@@ -7,6 +7,8 @@ import {getLocale, getTranslations} from "next-intl/server";
 import {localeConfig} from "@/i18n";
 import {Metadata} from "next";
 import Cursor from "@/app/[locale]/_components/cursor";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 
 const calSans = localFont({
     src: '_assets/fonts/CalSans-SemiBold.woff2',
@@ -45,11 +47,11 @@ export default function RootLayout(
 
     // noinspection HtmlRequiredTitleElement
     return (
-        <html lang={locale} className="scroll-smooth selection:bg-primary-100 selection:text-primary-500">
+        <html lang={locale} className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
         <head/>
         <body className={`${onest.variable} ${calSans.variable} font-sans overscroll-none`} style={{
             '--font-sans': 'var(--font-onest)',
-            '--font-display': locale == 'ru' ? 'var(--font-onest)' : 'var(--font-cal-sans)',
+            '--font-display': 'var(--font-cal-sans)',
         } as any}>
             <Cursor />
             {children}
@@ -59,53 +61,75 @@ export default function RootLayout(
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-    const locale = getLocale();
+    const locale = await getLocale();
     const t = await getTranslations('meta');
-    const canonicalUrl = process.env.CANONICAL_URL ||
-        (process.env.NODE_ENV === "development" ? `http://localhost:${process.env.PORT || 3000}` :
-            `https://${process.env.VERCEL_URL}` || "")
+    const messages = await loadLocaleMessages(locale);
+    const keywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
+    const canonicalPath = getLocalePath(locale);
 
     return {
-        metadataBase: new URL(canonicalUrl),
+        metadataBase: new URL(getSiteUrl()),
         title: {
             default: t('fullTitle'),
             template: "%s | " + t('title')
         },
         description: t('description'),
+        keywords,
         generator: "Next.js",
-        colorScheme: "light",
-        themeColor: "#F54142",
+        colorScheme: "dark",
+        themeColor: "#1BC451",
+        category: "education",
+        applicationName: t('title'),
+        robots: {
+            index: true,
+            follow: true,
+            googleBot: {
+                index: true,
+                follow: true,
+                "max-image-preview": "large",
+                "max-snippet": -1,
+                "max-video-preview": -1
+            }
+        },
+        formatDetection: {
+            telephone: false,
+            email: false,
+            address: false
+        },
         icons: {
-            icon: '/favicon.ico',
-            shortcut: '/favicon.ico',
+            icon: '/favicon.svg',
+            shortcut: '/favicon.svg',
         },
         openGraph: {
             type: "website",
-            locale: locale,
+            locale: getMetadataLocale(locale),
             title: t('fullTitle'),
             description: t('description'),
             siteName: t('title'),
-            url: '/',
-            images: "/images/og.png",
+            url: canonicalPath,
+            images: [
+                {
+                    url: "/images/og-animaldex.svg",
+                    width: 1200,
+                    height: 630,
+                    alt: t('fullTitle')
+                }
+            ],
         },
         twitter: {
-            card: "app",
-            title: t('title'),
+            card: "summary_large_image",
+            title: t('fullTitle'),
             description: t('description'),
-            images: "/images/og.png",
-            site: "@immat0x1",
-            app: {
-                id: {
-                    googleplay: "com.exteragram.messenger"
-                }
-            }
+            images: ["/images/og-animaldex.svg"],
         },
         alternates: {
-            canonical: '/',
+            canonical: canonicalPath,
             languages: localeConfig.locales.reduce((acc, locale) => {
                 acc[locale] = "/" + locale;
                 return acc;
-            }, {} as Record<string, string>)
+            }, {
+                "x-default": "/" + localeConfig.defaultLocale
+            } as Record<string, string>)
         }
     };
 }

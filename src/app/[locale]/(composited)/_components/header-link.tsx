@@ -20,12 +20,12 @@ export default function HeaderLink({href, children, mobile = false, ...props}: H
             onClick={() => setOpen(false)}
             {...props}
         >
-            <div
+            <span
                 className={`md:translate-y-0 ${open ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-700 
-                ease-in-out delay-700`}
+                ease-in-out delay-700 inline-block`}
             >
                 {children}
-            </div>
+            </span>
         </Link>
     )
 }

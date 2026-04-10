@@ -1,0 +1,11 @@
+<svg width="537" height="500" viewBox="0 0 537 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="537" height="500" rx="36" fill="#101612"/>
+  <rect x="24" y="24" width="489" height="196" rx="28" fill="#141C18"/>
+  <text x="48" y="78" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="20">AI SCAN RESULT</text>
+  <text x="48" y="128" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="38" font-weight="700">Instant species readout</text>
+  <rect x="48" y="156" width="132" height="34" rx="17" fill="#1BC451"/>
+  <text x="81" y="178" fill="#040705" font-family="Arial, sans-serif" font-size="16" font-weight="700">CARD READY</text>
+  <rect x="24" y="244" width="232" height="232" rx="28" fill="#141C18"/>
+  <rect x="280" y="244" width="233" height="110" rx="28" fill="#141C18"/>
+  <rect x="280" y="366" width="233" height="110" rx="28" fill="#141C18"/>
+</svg>

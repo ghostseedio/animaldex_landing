@@ -1,0 +1,8 @@
+<svg width="272" height="120" viewBox="0 0 272 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="272" height="120" rx="24" fill="#131A16"/>
+  <rect x="0.75" y="0.75" width="270.5" height="118.5" rx="23.25" stroke="#314036" stroke-width="1.5"/>
+  <text x="20" y="34" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="14">SET PROGRESS</text>
+  <text x="20" y="64" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="700">Indonesia Pack</text>
+  <rect x="20" y="82" width="232" height="12" rx="6" fill="#243028"/>
+  <rect x="20" y="82" width="154" height="12" rx="6" fill="#1BC451"/>
+</svg>

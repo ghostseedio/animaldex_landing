@@ -2,47 +2,47 @@
   {
     "id": "theme",
     "img": {
-      "src": "/images/features/common/theme.png",
+      "src": "/images/placeholders/more-analysis.svg",
       "width": 1024,
       "height": 750
     },
-    "icon": "@Pallete2",
+    "icon": "/images/features/icon-analysis.svg",
     "note": true
   },
   {
     "id": "ui",
     "img": {
-      "src": "/images/features/{locale}/ui.png",
+      "src": "/images/placeholders/more-discovery.svg",
       "width": 1024,
       "height": 767
     },
-    "icon": "@Widget2"
+    "icon": "/images/features/icon-discovery.svg"
   },
   {
     "id": "design",
     "img": {
-      "src": "/images/features/{locale}/design.png",
+      "src": "/images/placeholders/more-collection.svg",
       "width": 1024,
       "height": 688
     },
-    "icon": "/images/features/ic_gaze.svg"
+    "icon": "/images/features/icon-collection.svg"
   },
   {
     "id": "speed",
     "img": {
-      "src": "/images/features/{locale}/speed.png",
+      "src": "/images/placeholders/more-challenges.svg",
       "width": 1024,
       "height": 686
     },
-    "icon": "@DownloadTwiceSquare"
+    "icon": "/images/features/icon-challenge.svg"
   },
   {
     "id": "camera",
     "img": {
-      "src": "/images/features/{locale}/camera.png",
+      "src": "/images/placeholders/more-guide.svg",
       "width": 1024,
       "height": 800
     },
-    "icon": "/images/features/ic_camera.svg"
+    "icon": "/images/features/icon-guide.svg"
   }
 ]

@@ -1,0 +1,7 @@
+<svg width="272" height="68" viewBox="0 0 272 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="272" height="68" rx="22" fill="#131A16"/>
+  <rect x="0.75" y="0.75" width="270.5" height="66.5" rx="21.25" stroke="#314036" stroke-width="1.5"/>
+  <text x="20" y="29" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="14">CHALLENGE READY</text>
+  <text x="20" y="50" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="18" font-weight="700">Stake 12 credits</text>
+  <circle cx="232" cy="34" r="12" fill="#1BC451"/>
+</svg>

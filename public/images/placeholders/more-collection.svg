@@ -1,0 +1,8 @@
+<svg width="1024" height="688" viewBox="0 0 1024 688" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="688" rx="36" fill="#101612"/>
+  <rect x="44" y="44" width="936" height="180" rx="32" fill="#141C18"/>
+  <rect x="44" y="260" width="448" height="384" rx="32" fill="#141C18"/>
+  <rect x="532" y="260" width="448" height="180" rx="32" fill="#141C18"/>
+  <rect x="532" y="464" width="448" height="180" rx="32" fill="#141C18"/>
+  <text x="84" y="128" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="52" font-weight="700">Albums, sets, and collection progress</text>
+</svg>

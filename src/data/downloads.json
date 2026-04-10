@@ -1,26 +1,32 @@
 [
   {
-    "eyebrowId": "store",
-    "name": "RuStore",
-    "icon": "/images/downloads/ruStore.svg",
-    "href": "https://apps.rustore.ru/app/com.exteragram.messenger"
-  },
-  {
     "eyebrowId": "unavailable",
-    "name": "Google Play",
-    "icon": "/images/downloads/googlePlay.svg",
+    "name": "App Store",
+    "icon": "/images/downloads/appStore.svg",
     "unavailable": true
   },
   {
-    "eyebrowId": "file",
-    "name": "APK",
-    "icon": "/images/downloads/apk.svg",
-    "href": "https://github.com/exteraSquad/exteraGram/releases/latest"
+    "eyebrowId": "beta",
+    "name": "TestFlight",
+    "icon": "/images/downloads/testFlight.svg",
+    "unavailable": true
   },
   {
-    "eyebrowId": "link",
-    "name": "Telegram",
-    "icon": "/images/downloads/telegram.svg",
-    "href": "https://t.me/exteraGram"
+    "eyebrowId": "read",
+    "name": "AnimalDex Journal",
+    "icon": "/images/downloads/journal.svg",
+    "href": "/journal"
+  },
+  {
+    "eyebrowId": "read",
+    "name": "Privacy Policy",
+    "icon": "/images/downloads/privacy.svg",
+    "href": "/legal/privacy"
+  },
+  {
+    "eyebrowId": "contact",
+    "name": "Support",
+    "icon": "/images/downloads/support.svg",
+    "href": "mailto:hello@animaldex.app"
   }
 ]

@@ -7,3 +7,21 @@ html {
     scroll-behavior: smooth!important;
     -webkit-tap-highlight-color: transparent;
 }
+
+body {
+    min-height: 100vh;
+    color: #f4fff5;
+    background:
+        radial-gradient(circle at top, rgba(27, 196, 81, 0.22), transparent 32%),
+        linear-gradient(180deg, #0a0f0c 0%, #040705 100%);
+}
+
+a,
+button {
+    outline-color: #83ffae;
+}
+
+::selection {
+    background: #83ffae;
+    color: #040705;
+}

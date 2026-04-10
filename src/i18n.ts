@@ -10,6 +10,6 @@ export default getRequestConfig(async ({locale}) => {
 });
 
 export const localeConfig = {
-    locales: ['en', 'ru'],
+    locales: ['en', 'id'],
     defaultLocale: 'en'
 }

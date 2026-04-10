@@ -1,0 +1,9 @@
+<svg width="268" height="168" viewBox="0 0 268 168" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="268" height="168" rx="26" fill="#131A16"/>
+  <rect x="0.75" y="0.75" width="266.5" height="166.5" rx="25.25" stroke="#314036" stroke-width="1.5"/>
+  <text x="20" y="34" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="14">FIELD GUIDE</text>
+  <text x="20" y="60" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="18" font-weight="700">Habitat, diet, behavior</text>
+  <rect x="20" y="84" width="228" height="10" rx="5" fill="#243028"/>
+  <rect x="20" y="104" width="176" height="10" rx="5" fill="#243028"/>
+  <rect x="20" y="124" width="148" height="10" rx="5" fill="#83FFAE"/>
+</svg>

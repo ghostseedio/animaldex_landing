@@ -17,7 +17,7 @@ export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
                             <Link
                                 href={path || "/"}
                                 locale={locale}
-                                className={"uppercase" +
+                                className={"uppercase text-ink-200" +
                                     (locale === currentLocale ? " underline decoration-4 underline-offset-8 text-primary-500"
                                         : ""
                                     )}
@@ -26,7 +26,7 @@ export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
                                 {locale}
                             </Link>
                             {i < localeConfig.locales.length - 1 &&
-                                <div className="bg-neutral-300 rounded h-8 w-1"/>
+                                <div className="bg-line-300 rounded h-8 w-1"/>
                             }
                         </Fragment>
                     )

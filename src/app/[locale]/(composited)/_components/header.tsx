@@ -13,7 +13,7 @@ export default function Header() {
     return (
         <header
             className="flex justify-between items-center mb-16 font-display font-bold text-2xl sticky top-0 py-4 md:py-8
-            bg-white px-8 md:px-16 z-40"
+            bg-canvas-900/80 backdrop-blur-xl border-b border-line-400 px-8 md:px-16 z-40"
         >
             <LocaleToggle currentLocale={currentLocale}/>
             <HeaderMenu>
@@ -29,11 +29,40 @@ export default function Header() {
                 >
                     {t('features')}
                 </HeaderLink>
+                <HeaderLink
+                    href="/journal"
+                    data-cursor-text={t('journal')}
+                >
+                    {t('journal')}
+                </HeaderLink>
+                <HeaderLink
+                    href="/blog"
+                    data-cursor-text={t('blog')}
+                >
+                    {t('blog')}
+                </HeaderLink>
+                <HeaderLink
+                    href="/use-cases"
+                    data-cursor-text={t('useCases')}
+                >
+                    {t('useCases')}
+                </HeaderLink>
+                <HeaderLink
+                    href="/animals"
+                    data-cursor-text={t('animals')}
+                >
+                    {t('animals')}
+                </HeaderLink>
                 <Link
                     href="/#download"
                     className="hidden md:block"
                 >
-                    <Button className="w-14 overflow-hidden md:w-48 word-spacing-6 px-[0!important]">
+                    <Button
+                        as="span"
+                        className="inline-flex items-center justify-center w-14 overflow-hidden md:w-48 word-spacing-6 px-[0!important]
+                        !text-canvas-950 hover:!text-white !bg-primary-100 hover:!bg-primary-500 active:!text-white
+                        border-0 shadow-none"
+                    >
                         <Marquee repeatCount={2}>
                             {t('download')}
                         </Marquee>
@@ -45,11 +74,23 @@ export default function Header() {
                 <HeaderLink href="/legal/privacy" mobile>
                     {t('privacy')}
                 </HeaderLink>
-                <HeaderLink href="https://github.com/exteraSquad" mobile>
-                    {t('source')}
+                <HeaderLink href="/journal" mobile>
+                    {t('journal')}
                 </HeaderLink>
-                <HeaderLink href="https://t.me/exteraChat" mobile>
-                    {t('chats')}
+                <HeaderLink href="/blog" mobile>
+                    {t('blog')}
+                </HeaderLink>
+                <HeaderLink href="/use-cases" mobile>
+                    {t('useCases')}
+                </HeaderLink>
+                <HeaderLink href="/animals" mobile>
+                    {t('animals')}
+                </HeaderLink>
+                <HeaderLink href="/#more" mobile>
+                    {t('discover')}
+                </HeaderLink>
+                <HeaderLink href="/#features" mobile>
+                    {t('collection')}
                 </HeaderLink>
             </HeaderMenu>
         </header>

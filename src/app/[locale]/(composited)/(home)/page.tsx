@@ -1,4 +1,4 @@
-import {useTranslations} from "next-intl";
+import {getLocale, getTranslations} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Image from "next/image";
@@ -18,27 +18,146 @@ import {default as team} from "@/data/team.json";
 import {default as downloads} from "@/data/downloads.json";
 import {localisePath} from "@/loaders/path";
 import {unsafelyLoadSVG} from "@/loaders/svg";
-import {SquareArrowDown} from "solar-icon-set";
-import * as icons from "solar-icon-set";
-import {ComponentType} from "react";
-import {IconProps} from "solar-icon-set/dist/types";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
+import {getAbsoluteUrl} from "@/lib/site";
+import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 
-export default function Home() {
-    const t = useTranslations('home');
+export default async function Home() {
+    const t = await getTranslations('home');
+    const locale = await getLocale();
+    const siteUrl = getAbsoluteUrl(locale);
+    const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
+        question: t(`faq.${id}.q`),
+        answer: t(`faq.${id}.a`)
+    }));
+    const exploreLinks = [
+        {
+            href: "/journal",
+            title: t("download.journalLink"),
+            description: t("download.journalPrompt"),
+            accent: "from-primary-500/18 via-primary-500/6 to-transparent"
+        },
+        {
+            href: "/blog",
+            title: t("download.blogLink"),
+            description: t("download.blogPrompt"),
+            accent: "from-primary-400/14 via-primary-400/6 to-transparent"
+        },
+        {
+            href: "/best-animal-identification-app",
+            title: t("download.answersLink"),
+            description: t("download.answersPrompt"),
+            accent: "from-line-300/20 via-line-300/6 to-transparent"
+        },
+        {
+            href: "/use-cases",
+            title: t("download.useCasesLink"),
+            description: t("download.useCasesPrompt"),
+            accent: "from-primary-300/12 via-primary-300/6 to-transparent"
+        },
+        {
+            href: "/animals",
+            title: t("download.animalsLink"),
+            description: t("download.animalsPrompt"),
+            accent: "from-primary-500/14 via-primary-500/6 to-transparent"
+        }
+    ];
+    const webSiteSchema = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "AnimalDex",
+        url: siteUrl,
+        description: t("supporting"),
+        inLanguage: locale,
+        potentialAction: {
+            "@type": "SearchAction",
+            target: `${siteUrl}/journal`,
+            "query-input": "required name=search_term_string"
+        }
+    };
+    const mobileAppSchema = {
+        "@context": "https://schema.org",
+        "@type": "MobileApplication",
+        name: "AnimalDex",
+        operatingSystem: "iOS",
+        applicationCategory: "EducationalApplication",
+        url: siteUrl,
+        description: t("description"),
+        isFamilyFriendly: true,
+        audience: [
+            {"@type": "Audience", "audienceType": "Animal lovers"},
+            {"@type": "Audience", "audienceType": "Wildlife learners"},
+            {"@type": "Audience", "audienceType": "Families"},
+            {"@type": "Audience", "audienceType": "Travelers"},
+            {"@type": "Audience", "audienceType": "Photographers"},
+            {"@type": "Audience", "audienceType": "Collectors"},
+            {"@type": "Audience", "audienceType": "Competitive players"}
+        ],
+        featureList: [
+            "AI animal scanning and analysis",
+            "Animal identification and field-guide context",
+            "Collectible wildlife cards and journals",
+            "Albums, sets, missions, and progression",
+            "Discovery feed for real animal sightings",
+            "Challenge, battle, and trading loops",
+            "Family-friendly animal learning",
+            "Respectful wildlife observation and habitat curiosity"
+        ],
+        about: [
+            {"@type": "Thing", "name": "Animal identification"},
+            {"@type": "Thing", "name": "Wildlife learning"},
+            {"@type": "Thing", "name": "Animal card collecting"},
+            {"@type": "Thing", "name": "Wildlife photography"},
+            {"@type": "Thing", "name": "Zoo and safari animal discovery"}
+        ]
+    };
+    const softwareAppSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "AnimalDex",
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "iOS",
+        url: siteUrl,
+        description: t("description"),
+        offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD"
+        },
+        featureList: mobileAppSchema.featureList
+    };
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: item.answer
+            }
+        }))
+    };
 
     return (
         <>
-            <IconCanvas probability={0.02} paths={checkedIcons} color="#F54142" height={2000}/>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{__html: JSON.stringify([webSiteSchema, softwareAppSchema, mobileAppSchema, faqSchema])}}
+            />
+            <IconCanvas probability={0.02} paths={checkedIcons} color="#1BC451" height={2000}/>
 
             <section className="w-full flex justify-center items-center flex-col gap-4 mt-48 md:mt-72 mb-16 px-4" id="top">
                 <h1 className="text-primary-500 font-bold font-display text-5xl md:text-6xl lg:text-7xl">{t("title")}</h1>
-                <p className="text-xl md:text-2xl text-neutral-800 w-full md:w-[30rem] text-center">{t("description")}</p>
+                <p className="text-xl md:text-2xl text-ink-200 w-full md:w-[34rem] text-center">{t("description")}</p>
+                <p className="text-base md:text-lg text-ink-300 w-full max-w-3xl text-center">
+                    {t("supporting")}
+                </p>
                 <Link
                     href="/#download"
                     className="md:hidden"
                 >
-                    <Button>
+                    <Button as="span">
                         {t('more.download')}
                     </Button>
                 </Link>
@@ -58,14 +177,14 @@ export default function Home() {
             </section>
             <Anchor id="features" className="top-12 lg:-top-48" />
             <section
-                className="bg-black text-white justify-between flex lg:px-24 lg:py-36 lg:gap-4 mb-16 flex-col w-full-no-offset
+                className="bg-canvas-950 text-white justify-between flex lg:px-24 lg:py-36 lg:gap-4 mb-16 flex-col w-full-no-offset
                 lg:flex-row rounded-4xl lg:rounded-6xl lg:h-[28rem] mt-64 sm:p-12 sm:pt-16 gap-12 p-4 pt-12 mx-offset md:o-16"
             >
                 <div className="flex flex-col gap-4 justify-center">
                     <h3 className="font-bold font-display text-5xl lg:text-6xl 2xl:text-8xl text-center lg:text-left">
                         {t("features.title")}
                     </h3>
-                    <p className="text-lg md:text-xl xl:text-2xl w-full lg:max-w-lg text-center lg:text-left">
+                    <p className="text-lg md:text-xl xl:text-2xl w-full lg:max-w-lg text-center lg:text-left text-ink-200">
                         {t("features.description")}
                     </p>
                 </div>
@@ -91,18 +210,18 @@ export default function Home() {
                                     <Link
                                         href="/#more"
                                         role="button"
-                                        className="w-32 h-32 aspect-square hover:bg-primary-500 flex-col hover:text-primary-50
-                                        rounded-full bg-white text-primary-500 flex justify-center items-center transition-colors
-                                        active:bg-primary-400 active:text-primary-50 duration-300 ease-in-out"
+                                        className="w-32 h-32 aspect-square hover:bg-primary-500 flex-col hover:text-canvas-950
+                                        rounded-full bg-canvas-950 text-primary-500 flex justify-center items-center transition-colors
+                                        active:bg-primary-400 active:text-canvas-950 duration-300 ease-in-out border border-primary-500/40"
                                     >
-                                        <SquareArrowDown size={60} iconStyle="Bold" />
+                                        <ArrowSquareDownIcon size={60} />
                                     </Link>
-                                    <p className="text-neutral-500 text-xl font-medium">{t("features.button")}</p>
+                                    <p className="text-ink-400 text-xl font-medium">{t("features.button")}</p>
                                 </div>
                             )
                         },
                     ]}
-                    className="lg:w-[32rem] h-fit md:h-[36rem] lg:-translate-y-96 rounded-3xl bg-primary-100 text-black"
+                    className="lg:w-[32rem] h-fit md:h-[36rem] lg:-translate-y-96 rounded-3xl bg-primary-100 text-canvas-950 shadow-[0_30px_120px_rgba(27,196,81,0.16)]"
                     leftOffset={24}
                 />
             </section>
@@ -110,11 +229,10 @@ export default function Home() {
             <Anchor id="more" />
             <section
                 className="flex justify-center items-center flex-col gap-24 mb-16 border-2 py-12 px-4 md:px-12 lg:p-20
-                border-neutral-100 rounded-4xl md:rounded-6xl bg-white md:o-16 o-4 mx-offset w-full-no-offset"
+                border-line-300 rounded-4xl md:rounded-6xl bg-surface-900/80 backdrop-blur md:o-16 o-4 mx-offset w-full-no-offset"
             >
                 {moreFeatures.map(({img, id, note, icon}, i) => {
-                    const Icon: ComponentType<IconProps> = icon.startsWith('@') && icons.hasOwnProperty(icon.slice(1)) ?
-                        (icons as any)[icon.slice(1)] : () => unsafelyLoadSVG(localisePath(icon))
+                    const iconMarkup = unsafelyLoadSVG(localisePath(icon))
                     return (
                         <figure
                             className={"flex w-full justify-between gap-8 md:gap-24 items-center flex-col-reverse " +
@@ -131,23 +249,23 @@ export default function Home() {
                             />
                             <figcaption
                                 className="flex flex-col justify-center gap-1 text-center md:text-left md:w-7/12 h-fit">
-                                {Icon && (
+                                {iconMarkup && (
                                     <div
-                                        className="flex justify-center p-4 rounded-full bg-primary-500 text-white w-min
+                                        className="flex justify-center p-4 rounded-full bg-primary-500 text-canvas-950 w-min
                                         h-min items-center mx-auto md:mx-0 mb-4"
                                     >
-                                        <Icon iconStyle="Bold" size={40} />
+                                        {iconMarkup}
                                     </div>
                                 )}
                                 {note &&
-                                    <p className="text-neutral-400 text-lg">
+                                    <p className="text-ink-400 text-lg">
                                         {t("more." + id + ".note")}
                                     </p>
                                 }
-                                <h3 className="font-bold font-display text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
+                                <h3 className="font-bold font-display text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl text-white">
                                     {t("more." + id + ".title")}
                                 </h3>
-                                <p className="text-neutral-800 text-lg md:text-xl xl:text-2xl mt-4 md:mt-6">
+                                <p className="text-ink-200 text-lg md:text-xl xl:text-2xl mt-4 md:mt-6">
                                     {t("more." + id + ".description")}
                                 </p>
                             </figcaption>
@@ -155,16 +273,16 @@ export default function Home() {
                     )
                 })}
                 <figure className="flex flex-col gap-4 lg:gap-6 items-center">
-                    <h3 className="font-bold font-display text-4xl lg:text-7xl text-center">
+                    <h3 className="font-bold font-display text-4xl lg:text-7xl text-center text-white">
                         {t("more.title")}
                     </h3>
-                    <p className="text-lg md:text-xl xl:text-2xl text-neutral-800 w-full max-w-lg text-center">
+                    <p className="text-lg md:text-xl xl:text-2xl text-ink-200 w-full max-w-lg text-center">
                         {t("more.description")}
                     </p>
                     <Link
                         href="/#download"
                     >
-                        <Button>
+                        <Button as="span">
                             {t('more.download')}
                         </Button>
                     </Link>
@@ -175,18 +293,21 @@ export default function Home() {
                 className="overflow-hidden w-full my-8 md:my-16 flex flex-col justify-center h-96 sm:h-[32rem] md:h-[48rem]
                 word-spacing-6 text-6xl sm:text-8xl md:text-9xl font-bold font-display"
             >
-                <Marquee rotation={8} className="text-neutral-300" scrollBoost={0.25}>
+                <Marquee rotation={8} className="text-line-300" scrollBoost={0.25}>
                     {splashes.join(" ")}
                 </Marquee>
                 <div className="h-4 md:h-12" />
-                <Marquee rotation={8} baseVelocity={-1} className="text-white text-outline-neutral-300" scrollBoost={0.25}>
+                <Marquee rotation={8} baseVelocity={-1} className="text-white text-outline-line-300" scrollBoost={0.25}>
                     {splashes.join(" ")}
                 </Marquee>
             </div>
 
             <Anchor id="team" />
             <section className="w-full flex justify-center items-center flex-col gap-16 mb-32">
-                <h2 className="font-display font-bold text-5xl lg:text-7xl text-center">{t("team.title")}</h2>
+                <h2 className="font-display font-bold text-5xl lg:text-7xl text-center text-white">{t("team.title")}</h2>
+                <p className="text-lg md:text-xl xl:text-2xl text-ink-200 w-full max-w-4xl text-center px-4">
+                    {t("team.description")}
+                </p>
                 <DragSlider>
                     {
                         team.map(({img, roles, ...member}, i) => (
@@ -204,7 +325,10 @@ export default function Home() {
 
             <Anchor id="download" className="md:-top-48" />
             <section className="w-full flex justify-center items-center flex-col px-5 md:px-8 gap-8 md:gap-16">
-                <h2 className="font-display font-bold text-5xl lg:text-7xl text-center">{t("download.title")}</h2>
+                <h2 className="font-display font-bold text-5xl lg:text-7xl text-center text-white">{t("download.title")}</h2>
+                <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-3xl text-center">
+                    {t("download.description")}
+                </p>
                 <div className="flex flex-row flex-wrap gap-8 justify-center w-full">
                     {
                         downloads.map(({name, icon, eyebrowId, unavailable, href}, i) => (
@@ -217,6 +341,50 @@ export default function Home() {
                             />
                         ))
                     }
+                </div>
+                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                    {exploreLinks.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="group relative overflow-hidden rounded-3xl border border-line-300/90 bg-surface-900/85
+                            backdrop-blur px-5 py-5 md:px-6 md:py-6 flex flex-col gap-4 min-h-[12rem] hover:border-primary-500/60
+                            transition-colors"
+                        >
+                            <div className={`absolute inset-0 bg-gradient-to-br ${item.accent} opacity-100`} />
+                            <div className="relative flex flex-col gap-4 h-full">
+                                <span className="text-primary-200 text-xs uppercase tracking-[0.18em] font-medium">
+                                    Explore
+                                </span>
+                                <div className="flex flex-col gap-3">
+                                    <h3 className="font-display font-bold text-2xl text-white leading-tight">
+                                        {item.title}
+                                    </h3>
+                                    <p className="text-ink-200 text-base leading-7">
+                                        {item.description}
+                                    </p>
+                                </div>
+                                <span className="mt-auto text-primary-200 group-hover:text-primary-100 transition-colors font-medium">
+                                    Open
+                                </span>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+                <div className="w-full max-w-4xl rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                    <h3 className="font-display font-bold text-3xl md:text-4xl text-white text-center">{t("faq.title")}</h3>
+                    <p className="text-ink-200 text-lg md:text-xl text-center">{t("faq.description")}</p>
+                    <div className="flex flex-col gap-4 mt-2">
+                        {faqItems.map((item) => (
+                            <article
+                                key={item.question}
+                                className="rounded-2xl border border-line-300/80 bg-surface-800/60 px-4 py-4 md:px-6 md:py-5"
+                            >
+                                <h4 className="text-white text-xl font-semibold">{item.question}</h4>
+                                <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
+                            </article>
+                        ))}
+                    </div>
                 </div>
             </section>
         </>

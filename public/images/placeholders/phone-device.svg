@@ -1,0 +1,16 @@
+<svg width="288" height="616" viewBox="0 0 288 616" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="28" y="8" width="232" height="600" rx="42" fill="#0B100D"/>
+  <rect x="29" y="9" width="230" height="598" rx="41" stroke="#314036" stroke-width="2"/>
+  <rect x="108" y="22" width="72" height="10" rx="5" fill="#243028"/>
+  <rect x="46" y="60" width="196" height="86" rx="28" fill="#111714"/>
+  <text x="66" y="96" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="18">SCAN RESULT</text>
+  <text x="66" y="126" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="26" font-weight="700">Green Tree Frog</text>
+  <rect x="46" y="166" width="92" height="148" rx="24" fill="#151D19"/>
+  <rect x="150" y="166" width="92" height="148" rx="24" fill="#151D19"/>
+  <rect x="46" y="332" width="196" height="110" rx="28" fill="#111714"/>
+  <rect x="46" y="464" width="196" height="106" rx="28" fill="#151D19"/>
+  <rect x="64" y="356" width="160" height="18" rx="9" fill="#243028"/>
+  <rect x="64" y="384" width="112" height="12" rx="6" fill="#1BC451"/>
+  <rect x="64" y="498" width="92" height="16" rx="8" fill="#243028"/>
+  <rect x="64" y="528" width="136" height="12" rx="6" fill="#83FFAE"/>
+</svg>

@@ -67,7 +67,7 @@ export default function FeaturesOverview({features, className, smoothnessCoeffic
                             setSlide(i)
                         }}
                         className={"min-w-max max-h-20 whitespace-pre-line " +
-                            (slide !== i ? "text-neutral-500" : "text-black")}
+                            (slide !== i ? "text-ink-400" : "text-canvas-950")}
                         key={i}
                     >
                         {name}
@@ -82,12 +82,12 @@ export default function FeaturesOverview({features, className, smoothnessCoeffic
                     </div>
                 ))}
             </div>
-            <div className="absolute inset-x-0 bottom-16 lg:bottom-0 top-autp w-full h-48 bg-gradient-to-t from-primary-100 to-transparent pointer-events-none rounded-b-3xl" />
-            <div className="absolute flex flex-row gap-2 p-3 rounded-full mx-auto bg-neutral-900 bottom-8 lg:-bottom-16 w-fit left-1/2 -translate-x-1/2">
+            <div className="absolute inset-x-0 bottom-16 lg:bottom-0 top-autp w-full h-48 bg-gradient-to-t from-primary-100 via-primary-100/70 to-transparent pointer-events-none rounded-b-3xl" />
+            <div className="absolute flex flex-row gap-2 p-3 rounded-full mx-auto bg-canvas-900 bottom-8 lg:-bottom-16 w-fit left-1/2 -translate-x-1/2 border border-line-300">
                 {features.map((_, i) => (
                     <button
                         key={i}
-                        className={"w-2 h-2 rounded-full cursor-pointer " + (slide === i ? "bg-white" : "bg-neutral-800")}
+                        className={"w-2 h-2 rounded-full cursor-pointer " + (slide === i ? "bg-primary-200" : "bg-line-300")}
                         onClick={() => setSlide(i)}
                     />
                 ))}
