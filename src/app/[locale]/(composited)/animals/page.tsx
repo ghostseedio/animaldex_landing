@@ -1,13 +1,22 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import {speciesEntries} from "@/data/species";
+import {getSpeciesDirectoryPage, speciesEntries} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import SpeciesDirectory from "./species-directory";
 
-function formatDate(locale: string, date: string) {
-    return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
+type AnimalsIndexPageProps = {
+    searchParams?: {
+        q?: string | string[];
+        letter?: string | string[];
+        page?: string | string[];
+    };
+};
+
+function getSingleParam(value?: string | string[]) {
+    return Array.isArray(value) ? value[0] : value;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,10 +64,18 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function AnimalsIndexPage() {
+export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageProps) {
     const t = await getTranslations("animals");
     const locale = await getLocale();
     const pageUrl = getAbsoluteUrl(locale, "/animals");
+    const query = getSingleParam(searchParams?.q) ?? "";
+    const letter = getSingleParam(searchParams?.letter) ?? "all";
+    const page = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
+    const directoryPage = getSpeciesDirectoryPage({
+        query,
+        letter,
+        page: Number.isFinite(page) ? page : 1
+    });
 
     const schema = {
         "@context": "https://schema.org",
@@ -67,7 +84,7 @@ export default async function AnimalsIndexPage() {
         description: t("description"),
         url: pageUrl,
         inLanguage: locale,
-        hasPart: speciesEntries.map((entry) => ({
+        hasPart: directoryPage.entries.map((entry) => ({
             "@type": "Article",
             headline: entry.heroTitle,
             about: entry.name,
@@ -85,39 +102,30 @@ export default async function AnimalsIndexPage() {
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{t("description")}</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {speciesEntries.map((entry) => (
-                    <article
-                        key={entry.slug}
-                        className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4"
-                    >
-                        <h2 className="font-display font-bold text-3xl text-white">{entry.heroTitle}</h2>
-                        <p className="text-ink-200 text-lg">{entry.analysis.summary}</p>
-                        <div className="text-ink-300 text-sm md:text-base">
-                            <span className="text-white">{t("scientificName")}: </span>
-                            {entry.analysis.scientificName}
-                        </div>
-                        <div className="text-ink-300 text-sm md:text-base">
-                            <span className="text-white">{t("updated")}: </span>
-                            {formatDate(locale, entry.updatedAt)}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {entry.searchIntents.map((intent) => (
-                                <span key={intent} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs">
-                                    {intent}
-                                </span>
-                            ))}
-                        </div>
-                        <Link
-                            href={`/animals/${entry.slug}`}
-                            className="mt-auto text-primary-200 text-lg hover:text-primary-100 transition-colors"
-                            underline
-                        >
-                            {t("readSpecies")}
-                        </Link>
-                    </article>
-                ))}
-            </div>
+            <SpeciesDirectory
+                locale={locale}
+                speciesEntries={directoryPage.entries}
+                totalSpecies={directoryPage.total}
+                currentPage={directoryPage.currentPage}
+                totalPages={directoryPage.totalPages}
+                currentQuery={directoryPage.query}
+                currentLetter={directoryPage.letter}
+                copy={{
+                    scientificName: t("scientificName"),
+                    updated: t("updated"),
+                    readSpecies: t("readSpecies"),
+                    searchPlaceholder: t("searchPlaceholder"),
+                    alphabetLabel: t("alphabetLabel"),
+                    filterAll: t("filterAll"),
+                    resultsSummary: t("resultsSummary"),
+                    noResultsTitle: t("noResultsTitle"),
+                    noResultsDescription: t("noResultsDescription"),
+                    clearFilters: t("clearFilters"),
+                    previousPage: "Previous",
+                    nextPage: "Next",
+                    pageLabel: "Page {page} of {totalPages}"
+                }}
+            />
 
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-3 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>

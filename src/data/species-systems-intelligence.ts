@@ -1,4 +1,12 @@
 import {SystemsIntelligenceEntry} from "@/data/content-schema";
+import {additionalSpeciesSystemsIntelligence} from "@/data/species-expansion-pack";
+import {additionalSpeciesSystemsIntelligenceTwo} from "@/data/species-expansion-pack-2";
+import {additionalSpeciesSystemsIntelligenceThree} from "@/data/species-expansion-pack-3";
+import {additionalSpeciesSystemsIntelligenceFour} from "@/data/species-expansion-pack-4";
+import {additionalSpeciesSystemsIntelligenceFive} from "@/data/species-expansion-pack-5";
+import {additionalSpeciesSystemsIntelligenceSix} from "@/data/species-expansion-pack-6";
+import {additionalSpeciesSystemsIntelligenceSeven} from "@/data/species-expansion-pack-7";
+import {additionalSpeciesSystemsIntelligenceEight} from "@/data/species-expansion-pack-8";
 
 const baseSpeciesSystemsIntelligenceData: Record<string, SystemsIntelligenceEntry> = {
     "african-wild-dog": {
@@ -301,6 +309,13 @@ Object.assign(expandedSpeciesSystemsIntelligenceData, {
         strategicInsight: "When resources are sparse, range and follow-through become competitive advantages of their own."
     }
 });
+
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceThree);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceFour);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceFive);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceSix);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceSeven);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceEight);
 
 Object.assign(expandedSpeciesSystemsIntelligenceData, {
     "peregrine-falcon": {
@@ -646,7 +661,15 @@ Object.assign(expandedSpeciesSystemsIntelligenceData, {
 
 export const speciesSystemsIntelligence = {
     ...baseSpeciesSystemsIntelligenceData,
-    ...expandedSpeciesSystemsIntelligenceData
+    ...expandedSpeciesSystemsIntelligenceData,
+    ...additionalSpeciesSystemsIntelligence,
+    ...additionalSpeciesSystemsIntelligenceTwo,
+    ...additionalSpeciesSystemsIntelligenceThree,
+    ...additionalSpeciesSystemsIntelligenceFour,
+    ...additionalSpeciesSystemsIntelligenceFive,
+    ...additionalSpeciesSystemsIntelligenceSix,
+    ...additionalSpeciesSystemsIntelligenceSeven,
+    ...additionalSpeciesSystemsIntelligenceEight
 };
 
 export function getSystemsIntelligenceBySpeciesSlug(slug: string) {

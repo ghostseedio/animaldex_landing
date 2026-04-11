@@ -28,6 +28,7 @@ export function buildContentMetadata({
 }: BuildContentMetadataOptions): Metadata {
     const imageUrl = getAbsoluteUrl(locale, featuredImage.src);
     const brandedTitle = title.includes("AnimalDex") ? title : `${title} | AnimalDex`;
+    const brandedImageAlt = featuredImage.alt.includes("AnimalDex") ? featuredImage.alt : `${featuredImage.alt} | AnimalDex`;
 
     return {
         title,
@@ -56,7 +57,7 @@ export function buildContentMetadata({
                     url: imageUrl,
                     width: featuredImage.width,
                     height: featuredImage.height,
-                    alt: featuredImage.alt
+                    alt: brandedImageAlt
                 }
             ]
         },
@@ -64,7 +65,12 @@ export function buildContentMetadata({
             card: "summary_large_image",
             title: brandedTitle,
             description,
-            images: [imageUrl]
+            images: [
+                {
+                    url: imageUrl,
+                    alt: brandedImageAlt
+                }
+            ]
         }
     };
 }

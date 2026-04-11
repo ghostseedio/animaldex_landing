@@ -1,4 +1,12 @@
 import {ContentImage} from "@/data/content-schema";
+import {additionalSpeciesEntriesInput} from "@/data/species-expansion-pack";
+import {additionalSpeciesEntriesInputTwo} from "@/data/species-expansion-pack-2";
+import {additionalSpeciesEntriesInputThree} from "@/data/species-expansion-pack-3";
+import {additionalSpeciesEntriesInputFour} from "@/data/species-expansion-pack-4";
+import {additionalSpeciesEntriesInputFive} from "@/data/species-expansion-pack-5";
+import {additionalSpeciesEntriesInputSix} from "@/data/species-expansion-pack-6";
+import {additionalSpeciesEntriesInputSeven} from "@/data/species-expansion-pack-7";
+import {additionalSpeciesEntriesInputEight} from "@/data/species-expansion-pack-8";
 
 export type SpeciesAnalysis = {
     summary: string;
@@ -21,6 +29,8 @@ export type SpeciesPremiumDetails = {
 export type SpeciesEntry = {
     slug: string;
     name: string;
+    speciesProfileId?: string;
+    normalizedIdentityKey?: string;
     heroTitle: string;
     publishedAt: string;
     updatedAt: string;
@@ -31,14 +41,55 @@ export type SpeciesEntry = {
     relatedSpecies: string[];
 };
 
-type SpeciesEntryInput = Omit<SpeciesEntry, "heroTitle" | "publishedAt" | "updatedAt" | "featuredImage" | "searchIntents" | "relatedSpecies"> & {
+export type SpeciesDirectoryLetter = "all" | string;
+
+export type SpeciesDirectoryPage = {
+    entries: SpeciesEntry[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    query: string;
+    letter: SpeciesDirectoryLetter;
+};
+
+export const SPECIES_DIRECTORY_PAGE_SIZE = 48;
+
+type SpeciesEntryInput = Omit<SpeciesEntry, "heroTitle" | "publishedAt" | "updatedAt" | "featuredImage" | "searchIntents" | "relatedSpecies" | "premiumDetails"> & {
+    premiumDetails?: SpeciesPremiumDetails;
     relatedSpecies?: string[];
     searchIntents?: string[];
 };
 
+function buildDefaultPremiumDetails(name: string, analysis: SpeciesAnalysis): SpeciesPremiumDetails {
+    return {
+        behaviorTraits: [
+            `${name} adjusts movement and feeding to match light, temperature, and food access in its habitat.`,
+            `Body design, timing, and shelter choices all help this species stay effective in the wild.`,
+            `Patient observation usually reveals more behavior than close approach or fast movement.`
+        ],
+        whyInteresting: [
+            `${name} is a useful example of how anatomy and habitat fit together as one survival system.`,
+            `Its shape, movement style, and food strategy make it easy to compare with related animals.`,
+            `This species turns one page into a lesson about adaptation, ecosystem role, and identification.`
+        ],
+        respectfulSpotting: [
+            "Keep distance and let the animal choose the space.",
+            "Avoid blocking movement routes, nesting areas, or feeding behavior.",
+            "Use optics, patience, and quiet observation instead of crowding for a closer view."
+        ],
+        lookalikes: [
+            "Regional relatives may look similar at a distance.",
+            "Juveniles, adults, and seasonal forms can differ in color or size.",
+            "Light, angle, and habitat context can change how field marks appear."
+        ]
+    };
+}
+
 function createSpeciesEntry({
     slug,
     name,
+    speciesProfileId,
+    normalizedIdentityKey,
     analysis,
     premiumDetails,
     relatedSpecies = [],
@@ -49,6 +100,8 @@ function createSpeciesEntry({
     return {
         slug,
         name,
+        speciesProfileId,
+        normalizedIdentityKey: normalizedIdentityKey ?? slug,
         heroTitle: `${name} — Identification, Habitat, Rarity & Facts`,
         publishedAt: "2026-04-10",
         updatedAt: "2026-04-10",
@@ -67,9 +120,23 @@ function createSpeciesEntry({
             ...searchIntents
         ],
         analysis,
-        premiumDetails,
+        premiumDetails: premiumDetails ?? buildDefaultPremiumDetails(name, analysis),
         relatedSpecies
     };
+}
+
+function assertUniqueSpeciesSlugs(entries: SpeciesEntry[]) {
+    const seen = new Set<string>();
+
+    for (const entry of entries) {
+        if (seen.has(entry.slug)) {
+            throw new Error(`Duplicate species slug detected: ${entry.slug}`);
+        }
+
+        seen.add(entry.slug);
+    }
+
+    return entries;
 }
 
 const baseSpeciesData: SpeciesEntry[] = [
@@ -3759,13 +3826,76 @@ expandedSpeciesData.push(
     })
 );
 
-const speciesData: SpeciesEntry[] = [...baseSpeciesData, ...expandedSpeciesData];
+const speciesData: SpeciesEntry[] = [
+    ...baseSpeciesData,
+    ...expandedSpeciesData,
+    ...additionalSpeciesEntriesInput.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputTwo.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputThree.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputFour.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputFive.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputSix.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputSeven.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputEight.map(createSpeciesEntry)
+];
 
-export const speciesEntries: SpeciesEntry[] = [...speciesData]
+export const speciesEntries: SpeciesEntry[] = [...assertUniqueSpeciesSlugs(speciesData)]
     .sort((a, b) => a.name.localeCompare(b.name));
 
 export function getSpeciesBySlug(slug: string) {
     return speciesEntries.find((entry) => entry.slug === slug);
+}
+
+export function getSpeciesDirectoryPage({
+    page = 1,
+    query = "",
+    letter = "all",
+    pageSize = SPECIES_DIRECTORY_PAGE_SIZE
+}: {
+    page?: number;
+    query?: string;
+    letter?: SpeciesDirectoryLetter;
+    pageSize?: number;
+}): SpeciesDirectoryPage {
+    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedLetter = letter === "all" ? "all" : letter.trim().slice(0, 1).toUpperCase();
+
+    const filtered = speciesEntries.filter((entry) => {
+        const matchesLetter = normalizedLetter === "all" || entry.name.toUpperCase().startsWith(normalizedLetter);
+
+        if (!matchesLetter) {
+            return false;
+        }
+
+        if (!normalizedQuery) {
+            return true;
+        }
+
+        const haystack = [
+            entry.name,
+            entry.analysis.scientificName,
+            entry.analysis.category,
+            entry.analysis.summary
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(normalizedQuery);
+    });
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const currentPage = Math.min(Math.max(1, page), totalPages);
+    const start = (currentPage - 1) * pageSize;
+
+    return {
+        entries: filtered.slice(start, start + pageSize),
+        total,
+        totalPages,
+        currentPage,
+        query,
+        letter: normalizedLetter
+    };
 }
 
 export function getRelatedSpecies(slug: string, limit = 3) {

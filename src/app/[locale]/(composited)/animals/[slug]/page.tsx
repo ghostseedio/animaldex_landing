@@ -1,13 +1,31 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
+import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
+import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
+import SpeciesStatsSection from "@/app/[locale]/(composited)/animals/[slug]/species-stats-section";
+import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import {getBlogPostsForSpecies} from "@/data/blog";
+import {getSpeciesDietContent} from "@/data/species-diet";
+import {
+    getSpeciesImageAltText,
+    getSpeciesImageAttribution,
+    getSpeciesImageRoute,
+    getSpeciesImageReferences,
+    getSpeciesRepresentativeImageReference
+} from "@/data/species-images";
+import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
+import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
+import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+
+export const revalidate = 3600;
 
 type SpeciesPageProps = {
     params: {
@@ -37,7 +55,11 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         title,
         description,
         keywords: [...entry.searchIntents, entry.name, entry.analysis.scientificName, "animal identification app", "wildlife app"],
-        featuredImage: entry.featuredImage,
+        featuredImage: {
+            ...entry.featuredImage,
+            src: getSpeciesImageRoute(entry.slug),
+            alt: getSpeciesImageAltText(entry, "metadata")
+        },
         publishedAt: entry.publishedAt,
         updatedAt: entry.updatedAt,
         tags: entry.searchIntents
@@ -60,6 +82,28 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const related = getRelatedSpecies(entry.slug, 3);
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
+    const dietContent = getSpeciesDietContent(entry);
+    const {descriptor, subtitleStory} = await getSpeciesSubtitle(entry.slug, locale);
+    const miniSystemsSummary = getMiniSystemsBySpeciesSlug(entry.slug);
+    const statsResult = await resolveSpeciesStats(entry.slug);
+    const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8);
+    const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug);
+    const imageAttribution = getSpeciesImageAttribution(featuredMedia);
+    const captureContextLabel = featuredMedia?.imagePath ? featuredMedia.contextLabel : null;
+    const captureLocationLabel = featuredMedia?.captureId && featuredMedia.imageBucket && featuredMedia.imagePath
+        ? featuredMedia.locationDisplayLabel
+        : null;
+    const resolvedRarityScore = statsResult.stats && statsResult.statsSource !== "generated"
+        ? statsResult.stats.rarity
+        : entry.analysis.rarityScore;
+    const resolvedRarityLabel = rarityLabel(resolvedRarityScore);
+    const battleTier = statsResult.stats && statsResult.statsSource !== "generated"
+        ? getBattleTier(statsResult.stats)
+        : null;
+    const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
+    const heroSubtitle = [descriptor ? `${descriptor}.` : null, subtitleStory ?? [entry.analysis.summary, miniSystemsSummary].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(" ");
     const pageUrl = getAbsoluteUrl(locale, `/animals/${entry.slug}`);
     const thingSchema = {
         "@context": "https://schema.org",
@@ -76,7 +120,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         description: entry.analysis.summary,
         datePublished: entry.publishedAt,
         dateModified: entry.updatedAt,
-        image: getAbsoluteUrl(locale, entry.featuredImage.src),
+        image: getAbsoluteUrl(locale, getSpeciesImageRoute(entry.slug)),
         author: {
             "@type": "Organization",
             name: "AnimalDex"
@@ -105,12 +149,82 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 dangerouslySetInnerHTML={{__html: JSON.stringify([thingSchema, articleSchema])}}
             />
 
+            <Link href="/animals" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
+                {t("back")}
+            </Link>
+
+            {featuredMediaList.length > 1 ? (
+                <FeaturedSpeciesImageCarousel
+                    slides={featuredMediaList.map((item) => ({
+                        captureId: item.captureId,
+                        src: getSpeciesImageRoute(entry.slug, item.captureId),
+                        alt: getSpeciesImageAltText(entry, "featured"),
+                        attribution: getSpeciesImageAttribution(item),
+                        contextLabel: item.contextLabel,
+                        locationDisplayLabel: item.locationDisplayLabel
+                    }))}
+                    rarityLabel={resolvedRarityLabel}
+                    battleTierLabel={battleTierLabel}
+                />
+            ) : (
+                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-3 md:p-4">
+                    <div className="relative overflow-hidden rounded-[2rem]">
+                        <SpeciesImage
+                            slug={entry.slug}
+                            alt={getSpeciesImageAltText(entry, "featured")}
+                            priority
+                            className="aspect-[4/3] rounded-[2rem]"
+                        />
+                        <div className="absolute left-4 top-4 md:left-5 md:top-5 flex max-w-[calc(100%-2rem)] md:max-w-[calc(100%-2.5rem)] flex-col items-start gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                <span className="rounded-full border border-amber-200/30 bg-gradient-to-r from-amber-500/70 via-orange-400/65 to-rose-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(245,158,11,0.28)]">
+                                    {resolvedRarityLabel}
+                                </span>
+                                {battleTierLabel ? (
+                                    <span className="rounded-full border border-cyan-200/30 bg-gradient-to-r from-sky-500/70 via-cyan-500/65 to-teal-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.24)]">
+                                        {battleTierLabel}
+                                    </span>
+                                ) : null}
+                            </div>
+                            {captureContextLabel && captureLocationLabel ? (
+                                <span className="max-w-[min(68vw,26rem)] truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
+                                    {captureLocationLabel}
+                                </span>
+                            ) : null}
+                        </div>
+                        {captureContextLabel ? (
+                            <div className="absolute right-4 top-4 md:right-5 md:top-5">
+                                <span className="rounded-full border border-fuchsia-200/30 bg-gradient-to-r from-fuchsia-500/70 via-violet-500/65 to-indigo-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold uppercase tracking-[0.12em] text-white shadow-[0_12px_30px_rgba(168,85,247,0.24)]">
+                                    {captureContextLabel}
+                                </span>
+                            </div>
+                        ) : null}
+                        {!captureContextLabel && captureLocationLabel ? (
+                            <div className="absolute right-4 top-4 md:right-5 md:top-5 max-w-[min(75vw,32rem)]">
+                                <span className="block truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
+                                    {captureLocationLabel}
+                                </span>
+                            </div>
+                        ) : null}
+                    </div>
+                    {imageAttribution ? (
+                        <div className="px-2 pt-3">
+                            <p className="text-sm md:text-base text-ink-300">
+                                {imageAttribution}
+                            </p>
+                        </div>
+                    ) : null}
+                </section>
+            )}
+
             <div className="flex flex-col gap-4">
-                <Link href="/animals" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                    {t("back")}
-                </Link>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{entry.heroTitle}</h1>
-                <p className="text-lg md:text-xl xl:text-2xl text-ink-200">{entry.analysis.summary}</p>
+                <SubtitleSpeaker
+                    text={heroSubtitle}
+                    locale={locale}
+                    cacheKey={`${locale}:${entry.slug}:${heroSubtitle}`}
+                    refreshUrl={`/api/species-subtitles/${entry.slug}?locale=${encodeURIComponent(locale)}`}
+                />
                 <div className="text-ink-300 text-sm md:text-base flex flex-wrap gap-x-6 gap-y-3">
                     <span>
                         <span className="text-white">{t("scientificName")}: </span>
@@ -130,6 +244,30 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </span>
                 </div>
             </div>
+
+            <SpeciesStatsSection
+                result={statsResult}
+                battleTier={battleTier}
+                labels={{
+                    title: t("statsTitle", {animal: entry.name}),
+                    description: t("statsDescription"),
+                    battleTierChip: battleTierLabel ?? t("battleTierChip", {tier: "{tier}"}),
+                    sourceLabel: t("statsSourceLabel"),
+                    dominance: t("dominanceStat"),
+                    speed: t("speedStat"),
+                    size: t("sizeStat"),
+                    intelligence: t("intelligenceStat"),
+                    rarity: t("rarityStat"),
+                    sourceSpeciesProfile: t("statsSourceSpeciesProfile"),
+                    sourceAnalysisBase: t("statsSourceAnalysisBase"),
+                    sourceAnalysisEffective: t("statsSourceAnalysisEffective"),
+                    sourceRawJson: t("statsSourceRawJson"),
+                    sourceGenerated: t("statsSourceGenerated"),
+                    sourceNone: t("statsSourceNone"),
+                    unavailableTitle: t("statsUnavailableTitle"),
+                    unavailableDescription: t("statsUnavailableDescription")
+                }}
+            />
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
@@ -155,13 +293,41 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     <span className="text-white">{t("nativeRangeLabel")}: </span>
                     {entry.analysis.nativeRange}
                 </p>
+                <NativeRangeMapCard
+                    entry={entry}
+                    labels={{
+                        title: t("nativeRangeCardTitle"),
+                        description: t("nativeRangeCardDescription"),
+                        missingAssets: t("nativeRangeMissingAssets")
+                    }}
+                />
+            </section>
+
+            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("dietTitle", {animal: entry.name})}</h2>
+                <p className="text-ink-200 text-lg md:text-xl leading-8">
+                    <span className="text-white">{t("dietSummaryLabel")}: </span>
+                    {dietContent.summary}
+                </p>
+                <div className="flex flex-col gap-3">
+                    <h3 className="text-xl md:text-2xl font-semibold text-white">{t("dietFoodsLabel")}</h3>
+                    <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
+                        {dietContent.foods.map((item) => (
+                            <li key={item}>{item}</li>
+                        ))}
+                    </ul>
+                </div>
+                <p className="text-ink-300 text-base md:text-lg leading-8">
+                    <span className="text-white">{t("dietFieldNoteLabel")}: </span>
+                    {dietContent.note}
+                </p>
             </section>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("rareTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("rarityLabel")}: </span>
-                    {rarityLabel(entry.analysis.rarityScore)} ({entry.analysis.rarityScore}/100)
+                    {resolvedRarityLabel} ({resolvedRarityScore}/100)
                 </p>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.analysis.rarityReason}</p>
             </section>

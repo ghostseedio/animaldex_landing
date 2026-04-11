@@ -110,3 +110,71 @@ export function DatabaseIcon({className, size = 64}: IconProps) {
         </svg>
     );
 }
+
+export function SpeakerOnIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M5 10.5h3.2L12.8 7v10l-4.6-3.5H5v-3Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M16 9.25c1.2.83 2 2.22 2 3.75s-.8 2.92-2 3.75"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+            />
+            <path
+                d="M18.5 6.5c2.04 1.55 3.3 3.96 3.3 6.5s-1.26 4.95-3.3 6.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
+export function SpeakerOffIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M5 10.5h3.2L12.8 7v10l-4.6-3.5H5v-3Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="m16.5 10.5 5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+            />
+            <path
+                d="m21.5 10.5-5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
