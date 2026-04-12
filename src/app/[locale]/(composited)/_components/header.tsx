@@ -30,28 +30,22 @@ export default function Header() {
                     {t('features')}
                 </HeaderLink>
                 <HeaderLink
-                    href="/journal"
-                    data-cursor-text={t('journal')}
-                >
-                    {t('journal')}
-                </HeaderLink>
-                <HeaderLink
-                    href="/blog"
-                    data-cursor-text={t('blog')}
-                >
-                    {t('blog')}
-                </HeaderLink>
-                <HeaderLink
-                    href="/use-cases"
-                    data-cursor-text={t('useCases')}
-                >
-                    {t('useCases')}
-                </HeaderLink>
-                <HeaderLink
                     href="/animals"
                     data-cursor-text={t('animals')}
                 >
                     {t('animals')}
+                </HeaderLink>
+                <HeaderLink
+                    href="/challenges"
+                    data-cursor-text={t('challenges')}
+                >
+                    {t('challenges')}
+                </HeaderLink>
+                <HeaderLink
+                    href="/rankings"
+                    data-cursor-text={t('rankings')}
+                >
+                    {t('rankings')}
                 </HeaderLink>
                 <Link
                     href="/#download"
@@ -74,17 +68,14 @@ export default function Header() {
                 <HeaderLink href="/legal/privacy" mobile>
                     {t('privacy')}
                 </HeaderLink>
-                <HeaderLink href="/journal" mobile>
-                    {t('journal')}
-                </HeaderLink>
-                <HeaderLink href="/blog" mobile>
-                    {t('blog')}
-                </HeaderLink>
-                <HeaderLink href="/use-cases" mobile>
-                    {t('useCases')}
-                </HeaderLink>
                 <HeaderLink href="/animals" mobile>
                     {t('animals')}
+                </HeaderLink>
+                <HeaderLink href="/challenges" mobile>
+                    {t('challenges')}
+                </HeaderLink>
+                <HeaderLink href="/rankings" mobile>
+                    {t('rankings')}
                 </HeaderLink>
                 <HeaderLink href="/#more" mobile>
                     {t('discover')}

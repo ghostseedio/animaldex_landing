@@ -7,6 +7,10 @@ import {additionalSpeciesEntriesInputFive} from "@/data/species-expansion-pack-5
 import {additionalSpeciesEntriesInputSix} from "@/data/species-expansion-pack-6";
 import {additionalSpeciesEntriesInputSeven} from "@/data/species-expansion-pack-7";
 import {additionalSpeciesEntriesInputEight} from "@/data/species-expansion-pack-8";
+import {additionalSpeciesEntriesInputNine} from "@/data/species-expansion-pack-9";
+import {additionalSpeciesEntriesInputTen} from "@/data/species-expansion-pack-10";
+import {additionalSpeciesEntriesInputEleven} from "@/data/species-expansion-pack-11";
+import {additionalSpeciesEntriesInputTwelve} from "@/data/species-expansion-pack-12";
 
 export type SpeciesAnalysis = {
     summary: string;
@@ -3823,6 +3827,132 @@ expandedSpeciesData.push(
             ],
             lookalikes: ["Mackerel tuna", "Yellowfin tuna", "Large sharks from surface fin views"]
         }
+    }),
+    createSpeciesEntry({
+        slug: "white-rhinoceros",
+        name: "White Rhinoceros",
+        analysis: {
+            summary: "White rhinoceroses are massive square-lipped grazers built for bulk feeding, territorial presence, and short explosive charges across open African grassland systems.",
+            scientificName: "Ceratotherium simum",
+            category: "Mammal",
+            identification: [
+                "Huge barrel-bodied grazer with broad square mouth held close to the ground",
+                "Two horns on the snout with the front horn usually longer",
+                "Large shoulder hump and heavy head carried low while feeding"
+            ],
+            habitat: "Open grassland, savannah, floodplain, and lightly wooded grazing country with access to water and wallows.",
+            nativeRange: "Southern Africa with managed and fragmented populations in parts of eastern Africa.",
+            rarityScore: 78,
+            rarityReason: "White rhinoceroses survive best in protected landscapes, but poaching and fragmentation still keep long-term security under pressure."
+        },
+        premiumDetails: {
+            behaviorTraits: [
+                "Grazes for long stretches with the head low and lips sweeping short grass",
+                "Uses wallows, scent marks, and spatial routines to manage social pressure",
+                "Can shift from calm feeding to very fast short-distance aggression when threatened"
+            ],
+            whyInteresting: [
+                "White rhinoceroses are excellent megaherbivore comparison animals because they turn bulk, horn placement, and grazing design into one clear body plan.",
+                "They make elephant versus rhino comparisons much more useful than generic 'big animal' content."
+            ],
+            respectfulSpotting: [
+                "Stay in vehicles or with licensed guides in rhino country and never pressure an animal to move off a preferred path.",
+                "Give extra space around calves, wallows, and water access points."
+            ],
+            lookalikes: ["Black rhinoceros", "Mud-covered hippopotamus at distance", "Cape buffalo from poor angles"]
+        },
+        relatedSpecies: ["elephant", "lion", "giraffe"],
+        searchIntents: [
+            "white rhinoceros facts",
+            "rhino identification",
+            "white rhinoceros habitat",
+            "rhino behavior",
+            "rhino vs elephant"
+        ]
+    }),
+    createSpeciesEntry({
+        slug: "boxer-crab",
+        name: "Boxer Crab",
+        analysis: {
+            summary: "Boxer crabs are small reef crabs famous for carrying tiny sea anemones in their claws, turning borrowed stinging partners into defensive and feeding tools.",
+            scientificName: "Lybia tessellata",
+            category: "Marine invertebrate",
+            identification: [
+                "Small pale crab with patterned shell and relatively delicate walking legs",
+                "Carries a tiny sea anemone in each claw like living pom-poms",
+                "Often moves in a raised defensive stance when disturbed"
+            ],
+            habitat: "Shallow coral reef, reef rubble, and sheltered Indo-Pacific marine substrate.",
+            nativeRange: "Indo-Pacific reef systems.",
+            rarityScore: 64,
+            rarityReason: "Boxer crabs are small and easy to miss, and healthy reef habitat is patchy and under pressure in many regions."
+        },
+        premiumDetails: {
+            behaviorTraits: [
+                "Uses anemones for protection and to help secure tiny food particles",
+                "Moves carefully through reef crevices rather than relying on raw shell bulk",
+                "Can divide and maintain anemone partners over time"
+            ],
+            whyInteresting: [
+                "Boxer crabs are one of the clearest examples of an animal outsourcing part of its defense system to another species.",
+                "They turn a tiny reef crustacean into a vivid lesson in symbiosis and tool-like behavior."
+            ],
+            respectfulSpotting: [
+                "Look slowly through reef rubble or aquarium reef structures rather than touching or lifting the animal repeatedly.",
+                "Never separate a boxer crab from its anemones for a photo."
+            ],
+            lookalikes: ["Tiny porcelain crab", "Decorator crab juvenile", "Small reef crab without anemones in poor light"]
+        },
+        relatedSpecies: ["crab", "mantis-shrimp", "octopus"],
+        searchIntents: [
+            "boxer crab facts",
+            "boxer crab identification",
+            "pom pom crab habitat",
+            "boxer crab symbiosis",
+            "boxer crab behavior"
+        ]
+    }),
+    createSpeciesEntry({
+        slug: "gorilla",
+        name: "Gorilla",
+        analysis: {
+            summary: "Gorillas are the largest living primates, built around immense upper-body strength, social family groups, and forest-based foraging rather than predatory violence.",
+            scientificName: "Gorilla spp.",
+            category: "Mammal",
+            identification: [
+                "Massive barrel chest, long muscular arms, and broad dark face",
+                "Knuckle-walking posture with heavy shoulders and relatively short legs",
+                "Adult males often show a silver saddle across the back"
+            ],
+            habitat: "Tropical lowland forest, montane forest, swamp forest, and dense equatorial woodland.",
+            nativeRange: "Central equatorial Africa in fragmented western and eastern populations.",
+            rarityScore: 86,
+            rarityReason: "Gorillas are vulnerable because they rely on intact forest blocks and remain under pressure from habitat loss, disease, and hunting."
+        },
+        premiumDetails: {
+            behaviorTraits: [
+                "Lives in family groups anchored by adult leadership and social stability",
+                "Feeds mainly on vegetation, shoots, fruit, and other forest foods rather than hunting large prey",
+                "Uses display, posture, and warning behavior to avoid unnecessary direct conflict"
+            ],
+            whyInteresting: [
+                "Gorillas are useful comparison animals because they combine enormous strength with a life strategy that is not built around active predation.",
+                "They also make primate intelligence and social calm visible at a very large body scale."
+            ],
+            respectfulSpotting: [
+                "Follow strict distance and illness-control rules in gorilla trekking zones.",
+                "Never block travel paths or crowd a silverback during feeding or social display."
+            ],
+            lookalikes: ["Large chimpanzee at distance", "Orangutan in captive comparison only", "Dark boulder or stump in dense shade"]
+        },
+        relatedSpecies: ["orangutan", "elephant", "tiger"],
+        searchIntents: [
+            "gorilla facts",
+            "gorilla identification",
+            "gorilla habitat",
+            "gorilla behavior",
+            "gorilla strength"
+        ]
     })
 );
 
@@ -3836,7 +3966,11 @@ const speciesData: SpeciesEntry[] = [
     ...additionalSpeciesEntriesInputFive.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputSix.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputSeven.map(createSpeciesEntry),
-    ...additionalSpeciesEntriesInputEight.map(createSpeciesEntry)
+    ...additionalSpeciesEntriesInputEight.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputNine.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputTen.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputEleven.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputTwelve.map(createSpeciesEntry)
 ];
 
 export const speciesEntries: SpeciesEntry[] = [...assertUniqueSpeciesSlugs(speciesData)]

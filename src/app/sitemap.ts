@@ -7,6 +7,8 @@ import {speciesEntries} from "@/data/species";
 import {collectorPages} from "@/data/collector-pages";
 import {blogPosts} from "@/data/blog";
 import {answerPages} from "@/data/answer-pages";
+import {challengeEntries} from "@/data/challenges";
+import {rankingPages} from "@/data/rankings";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();
@@ -39,6 +41,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
             },
             {
                 url: getAbsoluteUrl(locale, "/blog"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/challenges"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/rankings"),
                 lastModified: now
             }
         ];
@@ -73,6 +83,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(entry.updatedAt)
         }));
 
+        const challengePageEntries = challengeEntries.map((entry) => ({
+            url: getAbsoluteUrl(locale, `/challenges/${entry.slug}`),
+            lastModified: new Date(entry.updatedAt || entry.publishedAt)
+        }));
+
+        const rankingPageEntries = rankingPages.map((page) => ({
+            url: getAbsoluteUrl(locale, `/rankings/${page.slug}`),
+            lastModified: new Date(page.updatedAt || page.publishedAt)
+        }));
+
         return [
             ...staticEntries,
             ...journalEntries,
@@ -80,7 +100,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
             ...speciesPages,
             ...collectorLandingPages,
             ...blogEntries,
-            ...answerPageEntries
+            ...answerPageEntries,
+            ...challengePageEntries,
+            ...rankingPageEntries
         ];
     });
 }

@@ -8,6 +8,8 @@ import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
 import SpeciesStatsSection from "@/app/[locale]/(composited)/animals/[slug]/species-stats-section";
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import {getBlogPostsForSpecies} from "@/data/blog";
+import {getChallengesForSpecies} from "@/data/challenges";
+import {getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {
     getSpeciesImageAltText,
@@ -17,6 +19,7 @@ import {
     getSpeciesRepresentativeImageReference
 } from "@/data/species-images";
 import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
+import {getSpeciesSpottingContent} from "@/data/species-spotting";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
@@ -34,8 +37,190 @@ type SpeciesPageProps = {
     };
 };
 
+type SpeciesTextLink = {
+    text: string;
+    slug: string;
+};
+
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
+}
+
+function pluralizeWord(word: string) {
+    const lowerWord = word.toLowerCase();
+    const irregularPlurals: Record<string, string> = {
+        wolf: "wolves",
+        jellyfish: "jellyfish",
+        octopus: "octopuses"
+    };
+
+    if (irregularPlurals[lowerWord]) {
+        return irregularPlurals[lowerWord];
+    }
+
+    if (lowerWord.endsWith("fe")) {
+        return `${word.slice(0, -2)}ves`;
+    }
+
+    if (lowerWord.endsWith("f")) {
+        return `${word.slice(0, -1)}ves`;
+    }
+
+    if (lowerWord.endsWith("y") && !/[aeiou]y$/.test(lowerWord)) {
+        return `${word.slice(0, -1)}ies`;
+    }
+
+    if (/(s|x|z|ch|sh)$/i.test(word)) {
+        return `${word}es`;
+    }
+
+    return `${word}s`;
+}
+
+function buildPluralPhrase(text: string) {
+    const words = text.split(" ");
+
+    if (words.length === 0) {
+        return text;
+    }
+
+    const lastWord = words[words.length - 1];
+    return [...words.slice(0, -1), pluralizeWord(lastWord)].join(" ");
+}
+
+function buildSpeciesTextLinks(entries: typeof speciesEntries, aliases: SpeciesTextLink[]) {
+    const entryLinks = entries.flatMap((item) => {
+        const baseText = item.name.toLowerCase();
+        const pluralText = buildPluralPhrase(baseText);
+
+        return pluralText === baseText
+            ? [{text: baseText, slug: item.slug}]
+            : [
+                {text: baseText, slug: item.slug},
+                {text: pluralText, slug: item.slug}
+            ];
+    });
+    const aliasLinks = aliases.flatMap((item) => {
+        const baseText = item.text.toLowerCase();
+        const pluralText = buildPluralPhrase(baseText);
+
+        return pluralText === baseText
+            ? [{text: baseText, slug: item.slug}]
+            : [
+                {text: baseText, slug: item.slug},
+                {text: pluralText, slug: item.slug}
+            ];
+    });
+
+    return Array.from(
+        new Map(
+            [...entryLinks, ...aliasLinks].map((item) => [`${item.slug}:${item.text}`, item])
+        ).values()
+    );
+}
+
+const SPECIES_ALIAS_TEXT_LINKS: SpeciesTextLink[] = [
+    {text: "Alligator", slug: "american-alligator"}
+];
+
+const GLOBAL_SPECIES_TEXT_LINKS = buildSpeciesTextLinks(speciesEntries, SPECIES_ALIAS_TEXT_LINKS)
+    .sort((left, right) => right.text.length - left.text.length);
+
+function renderTextWithSpeciesLinks(text: string, currentSlug: string) {
+    const links = GLOBAL_SPECIES_TEXT_LINKS.filter((item) => item.slug !== currentSlug);
+
+    if (links.length === 0) {
+        return text;
+    }
+
+    const linkMap = new Map(links.map((item) => [item.text.toLowerCase(), item]));
+    const pattern = links
+        .map((item) => item.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join("|");
+    const matcher = new RegExp(`\\b(${pattern})\\b`, "gi");
+    const parts: JSX.Element[] = [];
+    const linkedSlugs = new Set<string>();
+    let cursor = 0;
+
+    for (const match of Array.from(text.matchAll(matcher))) {
+        const matchText = match[0];
+        const index = match.index;
+
+        if (index === undefined) {
+            continue;
+        }
+
+        const link = linkMap.get(matchText.toLowerCase());
+
+        if (!link) {
+            continue;
+        }
+
+        if (index > cursor) {
+            parts.push(<span key={`text-${cursor}`}>{text.slice(cursor, index)}</span>);
+        }
+
+        if (linkedSlugs.has(link.slug)) {
+            parts.push(<span key={`text-${index}`}>{matchText}</span>);
+        } else {
+            parts.push(
+                <Link
+                    key={`link-${link.slug}-${index}`}
+                    href={`/animals/${link.slug}`}
+                    className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
+                >
+                    {matchText}
+                </Link>
+            );
+            linkedSlugs.add(link.slug);
+        }
+
+        cursor = index + matchText.length;
+    }
+
+    if (cursor < text.length) {
+        parts.push(<span key={`text-${cursor}`}>{text.slice(cursor)}</span>);
+    }
+
+    return parts;
+}
+
+function resolveSpeciesMentionSlug(text: string, currentSlug: string) {
+    const normalized = text.trim().toLowerCase();
+
+    for (const item of GLOBAL_SPECIES_TEXT_LINKS) {
+        if (item.slug === currentSlug) {
+            continue;
+        }
+
+        if (
+            normalized === item.text
+            || normalized.startsWith(`${item.text} `)
+            || normalized.startsWith(`${item.text}(`)
+            || normalized.startsWith(`${item.text},`)
+        ) {
+            return item.slug;
+        }
+    }
+
+    return null;
+}
+
+function renderListItemWithSpeciesLink(text: string, currentSlug: string) {
+    const slug = resolveSpeciesMentionSlug(text, currentSlug);
+
+    if (slug) {
+        return (
+            <Link
+                href={`/animals/${slug}`}
+                className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
+            >
+                {text}
+            </Link>
+        );
+    }
+
+    return renderTextWithSpeciesLinks(text, currentSlug);
 }
 
 export async function generateMetadata({params}: SpeciesPageProps): Promise<Metadata> {
@@ -73,6 +258,7 @@ export function generateStaticParams() {
 export default async function SpeciesPage({params}: SpeciesPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "animals");
+    const rankingsT = await getScopedTranslator(locale, "rankings");
     const entry = getSpeciesBySlug(slug);
 
     if (!entry) {
@@ -81,8 +267,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
     const related = getRelatedSpecies(entry.slug, 3);
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
+    const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
+    const featuredRankings = getRankingsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
     const dietContent = getSpeciesDietContent(entry);
+    const spottingContent = getSpeciesSpottingContent(entry);
     const {descriptor, subtitleStory} = await getSpeciesSubtitle(entry.slug, locale);
     const miniSystemsSummary = getMiniSystemsBySpeciesSlug(entry.slug);
     const statsResult = await resolveSpeciesStats(entry.slug);
@@ -101,6 +290,23 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ? getBattleTier(statsResult.stats)
         : null;
     const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
+    const compareWithLinks = Array.from(
+        new Map(
+            relatedChallenges.map((challenge) => {
+                const otherSlug = challenge.animalASlug === entry.slug ? challenge.animalBSlug : challenge.animalASlug;
+                const otherSpecies = getSpeciesBySlug(otherSlug);
+
+                if (!otherSpecies) {
+                    return null;
+                }
+
+                return [otherSlug, {
+                    challengeSlug: challenge.slug,
+                    otherName: otherSpecies.name
+                }] as const;
+            }).filter((item): item is readonly [string, {challengeSlug: string; otherName: string}] => Boolean(item))
+        ).values()
+    ).slice(0, 4);
     const heroSubtitle = [descriptor ? `${descriptor}.` : null, subtitleStory ?? [entry.analysis.summary, miniSystemsSummary].filter(Boolean).join(" ")]
         .filter(Boolean)
         .join(" ");
@@ -271,14 +477,14 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.analysis.summary}</p>
+                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
             </section>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("identifyTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.analysis.identification.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
                     ))}
                 </ul>
             </section>
@@ -287,11 +493,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whereFoundTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("habitatLabel")}: </span>
-                    {entry.analysis.habitat}
+                    {renderTextWithSpeciesLinks(entry.analysis.habitat, entry.slug)}
                 </p>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("nativeRangeLabel")}: </span>
-                    {entry.analysis.nativeRange}
+                    {renderTextWithSpeciesLinks(entry.analysis.nativeRange, entry.slug)}
                 </p>
                 <NativeRangeMapCard
                     entry={entry}
@@ -301,25 +507,45 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         missingAssets: t("nativeRangeMissingAssets")
                     }}
                 />
+                <div className="mt-2 flex flex-col gap-4">
+                    <h3 className="text-xl md:text-2xl font-semibold text-white">{t("wildSpottingTitle", {animal: entry.name})}</h3>
+                    <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(spottingContent.summary, entry.slug)}</p>
+                    <div className="flex flex-col gap-3">
+                        <h4 className="text-lg md:text-xl font-semibold text-white">{t("wildSpottingLocationsLabel")}</h4>
+                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
+                            {spottingContent.locations.map((item) => (
+                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), entry.slug)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <h4 className="text-lg md:text-xl font-semibold text-white">{t("wildSpottingTipsLabel")}</h4>
+                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
+                            {spottingContent.tips.map((item) => (
+                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
             </section>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("dietTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("dietSummaryLabel")}: </span>
-                    {dietContent.summary}
+                    {renderTextWithSpeciesLinks(dietContent.summary, entry.slug)}
                 </p>
                 <div className="flex flex-col gap-3">
                     <h3 className="text-xl md:text-2xl font-semibold text-white">{t("dietFoodsLabel")}</h3>
                     <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                         {dietContent.foods.map((item) => (
-                            <li key={item}>{item}</li>
+                            <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
                         ))}
                     </ul>
                 </div>
                 <p className="text-ink-300 text-base md:text-lg leading-8">
                     <span className="text-white">{t("dietFieldNoteLabel")}: </span>
-                    {dietContent.note}
+                    {renderTextWithSpeciesLinks(dietContent.note, entry.slug)}
                 </p>
             </section>
 
@@ -329,7 +555,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     <span className="text-white">{t("rarityLabel")}: </span>
                     {resolvedRarityLabel} ({resolvedRarityScore}/100)
                 </p>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.analysis.rarityReason}</p>
+                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.rarityReason, entry.slug)}</p>
             </section>
 
             {systemsEntry && (
@@ -356,7 +582,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("behaviorTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.behaviorTraits.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
                     ))}
                 </ul>
             </section>
@@ -365,7 +591,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("interestingTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.whyInteresting.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
                     ))}
                 </ul>
             </section>
@@ -374,7 +600,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("spottingTitle")}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.respectfulSpotting.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
                     ))}
                 </ul>
             </section>
@@ -383,7 +609,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("lookalikesTitle")}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.lookalikes.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug)}</li>
                     ))}
                 </ul>
             </section>
@@ -397,7 +623,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
                         >
                             <h3 className="font-display font-bold text-2xl text-white">{item.name}</h3>
-                            <p className="text-ink-200 text-base">{item.analysis.summary}</p>
+                            <p className="text-ink-200 text-base">{renderTextWithSpeciesLinks(item.analysis.summary, entry.slug)}</p>
                             <Link
                                 href={`/animals/${item.slug}`}
                                 className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
@@ -431,6 +657,97 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 </Link>
                             </article>
                         ))}
+                    </div>
+                </section>
+            )}
+
+            {relatedChallenges.length > 0 && (
+                <section className="flex flex-col gap-4">
+                    <h2 className="font-display font-bold text-4xl text-white">{t("relatedChallengesTitle")}</h2>
+                    <p className="text-ink-200 text-lg md:text-xl">{t("relatedChallengesDescription")}</p>
+                    {compareWithLinks.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-white text-sm md:text-base font-semibold uppercase tracking-[0.22em]">
+                                {t("compareWithTitle")}
+                            </span>
+                            {compareWithLinks.map((item) => (
+                                <Link
+                                    key={item.challengeSlug}
+                                    href={`/challenges/${item.challengeSlug}`}
+                                    className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm md:text-base"
+                                >
+                                    {t("compareWithLink", {animal: item.otherName})}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {relatedChallenges.map((challenge) => (
+                            <article
+                                key={challenge.slug}
+                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                            >
+                                <h3 className="font-display font-bold text-2xl text-white">
+                                    <Link
+                                        href={`/challenges/${challenge.slug}`}
+                                        className="hover:text-primary-100 transition-colors"
+                                    >
+                                        {challenge.title}
+                                    </Link>
+                                </h3>
+                                <p className="text-ink-200 text-base">{challenge.quickVerdict}</p>
+                                <Link
+                                    href={`/challenges/${challenge.slug}`}
+                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                                    underline
+                                >
+                                    {t("readChallenge")}
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {featuredRankings.length > 0 && (
+                <section className="flex flex-col gap-4">
+                    <h2 className="font-display font-bold text-4xl text-white">{t("featuredRankingsTitle")}</h2>
+                    <p className="text-ink-200 text-lg md:text-xl">{t("featuredRankingsDescription")}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {featuredRankings.map((ranking) => {
+                            const rankingEntry = ranking.entries.find((item) => item.speciesSlug === entry.slug);
+
+                            if (!rankingEntry) {
+                                return null;
+                            }
+
+                            return (
+                                <article
+                                    key={ranking.slug}
+                                    className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                                >
+                                    <p className="text-primary-200 text-sm md:text-base font-semibold uppercase tracking-[0.18em]">
+                                        #{rankingEntry.rank} · {rankingsT(`categories.${ranking.category}`)}
+                                    </p>
+                                    <h3 className="font-display font-bold text-2xl text-white">
+                                        <Link
+                                            href={`/rankings/${ranking.slug}`}
+                                            className="hover:text-primary-100 transition-colors"
+                                        >
+                                            {ranking.title}
+                                        </Link>
+                                    </h3>
+                                    <p className="text-ink-200 text-base">{rankingEntry.shortReason}</p>
+                                    <Link
+                                        href={`/rankings/${ranking.slug}`}
+                                        className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                                        underline
+                                    >
+                                        {rankingsT("readRanking")}
+                                    </Link>
+                                </article>
+                            );
+                        })}
                     </div>
                 </section>
             )}

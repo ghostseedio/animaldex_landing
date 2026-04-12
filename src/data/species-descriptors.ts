@@ -6,6 +6,10 @@ import {additionalSpeciesDescriptorsFive} from "@/data/species-expansion-pack-5"
 import {additionalSpeciesDescriptorsSix} from "@/data/species-expansion-pack-6";
 import {additionalSpeciesDescriptorsSeven} from "@/data/species-expansion-pack-7";
 import {additionalSpeciesDescriptorsEight} from "@/data/species-expansion-pack-8";
+import {additionalSpeciesDescriptorsNine} from "@/data/species-expansion-pack-9";
+import {additionalSpeciesDescriptorsTen} from "@/data/species-expansion-pack-10";
+import {additionalSpeciesDescriptorsEleven} from "@/data/species-expansion-pack-11";
+import {additionalSpeciesDescriptorsTwelve} from "@/data/species-expansion-pack-12";
 
 export const speciesDescriptors: Record<string, string> = {
     "white-headed-vulture": "The clean-sky carrion judge animal",
@@ -108,6 +112,12 @@ export const speciesDescriptors: Record<string, string> = {
     "manta-ray": "The flying filter-wing ocean animal",
     "great-white-shark": "The sharp-sensed apex torpedo animal",
     "scalloped-hammerhead": "The wide-headed signal scanner animal",
+    "white-rhinoceros": "The square-lipped grassland battering animal",
+    crab: "The hard-shelled sideways armor animal",
+    "boxer-crab": "The anemone-gloved reef fighter animal",
+    gorilla: "The forest giant calm-force animal",
+    jaguar: "The river-edge crushing ambusher animal",
+    snake: "The limbless scent-tracking survivor animal",
     cuttlefish: "The living color-screen illusion animal",
     "chambered-nautilus": "The spiral depth-tuning elder animal",
     "sea-cucumber": "The soft seafloor recycler animal",
@@ -120,7 +130,11 @@ export const speciesDescriptors: Record<string, string> = {
     ...additionalSpeciesDescriptorsFive,
     ...additionalSpeciesDescriptorsSix,
     ...additionalSpeciesDescriptorsSeven,
-    ...additionalSpeciesDescriptorsEight
+    ...additionalSpeciesDescriptorsEight,
+    ...additionalSpeciesDescriptorsNine,
+    ...additionalSpeciesDescriptorsTen,
+    ...additionalSpeciesDescriptorsEleven,
+    ...additionalSpeciesDescriptorsTwelve
 };
 
 export function getSpeciesDescriptorBySlug(slug: string) {

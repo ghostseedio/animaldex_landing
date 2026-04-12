@@ -1,8 +1,31 @@
+import {getChallenge, getChallengesForSpecies} from "@/data/challenges";
 import {BlogMediaBlock, CanonicalContentMetadata} from "@/data/content-schema";
 
+export type BlogLink = {
+    text: string;
+    slug: string;
+    href?: string;
+    kind?: "species" | "challenge";
+};
+
+export type BlogSectionCard = {
+    label: string;
+    body: string;
+    links?: BlogLink[];
+    image?: {
+        src: string;
+        alt: string;
+        width: number;
+        height: number;
+    };
+};
+
 export type BlogSection = {
+    kicker?: string;
     title: string;
     paragraphs: string[];
+    cards?: BlogSectionCard[];
+    inlineLinks?: BlogLink[];
     speciesSlugs?: string[];
     media?: BlogMediaBlock;
 };
@@ -20,6 +43,7 @@ export type BlogPost = CanonicalContentMetadata & {
     searchIntents: string[];
     speciesSlugs: string[];
     systemsSpeciesSlugs?: string[];
+    relatedChallengeSlugs?: string[];
     sections: BlogSection[];
     faq?: BlogFAQ[];
 };
@@ -194,20 +218,20 @@ const blogPostsData: BlogPost[] = [
     },
     {
         slug: "real-life-pokemon-animals-you-can-collect-in-the-wild",
-        title: "Real-life Pokémon: animals you can collect in the wild",
-        description: "How creature-collection fans can channel Pokemon-style discovery energy into real-world species collecting and animal learning.",
+        title: "20 Real-life Pokémon: animals you can collect in the wild",
+        description: "A cross-generation guide to 20 Pokémon inspired by real animals, from Generation I through Generation IX, and how that collecting instinct maps onto wildlife discovery.",
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/placeholders/feature-collection-overview.svg",
-            alt: "AnimalDex collection illustration inspired by real-animal discovery",
-            width: 1200,
-            height: 675,
-            caption: "The collection loop works best when discovery and real species knowledge scale together."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wild-animal-game-like-pokemon-in-real-life.webp",
+            alt: "Wild animal collection image for a real-life Pokemon-style discovery article on AnimalDex",
+            width: 3024,
+            height: 4032,
+            caption: "The creature-collection instinct gets more interesting when the animals are real and the habitats actually matter."
         },
-        readingMinutes: 6,
-        tags: ["Animal collection game", "Species collecting", "Pokemon-like animal app"],
-        searchIntents: ["Pokemon-like animal app", "animal collection app", "collect real animals app", "species collecting game"],
+        readingMinutes: 9,
+        tags: ["Animal collection game", "Species collecting", "Pokemon-like animal app", "Real-life Pokemon"],
+        searchIntents: ["Pokemon-like animal app", "animal collection app", "collect real animals app", "species collecting game", "real life pokemon animals"],
         speciesSlugs: ["african-wild-dog", "komodo-dragon", "white-headed-vulture"],
         systemsSpeciesSlugs: ["african-wild-dog", "komodo-dragon"],
         sections: [
@@ -215,21 +239,262 @@ const blogPostsData: BlogPost[] = [
                 title: "Why real-animal collecting can feel as rewarding as fantasy collecting",
                 paragraphs: [
                     "The same loop still works: discover, log, compare, and complete. What changes is the depth of context because each entry exists in a real habitat and ecosystem.",
-                    "That added context gives your collection more story value and stronger memory retention."
+                    "That added context gives your collection more story value and stronger memory retention.",
+                    "As of April 11, 2026, the latest mainline Pokemon generation is Generation IX, so a useful cross-gen list should cover Generations I through IX rather than stopping at the older classics.",
+                    "These pairings are design inferences, not official biological classifications. The point is to use familiar monster designs as a bridge into noticing real animals more carefully."
                 ]
             },
             {
-                title: "Treat sightings like rare encounters",
-                paragraphs: [
-                    "Some species naturally feel like high-tier finds due to lower encounter probability and stricter habitat constraints.",
-                    "Examples include species with fragmented populations or highly specific range conditions."
+                kicker: "20 Pokemon inspired by real animals",
+                title: "Generations I to III",
+                paragraphs: [],
+                cards: [
+                    {
+                        label: "Generation I",
+                        body: "Pikachu tracks closely to a pika-like small mammal. The electrical gimmick is fantasy, but the compact rodent body plan is doing the design work.",
+                        links: [{text: "pika", slug: "pika"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/thepokemonshow/images/8/80/20101007155439%21Ash_Pikachu.png/revision/latest?cb=20140425213328",
+                            alt: "Anime image of Pikachu used in the real-life Pokemon comparison list",
+                            width: 899,
+                            height: 580
+                        }
+                    },
+                    {
+                        label: "Generation I",
+                        body: "Ekans is one of the cleanest examples in the series because it is essentially a snake with a direct naming joke layered on top.",
+                        links: [{text: "snake", slug: "snake"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e7/Goh_Ekans.png/revision/latest?cb=20200405113459",
+                            alt: "Anime image of Ekans used in the real-life Pokemon comparison list",
+                            width: 1920,
+                            height: 1080
+                        }
+                    },
+                    {
+                        label: "Generation I",
+                        body: "Magikarp clearly draws from carp, which is why it lands so well as a weak fish that later transforms into something far more dramatic.",
+                        links: [{text: "carp", slug: "carp"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e5/Goh_Magikarp.png/revision/latest/scale-to-width-down/1200?cb=20200622002446",
+                            alt: "Anime image of Magikarp used in the real-life Pokemon comparison list",
+                            width: 1200,
+                            height: 675
+                        }
+                    },
+                    {
+                        label: "Generation II",
+                        body: "Hoothoot reads as an owl first and a stylized clock-face mascot second, which makes it one of the easier bird inspirations to spot.",
+                        links: [{text: "owl", slug: "owl"}],
+                        image: {
+                            src: "https://static0.thegamerimages.com/wordpress/wp-content/uploads/2020/05/hoothoot-anime-bulbapedia.png?q=50&fit=crop&w=800&dpr=1.5",
+                            alt: "Anime image of Hoothoot used in the real-life Pokemon comparison list",
+                            width: 800,
+                            height: 450
+                        }
+                    },
+                    {
+                        label: "Generation II",
+                        body: "Heracross is strongly based on a rhinoceros beetle, using the horn and armored insect profile as the core silhouette.",
+                        links: [{text: "rhinoceros beetle", slug: "rhinoceros-beetle"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/2/20/Goh_Heracross.png/revision/latest?cb=20200816110158",
+                            alt: "Anime image of Heracross used in the real-life Pokemon comparison list",
+                            width: 1920,
+                            height: 1080
+                        }
+                    },
+                    {
+                        label: "Generation III",
+                        body: "Torchic is based on a chicken, making it a straightforward poultry-based starter with exaggerated warmth and attitude.",
+                        links: [{text: "chicken", slug: "domestic-chicken"}],
+                        image: {
+                            src: "https://www.dexerto.com/cdn-image/wp-content/uploads/2025/02/06/Pokemon-Scarlet-and-Violet-.jpg?width=1200&quality=60&format=auto",
+                            alt: "Image used for Torchic in the real-life Pokemon comparison list",
+                            width: 1200,
+                            height: 675
+                        }
+                    },
+                    {
+                        label: "Generation III",
+                        body: "Sharpedo is built on a shark template, especially in its torpedo body, exposed teeth, and forward-attack design.",
+                        links: [{text: "shark", slug: "shark"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/international-pokedex/images/1/15/Sharpedo_%28Ash%29.png/revision/latest?cb=20180406183156",
+                            alt: "Anime image of Sharpedo used in the real-life Pokemon comparison list",
+                            width: 800,
+                            height: 450
+                        }
+                    },
+                    {
+                        label: "Generation III",
+                        body: "Spheal maps cleanly onto a seal pup, using round body shape and marine-mammal softness as its whole appeal.",
+                        links: [{text: "seal", slug: "seal"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/7/74/Marius%27s_Spheal.png/revision/latest?cb=20240223073311",
+                            alt: "Anime image of Spheal used in the real-life Pokemon comparison list",
+                            width: 1440,
+                            height: 1080
+                        }
+                    }
                 ],
                 speciesSlugs: ["white-headed-vulture", "african-wild-dog"]
             },
             {
-                title: "Make progression useful, not just cosmetic",
+                kicker: "20 Pokemon inspired by real animals",
+                title: "Generations IV to VI",
+                paragraphs: [],
+                cards: [
+                    {
+                        label: "Generation IV",
+                        body: "Piplup is based on a penguin chick, and the tuxedo-like coloring is what makes the animal connection immediate.",
+                        links: [{text: "penguin", slug: "penguin"}],
+                        image: {
+                            src: "https://comicbook.com/wp-content/uploads/sites/4/2022/01/82298dd4-0790-49ae-939c-7e5fd7734288.jpg?w=1200",
+                            alt: "Image of Piplup used in the real-life Pokemon comparison list",
+                            width: 1200,
+                            height: 628
+                        }
+                    },
+                    {
+                        label: "Generation IV",
+                        body: "Buizel draws from otters and similar semi-aquatic mustelids, especially in the flotation-ring concept around its neck.",
+                        links: [{text: "otters", slug: "otter"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e2/Ash_Buizel.png/revision/latest?cb=20230114015139",
+                            alt: "Anime image of Buizel used in the real-life Pokemon comparison list",
+                            width: 1920,
+                            height: 1080
+                        }
+                    },
+                    {
+                        label: "Generation V",
+                        body: "Sandile is a crocodile, using the low-slung body, long snout, and ambush-predator profile as the base design.",
+                        links: [{text: "crocodile", slug: "crocodile"}],
+                        image: {
+                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/seasons/season14/season14_ep03_ss02.jpg",
+                            alt: "Pokemon TV image of Sandile used in the real-life Pokemon comparison list",
+                            width: 578,
+                            height: 327
+                        }
+                    },
+                    {
+                        label: "Generation V",
+                        body: "Deerling is an easy deer read, with seasonal variants layered onto a familiar ungulate body plan.",
+                        links: [{text: "deer", slug: "deer"}],
+                        image: {
+                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/seasons/season15/season15_ep06_ss03.jpg",
+                            alt: "Pokemon TV image of Deerling used in the real-life Pokemon comparison list",
+                            width: 578,
+                            height: 327
+                        }
+                    },
+                    {
+                        label: "Generation VI",
+                        body: "Fletchling works as a robin- or finch-like songbird design, built around a very recognizable small-bird silhouette.",
+                        links: [
+                            {text: "robin", slug: "robin"},
+                            {text: "finch", slug: "finch"}
+                        ],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/thepokemonshow/images/4/42/Ash%27s_Fletchling.png/revision/latest?cb=20140520024341",
+                            alt: "Anime image of Fletchling used in the real-life Pokemon comparison list",
+                            width: 1280,
+                            height: 720
+                        }
+                    },
+                    {
+                        label: "Generation VI",
+                        body: "Helioptile borrows from lizards with frilled-neck visual cues, turning a reptile template into a solar-powered creature concept.",
+                        links: [{text: "lizards", slug: "lizard"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/8/82/Alexa_Helioptile.png/revision/latest/scale-to-width-down/1200?cb=20150901045405",
+                            alt: "Anime image of Helioptile used in the real-life Pokemon comparison list",
+                            width: 1200,
+                            height: 675
+                        }
+                    }
+                ],
+                speciesSlugs: ["komodo-dragon", "bald-eagle"]
+            },
+            {
+                kicker: "20 Pokemon inspired by real animals",
+                title: "Generations VII to IX",
+                paragraphs: [],
+                cards: [
+                    {
+                        label: "Generation VII",
+                        body: "Rowlet is an owl, but the design softens it into a round-bodied forest bird with an instantly readable face.",
+                        links: [{text: "owl", slug: "owl"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/3/3d/Ash_Rowlet.png/revision/latest?cb=20161124113130",
+                            alt: "Anime image of Rowlet used in the real-life Pokemon comparison list",
+                            width: 1920,
+                            height: 1080
+                        }
+                    },
+                    {
+                        label: "Generation VII",
+                        body: "Crabrawler has strong crab roots, especially the oversized claws and sideways, shell-backed body logic.",
+                        links: [{text: "crab", slug: "crab"}],
+                        image: {
+                            src: "https://media.tenor.com/2s-HnUONo_gAAAAe/pokemon-crabrawler.png",
+                            alt: "Image of Crabrawler used in the real-life Pokemon comparison list",
+                            width: 640,
+                            height: 358
+                        }
+                    },
+                    {
+                        label: "Generation VIII",
+                        body: "Nickit is based on a fox, leaning into the narrow muzzle, sly expression, and tail-heavy silhouette.",
+                        links: [{text: "fox", slug: "fox"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon/images/9/98/Nickit_anime.png/revision/latest?cb=20191210162308",
+                            alt: "Anime image of Nickit used in the real-life Pokemon comparison list",
+                            width: 1920,
+                            height: 1080
+                        }
+                    },
+                    {
+                        label: "Generation VIII",
+                        body: "Cramorant is a cormorant-like diving bird, which is why its long beak and awkward waterbird posture feel so specific.",
+                        links: [{text: "cormorant", slug: "cormorant"}],
+                        image: {
+                            src: "https://i.ytimg.com/vi/K0Lg4NmvCDc/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLBYz7qKAQ5HLAi4uxkWXVjg-zx8fw",
+                            alt: "Image of Cramorant used in the real-life Pokemon comparison list",
+                            width: 686,
+                            height: 386
+                        }
+                    },
+                    {
+                        label: "Generation IX",
+                        body: "Sprigatito is unmistakably a cat, using feline posture, face shape, and playful movement as the whole design anchor.",
+                        links: [{text: "cat", slug: "cat"}],
+                        image: {
+                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/horizons/01/horizons_ep40_ss01.png",
+                            alt: "Pokemon Horizons image of Sprigatito used in the real-life Pokemon comparison list",
+                            width: 578,
+                            height: 327
+                        }
+                    },
+                    {
+                        label: "Generation IX",
+                        body: "Nymble is built on a grasshopper-like insect body, showing that even the latest generation still pulls heavily from real-animal structure.",
+                        links: [{text: "grasshopper", slug: "grasshopper"}],
+                        image: {
+                            src: "https://static.wikia.nocookie.net/pokemon-journeys-my-fanon/images/1/10/Ash%27s_Nymble.jpg/revision/latest?cb=20240629091346",
+                            alt: "Image of Nymble used in the real-life Pokemon comparison list",
+                            width: 680,
+                            height: 383
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Why this matters for real wildlife collecting",
                 paragraphs: [
                     "A strong collection app should reward users with both progression and knowledge. If you complete sets but still cannot identify key traits, the loop is incomplete.",
+                    "The useful crossover is attention. If Pokémon helped you care about silhouette, rarity, region, type, or evolution, those same instincts can help you notice body shape, habitat, behavior, and ecological role in real animals.",
                     "AnimalDex is designed so card progress and species understanding grow together."
                 ],
                 speciesSlugs: ["komodo-dragon", "bald-eagle"]
@@ -359,17 +624,17 @@ const blogPostsData: BlogPost[] = [
         speciesSlug: "crow",
         slug: "what-makes-crows-so-intelligent",
         title: "What Makes Crows So Intelligent? Systems, Behavior, and Survival Strategy",
-        description: "Learn what makes crow intelligence so effective in the wild, from memory and tool use to animal behavior, survival strategy, and ecosystem role.",
+        description: "Learn what makes crows so intelligent, from memory and tool use to adaptive behavior, survival strategy, and their ecosystem role in changing environments.",
         featuredImage: {
-            src: "/images/placeholders/more-analysis.svg",
-            alt: "Illustrated crow intelligence and animal behavior article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/intelligent-crow-holding-ring.webp",
+            alt: "Intelligent crow holding a ring, illustrating tool use, memory, and adaptive crow behavior for AnimalDex",
             width: 1200,
             height: 675,
-            caption: "Crows win less by elegance and more by converting noise, memory, and experimentation into usable advantage."
+            caption: "A crow holding a ring captures the mix of object curiosity, memory, and experimentation that makes crow intelligence so effective."
         },
         readingMinutes: 7,
-        tags: ["Crow intelligence", "Animal behavior", "Ecosystem role"],
-        searchIntents: ["crow intelligence", "crow animal behavior", "what makes crows intelligent", "crow ecosystem role"],
+        tags: ["Crow intelligence", "Animal behavior", "Tool use", "Ecosystem role"],
+        searchIntents: ["crow intelligence", "crow animal behavior", "what makes crows intelligent", "crow ecosystem role", "why are crows so intelligent"],
         sections: [
             {
                 title: "Why crows keep showing up in animal intelligence conversations",
@@ -404,7 +669,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Crows show that adaptable systems do not wait for perfect clarity. They observe, test, remember, and circulate useful signal through the group.",
                     "That is the durable lesson. Intelligence is not just raw processing power. It is the ability to keep updating the model while the world keeps moving."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/why-crows-matter-infographic.png",
+                        alt: "Why crows matter infographic summarizing crow intelligence, adaptive behavior, survival strategy, and ecosystem role",
+                        width: 1024,
+                        height: 1536,
+                        caption: "Infographic summary: why crows matter as adaptive, socially intelligent animals in human-shaped environments."
+                    }
+                }
             }
         ]
     }),
@@ -414,11 +689,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Octopus Intelligence Works: Nature’s Most Advanced Problem Solver",
         description: "Explore octopus intelligence through animal behavior, flexible nervous systems, camouflage, survival strategy, and the octopus ecosystem role.",
         featuredImage: {
-            src: "/images/placeholders/feature-discovery-overview.svg",
-            alt: "Illustrated octopus intelligence and survival strategy guide for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "An octopus is what happens when problem solving, camouflage, and escape engineering get merged into one animal."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/octopus-in-blue-ocean.jpg",
+            alt: "Octopus in blue ocean water, illustrating octopus intelligence, camouflage, and marine survival strategy for AnimalDex",
+            width: 1500,
+            height: 843,
+            caption: "An octopus in open blue water captures the flexibility, perception, and camouflage-driven survival strategy that make the species so distinctive."
         },
         readingMinutes: 8,
         tags: ["Octopus intelligence", "Marine biology", "Animal behavior"],
@@ -457,7 +732,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "The octopus is a reminder that smart systems do not always look centralized or symmetrical. Sometimes performance comes from placing sensing and decision-making closer to the point of action.",
                     "That is why the octopus keeps showing up in biomimicry and systems design conversations. Flexibility is not a luxury feature. In unstable environments, it is the survival engine."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/the-intelligence-of-an-octopus-infographic%20(1).png",
+                        alt: "The intelligence of an octopus infographic summarizing octopus cognition, camouflage, distributed sensing, and survival strategy",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: the octopus combines distributed sensing, flexible movement, and rapid adaptation into a distinctive intelligence system."
+                    }
+                }
             }
         ]
     }),
@@ -467,11 +752,11 @@ const blogPostsData: BlogPost[] = [
         title: "Mantis Shrimp Vision and Strike Power: How This Animal Sees and Hits So Fast",
         description: "See how mantis shrimp combine extreme animal vision, explosive strike mechanics, reef survival strategy, and a powerful ecosystem role.",
         featuredImage: {
-            src: "/images/placeholders/feature-scan-overview.svg",
-            alt: "Illustrated mantis shrimp vision and strike mechanics article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Mantis shrimp pair unusual signal processing with one of the most violent mechanical outputs in the animal world."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp-close-up.png",
+            alt: "Close-up of a mantis shrimp illustrating extreme vision, strike mechanics, and reef survival strategy for AnimalDex",
+            width: 1536,
+            height: 1024,
+            caption: "A mantis shrimp close-up captures the sensory precision and stored-power strike system that make the animal so distinctive."
         },
         readingMinutes: 7,
         tags: ["Mantis shrimp", "Animal vision", "Reef behavior"],
@@ -510,7 +795,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "The mantis shrimp shows that output quality often depends on what happens before the visible action. Load the spring, align the signal, and let structure do the hard work.",
                     "That is a useful systems lesson. Fast results usually come from smart preparation, not frantic improvisation."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp-infographic.png",
+                        alt: "Mantis shrimp infographic summarizing vision, strike power, reef behavior, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: mantis shrimp combine unusual visual processing with explosive strike mechanics to control tight reef interactions."
+                    }
+                }
             }
         ]
     }),
@@ -520,11 +815,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Honey Bees Keep Ecosystems Running: Pollination, Behavior, and Survival Strategy",
         description: "Understand honey bee behavior, pollination logistics, colony intelligence, ecosystem role, and how honey bees survive as one of nature’s most important networks.",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "Illustrated honey bee pollination and ecosystem role article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Honey bees turn floral geography into movement, communication, and reproductive logistics at scale."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/honey-bees.png",
+            alt: "Honey bees on flowers illustrating pollination behavior, colony coordination, and ecosystem role for AnimalDex",
+            width: 1536,
+            height: 1024,
+            caption: "Honey bees in action show how pollination, movement, and colony coordination keep plant reproduction and food systems moving."
         },
         readingMinutes: 7,
         tags: ["Honey bee", "Pollination", "Animal behavior"],
@@ -563,7 +858,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Honey bees show the advantage of routing useful signal quickly. When a worker finds a strong resource patch, the colony benefits because the information does not stay trapped in one body.",
                     "That is the practical lesson: high-performing systems scale when discovery, location, and quality data move faster than ego."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/honey-bees-educational-infographic.png",
+                        alt: "Honey bees educational infographic summarizing pollination, colony behavior, survival strategy, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: honey bees keep ecosystems productive through pollination logistics, colony coordination, and shared behavioral roles."
+                    }
+                }
             }
         ]
     }),
@@ -573,11 +878,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Wolves Hunt, Survive, and Shape Ecosystems",
         description: "A clear guide to wolf behavior, pack intelligence, survival strategy, and ecosystem role, with a systems view of how wolves reshape landscapes.",
         featuredImage: {
-            src: "/images/placeholders/more-discovery.svg",
-            alt: "Illustrated wolf behavior and ecosystem role article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wolves-close-up-wildlife.webp",
+            alt: "Close-up of wolves in the wild illustrating pack coordination, survival strategy, and ecosystem influence for AnimalDex",
             width: 1200,
-            height: 675,
-            caption: "Wolves change a landscape twice: once through predation and once through the movement patterns they force into everything else."
+            height: 801,
+            caption: "A close-up wolf image captures the coordination, vigilance, and pack-level intelligence that make wolves such influential predators."
         },
         readingMinutes: 8,
         tags: ["Wolf behavior", "Predator ecology", "Animal intelligence"],
@@ -616,7 +921,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Wolves are a good reminder that disciplined coordination beats isolated brilliance over time. Clear roles, good signaling, and patient pressure can outperform raw intensity.",
                     "The deeper lesson is strategic: some systems win by staying synchronized long enough for the terrain itself to start helping."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wolves-educational-infographic.png",
+                        alt: "Wolves educational infographic summarizing pack hunting, survival strategy, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: wolves shape ecosystems through pack coordination, prey pressure, and landscape-level behavior effects."
+                    }
+                }
             }
         ]
     }),
@@ -626,11 +941,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Barn Owls Hunt in the Dark: Sound, Silence, and Survival Strategy",
         description: "Learn how barn owl behavior, hearing, silent flight, and ecosystem role make this nocturnal predator one of nature’s sharpest intercept systems.",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "Illustrated barn owl hunting behavior and silent flight article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Barn owls do not need bright light to hunt well. They turn darkness into a usable signal field."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/owl-hunting-in-the-dark.webp",
+            alt: "Barn owl hunting in the dark, illustrating silent flight, hearing, and nocturnal survival strategy for AnimalDex",
+            width: 1400,
+            height: 788,
+            caption: "A barn owl hunting at night captures the quiet precision, hearing, and silent flight that make darkness usable."
         },
         readingMinutes: 6,
         tags: ["Barn owl", "Animal behavior", "Nocturnal predators"],
@@ -669,7 +984,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "The barn owl teaches the value of reducing your own noise. Quiet systems perceive more, and perception quality often matters more than motion volume.",
                     "That is the practical insight: if you improve signal capture and lower operational noise, the right move becomes easier to see."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/hunting-owl-educational-infographic.png",
+                        alt: "Barn owl educational infographic summarizing silent flight, hearing, hunting behavior, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: barn owls hunt by pairing low-noise flight with precise sound localization in low-light environments."
+                    }
+                }
             }
         ]
     }),
@@ -679,11 +1004,11 @@ const blogPostsData: BlogPost[] = [
         title: "Why Jumping Spiders Are So Precise: Vision, Behavior, and Survival Strategy",
         description: "See how jumping spider behavior, animal vision, hunting precision, and ecosystem role make this tiny predator unusually intelligent and effective.",
         featuredImage: {
-            src: "/images/placeholders/feature-scan-overview.svg",
-            alt: "Illustrated jumping spider precision and animal behavior article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Jumping spiders prove that small hardware can still deliver excellent targeting when the sensor package is strong."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/jumping-spider-birds-eye-view.jpg",
+            alt: "Jumping spider viewed from above, illustrating precision vision, targeting behavior, and survival strategy for AnimalDex",
+            width: 1000,
+            height: 667,
+            caption: "A jumping spider from above captures the visual focus and movement precision that make this tiny hunter so effective."
         },
         readingMinutes: 6,
         tags: ["Jumping spider", "Animal behavior", "Predator strategy"],
@@ -722,7 +1047,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "A jumping spider is a good lesson in precision over drama. Better depth perception, better timing, and cleaner commitment beat random volume.",
                     "In systems terms, the point is simple: if you improve targeting enough, you often need less force than you thought."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/why-jumping-spiders-are-so-precise.png",
+                        alt: "Jumping spider infographic summarizing vision, hunting precision, behavior, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: jumping spiders pair sharp visual targeting with measured movement to hunt efficiently at small scale."
+                    }
+                }
             }
         ]
     }),
@@ -732,11 +1067,11 @@ const blogPostsData: BlogPost[] = [
         title: "Why Elephants Never Stop Reshaping Landscapes",
         description: "Explore elephant behavior, memory, survival strategy, ecosystem role, and the systems biology behind how elephants reshape habitats over time.",
         featuredImage: {
-            src: "/images/placeholders/more-discovery.svg",
-            alt: "Illustrated elephant behavior and ecosystem role article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Elephants are not just large animals in a landscape. They are landscape editors with memory."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/african-elephant-in-the-wild-credit-elie-wolf.jpg",
+            alt: "African elephant in the wild illustrating habitat engineering, memory, and ecosystem role for AnimalDex",
+            width: 2048,
+            height: 1536,
+            caption: "An elephant in the wild shows how memory, movement, and sheer physical presence reshape landscapes over time."
         },
         readingMinutes: 8,
         tags: ["Elephant behavior", "Ecosystem role", "Animal intelligence"],
@@ -775,7 +1110,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Elephants show that scale only becomes durable when it is paired with memory. Big systems fail quickly when they forget where the bottlenecks and fallback routes are.",
                     "That is the practical lesson: store useful route knowledge, not just abstract data, because resilience often depends on remembering where survival still works."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/the-ecosystem-role-of-an-elephant-infographic.png",
+                        alt: "Elephant infographic summarizing landscape engineering, movement, survival strategy, and ecosystem role",
+                        width: 1536,
+                        height: 1024,
+                        caption: "Infographic summary: elephants reshape ecosystems through movement, seed dispersal, vegetation change, and remembered routes to resources."
+                    }
+                }
             }
         ]
     }),
@@ -785,11 +1130,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Tigers Survive as Solo Apex Hunters",
         description: "A systems look at tiger behavior, survival strategy, ecosystem role, and why this solitary predator remains one of the most effective hunters in the wild.",
         featuredImage: {
-            src: "/images/placeholders/more-challenges.svg",
-            alt: "Illustrated tiger behavior and apex predator strategy article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Tigers do not win by constant movement. They win by making the decisive moment expensive for everyone else."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/bengal-tiger-close-up.webp",
+            alt: "Close-up of a Bengal tiger illustrating stealth, focus, and solo apex hunting strategy for AnimalDex",
+            width: 800,
+            height: 519,
+            caption: "A Bengal tiger close-up captures the restraint, sensory focus, and decisive commitment behind solo apex hunting."
         },
         readingMinutes: 7,
         tags: ["Tiger behavior", "Apex predator", "Animal survival"],
@@ -808,6 +1153,28 @@ const blogPostsData: BlogPost[] = [
                     "A tiger blends striped camouflage, strong night vision, padded feet, and explosive forelimb force into one close-range hunting package. The body is built for concealment and violent resolution, not for long public chases.",
                     "That matters because the tiger’s edge is timing. It narrows the gap between hidden presence and decisive contact."
                 ]
+            },
+            {
+                title: "How to tell the difference between different tigers",
+                paragraphs: [
+                    "The safest way to compare tiger types is to look at body build, stripe density, coat tone, and context together rather than forcing one trait to do all the work. Bengal tigers usually look larger and heavier through the chest and shoulders, with a rich orange coat and strong black striping across a broad frame.",
+                    "Sumatran tigers usually read smaller, tighter, and more densely striped, often with a darker coat and a more compact build that fits dense forest conditions. If you compare Bengal tigers vs Sumatran tigers at a glance, Bengal tigers often feel broader and more open-patterned, while Sumatran tigers tend to look narrower, darker, and more tightly marked.",
+                    "Those are useful visual rules, but they are not perfect on their own. Age, sex, lighting, posture, and individual variation can blur the differences, so the most reliable comparison is pattern plus proportions plus where the tiger originates."
+                ],
+                inlineLinks: [
+                    {text: "Bengal tigers", slug: "bengal-tiger"},
+                    {text: "Sumatran tigers", slug: "sumatran-tiger"}
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/types-of-tigers-how-to-tell-the-difference.jpg",
+                        alt: "Comparison image showing how to tell the difference between tiger types, including Bengal and Sumatran tigers",
+                        width: 900,
+                        height: 1310,
+                        caption: "Tiger comparison visual: build, stripe density, coat tone, and habitat context help separate Bengal and Sumatran tigers."
+                    }
+                }
             },
             {
                 title: "How tigers survive without pack support",
@@ -838,11 +1205,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Orangutans Think and Survive in the Canopy",
         description: "Discover orangutan intelligence, canopy behavior, survival strategy, and ecosystem role through a systems view of one of the forest’s best problem solvers.",
         featuredImage: {
-            src: "/images/placeholders/feature-discovery-overview.svg",
-            alt: "Illustrated orangutan intelligence and canopy survival article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Orangutans show what happens when slow learning, reach, and forest memory become survival hardware."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/photography-orangutan.jpg",
+            alt: "Orangutan in the forest canopy illustrating intelligence, reach, and arboreal survival strategy for AnimalDex",
+            width: 1600,
+            height: 1067,
+            caption: "An orangutan in the canopy captures the patience, reach, and forest memory that support survival in complex arboreal habitats."
         },
         readingMinutes: 8,
         tags: ["Orangutan intelligence", "Canopy behavior", "Ecosystem role"],
@@ -861,6 +1228,32 @@ const blogPostsData: BlogPost[] = [
                     "Long arms, strong hands and feet, slow development, and extensive learning time give orangutans a rare combination of mobility and cognitive refinement in the canopy.",
                     "They are not built for speed on the ground. They are built for solving arboreal problems in a habitat where one bad movement can be costly."
                 ]
+            },
+            {
+                title: "Types of orangutans",
+                paragraphs: [
+                    "There are three living orangutan species, and the most useful comparison is Bornean orangutan vs Sumatran orangutan vs Tapanuli orangutan. Bornean orangutans are generally heavier-built and more robust, while Sumatran orangutans often look slimmer, paler, and more lightly built through the face and body.",
+                    "Tapanuli orangutans are the rarest and most geographically restricted. They are closely related to the Sumatran form but are recognized as their own species, with differences in skull shape, hair texture, vocalization patterns, and isolated range in the Batang Toru ecosystem.",
+                    "If you are trying to tell them apart in photos, geography is still one of the best clues. Borneo points to Bornean orangutan, northern Sumatra usually points to Sumatran orangutan, and the Batang Toru region points to Tapanuli orangutan."
+                ],
+                inlineLinks: [
+                    {text: "Bornean orangutan", slug: "bornean-orangutan"},
+                    {text: "Bornean orangutans", slug: "bornean-orangutan"},
+                    {text: "Sumatran orangutan", slug: "sumatran-orangutan"},
+                    {text: "Sumatran orangutans", slug: "sumatran-orangutan"},
+                    {text: "Tapanuli orangutan", slug: "tapanuli-orangutan"},
+                    {text: "Tapanuli orangutans", slug: "tapanuli-orangutan"}
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/types-of-orangutans.png",
+                        alt: "Types of orangutans comparison image covering Bornean, Sumatran, and Tapanuli orangutans",
+                        width: 2482,
+                        height: 2482,
+                        caption: "Orangutan comparison visual: Bornean, Sumatran, and Tapanuli orangutans are easiest to separate by build, facial shape, coat texture, and geography."
+                    }
+                }
             },
             {
                 title: "How orangutans survive in a complex forest",
@@ -891,11 +1284,11 @@ const blogPostsData: BlogPost[] = [
         title: "Why Jellyfish Thrive in Changing Oceans",
         description: "A practical guide to jellyfish behavior, simple but effective survival strategy, ecosystem role, and why jellyfish can flourish when ocean systems shift.",
         featuredImage: {
-            src: "/images/placeholders/more-analysis.svg",
-            alt: "Illustrated jellyfish survival strategy and ecosystem role article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Jellyfish are not complicated in the usual sense. They are efficient at exploiting the right kind of instability."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/jellyfish-photography.webp",
+            alt: "Jellyfish in the ocean illustrating low-cost survival strategy and adaptation to changing marine conditions for AnimalDex",
+            width: 1072,
+            height: 715,
+            caption: "A jellyfish drifting through open water captures the simple, low-overhead design that lets jellyfish thrive when marine systems shift."
         },
         readingMinutes: 6,
         tags: ["Jellyfish", "Marine ecosystems", "Animal behavior"],
@@ -921,6 +1314,27 @@ const blogPostsData: BlogPost[] = [
                     "Jellyfish survive by pairing simple capture hardware with environmental drift. They let currents do part of the transportation work while keeping prey capture mechanisms ready.",
                     "In animal behavior terms, this is a lightweight strategy. The jellyfish does not need to dominate every interaction if the surrounding water keeps delivering opportunities."
                 ]
+            },
+            {
+                title: "Do jellyfish feel pain?",
+                paragraphs: [
+                    "Jellyfish respond to touch, injury, and environmental change, but that does not automatically mean they feel pain in the way vertebrates are thought to. They do not have a brain or a centralized nervous system that would strongly suggest pain processing like mammals, birds, or many other animals.",
+                    "The safer interpretation is that jellyfish detect and react to harmful stimuli without good evidence for conscious pain as humans usually mean it. They have nerve nets, not a centralized mind, so the better phrase is stimulus response rather than emotional suffering.",
+                    "That difference matters when people ask how predators interact with them. A sea turtle eating a jellyfish is still part of a real ecological relationship, but it is not well described by projecting mammal-style pain assumptions onto a very different kind of body plan."
+                ],
+                inlineLinks: [
+                    {text: "sea turtle", slug: "sea-turtle"}
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/sea-turtle-eating-jellyfish.png",
+                        alt: "Sea turtle eating jellyfish, illustrating predator-prey relationships and the question of whether jellyfish feel pain",
+                        width: 960,
+                        height: 636,
+                        caption: "Sea turtle and jellyfish interaction: jellyfish clearly respond to stimuli, but current evidence does not support pain processing in the mammal-like sense."
+                    }
+                }
             },
             {
                 title: "The ecosystem role of jellyfish",
@@ -1050,11 +1464,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Dolphin Intelligence Works in the Wild",
         description: "A practical guide to dolphin intelligence, animal behavior, echolocation, survival strategy, and ecosystem role in open-water hunting systems.",
         featuredImage: {
-            src: "/images/placeholders/feature-discovery-overview.svg",
-            alt: "Illustrated dolphin intelligence and echolocation behavior article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Dolphins fuse movement, sound, and social coordination into one of the ocean’s best real-time sensing systems."
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/dolphin-intelligence-a-pack-of-dolphins.jpg",
+            alt: "A pod of dolphins illustrating social intelligence, echolocation, and coordinated survival strategy for AnimalDex",
+            width: 2048,
+            height: 1152,
+            caption: "A pack of dolphins captures the social coordination and real-time sensing that make dolphin intelligence so effective in the wild."
         },
         readingMinutes: 7,
         tags: ["Dolphin intelligence", "Marine behavior", "Animal behavior"],
@@ -1072,7 +1486,17 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Echolocation is the obvious headline, but the real advantage comes from combining sound-based sensing with hydrodynamic efficiency and social communication.",
                     "A dolphin can keep moving, keep sensing, and keep coordinating with others without needing the environment to become visually simple first."
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/dolphin-seeing-themself-in-a-mirror.jpg",
+                        alt: "Dolphin seeing itself in a mirror, illustrating self-recognition and cognitive complexity in dolphin intelligence",
+                        width: 1259,
+                        height: 783,
+                        caption: "Mirror-recognition imagery points to the kind of perception and self-modeling that often enters dolphin intelligence discussions."
+                    }
+                }
             },
             {
                 title: "How dolphins survive and hunt",
@@ -1374,6 +1798,22 @@ export function getBlogPost(slug: string) {
     return blogPosts.find((post) => post.slug === slug);
 }
 
+export function getMentionedSpeciesSlugs(postOrSlug: BlogPost | string) {
+    const post = typeof postOrSlug === "string" ? getBlogPost(postOrSlug) : postOrSlug;
+
+    if (!post) {
+        return [];
+    }
+
+    return Array.from(
+        new Set([
+            ...post.speciesSlugs,
+            ...(post.systemsSpeciesSlugs || []),
+            ...post.sections.flatMap((section) => section.speciesSlugs || [])
+        ])
+    );
+}
+
 export function getRelatedBlogPosts(slug: string, limit = 3) {
     const current = getBlogPost(slug);
 
@@ -1406,4 +1846,43 @@ export function getBlogPostsForSpecies(speciesSlug: string, limit = 3) {
             || post.sections.some((section) => (section.speciesSlugs || []).includes(speciesSlug))
         )
         .slice(0, limit);
+}
+
+export function getRelatedChallengesForBlogPost(slug: string, limit = 3) {
+    const post = getBlogPost(slug);
+
+    if (!post) {
+        return [];
+    }
+
+    const mentionedSpeciesSlugs = getMentionedSpeciesSlugs(post);
+    const explicit = (post.relatedChallengeSlugs || [])
+        .map((challengeSlug) => getChallenge(challengeSlug))
+        .filter((entry): entry is NonNullable<ReturnType<typeof getChallenge>> => Boolean(entry));
+    const explicitSlugs = new Set(explicit.map((entry) => entry.slug));
+
+    const scored = Array.from(
+        new Map(
+            mentionedSpeciesSlugs
+                .flatMap((speciesSlug) => getChallengesForSpecies(speciesSlug, limit + 3))
+                .filter((challenge) => !explicitSlugs.has(challenge.slug))
+                .map((challenge) => [challenge.slug, challenge])
+        ).values()
+    )
+        .map((challenge) => {
+            const sharedSpecies = challenge.speciesSlugs.filter((speciesSlug) => mentionedSpeciesSlugs.includes(speciesSlug)).length;
+
+            return {
+                challenge,
+                score: sharedSpecies * 3 + ((post.relatedChallengeSlugs || []).includes(challenge.slug) ? 4 : 0)
+            };
+        })
+        .sort((left, right) =>
+            right.score - left.score
+            || (right.challenge.updatedAt || right.challenge.publishedAt).localeCompare(left.challenge.updatedAt || left.challenge.publishedAt)
+            || left.challenge.title.localeCompare(right.challenge.title)
+        )
+        .map(({challenge}) => challenge);
+
+    return [...explicit, ...scored].slice(0, limit);
 }

@@ -7,6 +7,7 @@ import {additionalSpeciesSystemsIntelligenceFive} from "@/data/species-expansion
 import {additionalSpeciesSystemsIntelligenceSix} from "@/data/species-expansion-pack-6";
 import {additionalSpeciesSystemsIntelligenceSeven} from "@/data/species-expansion-pack-7";
 import {additionalSpeciesSystemsIntelligenceEight} from "@/data/species-expansion-pack-8";
+import {additionalSpeciesSystemsIntelligenceNine} from "@/data/species-expansion-pack-9";
 
 const baseSpeciesSystemsIntelligenceData: Record<string, SystemsIntelligenceEntry> = {
     "african-wild-dog": {
@@ -316,6 +317,7 @@ Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIn
 Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceSix);
 Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceSeven);
 Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceEight);
+Object.assign(expandedSpeciesSystemsIntelligenceData, additionalSpeciesSystemsIntelligenceNine);
 
 Object.assign(expandedSpeciesSystemsIntelligenceData, {
     "peregrine-falcon": {
@@ -627,6 +629,42 @@ Object.assign(expandedSpeciesSystemsIntelligenceData, {
         systemsScript: "Scalloped hammerheads convert unusual head geometry into better prey detection and maneuvering, especially around reefs and seamounts. Their design proves shape can be a sensing strategy.",
         strategicInsight: "A wider information array can change decision quality more than simply moving faster."
     },
+    "white-rhinoceros": {
+        roleTitle: "The Grassland Mass-Throughput Grazer",
+        specializedHardware: "Square grazing lip, heavy neck support, thick skin, and horn-forward charge mechanics make white rhinoceroses bulk-feeding hardware built for open ground.",
+        systemsScript: "White rhinoceroses convert large grass volumes into megaherbivore pressure across savannah systems. They reshape short-grass structure, path use, and wallow zones while forcing the landscape to make room for body scale.",
+        strategicInsight: "Scale is powerful when it is paired with a simple repeatable operating loop. Do the basic high-value action well enough, and the whole environment starts bending around it."
+    },
+    crab: {
+        roleTitle: "The Edge-Armor Opportunist",
+        specializedHardware: "Hard carapace, jointed sideways gait, and claw-based feeding and signaling make crabs versatile hardware for cluttered tidal and shoreline environments.",
+        systemsScript: "Crabs turn reef cracks, mudflats, mangroves, and rocky edges into active feeding and recycling zones. They process waste, prey on smaller animals, and convert hard surfaces into inhabited economic space.",
+        strategicInsight: "You do not always need elegant forward speed. In messy environments, armor, leverage, and the ability to move through narrow edges can be the real advantage."
+    },
+    "boxer-crab": {
+        roleTitle: "The Symbiotic Defense Carrier",
+        specializedHardware: "Tiny crab frame, delicate claws, and live sea-anemone partners turn the boxer crab into mutualist hardware with outsourced stinging defense.",
+        systemsScript: "Boxer crabs move through reef rubble as tiny examples of cooperative engineering. Their niche proves that a small system can scale its defense by partnering with another species rather than building everything itself.",
+        strategicInsight: "When internal resources are limited, carry the right ally. A strong partnership can function like extra hardware."
+    },
+    gorilla: {
+        roleTitle: "The Forest Power Diplomat",
+        specializedHardware: "Massive upper-body strength, dexterous hands, social signaling, and plant-processing gut design make gorillas authority hardware for dense forest life without a predator's operating model.",
+        systemsScript: "Gorillas move seeds, prune vegetation, open travel routes, and stabilize social groups in forest systems where communication and memory matter. Their influence comes less from killing power and more from how a large intelligent herbivore uses space.",
+        strategicInsight: "Strength is most stable when it does not need to prove itself constantly. The best-positioned systems often lead by clarity, not by endless escalation."
+    },
+    jaguar: {
+        roleTitle: "The River-Edge Bone-Crusher",
+        specializedHardware: "Compact muscular frame, crushing bite mechanics, and stealth optimized for wet, broken terrain make jaguars ambush hardware with unusually high finishing force.",
+        systemsScript: "Jaguars pressure prey around rivers, flooded forest, and wetland corridors where movement channels become predictable. They are part cat, part shoreline regulator, and fully shaped by edge habitat logic.",
+        strategicInsight: "Do not just be strong in the abstract. Build your force around the exact terrain where the decision gets made."
+    },
+    snake: {
+        roleTitle: "The Limbless Chemical Tracker",
+        specializedHardware: "Whole-body propulsion, forked-tongue chemosensing, flexible skull mechanics, and highly varied strike or constriction systems make snakes modular predatory hardware without limbs.",
+        systemsScript: "Snakes regulate rodents, birds, amphibians, reptiles, and eggs across almost every major terrestrial system. Their success comes from reducing structural overhead while keeping sensing and predation extremely efficient.",
+        strategicInsight: "Do not confuse missing parts with weakness. Some of the most efficient systems win by removing what they do not need and perfecting what remains."
+    },
     cuttlefish: {
         roleTitle: "The Instant Interface Designer",
         specializedHardware: "Dynamic skin chromatophores, advanced eyes, and flexible arm control make cuttlefish adaptive display hardware for camouflage, hunting, and signaling.",
@@ -669,7 +707,8 @@ export const speciesSystemsIntelligence = {
     ...additionalSpeciesSystemsIntelligenceFive,
     ...additionalSpeciesSystemsIntelligenceSix,
     ...additionalSpeciesSystemsIntelligenceSeven,
-    ...additionalSpeciesSystemsIntelligenceEight
+    ...additionalSpeciesSystemsIntelligenceEight,
+    ...additionalSpeciesSystemsIntelligenceNine
 };
 
 export function getSystemsIntelligenceBySpeciesSlug(slug: string) {

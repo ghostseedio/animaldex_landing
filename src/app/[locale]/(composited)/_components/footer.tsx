@@ -30,6 +30,12 @@ export default function Footer() {
                     <FooterLink href="/animals">
                         {t('animals')}
                     </FooterLink>
+                    <FooterLink href="/challenges">
+                        {t('challenges')}
+                    </FooterLink>
+                    <FooterLink href="/rankings">
+                        {t('rankings')}
+                    </FooterLink>
                     <FooterLink href="/use-cases">
                         {t('useCases')}
                     </FooterLink>

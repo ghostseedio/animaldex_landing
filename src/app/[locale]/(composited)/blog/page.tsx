@@ -1,5 +1,6 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
+import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {blogPosts} from "@/data/blog";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -94,6 +95,16 @@ export default async function BlogIndexPage() {
                         key={post.slug}
                         className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4"
                     >
+                        <Link href={`/blog/${post.slug}`} className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60">
+                            <Image
+                                src={post.featuredImage.src}
+                                alt={post.featuredImage.alt}
+                                width={post.featuredImage.width}
+                                height={post.featuredImage.height}
+                                sizes="(min-width: 1024px) 42vw, 100vw"
+                                className="h-auto w-full object-cover"
+                            />
+                        </Link>
                         <h2 className="font-display font-bold text-3xl text-white">{post.title}</h2>
                         <p className="text-ink-200 text-lg">{post.description}</p>
                         <div className="text-ink-300 text-sm md:text-base flex flex-wrap gap-4">

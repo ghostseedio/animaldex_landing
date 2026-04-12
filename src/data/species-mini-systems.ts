@@ -6,6 +6,7 @@ import {additionalSpeciesMiniSystemsFive} from "@/data/species-expansion-pack-5"
 import {additionalSpeciesMiniSystemsSix} from "@/data/species-expansion-pack-6";
 import {additionalSpeciesMiniSystemsSeven} from "@/data/species-expansion-pack-7";
 import {additionalSpeciesMiniSystemsEight} from "@/data/species-expansion-pack-8";
+import {additionalSpeciesMiniSystemsNine} from "@/data/species-expansion-pack-9";
 
 export const speciesMiniSystems: Record<string, string> = {
     "white-headed-vulture": "The White-headed Vulture is nature's clean-up pilot. It finds what is finished, clears it fast, and helps the land stay healthy.",
@@ -108,6 +109,12 @@ export const speciesMiniSystems: Record<string, string> = {
     "manta-ray": "The Manta Ray flies through water with an open mouth and open path. Grace can be a feeding strategy.",
     "great-white-shark": "The Great White Shark is strong because all its parts work together: senses, speed, and timing. Top hunters are built like systems, not just muscles.",
     "scalloped-hammerhead": "The Hammerhead's wide head is like a bigger sensor bar. See more, and the next move gets smarter.",
+    "white-rhinoceros": "The White Rhinoceros turns calm grazing into massive presence. When scale meets routine, the whole grassland notices.",
+    crab: "The Crab proves weird body plans can still be brilliant. Armor, leverage, and sideways moves can beat elegant speed.",
+    "boxer-crab": "The Boxer Crab carries tiny bodyguards in its claws. Smart partnerships can feel like extra equipment.",
+    gorilla: "The Gorilla shows that huge strength does not have to live in constant violence. Real power can stay calm until it matters.",
+    jaguar: "The Jaguar keeps its force short, heavy, and exact. In wet tangled ground, the cleanest strike wins.",
+    snake: "The Snake moves without limbs and still reaches almost everywhere. When the body becomes one long tool, efficiency gets strange and powerful.",
     cuttlefish: "The Cuttlefish changes its skin like a living screen. When you can change the message fast, you can hide, hunt, or talk.",
     "chambered-nautilus": "The Nautilus rises and sinks by tuning the chambers in its shell. Small adjustments can guide a whole life.",
     "sea-cucumber": "The Sea Cucumber cleans the seafloor by eating the messy bits. Quiet cleaners keep oceans breathing.",
@@ -120,7 +127,8 @@ export const speciesMiniSystems: Record<string, string> = {
     ...additionalSpeciesMiniSystemsFive,
     ...additionalSpeciesMiniSystemsSix,
     ...additionalSpeciesMiniSystemsSeven,
-    ...additionalSpeciesMiniSystemsEight
+    ...additionalSpeciesMiniSystemsEight,
+    ...additionalSpeciesMiniSystemsNine
 };
 
 export function getMiniSystemsBySpeciesSlug(slug: string) {

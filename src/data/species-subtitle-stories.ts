@@ -6,6 +6,10 @@ import {additionalSpeciesSubtitleStoriesFive} from "@/data/species-expansion-pac
 import {additionalSpeciesSubtitleStoriesSix} from "@/data/species-expansion-pack-6";
 import {additionalSpeciesSubtitleStoriesSeven} from "@/data/species-expansion-pack-7";
 import {additionalSpeciesSubtitleStoriesEight} from "@/data/species-expansion-pack-8";
+import {additionalSpeciesSubtitleStoriesNine} from "@/data/species-expansion-pack-9";
+import {additionalSpeciesSubtitleStoriesTen} from "@/data/species-expansion-pack-10";
+import {additionalSpeciesSubtitleStoriesEleven} from "@/data/species-expansion-pack-11";
+import {additionalSpeciesSubtitleStoriesTwelve} from "@/data/species-expansion-pack-12";
 import {appendUsefulApplicationSentence} from "@/data/species-useful-application";
 
 const rawSpeciesSubtitleStories: Record<string, string> = {
@@ -109,6 +113,12 @@ const rawSpeciesSubtitleStories: Record<string, string> = {
     "manta-ray": "The Manta Ray is a huge flat sea animal that glides through water like a bird in the sky. It opens its mouth as it swims to filter tiny food from the sea.",
     "great-white-shark": "The Great White Shark is a strong fast hunter with sharp senses that can notice movement, smell, and electrical signals in the water. Its power comes from many parts working together, not from teeth alone.",
     "scalloped-hammerhead": "The Scalloped Hammerhead is a shark with a wide hammer-shaped head that helps it sense more of the world around it. Seeing and feeling more clearly helps it make smarter hunting moves.",
+    "white-rhinoceros": "The White Rhinoceros is a huge grass-eating animal with a wide mouth built for mowing short grass across open African plains. It shows that enormous strength can come from doing one simple job over and over with heavy confidence.",
+    crab: "The Crab is a hard-shelled animal with a sideways body plan and strong front claws for feeding and defense. Its shape looks unusual, but every part helps it move through tight shorelines, muddy banks, and reef cracks with control.",
+    "boxer-crab": "The Boxer Crab is a tiny reef crab that carries little sea anemones in its claws like living gloves. It shows that even a small animal can become stronger by partnering with the right helper.",
+    gorilla: "The Gorilla is the largest living ape, with huge arms, deep social bonds, and a forest life built more around strength and family than around hunting. It shows that power can be real even when it is usually calm.",
+    jaguar: "The Jaguar is a heavy, spotted big cat that moves through rivers, wetlands, and forest edges with quiet confidence. It turns short-range force and perfect timing into one of the strongest ambush systems in the Americas.",
+    snake: "The Snake is a limbless reptile that uses its tongue to read scent in the air and its scales to move through grass, soil, and water. It survives in many different habitats because its whole body is built for efficient motion without wasted parts.",
     cuttlefish: "The Cuttlefish is a smart sea animal that can change the color and pattern of its skin in a flash. It uses its body like a living screen to hide, hunt, or send a message.",
     "chambered-nautilus": "The Nautilus is a sea creature with a beautiful curly shell that works like a little submarine. Inside its shell are tiny rooms that help it float up high or sink down deep, and it moves slowly through reef water looking for food.",
     "sea-cucumber": "The Sea Cucumber is a soft slow sea animal that crawls along the ocean floor eating bits of mess from the sand. It helps clean the seabed so the underwater world keeps working well.",
@@ -121,7 +131,11 @@ const rawSpeciesSubtitleStories: Record<string, string> = {
     ...additionalSpeciesSubtitleStoriesFive,
     ...additionalSpeciesSubtitleStoriesSix,
     ...additionalSpeciesSubtitleStoriesSeven,
-    ...additionalSpeciesSubtitleStoriesEight
+    ...additionalSpeciesSubtitleStoriesEight,
+    ...additionalSpeciesSubtitleStoriesNine,
+    ...additionalSpeciesSubtitleStoriesTen,
+    ...additionalSpeciesSubtitleStoriesEleven,
+    ...additionalSpeciesSubtitleStoriesTwelve
 };
 
 export const speciesSubtitleStories: Record<string, string> = Object.fromEntries(
