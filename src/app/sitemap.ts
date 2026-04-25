@@ -9,6 +9,7 @@ import {blogPosts} from "@/data/blog";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
 import {rankingPages} from "@/data/rankings";
+import {locationPages} from "@/data/locations";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();
@@ -44,11 +45,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
                 lastModified: now
             },
             {
-                url: getAbsoluteUrl(locale, "/challenges"),
+                url: getAbsoluteUrl(locale, "/comparisons"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/animal-wisdom"),
                 lastModified: now
             },
             {
                 url: getAbsoluteUrl(locale, "/rankings"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/locations"),
                 lastModified: now
             }
         ];
@@ -84,12 +93,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
         }));
 
         const challengePageEntries = challengeEntries.map((entry) => ({
-            url: getAbsoluteUrl(locale, `/challenges/${entry.slug}`),
+            url: getAbsoluteUrl(locale, `/comparisons/${entry.slug}`),
             lastModified: new Date(entry.updatedAt || entry.publishedAt)
         }));
 
         const rankingPageEntries = rankingPages.map((page) => ({
             url: getAbsoluteUrl(locale, `/rankings/${page.slug}`),
+            lastModified: new Date(page.updatedAt || page.publishedAt)
+        }));
+
+        const locationPageEntries = locationPages.map((page) => ({
+            url: getAbsoluteUrl(locale, `/locations/${page.slug}`),
             lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
 
@@ -102,7 +116,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             ...blogEntries,
             ...answerPageEntries,
             ...challengePageEntries,
-            ...rankingPageEntries
+            ...rankingPageEntries,
+            ...locationPageEntries
         ];
     });
 }

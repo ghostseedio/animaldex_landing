@@ -49,7 +49,7 @@ export default function RelatedChallengesSection({
                         </div>
                         <h3 className="font-display font-bold text-2xl text-white">
                             <Link
-                                href={`/challenges/${item.slug}`}
+                                href={`/comparisons/${item.slug}`}
                                 className="hover:text-primary-100 transition-colors"
                             >
                                 {item.title}
@@ -57,7 +57,7 @@ export default function RelatedChallengesSection({
                         </h3>
                         <p className="text-ink-200 text-base">{item.quickVerdict}</p>
                         <Link
-                            href={`/challenges/${item.slug}`}
+                            href={`/comparisons/${item.slug}`}
                             className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
                             underline
                         >

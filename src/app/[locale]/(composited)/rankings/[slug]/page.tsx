@@ -1,7 +1,7 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
-import Button from "@/app/[locale]/_components/button";
 import Link from "@/app/[locale]/_components/link";
+import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import RankingHero from "@/app/[locale]/(composited)/rankings/_components/ranking-hero";
 import RankingTable from "@/app/[locale]/(composited)/rankings/_components/ranking-table";
 import RankingEntryCard from "@/app/[locale]/(composited)/rankings/_components/ranking-entry-card";
@@ -120,6 +120,11 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         description: page.description,
         categoryLabel: t(`categories.${page.category}`)
     }));
+    const ctaSupportItems = [
+        t("ctaSupportOne"),
+        t("ctaSupportTwo"),
+        t("ctaSupportThree")
+    ];
     const pageUrl = getAbsoluteUrl(locale, `/rankings/${ranking.slug}`);
     const articleSchema = {
         "@context": "https://schema.org",
@@ -270,6 +275,13 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 </div>
             </section>
 
+            <IntentCtaCard
+                title={t("ctaTitle")}
+                description={t("ctaDescription")}
+                buttonLabel={t("ctaButton")}
+                supportItems={ctaSupportItems}
+            />
+
             <RelatedChallengesSection
                 title={t("relatedChallengesTitle")}
                 description={t("relatedChallengesDescription")}
@@ -296,16 +308,6 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     ))}
                 </section>
             )}
-
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <div className="flex justify-center">
-                    <Link href="/#download">
-                        <Button as="span">{t("ctaButton")}</Button>
-                    </Link>
-                </div>
-            </div>
         </article>
     );
 }

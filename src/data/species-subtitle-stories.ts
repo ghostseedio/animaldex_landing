@@ -10,6 +10,9 @@ import {additionalSpeciesSubtitleStoriesNine} from "@/data/species-expansion-pac
 import {additionalSpeciesSubtitleStoriesTen} from "@/data/species-expansion-pack-10";
 import {additionalSpeciesSubtitleStoriesEleven} from "@/data/species-expansion-pack-11";
 import {additionalSpeciesSubtitleStoriesTwelve} from "@/data/species-expansion-pack-12";
+import {additionalSpeciesSubtitleStoriesThirteen} from "@/data/species-expansion-pack-13";
+import {additionalSpeciesSubtitleStoriesFourteen} from "@/data/species-expansion-pack-14";
+import {additionalSpeciesSubtitleStoriesFifteen} from "@/data/species-expansion-pack-15";
 import {appendUsefulApplicationSentence} from "@/data/species-useful-application";
 
 const rawSpeciesSubtitleStories: Record<string, string> = {
@@ -135,7 +138,10 @@ const rawSpeciesSubtitleStories: Record<string, string> = {
     ...additionalSpeciesSubtitleStoriesNine,
     ...additionalSpeciesSubtitleStoriesTen,
     ...additionalSpeciesSubtitleStoriesEleven,
-    ...additionalSpeciesSubtitleStoriesTwelve
+    ...additionalSpeciesSubtitleStoriesTwelve,
+    ...additionalSpeciesSubtitleStoriesThirteen,
+    ...additionalSpeciesSubtitleStoriesFourteen,
+    ...additionalSpeciesSubtitleStoriesFifteen
 };
 
 export const speciesSubtitleStories: Record<string, string> = Object.fromEntries(

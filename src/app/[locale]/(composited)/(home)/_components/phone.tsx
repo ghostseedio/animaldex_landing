@@ -23,10 +23,12 @@ export type PhoneProps = {
     phone: {
         src: string,
         alt: string,
+        width?: number,
+        height?: number,
     }
 }
 
-export default function Phone({data, phone: {src, alt}}: PhoneProps) {
+export default function Phone({data, phone: {src, alt, width = 288, height = 616}}: PhoneProps) {
     const progress = useRef(0);
     const root = useRef<HTMLDivElement>(null);
     const elements = useRef<HTMLImageElement[]>([]);
@@ -70,6 +72,7 @@ export default function Phone({data, phone: {src, alt}}: PhoneProps) {
                         alt={item.alt}
                         width={item.width}
                         height={item.height}
+                        unoptimized
                         className="absolute"
                         style={{
                             zIndex: item.z,
@@ -84,7 +87,7 @@ export default function Phone({data, phone: {src, alt}}: PhoneProps) {
                     />
                 )}
             </div>
-            <Image className="mx-auto" src={src} alt={alt} width={288} height={616} />
+            <Image className="mx-auto" src={src} alt={alt} width={width} height={height} unoptimized />
         </div>
     )
 }

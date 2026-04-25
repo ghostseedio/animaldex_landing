@@ -1,6 +1,7 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
@@ -307,6 +308,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             }).filter((item): item is readonly [string, {challengeSlug: string; otherName: string}] => Boolean(item))
         ).values()
     ).slice(0, 4);
+    const ctaSupportItems = [
+        t("ctaSupportOne"),
+        t("ctaSupportTwo"),
+        t("ctaSupportThree")
+    ];
     const heroSubtitle = [descriptor ? `${descriptor}.` : null, subtitleStory ?? [entry.analysis.summary, miniSystemsSummary].filter(Boolean).join(" ")]
         .filter(Boolean)
         .join(" ");
@@ -636,6 +642,13 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             </section>
 
+            <IntentCtaCard
+                title={t("ctaTitle")}
+                description={t("ctaDescription")}
+                buttonLabel={t("ctaButton")}
+                supportItems={ctaSupportItems}
+            />
+
             {relatedBlogPosts.length > 0 && (
                 <section className="flex flex-col gap-4">
                     <h2 className="font-display font-bold text-4xl text-white">{t("relatedBlogTitle")}</h2>
@@ -673,7 +686,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             {compareWithLinks.map((item) => (
                                 <Link
                                     key={item.challengeSlug}
-                                    href={`/challenges/${item.challengeSlug}`}
+                                    href={`/comparisons/${item.challengeSlug}`}
                                     className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm md:text-base"
                                 >
                                     {t("compareWithLink", {animal: item.otherName})}
@@ -689,7 +702,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             >
                                 <h3 className="font-display font-bold text-2xl text-white">
                                     <Link
-                                        href={`/challenges/${challenge.slug}`}
+                                        href={`/comparisons/${challenge.slug}`}
                                         className="hover:text-primary-100 transition-colors"
                                     >
                                         {challenge.title}
@@ -697,7 +710,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 </h3>
                                 <p className="text-ink-200 text-base">{challenge.quickVerdict}</p>
                                 <Link
-                                    href={`/challenges/${challenge.slug}`}
+                                    href={`/comparisons/${challenge.slug}`}
                                     className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
                                     underline
                                 >
@@ -752,15 +765,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </section>
             )}
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <div className="flex justify-center">
-                    <Link href="/#download" underline className="text-primary-200 text-lg hover:text-primary-100 transition-colors">
-                        {t("ctaButton")}
-                    </Link>
-                </div>
-            </div>
         </article>
     );
 }

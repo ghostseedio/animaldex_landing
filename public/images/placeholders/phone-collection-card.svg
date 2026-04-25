@@ -1,8 +1,93 @@
 <svg width="272" height="120" viewBox="0 0 272 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="272" height="120" rx="24" fill="#131A16"/>
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="272" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172019"/>
+      <stop offset="0.5" stop-color="#101611"/>
+      <stop offset="1" stop-color="#171326"/>
+    </linearGradient>
+
+    <linearGradient id="catalogThumb" x1="18" y1="18" x2="92" y2="102" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8FF5A"/>
+      <stop offset="0.45" stop-color="#FF6B2B"/>
+      <stop offset="1" stop-color="#171019"/>
+    </linearGradient>
+
+    <radialGradient id="mouthGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(55 61) rotate(90) scale(48 52)">
+      <stop stop-color="#F8FF6A" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#FF6B2B" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="purpleLine" x1="116" y1="92" x2="220" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7D4DFF"/>
+      <stop offset="1" stop-color="#A967FF"/>
+    </linearGradient>
+
+    <filter id="greenGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+
+    <clipPath id="thumbClip">
+      <rect x="18" y="18" width="76" height="84" rx="18"/>
+    </clipPath>
+  </defs>
+
+  <rect width="272" height="120" rx="24" fill="url(#cardBg)"/>
   <rect x="0.75" y="0.75" width="270.5" height="118.5" rx="23.25" stroke="#314036" stroke-width="1.5"/>
-  <text x="20" y="34" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="14">SET PROGRESS</text>
-  <text x="20" y="64" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="700">Indonesia Pack</text>
-  <rect x="20" y="82" width="232" height="12" rx="6" fill="#243028"/>
-  <rect x="20" y="82" width="154" height="12" rx="6" fill="#1BC451"/>
+
+  <!-- Catalog thumbnail -->
+  <g clip-path="url(#thumbClip)">
+    <rect x="18" y="18" width="76" height="84" rx="18" fill="url(#catalogThumb)"/>
+    <rect x="18" y="18" width="76" height="84" rx="18" fill="url(#mouthGlow)"/>
+
+    <!-- stylised creature mouth / catalog art -->
+    <ellipse cx="56" cy="61" rx="44" ry="35" fill="#241516" opacity="0.62"/>
+    <ellipse cx="56" cy="58" rx="31" ry="23" fill="#0B0B0A" opacity="0.88"/>
+    <path d="M28 44C36 27 50 20 64 24C78 28 88 40 94 55C82 48 71 45 56 45C44 45 36 46 28 44Z" fill="#C85B3D" opacity="0.95"/>
+    <path d="M26 76C38 90 52 96 69 91C82 87 91 76 95 62C82 70 70 74 55 73C43 73 35 72 26 76Z" fill="#E66F3E" opacity="0.88"/>
+    <path d="M40 43L45 55L50 43L55 55L60 43L65 55L70 43" stroke="#FFF2C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M41 75L46 64L51 76L56 64L61 76L66 64L71 75" stroke="#FFF2C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="37" cy="36" r="5" fill="#111614"/>
+    <circle cx="75" cy="36" r="5" fill="#111614"/>
+    <circle cx="38.5" cy="34.5" r="1.8" fill="#CFFFF0"/>
+    <circle cx="76.5" cy="34.5" r="1.8" fill="#CFFFF0"/>
+
+    <!-- arrow badge -->
+    <circle cx="70" cy="76" r="15" fill="#10180F" fill-opacity="0.84"/>
+    <circle cx="70" cy="76" r="14.25" stroke="#E5FF45" stroke-opacity="0.75" stroke-width="1.5"/>
+    <path d="M62 81L76 67M66 67H76V77" stroke="#E5FF45" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Copy -->
+  <text x="112" y="30" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2.4">ANIMALDEX</text>
+  <text x="112" y="55" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="800">Catalog</text>
+
+  <!-- Mini stat cards -->
+  <rect x="112" y="67" width="40" height="34" rx="11" fill="#181D1A"/>
+  <rect x="112.75" y="67.75" width="38.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
+  <text x="122" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">FOUND</text>
+  <text x="122" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
+
+  <rect x="158" y="67" width="40" height="34" rx="11" fill="#181A22"/>
+  <rect x="158.75" y="67.75" width="38.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
+  <text x="168" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">SETS</text>
+  <text x="168" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">22</text>
+
+  <rect x="204" y="67" width="50" height="34" rx="11" fill="#191621"/>
+  <rect x="204.75" y="67.75" width="48.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
+  <text x="214" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">ARCHIVE</text>
+  <text x="214" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
+
+  <!-- progress accents -->
+  <rect x="122" y="104" width="30" height="4" rx="2" fill="#2EFF4A"/>
+  <rect x="168" y="104" width="30" height="4" rx="2" fill="url(#purpleLine)"/>
+  <rect x="214" y="104" width="32" height="4" rx="2" fill="#FF9B38"/>
+
+  <!-- info button -->
+  <circle cx="238" cy="30" r="14" fill="#202620"/>
+  <circle cx="238" cy="30" r="13.25" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.5"/>
+  <text x="238" y="35" text-anchor="middle" fill="#AEB6AE" font-family="Arial, sans-serif" font-size="15" font-weight="800">i</text>
+
+  <!-- subtle glow dot -->
+  <circle cx="252" cy="18" r="5" fill="#2EFF4A" opacity="0.55" filter="url(#greenGlow)"/>
 </svg>

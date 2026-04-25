@@ -22,5 +22,13 @@
       "width": 537,
       "height": 500
     }
+  },
+  {
+    "id": "wisdom",
+    "img": {
+      "src": "/images/placeholders/more-guide.svg",
+      "width": 1024,
+      "height": 800
+    }
   }
 ]
