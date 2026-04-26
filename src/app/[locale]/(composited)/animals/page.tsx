@@ -1,7 +1,9 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesDirectoryPage, speciesEntries} from "@/data/species";
+import {getSpeciesDirectoryPage, speciesEntries, SpeciesRarityStatusKey} from "@/data/species";
+import {isNativeRangeRegionKey} from "@/data/native-range";
+import {getLocationPage} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
@@ -11,12 +13,19 @@ type AnimalsIndexPageProps = {
     searchParams?: {
         q?: string | string[];
         letter?: string | string[];
+        region?: string | string[];
+        location?: string | string[];
+        status?: string | string[];
         page?: string | string[];
     };
 };
 
 function getSingleParam(value?: string | string[]) {
     return Array.isArray(value) ? value[0] : value;
+}
+
+function isSpeciesRarityStatusKey(value: string): value is SpeciesRarityStatusKey {
+    return ["very-rare", "rare", "uncommon", "relatively-common"].includes(value);
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -70,10 +79,19 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
     const pageUrl = getAbsoluteUrl(locale, "/animals");
     const query = getSingleParam(searchParams?.q) ?? "";
     const letter = getSingleParam(searchParams?.letter) ?? "all";
+    const regionParam = getSingleParam(searchParams?.region);
+    const region = regionParam && isNativeRangeRegionKey(regionParam) ? regionParam : "all";
+    const locationParam = getSingleParam(searchParams?.location);
+    const location = locationParam && getLocationPage(locationParam) ? locationParam : "all";
+    const statusParam = getSingleParam(searchParams?.status);
+    const status = statusParam && isSpeciesRarityStatusKey(statusParam) ? statusParam : "all";
     const page = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
+        region,
+        location,
+        status,
         page: Number.isFinite(page) ? page : 1
     });
 
@@ -110,11 +128,20 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                 totalPages={directoryPage.totalPages}
                 currentQuery={directoryPage.query}
                 currentLetter={directoryPage.letter}
+                currentRegion={directoryPage.region}
+                currentLocation={directoryPage.location}
+                currentStatus={directoryPage.status}
                 copy={{
-                    scientificName: t("scientificName"),
-                    updated: t("updated"),
                     readSpecies: t("readSpecies"),
                     searchPlaceholder: t("searchPlaceholder"),
+                    locationLabel: t("locationLabel"),
+                    locationDescription: t("locationDescription"),
+                    allRegions: t("allRegions"),
+                    mapAriaLabel: t("mapAriaLabel"),
+                    mapActiveLabel: t("mapActiveLabel"),
+                    openLocationFilter: t("openLocationFilter"),
+                    closeLocationFilter: t("closeLocationFilter"),
+                    statusLabel: t("statusLabel"),
                     alphabetLabel: t("alphabetLabel"),
                     filterAll: t("filterAll"),
                     resultsSummary: t("resultsSummary"),
@@ -123,7 +150,13 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                     clearFilters: t("clearFilters"),
                     previousPage: "Previous",
                     nextPage: "Next",
-                    pageLabel: "Page {page} of {totalPages}"
+                    pageLabel: "Page {page} of {totalPages}",
+                    rarityStatuses: {
+                        "very-rare": t("rarityStatuses.veryRare"),
+                        "rare": t("rarityStatuses.rare"),
+                        "uncommon": t("rarityStatuses.uncommon"),
+                        "relatively-common": t("rarityStatuses.relativelyCommon")
+                    }
                 }}
             />
 

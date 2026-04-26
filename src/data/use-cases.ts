@@ -338,6 +338,165 @@ const useCaseData: UseCaseLanding[] = [
                 answer: "No. The collection and progression loops are built around real animals and real-world sightings."
             }
         ]
+    },
+    {
+        slug: "animal-breed-pricing-grading-app",
+        shortLabel: "Breed Pricing",
+        title: "Animal breed pricing and grading app for clearer market context",
+        description: "AnimalDex helps breed-focused users document traits, compare likely breed signals, and build clearer pricing context before making breeder, buyer, or seller decisions.",
+        audience: "Breeders, buyers, sellers, rescues, and serious pet owners",
+        updatedAt: "2026-04-24",
+        searchIntents: [
+            "animal breed price estimator",
+            "animal breed grading app",
+            "breeder pricing tool",
+            "average breed cost by area",
+            "pet breed valuation",
+            "animal breed identifier"
+        ],
+        keyActions: [
+            "Scan and document likely breed traits from photos",
+            "Track condition, age, rarity, and profile completeness",
+            "Compare local pricing factors before setting expectations",
+            "Keep structured notes that support breeder and buyer conversations"
+        ],
+        whyDifferent: [
+            "AnimalDex frames breed pricing as evidence-backed context rather than a single unsupported number.",
+            "Breed identification, collection history, and grading signals live in one workflow.",
+            "The app can support both casual breed curiosity and more serious breeder-facing valuation habits."
+        ],
+        sections: [
+            {
+                title: "Better pricing starts with better breed evidence",
+                paragraphs: [
+                    "Breed value is shaped by more than a name. Location, age, documentation, health signals, rarity, temperament, profile quality, and buyer demand can all change the expected range.",
+                    "AnimalDex can help users gather the structured evidence behind those decisions instead of relying on a quick guess from one photo."
+                ]
+            },
+            {
+                title: "Useful for breeders, buyers, and careful sellers",
+                paragraphs: [
+                    "A breeder may want cleaner records for a litter, while a buyer may want to understand whether a listed price makes sense for a local area.",
+                    "AnimalDex gives this audience a place to organize breed clues, grading notes, and comparison context without pretending that every animal can be priced perfectly from an image."
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "Can AnimalDex give an exact price for every breed?",
+                answer: "No. Breed pricing depends on local demand, documentation, health, age, training, and seller context. AnimalDex is best positioned as a pricing and grading support tool."
+            },
+            {
+                question: "How could breeders use AnimalDex?",
+                answer: "Breeders can use AnimalDex to document breed traits, organize animal profiles, compare grading signals, and keep clearer context for pricing conversations."
+            }
+        ]
+    },
+    {
+        slug: "custom-animal-card-deck-creator",
+        shortLabel: "Custom Decks",
+        title: "Custom animal card deck creator for collectors, educators, and sellers",
+        description: "AnimalDex helps users turn pets, sightings, and curated species lists into custom animal cards and decks that can support collecting, teaching, gifting, and creator sales.",
+        audience: "Collectors, creators, pet owners, educators, photographers, and small sellers",
+        updatedAt: "2026-04-24",
+        searchIntents: [
+            "custom animal card deck",
+            "animal card creator",
+            "create animal cards",
+            "make animal trading cards",
+            "sell custom animal cards",
+            "pet trading cards"
+        ],
+        keyActions: [
+            "Create animal cards from pets, sightings, or species profiles",
+            "Group cards into themed decks and collectible sets",
+            "Use rarity, stats, stories, and visuals to make cards feel premium",
+            "Prepare decks for sharing, classroom use, gifts, or creator storefronts"
+        ],
+        whyDifferent: [
+            "AnimalDex already treats animals as collectible cards, so custom deck creation fits the product naturally.",
+            "Cards can blend real animal context with creator-friendly presentation.",
+            "The same workflow can serve personal collections, education packs, photography projects, and small commercial ideas."
+        ],
+        sections: [
+            {
+                title: "Custom cards from real animal stories",
+                paragraphs: [
+                    "A good animal card is more than a picture. It needs a name, traits, stats, rarity, story, and a reason to belong in a deck.",
+                    "AnimalDex is already built around that card logic, which makes custom animal decks a strong extension for creators and collectors."
+                ]
+            },
+            {
+                title: "From personal collection to sellable deck concept",
+                paragraphs: [
+                    "Users may want pet cards for gifts, classroom decks for learning, wildlife photography cards, or themed packs for niche audiences.",
+                    "AnimalDex can support that funnel by helping users organize the animals, polish the card content, and prepare deck concepts with clearer structure."
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "Can AnimalDex support custom animal cards?",
+                answer: "Yes. The product already uses collectible animal card logic, making custom cards and decks a natural SEO and product direction."
+            },
+            {
+                question: "Can users sell custom animal decks?",
+                answer: "AnimalDex can be positioned around creator-ready card and deck workflows. Direct marketplace claims should only be made once those features exist in the product."
+            }
+        ]
+    },
+    {
+        slug: "animal-inspired-self-improvement-app",
+        shortLabel: "Animal Growth",
+        title: "Animal-inspired self-improvement app for learning from real animal traits",
+        description: "AnimalDex can help users learn from animals by turning species behavior, traits, and observation into practical prompts for focus, patience, resilience, and personal growth.",
+        audience: "Animal lovers, journalers, students, coaches, and self-improvement readers",
+        updatedAt: "2026-04-24",
+        searchIntents: [
+            "learn from animals",
+            "self improvement from animals",
+            "animal lessons for life",
+            "what animals teach us",
+            "animal traits personal growth",
+            "animal behavior learning app"
+        ],
+        keyActions: [
+            "Study animal traits as memorable personal-growth prompts",
+            "Use sightings and species cards as reflection anchors",
+            "Connect behavior patterns to habits like patience and adaptability",
+            "Build a learning journal around attention, curiosity, and respect"
+        ],
+        whyDifferent: [
+            "AnimalDex can connect real species learning with human reflection without becoming generic motivational content.",
+            "Collection and journaling loops make self-improvement prompts easier to revisit.",
+            "The angle broadens AnimalDex beyond identification into personal meaning and habit formation."
+        ],
+        sections: [
+            {
+                title: "Animals make abstract habits easier to remember",
+                paragraphs: [
+                    "People often remember behavior through examples. An animal trait can become a practical anchor for focus, patience, teamwork, independence, or adaptation.",
+                    "AnimalDex can turn species cards into reflection prompts so learning about animals also helps users think about how they move through the world."
+                ]
+            },
+            {
+                title: "Observation as a self-improvement habit",
+                paragraphs: [
+                    "Wildlife learning rewards patience, attention, and context. Those same habits transfer into better decision-making and stronger awareness in daily life.",
+                    "This gives AnimalDex a credible self-improvement lane grounded in real observation instead of vague inspiration."
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "Can learning about animals support self-improvement?",
+                answer: "Yes. Animal behavior can provide concrete prompts for patience, focus, resilience, cooperation, boundaries, and adaptability."
+            },
+            {
+                question: "Is this separate from animal identification?",
+                answer: "No. It builds on the same species cards and sightings, then adds a reflection layer for users who want personal meaning from what they learn."
+            }
+        ]
     }
 ];
 

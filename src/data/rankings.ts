@@ -16,7 +16,14 @@ export type RankingCategory =
     | "teamwork"
     | "adaptability"
     | "camouflage"
-    | "strike";
+    | "strike"
+    | "invasive"
+    | "reproduction"
+    | "reputation"
+    | "rarity"
+    | "fatality"
+    | "culture"
+    | "communication";
 
 export type RankingEntry = {
     rank: number;
@@ -47,17 +54,27 @@ export type RankingPage = CanonicalContentMetadata & {
 
 type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
 
+const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
+
+function getRankingImageSlug(page: RankingPageInput) {
+    return page.title
+        .replace(/: Top 10 Ranked$/i, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
 function createRankingPage(page: RankingPageInput): RankingPage {
     return {
         ...page,
         publishedAt: "2026-04-12",
         updatedAt: "2026-04-12",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
+            src: `${RANKING_IMAGE_BASE_URL}/${getRankingImageSlug(page)}.webp`,
             alt: `${page.title} ranking page on AnimalDex`,
-            width: 1200,
-            height: 675,
-            caption: "AnimalDex ranking pages turn headline queries into structured, species-linked analysis instead of generic listicle filler."
+            width: 1672,
+            height: 941,
+            caption: "Ranking image source: AnimalDex CDN."
         }
     };
 }
@@ -775,7 +792,7 @@ const rankingPagesData: RankingPage[] = [
         ],
         breakdown: [
             "If the question is about living alongside change, red fox and crow become very persuasive answers. If it is about adaptive problem solving, octopus and dolphin rise. If it is about broad predatory flexibility, leopard and wolf deserve more attention than generic lists usually give them.",
-            "That makes adaptability one of the best bridge categories between species pages, rankings, and challenge pages."
+            "That makes adaptability one of the best bridge categories between species pages, rankings, and comparison pages."
         ],
         faq: [
             {
@@ -906,6 +923,473 @@ const rankingPagesData: RankingPage[] = [
         ],
         relatedRankingSlugs: ["most-agile-animals", "best-hunters"],
         systemsSpeciesSlugs: ["mantis-shrimp", "red-kangaroo", "secretary-bird"]
+    }),
+    createRankingPage({
+        slug: "largest-introduced-and-invasive-animals",
+        title: "Largest Introduced and Invasive Animals in the World: Top 10 Ranked",
+        description: "A structured ranking of the largest introduced and invasive animals, prioritizing body size first while still accounting for how disruptive those animals can become outside their native range.",
+        category: "invasive",
+        searchIntents: [
+            "largest invasive animals",
+            "biggest invasive species",
+            "largest introduced animals in the world",
+            "largest non native animals",
+            "most invasive big animals"
+        ],
+        quickAnswer: "If the question is specifically about big-bodied invasive or feral animals, dromedary camel is one of the clearest headline answers. Reticulated python, sika deer, red fox, and other large or mid-sized nonnative animals follow depending on whether you emphasize raw body size or ecological disruption.",
+        introduction: [
+            "This page answers a more specific question than a normal invasive-species list. It is built for readers who care about the largest nonnative animals first, not just the most notorious small invaders.",
+            "That means body scale carries unusual weight here. A feral camel and a lionfish are both invasive stories, but they reshape systems in very different physical ways."
+        ],
+        methodology: [
+            "Ranking prioritizes large body size first, then adjusts for ecological footprint, establishment strength, and how clearly the species is known for nonnative spread or feral pressure.",
+            "Because the AnimalDex dataset is broader than a pure invasive-species database, the back half of the ranking includes animals best understood as introduced or feral pressure species in at least part of their range, not only as universally dominant invaders everywhere.",
+            "The goal is to answer the user's likely intent honestly: which invasive or introduced animals feel physically biggest and most system-changing, not which tiny pest spreads fastest."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "dromedary-camel", primaryMetric: "Massive feral grazer footprint", shortReason: "Dromedary camel is the clearest large-bodied answer because feral populations can impose huge grazing, trampling, and water-use pressure at true megafauna scale."},
+            {rank: 2, speciesSlug: "reticulated-python", primaryMetric: "Giant constrictor invasive risk", shortReason: "Reticulated python belongs near the top because its sheer size changes what an introduced predator can do in a warm-climate ecosystem."},
+            {rank: 3, speciesSlug: "sika-deer", primaryMetric: "Large introduced browser", shortReason: "Sika deer earns a high slot because introduced populations can reshape vegetation and compete with native herbivores at real mammal scale."},
+            {rank: 4, speciesSlug: "red-fox", primaryMetric: "Wide-ranging mesopredator spread", shortReason: "Red fox is not enormous, but it is one of the strongest large-terrestrial invasive conversation pieces because it combines flexibility with predatory pressure."},
+            {rank: 5, speciesSlug: "reindeer", primaryMetric: "Introduced grazing pressure", shortReason: "Reindeer matters here because introduced island and managed populations can change fragile northern vegetation systems fast."},
+            {rank: 6, speciesSlug: "yak", primaryMetric: "Heavy feral highland grazer", shortReason: "Yak fits the list because feral or introduced herds can impose outsized pressure simply through body mass and hard-environment durability."},
+            {rank: 7, speciesSlug: "llama", primaryMetric: "Introduced browsing and grazing pressure", shortReason: "Llama rounds out the large-mammal tier because even domestic-origin animals can become meaningful ecological movers once introduced widely enough."},
+            {rank: 8, speciesSlug: "american-bullfrog", primaryMetric: "Large invasive amphibian", shortReason: "American bullfrog is smaller than the mammals above it, but for an amphibian it is a heavyweight invader with major predatory and competitive impact."},
+            {rank: 9, speciesSlug: "cane-toad", primaryMetric: "Large toxic colonizer", shortReason: "Cane toad stays high because its body size, toxicity, and disturbance tolerance make it unusually consequential for a toad."},
+            {rank: 10, speciesSlug: "lionfish", primaryMetric: "Spiny reef invader", shortReason: "Lionfish closes the list because it is not physically huge, but in marine settings it behaves like a visibly outsized invader relative to reef prey."}
+        ],
+        breakdown: [
+            "If you want the biggest invasive-animal headline, dromedary camel is the cleanest answer in this dataset because it combines huge body size with well-known feral ecosystem pressure. Reticulated python is the strongest predatory alternative if the reader is thinking about giant invasive hunters instead of grazing animals.",
+            "That is why this page is not identical to a general invasive-species list. Size first changes the ordering a lot."
+        ],
+        faq: [
+            {
+                question: "What is the largest invasive animal in the world?",
+                answer: "In this ranking set, dromedary camel is the clearest big-bodied invasive or feral animal headline."
+            },
+            {
+                question: "Why are large invasive animals different from typical invasive species lists?",
+                answer: "Because body size changes the kind of damage they do. Trampling, heavy grazing, and large-predator pressure are different problems from the spread of small pests."
+            }
+        ],
+        relatedRankingSlugs: ["most-invasive-species", "most-adaptable-animals"],
+        systemsSpeciesSlugs: ["dromedary-camel", "reticulated-python", "sika-deer"]
+    }),
+    createRankingPage({
+        slug: "most-invasive-species",
+        title: "Most Invasive Species in the World: Top 10 Ranked",
+        description: "A structured ranking of the most invasive species in the world, balancing establishment success, ecological disruption, spread potential, and how difficult the species is to remove once it takes hold.",
+        category: "invasive",
+        searchIntents: [
+            "most invasive species",
+            "most invasive animals",
+            "worst invasive species in the world",
+            "most destructive non native animals",
+            "top invasive species"
+        ],
+        quickAnswer: "If you want the cleanest invasive-animal answer in this dataset, lionfish, cane toad, and American bullfrog belong near the top because they combine spread, ecological disruption, and removal difficulty. Red fox, reticulated python, and other introduced vertebrates remain highly relevant depending on region.",
+        introduction: [
+            "Invasive-species rankings work best when they focus on ecological disruption rather than pure popularity. A species becomes important here because it spreads, establishes, and keeps changing systems after arrival.",
+            "That is why some relatively small animals outrank much larger ones. Invasiveness is about footprint and persistence, not only body size."
+        ],
+        methodology: [
+            "Ranking weight comes from establishment success outside native range, documented ecological pressure, predator or prey disruption, competitive effect, and practical difficulty of control.",
+            "This page stays animal-focused rather than trying to cover plants, fungi, and microbes. It is also limited to species represented in the AnimalDex dataset, so the list is best read as a strong animal-focused answer rather than a universal invasive-species census.",
+            "Where a species is better understood as regionally feral or introduced rather than one uniform global invader, the short reason states that context."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "lionfish", primaryMetric: "High reef predation pressure", shortReason: "Lionfish leads because it combines fast establishment, broad prey pressure, and stubborn control problems in invaded reef systems."},
+            {rank: 2, speciesSlug: "cane-toad", primaryMetric: "Toxic rapid spread", shortReason: "Cane toad stays near the top because its toxicity and disturbance tolerance let it damage food webs far beyond a normal toad footprint."},
+            {rank: 3, speciesSlug: "american-bullfrog", primaryMetric: "Aggressive amphibian expansion", shortReason: "American bullfrog belongs in the top tier because it is a broad-eating, hard-to-remove invader in many freshwater systems."},
+            {rank: 4, speciesSlug: "red-fox", primaryMetric: "Introduced predator pressure", shortReason: "Red fox ranks highly because it is an unusually effective adaptable predator in regions where native prey evolved without that exact pressure."},
+            {rank: 5, speciesSlug: "reticulated-python", primaryMetric: "Large-bodied introduced predator", shortReason: "Reticulated python is a major invasive conversation piece because once large constrictors establish, control gets difficult very quickly."},
+            {rank: 6, speciesSlug: "sika-deer", primaryMetric: "Vegetation and competition pressure", shortReason: "Sika deer matters because introduced deer can alter browse patterns, compete with natives, and persist across mixed landscapes."},
+            {rank: 7, speciesSlug: "dromedary-camel", primaryMetric: "Feral megaherbivore impact", shortReason: "Dromedary camel stays relevant because feral populations can impose large-scale water and vegetation pressure in arid systems."},
+            {rank: 8, speciesSlug: "honey-bee", primaryMetric: "Pollinator competition footprint", shortReason: "Honey bee is not a classic shock-value invader, but introduced populations can still reshape pollination competition in sensitive environments."},
+            {rank: 9, speciesSlug: "reindeer", primaryMetric: "Island and tundra grazing pressure", shortReason: "Reindeer earns a late slot because introduced populations can heavily pressure fragile northern vegetation where recovery is slow."},
+            {rank: 10, speciesSlug: "yak", primaryMetric: "Feral grazer persistence", shortReason: "Yak rounds out the list as a hard-environment grazer whose introduced presence can matter more than readers expect in thin ecological systems."}
+        ],
+        breakdown: [
+            "Lionfish is the clearest animal-only invasive headline here because it disrupts reef systems with a combination of predation pressure, rapid establishment, and frustrating control limits. Cane toad and American bullfrog stay close because they translate adaptability into broad ecosystem consequences.",
+            "If a reader mainly cares about large mammals, this ranking is not the best entry point. That is why the related page on the largest introduced and invasive animals exists separately."
+        ],
+        faq: [
+            {
+                question: "What is the most invasive animal in the world?",
+                answer: "In this dataset, lionfish is the clearest invasive-animal headline because its invaded-range impact is so consistently severe."
+            },
+            {
+                question: "Why do smaller invasive animals often outrank bigger ones?",
+                answer: "Because spread speed, reproduction, and ecological disruption usually matter more than raw body size."
+            }
+        ],
+        relatedRankingSlugs: ["largest-introduced-and-invasive-animals", "most-adaptable-animals"],
+        systemsSpeciesSlugs: ["lionfish", "cane-toad", "american-bullfrog"]
+    }),
+    createRankingPage({
+        slug: "animals-with-highest-mating-drive",
+        title: "Animals with the Highest Mating Drive: Top 10 Ranked",
+        description: "A structured ranking of animals with the highest mating drive, balancing mating frequency, reproductive intensity, courtship persistence, and how central breeding behavior is to the animal's life strategy.",
+        category: "reproduction",
+        searchIntents: [
+            "animals with the highest libido",
+            "animals with highest mating drive",
+            "most sexual animals",
+            "animals that mate the most",
+            "highest libido in the animal kingdom"
+        ],
+        quickAnswer: "If you want the cleanest high-libido headline, bonobos belong near the top because sexual behavior is deeply woven into their social system. Dolphins, chimpanzees, lions, explosive-breeding amphibians, and show-heavy insects all remain strong answers depending on whether you mean frequency, intensity, or how central mating behavior is to daily life.",
+        introduction: [
+            "This topic gets messy when it treats human libido and animal reproduction as exactly the same thing. The better version asks which animals show the strongest mating drive, most frequent sexual behavior, or most intense breeding-centered behavior.",
+            "That framing lets the page stay provocative without becoming biologically sloppy. Some animals rank high because they mate often. Others rank high because the whole life cycle or social structure revolves around reproductive intensity."
+        ],
+        methodology: [
+            "Ranking balances mating frequency, courtship persistence, sexual competition, reproductive urgency, and how strongly breeding behavior shapes the species' social or seasonal life.",
+            "This is not a fertility ranking. Large litter size or egg count alone does not automatically mean a stronger mating drive.",
+            "Where the answer depends on seasonality versus year-round behavior, that distinction is made explicit in the entry."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "bonobo", primaryMetric: "Sex central to social life", shortReason: "Bonobo takes the top slot because sexual behavior functions as both bonding system and tension-management tool, not only reproduction."},
+            {rank: 2, speciesSlug: "dolphin", primaryMetric: "Frequent social sexual behavior", shortReason: "Dolphin stays near the top because sexual behavior appears often in social play, hierarchy, and bonding rather than only narrow breeding windows."},
+            {rank: 3, speciesSlug: "chimpanzee", primaryMetric: "Intense mating competition", shortReason: "Chimpanzees rank highly because mating behavior is frequent, strategic, and deeply tied to social politics."},
+            {rank: 4, speciesSlug: "lion", primaryMetric: "Repeated short-cycle mating bouts", shortReason: "Lion earns a top-tier place because mating bouts can be extremely frequent over concentrated breeding windows."},
+            {rank: 5, speciesSlug: "red-kangaroo", primaryMetric: "Persistent reproductive opportunism", shortReason: "Red kangaroo belongs here because reproductive timing stays unusually flexible in response to environmental opportunity."},
+            {rank: 6, speciesSlug: "american-bullfrog", primaryMetric: "Explosive breeding pressure", shortReason: "American bullfrog rises because breeding season turns the species into a loud, persistent reproductive engine around water."},
+            {rank: 7, speciesSlug: "cane-toad", primaryMetric: "High-output breeding strategy", shortReason: "Cane toad is a strong ranking entry because reproduction is one of the main reasons it spreads so effectively."},
+            {rank: 8, speciesSlug: "firefly", primaryMetric: "Courtship signaling built around mating", shortReason: "Firefly matters because much of its visible adult life is essentially a mating communication system."},
+            {rank: 9, speciesSlug: "cicada", primaryMetric: "Adult stage dominated by reproduction", shortReason: "Cicada makes the list because emergence, signaling, and adult activity are overwhelmingly focused on reproductive success."},
+            {rank: 10, speciesSlug: "honey-bee", primaryMetric: "Colony-scale reproductive pressure", shortReason: "Honey bee closes the ranking because mating is not constant at the individual level, but the species' entire social machinery still revolves around reproductive success."}
+        ],
+        breakdown: [
+            "Bonobo is the clearest high-libido answer if the reader means frequent social sexual behavior. Lion is stronger if the reader means repeated intense mating bouts in a compressed window. Bullfrogs and cane toads become more compelling if the question is about breeding urgency at season scale.",
+            "That is why there is no single clean metric. Frequency, intensity, and reproductive centrality are related but not identical."
+        ],
+        faq: [
+            {
+                question: "Which animal has the highest libido?",
+                answer: "Bonobo is one of the strongest headline answers because sexual behavior is unusually central to everyday social life."
+            },
+            {
+                question: "Do animals with the highest mating drive always reproduce the most?",
+                answer: "No. Mating frequency, fertility, and population growth are related but not the same biological question."
+            }
+        ],
+        relatedRankingSlugs: ["animals-with-best-teamwork", "most-communicative-animals-in-the-wild"],
+        systemsSpeciesSlugs: ["bonobo", "dolphin", "lion"]
+    }),
+    createRankingPage({
+        slug: "most-reviled-animals",
+        title: "Most Reviled Animals in the World: Top 10 Ranked",
+        description: "A structured ranking of the animals people most often treat as the worst, balancing fear, disgust, nuisance reputation, and how strongly the species triggers negative human reactions.",
+        category: "reputation",
+        searchIntents: [
+            "worst animals",
+            "most useless animals",
+            "most hated animals",
+            "animals people hate the most",
+            "scariest and most hated animals"
+        ],
+        quickAnswer: "If you mean the animals humans react to most negatively, venomous snakes, crocodilians, jellyfish, scavengers, skunks, termites, and other fear-or-disgust species usually dominate. This page ranks human revulsion and reputation, not actual ecological worth.",
+        introduction: [
+            "Calling an animal 'useless' is usually a human emotional reaction, not a biological truth. Even animals people hate often do important ecological work.",
+            "So this page reframes the question in a more defensible way. It ranks the animals humans most often revile, fear, or treat as the worst, while keeping the biology honest."
+        ],
+        methodology: [
+            "Ranking emphasizes human fear response, disgust triggers, nuisance reputation, cultural stigma, and how likely the animal is to be described as one of the 'worst' in ordinary conversation.",
+            "This is explicitly not a measure of ecological value. A highly ranked animal can still be important or even essential in its ecosystem.",
+            "Direct danger matters, but so do smell, appearance, disease association, scavenger stigma, and media reputation."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "king-cobra", primaryMetric: "Fear and lethal reputation", shortReason: "King cobra takes the top slot because huge venomous snakes trigger one of the strongest fear reactions humans reliably show."},
+            {rank: 2, speciesSlug: "black-mamba", primaryMetric: "Extreme danger reputation", shortReason: "Black mamba stays near the top because speed, venom, and mythic fear all compound into a brutally negative public image."},
+            {rank: 3, speciesSlug: "crocodile", primaryMetric: "Predatory dread factor", shortReason: "Crocodile ranks highly because ambush power and survival odds in a bad encounter make people fear it in a very direct way."},
+            {rank: 4, speciesSlug: "jellyfish", primaryMetric: "Pain and ocean anxiety", shortReason: "Jellyfish belongs here because it turns ordinary swimming space into a place people suddenly do not trust."},
+            {rank: 5, speciesSlug: "spotted-hyena", primaryMetric: "Scavenger stigma", shortReason: "Spotted hyena is one of the clearest examples of an animal whose real intelligence is overshadowed by centuries of negative human storytelling."},
+            {rank: 6, speciesSlug: "american-alligator", primaryMetric: "Ancient reptile fear", shortReason: "American alligator stays high because crocodilian body design itself tends to trigger strong human unease even where attacks are uncommon."},
+            {rank: 7, speciesSlug: "white-headed-vulture", primaryMetric: "Carrion-linked revulsion", shortReason: "Vultures are ecologically useful, but visually and culturally they are still among the easiest birds for humans to treat as ominous or ugly."},
+            {rank: 8, speciesSlug: "striped-skunk", primaryMetric: "Nuisance and smell reputation", shortReason: "Striped skunk earns its place because odor alone is enough to make many people rank it among the most disliked animals."},
+            {rank: 9, speciesSlug: "termite", primaryMetric: "Property damage reputation", shortReason: "Termite matters because humans often treat home-damaging insects as among the most 'useless' animals on Earth."},
+            {rank: 10, speciesSlug: "wolf", primaryMetric: "Historic fear and folklore", shortReason: "Wolf closes the list because folklore and livestock anxiety have made it one of the most overhated mammals in human history."}
+        ],
+        breakdown: [
+            "Venomous snakes and crocodilians dominate because they combine direct danger with unusually deep human fear. The middle of the list shifts toward disgust, nuisance, or stigma: jellyfish for pain, skunks for smell, termites for property damage, and scavengers for reputation.",
+            "That mix is exactly why this page works better as a reviled-animal ranking than a fake 'useless animal' ranking. Humans hate animals for very different reasons."
+        ],
+        faq: [
+            {
+                question: "What is the most hated animal in the world?",
+                answer: "There is no universal winner, but giant venomous snakes are among the clearest recurring headline answers."
+            },
+            {
+                question: "Are these animals actually useless?",
+                answer: "No. This page ranks human dislike, not ecological importance."
+            }
+        ],
+        relatedRankingSlugs: ["most-dangerous-animals", "deadliest-animals-to-humans-in-the-wild", "ugliest-animals"],
+        systemsSpeciesSlugs: ["king-cobra", "crocodile", "termite"]
+    }),
+    {
+        slug: "ugliest-animals",
+        title: "Ugliest Animals in the World: Top 10 Ranked",
+        description: "A structured ranking of the animals humans most often call ugly, balancing unusual facial structure, exposed skin, body proportions, and how strongly the species triggers an 'ugly' reaction in popular culture.",
+        category: "reputation",
+        searchIntents: [
+            "ugliest animals",
+            "ugliest animal in the world",
+            "weirdest looking animals",
+            "top 10 ugliest animals",
+            "animals people think are ugly"
+        ],
+        quickAnswer: "Blobfish is the cleanest popular-culture headline answer, but naked mole-rats, goblin sharks, aye-ayes, marabou storks, humpback anglerfish, proboscis monkeys, warthogs, vultures, and other extreme-looking species all belong in the conversation. This page ranks human aesthetic reaction, not biological value.",
+        introduction: [
+            "Calling an animal ugly is always a human judgment, not a biological flaw. Many of the animals that people rank this way look strange because they are specialized for darkness, scavenging, underground life, or other hard environments.",
+            "So this page does not pretend ugliness is an objective scientific trait. It treats the topic as a reputation ranking built around the species people most often describe as ugly or bizarre-looking."
+        ],
+        methodology: [
+            "Ranking emphasizes unusual facial structure, exposed or wrinkled skin, awkward proportions, and how strongly the animal is treated as ugly in ordinary conversation and popular media.",
+            "This is not a measure of ecological worth, intelligence, or health. A highly ranked animal can still be highly specialized, successful, and important in its ecosystem.",
+            "Public familiarity matters here. An animal can look stranger in strict anatomical terms, but rank lower if it is less commonly recognized as an 'ugly animal' headline example."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "blobfish", primaryMetric: "Ultimate ugly-animal meme status", shortReason: "Blobfish takes the top slot because it became the global shorthand for 'ugly animal,' especially when pressure-adapted deep-sea bodies are shown outside their natural environment."},
+            {rank: 2, speciesSlug: "naked-mole-rat", primaryMetric: "Hairless wrinkled underground body", shortReason: "Naked mole-rat stays near the top because exposed skin, protruding teeth, and tunnel-life anatomy create one of the strongest ugly-first reactions humans have."},
+            {rank: 3, speciesSlug: "goblin-shark", primaryMetric: "Blade snout and projecting jaws", shortReason: "Goblin shark ranks highly because its long rostrum and sudden jaw extension look almost engineered to unsettle people."},
+            {rank: 4, speciesSlug: "aye-aye", primaryMetric: "Huge eyes and skeletal probing finger", shortReason: "Aye-aye belongs near the top because its face, teeth, and elongated finger combine into one of the strangest primate silhouettes on Earth."},
+            {rank: 5, speciesSlug: "marabou-stork", primaryMetric: "Bare head and hanging throat pouch", shortReason: "Marabou stork earns a high spot because its scavenger build, bald head, and dangling throat sac produce a reliably harsh human reaction."},
+            {rank: 6, speciesSlug: "humpback-anglerfish", primaryMetric: "Deep-sea lure and compressed face", shortReason: "Humpback anglerfish looks severe even by deep-sea standards, with a body plan that reads more like a monster sketch than a typical fish."},
+            {rank: 7, speciesSlug: "proboscis-monkey", primaryMetric: "Oversized pendulous nose", shortReason: "Proboscis monkey ranks because its nose is so visually dominant that people often describe it as absurd before they notice anything else."},
+            {rank: 8, speciesSlug: "common-warthog", primaryMetric: "Tusked face and coarse bristled build", shortReason: "Common warthog belongs in the top 10 because tusks, facial warts, and a rough body outline create a classic ugly-but-effective savannah profile."},
+            {rank: 9, speciesSlug: "lappet-faced-vulture", primaryMetric: "Bald carrion-specialist head", shortReason: "Lappet-faced vulture stays high because vultures already trigger strong aesthetic bias, and this species pushes the bare-headed scavenger look even harder."},
+            {rank: 10, speciesSlug: "turkey-vulture", primaryMetric: "Bare red scavenger face", shortReason: "Turkey vulture rounds out the list because its red bald head and carrion reputation make it one of the most commonly called ugly birds in the Americas."}
+        ],
+        breakdown: [
+            "Blobfish is the easiest quotable answer because internet culture turned it into the default ugly-animal icon. After that, the list splits into several aesthetic lanes: deep-sea nightmare faces like goblin shark and anglerfish, hairless or wrinkled mammals like naked mole-rat, and bald scavengers like marabou stork and vultures.",
+            "That is why this page works best as a human-reaction ranking rather than a fake science claim. Most of these animals look strange because they are built for environments and jobs that humans do not usually think of as beautiful."
+        ],
+        faq: [
+            {
+                question: "What is the ugliest animal in the world?",
+                answer: "Blobfish is the clearest popular headline answer, though naked mole-rat and goblin shark are close behind in public ugly-animal rankings."
+            },
+            {
+                question: "Are ugly animals less successful in nature?",
+                answer: "No. Many animals people call ugly are highly specialized and very well adapted to their real environments."
+            }
+        ],
+        relatedRankingSlugs: ["most-reviled-animals", "rarest-animals", "animals-with-best-camouflage"],
+        publishedAt: "2026-04-12",
+        updatedAt: "2026-04-12",
+        featuredImage: {
+            src: "/images/placeholders/more-guide.svg",
+            alt: "Ugliest Animals in the World: Top 10 Ranked ranking page on AnimalDex",
+            width: 1200,
+            height: 675,
+            caption: "Ranking image source: AnimalDex placeholder artwork."
+        }
+    },
+    createRankingPage({
+        slug: "rarest-animals",
+        title: "Rarest Animals in the World: Top 10 Ranked",
+        description: "A structured ranking of the rarest animals in the world, blending scarcity, vulnerability, and conservation pressure to answer the overlap between rarest and most endangered wildlife.",
+        category: "rarity",
+        searchIntents: [
+            "rarest animals in the world",
+            "most endangered animals in the world",
+            "rarest endangered animals",
+            "animals closest to extinction",
+            "most rare animals"
+        ],
+        quickAnswer: "If you want a clean headline answer, black rhinoceros, Sunda pangolin, aye-aye, bonobo, harpy eagle, orangutan, snow leopard, giant panda, Tasmanian devil, and other highly pressured species belong near the top. The exact order depends on whether you prioritize tiny range, low numbers, or broader extinction risk.",
+        introduction: [
+            "Rarity and endangerment overlap heavily, but they are not identical. Some animals are rare because they naturally occupy narrow ranges. Others are rare because human pressure has forced populations down.",
+            "This page combines both ideas because that is what most readers actually mean when they search for the rarest animals in the world."
+        ],
+        methodology: [
+            "Ranking emphasizes small or pressured populations, range restriction, long-term decline, and how exposed the species is to extinction risk under current conditions.",
+            "This is not a formal IUCN list. It is a structured rarity ranking built from the AnimalDex dataset, so it balances practical recognition with conservation seriousness.",
+            "The result is best read as a high-signal rarity page rather than a literal countdown of the ten lowest surviving population estimates on Earth."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "black-rhinoceros", primaryMetric: "Extreme poaching-driven rarity", shortReason: "Black rhinoceros leads because intense historical poaching and slow recovery make it one of the clearest globally recognized rare-animal answers."},
+            {rank: 2, speciesSlug: "sunda-pangolin", primaryMetric: "Heavy trafficking pressure", shortReason: "Sunda pangolin belongs near the top because illegal trade has pushed it into one of the harshest pressure profiles in the dataset."},
+            {rank: 3, speciesSlug: "aye-aye", primaryMetric: "Restricted and persecuted range", shortReason: "Aye-aye ranks highly because it combines limited range with habitat loss and long-standing human persecution."},
+            {rank: 4, speciesSlug: "bonobo", primaryMetric: "Narrow range and strong pressure", shortReason: "Bonobo stays in the top tier because it is geographically restricted and vulnerable to habitat disruption and hunting."},
+            {rank: 5, speciesSlug: "harpy-eagle", primaryMetric: "Large-range habitat dependence", shortReason: "Harpy eagle earns a high slot because it needs expansive intact forest, making fragmentation especially costly."},
+            {rank: 6, speciesSlug: "orangutan", primaryMetric: "Forest-loss vulnerability", shortReason: "Orangutan remains one of the strongest rare-and-endangered icons because habitat loss keeps shrinking safe strongholds."},
+            {rank: 7, speciesSlug: "snow-leopard", primaryMetric: "Low-density mountain rarity", shortReason: "Snow leopard belongs here because naturally low densities and hard terrain combine with ongoing human pressure."},
+            {rank: 8, speciesSlug: "giant-panda", primaryMetric: "Range-limited specialist dependence", shortReason: "Giant panda still fits the list because recovery progress does not erase how range-limited and habitat-specific the species remains."},
+            {rank: 9, speciesSlug: "tasmanian-devil", primaryMetric: "Disease-driven decline", shortReason: "Tasmanian devil stays high because disease pressure has made the species rarer and more fragile than its fierce image suggests."},
+            {rank: 10, speciesSlug: "chimpanzee", primaryMetric: "Broad decline across fragmented range", shortReason: "Chimpanzee rounds out the ranking because even a well-known species can become genuinely scarce once fragmentation and hunting accumulate long enough."}
+        ],
+        breakdown: [
+            "Black rhinoceros and Sunda pangolin are the cleanest quotable answers here because both rarity and human pressure are central to their story. Aye-aye, bonobo, and harpy eagle rise because restriction and habitat dependence make them unusually vulnerable even before a species disappears completely.",
+            "That is why a rarity page needs more than one metric. Tiny numbers, shrinking range, and high pressure each tell a different part of the conservation story."
+        ],
+        faq: [
+            {
+                question: "What is the rarest animal in the world?",
+                answer: "There is no single permanent answer, but black rhinoceros and Sunda pangolin are among the clearest high-profile rare-animal examples in this dataset."
+            },
+            {
+                question: "Are the rarest animals always the most endangered?",
+                answer: "Often, but not always. Some species are naturally restricted, while others become rare because modern pressure drives them downward."
+            }
+        ],
+        relatedRankingSlugs: ["most-adaptable-animals", "smartest-animals"],
+        systemsSpeciesSlugs: ["black-rhinoceros", "sunda-pangolin", "orangutan"]
+    }),
+    createRankingPage({
+        slug: "deadliest-animals-to-humans-in-the-wild",
+        title: "Deadliest Animals to Humans in the Wild: Top 10 Ranked",
+        description: "A structured ranking of the deadliest animals to humans in the wild, focusing on direct encounter lethality rather than disease-vector statistics.",
+        category: "fatality",
+        searchIntents: [
+            "animals with most human deaths",
+            "deadliest animals to humans",
+            "animals that kill the most humans",
+            "most dangerous animals to humans",
+            "animals with highest human fatality risk"
+        ],
+        quickAnswer: "If you exclude disease vectors and focus on direct wild encounters, crocodiles and large venomous snakes are among the clearest top-tier answers. Hippopotamus, elephant, big cats, dangerous jellyfish, and large ambush reptiles also remain highly relevant depending on region and encounter context.",
+        introduction: [
+            "This page answers a narrower and cleaner question than a generic 'deadliest animals' list. It focuses on direct contact danger in the wild instead of mixing in mosquito-borne disease or other indirect mortality categories.",
+            "That matters because the story changes fast once you remove vectors. The top of the ranking shifts toward crocodilians, venomous snakes, and large aggressive animals humans survive only inconsistently."
+        ],
+        methodology: [
+            "Ranking balances documented fatality reputation, direct lethality in wild encounters, speed of outcome once an attack begins, and how difficult the encounter is to survive without immediate help.",
+            "This is not a precise annual death-count table. Global numbers vary by region, reporting quality, and whether indirect outcomes are included.",
+            "The ranking is best read as a biologically grounded danger order for direct human encounters, not as a legal or public-health database."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "crocodile", primaryMetric: "High direct-fatality encounter risk", shortReason: "Crocodile leads because ambush success, bite power, and water-edge surprise make a bad encounter extraordinarily hard to survive."},
+            {rank: 2, speciesSlug: "king-cobra", primaryMetric: "Massive venom-delivery threat", shortReason: "King cobra stays near the top because large venomous snakes can turn one close-range mistake into a fast medical emergency."},
+            {rank: 3, speciesSlug: "black-mamba", primaryMetric: "Rapid lethal venom reputation", shortReason: "Black mamba ranks highly because its venom and speed make it one of the most feared direct-fatality snake encounters."},
+            {rank: 4, speciesSlug: "hippopotamus", primaryMetric: "Extreme aggressive force", shortReason: "Hippopotamus belongs in the top tier because it is both huge and unusually dangerous when territory, water access, or young are involved."},
+            {rank: 5, speciesSlug: "elephant", primaryMetric: "Massive conflict lethality", shortReason: "Elephant remains a serious human-fatality animal because size alone becomes devastating once a confrontation starts."},
+            {rank: 6, speciesSlug: "lion", primaryMetric: "Large predator attack risk", shortReason: "Lion keeps a high rank because large-cat encounters can shift from intimidation to fatal force quickly under the wrong conditions."},
+            {rank: 7, speciesSlug: "tiger", primaryMetric: "Heavy ambush-predator threat", shortReason: "Tiger stays close to lion because a committed big-cat attack is an exceptionally difficult event for a human to survive."},
+            {rank: 8, speciesSlug: "jellyfish", primaryMetric: "Venomous marine lethality", shortReason: "Jellyfish earns a slot because dangerous stings can turn ordinary swimming into fatal or near-fatal collapse in some regions."},
+            {rank: 9, speciesSlug: "american-alligator", primaryMetric: "Powerful ambush reptile", shortReason: "American alligator is not a global fatality leader like crocodiles, but it still belongs in a direct-encounter lethality discussion."},
+            {rank: 10, speciesSlug: "reticulated-python", primaryMetric: "Rare but extreme constrictor risk", shortReason: "Reticulated python closes the list because such attacks are less common, but the size ceiling makes the risk biologically real."}
+        ],
+        breakdown: [
+            "Crocodiles and large venomous snakes dominate because they combine lethal hardware with encounters that become catastrophic very quickly. Hippopotamus and elephant stay surprisingly high because raw aggression and body mass can rival predatory danger in the wrong place.",
+            "This ranking should not be confused with public-health death tables. It is about what happens when a human and a dangerous wild animal meet directly and the situation goes bad."
+        ],
+        faq: [
+            {
+                question: "Which animal kills the most humans in direct wild encounters?",
+                answer: "In this animal-only, direct-encounter framing, crocodiles are among the clearest top answers."
+            },
+            {
+                question: "Why are mosquitoes not on this page?",
+                answer: "Because this ranking is intentionally limited to direct wild-animal encounters rather than disease-vector mortality."
+            }
+        ],
+        relatedRankingSlugs: ["most-dangerous-animals", "most-reviled-animals"],
+        systemsSpeciesSlugs: ["crocodile", "king-cobra", "hippopotamus"]
+    }),
+    createRankingPage({
+        slug: "most-sacred-animals-in-history",
+        title: "Most Sacred Animals in History: Top 10 Ranked",
+        description: "A structured ranking of the most sacred animals in history, balancing long-term worship, ritual symbolism, divine association, and cultural persistence across civilizations.",
+        category: "culture",
+        searchIntents: [
+            "most worshipped animals in history",
+            "most sacred animals in history",
+            "animals worshipped by humans",
+            "animals with religious significance",
+            "holy animals in ancient history"
+        ],
+        quickAnswer: "If you want the strongest sacred-animal headlines in this dataset, elephant, cobra, lion, eagle, peafowl, crocodile, wolf, dolphin, scarab-like beetles, and tiger all belong near the top. The exact order depends on whether you prioritize direct worship, divine symbolism, or long-term ritual persistence.",
+        introduction: [
+            "Human history did not only fear animals. In many cultures, animals carried divine power, protective symbolism, royal meaning, or direct ritual importance.",
+            "This page ranks that sacred status instead of simple popularity. The key question is not whether the animal was admired, but how deeply it entered worship, myth, and long-lived symbolic systems."
+        ],
+        methodology: [
+            "Ranking emphasizes direct sacred status, religious symbolism, ritual use, long historical persistence, and how widely the animal appears as a divine or semi-divine figure.",
+            "This is not a strict count of how many people worshipped each species. It is a structured historical-symbolic ranking built from the AnimalDex dataset.",
+            "Some entries rank highly because of direct divine association, while others rise because they stayed sacred across multiple regions and eras."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "elephant", primaryMetric: "Deep religious and royal symbolism", shortReason: "Elephant leads because it carries one of the strongest long-running sacred profiles in human civilization, especially across South and Southeast Asia."},
+            {rank: 2, speciesSlug: "king-cobra", primaryMetric: "Divine serpent symbolism", shortReason: "King cobra ranks near the top because sacred snake traditions and naga symbolism run very deep across major religious histories."},
+            {rank: 3, speciesSlug: "lion", primaryMetric: "Royal and divine prestige", shortReason: "Lion stays high because few animals have symbolized kingship, divine protection, and cosmic power as consistently."},
+            {rank: 4, speciesSlug: "eagle", primaryMetric: "Sky-power sacred symbol", shortReason: "Eagle belongs in the top tier because it repeatedly appears as a divine messenger, imperial sign, or sacred sky animal across civilizations."},
+            {rank: 5, speciesSlug: "indian-peafowl", primaryMetric: "Temple and deity association", shortReason: "Indian peafowl earns a high slot because beauty and sacred symbolism overlap strongly in South Asian religious traditions."},
+            {rank: 6, speciesSlug: "crocodile", primaryMetric: "River-power worship history", shortReason: "Crocodile stays prominent because some cultures treated it not only as feared wildlife but as a genuine sacred river force."},
+            {rank: 7, speciesSlug: "wolf", primaryMetric: "Mythic ancestor and guardian role", shortReason: "Wolf ranks highly because it repeatedly appears in origin stories, sacred warrior imagery, and protective mythology."},
+            {rank: 8, speciesSlug: "dolphin", primaryMetric: "Protective sea symbolism", shortReason: "Dolphin belongs because maritime cultures often treated it as a benevolent, sacred, or divinely favored sea animal."},
+            {rank: 9, speciesSlug: "dung-beetle", primaryMetric: "Scarab-style sacred symbolism", shortReason: "Dung beetle makes the list because scarab symbolism gave beetle forms one of history's most durable sacred insect identities."},
+            {rank: 10, speciesSlug: "tiger", primaryMetric: "Power and guardian symbolism", shortReason: "Tiger rounds out the ranking because it carried sustained sacred force, guardian symbolism, and ritual prestige across several Asian traditions."}
+        ],
+        breakdown: [
+            "Elephant and cobra are the cleanest answers here because their sacred identity remains visible even in the modern world. Lion and eagle follow because rulership, sky power, and divine legitimacy made them enduring symbols across multiple civilizations.",
+            "This page works best when read as sacred significance rather than popularity. Some animals were feared, but fear itself often became part of why they were revered."
+        ],
+        faq: [
+            {
+                question: "What animal was worshipped the most in history?",
+                answer: "There is no single measurable winner, but elephant and sacred serpent traditions are among the strongest recurring answers in this dataset."
+            },
+            {
+                question: "Does sacred mean the same thing as worshipped?",
+                answer: "Not always. Some animals were directly worshipped, while others were treated as divine symbols, protectors, or carriers of ritual power."
+            }
+        ],
+        relatedRankingSlugs: ["smartest-animals", "most-communicative-animals-in-the-wild"],
+        systemsSpeciesSlugs: ["elephant", "king-cobra", "lion"]
+    }),
+    createRankingPage({
+        slug: "most-communicative-animals-in-the-wild",
+        title: "Most Communicative Animals in the Wild: Top 10 Ranked",
+        description: "A structured ranking of the most communicative animals in the wild, balancing vocal range, signal diversity, social coordination, and how heavily the species depends on information exchange.",
+        category: "communication",
+        searchIntents: [
+            "animals which communicate the most in the wild",
+            "most communicative animals",
+            "animals that communicate the most",
+            "best animal communicators",
+            "animals with the most complex communication"
+        ],
+        quickAnswer: "If you want the cleanest communication headline, dolphins, orcas, beluga whales, chimpanzees, elephants, wolves, crows, honey bees, and prairie dogs all belong near the top. The order changes depending on whether you emphasize vocal complexity, signal diversity, or coordination value.",
+        introduction: [
+            "Animal communication is not just about making noise. Some species use calls, posture, touch, chemistry, movement, or location-specific signals as part of a much larger information system.",
+            "This page ranks the animals whose lives depend most visibly and consistently on exchanging information with others in the wild."
+        ],
+        methodology: [
+            "Ranking balances signal variety, situational precision, social dependence, long-distance reach, and how much survival or coordination improves when communication succeeds.",
+            "No single channel wins automatically. A bee dance, a whale whistle set, and a primate gesture system can all be highly sophisticated in different ways.",
+            "The goal is not to crown one universal smartest talker. It is to rank the richest real communication systems represented in the dataset."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "dolphin", primaryMetric: "Rich social vocal system", shortReason: "Dolphin takes the top slot because communication is central to coordination, identity, play, and social learning."},
+            {rank: 2, speciesSlug: "orca", primaryMetric: "Pod-scale acoustic culture", shortReason: "Orca stays near the top because pods appear to use highly social, learned, and coordinated communication in ways that shape group behavior."},
+            {rank: 3, speciesSlug: "beluga-whale", primaryMetric: "Wide acoustic range", shortReason: "Beluga whale belongs here because its famous variety of whistles, clicks, and squeaks makes it one of the strongest vocal specialists in the sea."},
+            {rank: 4, speciesSlug: "chimpanzee", primaryMetric: "Calls, gestures, and politics", shortReason: "Chimpanzee ranks highly because social life depends on a layered mix of vocalization, posture, and strategic signaling."},
+            {rank: 5, speciesSlug: "elephant", primaryMetric: "Long-range social signaling", shortReason: "Elephant earns a top-tier slot because communication helps hold together memory-rich social systems across distance."},
+            {rank: 6, speciesSlug: "bonobo", primaryMetric: "Social tension-management signaling", shortReason: "Bonobo belongs because communication is deeply tied to social stability, bonding, and conflict reduction."},
+            {rank: 7, speciesSlug: "wolf", primaryMetric: "Pack coordination signaling", shortReason: "Wolf remains one of the strongest land-based communication answers because pack hunting and spacing rely heavily on information exchange."},
+            {rank: 8, speciesSlug: "crow", primaryMetric: "Flexible call-based problem signaling", shortReason: "Crow makes the list because corvids pair vocal communication with social learning and situational awareness."},
+            {rank: 9, speciesSlug: "honey-bee", primaryMetric: "Location-sharing dance language", shortReason: "Honey bee deserves a high slot because it translates spatial resource information into one of the most famous nonhuman communication systems."},
+            {rank: 10, speciesSlug: "prairie-dog", primaryMetric: "Colony alarm network", shortReason: "Prairie dog closes the list because its colony warning system shows how even small mammals can build serious communication infrastructure."}
+        ],
+        breakdown: [
+            "Dolphin, orca, and beluga dominate if the reader means vocal and acoustic richness. Honey bee becomes unusually strong if the reader means precision information transfer, while prairie dog rises when alarm specificity and colony coordination matter more than raw sound variety.",
+            "That is why this page rewards multiple styles of communication instead of pretending language-like vocalization is the only meaningful category."
+        ],
+        faq: [
+            {
+                question: "Which animal communicates the most?",
+                answer: "Dolphin is one of the clearest headline answers because complex social life depends heavily on frequent and flexible communication."
+            },
+            {
+                question: "Are vocal animals always the best communicators?",
+                answer: "No. Some of the most impressive communication systems rely on movement, gesture, touch, or spatial signaling rather than pure sound."
+            }
+        ],
+        relatedRankingSlugs: ["smartest-animals", "animals-with-best-teamwork"],
+        systemsSpeciesSlugs: ["dolphin", "orca", "honey-bee"]
     })
 ];
 

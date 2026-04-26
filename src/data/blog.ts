@@ -76,11 +76,11 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/placeholders/feature-scan-overview.svg",
-            alt: "Illustrated AnimalDex scan workflow for identifying animals in the wild",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-capturing-an-alpaca-in-the-wild.webp",
+            alt: "AnimalDex featured image showing an alpaca in the wild for the animal identification guide",
             width: 1200,
             height: 675,
-            caption: "Use AI to shorten the list, then verify with field traits and habitat context."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 7,
         author: "AnimalDex Field Team",
@@ -150,11 +150,11 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/placeholders/more-discovery.svg",
-            alt: "Travel-focused AnimalDex illustration for spotting animals in Bali",
+            src: "https://www.balitecturerealty.com/wp-content/uploads/2025/05/Animals-in-Bali.webp",
+            alt: "Animals in Bali featured image for the AnimalDex 2026 Bali spotting guide",
             width: 1200,
             height: 675,
-            caption: "A habitat-first plan gives Bali wildlife trips more signal and less random guessing."
+            caption: "Featured image source: Balitecture Realty."
         },
         readingMinutes: 6,
         author: "AnimalDex Travel Desk",
@@ -518,11 +518,11 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/placeholders/more-analysis.svg",
-            alt: "AnimalDex illustration explaining wildlife rarity, pressure, and fragmentation",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-rarity-of-ostrich-shot.webp",
+            alt: "AnimalDex featured image for the article explaining what makes an animal rare",
             width: 1200,
             height: 675,
-            caption: "Rarity usually comes from ecological constraints, not hype."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 7,
         author: "AnimalDex Research Notes",
@@ -573,11 +573,11 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "AnimalDex illustration comparing zoo and wild animal learning contexts",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-comparison-for-zoo-vs-wild.webp",
+            alt: "AnimalDex featured image comparing zoo and wild animals for the observation guide",
             width: 1200,
             height: 675,
-            caption: "Zoo and wild sightings teach different parts of the same recognition system."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 6,
         tags: ["Zoo animals", "Wild animals", "Family-friendly animal learning"],
@@ -1358,11 +1358,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Crocodiles Dominate the Water Edge: Ambush, Behavior, and Ecosystem Role",
         description: "Understand crocodile behavior, ambush survival strategy, ecosystem role, and why riverbanks and estuaries become so dangerous when crocodiles control the chokepoints.",
         featuredImage: {
-            src: "/images/placeholders/more-challenges.svg",
-            alt: "Illustrated crocodile ambush strategy and ecosystem role article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-crocodiles-dominate-the-water.webp",
+            alt: "Crocodile featured image for the AnimalDex article on water-edge ambush, behavior, and ecosystem role",
             width: 1200,
             height: 675,
-            caption: "Crocodiles do not need full territorial coverage. They need the exact places where everyone else is forced to pass."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 7,
         tags: ["Crocodile behavior", "Ambush predators", "Ecosystem role"],
@@ -1411,11 +1411,11 @@ const blogPostsData: BlogPost[] = [
         title: "How King Cobras Survive and Hunt Other Snakes",
         description: "Explore king cobra behavior, specialized hunting strategy, ecosystem role, and how this predator survives by focusing on one of the hardest niches in the forest.",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "Illustrated king cobra behavior and reptile hunting strategy article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-king-cobras-survive-and-hunt-other-snakes.webp",
+            alt: "King cobra featured image for the AnimalDex article on hunting other snakes and survival strategy",
             width: 1200,
             height: 675,
-            caption: "The king cobra does not try to solve every problem in the forest. It solves one narrow problem unusually well."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 7,
         tags: ["King cobra", "Reptile behavior", "Predator ecology"],
@@ -1527,11 +1527,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Eagles Use Height, Vision, and Timing to Survive",
         description: "Learn how eagle behavior, animal vision, hunting strategy, and ecosystem role turn altitude and timing into survival advantages.",
         featuredImage: {
-            src: "/images/placeholders/more-discovery.svg",
-            alt: "Illustrated eagle vision and aerial hunting strategy article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-eagles-use-height-vision-and-timing-to-survive.webp",
+            alt: "Eagle featured image for the AnimalDex article on height, vision, and timing",
             width: 1200,
             height: 675,
-            caption: "Eagles treat altitude as decision support, not scenery."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 6,
         tags: ["Eagle behavior", "Animal vision", "Predator ecology"],
@@ -1580,11 +1580,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Termites Build Living Infrastructure",
         description: "A systems guide to termite behavior, mound engineering, survival strategy, ecosystem role, and why termites matter far beyond being decomposers.",
         featuredImage: {
-            src: "/images/placeholders/more-collection.svg",
-            alt: "Illustrated termite mound engineering and ecosystem role article for AnimalDex",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/termites-close-up.webp",
+            alt: "Termites close-up featured image for the AnimalDex article on living infrastructure and mound engineering",
             width: 1200,
             height: 675,
-            caption: "Termites are not just decomposers. They are builders, processors, and climate managers at small scale."
+            caption: "Featured image source: AnimalDex CDN."
         },
         readingMinutes: 7,
         tags: ["Termite behavior", "Ecosystem engineering", "Animal systems"],
@@ -1633,11 +1633,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Chameleons See and Strike: Vision, Behavior, and Survival Strategy",
         description: "Learn how chameleon vision, camouflage, tongue mechanics, animal behavior, and ecosystem role make this reptile an elite patient hunter.",
         featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "Illustrated chameleon vision and strike behavior article for AnimalDex",
-            width: 1200,
+            src: "https://chameleons101.com/wp-content/uploads/2023/04/Panther_Chameleons101_Eyes-1080x675.jpg",
+            alt: "Chameleon featured image for the AnimalDex article on vision, strike behavior, and survival strategy",
+            width: 1080,
             height: 675,
-            caption: "A chameleon wins by scanning from stillness and spending its force only when the geometry turns favorable."
+            caption: "Featured image source: Chameleons101."
         },
         readingMinutes: 6,
         tags: ["Chameleon behavior", "Animal vision", "Reptile survival"],
@@ -1686,11 +1686,11 @@ const blogPostsData: BlogPost[] = [
         title: "Why Fireflies Use Light So Well: Signaling, Behavior, and Survival Strategy",
         description: "Explore firefly signaling, animal behavior, survival strategy, and ecosystem role through a systems view of one of nature’s cleanest communication designs.",
         featuredImage: {
-            src: "/images/placeholders/more-discovery.svg",
-            alt: "Illustrated firefly signaling and animal behavior article for AnimalDex",
+            src: "https://plunketts.net/uploads/blog/279a65cf-c701-422b-93f5-a428a926b59a/firefly-glow.jpg",
+            alt: "Firefly featured image for the AnimalDex article on signaling, behavior, and survival strategy",
             width: 1200,
             height: 675,
-            caption: "Fireflies show that excellent communication is often more about precision and timing than raw intensity."
+            caption: "Featured image source: Plunkett's Pest Control."
         },
         readingMinutes: 6,
         tags: ["Firefly behavior", "Animal signaling", "Insect ecology"],
@@ -1739,11 +1739,11 @@ const blogPostsData: BlogPost[] = [
         title: "How Whale Sharks Feed at Ocean Scale",
         description: "Understand whale shark behavior, filter-feeding survival strategy, ecosystem role, and how the largest fish on Earth thrives without acting like a classic predator.",
         featuredImage: {
-            src: "/images/placeholders/feature-collection-overview.svg",
-            alt: "Illustrated whale shark feeding and marine ecosystem role article for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Whale sharks scale by processing huge flow efficiently rather than by chasing prey individually."
+            src: "https://cdn.britannica.com/33/151933-050-E7E77CA0/Whale-shark-swimming-trevallies-front-predators-filter-feeding.jpg",
+            alt: "Whale shark featured image for the AnimalDex article on ocean-scale filter feeding",
+            width: 1600,
+            height: 900,
+            caption: "Featured image source: Britannica."
         },
         readingMinutes: 7,
         tags: ["Whale shark", "Marine biology", "Ecosystem role"],
@@ -1785,7 +1785,322 @@ const blogPostsData: BlogPost[] = [
                 ]
             }
         ]
-    })
+    }),
+    {
+        slug: "how-to-estimate-animal-breed-prices",
+        title: "How to estimate animal breed prices without guessing",
+        description: "A practical guide to animal breed pricing, local average cost, grading signals, and why responsible valuation needs more than a single photo.",
+        publishedAt: "2026-04-24",
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/placeholders/phone-scan-card.svg",
+            alt: "AnimalDex scan card visual for estimating breed pricing and grading context",
+            width: 1200,
+            height: 675,
+            caption: "Breed pricing is strongest when scan evidence, grading notes, and market context stay together."
+        },
+        readingMinutes: 7,
+        author: "AnimalDex Market Desk",
+        tags: ["Breed pricing", "Animal grading", "Pet valuation"],
+        searchIntents: [
+            "animal breed price estimator",
+            "animal breed pricing app",
+            "average breed cost by area",
+            "breeder pricing tool",
+            "pet breed valuation",
+            "animal breed grading app"
+        ],
+        speciesSlugs: ["maine-coon-cat", "african-wild-dog", "bald-eagle"],
+        sections: [
+            {
+                title: "Breed price is a range, not a magic number",
+                paragraphs: [
+                    "The same breed can have very different prices depending on area, age, documentation, health, temperament, training, and demand. That is why a responsible estimate should start as a range.",
+                    "AnimalDex should position breed pricing around structured context: likely breed signals, grading notes, profile completeness, and local comparison logic."
+                ],
+                inlineLinks: [
+                    {
+                        text: "AnimalDex",
+                        slug: "animal-breed-price-estimator",
+                        href: "/animal-breed-price-estimator"
+                    },
+                    {
+                        text: "breed pricing and grading",
+                        slug: "animal-breed-grading-app",
+                        href: "/animal-breed-grading-app"
+                    }
+                ]
+            },
+            {
+                title: "The signals that matter most",
+                paragraphs: [
+                    "Start with visible breed traits, then add practical valuation inputs: age, sex, condition, lineage documents, vaccination or health records, training level, rarity, and local buyer demand.",
+                    "For breeder workflows, the most useful system is not just a price calculator. It is a record that explains why a price range might be reasonable."
+                ],
+                cards: [
+                    {
+                        label: "Breed evidence",
+                        body: "Likely breed, lookalike notes, image quality, and confidence level should be recorded before any price conversation."
+                    },
+                    {
+                        label: "Market context",
+                        body: "Average breed cost by area depends on local demand, reputable seller supply, and what comparable animals include."
+                    },
+                    {
+                        label: "Grading context",
+                        body: "Health documentation, pedigree, age, training, and profile completeness can change how buyers interpret value."
+                    },
+                    {
+                        label: "Buyer protection",
+                        body: "Clear notes reduce vague claims and help buyers ask better questions before committing."
+                    }
+                ]
+            },
+            {
+                title: "Why breeders need evidence-backed pricing",
+                paragraphs: [
+                    "Breeders often need to explain value clearly. A structured profile can show the difference between a casual listing and a well-documented animal.",
+                    "That does not mean every animal needs a formal appraisal. It means the pricing conversation should be based on visible traits, documented facts, and comparable local expectations."
+                ],
+                inlineLinks: [
+                    {
+                        text: "pricing conversation",
+                        slug: "animal-breed-pricing-grading-app",
+                        href: "/use-cases/animal-breed-pricing-grading-app"
+                    }
+                ]
+            },
+            {
+                title: "Where AnimalDex fits",
+                paragraphs: [
+                    "AnimalDex can give this search audience a useful bridge between breed identification and valuation. The app can help users collect the clues that make pricing less arbitrary.",
+                    "The careful framing is important: AnimalDex should support breed pricing and grading context, not promise exact market prices from one image."
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "Can a breed price estimator be exact?",
+                answer: "No. A responsible estimate should use a range and explain the factors behind it, including breed evidence, documentation, health, age, and local demand."
+            },
+            {
+                question: "What is animal breed grading?",
+                answer: "Breed grading is the process of recording quality and confidence signals such as trait match, documentation, condition, rarity, and profile completeness."
+            }
+        ]
+    },
+    {
+        slug: "how-to-create-custom-animal-card-decks",
+        title: "How to create custom animal card decks people want to collect",
+        description: "Learn how to design custom animal cards and decks for pets, wildlife trips, classrooms, photography projects, gifts, and creator sales.",
+        publishedAt: "2026-04-24",
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/placeholders/feature-collection-overview.svg",
+            alt: "AnimalDex collection visual for custom animal card deck creation",
+            width: 1200,
+            height: 675,
+            caption: "The best custom animal decks feel like complete collectible sets, not isolated cards."
+        },
+        readingMinutes: 7,
+        author: "AnimalDex Creator Desk",
+        tags: ["Animal cards", "Custom decks", "Creator tools"],
+        searchIntents: [
+            "custom animal card deck",
+            "animal card deck creator",
+            "create animal cards",
+            "make animal trading cards",
+            "sell custom animal cards",
+            "pet trading cards"
+        ],
+        speciesSlugs: ["maine-coon-cat", "bald-eagle", "komodo-dragon"],
+        sections: [
+            {
+                title: "Start with a deck theme",
+                paragraphs: [
+                    "A custom animal card deck needs a clear reason to exist. It might be a family pet deck, a zoo trip set, a regional wildlife pack, a classroom unit, or a photographer's best sightings.",
+                    "The theme decides which animals belong, what stats matter, and why someone would want to complete the set."
+                ],
+                inlineLinks: [
+                    {
+                        text: "custom animal card deck",
+                        slug: "custom-animal-card-deck",
+                        href: "/custom-animal-card-deck"
+                    }
+                ]
+            },
+            {
+                title: "Give every card a collectible structure",
+                paragraphs: [
+                    "A card should include a strong image, animal name, traits, rarity, stats, a short story, and a reason it matters inside the deck.",
+                    "AnimalDex already uses animal profiles and collectible logic, so it can support cards that feel more complete than simple image templates."
+                ],
+                cards: [
+                    {
+                        label: "Identity",
+                        body: "Name, species or breed, location, and deck role make the card easy to understand."
+                    },
+                    {
+                        label: "Stats",
+                        body: "Rarity, strength, speed, intelligence, adaptability, or care difficulty can create comparison value."
+                    },
+                    {
+                        label: "Story",
+                        body: "A short story turns the animal from a picture into a memorable card."
+                    },
+                    {
+                        label: "Set logic",
+                        body: "Habitats, regions, colors, traits, or owner stories can make the deck feel complete."
+                    }
+                ]
+            },
+            {
+                title: "Design for personal use and creator sales",
+                paragraphs: [
+                    "Pet owners may want keepsake cards. Teachers may want classroom decks. Photographers may want wildlife packs. Small creators may want themed products for a niche audience.",
+                    "AnimalDex should frame this as a creator-ready workflow until a direct marketplace exists: make the cards, organize the deck, and prepare the concept for sharing, printing, or selling elsewhere."
+                ],
+                inlineLinks: [
+                    {
+                        text: "creator-ready workflow",
+                        slug: "sell-custom-animal-cards",
+                        href: "/sell-custom-animal-cards"
+                    }
+                ]
+            },
+            {
+                title: "Where AnimalDex fits",
+                paragraphs: [
+                    "AnimalDex has a strong foundation for custom animal cards because its product language already combines scanning, profiles, rarity, collection, and learning.",
+                    "That gives the SEO story a natural product path: users do not just create a card, they build an animal deck with structure."
+                ],
+                inlineLinks: [
+                    {
+                        text: "animal deck",
+                        slug: "animal-card-deck-creator",
+                        href: "/animal-card-deck-creator"
+                    }
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "What should be on a custom animal card?",
+                answer: "A strong custom animal card usually includes an image, name, traits, rarity, stats, a short story, and a role inside a larger deck."
+            },
+            {
+                question: "Can creators sell custom animal cards?",
+                answer: "Creators can prepare sellable deck concepts for gifts, classrooms, photography products, or niche collections. Direct AnimalDex marketplace claims should wait until that feature exists."
+            }
+        ]
+    },
+    {
+        slug: "what-animals-can-teach-us-about-self-improvement",
+        title: "What animals can teach us about self-improvement",
+        description: "Animals can teach focus, patience, resilience, teamwork, boundaries, and adaptability. Here is how AnimalDex can turn species learning into personal growth prompts.",
+        publishedAt: "2026-04-24",
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/placeholders/more-guide.svg",
+            alt: "AnimalDex field guide visual for learning self-improvement from animals",
+            width: 1200,
+            height: 675,
+            caption: "Animal traits become more useful when they turn into repeatable reflection prompts."
+        },
+        readingMinutes: 6,
+        author: "AnimalDex Learning Desk",
+        tags: ["Animal learning", "Self improvement", "Nature journaling"],
+        searchIntents: [
+            "learn from animals",
+            "what animals teach us",
+            "animal lessons for life",
+            "self improvement from animals",
+            "animal traits personal growth",
+            "animal behavior learning app"
+        ],
+        speciesSlugs: ["bald-eagle", "african-wild-dog", "komodo-dragon"],
+        systemsSpeciesSlugs: ["bald-eagle", "african-wild-dog", "komodo-dragon"],
+        sections: [
+            {
+                title: "Animal lessons work because they are concrete",
+                paragraphs: [
+                    "Self-improvement advice is often abstract. Animals make it easier to remember because their behavior gives you a vivid example of a trait in action.",
+                    "A species card can become a prompt: what does this animal do well, what constraint does it solve, and what human habit does that suggest?"
+                ],
+                inlineLinks: [
+                    {
+                        text: "species card",
+                        slug: "learn-from-animals",
+                        href: "/learn-from-animals"
+                    }
+                ]
+            },
+            {
+                title: "Six habits animals can make easier to understand",
+                paragraphs: [
+                    "Focus is easier to picture through a hunting bird than through a vague slogan. Teamwork becomes clearer through social animals. Adaptability becomes clearer through species that thrive across difficult conditions.",
+                    "The point is not to pretend humans should copy animals literally. The point is to use animal behavior as a memorable anchor for reflection."
+                ],
+                cards: [
+                    {
+                        label: "Focus",
+                        body: "Predators and foragers show how attention narrows when the target matters."
+                    },
+                    {
+                        label: "Patience",
+                        body: "Ambush hunters, nesting birds, and slow-moving reptiles show the value of timing."
+                    },
+                    {
+                        label: "Teamwork",
+                        body: "Social animals show how shared signals and roles reduce wasted effort."
+                    },
+                    {
+                        label: "Boundaries",
+                        body: "Territorial behavior can become a prompt for space, energy, and limits."
+                    },
+                    {
+                        label: "Adaptability",
+                        body: "Generalist species show how flexible systems survive changing conditions."
+                    },
+                    {
+                        label: "Resilience",
+                        body: "Migration, recovery, and seasonal behavior show how persistence often has a rhythm."
+                    }
+                ]
+            },
+            {
+                title: "Turn animal learning into a journal habit",
+                paragraphs: [
+                    "After each sighting or card, users can ask one simple question: what useful trait does this animal demonstrate?",
+                    "AnimalDex can make that repeatable by connecting identification, collection, and reflection in one learning loop."
+                ],
+                inlineLinks: [
+                    {
+                        text: "learning loop",
+                        slug: "animal-inspired-self-improvement-app",
+                        href: "/use-cases/animal-inspired-self-improvement-app"
+                    }
+                ]
+            },
+            {
+                title: "Why this belongs inside AnimalDex",
+                paragraphs: [
+                    "AnimalDex already gives users a reason to collect and revisit animal cards. Self-improvement adds another layer of meaning to those cards.",
+                    "The best version stays grounded in real species and real observation, so it feels like practical nature learning rather than generic motivation."
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "What can animals teach people?",
+                answer: "Animals can teach focus, patience, teamwork, boundaries, adaptability, resilience, attention, and respect through observable behavior."
+            },
+            {
+                question: "How can AnimalDex support self-improvement?",
+                answer: "AnimalDex can turn species cards and sightings into reflection prompts that connect animal traits to human habits."
+            }
+        ]
+    }
 ];
 
 export const blogPosts: BlogPost[] = [...blogPostsData]

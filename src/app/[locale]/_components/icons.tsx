@@ -178,3 +178,61 @@ export function SpeakerOffIcon({className, size = 24}: IconProps) {
         </svg>
     );
 }
+
+export function InstagramIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5" stroke="currentColor" strokeWidth="1.8" />
+            <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.8" />
+            <circle cx="17.3" cy="6.8" r="1.1" fill="currentColor" />
+        </svg>
+    );
+}
+
+export function TikTokIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M14 4c.45 2.08 1.84 3.62 4 4.07v2.72c-1.47-.04-2.82-.48-4-1.3v5.46a4.95 4.95 0 1 1-4.95-4.95c.36 0 .71.04 1.05.11v2.84a2.22 2.22 0 1 0 1.17 1.95V4H14Z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}
+
+export function YouTubeIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M21 12c0 2.2-.24 3.67-.46 4.45a2.96 2.96 0 0 1-2.09 2.09C17.67 18.76 16.2 19 12 19s-5.67-.24-6.45-.46a2.96 2.96 0 0 1-2.09-2.09C3.24 15.67 3 14.2 3 12s.24-3.67.46-4.45a2.96 2.96 0 0 1 2.09-2.09C6.33 5.24 7.8 5 12 5s5.67.24 6.45.46a2.96 2.96 0 0 1 2.09 2.09C20.76 8.33 21 9.8 21 12Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+            />
+            <path d="m10 9 5 3-5 3V9Z" fill="currentColor" />
+        </svg>
+    );
+}

@@ -181,8 +181,45 @@ const AVAILABLE_VECTOR_REGIONS = new Set<NativeRangeRegionKey>([
     "southeast_asia",
     "east_asia",
     "australia_oceania",
-    "arctic_antarctic"
+    "arctic_antarctic",
+    "indian_ocean",
+    "coral_triangle",
+    "southeast_asia_coastal",
+    "australia_coastal"
 ]);
+
+export const DIRECTORY_NATIVE_RANGE_REGION_KEYS: NativeRangeRegionKey[] = [
+    "north_america",
+    "south_america",
+    "europe",
+    "north_africa_middle_east",
+    "sub_saharan_africa",
+    "central_asia",
+    "south_asia",
+    "southeast_asia",
+    "east_asia",
+    "australia_oceania",
+    "arctic_antarctic"
+];
+
+const REGION_FILTER_ALIASES: Partial<Record<NativeRangeRegionKey, NativeRangeRegionKey[]>> = {
+    europe: ["scotland"],
+    north_africa_middle_east: ["red_sea", "mediterranean"],
+    southeast_asia: [
+        "west_java",
+        "east_java",
+        "java",
+        "bali",
+        "sumatra",
+        "borneo",
+        "northern_thailand",
+        "southern_thailand",
+        "southeast_asia_coastal",
+        "coral_triangle"
+    ],
+    australia_oceania: ["tasmania", "australia_coastal", "coral_triangle"],
+    arctic_antarctic: ["arctic_ocean", "southern_ocean"]
+};
 
 export const NATIVE_RANGE_WORLD_BASE_ASSET = "/images/native-range/world_base.svg";
 
@@ -621,4 +658,27 @@ export function getNativeRangeDisplayLabel(descriptor: NativeRangeDescriptor) {
 
 export function getNativeRangeRegionTier(region: NativeRangeRegionKey) {
     return REGION_TIERS[region];
+}
+
+export function getDirectoryNativeRangeRegions() {
+    return DIRECTORY_NATIVE_RANGE_REGION_KEYS;
+}
+
+export function isNativeRangeRegionKey(value: string): value is NativeRangeRegionKey {
+    return (DIRECTORY_NATIVE_RANGE_REGION_KEYS as string[]).includes(value);
+}
+
+export function speciesMatchesNativeRangeRegion(entry: SpeciesEntry, region: NativeRangeRegionKey) {
+    const presentation = resolveNativeRangePresentation(entry);
+
+    if (presentation.kind !== "mapped") {
+        return false;
+    }
+
+    const acceptedRegions = new Set<NativeRangeRegionKey>([
+        region,
+        ...(REGION_FILTER_ALIASES[region] ?? [])
+    ]);
+
+    return presentation.descriptor.regions.some((descriptorRegion) => acceptedRegions.has(descriptorRegion));
 }

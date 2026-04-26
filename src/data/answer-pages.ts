@@ -76,7 +76,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Find related species and build a deeper wildlife journal."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Progress through missions, rarity milestones, and social loops."
             },
             {
@@ -156,7 +156,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Unlock related species and habitat-driven exploration."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Use missions and rarity goals to drive consistent progress."
             },
             {
@@ -203,7 +203,7 @@ const answerPageData: AnswerPageEntry[] = [
         ],
         howItWorks: [
             "Spot an animal, scan it, and save it as a collectible entry with meaningful context.",
-            "Progress through sets, rarity milestones, and challenge systems while improving your species recognition."
+            "Progress through sets, rarity milestones, and comparison systems while improving your species recognition."
         ],
         comparisonTypical: [
             "Fantasy-focused creature loops disconnected from real-world learning.",
@@ -236,7 +236,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Follow related-species paths to expand your collection map."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Use progression and rarity targets to keep momentum."
             },
             {
@@ -316,7 +316,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Surface nearby species relationships and next targets."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Stay engaged with missions, rarity milestones, and competition."
             },
             {
@@ -396,7 +396,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Expand from one scan into related species learning."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Use goals and progression to improve scanning consistency."
             },
             {
@@ -476,7 +476,7 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Expand into related species, habitats, and lookalikes."
             },
             {
-                title: "Challenges",
+                title: "Comparisons",
                 description: "Use missions to keep consistent field engagement."
             },
             {
@@ -508,6 +508,330 @@ const answerPageData: AnswerPageEntry[] = [
             "educational animal app"
         ],
         updatedAt: "2026-04-09"
+    },
+    {
+        slug: "animal-breed-price-estimator",
+        shortTitle: "Breed Price Estimator",
+        heroTitle: "How can you estimate an animal breed's price?",
+        metaTitle: "Animal Breed Price Estimator | AnimalDex",
+        metaDescription: "Learn how AnimalDex can support animal breed pricing with breed clues, grading notes, local market context, and structured valuation records.",
+        intro: "A useful animal breed price estimate needs more than a breed name. It needs evidence, grading context, and local market awareness.",
+        directAnswer: [
+            "AnimalDex can support breed pricing by helping users document likely breed traits, profile quality, rarity, condition, age, and other signals that affect value.",
+            "The strongest estimate should treat price as a range shaped by location, demand, documentation, health, temperament, and breeder reputation.",
+            "That makes AnimalDex valuable as a breed pricing and grading support workflow, especially when users need clearer records before buying, selling, or comparing animals."
+        ],
+        howItWorks: [
+            "Start with breed-aware scanning or manual entry, then record visible traits, age, documentation, condition, location, and notes that may influence price.",
+            "Use those structured notes to compare similar animals and discuss pricing with more context instead of relying on a one-photo guess."
+        ],
+        comparisonTypical: [
+            "Shows a broad price range with little context.",
+            "Treats breed name as the only important pricing factor.",
+            "Does not preserve grading notes for later comparison."
+        ],
+        comparisonAnimalDex: [
+            "Combines breed identification, profile notes, and collectible animal records.",
+            "Encourages pricing ranges based on evidence and local context.",
+            "Supports breeder, buyer, seller, and rescue conversations without overclaiming certainty."
+        ],
+        whoItsFor: [
+            "Breeders documenting animal profiles and quality signals",
+            "Buyers comparing listed prices against visible evidence",
+            "Sellers preparing clearer animal records",
+            "Rescues and shelters organizing breed-curious notes",
+            "Pet owners trying to understand breed value responsibly"
+        ],
+        features: [
+            {
+                title: "Breed clues",
+                description: "Scan and document likely breed signals while keeping uncertainty visible."
+            },
+            {
+                title: "Grading notes",
+                description: "Track condition, rarity, completeness, and profile confidence."
+            },
+            {
+                title: "Local context",
+                description: "Frame average cost expectations around area, demand, and documentation."
+            },
+            {
+                title: "Records",
+                description: "Keep animal profiles organized for comparison and follow-up."
+            },
+            {
+                title: "Learning",
+                description: "Understand why a breed or animal may command a different price range."
+            }
+        ],
+        speciesSlugs: ["maine-coon-cat", "african-wild-dog", "bald-eagle"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
+        faq: [
+            {
+                question: "Can an app estimate the exact price of a breed?",
+                answer: "No app should promise an exact price from a single photo. A responsible estimate needs breed evidence, health and documentation context, local demand, and comparable listings."
+            },
+            {
+                question: "What affects animal breed pricing?",
+                answer: "Breed, age, pedigree, location, health, documentation, temperament, training, rarity, and breeder reputation can all affect the expected price range."
+            },
+            {
+                question: "Is AnimalDex useful for breeders?",
+                answer: "Yes. AnimalDex can support breeder workflows by organizing breed clues, grading notes, profile completeness, and comparison records."
+            }
+        ],
+        searchIntents: [
+            "animal breed price estimator",
+            "animal breed pricing app",
+            "average breed cost by area",
+            "breeder pricing tool",
+            "pet breed valuation",
+            "animal breed grading app"
+        ],
+        updatedAt: "2026-04-24"
+    },
+    {
+        slug: "animal-breed-grading-app",
+        shortTitle: "Breed Grading App",
+        heroTitle: "What should an animal breed grading app track?",
+        metaTitle: "Animal Breed Grading App | AnimalDex",
+        metaDescription: "AnimalDex can support animal breed grading by tracking breed clues, confidence, profile completeness, condition, rarity, and documentation context.",
+        intro: "A useful animal breed grading app should explain the quality of the evidence behind a profile, not just assign a flashy score.",
+        directAnswer: [
+            "Animal breed grading should track likely breed signals, image quality, trait confidence, documentation, condition, age, rarity, and profile completeness.",
+            "For breeders and buyers, grading is useful because it makes the animal record easier to evaluate and compare.",
+            "AnimalDex can support this by combining breed-aware identification, collectible animal profiles, notes, and market context in one workflow."
+        ],
+        howItWorks: [
+            "Start with a scan or profile entry, then record the visible traits and supporting details that make the breed claim stronger or weaker.",
+            "A grading workflow can then separate strong evidence from weak guesses, helping buyers, sellers, and breeders discuss value more clearly."
+        ],
+        comparisonTypical: [
+            "Uses a single score without explaining the evidence.",
+            "Confuses breed popularity with animal quality.",
+            "Does not preserve the notes needed for buyer or breeder review."
+        ],
+        comparisonAnimalDex: [
+            "Keeps breed clues, card profiles, and notes together.",
+            "Frames grading as transparent context rather than guaranteed certification.",
+            "Connects grading to pricing, collecting, and long-term animal records."
+        ],
+        whoItsFor: [
+            "Breeders comparing animal profiles within a litter or program",
+            "Buyers checking whether a listing has enough evidence",
+            "Sellers preparing more credible animal records",
+            "Rescues documenting breed-curious profiles",
+            "Collectors who want clearer rarity and profile quality signals"
+        ],
+        features: [
+            {
+                title: "Trait confidence",
+                description: "Track which visible traits support or weaken a breed match."
+            },
+            {
+                title: "Profile completeness",
+                description: "Separate complete animal records from thin listings."
+            },
+            {
+                title: "Documentation",
+                description: "Keep pedigree, health, age, and owner notes beside the animal profile."
+            },
+            {
+                title: "Rarity context",
+                description: "Understand whether rarity is meaningful, local, documented, or only claimed."
+            },
+            {
+                title: "Pricing support",
+                description: "Use grading context to support more realistic pricing conversations."
+            }
+        ],
+        speciesSlugs: ["maine-coon-cat", "african-wild-dog", "bald-eagle"],
+        blogSlugs: ["how-to-estimate-animal-breed-prices", "what-makes-an-animal-rare"],
+        faq: [
+            {
+                question: "Is breed grading the same as breed identification?",
+                answer: "No. Identification suggests what breed or mix an animal may be. Grading explains how strong the supporting evidence and profile quality are."
+            },
+            {
+                question: "Can AnimalDex certify a breed?",
+                answer: "No. Certification depends on official documentation and relevant breed organizations. AnimalDex should be positioned as a grading and evidence-support tool."
+            },
+            {
+                question: "Why does grading matter for pricing?",
+                answer: "Pricing depends partly on confidence and documentation. A better documented animal profile can make pricing discussions clearer and less arbitrary."
+            }
+        ],
+        searchIntents: [
+            "animal breed grading app",
+            "breed grading app",
+            "pet grading app",
+            "animal grading app",
+            "breeder pricing tool",
+            "animal breed price estimator"
+        ],
+        updatedAt: "2026-04-24"
+    },
+    {
+        slug: "sell-custom-animal-cards",
+        shortTitle: "Sell Animal Cards",
+        heroTitle: "How can creators make and sell custom animal cards?",
+        metaTitle: "Sell Custom Animal Cards | AnimalDex",
+        metaDescription: "Explore how AnimalDex can support custom animal card and deck creation for pet cards, wildlife packs, classroom sets, gifts, and creator sales.",
+        intro: "Custom animal cards can become keepsakes, learning tools, photography products, or collectible decks when they are built with a clear theme and card structure.",
+        directAnswer: [
+            "Creators can sell custom animal cards by turning pets, sightings, or curated species lists into polished cards with names, visuals, stats, rarity, and short stories.",
+            "AnimalDex is a natural fit for this because its core product already treats animals as collectible entries rather than loose photos.",
+            "The clearest SEO position is creator-ready card and deck creation. Direct marketplace claims should wait until selling tools exist inside the product."
+        ],
+        howItWorks: [
+            "Choose a deck theme, create or scan animal entries, add traits and stats, then group the cards into a set that feels complete.",
+            "Creators can use this structure for pet keepsakes, classroom decks, regional wildlife packs, photography merch, or custom gifts."
+        ],
+        comparisonTypical: [
+            "Simple card makers that only place text over an image.",
+            "No species context, rarity logic, or collection progression.",
+            "Weak support for themed decks and long-term collecting."
+        ],
+        comparisonAnimalDex: [
+            "Turns animal entries into card-ready profiles with context.",
+            "Supports deck themes, rarity, stats, and educational value.",
+            "Connects custom card creation to a broader animal collection experience."
+        ],
+        whoItsFor: [
+            "Pet owners making custom cards or gifts",
+            "Wildlife photographers packaging animal collections",
+            "Teachers building animal learning decks",
+            "Creators testing niche collectible products",
+            "Collectors who want personalized animal sets"
+        ],
+        features: [
+            {
+                title: "Card profiles",
+                description: "Use animal names, images, traits, stats, rarity, and notes as card foundations."
+            },
+            {
+                title: "Deck themes",
+                description: "Group animals by pet family, location, habitat, classroom unit, or creator concept."
+            },
+            {
+                title: "Collectible feel",
+                description: "Make cards feel part of a set rather than isolated designs."
+            },
+            {
+                title: "Education value",
+                description: "Keep cards useful for learning, not just decoration."
+            },
+            {
+                title: "Creator path",
+                description: "Prepare structured deck concepts for future sharing, printing, or storefront workflows."
+            }
+        ],
+        speciesSlugs: ["maine-coon-cat", "bald-eagle", "komodo-dragon"],
+        blogSlugs: ["real-life-pokemon-animals-you-can-collect-in-the-wild", "what-makes-an-animal-rare"],
+        faq: [
+            {
+                question: "Can I make custom animal trading cards?",
+                answer: "Yes. AnimalDex is well positioned for custom animal card workflows because animals are already represented as collectible profiles."
+            },
+            {
+                question: "What kinds of animal cards could creators sell?",
+                answer: "Creators could build pet cards, wildlife photography packs, classroom decks, regional species sets, birthday gifts, or themed collector decks."
+            },
+            {
+                question: "Does AnimalDex currently run a card marketplace?",
+                answer: "The site should avoid claiming a live marketplace unless that feature is available. The current SEO direction should focus on creator-ready card and deck creation."
+            }
+        ],
+        searchIntents: [
+            "sell custom animal cards",
+            "create animal cards",
+            "custom animal card deck",
+            "animal card creator",
+            "make animal trading cards",
+            "pet trading cards"
+        ],
+        updatedAt: "2026-04-24"
+    },
+    {
+        slug: "learn-from-animals",
+        shortTitle: "Learn From Animals",
+        heroTitle: "What can people learn from animals?",
+        metaTitle: "Learn From Animals | AnimalDex",
+        metaDescription: "Learn how AnimalDex can turn animal behavior, traits, and species observation into self-improvement prompts for focus, patience, resilience, and growth.",
+        intro: "Animals can make self-improvement more concrete because their traits and behaviors are easy to observe, remember, and revisit.",
+        directAnswer: [
+            "People can learn patience, focus, cooperation, boundaries, resilience, adaptability, and awareness from animals.",
+            "AnimalDex can support that by turning species cards and sightings into reflection prompts, not just identification records.",
+            "This gives users another reason to return: each animal becomes both something to learn about and a practical reminder of a useful human habit."
+        ],
+        howItWorks: [
+            "Start with a species card or sighting, then connect its traits and behavior to a personal-growth prompt.",
+            "Over time, the collection becomes a journal of animal knowledge and memorable lessons about attention, discipline, curiosity, and respect."
+        ],
+        comparisonTypical: [
+            "Generic inspirational animal quotes without real species context.",
+            "Education apps that do not connect learning to personal reflection.",
+            "Journaling tools with no animal discovery or collection loop."
+        ],
+        comparisonAnimalDex: [
+            "Grounds reflection in real animals, traits, and behavior.",
+            "Uses collection and journaling loops to make lessons repeatable.",
+            "Keeps the experience educational without becoming vague motivation."
+        ],
+        whoItsFor: [
+            "Animal lovers who want deeper meaning from species learning",
+            "Journalers looking for concrete reflection prompts",
+            "Students and families learning character through nature",
+            "Coaches and teachers using animal traits as examples",
+            "Users who want self-improvement grounded in observation"
+        ],
+        features: [
+            {
+                title: "Trait prompts",
+                description: "Connect animal traits to habits such as patience, focus, and adaptability."
+            },
+            {
+                title: "Species cards",
+                description: "Use real animal entries as anchors for reflection."
+            },
+            {
+                title: "Journaling",
+                description: "Turn sightings and discoveries into personal notes."
+            },
+            {
+                title: "Learning loops",
+                description: "Revisit cards to strengthen both species knowledge and personal insight."
+            },
+            {
+                title: "Observation",
+                description: "Build attention and respect through careful animal study."
+            }
+        ],
+        speciesSlugs: ["bald-eagle", "african-wild-dog", "komodo-dragon"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "real-life-pokemon-animals-you-can-collect-in-the-wild"],
+        faq: [
+            {
+                question: "What can animals teach humans?",
+                answer: "Animals can teach attention, patience, cooperation, independence, resilience, boundaries, and adaptation through observable behavior."
+            },
+            {
+                question: "How does AnimalDex connect animals to self-improvement?",
+                answer: "AnimalDex can use species cards, sightings, and traits as prompts for reflection, journaling, and repeatable learning."
+            },
+            {
+                question: "Is this still an animal learning app?",
+                answer: "Yes. The self-improvement angle builds on real animal education instead of replacing it."
+            }
+        ],
+        searchIntents: [
+            "learn from animals",
+            "what animals teach us",
+            "animal lessons for life",
+            "self improvement from animals",
+            "animal traits personal growth",
+            "animal behavior learning app"
+        ],
+        updatedAt: "2026-04-24"
     }
 ];
 

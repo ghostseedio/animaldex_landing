@@ -1,8 +1,93 @@
-<svg width="190" height="70" viewBox="0 0 190 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="190" height="70" rx="22" fill="#131A16"/>
-  <rect x="0.75" y="0.75" width="188.5" height="68.5" rx="21.25" stroke="#314036" stroke-width="1.5"/>
-  <circle cx="28" cy="35" r="12" fill="#1BC451"/>
-  <circle cx="61" cy="35" r="12" fill="#83FFAE"/>
-  <circle cx="94" cy="35" r="12" fill="#243028"/>
-  <rect x="122" y="27" width="46" height="16" rx="8" fill="#243028"/>
+<svg width="240" height="70" viewBox="0 0 240 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="240" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#182019"/>
+      <stop offset="0.55" stop-color="#111713"/>
+      <stop offset="1" stop-color="#151223"/>
+    </linearGradient>
+
+    <linearGradient id="winnerBg" x1="134" y1="34" x2="226" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#162C1D"/>
+      <stop offset="1" stop-color="#1F3A27"/>
+    </linearGradient>
+
+    <radialGradient id="avatarGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(35 36) rotate(90) scale(24)">
+      <stop stop-color="#35F24C" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#35F24C" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+
+    <clipPath id="dragonflyClip" clipPathUnits="userSpaceOnUse">
+      <circle cx="27" cy="47" r="8"/>
+    </clipPath>
+
+    <clipPath id="beetleClip" clipPathUnits="userSpaceOnUse">
+      <circle cx="146" cy="47" r="8"/>
+    </clipPath>
+  </defs>
+
+  <rect width="240" height="70" rx="22" fill="url(#cardBg)"/>
+  <rect x="0.75" y="0.75" width="238.5" height="68.5" rx="21.25" stroke="#314036" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <path d="M20 12L16.5 24H21L18.7 34L27.5 19.5H22.5L25 12H20Z" fill="#2EFF4A"/>
+  <text x="34" y="25" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="12" font-weight="800">Scenario result</text>
+  <text x="184" y="25" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="11" font-weight="700">won 3 cr</text>
+
+  <!-- Matchup row: Dragonfly -->
+  <rect x="14" y="36" width="88" height="22" rx="11" fill="#222622"/>
+
+  <circle cx="27" cy="47" r="10" fill="url(#avatarGlow)" opacity="0.35" filter="url(#softGlow)"/>
+  <circle cx="27" cy="47" r="8" fill="#111713"/>
+
+  <image
+    x="19"
+    y="39"
+    width="16"
+    height="16"
+    preserveAspectRatio="xMidYMid slice"
+    clip-path="url(#dragonflyClip)"
+    href="data:image/webp;base64,UklGRo4CAABXRUJQVlA4WAoAAAAQAAAAPwAAPwAAQUxQSLcBAAABkETb1vFIL05VtW3btm3btm3btm3btm3b5p97B+GXb9g9iIgJkP8qW2IVrhhJldWhIuWMqx8+lVVkarW5TzZbgBIOuk3ySXpF0sLgq5m5HAFwVj1HgpxgURVtI8k3C3OZ/cm88AsJ8kBCUZ7yEEm+6B/XLWn5Qk4RidP5EQkA21NLECaZ/52kcaZZZCl9/eebWhK+wdm/JEhjeVwJSkeTawD4e3ejiyRPtV39g+6/7/eJJOrNqSpVyBgn/+RLBshvLgIuFwnQuN4le8QUhcr3HT2oeDgVSc78/v7y5tETbwwQdAcIAI/mj1136PGX7yQ/1FcROvQHPcIXj79+0iPII6lUiLPzezeAXgESoDsI8u3y1KLWWn7lU9BXeCQBkny9NK9DlNsyd5hz4s1f8tfv/bNvE6Dnv08Pj8tvl+A0Rc5So1P3lQcSmCq/hevV9Sc3Dq8ZWydVBAluW6+8IpZ2X340j5M8TphVgt8cXkTEOerPVLNoHe3kk5R6SRfXKIteic5/KKeXNDIOxdQr8X201csyhRcSaSVZH7OHXtLy7+5QvSJs/JBLL8l9q5tmkrOsbmLS7t9lAFZQOCCwAAAAMAcAnQEqQABAAD8ZdrdQrL+mIq4ZK4vwIwlnAADoZxiSU7WivCFI/7Gru5qbMaD5pzCcyFFFz/f3ViPoUuBtc8RwAP7yodn4+f/66cyOcuMrhYl+VLazQHxWbf49S0ZHH0b5v2tZN89VJ9QSzpWer4QylM402oI2i9ZNVe//9aEHKrU8acAHHwfLueqlLVqPWLWyVbcgR2neFDLPREx2J9KnR//vY8lN7mCzDmPAAAA="
+  />
+
+  <circle cx="27" cy="47" r="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
+
+  <text x="40" y="51" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="11" font-weight="800">Dragon</text>
+  <rect x="77" y="41" width="17" height="12" rx="6" fill="#331919"/>
+  <text x="85.5" y="50" text-anchor="middle" fill="#E85A5A" font-family="Arial, sans-serif" font-size="8" font-weight="800">B</text>
+
+  <!-- VS -->
+  <circle cx="120" cy="47" r="10" fill="#242824"/>
+  <text x="120" y="51" text-anchor="middle" fill="#AEB6AE" font-family="Arial, sans-serif" font-size="9" font-weight="800">VS</text>
+
+  <!-- Matchup row: Rhinoceros Beetle -->
+  <rect x="134" y="36" width="92" height="22" rx="11" fill="url(#winnerBg)"/>
+
+  <circle cx="146" cy="47" r="8" fill="#111713"/>
+
+  <image
+    x="138"
+    y="39"
+    width="16"
+    height="16"
+    preserveAspectRatio="xMidYMid slice"
+    clip-path="url(#beetleClip)"
+    href="data:image/webp;base64,UklGRowDAABXRUJQVlA4WAoAAAAQAAAAPwAAPwAAQUxQSL0CAAABkETbtiFJP7Js27Zt223btm3btm3btm2biXcHGREZVT3tQURMAPvPukxHAxujqmVd0G/ptok+oobUrUIm0T1P/8Snjf3ixZgc7lhVdKK67ftAwLvq2kx06sviytC38g4KC/GzM+CY34I3BBBhloyJ1lv10F0izjG399y9V56+fvfmxY19C7qcAYjU2jDxFT9W60himj39xk+IJoD4W4vzuySvyyTULd3zDcJEpMYLIowTMjDlog7gmI0ENlO+QiQRQYNLDnxc963TH+NDEdPccjVAIiAANXX55MQUK8a0Gn8A8K2zTDPtISoeEuAXQ4ovj0td8uZ9BOFDB22mecRrgAhiiQ/gAREUTx99B4CL5RyTsEIO0kCdCCAiED8AwosJbkzS1J8ANAMBIAAEEAGAfGWEjEnrdBlEAIkgIRBIEKrpZkxq5/0ACERCvAQCPxEA7HbV4yThgrpeUP589FIOCBDxEf05/+D53fNvVPJvf1Q427ezoQQyn+FP8PVg52od1z79SwDJlcRHBByLT0yJC8g/8WZBu46zF3dJlomROXm7OIe1WvgQ8hOdK2q36T5w6vqnhL/37n9TkOLX5y9K+rB3StfWzVs0rdHt3LP94xs0PHhzSryIjH3bt+7cc2jPgR2Da5TWqFGtRv0WLWd+xIMFC9du37919aL1H/B+Yo8Bg/r37tG5Y/fRS9bMGzdp9oo2nFBgsqObt6OFhZOrk5uvj4e7R0BKm10vD05t2bpVi6b1GzZrPeQGDtUqLSnMyUiKjQrydrI00JZpazNp9XI7DBq14czVbZ1rlkaHh0dFBocEBzgNxO1wCzNTExMzU2MDXS2OVWLEpUMT2w8oCrAwMjPR19PTN9TTN9C3mvL304ieDWqXB+uzSreLMGOac9rRfRbt2X/qyMWrDSpPei0DI2sL5wTHf+e/hgBWUDggqAAAAFAGAJ0BKkAAQAA/GYC3VSyoJSMoFAwBkCMJaQAAwLgSxOtSs8ID2YPSv0CwIr+sKbeeB0Pi10B0zUOAAP7yoRPcaDsuJqmnchDPHJYDrL7jp4ri/z2qht8roqA3vnh8KgoUpbFOolL4NZ4E9XNIL6WkGBtFYb8ib46z+uEsoEnGrKzQfw3X+MoT8nzke+7kFtav7MbqzS+7udeq5qnAv9RgAv7UwAAAAA=="
+  />
+
+  <circle cx="146" cy="47" r="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
+
+  <text x="159" y="51" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="11" font-weight="800">Beetle</text>
+  <rect x="198" y="41" width="18" height="12" rx="6" fill="#33260F"/>
+  <text x="207" y="50" text-anchor="middle" fill="#FF9B38" font-family="Arial, sans-serif" font-size="8" font-weight="800">A</text>
+
+  <!-- Small outcome chips -->
+  <rect x="20" y="60" width="36" height="6" rx="3" fill="#243028"/>
+  <rect x="20" y="60" width="25" height="6" rx="3" fill="#2EFF4A"/>
+  <rect x="66" y="60" width="36" height="6" rx="3" fill="#2B2613"/>
+  <rect x="112" y="60" width="36" height="6" rx="3" fill="#2A1820"/>
+  <rect x="158" y="60" width="36" height="6" rx="3" fill="#2A1E12"/>
 </svg>

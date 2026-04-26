@@ -15,7 +15,18 @@ export default function Header() {
             className="flex justify-between items-center mb-16 font-display font-bold text-2xl sticky top-0 py-4 md:py-8
             bg-canvas-900/80 backdrop-blur-xl border-b border-line-400 px-8 md:px-16 z-40"
         >
-            <LocaleToggle currentLocale={currentLocale}/>
+            <div className="flex items-center gap-4 md:gap-6">
+                <Link href="/" aria-label={t("logo")} className="shrink-0">
+                    <img
+                        src="/images/logo.webp"
+                        alt={t("logo")}
+                        width={48}
+                        height={48}
+                        className="h-10 w-10 md:h-12 md:w-12"
+                    />
+                </Link>
+                <LocaleToggle currentLocale={currentLocale}/>
+            </div>
             <HeaderMenu>
                 <HeaderLink
                     href="/#team"
@@ -34,18 +45,6 @@ export default function Header() {
                     data-cursor-text={t('animals')}
                 >
                     {t('animals')}
-                </HeaderLink>
-                <HeaderLink
-                    href="/challenges"
-                    data-cursor-text={t('challenges')}
-                >
-                    {t('challenges')}
-                </HeaderLink>
-                <HeaderLink
-                    href="/rankings"
-                    data-cursor-text={t('rankings')}
-                >
-                    {t('rankings')}
                 </HeaderLink>
                 <Link
                     href="/#download"
@@ -70,12 +69,6 @@ export default function Header() {
                 </HeaderLink>
                 <HeaderLink href="/animals" mobile>
                     {t('animals')}
-                </HeaderLink>
-                <HeaderLink href="/challenges" mobile>
-                    {t('challenges')}
-                </HeaderLink>
-                <HeaderLink href="/rankings" mobile>
-                    {t('rankings')}
                 </HeaderLink>
                 <HeaderLink href="/#more" mobile>
                     {t('discover')}

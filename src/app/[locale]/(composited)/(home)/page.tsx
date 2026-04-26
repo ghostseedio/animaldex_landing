@@ -22,6 +22,19 @@ import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {getAbsoluteUrl} from "@/lib/site";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 
+const animalBackgroundImages = [
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mountain-tapir.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/pekin-duck.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/red-kite.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/rex-rabbit.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/zander.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/thorny-devil.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/tibetan-fox.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/samoyed.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/swamp-harrier.webp"
+];
+
 export default async function Home() {
     const t = await getTranslations('home');
     const locale = await getLocale();
@@ -48,6 +61,30 @@ export default async function Home() {
             title: t("download.answersLink"),
             description: t("download.answersPrompt"),
             accent: "from-line-300/20 via-line-300/6 to-transparent"
+        },
+        {
+            href: "/animal-breed-price-estimator",
+            title: t("download.breedPricingLink"),
+            description: t("download.breedPricingPrompt"),
+            accent: "from-primary-500/16 via-line-300/8 to-transparent"
+        },
+        {
+            href: "/custom-animal-card-deck",
+            title: t("download.customDeckLink"),
+            description: t("download.customDeckPrompt"),
+            accent: "from-primary-400/16 via-primary-500/8 to-transparent"
+        },
+        {
+            href: "/learn-from-animals",
+            title: t("download.learnAnimalsLink"),
+            description: t("download.learnAnimalsPrompt"),
+            accent: "from-line-300/18 via-primary-300/6 to-transparent"
+        },
+        {
+            href: "/animal-wisdom",
+            title: t("download.animalWisdomLink"),
+            description: t("download.animalWisdomPrompt"),
+            accent: "from-primary-500/12 via-primary-300/6 to-transparent"
         },
         {
             href: "/use-cases",
@@ -91,22 +128,32 @@ export default async function Home() {
             {"@type": "Audience", "audienceType": "Travelers"},
             {"@type": "Audience", "audienceType": "Photographers"},
             {"@type": "Audience", "audienceType": "Collectors"},
-            {"@type": "Audience", "audienceType": "Competitive players"}
+            {"@type": "Audience", "audienceType": "Competitive players"},
+            {"@type": "Audience", "audienceType": "Breeders and breed researchers"},
+            {"@type": "Audience", "audienceType": "Animal card creators"},
+            {"@type": "Audience", "audienceType": "Self-improvement learners"}
         ],
         featureList: [
             "AI animal scanning and analysis",
             "Animal identification and field-guide context",
+            "Breed identification, grading, and pricing context",
             "Collectible wildlife cards and journals",
+            "Custom animal card decks for pets, wildlife, and creator projects",
             "Albums, sets, missions, and progression",
             "Discovery feed for real animal sightings",
             "Challenge, battle, and trading loops",
             "Family-friendly animal learning",
+            "Animal-inspired reflection and self-improvement prompts",
             "Respectful wildlife observation and habitat curiosity"
         ],
         about: [
             {"@type": "Thing", "name": "Animal identification"},
+            {"@type": "Thing", "name": "Animal breed grading"},
+            {"@type": "Thing", "name": "Animal breed pricing"},
             {"@type": "Thing", "name": "Wildlife learning"},
             {"@type": "Thing", "name": "Animal card collecting"},
+            {"@type": "Thing", "name": "Custom animal card decks"},
+            {"@type": "Thing", "name": "Animal-inspired self-improvement"},
             {"@type": "Thing", "name": "Wildlife photography"},
             {"@type": "Thing", "name": "Zoo and safari animal discovery"}
         ]
@@ -145,10 +192,23 @@ export default async function Home() {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([webSiteSchema, softwareAppSchema, mobileAppSchema, faqSchema])}}
             />
-            <IconCanvas probability={0.02} paths={checkedIcons} color="#1BC451" height={2000}/>
+            <IconCanvas
+                probability={0.02}
+                paths={checkedIcons}
+                imageSources={animalBackgroundImages}
+                color="#1BC451"
+                height={2000}
+            />
 
             <section className="w-full flex justify-center items-center flex-col gap-4 mt-48 md:mt-72 mb-16 px-4" id="top">
-                <h1 className="text-primary-500 font-bold font-display text-5xl md:text-6xl lg:text-7xl">{t("title")}</h1>
+                <Image
+                    src="/images/animaldex-logo-text.webp"
+                    alt={t("title")}
+                    width={520}
+                    height={124}
+                    priority
+                    className="w-full max-w-[20rem] md:max-w-[26rem] lg:max-w-[32rem] h-auto"
+                />
                 <p className="text-xl md:text-2xl text-ink-200 w-full md:w-[34rem] text-center">{t("description")}</p>
                 <p className="text-base md:text-lg text-ink-300 w-full max-w-3xl text-center">
                     {t("supporting")}
@@ -171,7 +231,9 @@ export default async function Home() {
                     }
                     phone={{
                         src: localisePath(phone.phone),
-                        alt: t('phone.phone')
+                        alt: t('phone.phone'),
+                        width: phone.phoneWidth,
+                        height: phone.phoneHeight
                     }}
                 />
             </section>
@@ -186,6 +248,12 @@ export default async function Home() {
                     </h3>
                     <p className="text-lg md:text-xl xl:text-2xl w-full lg:max-w-lg text-center lg:text-left text-ink-200">
                         {t("features.description")}
+                    </p>
+                    <p className="text-base md:text-lg w-full lg:max-w-lg text-center lg:text-left text-ink-300">
+                        {t("features.wisdomDescription")}
+                    </p>
+                    <p className="text-sm md:text-base w-full lg:max-w-lg text-center lg:text-left text-ink-400">
+                        {t("features.appliedInsight")}
                     </p>
                 </div>
 
@@ -342,7 +410,7 @@ export default async function Home() {
                         ))
                     }
                 </div>
-                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     {exploreLinks.map((item) => (
                         <Link
                             key={item.href}

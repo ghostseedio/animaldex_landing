@@ -1,9 +1,9 @@
 import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
-import Button from "@/app/[locale]/_components/button";
 import Link from "@/app/[locale]/_components/link";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
+import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import {getAnswerPagesForIntents} from "@/data/answer-pages";
 import {BlogMediaBlock, ContentImage} from "@/data/content-schema";
@@ -123,7 +123,7 @@ function resolveBlogLinkHref(link: BlogLink) {
         return link.href;
     }
 
-    return link.kind === "challenge" ? `/challenges/${link.slug}` : `/animals/${link.slug}`;
+    return link.kind === "challenge" ? `/comparisons/${link.slug}` : `/animals/${link.slug}`;
 }
 
 function buildSpeciesTextLinks(speciesSlugs: string[]): BlogLink[] {
@@ -346,6 +346,11 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                 entry
             }];
         });
+    const ctaSupportItems = [
+        t("ctaSupportOne"),
+        t("ctaSupportTwo"),
+        t("ctaSupportThree")
+    ];
 
     const postUrl = getAbsoluteUrl(locale, `/blog/${post.slug}`);
     const schema = {
@@ -501,7 +506,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                             >
                                 <h3 className="font-display font-bold text-2xl text-white">
                                     <Link
-                                        href={`/challenges/${challenge.slug}`}
+                                        href={`/comparisons/${challenge.slug}`}
                                         className="hover:text-primary-100 transition-colors"
                                     >
                                         {challenge.title}
@@ -509,7 +514,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                                 </h3>
                                 <p className="text-ink-200 text-base">{challenge.quickVerdict}</p>
                                 <Link
-                                    href={`/challenges/${challenge.slug}`}
+                                    href={`/comparisons/${challenge.slug}`}
                                     className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
                                     underline
                                 >
@@ -546,15 +551,12 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                 </section>
             )}
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <div className="flex justify-center">
-                    <Link href="/#download">
-                        <Button as="span">{t("ctaButton")}</Button>
-                    </Link>
-                </div>
-            </div>
+            <IntentCtaCard
+                title={t("ctaTitle")}
+                description={t("ctaDescription")}
+                buttonLabel={t("ctaButton")}
+                supportItems={ctaSupportItems}
+            />
 
             {relatedPosts.length > 0 && (
                 <section className="flex flex-col gap-4">

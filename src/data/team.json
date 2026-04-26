@@ -1,32 +1,32 @@
 [
   {
     "href": "/#features",
-    "name": "Collectors & Creature Fans",
+    "name": "Pokémon Fans",
     "roles": ["collector", "competitor"],
     "img": "/images/placeholders/persona-collector.svg"
   },
   {
     "href": "/#more",
-    "name": "Travelers, Zoo & Safari Explorers",
-    "roles": ["traveler", "curious"],
+    "name": "Adventurists",
+    "roles": ["traveler", "curious", "learner"],
     "img": "/images/placeholders/persona-traveler.svg"
   },
   {
     "href": "/#more",
-    "name": "Families & Young Animal Lovers",
-    "roles": ["family", "animalLover"],
+    "name": "Animal Lovers",
+    "roles": ["breeders", "family", "animalLover"],
     "img": "/images/placeholders/persona-family.svg"
   },
   {
     "href": "/#more",
-    "name": "Photographers & Field Spotters",
+    "name": "Creators",
     "roles": ["photographer", "learner"],
     "img": "/images/placeholders/persona-curious.svg"
   },
   {
     "href": "/#download",
-    "name": "Progress Hunters & Competitive Players",
-    "roles": ["competitor", "collector"],
+    "name": "Winners and Goal Achievers",
+    "roles": ["progress"],
     "img": "/images/placeholders/persona-competitor.svg"
   }
 ]

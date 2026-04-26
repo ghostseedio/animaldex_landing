@@ -154,6 +154,66 @@ const collectorPageData: CollectorPageEntry[] = [
                 ]
             }
         ]
+    },
+    {
+        slug: "custom-animal-card-deck",
+        title: "Custom animal card deck for pets, wildlife, and collections",
+        heroTitle: "Custom Animal Card Deck - Build Premium Decks From Real Animals",
+        description: "AnimalDex helps users turn pets, sightings, and curated species lists into custom animal card decks with collectible structure, stats, rarity, and story.",
+        searchIntents: [
+            "custom animal card deck",
+            "animal card deck",
+            "pet trading cards",
+            "wildlife card deck",
+            "custom animal cards",
+            "animal card creator"
+        ],
+        sections: [
+            {
+                title: "A custom animal deck needs more than images",
+                paragraphs: [
+                    "The strongest animal cards combine visuals with traits, stats, rarity, and a reason each animal belongs in the set.",
+                    "AnimalDex already organizes animals as collectible entries, so deck creation can build on a structure users understand immediately."
+                ]
+            },
+            {
+                title: "For pet owners, educators, photographers, and collectors",
+                paragraphs: [
+                    "A custom deck can become a pet keepsake, a classroom learning pack, a wildlife photography project, or a collector set built around a trip or theme.",
+                    "AnimalDex makes that easier by connecting card presentation with real species context and collection progress."
+                ]
+            }
+        ]
+    },
+    {
+        slug: "animal-card-deck-creator",
+        title: "Animal card deck creator for making and sharing collectible cards",
+        heroTitle: "Animal Card Deck Creator - Make Cards People Want to Collect",
+        description: "AnimalDex is positioned for animal card creation workflows where users can build themed decks from pets, wildlife sightings, species profiles, and creator ideas.",
+        searchIntents: [
+            "animal card deck creator",
+            "create animal cards",
+            "make animal trading cards",
+            "animal card creator",
+            "sell custom animal cards",
+            "custom pet cards"
+        ],
+        sections: [
+            {
+                title: "Create animal cards with collectible logic",
+                paragraphs: [
+                    "Animal cards work best when they feel like part of a complete system: card identity, set theme, rarity, traits, stats, and progression.",
+                    "AnimalDex can support that system by turning real animal data and user-created context into cards that feel organized instead of random."
+                ]
+            },
+            {
+                title: "A foundation for creator and seller use cases",
+                paragraphs: [
+                    "Creators may want to sell pet decks, regional wildlife packs, classroom sets, photography cards, or themed animal collections.",
+                    "AnimalDex should be careful not to claim a live marketplace before it exists, but the SEO path can already target deck creation and creator-ready selling workflows."
+                ]
+            }
+        ]
     }
 ];
 

@@ -10,6 +10,9 @@ import {additionalSpeciesDescriptorsNine} from "@/data/species-expansion-pack-9"
 import {additionalSpeciesDescriptorsTen} from "@/data/species-expansion-pack-10";
 import {additionalSpeciesDescriptorsEleven} from "@/data/species-expansion-pack-11";
 import {additionalSpeciesDescriptorsTwelve} from "@/data/species-expansion-pack-12";
+import {additionalSpeciesDescriptorsThirteen} from "@/data/species-expansion-pack-13";
+import {additionalSpeciesDescriptorsFourteen} from "@/data/species-expansion-pack-14";
+import {additionalSpeciesDescriptorsFifteen} from "@/data/species-expansion-pack-15";
 
 export const speciesDescriptors: Record<string, string> = {
     "white-headed-vulture": "The clean-sky carrion judge animal",
@@ -134,7 +137,10 @@ export const speciesDescriptors: Record<string, string> = {
     ...additionalSpeciesDescriptorsNine,
     ...additionalSpeciesDescriptorsTen,
     ...additionalSpeciesDescriptorsEleven,
-    ...additionalSpeciesDescriptorsTwelve
+    ...additionalSpeciesDescriptorsTwelve,
+    ...additionalSpeciesDescriptorsThirteen,
+    ...additionalSpeciesDescriptorsFourteen,
+    ...additionalSpeciesDescriptorsFifteen
 };
 
 export function getSpeciesDescriptorBySlug(slug: string) {

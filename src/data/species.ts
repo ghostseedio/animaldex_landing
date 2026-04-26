@@ -11,6 +11,11 @@ import {additionalSpeciesEntriesInputNine} from "@/data/species-expansion-pack-9
 import {additionalSpeciesEntriesInputTen} from "@/data/species-expansion-pack-10";
 import {additionalSpeciesEntriesInputEleven} from "@/data/species-expansion-pack-11";
 import {additionalSpeciesEntriesInputTwelve} from "@/data/species-expansion-pack-12";
+import {additionalSpeciesEntriesInputThirteen} from "@/data/species-expansion-pack-13";
+import {additionalSpeciesEntriesInputFourteen} from "@/data/species-expansion-pack-14";
+import {additionalSpeciesEntriesInputFifteen} from "@/data/species-expansion-pack-15";
+import {NativeRangeRegionKey, speciesMatchesNativeRangeRegion} from "@/data/native-range";
+import {getLocationAnimalSpeciesSlugs} from "@/data/locations";
 
 export type SpeciesAnalysis = {
     summary: string;
@@ -46,6 +51,7 @@ export type SpeciesEntry = {
 };
 
 export type SpeciesDirectoryLetter = "all" | string;
+export type SpeciesRarityStatusKey = "very-rare" | "rare" | "uncommon" | "relatively-common";
 
 export type SpeciesDirectoryPage = {
     entries: SpeciesEntry[];
@@ -54,6 +60,9 @@ export type SpeciesDirectoryPage = {
     currentPage: number;
     query: string;
     letter: SpeciesDirectoryLetter;
+    region: NativeRangeRegionKey | "all";
+    location: string | "all";
+    status: SpeciesRarityStatusKey | "all";
 };
 
 export const SPECIES_DIRECTORY_PAGE_SIZE = 48;
@@ -3970,7 +3979,10 @@ const speciesData: SpeciesEntry[] = [
     ...additionalSpeciesEntriesInputNine.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputTen.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputEleven.map(createSpeciesEntry),
-    ...additionalSpeciesEntriesInputTwelve.map(createSpeciesEntry)
+    ...additionalSpeciesEntriesInputTwelve.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputThirteen.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputFourteen.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputFifteen.map(createSpeciesEntry)
 ];
 
 export const speciesEntries: SpeciesEntry[] = [...assertUniqueSpeciesSlugs(speciesData)]
@@ -3984,20 +3996,50 @@ export function getSpeciesDirectoryPage({
     page = 1,
     query = "",
     letter = "all",
+    region = "all",
+    location = "all",
+    status = "all",
     pageSize = SPECIES_DIRECTORY_PAGE_SIZE
 }: {
     page?: number;
     query?: string;
     letter?: SpeciesDirectoryLetter;
+    region?: NativeRangeRegionKey | "all";
+    location?: string | "all";
+    status?: SpeciesRarityStatusKey | "all";
     pageSize?: number;
 }): SpeciesDirectoryPage {
     const normalizedQuery = query.trim().toLowerCase();
     const normalizedLetter = letter === "all" ? "all" : letter.trim().slice(0, 1).toUpperCase();
+    const normalizedRegion = region === "all" ? "all" : region;
+    const normalizedLocation = location === "all" ? "all" : location;
+    const normalizedStatus = status === "all" ? "all" : status;
+    const allowedLocationSpeciesSlugs = normalizedLocation === "all"
+        ? null
+        : new Set(getLocationAnimalSpeciesSlugs(normalizedLocation));
 
     const filtered = speciesEntries.filter((entry) => {
         const matchesLetter = normalizedLetter === "all" || entry.name.toUpperCase().startsWith(normalizedLetter);
 
         if (!matchesLetter) {
+            return false;
+        }
+
+        const matchesLocation = allowedLocationSpeciesSlugs === null || allowedLocationSpeciesSlugs.has(entry.slug);
+
+        if (!matchesLocation) {
+            return false;
+        }
+
+        const matchesStatus = normalizedStatus === "all" || getSpeciesRarityStatusKey(entry.analysis.rarityScore) === normalizedStatus;
+
+        if (!matchesStatus) {
+            return false;
+        }
+
+        const matchesRegion = normalizedRegion === "all" || speciesMatchesNativeRangeRegion(entry, normalizedRegion);
+
+        if (!matchesRegion) {
             return false;
         }
 
@@ -4009,7 +4051,9 @@ export function getSpeciesDirectoryPage({
             entry.name,
             entry.analysis.scientificName,
             entry.analysis.category,
-            entry.analysis.summary
+            entry.analysis.summary,
+            entry.analysis.habitat,
+            entry.analysis.nativeRange
         ]
             .join(" ")
             .toLowerCase();
@@ -4028,7 +4072,10 @@ export function getSpeciesDirectoryPage({
         totalPages,
         currentPage,
         query,
-        letter: normalizedLetter
+        letter: normalizedLetter,
+        region: normalizedRegion,
+        location: normalizedLocation,
+        status: normalizedStatus
     };
 }
 
@@ -4051,8 +4098,23 @@ export function getRelatedSpecies(slug: string, limit = 3) {
 }
 
 export function rarityLabel(score: number) {
-    if (score >= 85) return "Very rare";
-    if (score >= 70) return "Rare";
-    if (score >= 50) return "Uncommon";
-    return "Relatively common";
+    const key = getSpeciesRarityStatusKey(score);
+
+    switch (key) {
+        case "very-rare":
+            return "Very rare";
+        case "rare":
+            return "Rare";
+        case "uncommon":
+            return "Uncommon";
+        default:
+            return "Relatively common";
+    }
+}
+
+export function getSpeciesRarityStatusKey(score: number): SpeciesRarityStatusKey {
+    if (score >= 85) return "very-rare";
+    if (score >= 70) return "rare";
+    if (score >= 50) return "uncommon";
+    return "relatively-common";
 }
