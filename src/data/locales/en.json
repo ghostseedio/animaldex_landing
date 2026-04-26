@@ -33,8 +33,8 @@
   },
   "home": {
     "title": "AnimalDex",
-    "description": "Scan real animals, get instant AI ID, and turn every sighting into a collectible card.",
-    "supporting": "Built for zoo days, safaris, nature walks, pet-curious moments, and anyone who wants real-animal collecting instead of fantasy creatures.",
+    "description": "Catch real animals with your camera.",
+    "supporting": "Scan any animal, get instant AI identification, and build your real-world AnimalDex.",
     "phone": {
       "phone": "AnimalDex iPhone preview",
       "emojis": "Floating preview card for challenge stats",
@@ -44,14 +44,14 @@
       "settings": "Floating preview card for field guide details"
     },
     "features": {
-      "title": "Scan, learn, and collect real animals",
-      "description": "Identify species and breeds, save each sighting, and build a wildlife collection worth growing.",
-      "settings": "AI animal\nscanner",
-      "music": "Discovery\nfeed",
-      "customization": "Collection\njournal",
+      "title": "Wait, it gets Wilder",
+      "description": "AnimalDex is more than a scanner — it turns every sighting into a card to keep, learn from, and collect.",
+      "settings": "Instant\nAI ID",
+      "music": "Animal\ncards",
+      "customization": "Your\nDex",
       "wisdom": "Animal\nWisdom",
-      "wisdomDescription": "Learn practical strategies from real animal behavior — from patience and timing to teamwork, focus, and adaptability.",
-      "appliedInsight": "Applied Insight helps Pro users connect animal strategies to their own current goals, privately and optionally.",
+      "wisdomDescription": "Learn simple life lessons from real animal behavior.",
+      "appliedInsight": "Optional Pro insights connect animal wisdom to your own goals.",
       "more": "See the full\nexperience",
       "button": "Explore"
     },
@@ -98,7 +98,9 @@
         "curious": "Curious explorers",
         "photographer": "Photographers",
         "learner": "Wildlife learners",
-        "animalLover": "Animal lovers"
+        "animalLover": "Animal lovers",
+        "progress": "Progress Hunters",
+        "breeders": "Breedrs"
       }
     },
     "download": {

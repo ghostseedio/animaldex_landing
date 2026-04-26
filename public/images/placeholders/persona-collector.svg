@@ -1,6 +1,17 @@
 <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="80" cy="80" r="80" fill="#111714"/>
   <circle cx="80" cy="80" r="79" stroke="#314036" stroke-width="2"/>
-  <circle cx="80" cy="62" r="24" fill="#1BC451" fill-opacity="0.18"/>
-  <path d="M44 118C49 94 63 82 80 82C97 82 111 94 116 118" stroke="#CFFFF0" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- left player -->
+  <circle cx="56" cy="62" r="20" fill="#1BC451" fill-opacity="0.18"/>
+  <path d="M30 118C34 96 45 84 56 84C67 84 76 96 80 118" stroke="#CFFFF0" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- right player -->
+  <circle cx="104" cy="62" r="20" fill="#FF5472" fill-opacity="0.16"/>
+  <path d="M80 118C84 96 93 84 104 84C115 84 126 96 130 118" stroke="#FFB7C4" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- simple battle marker -->
+  <circle cx="80" cy="82" r="17" fill="#111714"/>
+  <circle cx="80" cy="82" r="16" stroke="#314036" stroke-width="2"/>
+  <text x="80" y="88" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="17" font-weight="900">VS</text>
 </svg>

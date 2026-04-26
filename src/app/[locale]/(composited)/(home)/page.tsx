@@ -22,6 +22,19 @@ import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {getAbsoluteUrl} from "@/lib/site";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 
+const animalBackgroundImages = [
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mountain-tapir.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/pekin-duck.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/red-kite.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/rex-rabbit.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/zander.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/thorny-devil.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/tibetan-fox.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/samoyed.webp",
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/swamp-harrier.webp"
+];
+
 export default async function Home() {
     const t = await getTranslations('home');
     const locale = await getLocale();
@@ -179,7 +192,13 @@ export default async function Home() {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([webSiteSchema, softwareAppSchema, mobileAppSchema, faqSchema])}}
             />
-            <IconCanvas probability={0.02} paths={checkedIcons} color="#1BC451" height={2000}/>
+            <IconCanvas
+                probability={0.02}
+                paths={checkedIcons}
+                imageSources={animalBackgroundImages}
+                color="#1BC451"
+                height={2000}
+            />
 
             <section className="w-full flex justify-center items-center flex-col gap-4 mt-48 md:mt-72 mb-16 px-4" id="top">
                 <Image

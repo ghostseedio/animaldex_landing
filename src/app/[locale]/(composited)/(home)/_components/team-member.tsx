@@ -18,7 +18,7 @@ export default function TeamMember({href, name, role, img, buttonText}: TeamMemb
             <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.22),transparent_45%),linear-gradient(180deg,#1b241f_0%,#111714_100%)] opacity-0 group-hover:opacity-100 duration-300 ease-in-out" />
             <div className="w-full flex-1" />
             <Image src={img} alt={name} className="rounded-full aspect-square mb-6 w-24 md:w-36 border border-line-300 bg-surface-800" width={150} height={150} />
-            <h6 className="font-display font-bold text-2xl md:text-3xl text-white">{name}</h6>
+            <h6 className="font-display font-bold text-center text-2xl mb-4 md:text-3xl text-white">{name}</h6>
             <p className="text-xl md:text-2xl text-center text-ink-200">{role}</p>
             <div className="w-full flex-1" />
             <Link

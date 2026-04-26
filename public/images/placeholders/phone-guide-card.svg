@@ -1,6 +1,6 @@
-<svg width="340" height="210" viewBox="0 0 340 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="390" height="210" viewBox="0 0 390 210" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="cardBg" x1="0" y1="0" x2="340" y2="210" gradientUnits="userSpaceOnUse">
+    <linearGradient id="cardBg" x1="0" y1="0" x2="390" y2="210" gradientUnits="userSpaceOnUse">
       <stop stop-color="#182019"/>
       <stop offset="0.48" stop-color="#101611"/>
       <stop offset="1" stop-color="#171326"/>
@@ -12,7 +12,7 @@
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
 
-    <linearGradient id="insightBg" x1="152" y1="112" x2="314" y2="176" gradientUnits="userSpaceOnUse">
+    <linearGradient id="insightBg" x1="152" y1="112" x2="366" y2="176" gradientUnits="userSpaceOnUse">
       <stop stop-color="#202824"/>
       <stop offset="1" stop-color="#191E20"/>
     </linearGradient>
@@ -30,18 +30,18 @@
     </clipPath>
   </defs>
 
-  <rect width="340" height="210" rx="32" fill="url(#cardBg)"/>
-  <rect x="1" y="1" width="338" height="208" rx="31" stroke="#314036" stroke-width="2"/>
+  <rect width="390" height="210" rx="32" fill="url(#cardBg)"/>
+  <rect x="1" y="1" width="388" height="208" rx="31" stroke="#314036" stroke-width="2"/>
 
   <!-- Header -->
   <text x="24" y="37" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="15" font-weight="900" letter-spacing="2.7">
     FIELD GUIDE
   </text>
 
-  <rect x="238" y="18" width="78" height="30" rx="15" fill="#152319"/>
-  <rect x="239" y="19" width="76" height="28" rx="14" stroke="#2EFF4A" stroke-opacity="0.3" stroke-width="2"/>
-  <text x="277" y="38" text-anchor="middle" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="12" font-weight="900">
-    WISDOM
+  <rect x="288" y="18" width="78" height="30" rx="15" fill="#152319"/>
+  <rect x="289" y="19" width="76" height="28" rx="14" stroke="#2EFF4A" stroke-opacity="0.3" stroke-width="2"/>
+  <text x="327" y="38" text-anchor="middle" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="12" font-weight="900">
+    WILD
   </text>
 
   <!-- Animal image tile -->
@@ -62,25 +62,33 @@
       <rect x="24" y="62" width="112" height="122" fill="#000000" opacity="0.12"/>
       <rect x="24" y="62" width="112" height="122" fill="url(#animalGlow)" opacity="0.58"/>
 
-      <!-- Scan/detail corners -->
-      <path d="M38 82V75C38 71 41 68 45 68H56" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
-      <path d="M114 68H124C128 68 131 71 131 75V86" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
-      <path d="M38 164V175C38 179 41 182 45 182H56" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
-      <path d="M114 182H124C128 182 131 179 131 175V164" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
     </g>
-  </g>
+      <!-- Scan/detail corners -->
+<!-- Scan/detail corners matching image radius -->
+<path d="M48 62H66" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+<path d="M24 86V104" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+
+<path d="M94 62H112" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+<path d="M136 86V104" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+
+<path d="M48 184H66" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+<path d="M24 142V160" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+
+<path d="M94 184H112" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/>
+<path d="M136 142V160" stroke="#2EFF4A" stroke-width="4" stroke-linecap="round"/></g>
 
   <!-- Main content -->
   <text x="152" y="76" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="25" font-weight="900">
     Leopard Gecko
   </text>
+
   <text x="152" y="102" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="15" font-weight="700">
     Habitat · diet · behavior
   </text>
 
   <!-- Applied insight panel -->
-  <rect x="152" y="118" width="164" height="58" rx="20" fill="url(#insightBg)"/>
-  <rect x="153" y="119" width="162" height="56" rx="19" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="2"/>
+  <rect x="152" y="118" width="214" height="58" rx="20" fill="url(#insightBg)"/>
+  <rect x="153" y="119" width="212" height="56" rx="19" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="2"/>
 
   <circle cx="174" cy="139" r="10" fill="#2EFF4A" opacity="0.18"/>
   <circle cx="174" cy="139" r="5" fill="#2EFF4A"/>
@@ -89,6 +97,7 @@
   <text x="194" y="141" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.3">
     NATURE SECRET
   </text>
+
   <text x="172" y="163" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="900">
     Stay still. Move smart.
   </text>
@@ -96,6 +105,7 @@
   <!-- Footer read/progress bars -->
   <rect x="24" y="195" width="112" height="6" rx="3" fill="#243028"/>
   <rect x="24" y="195" width="68" height="6" rx="3" fill="#2EFF4A"/>
-  <rect x="152" y="195" width="132" height="6" rx="3" fill="#243028"/>
-  <rect x="152" y="195" width="92" height="6" rx="3" fill="#7D4DFF"/>
+
+  <rect x="152" y="195" width="182" height="6" rx="3" fill="#243028"/>
+  <rect x="152" y="195" width="128" height="6" rx="3" fill="#7D4DFF"/>
 </svg>

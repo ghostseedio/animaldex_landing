@@ -1,6 +1,22 @@
 <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="80" cy="80" r="80" fill="#111714"/>
   <circle cx="80" cy="80" r="79" stroke="#314036" stroke-width="2"/>
-  <path d="M60 42H100V56C100 68 91 78 80 78C69 78 60 68 60 56V42Z" fill="#1BC451"/>
-  <path d="M68 94H92L100 118H60L68 94Z" fill="#CFFFF0"/>
+
+  <!-- handles -->
+  <path d="M58 50H44V58C44 70 52 78 64 80" stroke="#CFFFF0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M102 50H116V58C116 70 108 78 96 80" stroke="#CFFFF0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- cup -->
+  <path d="M58 42H102V58C102 74 92 86 80 86C68 86 58 74 58 58V42Z" fill="#1BC451" fill-opacity="0.18"/>
+  <path d="M58 42H102V58C102 74 92 86 80 86C68 86 58 74 58 58V42Z" stroke="#CFFFF0" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- stem -->
+  <path d="M80 86V102" stroke="#CFFFF0" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- base -->
+  <path d="M68 102H92L98 118H62L68 102Z" fill="#1BC451" fill-opacity="0.18"/>
+  <path d="M68 102H92L98 118H62L68 102Z" stroke="#CFFFF0" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- shine -->
+  <path d="M72 54H88" stroke="#1BC451" stroke-width="6" stroke-linecap="round"/>
 </svg>
