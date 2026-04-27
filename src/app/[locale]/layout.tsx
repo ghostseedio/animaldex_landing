@@ -102,7 +102,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
         },
         icons: {
             icon: '/favicon.svg',
-            shortcut: '/favicon.svg',
+            shortcut: '/favicon.ico',
         },
         openGraph: {
             type: "website",

@@ -5,9 +5,10 @@ import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import Image from "next/image";
 import {Metadata} from "next";
 import {getLocale, getTranslations} from "next-intl/server";
-import {getLocalePath} from "@/lib/site";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
+import {loadLocaleMessages} from "@/loaders/locale";
 
 export default async function PrivacyPolicy() {
     const processedContent = await remark()
@@ -35,10 +36,13 @@ export default async function PrivacyPolicy() {
 export async function generateMetadata(): Promise<Metadata> {
     const locale = await getLocale();
     const t = await getTranslations("meta");
+    const messages = await loadLocaleMessages(locale);
+    const keywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
 
     return {
         title: t("privacyTitle"),
         description: t("privacyDescription"),
+        keywords,
         alternates: {
             canonical: getLocalePath(locale, "/legal/privacy"),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
@@ -47,6 +51,27 @@ export async function generateMetadata(): Promise<Metadata> {
             }, {
                 "x-default": `/${localeConfig.defaultLocale}/legal/privacy`
             } as Record<string, string>)
+        },
+        openGraph: {
+            type: "website",
+            locale: getMetadataLocale(locale),
+            title: `${t("privacyTitle")} | AnimalDex`,
+            description: t("privacyDescription"),
+            url: getLocalePath(locale, "/legal/privacy"),
+            images: [
+                {
+                    url: "/images/og-animaldex.svg",
+                    width: 1200,
+                    height: 630,
+                    alt: `${t("privacyTitle")} | AnimalDex`
+                }
+            ]
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: `${t("privacyTitle")} | AnimalDex`,
+            description: t("privacyDescription"),
+            images: ["/images/og-animaldex.svg"]
         },
         robots: {
             index: true,

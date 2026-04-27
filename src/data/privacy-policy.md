@@ -41,4 +41,4 @@ AnimalDex is not intended for children under 13. If you believe a child has prov
 We may update this policy as AnimalDex evolves. When we do, we will revise the effective date on this page.
 
 ## Contact
-For privacy questions, use the support contact listed in the app or on the landing page. Replace the current placeholder contact route before launch if you need a dedicated privacy inbox.
+For privacy questions, contact `support@animaldex.app`.
