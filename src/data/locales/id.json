@@ -7,6 +7,7 @@
     "features": "Fitur",
     "download": "Dapatkan AnimalDex",
     "privacy": "Privasi",
+    "terms": "Ketentuan",
     "discover": "Temukan",
     "collection": "Koleksi",
     "support": "Dukungan",
@@ -592,6 +593,8 @@
     "description": "AnimalDex adalah pemindai hewan AI, aplikasi koleksi satwa liar, field guide edukatif, dan jurnal kartu hewan kolektibel untuk spotting, belajar tentang, dan mengoleksi hewan nyata.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
+    "termsTitle": "Ketentuan Penggunaan AnimalDex",
+    "termsDescription": "Pelajari ketentuan AnimalDex untuk akun, langganan, pembelian, konten pengguna, moderasi, hasil AI, dan penghapusan akun.",
     "keywords": [
       "pemindai hewan AI",
       "aplikasi identifikasi hewan",

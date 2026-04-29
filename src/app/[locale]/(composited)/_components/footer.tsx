@@ -32,6 +32,7 @@ export default function Footer() {
                 {href: "/blog", label: t("blog")},
                 {href: "/animal-wisdom", label: t("animalWisdom")},
                 {href: "/legal/privacy", label: t("privacy")},
+                {href: "/legal/terms", label: t("terms")},
                 {href: "mailto:support@animaldex.app", label: t("support")}
             ]
         }

@@ -1,44 +1,66 @@
 ## AnimalDex Privacy Policy
-#### Effective April 6, 2026
+#### Effective April 29, 2026
 
-AnimalDex ("AnimalDex," "we," "our," or "the app") is a mobile product focused on AI-assisted animal identification, collectible wildlife cards, and community discovery features. This page explains what information the app may process and why.
+AnimalDex ("AnimalDex," "we," "our," or "the app") is operated for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
 
 ## What AnimalDex Does
-AnimalDex helps users scan animals, save sightings, grow a collection, browse community captures, and unlock richer field-guide information. Some features may also include missions, progression, credits, challenges, trades, subscriptions, and optional account services.
+AnimalDex helps users identify animals with AI analysis, save captures to a personal collection, participate in public discovery features, and use community features such as missions, trades, challenges, messages, reactions, reports, and blocks.
 
-## Information We May Process
-We limit collection to what is needed to operate the product, secure accounts, and improve the experience.
+## Information We Collect
+We collect and use information needed to run AnimalDex and its core features.
 
-1. **Account information**: If you create an account, we may process your email address, Apple Sign In identifiers, display name, avatar, and authentication metadata.
-2. **Capture content**: When you scan or upload an animal photo, the image, related notes, and capture metadata may be stored so the app can generate analysis results, save the card to your collection, and sync it across devices.
-3. **Analysis data**: AnimalDex may process model outputs such as species guesses, rarity context, setting, score, battle stats, and field-guide information associated with a capture.
-4. **Optional location data**: If you allow location access, AnimalDex may attach approximate or precise capture coordinates and environmental context to improve regional classification, set matching, and the saved sighting record.
-5. **Usage and diagnostics**: We may process app version, device type, crash logs, and operational metrics needed to maintain stability, prevent abuse, and debug failures.
-6. **Commerce and entitlement data**: If you buy credits or subscribe to premium features, purchase status and entitlements may be processed so the app can unlock the correct features.
+1. **Account and profile data**: Email address, Apple sign-in identifier, AnimalDex user ID, display name, username, avatar, bio, Instagram URL, authentication records, and account settings.
+2. **Uploaded content and capture data**: Animal photos and videos, capture metadata, notes, saved library records, public or shared capture data, species results, card details, rarity context, scores, stats, and related analysis outputs.
+3. **Location data**: GPS coordinates, approximate location, location labels, and environmental context when users scan animals or save captures with location features enabled.
+4. **App activity**: Credits, purchases, AnimalDex Pro status, subscription entitlement, missions, packs, trades, challenges, direct messages, reactions, reports, blocks, moderation history, and support activity.
+5. **Device and diagnostic data**: Device type, operating system, app version, crash logs, performance data, security events, and other diagnostics used to maintain and debug the service.
 
 ## How We Use Information
-AnimalDex may use information to:
+AnimalDex uses information to:
 
-1. Authenticate users and protect accounts.
-2. Run scans, save collections, and sync user data.
-3. Power community discovery, missions, challenges, trades, and other progression systems.
-4. Prevent fraud, abuse, invalid captures, or misuse of paid features.
-5. Improve model quality, product reliability, and feature design.
+1. Create accounts, authenticate users, and support login.
+2. Analyze animal images and videos through backend services.
+3. Save captures, collections, libraries, cards, and user progress.
+4. Operate public discovery, community profiles, packs, missions, feeds, reactions, and shared captures.
+5. Enable direct messages, trades, challenges, blocks, and reports.
+6. Verify purchases, credits, subscriptions, and AnimalDex Pro entitlement.
+7. Moderate content, prevent abuse, protect safety, investigate reports, enforce policies, provide support, and debug technical issues.
+8. Improve reliability, security, and product quality.
 
-## Third-Party Services
-AnimalDex may rely on third-party infrastructure providers for hosting, authentication, storage, analytics, crash reporting, payments, notifications, or AI processing. Those providers only receive the information needed to deliver their part of the service and operate under their own privacy terms.
+## Third-Party Processors
+AnimalDex uses third-party service providers to operate the app. These providers process information only as needed to provide their services to AnimalDex.
 
-## Retention
-We retain account, capture, and operational data only as long as needed to provide the service, satisfy legitimate business needs, resolve disputes, comply with legal obligations, or enforce product policies.
+1. **Supabase**: Authentication, database, storage, Edge Functions, and backend infrastructure.
+2. **Apple**: Sign in with Apple, App Store purchases, subscriptions, receipts, and Apple ID subscription management.
+3. **OpenAI or another AI analysis provider**: Animal identification and related AI analysis. AnimalDex sends analysis requests through backend services rather than exposing provider access directly from the app.
 
-## Your Choices
-You can choose not to grant optional permissions such as location or photo access, but some features may work in a reduced mode. You may also request deletion of your account and associated data, subject to legal, security, and fraud-prevention requirements.
+## Public Content and Community Disclosure
+Some AnimalDex features are public or shared by design. Public captures, shared animal photos or videos, profile fields, usernames, avatars, bios, Instagram URLs, pack activity, trade activity, challenge activity, reactions, and related community activity may be visible to other users.
+
+Direct messages are intended for the participants in the conversation, but may be reviewed or retained when needed for reports, safety, abuse prevention, support, legal compliance, or service integrity.
+
+## User Choices and Controls
+Users can:
+
+1. Delete captures in the app.
+2. Block users.
+3. Report content or users.
+4. Delete their account in the app through Profile -> Settings -> Delete Account.
+5. Cancel subscriptions through Apple ID subscription settings.
+6. Decline optional device permissions, such as location or photo library access, although some features may not work without them.
+
+## Data Retention and Deletion
+We retain account, capture, purchase, community, diagnostic, and operational data while an account is active and as needed to provide AnimalDex.
+
+When a user deletes their account, AnimalDex deletes or deidentifies account data unless retention is required for legal compliance, fraud prevention, security, transaction records, dispute resolution, moderation records, abuse prevention, or other legitimate operational needs.
+
+Some information may remain in backups or logs for a limited period before routine deletion. Public or shared content may be removed, deidentified, or disconnected from the deleted account depending on the feature and operational requirements.
 
 ## Children
-AnimalDex is not intended for children under 13. If you believe a child has provided personal information without appropriate consent, contact us and we will review the request.
+AnimalDex is not intended for children under 13. If you believe a child under 13 has provided personal information without appropriate consent, contact `support@animaldex.app` and we will review the request.
 
 ## Changes
-We may update this policy as AnimalDex evolves. When we do, we will revise the effective date on this page.
+We may update this Privacy Policy as AnimalDex changes. When we do, we will revise the effective date on this page.
 
 ## Contact
-For privacy questions, contact `support@animaldex.app`.
+For privacy questions or account privacy requests, contact `support@animaldex.app`.

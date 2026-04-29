@@ -1,7 +1,7 @@
 import {MetadataRoute} from "next";
 import {journalPosts} from "@/data/journal";
 import {localeConfig} from "@/i18n";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import {useCases} from "@/data/use-cases";
 import {speciesEntries} from "@/data/species";
 import {collectorPages} from "@/data/collector-pages";
@@ -13,8 +13,18 @@ import {locationPages} from "@/data/locations";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();
+    const publicLegalEntries: MetadataRoute.Sitemap = [
+        {
+            url: new URL("/legal/privacy", getSiteUrl()).toString(),
+            lastModified: now
+        },
+        {
+            url: new URL("/legal/terms", getSiteUrl()).toString(),
+            lastModified: now
+        }
+    ];
 
-    return localeConfig.locales.flatMap((locale) => {
+    const localizedEntries = localeConfig.locales.flatMap((locale) => {
         const staticEntries: MetadataRoute.Sitemap = [
             {
                 url: getAbsoluteUrl(locale),
@@ -26,6 +36,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
             },
             {
                 url: getAbsoluteUrl(locale, "/legal/privacy"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/legal/terms"),
                 lastModified: now
             },
             {
@@ -120,4 +134,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
             ...locationPageEntries
         ];
     });
+
+    return [
+        ...publicLegalEntries,
+        ...localizedEntries
+    ];
 }
