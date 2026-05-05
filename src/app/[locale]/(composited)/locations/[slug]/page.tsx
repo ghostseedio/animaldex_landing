@@ -82,10 +82,6 @@ export async function generateMetadata({params}: LocationPageProps): Promise<Met
     });
 }
 
-export function generateStaticParams() {
-    return locationPages.map((page) => ({slug: page.slug}));
-}
-
 export default async function LocationDetailPage({params}: LocationPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "locations");

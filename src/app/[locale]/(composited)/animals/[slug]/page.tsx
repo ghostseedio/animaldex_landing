@@ -252,10 +252,6 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
     });
 }
 
-export function generateStaticParams() {
-    return speciesEntries.map((entry) => ({slug: entry.slug}));
-}
-
 export default async function SpeciesPage({params}: SpeciesPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "animals");

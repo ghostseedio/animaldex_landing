@@ -69,10 +69,6 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
     };
 }
 
-export function generateStaticParams() {
-    return useCases.map((entry) => ({slug: entry.slug}));
-}
-
 export default async function UseCasePage({params}: UseCasePageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "useCases");

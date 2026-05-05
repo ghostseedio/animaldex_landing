@@ -100,10 +100,6 @@ export async function generateMetadata({params}: ChallengePageProps): Promise<Me
     });
 }
 
-export function generateStaticParams() {
-    return challengeEntries.map((entry) => ({slug: entry.slug}));
-}
-
 export default async function ChallengePage({params}: ChallengePageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "comparisons");

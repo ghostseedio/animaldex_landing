@@ -43,10 +43,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
                 lastModified: now
             },
             {
-                url: getAbsoluteUrl(locale, "/journal/feed.xml"),
-                lastModified: now
-            },
-            {
                 url: getAbsoluteUrl(locale, "/animals"),
                 lastModified: now
             },

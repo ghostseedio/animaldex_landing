@@ -65,10 +65,6 @@ export async function generateMetadata({params}: JournalPostPageProps): Promise<
     };
 }
 
-export function generateStaticParams() {
-    return journalPosts.map((post) => ({slug: post.slug}));
-}
-
 export default async function JournalPostPage({params}: JournalPostPageProps) {
     const {locale, slug} = params;
     const post = getJournalPost(slug);

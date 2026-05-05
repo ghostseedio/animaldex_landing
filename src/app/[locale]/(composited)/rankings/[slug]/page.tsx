@@ -62,10 +62,6 @@ export async function generateMetadata({params}: RankingPageProps): Promise<Meta
     });
 }
 
-export function generateStaticParams() {
-    return rankingPages.map((page) => ({slug: page.slug}));
-}
-
 export default async function RankingDetailPage({params}: RankingPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "rankings");
