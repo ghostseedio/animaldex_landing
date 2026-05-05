@@ -19,7 +19,7 @@ import {default as downloads} from "@/data/downloads.json";
 import {localisePath} from "@/loaders/path";
 import {unsafelyLoadSVG} from "@/loaders/svg";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 
 const animalBackgroundImages = [
@@ -39,9 +39,11 @@ export default async function Home() {
     const t = await getTranslations('home');
     const locale = await getLocale();
     const siteUrl = getAbsoluteUrl(locale);
+    const rootSiteUrl = getSiteUrl();
     const appStoreUrl = "https://apps.apple.com/app/6761607780";
-    const brandLogoUrl = new URL("/images/logo.webp", siteUrl).toString();
-    const socialImageUrl = new URL("/images/og.png", siteUrl).toString();
+    const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
+    const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
+    const appSchemaDescription = "AnimalDex is an AI animal identifier app that helps users identify animals, insects, birds, reptiles, and pets from photos.";
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -106,14 +108,14 @@ export default async function Home() {
         "@context": "https://schema.org",
         "@type": "WebSite",
         name: "AnimalDex",
-        url: siteUrl,
+        url: rootSiteUrl,
         image: socialImageUrl,
         description: t("supporting"),
         inLanguage: locale,
         publisher: {
             "@type": "Organization",
             name: "AnimalDex",
-            url: siteUrl,
+            url: rootSiteUrl,
             logo: brandLogoUrl
         },
         potentialAction: {
@@ -127,13 +129,18 @@ export default async function Home() {
         "@type": "MobileApplication",
         name: "AnimalDex",
         operatingSystem: "iOS",
-        applicationCategory: "EducationalApplication",
-        url: appStoreUrl,
+        applicationCategory: "EducationApplication",
+        url: rootSiteUrl,
         installUrl: appStoreUrl,
         downloadUrl: appStoreUrl,
         image: socialImageUrl,
         screenshot: socialImageUrl,
-        description: t("description"),
+        description: appSchemaDescription,
+        offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD"
+        },
         isFamilyFriendly: true,
         audience: [
             {"@type": "Audience", "audienceType": "Animal lovers"},
@@ -176,13 +183,13 @@ export default async function Home() {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         name: "AnimalDex",
-        applicationCategory: "EducationalApplication",
+        applicationCategory: "EducationApplication",
         operatingSystem: "iOS",
-        url: appStoreUrl,
+        url: siteUrl,
         installUrl: appStoreUrl,
         downloadUrl: appStoreUrl,
         image: socialImageUrl,
-        description: t("description"),
+        description: appSchemaDescription,
         offers: {
             "@type": "Offer",
             price: "0",
@@ -194,7 +201,7 @@ export default async function Home() {
         "@context": "https://schema.org",
         "@type": "Organization",
         name: "AnimalDex",
-        url: siteUrl,
+        url: rootSiteUrl,
         logo: brandLogoUrl,
         image: brandLogoUrl,
         sameAs: [appStoreUrl]

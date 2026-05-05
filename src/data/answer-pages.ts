@@ -350,6 +350,87 @@ const answerPageData: AnswerPageEntry[] = [
         updatedAt: "2026-04-09"
     },
     {
+        slug: "animal-identifier-app",
+        shortTitle: "Animal Identifier App",
+        heroTitle: "What should an animal identifier app do?",
+        metaTitle: "Animal Identifier App | AnimalDex",
+        metaDescription: "Looking for an animal identifier app? Learn how AnimalDex helps identify animals from photos, verify traits, and save sightings as collectible field-guide entries.",
+        intro: "A useful animal identifier app should help you move from a photo to a confident, reusable animal record.",
+        directAnswer: [
+            "AnimalDex is built as an animal identifier app for people who want more than a quick label. It supports AI-assisted identification, trait checks, and collection history in one workflow.",
+            "The best animal identifier app should handle wildlife, pets, birds, reptiles, insects, and everyday sightings while still showing users how to verify the result.",
+            "AnimalDex turns each identification into a card-like entry, so the answer becomes part of a field guide and collection rather than a one-time search."
+        ],
+        howItWorks: [
+            "Start with a clear photo or sighting, review likely matches, then compare visible traits such as shape, pattern, color, habitat, and behavior.",
+            "After the match looks reasonable, save the animal as an entry with context you can revisit, compare, and build on over time."
+        ],
+        comparisonTypical: [
+            "Stops at a single label without explaining why.",
+            "Treats every animal type the same even when birds, insects, pets, and reptiles need different clues.",
+            "Does not preserve the identification as a useful collection record."
+        ],
+        comparisonAnimalDex: [
+            "Combines AI animal scanning with field-guide verification.",
+            "Supports broad animal identification and breed-curious use cases.",
+            "Saves results as collectible cards, sets, and learning records."
+        ],
+        whoItsFor: [
+            "Animal lovers identifying everyday sightings",
+            "Families using photos from zoos, parks, and trips",
+            "Travelers building a wildlife record",
+            "Pet owners comparing breed clues",
+            "Collectors who want a real-animal Dex"
+        ],
+        features: [
+            {
+                title: "Photo identification",
+                description: "Use AI-assisted scanning to narrow down likely animals from a photo."
+            },
+            {
+                title: "Trait checks",
+                description: "Compare visible features before treating a result as final."
+            },
+            {
+                title: "Animal cards",
+                description: "Save identified animals as collectible entries instead of loose search results."
+            },
+            {
+                title: "Field-guide depth",
+                description: "Keep habitat, rarity, behavior, and lookalike context attached to each sighting."
+            },
+            {
+                title: "Broad coverage",
+                description: "Use one app across wildlife, pets, birds, reptiles, insects, and common animal encounters."
+            }
+        ],
+        speciesSlugs: ["bald-eagle", "komodo-dragon", "monarch-butterfly"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
+        faq: [
+            {
+                question: "What is an animal identifier app?",
+                answer: "An animal identifier app helps users identify animals from photos or sightings, then verify the match with traits, context, and field-guide clues."
+            },
+            {
+                question: "Can one app identify different animal groups?",
+                answer: "Yes. AnimalDex is positioned for broad animal identification across wildlife, pets, birds, reptiles, insects, and other common sightings."
+            },
+            {
+                question: "Why save identifications after scanning?",
+                answer: "Saving results turns one-time identification into a useful learning record, collection entry, and future comparison point."
+            }
+        ],
+        searchIntents: [
+            "animal identifier app",
+            "animal identification app",
+            "AI animal scanner",
+            "identify animals from a photo",
+            "wildlife identification app",
+            "pet breed identifier"
+        ],
+        updatedAt: "2026-05-05"
+    },
+    {
         slug: "ai-animal-scanner",
         shortTitle: "AI Animal Scanner",
         heroTitle: "How does an AI animal scanner work, and which app should you use?",
@@ -428,6 +509,330 @@ const answerPageData: AnswerPageEntry[] = [
             "educational animal app"
         ],
         updatedAt: "2026-04-09"
+    },
+    {
+        slug: "identify-insects",
+        shortTitle: "Identify Insects",
+        heroTitle: "How can you identify insects from a photo?",
+        metaTitle: "Identify Insects from a Photo | AnimalDex",
+        metaDescription: "Learn how to identify insects with AnimalDex using AI scanning, visible traits, habitat clues, and collection records for beetles, butterflies, bees, moths, and more.",
+        intro: "Insect identification works best when a photo result is paired with careful checks for body shape, wings, legs, color, and habitat.",
+        directAnswer: [
+            "AnimalDex can help users identify insects by using AI-assisted photo scanning as the starting point, then encouraging trait verification before saving a result.",
+            "Insects are easy to confuse because many species are small, seasonal, or visually similar. A good workflow should look at antennae, wing position, number of legs, body segments, pattern, and where the insect was found.",
+            "AnimalDex keeps the final identification as a collectible entry, so insect sightings become part of a reusable field guide instead of a forgotten search."
+        ],
+        howItWorks: [
+            "Take a clear photo from above or the side when possible, then compare the suggested result against body shape, wing count, antennae, color patches, and behavior.",
+            "Save confirmed insect sightings with notes so repeated observations improve your recognition of butterflies, bees, beetles, moths, mantises, ants, and other insect groups."
+        ],
+        comparisonTypical: [
+            "Names an insect but gives little help checking the match.",
+            "Misses small context clues such as plant, season, habitat, or behavior.",
+            "Does not turn insect sightings into a collection or learning trail."
+        ],
+        comparisonAnimalDex: [
+            "Pairs scan output with practical insect trait checks.",
+            "Encourages careful observation instead of overconfident guesses.",
+            "Turns insect finds into collectible field-guide entries."
+        ],
+        whoItsFor: [
+            "Families identifying bugs in gardens and parks",
+            "Nature walkers spotting butterflies, beetles, bees, and moths",
+            "Students learning insect traits",
+            "Photographers organizing macro sightings",
+            "Collectors building a real-world insect record"
+        ],
+        features: [
+            {
+                title: "Insect scanning",
+                description: "Use AI-assisted recognition to narrow down likely insect matches."
+            },
+            {
+                title: "Body clues",
+                description: "Check wings, antennae, legs, body segments, and markings."
+            },
+            {
+                title: "Habitat notes",
+                description: "Record where the insect appeared, including plant, water, garden, or woodland context."
+            },
+            {
+                title: "Collection entries",
+                description: "Keep insect sightings as cards for later comparison."
+            },
+            {
+                title: "Learning loops",
+                description: "Use repeat sightings to get better at recognizing insect groups."
+            }
+        ],
+        speciesSlugs: ["monarch-butterfly", "honey-bee", "praying-mantis"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
+        faq: [
+            {
+                question: "Can an app identify insects from a photo?",
+                answer: "Yes, but insect results should be checked carefully because many species look similar. AnimalDex pairs scanning with visible trait and habitat context."
+            },
+            {
+                question: "What details help identify insects?",
+                answer: "Body shape, wing position, antennae, legs, color pattern, size, behavior, plant association, and location all help narrow an insect match."
+            },
+            {
+                question: "Can AnimalDex be used for butterflies and beetles?",
+                answer: "Yes. AnimalDex can support insect discovery workflows across butterflies, beetles, bees, moths, mantises, ants, and related groups."
+            }
+        ],
+        searchIntents: [
+            "identify insects",
+            "insect identifier app",
+            "bug identifier app",
+            "identify insects from photo",
+            "AI animal scanner",
+            "animal identifier app"
+        ],
+        updatedAt: "2026-05-05"
+    },
+    {
+        slug: "identify-birds",
+        shortTitle: "Identify Birds",
+        heroTitle: "How can you identify birds from a photo or sighting?",
+        metaTitle: "Identify Birds from a Photo | AnimalDex",
+        metaDescription: "Learn how AnimalDex helps identify birds with AI scanning, shape, plumage, behavior, habitat clues, and collectible bird sighting records.",
+        intro: "Bird identification is strongest when a quick photo scan is checked against shape, plumage, behavior, and habitat.",
+        directAnswer: [
+            "AnimalDex can help users identify birds by starting with an AI-assisted scan and then using field-guide style clues to verify the result.",
+            "Birds often require more than color matching. Silhouette, beak shape, wing shape, tail shape, posture, call, flight style, location, and season can all change the answer.",
+            "AnimalDex turns bird sightings into collectible entries, making it useful for bird-curious users who want a simple way to remember what they saw."
+        ],
+        howItWorks: [
+            "Capture a clear image or record a sighting note, then compare likely matches against body shape, head pattern, bill, wings, tail, habitat, and behavior.",
+            "Save the result as a bird entry so future sightings build a personal field guide across local parks, zoos, wetlands, beaches, and travel routes."
+        ],
+        comparisonTypical: [
+            "Focuses on a quick label without collection value.",
+            "Overweights color and misses posture, silhouette, habitat, and behavior.",
+            "Keeps bird identification separate from broader animal discovery."
+        ],
+        comparisonAnimalDex: [
+            "Supports bird identification inside a broader animal collection app.",
+            "Connects scan results to traits, field-guide detail, and saved sightings.",
+            "Works for casual bird discovery without requiring expert birding knowledge."
+        ],
+        whoItsFor: [
+            "Casual bird watchers and wildlife learners",
+            "Families identifying birds in parks and zoos",
+            "Travelers recording bird sightings",
+            "Photographers adding context to bird photos",
+            "Collectors building a real-world bird list"
+        ],
+        features: [
+            {
+                title: "Bird scanning",
+                description: "Use AI-assisted suggestions as a starting point for bird ID."
+            },
+            {
+                title: "Plumage and shape",
+                description: "Check color, silhouette, bill shape, tail, wings, and posture."
+            },
+            {
+                title: "Habitat context",
+                description: "Connect birds to wetlands, forests, coasts, grasslands, cities, or zoo habitats."
+            },
+            {
+                title: "Saved sightings",
+                description: "Build a personal bird record from repeated discoveries."
+            },
+            {
+                title: "Collection progress",
+                description: "Turn bird sightings into cards, sets, and learning milestones."
+            }
+        ],
+        speciesSlugs: ["bald-eagle", "peregrine-falcon", "barn-owl"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "zoo-vs-wild-animals-whats-the-difference"],
+        faq: [
+            {
+                question: "Can AnimalDex identify birds?",
+                answer: "Yes. AnimalDex can support bird identification by combining photo scanning with bird traits such as shape, plumage, bill, wings, tail, habitat, and behavior."
+            },
+            {
+                question: "What is the easiest way to identify a bird?",
+                answer: "Start with shape and size, then check color pattern, beak, posture, location, behavior, and season before finalizing a match."
+            },
+            {
+                question: "Is this only for expert birders?",
+                answer: "No. AnimalDex is designed for casual animal discovery, so bird identification can stay approachable while still encouraging careful checks."
+            }
+        ],
+        searchIntents: [
+            "identify birds",
+            "bird identifier app",
+            "identify birds from photo",
+            "AI animal scanner",
+            "animal identifier app",
+            "wildlife identification app"
+        ],
+        updatedAt: "2026-05-05"
+    },
+    {
+        slug: "identify-reptiles",
+        shortTitle: "Identify Reptiles",
+        heroTitle: "How can you identify reptiles from a photo?",
+        metaTitle: "Identify Reptiles from a Photo | AnimalDex",
+        metaDescription: "Use AnimalDex to identify reptiles with AI scanning, body-shape clues, habitat context, and saved entries for lizards, snakes, turtles, tortoises, and crocodilians.",
+        intro: "Reptile identification depends on body shape, scale pattern, head shape, habitat, and behavior, not just color.",
+        directAnswer: [
+            "AnimalDex can help users identify reptiles by combining AI-assisted suggestions with visible trait checks for lizards, snakes, turtles, tortoises, crocodilians, and geckos.",
+            "A good reptile identification workflow should stay cautious, especially with snakes or unfamiliar wildlife. The goal is learning and respectful observation, not risky handling.",
+            "AnimalDex saves reptile sightings as collectible field-guide entries, so each confirmed match improves your future recognition."
+        ],
+        howItWorks: [
+            "Use a clear photo taken from a safe distance, then compare the suggested match against body length, head shape, limbs, shell, scale pattern, posture, and habitat.",
+            "Add the reptile to your collection with notes about location and behavior so the sighting remains useful later."
+        ],
+        comparisonTypical: [
+            "Suggests a reptile name without enough safety or context.",
+            "Relies on color even though many reptiles vary by age, sex, and region.",
+            "Does not preserve reptile sightings as learning records."
+        ],
+        comparisonAnimalDex: [
+            "Combines scanning with safe, observation-first reptile verification.",
+            "Supports reptile groups such as lizards, snakes, turtles, tortoises, and crocodilians.",
+            "Turns reptile sightings into collectible and educational entries."
+        ],
+        whoItsFor: [
+            "Travelers spotting lizards, turtles, and snakes",
+            "Families learning about reptiles safely",
+            "Zoo visitors saving reptile discoveries",
+            "Pet owners comparing common reptile traits",
+            "Collectors building a reptile-focused animal set"
+        ],
+        features: [
+            {
+                title: "Reptile scanning",
+                description: "Use AI-assisted suggestions for reptile photos and sightings."
+            },
+            {
+                title: "Shape checks",
+                description: "Compare head shape, shell, limbs, body length, scales, and posture."
+            },
+            {
+                title: "Safety-first context",
+                description: "Identify from observation and avoid handling unknown reptiles."
+            },
+            {
+                title: "Habitat clues",
+                description: "Use desert, forest, freshwater, coastal, and zoo context to support a match."
+            },
+            {
+                title: "Reptile collection",
+                description: "Save each reptile as a card with useful field-guide context."
+            }
+        ],
+        speciesSlugs: ["komodo-dragon", "reticulated-python", "leopard-gecko"],
+        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "best-animals-to-spot-in-bali-2026"],
+        faq: [
+            {
+                question: "Can an app identify reptiles from a photo?",
+                answer: "Yes, but reptile identification should be treated cautiously and checked against visible traits, habitat, and safe observation context."
+            },
+            {
+                question: "What details help identify reptiles?",
+                answer: "Head shape, scale pattern, body length, limbs, shell structure, posture, habitat, behavior, and location can all help identify reptiles."
+            },
+            {
+                question: "Should I handle a reptile to identify it?",
+                answer: "No. Unknown reptiles should be identified from a safe distance using photos and observation notes."
+            }
+        ],
+        searchIntents: [
+            "identify reptiles",
+            "reptile identifier app",
+            "identify reptiles from photo",
+            "snake identifier app",
+            "lizard identifier app",
+            "AI animal scanner"
+        ],
+        updatedAt: "2026-05-05"
+    },
+    {
+        slug: "identify-pets",
+        shortTitle: "Identify Pets",
+        heroTitle: "How can you identify pets and pet breeds from a photo?",
+        metaTitle: "Identify Pets and Pet Breeds | AnimalDex",
+        metaDescription: "Learn how AnimalDex can help identify pets and compare pet breed clues with AI scanning, visible traits, profile notes, and collectible animal records.",
+        intro: "Pet identification should explain likely breed clues while keeping uncertainty visible, especially for mixed-breed animals.",
+        directAnswer: [
+            "AnimalDex can support pet identification by using AI-assisted scanning to suggest likely animal or breed context, then helping users compare visible traits.",
+            "For pets, the best workflow is not just naming a breed. Coat, body shape, face shape, ear shape, size, behavior, age, and mixed ancestry can all affect the result.",
+            "AnimalDex keeps pet profiles as collectible animal records, so owners can save photos, notes, traits, and breed-curious context in one place."
+        ],
+        howItWorks: [
+            "Start with a clear pet photo, review likely matches, then compare physical traits and any known background information before saving the result.",
+            "Use the saved profile as a pet card, breed note, collection entry, or reference for future updates."
+        ],
+        comparisonTypical: [
+            "Overclaims exact breed from a single image.",
+            "Does not explain mixed-breed uncertainty or trait evidence.",
+            "Leaves no structured record after the scan."
+        ],
+        comparisonAnimalDex: [
+            "Frames pet breed identification as evidence-based context.",
+            "Keeps photos, notes, traits, and profiles together.",
+            "Connects pet identification to card creation, collecting, and learning."
+        ],
+        whoItsFor: [
+            "Pet owners curious about breed clues",
+            "Families making pet cards and profiles",
+            "Rescues organizing breed-curious notes",
+            "Breeders and buyers comparing visible traits",
+            "Collectors who want pets inside their AnimalDex"
+        ],
+        features: [
+            {
+                title: "Pet scanning",
+                description: "Use AI-assisted recognition to start pet and breed-curious identification."
+            },
+            {
+                title: "Breed clues",
+                description: "Compare coat, face, ears, body shape, size, and other visible signals."
+            },
+            {
+                title: "Profile notes",
+                description: "Keep age, background, temperament, and documentation beside the result."
+            },
+            {
+                title: "Pet cards",
+                description: "Turn pets into collectible cards and reusable profiles."
+            },
+            {
+                title: "Responsible uncertainty",
+                description: "Avoid treating one-photo breed guesses as guaranteed certification."
+            }
+        ],
+        speciesSlugs: ["maine-coon-cat", "samoyed", "rex-rabbit"],
+        blogSlugs: ["how-to-estimate-animal-breed-prices", "how-to-identify-animals-in-the-wild-2026-guide"],
+        faq: [
+            {
+                question: "Can AnimalDex identify pets?",
+                answer: "Yes. AnimalDex can support pet identification and breed-curious workflows by pairing AI scanning with visible trait notes and profile context."
+            },
+            {
+                question: "Can an app identify a pet breed exactly?",
+                answer: "An app can suggest likely breed clues, but exact breed certainty often requires documentation, pedigree records, or genetic testing."
+            },
+            {
+                question: "Can I make pet cards in AnimalDex?",
+                answer: "AnimalDex is built around collectible animal profiles, making pet cards and saved pet entries a natural fit."
+            }
+        ],
+        searchIntents: [
+            "identify pets",
+            "pet breed identifier",
+            "pet identifier app",
+            "identify pet breed from photo",
+            "animal breed identifier",
+            "AI animal scanner"
+        ],
+        updatedAt: "2026-05-05"
     },
     {
         slug: "wildlife-discovery-app",

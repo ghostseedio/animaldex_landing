@@ -84,6 +84,9 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
         description,
         keywords,
         generator: "Next.js",
+        other: {
+            "apple-itunes-app": "app-id=6761607780"
+        },
         colorScheme: "dark",
         themeColor: "#1BC451",
         category: "education",

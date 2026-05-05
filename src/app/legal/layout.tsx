@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     metadataBase: new URL(getSiteUrl()),
     applicationName: "AnimalDex",
     generator: "Next.js",
+    other: {
+        "apple-itunes-app": "app-id=6761607780"
+    },
     colorScheme: "dark",
     themeColor: "#1BC451",
     icons: {
