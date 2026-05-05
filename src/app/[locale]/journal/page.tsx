@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
             url: getLocalePath(locale, "/journal"),
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${title} | AnimalDex`
@@ -56,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
             card: "summary_large_image",
             title: `${title} | AnimalDex`,
             description,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         }
     };
 }

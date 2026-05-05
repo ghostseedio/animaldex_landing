@@ -49,7 +49,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
             tags: entry.searchIntents,
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${entry.title} | AnimalDex`
@@ -60,7 +60,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
             card: "summary_large_image",
             title: `${entry.title} | AnimalDex`,
             description: entry.description,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         },
         other: {
             "article:author": "AnimalDex",
@@ -207,7 +207,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
                 <div className="flex justify-center">
-                    <Link href="/#download" underline className="text-primary-200 text-lg hover:text-primary-100 transition-colors">
+                    <Link href="https://apps.apple.com/app/6761607780" underline className="text-primary-200 text-lg hover:text-primary-100 transition-colors">
                         {t("ctaButton")}
                     </Link>
                 </div>

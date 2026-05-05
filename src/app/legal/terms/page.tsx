@@ -16,7 +16,7 @@ export const metadata: Metadata = {
         url: `${getSiteUrl()}/legal/terms`,
         images: [
             {
-                url: "/images/og-animaldex.svg",
+                url: "/images/og.png",
                 width: 1200,
                 height: 630,
                 alt: "AnimalDex Terms of Use"
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "AnimalDex Terms of Use",
         description: "Read the terms for AnimalDex accounts, subscriptions, purchases, user content, moderation, AI results, and account deletion.",
-        images: ["/images/og-animaldex.svg"]
+        images: ["/images/og.png"]
     },
     robots: {
         index: true,

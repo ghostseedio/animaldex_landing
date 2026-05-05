@@ -60,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
             url: getLocalePath(locale, "/legal/terms"),
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${t("termsTitle")} | AnimalDex`
@@ -71,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
             card: "summary_large_image",
             title: `${t("termsTitle")} | AnimalDex`,
             description: t("termsDescription"),
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         },
         robots: {
             index: true,

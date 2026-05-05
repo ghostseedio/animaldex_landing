@@ -43,7 +43,7 @@ export async function generateCollectorMetadata(slug: string): Promise<Metadata>
             url: getLocalePath(locale, `/${entry.slug}`),
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${entry.heroTitle} | AnimalDex`
@@ -54,7 +54,7 @@ export async function generateCollectorMetadata(slug: string): Promise<Metadata>
             card: "summary_large_image",
             title: `${entry.heroTitle} | AnimalDex`,
             description: entry.description,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         }
     };
 }
@@ -103,7 +103,7 @@ export default async function CollectorLandingPage({slug}: PositioningPageResult
                     <Link href="/">
                         <Button as="span">{t("homeButton")}</Button>
                     </Link>
-                    <Link href="/#download">
+                    <Link href="https://apps.apple.com/app/6761607780">
                         <Button as="span">{t("appButton")}</Button>
                     </Link>
                 </div>
@@ -129,7 +129,7 @@ export default async function CollectorLandingPage({slug}: PositioningPageResult
                     <Link href="/">
                         <Button as="span">{t("homeButton")}</Button>
                     </Link>
-                    <Link href="/#download">
+                    <Link href="https://apps.apple.com/app/6761607780">
                         <Button as="span">{t("appButton")}</Button>
                     </Link>
                 </div>

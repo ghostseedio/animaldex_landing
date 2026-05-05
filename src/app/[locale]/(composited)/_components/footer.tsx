@@ -13,7 +13,7 @@ export default function Footer() {
             links: [
                 {href: "/#features", label: t("features")},
                 {href: "/use-cases", label: t("useCases")},
-                {href: "/#download", label: t("download")}
+                {href: "https://apps.apple.com/app/6761607780", label: t("download")}
             ]
         },
         {
@@ -38,7 +38,7 @@ export default function Footer() {
         }
     ];
     const socialLinks = [
-        {href: "https://www.instagram.com/animaldex.app/", label: "Instagram", icon: InstagramIcon},
+        {href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon},
         {href: "https://www.tiktok.com/@animaldex.app", label: "TikTok", icon: TikTokIcon},
         {href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon}
     ];

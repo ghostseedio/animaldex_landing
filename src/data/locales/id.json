@@ -29,7 +29,7 @@
       "platform": "Dibuat untuk",
       "platformValue": "iPhone",
       "status": "Status",
-      "statusValue": "beta privat dan update jurnal baru"
+      "statusValue": "sudah tersedia di App Store"
     }
   },
   "home": {
@@ -85,7 +85,7 @@
         "description": "Lihat habitat, perilaku, rarity, lookalike, dan fakta field guide dengan cepat.",
         "alt": "Visual placeholder untuk detail field guide AnimalDex"
       },
-      "download": "Lihat opsi peluncuran"
+      "download": "Download di App Store"
     },
     "team": {
       "title": "Dibuat untuk cara kamu menemukan hewan",
@@ -104,12 +104,13 @@
     },
     "download": {
       "title": "Mulai penemuan berikutnya dengan AnimalDex",
-      "description": "Masuk ke beta privat dan ubah hasil scan jadi kartu, koleksi, dan pembelajaran field guide.",
-      "launch": "Rilis di",
-      "beta": "Beta privat",
+      "description": "Download AnimalDex di App Store dan ubah hasil scan jadi kartu, koleksi, dan pembelajaran field guide.",
+      "launch": "Download di",
+      "available": "Tersedia di",
+      "beta": "Aplikasi live",
       "read": "Baca",
       "contact": "Tanyakan soal",
-      "unavailable": "Segera hadir di",
+      "unavailable": "Tersedia di",
       "journalPrompt": "Mulai dengan tips spotting singkat, ide untuk keluarga, dan panduan ramah satwa liar.",
       "journalLink": "Baca Jurnal",
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, dan spotting saat travel.",
@@ -397,7 +398,7 @@
     "collectorDescription": "Halaman ini menargetkan intent pencarian card-collection dan creature-game sambil menjaga nilai hewan nyata tetap jelas.",
     "ctaTitle": "Siap memulai sesuai use case kamu?",
     "ctaDescription": "Pilih jalur yang paling cocok dengan tujuanmu, lalu mulai AnimalDex dari penemuan pertamamu.",
-    "ctaButton": "Lihat opsi peluncuran",
+    "ctaButton": "Download di App Store",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -577,7 +578,7 @@
     "back": "Kembali ke Use Cases",
     "ctaTitle": "Ubah gaya koleksi ini jadi discovery hewan nyata",
     "ctaDescription": "Gunakan AnimalDex untuk memindai, mengoleksi, dan progres lewat spesies nyata dengan polish aplikasi premium.",
-    "ctaButton": "Lihat opsi peluncuran aplikasi",
+    "ctaButton": "Download di App Store",
     "homeButton": "Kembali ke landing utama",
     "appButton": "Dapatkan aplikasinya"
   },
@@ -590,7 +591,7 @@
   "meta": {
     "fullTitle": "AnimalDex | pemindai hewan AI, aplikasi koleksi satwa liar, dan field guide",
     "title": "AnimalDex",
-    "description": "AnimalDex adalah pemindai hewan AI, aplikasi koleksi satwa liar, field guide edukatif, dan jurnal kartu hewan kolektibel untuk spotting, belajar tentang, dan mengoleksi hewan nyata.",
+    "description": "AnimalDex adalah aplikasi iPhone live untuk pemindaian hewan AI, koleksi satwa liar, pembelajaran field guide, dan jurnal kartu hewan kolektibel.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",

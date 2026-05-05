@@ -60,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
             url: getLocalePath(locale, "/legal/privacy"),
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${t("privacyTitle")} | AnimalDex`
@@ -71,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
             card: "summary_large_image",
             title: `${t("privacyTitle")} | AnimalDex`,
             description: t("privacyDescription"),
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         },
         robots: {
             index: true,

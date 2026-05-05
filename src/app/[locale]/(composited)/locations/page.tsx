@@ -133,7 +133,7 @@ export default async function LocationsIndexPage() {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("indexCtaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("indexCtaDescription")}</p>
                 <div className="flex justify-center">
-                    <Link href="/#download">
+                    <Link href="https://apps.apple.com/app/6761607780">
                         <Button as="span">{t("ctaButton")}</Button>
                     </Link>
                 </div>

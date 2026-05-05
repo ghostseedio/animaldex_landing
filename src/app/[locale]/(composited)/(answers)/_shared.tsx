@@ -47,7 +47,7 @@ export async function generateAnswerPageMetadata(slug: string): Promise<Metadata
             tags: entry.searchIntents,
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${entry.metaTitle} | AnimalDex`
@@ -58,7 +58,7 @@ export async function generateAnswerPageMetadata(slug: string): Promise<Metadata
             card: "summary_large_image",
             title: `${entry.metaTitle} | AnimalDex`,
             description: entry.metaDescription,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         }
     };
 }
@@ -260,7 +260,7 @@ export default async function AnswerPage({slug}: AnswerPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
                 <div className="flex justify-center flex-wrap gap-3">
-                    <Link href="/#download">
+                    <Link href="https://apps.apple.com/app/6761607780">
                         <Button as="span">{t("ctaButton")}</Button>
                     </Link>
                     <Link href="/">

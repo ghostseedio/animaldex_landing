@@ -39,6 +39,9 @@ export default async function Home() {
     const t = await getTranslations('home');
     const locale = await getLocale();
     const siteUrl = getAbsoluteUrl(locale);
+    const appStoreUrl = "https://apps.apple.com/app/6761607780";
+    const brandLogoUrl = new URL("/images/logo.webp", siteUrl).toString();
+    const socialImageUrl = new URL("/images/og.png", siteUrl).toString();
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -104,8 +107,15 @@ export default async function Home() {
         "@type": "WebSite",
         name: "AnimalDex",
         url: siteUrl,
+        image: socialImageUrl,
         description: t("supporting"),
         inLanguage: locale,
+        publisher: {
+            "@type": "Organization",
+            name: "AnimalDex",
+            url: siteUrl,
+            logo: brandLogoUrl
+        },
         potentialAction: {
             "@type": "SearchAction",
             target: `${siteUrl}/journal`,
@@ -118,7 +128,11 @@ export default async function Home() {
         name: "AnimalDex",
         operatingSystem: "iOS",
         applicationCategory: "EducationalApplication",
-        url: siteUrl,
+        url: appStoreUrl,
+        installUrl: appStoreUrl,
+        downloadUrl: appStoreUrl,
+        image: socialImageUrl,
+        screenshot: socialImageUrl,
         description: t("description"),
         isFamilyFriendly: true,
         audience: [
@@ -164,7 +178,10 @@ export default async function Home() {
         name: "AnimalDex",
         applicationCategory: "EducationalApplication",
         operatingSystem: "iOS",
-        url: siteUrl,
+        url: appStoreUrl,
+        installUrl: appStoreUrl,
+        downloadUrl: appStoreUrl,
+        image: socialImageUrl,
         description: t("description"),
         offers: {
             "@type": "Offer",
@@ -172,6 +189,15 @@ export default async function Home() {
             priceCurrency: "USD"
         },
         featureList: mobileAppSchema.featureList
+    };
+    const organizationSchema = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: "AnimalDex",
+        url: siteUrl,
+        logo: brandLogoUrl,
+        image: brandLogoUrl,
+        sameAs: [appStoreUrl]
     };
     const faqSchema = {
         "@context": "https://schema.org",
@@ -190,7 +216,7 @@ export default async function Home() {
         <>
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([webSiteSchema, softwareAppSchema, mobileAppSchema, faqSchema])}}
+                dangerouslySetInnerHTML={{__html: JSON.stringify([organizationSchema, webSiteSchema, softwareAppSchema, mobileAppSchema, faqSchema])}}
             />
             <IconCanvas
                 probability={0.02}
@@ -214,7 +240,7 @@ export default async function Home() {
                     {t("supporting")}
                 </p>
                 <Link
-                    href="/#download"
+                    href="https://apps.apple.com/app/6761607780"
                     className="md:hidden"
                 >
                     <Button as="span">
@@ -348,7 +374,7 @@ export default async function Home() {
                         {t("more.description")}
                     </p>
                     <Link
-                        href="/#download"
+                        href="https://apps.apple.com/app/6761607780"
                     >
                         <Button as="span">
                             {t('more.download')}

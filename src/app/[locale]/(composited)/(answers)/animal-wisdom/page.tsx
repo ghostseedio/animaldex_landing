@@ -63,7 +63,7 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
             modifiedTime: updatedAt,
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${pageTitle} | AnimalDex`
@@ -74,7 +74,7 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
             card: "summary_large_image",
             title: `${pageTitle} | AnimalDex`,
             description: pageDescription,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         }
     };
 }

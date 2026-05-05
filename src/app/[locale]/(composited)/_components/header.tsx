@@ -47,7 +47,7 @@ export default function Header() {
                     {t('animals')}
                 </HeaderLink>
                 <Link
-                    href="/#download"
+                    href="https://apps.apple.com/app/6761607780"
                     className="hidden md:block"
                 >
                     <Button
@@ -61,7 +61,7 @@ export default function Header() {
                         </Marquee>
                     </Button>
                 </Link>
-                <HeaderLink href="/#download" mobile>
+                <HeaderLink href="https://apps.apple.com/app/6761607780" mobile>
                     {t('download')}
                 </HeaderLink>
                 <HeaderLink href="/legal/privacy" mobile>

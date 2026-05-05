@@ -16,7 +16,7 @@ export const metadata: Metadata = {
         url: `${getSiteUrl()}/legal/privacy`,
         images: [
             {
-                url: "/images/og-animaldex.svg",
+                url: "/images/og.png",
                 width: 1200,
                 height: 630,
                 alt: "AnimalDex Privacy Policy"
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "AnimalDex Privacy Policy",
         description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion.",
-        images: ["/images/og-animaldex.svg"]
+        images: ["/images/og.png"]
     },
     robots: {
         index: true,

@@ -8,6 +8,10 @@ import Cursor from "@/app/[locale]/_components/cursor";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 
+const appStoreUrl = "https://apps.apple.com/app/6761607780";
+const brandIconUrl = "/images/logo.webp";
+const socialImageUrl = "/images/og.png";
+
 const calSans = localFont({
     src: '_assets/fonts/CalSans-SemiBold.woff2',
     variable: '--font-cal-sans',
@@ -84,6 +88,13 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
         themeColor: "#1BC451",
         category: "education",
         applicationName: title,
+        appLinks: {
+            ios: {
+                url: appStoreUrl,
+                app_store_id: "6761607780",
+                app_name: "AnimalDex"
+            }
+        },
         robots: {
             index: true,
             follow: true,
@@ -101,9 +112,22 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             address: false
         },
         icons: {
-            icon: '/favicon.svg',
+            icon: [
+                {url: '/favicon.ico'},
+                {url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png'},
+                {url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png'}
+            ],
             shortcut: '/favicon.ico',
+            apple: '/apple-touch-icon.png',
+            other: [
+                {
+                    rel: "icon",
+                    url: brandIconUrl,
+                    type: "image/webp"
+                }
+            ]
         },
+        manifest: "/site.webmanifest",
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
@@ -113,7 +137,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             url: canonicalPath,
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: socialImageUrl,
                     width: 1200,
                     height: 630,
                     alt: fullTitle
@@ -124,7 +148,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             card: "summary_large_image",
             title: fullTitle,
             description,
-            images: ["/images/og-animaldex.svg"],
+            images: [socialImageUrl],
         },
         alternates: {
             canonical: canonicalPath,

@@ -119,7 +119,7 @@ function createSpeciesEntry({
         publishedAt: "2026-04-10",
         updatedAt: "2026-04-10",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: `${name} species guide on AnimalDex`,
             width: 1200,
             height: 630
@@ -160,7 +160,7 @@ const baseSpeciesData: SpeciesEntry[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: "White-headed vulture species guide on AnimalDex",
             width: 1200,
             height: 630
@@ -214,7 +214,7 @@ const baseSpeciesData: SpeciesEntry[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: "Komodo dragon species guide on AnimalDex",
             width: 1200,
             height: 630
@@ -268,7 +268,7 @@ const baseSpeciesData: SpeciesEntry[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: "Maine Coon species guide on AnimalDex",
             width: 1200,
             height: 630
@@ -322,7 +322,7 @@ const baseSpeciesData: SpeciesEntry[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: "Bald eagle species guide on AnimalDex",
             width: 1200,
             height: 630
@@ -376,7 +376,7 @@ const baseSpeciesData: SpeciesEntry[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "/images/og-animaldex.svg",
+            src: "/images/og.png",
             alt: "African wild dog species guide on AnimalDex",
             width: 1200,
             height: 630

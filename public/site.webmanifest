@@ -1,0 +1,33 @@
+{
+  "name": "AnimalDex",
+  "short_name": "AnimalDex",
+  "description": "AI animal scanner, wildlife collection app, and collectible field guide for iPhone.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050806",
+  "theme_color": "#1BC451",
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/logo.webp",
+      "sizes": "400x400",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

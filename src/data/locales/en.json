@@ -29,7 +29,7 @@
       "platform": "Built for",
       "platformValue": "iPhone",
       "status": "Status",
-      "statusValue": "private beta and fresh journal updates"
+      "statusValue": "live on the App Store"
     }
   },
   "home": {
@@ -85,7 +85,7 @@
         "description": "See habitat, behavior, rarity, lookalikes, and field-guide facts at a glance.",
         "alt": "Placeholder visual for AnimalDex field guide details"
       },
-      "download": "View launch options"
+      "download": "Download on the App Store"
     },
     "team": {
       "title": "Made for how you discover animals",
@@ -106,12 +106,13 @@
     },
     "download": {
       "title": "Start your next sighting with AnimalDex",
-      "description": "Join the private beta and turn scans into cards, collections, and field-guide learning.",
-      "launch": "Launching on",
-      "beta": "Private beta",
+      "description": "Download AnimalDex on the App Store and turn scans into cards, collections, and field-guide learning.",
+      "launch": "Download on",
+      "available": "Available on the",
+      "beta": "Live app",
       "read": "Read the",
       "contact": "Ask about",
-      "unavailable": "Coming soon on",
+      "unavailable": "Available on",
       "journalPrompt": "Start with quick spotting tips, family ideas, and wildlife-friendly guides.",
       "journalLink": "Read the Journal",
       "blogPrompt": "Get sharper on animal ID, rarity, and travel spotting.",
@@ -399,7 +400,7 @@
     "collectorDescription": "These pages target card-collection and creature-game search intents while keeping the real-animal value proposition clear.",
     "ctaTitle": "Ready to start with your use case?",
     "ctaDescription": "Pick the path that fits your goals, then launch AnimalDex and build from your first sighting.",
-    "ctaButton": "View launch options",
+    "ctaButton": "Download on the App Store",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -599,7 +600,7 @@
     "back": "Back to Use Cases",
     "ctaTitle": "Turn this collection style into real animal discovery",
     "ctaDescription": "Use AnimalDex to scan, collect, and progress through real species with premium app polish.",
-    "ctaButton": "View app launch options",
+    "ctaButton": "Download on the App Store",
     "homeButton": "Back to main landing",
     "appButton": "Get the app"
   },
@@ -612,7 +613,7 @@
   "meta": {
     "fullTitle": "AnimalDex | AI animal scanner, wildlife collection app, and field guide",
     "title": "AnimalDex",
-    "description": "AnimalDex is an AI animal scanner, wildlife collection app, educational field guide, and collectible animal card journal for spotting, learning about, and collecting real animals.",
+    "description": "AnimalDex is a live iPhone app for AI animal scanning, wildlife collection, educational field-guide learning, and collectible animal card journaling.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",

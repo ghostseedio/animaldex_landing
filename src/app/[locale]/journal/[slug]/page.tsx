@@ -49,7 +49,7 @@ export async function generateMetadata({params}: JournalPostPageProps): Promise<
             tags: post.tags,
             images: [
                 {
-                    url: "/images/og-animaldex.svg",
+                    url: "/images/og.png",
                     width: 1200,
                     height: 630,
                     alt: `${post.title} | AnimalDex`
@@ -60,7 +60,7 @@ export async function generateMetadata({params}: JournalPostPageProps): Promise<
             card: "summary_large_image",
             title: `${post.title} | AnimalDex`,
             description: post.description,
-            images: ["/images/og-animaldex.svg"]
+            images: ["/images/og.png"]
         }
     };
 }

@@ -17,7 +17,7 @@ export default function IntentCtaCard({
     title,
     description,
     buttonLabel,
-    buttonHref = "/#download",
+    buttonHref = "https://apps.apple.com/app/6761607780",
     supportItems = [],
     secondaryLinks = []
 }: IntentCtaCardProps) {

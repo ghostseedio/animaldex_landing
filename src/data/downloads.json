@@ -1,32 +1,30 @@
 [
   {
-    "eyebrowId": "unavailable",
+    "eyebrowId": "available",
     "name": "App Store",
     "icon": "/images/downloads/appStore.svg",
-    "unavailable": true
-  },
-  {
-    "eyebrowId": "beta",
-    "name": "TestFlight",
-    "icon": "/images/downloads/testFlight.svg",
-    "unavailable": true
+    "href": "https://apps.apple.com/app/6761607780",
+    "unavailable": false
   },
   {
     "eyebrowId": "read",
     "name": "AnimalDex Journal",
     "icon": "/images/downloads/journal.svg",
-    "href": "/journal"
+    "href": "/journal",
+    "unavailable": false
   },
   {
     "eyebrowId": "read",
     "name": "Privacy Policy",
     "icon": "/images/downloads/privacy.svg",
-    "href": "/legal/privacy"
+    "href": "/legal/privacy",
+    "unavailable": false
   },
   {
     "eyebrowId": "contact",
     "name": "Support",
     "icon": "/images/downloads/support.svg",
-    "href": "mailto:support@animaldex.app"
+    "href": "mailto:support@animaldex.app",
+    "unavailable": false
   }
 ]
