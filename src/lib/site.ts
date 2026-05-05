@@ -1,10 +1,13 @@
+const productionSiteUrl = "https://animaldex.app";
+
 export function getSiteUrl() {
     const configuredUrl = process.env.CANONICAL_URL
+        || process.env.NEXT_PUBLIC_SITE_URL
+        || process.env.SITE_URL
+        || process.env.NEXT_PUBLIC_APP_URL
         || (process.env.NODE_ENV === "development"
             ? `http://localhost:${process.env.PORT || 3000}`
-            : process.env.VERCEL_URL
-                ? `https://${process.env.VERCEL_URL}`
-                : "https://animaldex.app");
+            : productionSiteUrl);
 
     return configuredUrl.replace(/\/$/, "");
 }
