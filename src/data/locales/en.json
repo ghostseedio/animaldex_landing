@@ -6,8 +6,9 @@
     "team": "Who It's For",
     "features": "Features",
     "download": "Get AnimalDex",
-    "privacy": "Privacy",
-    "terms": "Terms",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "contact": "Contact",
     "discover": "Discover",
     "collection": "Collection",
     "support": "Support",
@@ -38,6 +39,8 @@
   },
   "home": {
     "title": "AnimalDex",
+    "tagline": "AI animal scanner and wildlife collection app",
+    "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
     "description": "Scan real animals. Discover what they teach.",
     "supporting": "Use AI scanning to identify animals instantly, then learn biology-backed animal meaning, symbolism, and lessons from real behavior.",
     "phone": {
@@ -668,7 +671,7 @@
   "meta": {
     "fullTitle": "AnimalDex | AI animal scanner, wildlife collection app, and field guide",
     "title": "AnimalDex",
-    "description": "AnimalDex is a live iPhone app for AI animal scanning, wildlife collection, educational field-guide learning, and collectible animal card journaling.",
+    "description": "AnimalDex is an AI animal scanner and wildlife collection app that helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",

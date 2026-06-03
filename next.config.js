@@ -1,6 +1,20 @@
 const withNextIntl = require('next-intl/plugin')();
 
 module.exports = withNextIntl({
+    async redirects() {
+        return [
+            {
+                source: "/privacy",
+                destination: "/legal/privacy",
+                permanent: true
+            },
+            {
+                source: "/terms",
+                destination: "/legal/terms",
+                permanent: true
+            }
+        ];
+    },
     webpack: (config) => {
         config.module.rules.push({
             test: /\.md$/,

@@ -6,8 +6,9 @@
     "team": "Untuk Siapa",
     "features": "Fitur",
     "download": "Dapatkan AnimalDex",
-    "privacy": "Privasi",
-    "terms": "Ketentuan",
+    "privacy": "Kebijakan Privasi",
+    "terms": "Ketentuan Penggunaan",
+    "contact": "Kontak",
     "discover": "Temukan",
     "collection": "Koleksi",
     "support": "Dukungan",
@@ -38,6 +39,8 @@
   },
   "home": {
     "title": "AnimalDex",
+    "tagline": "Pemindai hewan AI dan aplikasi koleksi satwa liar",
+    "intro": "AnimalDex membantu pengguna mengidentifikasi hewan nyata dengan AI, menyimpan penampakan sebagai kartu koleksi, dan mempelajari fakta biologi, makna, dan pelajaran perilaku.",
     "description": "Pindai hewan nyata. Temukan pelajaran yang mereka ajarkan.",
     "supporting": "Gunakan pemindai AI untuk identifikasi instan, lalu pelajari meaning, symbolism, dan pelajaran hewan yang didukung biologi dan perilaku nyata.",
     "phone": {

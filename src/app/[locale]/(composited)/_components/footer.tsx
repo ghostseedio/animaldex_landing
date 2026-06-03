@@ -37,7 +37,8 @@ export default function Footer() {
                 {href: "/animal-wisdom", label: t("animalWisdom")},
                 {href: "/legal/privacy", label: t("privacy")},
                 {href: "/legal/terms", label: t("terms")},
-                {href: "mailto:support@animaldex.app", label: t("support")}
+                {href: "mailto:support@animaldex.app", label: t("support")},
+                {href: "mailto:support@animaldex.app", label: t("contact")}
             ]
         }
     ];
@@ -115,6 +116,15 @@ export default function Footer() {
                     </span>
                 </Link>
             </div>
+            <nav
+                aria-label="Legal and support"
+                className="flex flex-wrap w-full justify-center items-center gap-x-6 gap-y-3 text-sm text-ink-200 border-t border-line-400 pt-8"
+            >
+                <FooterLink href="/legal/privacy">{t("privacy")}</FooterLink>
+                <FooterLink href="/legal/terms">{t("terms")}</FooterLink>
+                <FooterLink href="mailto:support@animaldex.app">{t("support")}</FooterLink>
+                <FooterLink href="mailto:support@animaldex.app">{t("contact")}</FooterLink>
+            </nav>
             <div className="flex flex-col lg:flex-row w-full justify-center items-center gap-2 lg:gap-8 text-ink-300">
                 <div className="hover:font-semibold transition-all flex gap-1">
                     {t('credits.platform') + ' '}

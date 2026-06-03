@@ -16,14 +16,16 @@ export default function Header() {
             bg-canvas-900/80 backdrop-blur-xl border-b border-line-400 px-8 md:px-16 z-40"
         >
             <div className="flex items-center gap-4 md:gap-6">
-                <Link href="/" aria-label={t("logo")} className="shrink-0">
+                <Link href="/" className="flex items-center gap-3 shrink-0" aria-label={t("logo")}>
                     <img
                         src="/images/logo.webp"
-                        alt={t("logo")}
+                        alt=""
+                        aria-hidden="true"
                         width={48}
                         height={48}
                         className="h-10 w-10 md:h-12 md:w-12"
                     />
+                    <span className="text-xl md:text-2xl text-white tracking-tight">{t("title")}</span>
                 </Link>
                 <LocaleToggle currentLocale={currentLocale}/>
             </div>
@@ -46,12 +48,6 @@ export default function Header() {
                 >
                     {t('animals')}
                 </HeaderLink>
-                <HeaderLink
-                    href="/principles"
-                    data-cursor-text={t('principles')}
-                >
-                    {t('principles')}
-                </HeaderLink>
                 <Link
                     href="https://apps.apple.com/app/6761607780"
                     className="hidden md:block"
@@ -73,11 +69,11 @@ export default function Header() {
                 <HeaderLink href="/legal/privacy" mobile>
                     {t('privacy')}
                 </HeaderLink>
+                <HeaderLink href="/legal/terms" mobile>
+                    {t('terms')}
+                </HeaderLink>
                 <HeaderLink href="/animals" mobile>
                     {t('animals')}
-                </HeaderLink>
-                <HeaderLink href="/principles" mobile>
-                    {t('principles')}
                 </HeaderLink>
                 <HeaderLink href="/animal-meanings" mobile>
                     {t('animalMeanings')}
