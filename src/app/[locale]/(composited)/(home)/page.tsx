@@ -43,7 +43,7 @@ export default async function Home() {
     const appStoreUrl = "https://apps.apple.com/app/6761607780";
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = t("intro");
+    const appSchemaDescription = "AnimalDex is an AI animal identifier app that helps users identify animals from photos and discover biology-backed animal meaning, symbolism, behavior lessons, and field-guide context.";
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -258,25 +258,15 @@ export default async function Home() {
             />
 
             <section className="w-full flex justify-center items-center flex-col gap-4 mt-48 md:mt-72 mb-16 px-4" id="top">
-                <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white text-center tracking-tight">
-                    {t("title")}
-                </h1>
-                <h2 className="text-xl md:text-2xl lg:text-3xl text-primary-200 w-full max-w-3xl text-center font-sans font-medium">
-                    {t("tagline")}
-                </h2>
-                <p className="text-base md:text-lg text-ink-200 w-full max-w-3xl text-center leading-relaxed">
-                    {t("intro")}
-                </p>
                 <Image
                     src="/images/animaldex-logo-text.webp"
-                    alt=""
-                    aria-hidden="true"
+                    alt={t("title")}
                     width={520}
                     height={124}
                     priority
-                    className="w-full max-w-[16rem] md:max-w-[20rem] h-auto opacity-90"
+                    className="w-full max-w-[20rem] md:max-w-[26rem] lg:max-w-[32rem] h-auto"
                 />
-                <p className="text-xl md:text-2xl text-ink-100 w-full md:w-[34rem] text-center font-display">{t("description")}</p>
+                <p className="text-xl md:text-2xl text-ink-200 w-full md:w-[34rem] text-center">{t("description")}</p>
                 <p className="text-base md:text-lg text-ink-300 w-full max-w-3xl text-center">
                     {t("supporting")}
                 </p>
