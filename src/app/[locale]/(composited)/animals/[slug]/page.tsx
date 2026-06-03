@@ -23,8 +23,9 @@ import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
+import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
-import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
+import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -232,15 +233,28 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         return {};
     }
 
-    const title = `${entry.name} — Identification, Habitat, Rarity & Facts`;
-    const description = `${entry.name}: ${entry.analysis.summary} Learn identification traits, habitat, native range, rarity, behavior, and related animals with AnimalDex.`;
+    const title = `${entry.name} Meaning, Symbolism, Lessons, Habitat & Facts`;
+    const description = `${entry.name}: ${entry.analysis.summary} Explore biology-backed ${entry.name.toLowerCase()} meaning, symbolism, lessons, behavior, habitat, and related animals with AnimalDex.`;
 
     return buildContentMetadata({
         locale,
         pathname: `/animals/${entry.slug}`,
         title,
         description,
-        keywords: [...entry.searchIntents, entry.name, entry.analysis.scientificName, "animal identification app", "wildlife app"],
+        keywords: [
+            ...entry.searchIntents,
+            entry.name,
+            entry.analysis.scientificName,
+            `${entry.name.toLowerCase()} meaning`,
+            `${entry.name.toLowerCase()} symbolism`,
+            `${entry.name.toLowerCase()} lesson`,
+            `${entry.name.toLowerCase()} behavior meaning`,
+            "animal meaning",
+            "animal symbolism",
+            "biology-backed animal meaning",
+            "animal identification app",
+            "wildlife app"
+        ],
         featuredImage: {
             ...entry.featuredImage,
             src: getSpeciesImageRoute(entry.slug),
@@ -267,6 +281,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
+    const principleProfile = getBehavioralPrincipleProfile(entry.slug, systemsEntry, speciesSystemsIntelligence);
+    const relatedPrincipleSpecies = principleProfile
+        ? principleProfile.relatedSpeciesSlugs
+            .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
+            .filter((relatedEntry): relatedEntry is NonNullable<typeof relatedEntry> => Boolean(relatedEntry))
+        : [];
     const dietContent = getSpeciesDietContent(entry);
     const spottingContent = getSpeciesSpottingContent(entry);
     const {descriptor, subtitleStory} = await getSpeciesSubtitle(entry.slug, locale);
@@ -313,13 +333,110 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         .filter(Boolean)
         .join(" ");
     const pageUrl = getAbsoluteUrl(locale, `/animals/${entry.slug}`);
+    const faqItems = [
+        {
+            question: t("faqWhatSymbolize", {animal: entry.name.toLowerCase()}),
+            answer: principleProfile
+                ? `${entry.name} symbolizes ${principleProfile.principle.toLowerCase()} in AnimalDex because its repeatable behavior patterns show that strategy in nature.`
+                : `${entry.name} symbolizes observable survival strategy in AnimalDex, grounded in behavior and ecology rather than mystical claims.`
+        },
+        {
+            question: t("faqCoreLesson", {animal: entry.name.toLowerCase()}),
+            answer: principleProfile
+                ? principleProfile.coreLesson
+                : `${entry.name} teaches practical lessons through habitat fit, behavioral timing, and adaptation under pressure.`
+        },
+        {
+            question: t("faqBiologicalBasis", {animal: entry.name.toLowerCase()}),
+            answer: principleProfile
+                ? principleProfile.biologicalBasis
+                : `${entry.analysis.summary} ${entry.analysis.habitat}`
+        },
+        {
+            question: t("faqWhereFound", {animal: entry.name.toLowerCase()}),
+            answer: `${entry.name} is found in ${entry.analysis.nativeRange}`
+        }
+    ];
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: item.answer
+            }
+        }))
+    };
+    const animalBreadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: getAbsoluteUrl(locale)
+            },
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Animals",
+                item: getAbsoluteUrl(locale, "/animals")
+            },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: entry.name,
+                item: pageUrl
+            }
+        ]
+    };
+    const principleBreadcrumbSchema = principleProfile ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: getAbsoluteUrl(locale)
+            },
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Principles",
+                item: getAbsoluteUrl(locale, "/principles")
+            },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: principleProfile.principle,
+                item: getAbsoluteUrl(locale, `/principles/${principleProfile.principleSlug}`)
+            },
+            {
+                "@type": "ListItem",
+                position: 4,
+                name: entry.name,
+                item: pageUrl
+            }
+        ]
+    } : null;
     const thingSchema = {
         "@context": "https://schema.org",
         "@type": "Thing",
         name: entry.name,
         alternateName: entry.analysis.scientificName,
         description: entry.analysis.summary,
-        category: entry.analysis.category
+        category: entry.analysis.category,
+        ...(principleProfile ? {
+            additionalProperty: [
+                {"@type": "PropertyValue", name: "principle", value: principleProfile.principle},
+                {"@type": "PropertyValue", name: "coreLesson", value: principleProfile.coreLesson},
+                {"@type": "PropertyValue", name: "biologicalBasis", value: principleProfile.biologicalBasis}
+            ]
+        } : {})
     };
     const articleSchema = {
         "@context": "https://schema.org",
@@ -347,14 +464,34 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 "@type": "Thing",
                 name: entry.analysis.scientificName
             }
-        ]
+        ],
+        ...(principleProfile ? {
+            articleSection: ["Animal Principle", "Animal Symbolism & Meaning", "Field Guide"],
+            keywords: [
+                `${entry.name} meaning`,
+                `${entry.name} symbolism`,
+                `${entry.name} lesson`,
+                `${entry.name} behavior meaning`
+            ],
+            additionalProperty: [
+                {"@type": "PropertyValue", name: "principle", value: principleProfile.principle},
+                {"@type": "PropertyValue", name: "coreLesson", value: principleProfile.coreLesson},
+                {"@type": "PropertyValue", name: "biologicalBasis", value: principleProfile.biologicalBasis}
+            ]
+        } : {})
     };
 
     return (
         <article className="w-full max-w-5xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([thingSchema, articleSchema])}}
+                dangerouslySetInnerHTML={{__html: JSON.stringify([
+                    thingSchema,
+                    articleSchema,
+                    faqSchema,
+                    animalBreadcrumbSchema,
+                    ...(principleBreadcrumbSchema ? [principleBreadcrumbSchema] : [])
+                ])}}
             />
 
             <Link href="/animals" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
@@ -453,6 +590,111 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             </div>
 
+            {principleProfile ? (
+                <nav className="rounded-3xl border border-line-300 bg-surface-900/70 backdrop-blur px-4 py-4 flex flex-wrap items-center gap-2 md:gap-3">
+                    <span className="text-ink-300 text-xs uppercase tracking-[0.18em]">{t("jumpToLabel")}</span>
+                    <Link href="#meaning" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                        {t("anchorMeaning")}
+                    </Link>
+                    <Link href="#symbolism" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                        {t("anchorSymbolism")}
+                    </Link>
+                    <Link href="#biological-basis" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                        {t("anchorBiologicalBasis")}
+                    </Link>
+                    <Link href="#behavior" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                        {t("anchorBehavior")}
+                    </Link>
+                </nav>
+            ) : null}
+
+            {principleProfile ? (
+                <section id="meaning" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
+                        {t("principleTitle", {animal: entry.name})}
+                    </h2>
+                    <p className="text-ink-300 text-sm md:text-base">
+                        <span className="text-white">{t("principleHubLabel")}: </span>
+                        <Link href={`/principles/${principleProfile.principleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
+                            {principleProfile.principle}
+                        </Link>
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">
+                            <span className="text-white">{t("principleLabel")}: </span>
+                            {principleProfile.principle}
+                        </p>
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">
+                            <span className="text-white">{t("coreLessonLabel")}: </span>
+                            {principleProfile.coreLesson}
+                        </p>
+                        <p id="biological-basis" className="text-ink-200 text-lg md:text-xl leading-8">
+                            <span className="text-white">{t("biologicalBasisLabel")}: </span>
+                            {renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("bestForTitle")}</h3>
+                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
+                            {principleProfile.bestFor.map((item) => (
+                                <li key={item}>{item}</li>
+                            ))}
+                        </ul>
+                    </div>
+                    {relatedPrincipleSpecies.length > 0 ? (
+                        <div className="flex flex-col gap-3">
+                            <h3 className="text-xl md:text-2xl font-semibold text-white">
+                                {t("relatedPrincipleSpeciesTitle", {principle: principleProfile.principle})}
+                            </h3>
+                            <div className="flex flex-wrap gap-3">
+                                {relatedPrincipleSpecies.map((item) => (
+                                    <Link
+                                        key={item.slug}
+                                        href={`/animals/${item.slug}`}
+                                        className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm md:text-base"
+                                    >
+                                        {item.name}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
+                </section>
+            ) : null}
+
+            {principleProfile ? (
+                <section id="symbolism" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
+                        {t("symbolismTitle", {animal: entry.name})}
+                    </h2>
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionOne", {animal: entry.name.toLowerCase()})}</h3>
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">
+                            {entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionTwo", {animal: entry.name.toLowerCase()})}</h3>
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">{principleProfile.coreLesson}</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionThree")}</h3>
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionFour")}</h3>
+                        <p className="text-ink-200 text-lg md:text-xl leading-8">
+                            AnimalDex assigns this principle from observable biology: body design, behavioral strategy, and ecosystem role documented for {entry.name.toLowerCase()}.
+                        </p>
+                    </div>
+                </section>
+            ) : null}
+
+            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
+                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
+            </section>
+
             <SpeciesStatsSection
                 result={statsResult}
                 battleTier={battleTier}
@@ -476,11 +718,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     unavailableDescription: t("statsUnavailableDescription")
                 }}
             />
-
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
-            </section>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("identifyTitle", {animal: entry.name})}</h2>
@@ -580,7 +817,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 />
             )}
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section id="behavior" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("behaviorTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.behaviorTraits.map((item) => (
@@ -637,6 +874,37 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     ))}
                 </div>
             </section>
+
+            {principleProfile && relatedPrincipleSpecies.length > 0 ? (
+                <section className="flex flex-col gap-4">
+                    <h2 className="font-display font-bold text-4xl text-white">
+                        {t("moreWithPrincipleTitle", {principle: principleProfile.principle})}
+                    </h2>
+                    <p className="text-ink-200 text-lg md:text-xl">
+                        <Link href={`/principles/${principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
+                            {t("moreWithPrincipleHubLink", {principle: principleProfile.principle})}
+                        </Link>
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {relatedPrincipleSpecies.map((item) => (
+                            <article
+                                key={`principle-${item.slug}`}
+                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                            >
+                                <h3 className="font-display font-bold text-2xl text-white">{item.name}</h3>
+                                <p className="text-ink-200 text-base">{renderTextWithSpeciesLinks(item.analysis.summary, entry.slug)}</p>
+                                <Link
+                                    href={`/animals/${item.slug}`}
+                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                                    underline
+                                >
+                                    {t("readSpecies")}
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            ) : null}
 
             <IntentCtaCard
                 title={t("ctaTitle")}

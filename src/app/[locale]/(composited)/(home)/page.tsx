@@ -43,7 +43,7 @@ export default async function Home() {
     const appStoreUrl = "https://apps.apple.com/app/6761607780";
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = "AnimalDex is an AI animal identifier app that helps users identify animals, insects, birds, reptiles, and pets from photos.";
+    const appSchemaDescription = "AnimalDex is an AI animal identifier app that helps users identify animals from photos and discover biology-backed animal meaning, symbolism, behavior lessons, and field-guide context.";
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -102,6 +102,30 @@ export default async function Home() {
             title: t("download.animalsLink"),
             description: t("download.animalsPrompt"),
             accent: "from-primary-500/14 via-primary-500/6 to-transparent"
+        },
+        {
+            href: "/principles",
+            title: t("download.principlesLink"),
+            description: t("download.principlesPrompt"),
+            accent: "from-primary-500/14 via-primary-300/8 to-transparent"
+        },
+        {
+            href: "/animal-meanings",
+            title: t("download.meaningsLink"),
+            description: t("download.meaningsPrompt"),
+            accent: "from-primary-400/16 via-primary-500/8 to-transparent"
+        },
+        {
+            href: "/animal-symbolism",
+            title: t("download.symbolismLink"),
+            description: t("download.symbolismPrompt"),
+            accent: "from-line-300/18 via-primary-400/8 to-transparent"
+        },
+        {
+            href: "/animal-lessons",
+            title: t("download.lessonsLink"),
+            description: t("download.lessonsPrompt"),
+            accent: "from-primary-500/12 via-line-300/10 to-transparent"
         }
     ];
     const webSiteSchema = {

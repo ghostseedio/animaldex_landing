@@ -20,6 +20,10 @@ export default function Footer() {
             title: t("footerGroups.explore"),
             links: [
                 {href: "/animals", label: t("animals")},
+                {href: "/principles", label: t("principles")},
+                {href: "/animal-meanings", label: t("animalMeanings")},
+                {href: "/animal-symbolism", label: t("animalSymbolism")},
+                {href: "/animal-lessons", label: t("animalLessons")},
                 {href: "/locations", label: t("locations")},
                 {href: "/comparisons", label: t("challenges")},
                 {href: "/rankings", label: t("rankings")}

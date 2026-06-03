@@ -56,7 +56,12 @@ function buildSubtitleStory(seed: SpeciesSeedFifteen) {
 }
 
 const speciesSeedRowsFifteen: SpeciesSeedFifteenRow[] = [
-    ["grizzly-bear", "Grizzly Bear", "Ursus arctos horribilis", "Mammal", ["heavy shoulder-hump build", "long clawed digging forelimbs", "explosive close-range power"], "mountain forest, river valley, alpine meadow, and northern scrub", "Western North America, especially Alaska, western Canada, and parts of the northwestern United States", 58, "The hump-backed mountain force animal"]
+    ["grizzly-bear", "Grizzly Bear", "Ursus arctos horribilis", "Mammal", ["heavy shoulder-hump build", "long clawed digging forelimbs", "explosive close-range power"], "mountain forest, river valley, alpine meadow, and northern scrub", "Western North America, especially Alaska, western Canada, and parts of the northwestern United States", 58, "The hump-backed mountain force animal"],
+    ["cockroach", "Cockroach", "Blattodea", "Insect", ["flattened fast-moving body", "durable exoskeleton", "high environmental tolerance"], "urban edge, forest floor litter, sewer systems, and warm shelter pockets", "Worldwide except polar regions, with major concentrations in warm and humid environments", 40, "The resilient scavenger systems test animal"],
+    ["anglerfish", "Anglerfish", "Lophiiformes", "Fish", ["bioluminescent lure appendage", "wide expandable jaw", "ambush sit-and-wait hunting style"], "deep sea benthic zones, continental slopes, and dark pelagic layers", "Global oceans, especially deep Atlantic, Pacific, and Southern Ocean systems", 68, "The deep-ocean lure strategist animal"],
+    ["pigeon", "Pigeon", "Columba livia domestica", "Bird", ["fast homing flight memory", "compact urban-adapted body", "strong flock navigation behavior"], "city architecture, farmland edges, cliffs, and mixed suburban corridors", "Worldwide across cities and agricultural regions on every inhabited continent", 32, "The urban navigation memory animal"],
+    ["goose", "Goose", "Anserini", "Bird", ["long-distance migratory V-form flight", "strong social call coordination", "grazing wetland adaptation"], "wetland, grassland, river floodplain, and agricultural open country", "Northern Hemisphere breeding ranges with global migratory and resident populations", 36, "The migration teamwork pattern animal"],
+    ["kookaburra", "Kookaburra", "Dacelo novaeguineae", "Bird", ["powerful kingfisher beak", "territorial laughing call", "perch-and-strike hunting behavior"], "open woodland, forest edge, suburban parks, and riparian corridors", "Australia and nearby regions, with introductions in selected island habitats", 44, "The loud-territory precision hunter animal"]
 ];
 
 const speciesSeedsFifteen: SpeciesSeedFifteen[] = speciesSeedRowsFifteen.map(([

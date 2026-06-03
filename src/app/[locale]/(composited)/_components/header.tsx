@@ -46,6 +46,12 @@ export default function Header() {
                 >
                     {t('animals')}
                 </HeaderLink>
+                <HeaderLink
+                    href="/principles"
+                    data-cursor-text={t('principles')}
+                >
+                    {t('principles')}
+                </HeaderLink>
                 <Link
                     href="https://apps.apple.com/app/6761607780"
                     className="hidden md:block"
@@ -69,6 +75,18 @@ export default function Header() {
                 </HeaderLink>
                 <HeaderLink href="/animals" mobile>
                     {t('animals')}
+                </HeaderLink>
+                <HeaderLink href="/principles" mobile>
+                    {t('principles')}
+                </HeaderLink>
+                <HeaderLink href="/animal-meanings" mobile>
+                    {t('animalMeanings')}
+                </HeaderLink>
+                <HeaderLink href="/animal-symbolism" mobile>
+                    {t('animalSymbolism')}
+                </HeaderLink>
+                <HeaderLink href="/animal-lessons" mobile>
+                    {t('animalLessons')}
                 </HeaderLink>
                 <HeaderLink href="/#more" mobile>
                     {t('discover')}

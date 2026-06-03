@@ -10,6 +10,8 @@ import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
 import {rankingPages} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
+import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
+import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();
@@ -69,6 +71,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
             {
                 url: getAbsoluteUrl(locale, "/locations"),
                 lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/principles"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/animal-meanings"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/animal-symbolism"),
+                lastModified: now
+            },
+            {
+                url: getAbsoluteUrl(locale, "/animal-lessons"),
+                lastModified: now
             }
         ];
 
@@ -116,6 +134,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
             url: getAbsoluteUrl(locale, `/locations/${page.slug}`),
             lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
+        const principlePageEntries = getBehavioralPrinciplesIndex(speciesSystemsIntelligence).map((item) => ({
+            url: getAbsoluteUrl(locale, `/principles/${item.principleSlug}`),
+            lastModified: now
+        }));
 
         return [
             ...staticEntries,
@@ -127,7 +149,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             ...answerPageEntries,
             ...challengePageEntries,
             ...rankingPageEntries,
-            ...locationPageEntries
+            ...locationPageEntries,
+            ...principlePageEntries
         ];
     });
 

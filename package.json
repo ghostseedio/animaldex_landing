@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
+    "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
+    "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",
+    "seo:audit:catalog-parity": "node scripts/generateCatalogWebsiteParityReport.js"
   },
   "dependencies": {
     "@types/node": "18.13.0",

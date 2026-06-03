@@ -130,6 +130,10 @@ function createSpeciesEntry({
             `${normalizedName} behavior`,
             `${normalizedName} facts`,
             `${normalizedName} ecosystem role`,
+            `${normalizedName} meaning`,
+            `${normalizedName} symbolism`,
+            `${normalizedName} spiritual meaning`,
+            `${normalizedName} lessons`,
             ...searchIntents
         ],
         analysis,
