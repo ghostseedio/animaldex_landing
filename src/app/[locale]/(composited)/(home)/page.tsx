@@ -37,6 +37,7 @@ const animalBackgroundImages = [
 
 export default async function Home() {
     const t = await getTranslations('home');
+    const navT = await getTranslations('nav');
     const locale = await getLocale();
     const siteUrl = getAbsoluteUrl(locale);
     const rootSiteUrl = getSiteUrl();
@@ -270,6 +271,12 @@ export default async function Home() {
                 <p className="text-base md:text-lg text-ink-300 w-full max-w-3xl text-center">
                     {t("supporting")}
                 </p>
+                <a
+                    href={`${rootSiteUrl}/legal/privacy`}
+                    className="text-base md:text-lg text-primary-200 hover:text-primary-100 font-semibold underline underline-offset-4"
+                >
+                    {navT("privacy")}
+                </a>
                 <Link
                     href="https://apps.apple.com/app/6761607780"
                     className="md:hidden"
