@@ -11,7 +11,7 @@ import {BlogLink, blogPosts, getBlogPost, getMentionedSpeciesSlugs, getRelatedBl
 import {getSpeciesBySlug} from "@/data/species";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
 type BlogPostPageProps = {
@@ -60,6 +60,16 @@ function renderSectionMedia(media: BlogMediaBlock) {
             )}
             {renderImageGallery(media.images)}
         </div>
+    );
+}
+
+function renderPullQuote(quote: string) {
+    return (
+        <blockquote className="rounded-3xl border border-primary-500/30 bg-primary-500/10 px-5 py-4 md:px-6 md:py-5">
+            <p className="text-primary-100 text-xl md:text-2xl leading-8 font-display">
+                {quote}
+            </p>
+        </blockquote>
     );
 }
 
@@ -116,6 +126,14 @@ function buildPluralPhrase(text: string) {
 
     const lastWord = words[words.length - 1];
     return [...words.slice(0, -1), pluralizeWord(lastWord)].join(" ");
+}
+
+function toAnchorId(text: string) {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
 }
 
 function resolveBlogLinkHref(link: BlogLink) {
@@ -351,18 +369,29 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
     const postUrl = getAbsoluteUrl(locale, `/blog/${post.slug}`);
     const schema = {
         "@context": "https://schema.org",
-        "@type": "Article",
+        "@type": "BlogPosting",
         headline: post.title,
         description: post.description,
         datePublished: post.publishedAt,
+        dateModified: post.updatedAt || post.publishedAt,
         inLanguage: locale,
         url: postUrl,
-        image: getAbsoluteUrl(locale, post.featuredImage.src),
+        mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": postUrl
+        },
+        image: getAbsoluteAssetUrl(post.featuredImage.src),
         articleSection: post.tags,
         keywords: post.searchIntents.join(", "),
         author: post.author ? {"@type": "Person", name: post.author} : {"@type": "Organization", name: "AnimalDex"},
-        publisher: {"@type": "Organization", name: "AnimalDex"},
-        ...(post.updatedAt ? {dateModified: post.updatedAt} : {})
+        publisher: {
+            "@type": "Organization",
+            name: "AnimalDex",
+            logo: {
+                "@type": "ImageObject",
+                url: getAbsoluteAssetUrl("/images/logo.webp")
+            }
+        }
     };
     const faqSchema = post.faq && post.faq.length > 0 ? {
         "@context": "https://schema.org",
@@ -376,7 +405,31 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
             }
         }))
     } : null;
-    const schemas = faqSchema ? [schema, faqSchema] : [schema];
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "AnimalDex",
+                item: getAbsoluteUrl(locale, "/")
+            },
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: getAbsoluteUrl(locale, "/blog")
+            },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: post.title,
+                item: postUrl
+            }
+        ]
+    };
+    const schemas = faqSchema ? [schema, faqSchema, breadcrumbSchema] : [schema, breadcrumbSchema];
 
     return (
         <article className="w-full max-w-5xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
@@ -405,6 +458,24 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
 
             <ContentImageFigure image={post.featuredImage} priority />
 
+            {post.tableOfContents && post.tableOfContents.length > 0 && (
+                <nav className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-7 md:px-8 flex flex-col gap-4" aria-label="Table of contents">
+                    <h2 className="font-display font-bold text-2xl md:text-3xl text-white">Inside the files</h2>
+                    <ol className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {post.tableOfContents.map((item) => (
+                            <li key={item} className="list-none">
+                                <a
+                                    href={`#${toAnchorId(item)}`}
+                                    className="text-ink-200 hover:text-primary-100 transition-colors text-base md:text-lg"
+                                >
+                                    {item}
+                                </a>
+                            </li>
+                        ))}
+                    </ol>
+                </nav>
+            )}
+
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
                 {post.sections.map((section) => {
                     const sectionTextLinks = [
@@ -419,7 +490,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                         .filter((entry): entry is NonNullable<ReturnType<typeof getSpeciesBySlug>> => Boolean(entry));
 
                     return (
-                        <section key={section.title} className="flex flex-col gap-4">
+                        <section key={section.title} id={toAnchorId(section.title)} className="scroll-mt-24 flex flex-col gap-4">
                             {section.kicker && (
                                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
                                     {section.kicker}
@@ -427,7 +498,16 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                             )}
                             <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
                             {section.cards ? renderSectionCards(section.cards) : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
+                            {section.pullQuote && renderPullQuote(section.pullQuote)}
                             {section.media && renderSectionMedia(section.media)}
+                            {section.subsections && section.subsections.map((subsection) => (
+                                <section key={`${section.title}-${subsection.title}`} className="flex flex-col gap-4 rounded-3xl border border-line-300/80 bg-surface-800/50 p-5 md:p-6">
+                                    <h3 className="font-display font-bold text-2xl md:text-3xl text-white">{subsection.title}</h3>
+                                    {subsection.media && renderSectionMedia(subsection.media)}
+                                    {renderSectionParagraphs(subsection.paragraphs, sectionTextLinks)}
+                                    {subsection.pullQuote && renderPullQuote(subsection.pullQuote)}
+                                </section>
+                            ))}
                             {sectionSpecies.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {sectionSpecies.map((species) => (
@@ -469,6 +549,26 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                             <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
                         </div>
                     ))}
+                </section>
+            )}
+
+            {post.sources && post.sources.length > 0 && (
+                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Sources and Further Reading</h2>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {post.sources.map((source) => (
+                            <li key={source.href} className="list-none rounded-2xl border border-line-300/80 bg-surface-800/60 p-4">
+                                <a
+                                    href={source.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-200 hover:text-primary-100 transition-colors underline underline-offset-4"
+                                >
+                                    {source.label}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
                 </section>
             )}
 

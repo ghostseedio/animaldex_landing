@@ -1,7 +1,7 @@
 import {Metadata} from "next";
 import {localeConfig} from "@/i18n";
 import {ContentImage} from "@/data/content-schema";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAbsoluteAssetUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 type BuildContentMetadataOptions = {
     locale: string;
@@ -26,7 +26,7 @@ export function buildContentMetadata({
     updatedAt,
     tags
 }: BuildContentMetadataOptions): Metadata {
-    const imageUrl = getAbsoluteUrl(locale, featuredImage.src);
+    const imageUrl = getAbsoluteAssetUrl(featuredImage.src);
     const brandedTitle = title.includes("AnimalDex") ? title : `${title} | AnimalDex`;
     const brandedImageAlt = featuredImage.alt.includes("AnimalDex") ? featuredImage.alt : `${featuredImage.alt} | AnimalDex`;
 

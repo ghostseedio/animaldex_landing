@@ -20,6 +20,18 @@ export type BlogSectionCard = {
     };
 };
 
+export type BlogSource = {
+    label: string;
+    href: string;
+};
+
+export type BlogSubsection = {
+    title: string;
+    paragraphs: string[];
+    media?: BlogMediaBlock;
+    pullQuote?: string;
+};
+
 export type BlogSection = {
     kicker?: string;
     title: string;
@@ -28,6 +40,8 @@ export type BlogSection = {
     inlineLinks?: BlogLink[];
     speciesSlugs?: string[];
     media?: BlogMediaBlock;
+    pullQuote?: string;
+    subsections?: BlogSubsection[];
 };
 
 export type BlogFAQ = {
@@ -44,8 +58,10 @@ export type BlogPost = CanonicalContentMetadata & {
     speciesSlugs: string[];
     systemsSpeciesSlugs?: string[];
     relatedChallengeSlugs?: string[];
+    tableOfContents?: string[];
     sections: BlogSection[];
     faq?: BlogFAQ[];
+    sources?: BlogSource[];
 };
 
 type AnimalSystemsPostInput = Omit<BlogPost, "publishedAt" | "updatedAt" | "author" | "speciesSlugs" | "systemsSpeciesSlugs"> & {
@@ -68,7 +84,618 @@ function createAnimalSystemsPost({
     };
 }
 
+const forbiddenAnimalFilesImageBase = "/images/blog/forbidden-animal-files";
+
+function forbiddenAnimalFilesImage(src: string, alt: string, width: number, height: number, caption?: string) {
+    return {
+        src: `${forbiddenAnimalFilesImageBase}/${src}`,
+        alt,
+        width,
+        height,
+        caption
+    };
+}
+
 const blogPostsData: BlogPost[] = [
+    {
+        slug: "animal-experiments-they-wont-repeat-ethics-or-cover-up",
+        title: "Animal Experiments They Won’t Repeat — Ethics or Cover-Up?",
+        description: "Explore the forbidden animal files: CIA spy cats, bat bombs, planarian memory, Rupert Sheldrake, animal death instincts, Kirlian photography, medieval bestiaries, and ancient animal symbolism.",
+        publishedAt: "2026-06-08",
+        updatedAt: "2026-06-08",
+        featuredImage: forbiddenAnimalFilesImage(
+            "animal-kingdom-connected-consciousness-field.webp",
+            "World map style image showing animals connected through a shared consciousness field, representing the AnimalDex view of nature as a living network",
+            1548,
+            1296,
+            "The AnimalDex view treats the animal kingdom as a living archive of intelligence, instinct, myth, and meaning."
+        ),
+        readingMinutes: 22,
+        author: "AnimalDex Editorial",
+        tags: ["Forbidden animal files", "Animal consciousness", "Animal symbolism", "Animal intelligence"],
+        searchIntents: [
+            "animal experiments",
+            "forbidden animal experiments",
+            "unethical animal experiments",
+            "CIA animal experiments",
+            "Acoustic Kitty",
+            "Project X-Ray bat bomb",
+            "Rupert Sheldrake animals",
+            "morphic resonance animals",
+            "animal consciousness",
+            "animal symbolism",
+            "biblical animal symbolism",
+            "medieval bestiary animals",
+            "animals and death",
+            "do animals know when they are dying",
+            "animal intelligence experiments",
+            "flatworm memory experiment",
+            "planarian memory",
+            "Kirlian photography animals",
+            "AnimalDex"
+        ],
+        speciesSlugs: ["maine-coon-cat", "bald-eagle"],
+        systemsSpeciesSlugs: ["bald-eagle"],
+        tableOfContents: [
+            "The Chicks and the Random Robot",
+            "James McConnell and the Memory Cannibal Flatworms",
+            "The Soviet Rabbit Submarine Story",
+            "Animals and Death",
+            "Rupert Sheldrake, Dogs That Know, and Morphic Resonance",
+            "Why Would Mainstream Science Dismiss This?",
+            "Declassified Animal Projects",
+            "Animal Intelligence Experiments",
+            "Kirlian Photography, L-Fields, and the Body as a Blueprint",
+            "Ancient Animal Symbolism",
+            "Are Humans Animals?",
+            "Ethics or Cover-Up?",
+            "Final AnimalDex Reflection"
+        ],
+        sections: [
+            {
+                kicker: "Forbidden animal files",
+                title: "The animal questions science keeps at the edge",
+                paragraphs: [
+                    "There are animal experiments that feel too strange to belong in normal science. Not because they are automatically false. Not because every claim is proven. But because they ask questions that modern science often avoids.",
+                    "Can animals sense death before it happens? Can memory exist outside the brain? Can instinct be a kind of ancient biological archive? Can animals perceive invisible signals humans ignore? Can consciousness behave less like a private thought inside the skull and more like a field?",
+                    "The AnimalDex view is simple: animals are not just background creatures in the human story. They are living archives. They carry behavior, intelligence, symbolism, instinct, memory, and mystery. Every animal is a code. Every species is a different way of reading reality.",
+                    "Modern biology gives us one layer of the animal kingdom. Ancient texts give us another. Declassified military projects give us another. Controversial consciousness research gives us another. When those layers overlap, the question becomes hard to ignore: what if animals are receivers, sensors, symbols, and biological technologies tuned into parts of reality we barely understand?",
+                    "Some of these experiments are documented history. Some are controversial. Some are fringe. Some are rejected by mainstream science. The point is not to pretend every forbidden claim is proven. The point is to ask why the stories survive, what they reveal about human curiosity, and what they might still teach us about animals."
+                ],
+                pullQuote: "Real curiosity does not blindly believe every strange claim. It also does not laugh at a question just because it threatens a worldview."
+            },
+            {
+                title: "The Chicks and the Random Robot",
+                paragraphs: [
+                    "One of the strangest animal consciousness stories comes from French researcher Rene Peoc'h and his experiments with chicks and a machine known as a Tychoscope.",
+                    "A Tychoscope is a small robot designed to move randomly. It has no eyes, no feelings, no desire, and no relationship to the space around it. Then Peoc'h introduced newborn chicks.",
+                    "Newly hatched chicks can imprint on the first moving object they encounter. In nature, this is usually the mother hen. In the lab story, the first moving object was the robot. To the chicks, the little machine became mother.",
+                    "Peoc'h placed the chicks inside a glass cage on one side of the room and allowed the robot to move freely. According to the claim, the robot spent far more time near the chicks than random chance predicted.",
+                    "Mainstream science does not accept this as proof of psychokinesis or mind-over-matter. Critics have questioned methodology, statistics, environmental bias, edge effects, and replication. That matters. Any extraordinary claim should be treated carefully.",
+                    "But the reason this experiment remains fascinating is not because it proves animal telepathy. It is fascinating because it asks a forbidden question: can desire interact with randomness?"
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Chicks, imprinting, and a random machine",
+                    images: [
+                        forbiddenAnimalFilesImage(
+                            "rene-peoch-tychscope-chicks-robot-experiment.webp",
+                            "Rene Peoc'h Tychoscope experiment screenshot showing chicks imprinted on a robot used to test intention and random movement",
+                            862,
+                            684,
+                            "Rene Peoc'h's controversial chick-and-robot experiment asked whether animal intention could affect random movement."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "tychscope-robot-movement-before-after-chicks.webp",
+                            "Diagram comparing Tychoscope robot movement before and after exposure to imprinted chicks in Rene Peoc'h's controversial experiment",
+                            882,
+                            752,
+                            "The famous claim is disputed, but the story survives because it points at the mystery of attention, attachment, and randomness."
+                        )
+                    ]
+                },
+                pullQuote: "A newborn chick does not believe the robot is its mother in an abstract way. It experiences the robot as mother."
+            },
+            {
+                title: "James McConnell and the Memory Cannibal Flatworms",
+                paragraphs: [
+                    "If the chick experiment asks whether consciousness can reach outward, the flatworm experiments ask whether memory can live deeper than the brain.",
+                    "In the 1950s and 60s, biologist James V. McConnell became famous for experiments involving planarian flatworms. Planarians are small worms known for extraordinary regeneration. Cut one in half, and the head half can regrow a tail. The tail half can regrow a head, including a new brain and nervous system.",
+                    "McConnell trained planarians using light and electric shock conditioning, then cut trained worms in half and allowed them to regenerate. According to controversial reports, regenerated worms appeared to retain traces of previous training.",
+                    "Then McConnell pushed the idea further. He ground up trained worms and fed them to untrained worms. The claim was that the untrained worms learned faster than ordinary control worms. This became known popularly as the memory cannibalism experiment.",
+                    "Mainstream science heavily criticized the experiments, and many attempts to replicate McConnell's strongest claims produced mixed or negative results. For decades, the topic became almost embarrassing in serious neuroscience.",
+                    "But the question did not die. Modern planarian research has revived part of the mystery in a more careful way, including questions about regeneration, behavioral priming, and whether body-wide bioelectric or cellular systems participate in memory-like patterning.",
+                    "This does not mean worms literally eat knowledge in the cartoon sense. It means the simple model of memory equals brain wiring only may be incomplete in some organisms."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Planarians and body memory",
+                    images: [
+                        forbiddenAnimalFilesImage(
+                            "planarian-flatworm-regeneration-memory.webp",
+                            "Planarian flatworm used in regeneration and memory experiments exploring whether learned behavior can survive brain regrowth",
+                            1200,
+                            705,
+                            "Planarian flatworms raise one of biology's strangest questions: where does memory live if the brain can regrow?"
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "flatworm-under-microscope-memory-research.webp",
+                            "Flatworm under a microscope, representing planarian memory research and regeneration experiments",
+                            978,
+                            812,
+                            "Planarian regeneration is documented biology; the stronger memory-transfer claims remain disputed."
+                        )
+                    ]
+                },
+                pullQuote: "If your brain disappeared and came back, what part of you would remain?"
+            },
+            {
+                title: "The Soviet Rabbit Submarine Story",
+                paragraphs: [
+                    "One of the most disturbing and controversial animal stories comes from the Cold War. It is often described as the Soviet rabbit submarine experiment.",
+                    "The story goes like this: Soviet researchers allegedly placed a mother rabbit in a laboratory on shore and connected her to monitoring equipment. Her newborn babies were taken aboard a submarine. At scheduled intervals, the baby rabbits were killed. According to the story, the mother rabbit showed measurable physiological spikes at the exact moments her babies died.",
+                    "Mainstream science does not accept the rabbit submarine story as reliable proof. The documentation is murky, the chain of evidence is weak, and the experiment is often repeated in fringe literature more than in rigorous scientific archives.",
+                    "But as a story, it remains powerful because it touches a pattern humans have observed for thousands of years: the mother knows, the herd knows, the pack knows, the flock knows.",
+                    "Animal bonds often appear deeper than mechanical stimulus and response. A dog senses when its owner is coming home. A cat changes behavior around illness. Birds leave before storms. Herd animals panic before danger. Elephants gather around bones. Whales carry dead calves.",
+                    "These behaviors do not prove telepathy. But they do prove that animals respond to death, distress, absence, and emotional rupture in ways that look more complex than old models of mere instinct allowed.",
+                    "The rabbit submarine story may be myth, distorted history, or unverified Cold War rumor. Yet it survives because it points at something real: animals often appear to sense connection, distress, and death in ways humans still struggle to explain fully."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "A disputed Cold War legend",
+                    images: [
+                        forbiddenAnimalFilesImage(
+                            "soviet-rabbit-experiment-black-and-white.webp",
+                            "Black and white image representing the controversial Soviet rabbit experiment and Cold War biological radio communication research",
+                            1200,
+                            1198,
+                            "The Soviet rabbit story remains controversial, but it survives because it asks whether biological bonds can cross distance."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "mother-rabbit-eeg-biological-radio-communication.webp",
+                            "Mother rabbit connected to EEG monitoring equipment, representing claims about biological radio communication in Soviet animal experiments",
+                            1200,
+                            756,
+                            "Use this story carefully: it is reported and controversial, not accepted as proven science."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "soviet-rabbit-eeg-submarine-experiment-demonstration.webp",
+                            "Demonstration image of a rabbit connected to EEG equipment beside a toy rabbit, representing the controversial Soviet rabbit submarine experiment",
+                            1200,
+                            660,
+                            "Demonstration image for a disputed claim, not documentation of verified animal harm."
+                        )
+                    ]
+                }
+            },
+            {
+                title: "Animals and Death",
+                paragraphs: [
+                    "Animals and death may be one of the most emotionally powerful areas of animal mystery. Many people report that pets behave strangely before their own death or before the death of a human companion.",
+                    "Dogs may refuse to leave a dying owner's bedside. Cats may curl up next to someone shortly before they pass. Horses may become unusually still. Birds may go quiet. Elephants may touch the bones of dead relatives. Whales may carry dead calves through the ocean. Chimpanzees may gather quietly around a dying member of the group.",
+                    "These behaviors challenge the old idea that animals are emotional machines. They look like grief. They look like mourning. They look like goodbye.",
+                    "Cats are especially mysterious in this area. Many cat owners report that cats sometimes hide, leave home, or withdraw shortly before death. The standard explanation is practical and evolutionary: a sick animal becomes vulnerable, so it hides to avoid predators.",
+                    "There are also reports of cats and dogs reacting to dying humans before the humans visibly decline. Ordinary explanations matter here: animals can smell biochemical changes, hear changes in breathing, and detect shifts in movement, temperature, stress hormones, and routine.",
+                    "But the deeper question remains: do animals merely detect physical decline, or do they experience death as a transition before we consciously recognize it?",
+                    "In many cultures, animals were seen as threshold beings. Cats guarded doorways between seen and unseen worlds. Dogs guarded the underworld. Birds carried souls. Serpents represented death and rebirth. Modern people may dismiss this as superstition, but ancient symbolism often began with observation."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Boundary readers",
+                    images: [
+                        forbiddenAnimalFilesImage(
+                            "dog-beside-dying-owner-bedside.webp",
+                            "Dog lying beside a dying loved one in bed, representing reports of animals sensing death and staying close to their owners",
+                            1200,
+                            725,
+                            "Dogs and cats often behave strangely around illness and death, raising questions about animal sensitivity to human transition."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "cat-leaving-home-before-death-myth.webp",
+                            "Funny image of a cat leaving home with a suitcase, representing stories of cats hiding or leaving before death",
+                            221,
+                            228,
+                            "A lighter image for a heavy subject: cats may hide, withdraw, seek closeness, or simply change routine near the end of life."
+                        )
+                    ]
+                },
+                pullQuote: "Whether or not one accepts spiritual interpretations, animals clearly perceive more than humans consciously notice."
+            },
+            {
+                title: "Rupert Sheldrake, Dogs That Know, and Morphic Resonance",
+                paragraphs: [
+                    "Rupert Sheldrake is one of the most controversial figures in modern consciousness research. He is a Cambridge-educated biologist and author best known for the theory of morphic resonance.",
+                    "Morphic resonance proposes that nature has memory. Not just individual memory, but collective memory. According to the theory, organisms inherit not only genes but also habits of form and behavior through fields.",
+                    "This is not accepted as mainstream science. It is controversial and often criticized. But it is powerful as a framework because it tries to explain patterns that seem difficult to reduce to genes and mechanics alone.",
+                    "One of Sheldrake's most famous areas of research involves animals that appear to know when their owners are coming home. Many dog owners report that their dog goes to the window, waits by the door, or becomes excited before the owner arrives.",
+                    "Skeptics argue that dogs respond to routine, sound, smell, or subtle cues from people already in the house. Sheldrake explored cases where the owner returned at random times, by unfamiliar transport, or without normal cues. Mainstream researchers remain skeptical.",
+                    "Sheldrake's morphic resonance remains controversial, but it is useful for AnimalDex because it gives language to a possibility: animals may not be isolated machines. They may be nodes in a living field."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Pet bonds and species memory",
+                    images: [
+                        forbiddenAnimalFilesImage(
+                            "dog-knows-owner-coming-home-sheldrake.webp",
+                            "Dog waiting by the door for its owner, representing Rupert Sheldrake's research into pets knowing when their owners are coming home",
+                            1200,
+                            1000,
+                            "Sheldrake's pet research explores whether animals can sense their owners returning through more than ordinary cues."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "rat-maze-memory-experiment.webp",
+                            "Rats navigating a maze, representing early animal memory experiments and controversial maze-learning research",
+                            1200,
+                            838,
+                            "Rat maze stories became part of the wider debate about learning, replication, and species-level memory claims."
+                        ),
+                        forbiddenAnimalFilesImage(
+                            "morphic-resonance-rats-distant-labs.webp",
+                            "Rats in distant laboratories representing Rupert Sheldrake's controversial morphic resonance theory and shared species memory",
+                            1200,
+                            796,
+                            "Morphic resonance is disputed, but it remains one of the most famous field-like theories of animal behavior."
+                        )
+                    ]
+                }
+                // TODO: The image map requested rats-global-memory-field-experiment.webp, but no matching raw source image was present in blog-content-temp.
+            },
+            {
+                title: "Why Would Mainstream Science Dismiss This?",
+                paragraphs: [
+                    "The word suppressed is emotionally powerful, but it needs to be used carefully. Sometimes information is not suppressed. Sometimes it is rejected because the evidence is weak. Sometimes an experiment is flawed. Sometimes results cannot be replicated. Sometimes the simpler explanation is correct.",
+                    "But there is also a deeper cultural issue. Modern science operates inside worldviews. One dominant worldview is materialism: reality is made of physical matter and energy, consciousness is produced by the brain, memory is stored in neural systems, and emotions are chemical and electrical events.",
+                    "This worldview has produced incredible achievements: medicine, engineering, computing, antibiotics, neuroscience, and modern biology. It also creates boundaries around what kinds of questions are considered respectable.",
+                    "A young scientist who wants a stable career may avoid topics like telepathy, animal premonition, near-death experiences, or morphic fields because those subjects carry stigma. That does not prove the subjects are true. It does mean the social environment affects what gets researched.",
+                    "The AnimalDex approach should not be anti-science. It should be anti-dogma. Real science is curiosity plus discipline. It asks strange questions, then tests them carefully."
+                ],
+                pullQuote: "The right approach is curiosity with standards: mystery with discipline, wonder with honesty."
+            },
+            {
+                title: "Declassified Animal Projects",
+                paragraphs: [
+                    "One of the strongest arguments that animals are not simple comes from government behavior. Governments and militaries have repeatedly tried to use animals as biological technology.",
+                    "That does not mean every project was ethical. Many were disturbing. Some were cruel. Some were failures. But they show that powerful institutions took animal perception seriously."
+                ],
+                subsections: [
+                    {
+                        title: "Project Acoustic Kitty",
+                        paragraphs: [
+                            "During the Cold War, the CIA developed a project popularly known as Acoustic Kitty. The idea was to turn a cat into a covert listening device. Instead of simply attaching a microphone to a collar, the project involved surgical modification.",
+                            "The goal was espionage. A cat could wander near sensitive conversations without looking suspicious. The project was eventually judged impractical, and the famous taxi-ending version of the story is debated.",
+                            "The declassified lesson is still disturbing: the CIA viewed a living animal as a platform. Not a pet. Not a symbol. A biological surveillance device."
+                        ]
+                    },
+                    {
+                        title: "Project X-Ray: The Bat Bomb",
+                        paragraphs: [
+                            "During World War Two, the United States developed Project X-Ray, a plan to use bats as incendiary weapons. Mexican free-tailed bats were chosen because they could carry small loads and naturally hide in dark spaces such as roofs and attics.",
+                            "The plan involved attaching tiny timed incendiary devices to bats, placing the bats into bomb casings, dropping them over Japanese cities, and allowing them to disperse into wooden structures before the devices ignited.",
+                            "The project sounds cartoonish, but it was real enough to receive serious development. It was eventually canceled before deployment. Project X-Ray reveals something dark about human ingenuity: when humans recognize animal abilities, we often try to exploit them."
+                        ]
+                    },
+                    {
+                        title: "The US Navy Marine Mammal Program",
+                        paragraphs: [
+                            "The US Navy Marine Mammal Program trains bottlenose dolphins and California sea lions for underwater tasks. Dolphins are valuable because of echolocation. Sea lions have excellent underwater vision and can be trained to locate and mark objects.",
+                            "These animals have been used for mine detection, object recovery, and harbor defense. Unlike the more bizarre CIA cat or bat bomb experiments, the Navy marine mammal program is publicly acknowledged.",
+                            "The ethical questions are serious. Should animals be used in military programs? Can they consent? Are they protected? Are they treated as partners or equipment? One thing is clear: the military did not treat these animals as dumb. It treated them as specialists."
+                        ],
+                        media: {
+                            type: "gallery",
+                            title: "Dolphins and sea lions as specialists",
+                            images: [
+                                forbiddenAnimalFilesImage(
+                                    "navy-marine-mammal-program-dolphin-device.webp",
+                                    "Dolphin leaping from the water with a training device, representing the US Navy Marine Mammal Program and dolphin echolocation research",
+                                    998,
+                                    1200,
+                                    "Military programs treated dolphins and sea lions as biological specialists with perception machines still struggle to match."
+                                ),
+                                forbiddenAnimalFilesImage(
+                                    "navy-marine-mammal-program-sea-lion-device.webp",
+                                    "Sea lion with a training device, representing military marine mammal research and underwater object recovery",
+                                    932,
+                                    609,
+                                    "Sea lions specialize in underwater vision and trained object recovery."
+                                )
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Animal Intelligence Experiments",
+                paragraphs: [
+                    "For a long time, people imagined intelligence as a ladder: humans at the top, then great apes, mammals, birds, reptiles, fish, and insects below. This ladder is outdated.",
+                    "Animal intelligence is not one ladder. It is a forest of different abilities. Different species solve different realities."
+                ],
+                subsections: [
+                    {
+                        title: "Crows and the Concept of Zero",
+                        paragraphs: [
+                            "Crows are among the most intelligent birds studied. Research has shown that carrion crows can treat the empty set as a numerical quantity. In plain language, they can represent nothing as a kind of number.",
+                            "This matters because zero is abstract. Zero is not an object in the world. It is a concept representing absence. For a bird brain to represent absence as a numerical category suggests that abstract cognition does not require a human brain or even a mammalian neocortex."
+                        ],
+                        media: {
+                            type: "image",
+                            image: forbiddenAnimalFilesImage(
+                                "crow-neurons-concept-of-zero.webp",
+                                "Crow intelligence image showing specialized neurons linked to the concept of zero and abstract animal cognition",
+                                960,
+                                1200,
+                                "Crows challenge the human-centered view of intelligence by representing absence as a numerical category."
+                            )
+                        }
+                    },
+                    {
+                        title: "Cleaner Wrasse and Economic Strategy",
+                        paragraphs: [
+                            "Cleaner wrasse are small reef fish that eat parasites from larger client fish. Their social world is basically a living marketplace.",
+                            "Some client fish are residents that will wait. Others are visitors that will leave if not served quickly. This creates a strategic problem: serve the temporary client first before it leaves, then serve the one that will stay.",
+                            "In experiments based on this logic, adult cleaner wrasse outperformed capuchin monkeys, orangutans, and chimpanzees in a task involving temporary and permanent food options. This does not mean cleaner wrasse are generally smarter than apes. It means their intelligence is specialized for their ecological reality."
+                        ]
+                    },
+                    {
+                        title: "Slime Mold and the Tokyo Rail Network",
+                        paragraphs: [
+                            "Slime mold is not an animal in the usual sense. It has no brain or nervous system. Yet it can solve network problems.",
+                            "In a famous experiment, researchers placed food sources in positions corresponding to Tokyo and surrounding cities. Slime mold grew outward and formed a network connecting the food sources in a way that resembled the Tokyo rail system.",
+                            "No brain. No central planner. No engineering degree. Just biological feedback. For AnimalDex, this is crucial: if a brainless organism can solve a transport problem, perhaps intelligence is not a possession. Maybe intelligence is a pattern life enters when it organizes itself."
+                        ],
+                        media: {
+                            type: "gallery",
+                            title: "Network intelligence without a brain",
+                            images: [
+                                forbiddenAnimalFilesImage(
+                                    "slime-mold-network-intelligence.webp",
+                                    "Slime mold forming a branching network, used to explain decentralized intelligence without a brain",
+                                    960,
+                                    1200,
+                                    "Slime mold suggests that intelligence may emerge from networks, not just brains."
+                                ),
+                                forbiddenAnimalFilesImage(
+                                    "slime-mold-tokyo-rail-network-comparison.webp",
+                                    "Slime mold network pattern compared with human transport systems, showing how brainless organisms can solve complex routes",
+                                    1140,
+                                    760,
+                                    "The Tokyo rail comparison became famous because the organism's network was efficient, adaptive, and resilient."
+                                )
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Kirlian Photography, L-Fields, and the Body as a Blueprint",
+                paragraphs: [
+                    "Some of the most controversial animal-related ideas involve invisible fields around living bodies. Two names appear often in this area: Harold Saxton Burr and Semyon Kirlian."
+                ],
+                subsections: [
+                    {
+                        title: "Harold Burr and L-Fields",
+                        paragraphs: [
+                            "Dr. Harold Saxton Burr, an anatomist at Yale, studied electrical patterns in living organisms. He proposed that living beings are shaped by organizing electrical fields, which he called L-fields or Fields of Life.",
+                            "Mainstream science does not accept all of Burr's interpretations. However, modern biology increasingly recognizes that bioelectric signals play important roles in development, regeneration, wound healing, and body patterning.",
+                            "The controversial part is how far that idea goes. Does the body have an electrical mold? Can regeneration be guided by field-like information? Do animals carry body memory in bioelectric patterns?"
+                        ]
+                    },
+                    {
+                        title: "Kirlian Photography",
+                        paragraphs: [
+                            "Kirlian photography captures corona discharge around objects exposed to high-voltage electrical fields. The images often show glowing outlines, which many people have interpreted as auras or life-force fields.",
+                            "Mainstream science explains Kirlian images through electrical discharge, moisture, pressure, grounding, humidity, and conductivity. It does not treat them as proof of a soul or aura.",
+                            "The famous phantom leaf effect adds to the mystery. Some claimed that when part of a leaf was cut away, a ghostly outline of the missing section could still appear. Skeptics argue this can result from moisture residue, contamination, or technical artifacts.",
+                            "Even if the mainstream explanation is correct, the symbolism remains powerful. The Kirlian image feels like a visual metaphor for an ancient idea: the body is more than flesh. It is also pattern."
+                        ],
+                        media: {
+                            type: "gallery",
+                            title: "Corona discharge and field symbolism",
+                            images: [
+                                forbiddenAnimalFilesImage(
+                                    "semyon-kirlian-portrait-kirlian-photography.webp",
+                                    "Portrait of Semyon Kirlian, associated with Kirlian photography and glowing corona discharge images around living objects",
+                                    220,
+                                    282,
+                                    "Kirlian photography became famous for glowing corona images and controversial claims about life fields."
+                                ),
+                                forbiddenAnimalFilesImage(
+                                    "phantom-leaf-effect-kirlian-field.webp",
+                                    "Illustration of the phantom leaf effect showing a cut leaf with a glowing field around the missing section",
+                                    1200,
+                                    782,
+                                    "The phantom leaf effect is disputed and usually explained through technical artifacts, but its symbolism remains powerful."
+                                )
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Ancient Animal Symbolism",
+                paragraphs: [
+                    "Long before laboratories, military programs, and neuroscience, humans studied animals through myth, art, scripture, and symbol.",
+                    "Ancient people did not see animals as random background creatures. They saw them as living signs: a force, a temperament, a warning, a virtue, a danger, a divine message.",
+                    "AnimalDex can be understood as a modern continuation of this ancient instinct: to identify animals not only by species, but by meaning."
+                ],
+                media: {
+                    type: "image",
+                    image: forbiddenAnimalFilesImage(
+                        "leonardo-da-vinci-animal-drawings.webp",
+                        "Leonardo da Vinci animal drawings showing the historical study of animal anatomy, movement, and symbolic meaning",
+                        1200,
+                        690,
+                        "Human beings have always studied animals as anatomy, motion, symbol, and message."
+                    )
+                },
+                subsections: [
+                    {
+                        title: "The Tetramorph: Human, Lion, Ox, Eagle",
+                        paragraphs: [
+                            "In the biblical books of Ezekiel and Revelation, there are visions of four living creatures. These creatures are later represented in Christian art as the Tetramorph: human, lion, ox, and eagle.",
+                            "The human represents consciousness, intelligence, speech, empathy, and moral awareness. The lion represents courage, sovereignty, danger, and command. The ox represents labor, endurance, sacrifice, and grounded strength. The eagle represents height, vision, ascension, and the ability to see from above.",
+                            "Together, these animals form a symbolic map of reality: mind, power, labor, and vision."
+                        ]
+                    },
+                    {
+                        title: "Medieval Bestiaries",
+                        paragraphs: [
+                            "Medieval bestiaries were illustrated books about animals, both real and imaginary. They mixed natural history, folklore, theology, allegory, and moral teaching.",
+                            "Modern people sometimes laugh at bestiaries because the animals look inaccurate. But accuracy was not always the point. The medieval artist was not simply asking what an animal looked like. They were asking what it meant."
+                        ]
+                    },
+                    {
+                        title: "The Pelican: Sacrifice",
+                        paragraphs: [
+                            "The Pelican in her Piety became a major medieval Christian symbol. People believed the pelican pierced her own breast to feed her young with her blood. This was a misunderstanding of pelican behavior, but symbolically it became an image of self-sacrifice and life-giving love.",
+                            "In AnimalDex language, the pelican is the archetype of nourishment through suffering: the mother who gives herself, the body as offering, life feeding life."
+                        ],
+                        media: {
+                            type: "image",
+                            image: forbiddenAnimalFilesImage(
+                                "medieval-bestiary-pelican-sacrifice.webp",
+                                "Medieval bestiary illustration of the pelican sacrifice myth, showing a mother pelican feeding her young in ancient symbolic animal art",
+                                1200,
+                                730,
+                                "Medieval bestiaries treated animals as symbolic codes, not just biological creatures."
+                            )
+                        }
+                    },
+                    {
+                        title: "The Stag: Purity and Hidden Water",
+                        paragraphs: [
+                            "The stag or deer appears in Christian and ancient symbolism as a seeker of pure water. The biblical line about the deer panting for streams of water made the deer a symbol of spiritual longing.",
+                            "In older bestiary lore, stags were also associated with fighting serpents and renewal. In AnimalDex terms, the stag is the tracker of light."
+                        ],
+                        media: {
+                            type: "gallery",
+                            title: "The deer as seeker",
+                            images: [
+                                forbiddenAnimalFilesImage(
+                                    "medieval-bestiary-stag-symbolism.webp",
+                                    "Medieval bestiary image of a stag, symbolizing purity, hidden water, and spiritual longing in ancient animal symbolism",
+                                    500,
+                                    386,
+                                    "The stag searches for pure water and becomes a symbol of longing, renewal, and clean instinct."
+                                ),
+                                forbiddenAnimalFilesImage(
+                                    "as-the-deer-pants-for-streams-psalm-42.webp",
+                                    "Psalm 42 Bible verse image with a deer background, showing the ancient symbolism of the stag seeking pure water",
+                                    800,
+                                    1200,
+                                    "Psalm 42 helped make the deer a lasting image of spiritual thirst."
+                                )
+                            ]
+                        }
+                    },
+                    {
+                        title: "The Serpent and the Cat",
+                        paragraphs: [
+                            "The serpent is one of the most complex animal symbols in human history. In some traditions, it represents danger, temptation, poison, and deception. In others, it represents healing, wisdom, renewal, and immortality. Because the serpent sheds its skin, it becomes transformation through danger.",
+                            "Cats occupy a different symbolic threshold. In ancient Egypt, cats were linked with protection and sacred power. In European folklore, they were linked with witches, night, spirits, omens, and invisible worlds. Scientifically, cats have sharp senses and subtle body awareness. Symbolically, they represent the doorway."
+                        ]
+                    }
+                ]
+            },
+            {
+                title: "Are Humans Animals?",
+                paragraphs: [
+                    "Scientifically, yes. Humans are animals. We belong to the kingdom Animalia. We are mammals, primates, and great apes.",
+                    "The idea that humans are not animals is cultural, religious, philosophical, or linguistic. It is not biological taxonomy.",
+                    "But humans are unusual animals. We have symbolic language, cumulative culture, massive cooperation, abstract institutions, and technological acceleration. That makes humans different. Different does not mean separate, and it does not mean superior in every domain.",
+                    "A dog smells a world we cannot smell. A bat hears a map we cannot hear. A dolphin sees through sound. A bird senses magnetic direction. A snake reads heat. A fish feels pressure and electrical change. A spider reads vibration. A bee communicates through dance. A whale sings through oceans.",
+                    "The mistake is asking whether animals think like humans. The better question is: what kind of world does this animal live in? Once you ask that, every species becomes a portal."
+                ]
+            },
+            {
+                title: "Ethics or Cover-Up?",
+                paragraphs: [
+                    "So why won't these experiments be repeated? There are two answers.",
+                    "The first answer is ethics. Many old animal experiments were cruel, invasive, or unacceptable by modern standards. Cutting animals apart, weaponizing bats, surgically modifying cats, killing offspring to test distress responses, and using animals as military tools raise serious moral questions.",
+                    "Modern animal research requires ethical review, welfare standards, justification, and humane treatment. That is a good thing. Animals are sentient. They feel pain, stress, fear, attachment, and comfort. They should not be treated as disposable machines.",
+                    "The second answer is worldview. Some experiments are not repeated because they are ethically impossible. Others are avoided because they are reputationally dangerous.",
+                    "A researcher can study animal cognition safely if they use accepted language: memory, learning, sensory cue, conditioning, welfare, social behavior. But if they ask about telepathy, fields, death premonition, non-local connection, or consciousness beyond the brain, they risk ridicule.",
+                    "The AnimalDex position is balanced: do not blindly believe every forbidden claim, but do not blindly obey every official dismissal either. Animals deserve better than exploitation. They also deserve better than reduction."
+                ],
+                pullQuote: "Animals are not machines. They are not symbols only. They are living beings with their own intelligence, perception, and meaning."
+            },
+            {
+                title: "Final AnimalDex Reflection",
+                paragraphs: [
+                    "Every creature has a secret.",
+                    "The chick asks whether desire can touch probability. The flatworm asks where memory lives. The rabbit asks whether bonds cross distance. The dog asks whether love has a field. The cat asks what waits at the threshold. The dolphin asks what sound can see.",
+                    "The crow asks whether nothing can become a number. The slime mold asks whether intelligence needs a brain. The lion asks what it means to rule. The ox asks what it means to endure. The eagle asks what it means to see from above. The stag asks where pure water hides. The serpent asks what must be shed before rebirth.",
+                    "This is why AnimalDex exists. Not just to identify animals. To decode them.",
+                    "Because the animal kingdom is not background scenery. It is a living archive. A biological library. A symbolic language older than writing. A network of fur, feather, scale, sound, scent, blood, bone, instinct, memory, and signal.",
+                    "And we are only just beginning to remember how to read it."
+                ],
+                media: {
+                    type: "image",
+                    image: forbiddenAnimalFilesImage(
+                        "animal-kingdom-connected-consciousness-field.webp",
+                        "World map style image showing animals connected through a shared consciousness field, representing the AnimalDex view of nature as a living network",
+                        1548,
+                        1296,
+                        "Every creature has a secret."
+                    )
+                }
+            }
+        ],
+        faq: [
+            {
+                question: "Are humans scientifically classified as animals?",
+                answer: "Yes. Biologically, humans belong to the kingdom Animalia. Humans are mammals, primates, and great apes. The separation between humans and animals is cultural and philosophical, not biological."
+            },
+            {
+                question: "Do animals know when they are dying?",
+                answer: "Some animals appear to change behavior before death. Cats may hide, dogs may seek closeness, and social animals may withdraw or become unusually calm. Mainstream science usually explains this through illness, vulnerability, pain, scent, or instinct, but many owners report behaviors that feel emotionally significant."
+            },
+            {
+                question: "Do animals mourn?",
+                answer: "Many animals show behaviors that resemble mourning, including elephants, dolphins, whales, chimpanzees, dogs, and some birds. Scientists debate how closely animal grief resembles human grief, but animal emotional life is now taken much more seriously than it once was."
+            },
+            {
+                question: "What was Acoustic Kitty?",
+                answer: "Acoustic Kitty was a CIA project from the Cold War era that attempted to use a surgically modified cat as a covert listening device. The project was eventually judged impractical."
+            },
+            {
+                question: "What was Project X-Ray?",
+                answer: "Project X-Ray was a World War Two project that explored using bats carrying small incendiary devices as weapons. The project was canceled before deployment."
+            },
+            {
+                question: "What is morphic resonance?",
+                answer: "Morphic resonance is Rupert Sheldrake's controversial theory that nature has memory and that species may share information through field-like patterns. It is not accepted as mainstream science, but it remains influential in alternative discussions of animal behavior and consciousness."
+            },
+            {
+                question: "What are medieval bestiaries?",
+                answer: "Medieval bestiaries were illustrated books that described animals through religious, moral, and symbolic meanings. They were not just animal encyclopedias; they were spiritual and allegorical codebooks."
+            },
+            {
+                question: "What is the AnimalDex view of animals?",
+                answer: "AnimalDex treats animals as more than species labels. Each animal can be understood biologically, behaviorally, symbolically, and mythologically. The goal is to decode animals as living archives of intelligence, instinct, and meaning."
+            }
+        ],
+        sources: [
+            {label: "CIA Reading Room: Acoustic Kitty release record", href: "https://www.cia.gov/readingroom/document/06802443"},
+            {label: "National Security Archive: declassified CIA memo, Views on Trained Cats", href: "https://nsarchive2.gwu.edu/NSAEBB/NSAEBB54/st27.pdf"},
+            {label: "CIA: Natural Spies - Animals in Espionage, including Acoustikitty context", href: "https://www.cia.gov/stories/story/natural-spies-animals-in-espionage/"},
+            {label: "Smithsonian SOVA: Bombs, Bat Bombs and Project X-Ray records", href: "https://sova.si.edu/record/nasm.xxxx.1183.s/ref1764"},
+            {label: "US Navy NIWC Pacific: Marine Mammal Program official page", href: "https://www.niwcpacific.navy.mil/About/Departments/Intelligence-Surveillance-and-Reconnaissance/Marine-Mammal-Program/"},
+            {label: "Planarian memory and regeneration review, PMC", href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC5051648/"},
+            {label: "Planarian regeneration model overview, PMC", href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3014342/"},
+            {label: "Behavioral and neuronal representation of numerosity zero in the crow, PMC", href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC8260164/"},
+            {label: "Cleaner wrasse outperform primates in an ecologically relevant foraging task, PMC", href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3504063/"},
+            {label: "Rules for biologically inspired adaptive network design, Science", href: "https://www.science.org/doi/10.1126/science.1177894"},
+            {label: "Kirlian photography as corona discharge, History of Photography", href: "https://www.tandfonline.com/doi/abs/10.1080/03087290802582988"},
+            {label: "Britannica: medieval bestiary genre and symbolism", href: "https://www.britannica.com/art/bestiary-medieval-literary-genre"},
+            {label: "Medieval Bestiary: Pelican", href: "https://bestiary.ca/beasts/beast244.htm"},
+            {label: "Medieval Bestiary: Stag", href: "https://www.bestiary.ca/beasts/beast162.htm"},
+            {label: "BibleGateway: Ezekiel 1", href: "https://www.biblegateway.com/passage/?search=Ezekiel%201&version=NRSVUE"},
+            {label: "BibleGateway: Revelation 4", href: "https://www.biblegateway.com/passage/?search=Revelation%204&version=NRSVUE"},
+            {label: "BibleGateway: Psalm 42", href: "https://www.biblegateway.com/passage/?search=Psalm%2042&version=NRSVUE"},
+            {label: "BibleGateway: Job 12", href: "https://www.biblegateway.com/passage/?search=Job%2012&version=NRSVUE"}
+        ]
+    },
     {
         slug: "how-to-identify-animals-in-the-wild-2026-guide",
         title: "How to identify animals in the wild (2026 guide)",

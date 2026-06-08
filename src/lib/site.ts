@@ -21,6 +21,14 @@ export function getAbsoluteUrl(locale: string, path = "") {
     return new URL(getLocalePath(locale, path), getSiteUrl()).toString();
 }
 
+export function getAbsoluteAssetUrl(path: string) {
+    if (/^https?:\/\//i.test(path)) {
+        return path;
+    }
+
+    return new URL(path, getSiteUrl()).toString();
+}
+
 export function getMetadataLocale(locale: string) {
     const localeMap: Record<string, string> = {
         en: "en_US",
