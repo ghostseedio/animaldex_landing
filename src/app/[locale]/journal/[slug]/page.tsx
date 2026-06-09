@@ -98,7 +98,7 @@ export default async function JournalPostPage({params}: JournalPostPageProps) {
     };
 
     return (
-        <article className="w-full max-w-4xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="w-full max-w-[72rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}}

@@ -13,6 +13,8 @@ type PrinciplesIndexPageProps = {
     };
 };
 
+const principles = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
+
 export async function generateMetadata({params}: PrinciplesIndexPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "principles");
     return buildContentMetadata({
@@ -32,7 +34,6 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
 
 export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageProps) {
     const t = await getScopedTranslator(params.locale, "principles");
-    const principles = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
     const breadcrumbSchema = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -53,7 +54,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
     };
 
     return (
-        <section className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <section className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([breadcrumbSchema])}}
@@ -64,7 +65,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{t("description")}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                 {principles.map((principle) => {
                     const sampleSpecies = principle.speciesSlugs
                         .slice(0, 3)

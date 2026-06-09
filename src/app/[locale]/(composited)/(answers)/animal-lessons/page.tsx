@@ -14,6 +14,7 @@ type AnimalLessonsPageProps = {
 
 const pageTitle = "Animal Lessons";
 const pageDescription = "Find practical lessons from animals using AnimalDex principle clusters. Lessons are linked to ecology, behavior, and survival strategy.";
+const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
 
 export async function generateMetadata({params}: AnimalLessonsPageProps): Promise<Metadata> {
     return {
@@ -39,7 +40,6 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
 }
 
 export default function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
-    const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
@@ -49,7 +49,7 @@ export default function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
     };
 
     return (
-        <article className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([schema])}} />
             <div className="flex flex-col gap-4 text-center items-center">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">Lessons Index</p>

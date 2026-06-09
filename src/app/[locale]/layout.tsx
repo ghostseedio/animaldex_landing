@@ -5,6 +5,7 @@ import {notFound} from "next/navigation";
 import {localeConfig} from "@/i18n";
 import {Metadata} from "next";
 import Cursor from "@/app/[locale]/_components/cursor";
+import NavigationProgress from "@/app/[locale]/_components/navigation-progress";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 
@@ -59,6 +60,7 @@ export default function RootLayout(
             '--font-display': 'var(--font-cal-sans)',
         } as any}>
             <Cursor />
+            <NavigationProgress />
             {children}
         </body>
         </html>

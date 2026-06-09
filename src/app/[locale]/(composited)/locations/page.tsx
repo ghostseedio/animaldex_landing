@@ -78,7 +78,7 @@ export default async function LocationsIndexPage() {
     };
 
     return (
-        <section className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <section className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
 
             <div className="flex flex-col gap-4 text-center items-center">
@@ -92,7 +92,7 @@ export default async function LocationsIndexPage() {
                 </Link>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                 {locationPages.map((page) => (
                     <article
                         key={page.slug}

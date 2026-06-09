@@ -96,6 +96,17 @@ const CURATED_RELATED_SPECIES: Record<string, string[]> = {
     "barn-owl": ["snowy-owl", "great-horned-owl", "lynx"]
 };
 
+type BehavioralPrincipleIndexEntry = {
+    principle: string;
+    principleSlug: string;
+    speciesCount: number;
+    speciesSlugs: string[];
+    sampleMotto: string;
+};
+
+const profileMapCache = new WeakMap<Record<string, SystemsIntelligenceEntry>, Map<string, BehavioralPrincipleProfile>>();
+const principleIndexCache = new WeakMap<Record<string, SystemsIntelligenceEntry>, BehavioralPrincipleIndexEntry[]>();
+
 function normalizeSentence(text: string) {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -193,16 +204,70 @@ function resolvePrincipleForSpecies(entry: SpeciesEntry, systemsMap: Record<stri
     return inferPrincipleFromAnalysis(entry) ?? "Efficiency";
 }
 
-function buildRelatedSpeciesSlugs(currentSlug: string, principle: string, allEntries: SpeciesEntry[], systemsMap: Record<string, SystemsIntelligenceEntry>) {
-    return allEntries
-        .filter((entry) => entry.slug !== currentSlug)
-        .map((entry) => ({
-            slug: entry.slug,
-            principle: resolvePrincipleForSpecies(entry, systemsMap)
-        }))
-        .filter((item) => item.principle === principle)
-        .slice(0, 3)
-        .map((item) => item.slug);
+function buildPrincipleBuckets(systemsMap: Record<string, SystemsIntelligenceEntry>) {
+    const speciesSlugsByPrinciple = new Map<string, string[]>();
+
+    for (const entry of speciesEntries) {
+        const principle = resolvePrincipleForSpecies(entry, systemsMap);
+        speciesSlugsByPrinciple.set(
+            principle,
+            [...(speciesSlugsByPrinciple.get(principle) ?? []), entry.slug]
+        );
+    }
+
+    return {
+        speciesSlugsByPrinciple
+    };
+}
+
+function buildRelatedSpeciesSlugs(
+    currentSlug: string,
+    principle: string,
+    speciesSlugsByPrinciple: Map<string, string[]>
+) {
+    return (speciesSlugsByPrinciple.get(principle) ?? [])
+        .filter((slug) => slug !== currentSlug)
+        .slice(0, 3);
+}
+
+function getProfileMap(systemsMap: Record<string, SystemsIntelligenceEntry>) {
+    const cached = profileMapCache.get(systemsMap);
+
+    if (cached) {
+        return cached;
+    }
+
+    const {speciesSlugsByPrinciple} = buildPrincipleBuckets(systemsMap);
+    const profileMap = new Map<string, BehavioralPrincipleProfile>();
+
+    for (const speciesEntry of speciesEntries) {
+        const systemsEntry = systemsMap[speciesEntry.slug];
+        const curated = CURATED_PROFILES[speciesEntry.slug];
+        const profile = curated
+            ? {...curated, source: "manual" as const}
+            : systemsEntry
+                ? {
+                    ...buildFallbackProfileFromSystems(systemsEntry),
+                    source: "systems_intelligence" as const
+                }
+                : {
+                    ...buildFallbackProfileFromAnalysis(speciesEntry),
+                    source: inferPrincipleFromAnalysis(speciesEntry) ? "inferred" as const : "fallback" as const
+                };
+        const curatedRelated = CURATED_RELATED_SPECIES[speciesEntry.slug] ?? [];
+        const inferredRelated = buildRelatedSpeciesSlugs(speciesEntry.slug, profile.principle, speciesSlugsByPrinciple);
+        const relatedSpeciesSlugs = Array.from(new Set([...curatedRelated, ...inferredRelated])).slice(0, 4);
+
+        profileMap.set(speciesEntry.slug, {
+            ...profile,
+            principleSlug: toPrincipleSlug(profile.principle),
+            relatedSpeciesSlugs
+        });
+    }
+
+    profileMapCache.set(systemsMap, profileMap);
+
+    return profileMap;
 }
 
 export function getBehavioralPrincipleProfile(
@@ -210,42 +275,17 @@ export function getBehavioralPrincipleProfile(
     systemsEntry: SystemsIntelligenceEntry | null | undefined,
     systemsMap: Record<string, SystemsIntelligenceEntry>
 ): BehavioralPrincipleProfile | null {
-    const speciesEntry = speciesEntries.find((item) => item.slug === speciesSlug);
-
-    if (!speciesEntry) {
-        return null;
-    }
-
-    const curated = CURATED_PROFILES[speciesSlug];
-    const profile = curated
-        ? {...curated, source: "manual" as const}
-        : systemsEntry
-            ? {
-                ...buildFallbackProfileFromSystems(systemsEntry),
-                source: "systems_intelligence" as const
-            }
-            : {
-                ...buildFallbackProfileFromAnalysis(speciesEntry),
-                source: inferPrincipleFromAnalysis(speciesEntry) ? "inferred" as const : "fallback" as const
-            };
-    const curatedRelated = CURATED_RELATED_SPECIES[speciesSlug] ?? [];
-    const inferredRelated = buildRelatedSpeciesSlugs(speciesSlug, profile.principle, speciesEntries, systemsMap);
-    const relatedSpeciesSlugs = Array.from(new Set([...curatedRelated, ...inferredRelated])).slice(0, 4);
-    return {
-        ...profile,
-        principleSlug: toPrincipleSlug(profile.principle),
-        relatedSpeciesSlugs
-    };
+    return getProfileMap(systemsMap).get(speciesSlug) ?? null;
 }
 
 export function getBehavioralPrinciplesIndex(systemsMap: Record<string, SystemsIntelligenceEntry>) {
-    const grouped = new Map<string, {
-        principle: string;
-        principleSlug: string;
-        speciesCount: number;
-        speciesSlugs: string[];
-        sampleMotto: string;
-    }>();
+    const cached = principleIndexCache.get(systemsMap);
+
+    if (cached) {
+        return cached;
+    }
+
+    const grouped = new Map<string, BehavioralPrincipleIndexEntry>();
 
     for (const entry of speciesEntries) {
         const profile = getBehavioralPrincipleProfile(entry.slug, systemsMap[entry.slug], systemsMap);
@@ -264,5 +304,8 @@ export function getBehavioralPrinciplesIndex(systemsMap: Record<string, SystemsI
         grouped.set(profile.principleSlug, current);
     }
 
-    return Array.from(grouped.values()).sort((a, b) => b.speciesCount - a.speciesCount);
+    const index = Array.from(grouped.values()).sort((a, b) => b.speciesCount - a.speciesCount);
+    principleIndexCache.set(systemsMap, index);
+
+    return index;
 }

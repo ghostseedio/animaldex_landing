@@ -3992,8 +3992,10 @@ const speciesData: SpeciesEntry[] = [
 export const speciesEntries: SpeciesEntry[] = [...assertUniqueSpeciesSlugs(speciesData)]
     .sort((a, b) => a.name.localeCompare(b.name));
 
+const speciesBySlug = new Map(speciesEntries.map((entry) => [entry.slug, entry]));
+
 export function getSpeciesBySlug(slug: string) {
-    return speciesEntries.find((entry) => entry.slug === slug);
+    return speciesBySlug.get(slug);
 }
 
 export function getSpeciesDirectoryPage({

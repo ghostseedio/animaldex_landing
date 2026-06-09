@@ -14,6 +14,7 @@ type AnimalSymbolismPageProps = {
 
 const pageTitle = "Animal Symbolism";
 const pageDescription = "Animal symbolism on AnimalDex is grounded in biology. Use principle clusters to understand what behavior patterns each species represents.";
+const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
 
 export async function generateMetadata({params}: AnimalSymbolismPageProps): Promise<Metadata> {
     return {
@@ -39,7 +40,6 @@ export async function generateMetadata({params}: AnimalSymbolismPageProps): Prom
 }
 
 export default function AnimalSymbolismPage({params}: AnimalSymbolismPageProps) {
-    const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
@@ -49,7 +49,7 @@ export default function AnimalSymbolismPage({params}: AnimalSymbolismPageProps) 
     };
 
     return (
-        <article className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([schema])}} />
             <div className="flex flex-col gap-4 text-center items-center">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">Symbolism Index</p>

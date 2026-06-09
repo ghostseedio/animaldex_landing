@@ -136,6 +136,46 @@ function toAnchorId(text: string) {
         .replace(/\s+/g, "-");
 }
 
+function renderTableOfContents(items: string[], variant: "mobile" | "desktop") {
+    if (items.length === 0) {
+        return null;
+    }
+
+    const isDesktop = variant === "desktop";
+
+    return (
+        <nav
+            className={isDesktop
+                ? "hidden xl:flex sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-3xl border border-line-300 bg-surface-900/85 backdrop-blur px-5 py-6 flex-col gap-4"
+                : "xl:hidden rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-7 md:px-8 flex flex-col gap-4"
+            }
+            aria-label="Table of contents"
+        >
+            <h2 className={isDesktop
+                ? "font-display font-bold text-2xl text-white"
+                : "font-display font-bold text-2xl md:text-3xl text-white"
+            }>
+                Contents
+            </h2>
+            <ol className={isDesktop ? "flex flex-col gap-2" : "grid grid-cols-1 md:grid-cols-2 gap-2"}>
+                {items.map((item) => (
+                    <li key={`${variant}-${item}`} className="list-none">
+                        <a
+                            href={`#${toAnchorId(item)}`}
+                            className={isDesktop
+                                ? "block rounded-2xl px-3 py-2 text-sm leading-5 text-ink-200 hover:bg-surface-800 hover:text-primary-100 transition-colors"
+                                : "text-ink-200 hover:text-primary-100 transition-colors text-base md:text-lg"
+                            }
+                        >
+                            {item}
+                        </a>
+                    </li>
+                ))}
+            </ol>
+        </nav>
+    );
+}
+
 function resolveBlogLinkHref(link: BlogLink) {
     if (link.href) {
         return link.href;
@@ -430,12 +470,15 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
         ]
     };
     const schemas = faqSchema ? [schema, faqSchema, breadcrumbSchema] : [schema, breadcrumbSchema];
+    const tableOfContentsItems = post.tableOfContents && post.tableOfContents.length > 0
+        ? post.tableOfContents
+        : post.sections.map((section) => section.title);
 
     return (
-        <article className="w-full max-w-5xl mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 max-w-5xl">
                 <Link href="/blog" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                     {t("back")}
                 </Link>
@@ -458,73 +501,59 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
 
             <ContentImageFigure image={post.featuredImage} priority />
 
-            {post.tableOfContents && post.tableOfContents.length > 0 && (
-                <nav className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-7 md:px-8 flex flex-col gap-4" aria-label="Table of contents">
-                    <h2 className="font-display font-bold text-2xl md:text-3xl text-white">Inside the files</h2>
-                    <ol className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {post.tableOfContents.map((item) => (
-                            <li key={item} className="list-none">
-                                <a
-                                    href={`#${toAnchorId(item)}`}
-                                    className="text-ink-200 hover:text-primary-100 transition-colors text-base md:text-lg"
-                                >
-                                    {item}
-                                </a>
-                            </li>
-                        ))}
-                    </ol>
-                </nav>
-            )}
+            {renderTableOfContents(tableOfContentsItems, "mobile")}
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
-                {post.sections.map((section) => {
-                    const sectionTextLinks = [
-                        ...buildSpeciesTextLinks([
-                            ...getMentionedSpeciesSlugs(post),
-                            ...(section.speciesSlugs || [])
-                        ]),
-                        ...(section.inlineLinks || [])
-                    ];
-                    const sectionSpecies = (section.speciesSlugs || [])
-                        .map((speciesSlug) => getSpeciesBySlug(speciesSlug))
-                        .filter((entry): entry is NonNullable<ReturnType<typeof getSpeciesBySlug>> => Boolean(entry));
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_19rem] gap-8 items-start">
+                <div className="min-w-0 flex flex-col gap-10">
+                    <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
+                        {post.sections.map((section) => {
+                            const sectionTextLinks = [
+                                ...buildSpeciesTextLinks([
+                                    ...getMentionedSpeciesSlugs(post),
+                                    ...(section.speciesSlugs || [])
+                                ]),
+                                ...(section.inlineLinks || [])
+                            ];
+                            const sectionSpecies = (section.speciesSlugs || [])
+                                .map((speciesSlug) => getSpeciesBySlug(speciesSlug))
+                                .filter((entry): entry is NonNullable<ReturnType<typeof getSpeciesBySlug>> => Boolean(entry));
 
-                    return (
-                        <section key={section.title} id={toAnchorId(section.title)} className="scroll-mt-24 flex flex-col gap-4">
-                            {section.kicker && (
-                                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
-                                    {section.kicker}
-                                </p>
-                            )}
-                            <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
-                            {section.cards ? renderSectionCards(section.cards) : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
-                            {section.pullQuote && renderPullQuote(section.pullQuote)}
-                            {section.media && renderSectionMedia(section.media)}
-                            {section.subsections && section.subsections.map((subsection) => (
-                                <section key={`${section.title}-${subsection.title}`} className="flex flex-col gap-4 rounded-3xl border border-line-300/80 bg-surface-800/50 p-5 md:p-6">
-                                    <h3 className="font-display font-bold text-2xl md:text-3xl text-white">{subsection.title}</h3>
-                                    {subsection.media && renderSectionMedia(subsection.media)}
-                                    {renderSectionParagraphs(subsection.paragraphs, sectionTextLinks)}
-                                    {subsection.pullQuote && renderPullQuote(subsection.pullQuote)}
-                                </section>
-                            ))}
-                            {sectionSpecies.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {sectionSpecies.map((species) => (
-                                        <Link
-                                            key={species.slug}
-                                            href={`/animals/${species.slug}`}
-                                            className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm"
-                                        >
-                                            {species.name}
-                                        </Link>
+                            return (
+                                <section key={section.title} id={toAnchorId(section.title)} className="scroll-mt-24 flex flex-col gap-4">
+                                    {section.kicker && (
+                                        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
+                                            {section.kicker}
+                                        </p>
+                                    )}
+                                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
+                                    {section.cards ? renderSectionCards(section.cards) : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
+                                    {section.pullQuote && renderPullQuote(section.pullQuote)}
+                                    {section.media && renderSectionMedia(section.media)}
+                                    {section.subsections && section.subsections.map((subsection) => (
+                                        <section key={`${section.title}-${subsection.title}`} className="flex flex-col gap-4 rounded-3xl border border-line-300/80 bg-surface-800/50 p-5 md:p-6">
+                                            <h3 className="font-display font-bold text-2xl md:text-3xl text-white">{subsection.title}</h3>
+                                            {subsection.media && renderSectionMedia(subsection.media)}
+                                            {renderSectionParagraphs(subsection.paragraphs, sectionTextLinks)}
+                                            {subsection.pullQuote && renderPullQuote(subsection.pullQuote)}
+                                        </section>
                                     ))}
-                                </div>
-                            )}
-                        </section>
-                    );
-                })}
-            </div>
+                                    {sectionSpecies.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {sectionSpecies.map((species) => (
+                                                <Link
+                                                    key={species.slug}
+                                                    href={`/animals/${species.slug}`}
+                                                    className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm"
+                                                >
+                                                    {species.name}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </section>
+                            );
+                        })}
+                    </div>
 
             <SystemsIntelligenceSection
                 items={systemsItems}
@@ -677,6 +706,10 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                     </div>
                 </section>
             )}
+                </div>
+
+                {renderTableOfContents(tableOfContentsItems, "desktop")}
+            </div>
         </article>
     );
 }

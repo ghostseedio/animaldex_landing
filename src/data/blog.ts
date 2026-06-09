@@ -96,7 +96,570 @@ function forbiddenAnimalFilesImage(src: string, alt: string, width: number, heig
     };
 }
 
+const animalLessonImageBase = "/images/blog/what-if-every-animal-is-a-lesson";
+
+function animalLessonImage(src: string, alt: string, width: number, height: number, caption?: string) {
+    return {
+        src: `${animalLessonImageBase}/${src}`,
+        alt,
+        width,
+        height,
+        caption
+    };
+}
+
 const blogPostsData: BlogPost[] = [
+    {
+        slug: "what-if-every-animal-is-a-lesson",
+        title: "What If Every Animal Is a Lesson? Animal Frequencies, Symbolism & AnimalDex",
+        description: "Explore animal frequencies, animal symbolism, reincarnation theories, octopus intelligence, jellyfish meaning, eagle vision, dolphin communication, and the AnimalDex method for decoding animals as living lessons.",
+        publishedAt: "2026-06-09",
+        updatedAt: "2026-06-09",
+        featuredImage: animalLessonImage(
+            "animal-kingdom-frequency-map.webp",
+            "Mystical AnimalDex-style image of animals connected through glowing lines, representing the animal kingdom as a living frequency map",
+            1600,
+            900,
+            "AnimalDex is built on a simple question: what if every animal is not just a species, but a lesson?"
+        ),
+        readingMinutes: 18,
+        author: "AnimalDex Editorial",
+        tags: ["Animal frequencies", "Animal symbolism", "Animal archetypes", "AnimalDex"],
+        searchIntents: [
+            "animal frequencies",
+            "animal symbolism",
+            "animal archetypes",
+            "spiritual meaning of animals",
+            "animal lessons",
+            "AnimalDex",
+            "animal identification app",
+            "animal collection app",
+            "animal meaning",
+            "dog symbolism",
+            "octopus symbolism",
+            "jellyfish symbolism",
+            "eagle symbolism",
+            "dolphin symbolism",
+            "lion symbolism",
+            "cat symbolism",
+            "bee symbolism",
+            "elephant symbolism",
+            "wolf symbolism",
+            "serpent symbolism",
+            "macrocosm and microcosm animals",
+            "animals as teachers",
+            "what animals teach us",
+            "animal spirit meaning",
+            "animal consciousness"
+        ],
+        speciesSlugs: ["octopus", "jellyfish", "bald-eagle", "dolphin", "lion", "honey-bee", "elephant", "wolf", "gorilla", "greater-flamingo"],
+        systemsSpeciesSlugs: ["octopus", "dolphin", "bald-eagle"],
+        relatedChallengeSlugs: ["dolphin-vs-octopus-intelligence"],
+        tableOfContents: [
+            "Quick Answer",
+            "AnimalDex and the Living Archive",
+            "AnimalDex and the Idea of Animal Frequencies",
+            "Animal Frequency Field Guide",
+            "The Octopus: Intelligent Decentralization",
+            "The Jellyfish: Collective Light and Soft Power",
+            "The Eagle: Vision Above the Noise",
+            "The Dolphin: Communication, Play, and Emotional Intelligence",
+            "The Lion, Stag, Serpent, and Cat",
+            "Gorilla, Flamingo, Elephant, and Other Animal Archetypes",
+            "Are Animals Here to Teach Us?",
+            "Macrocosm, Microcosm, and Extinction",
+            "How to Decode an Animal",
+            "Final Thought"
+        ],
+        sections: [
+            {
+                kicker: "Quick answer",
+                title: "Quick Answer",
+                paragraphs: [
+                    "In the AnimalDex framework, every animal can be read as a living lesson. A dog teaches loyalty, an eagle teaches vision, an octopus teaches intelligent decentralization, a jellyfish teaches flow and collective light, and a cat teaches threshold awareness.",
+                    "This article explores animal symbolism, animal frequencies, and how to decode animals through behaviour, biology, environment, and ancient meaning. This is my personal interpretation. It is not something I am presenting as proven science."
+                ],
+                pullQuote: "Their biology is the scripture. Their behaviour is the teaching. Their environment is the classroom."
+            },
+            {
+                title: "AnimalDex and the Living Archive",
+                paragraphs: [
+                    "I have been searching for answers for a long time. Not in the casual way. I mean really searching. The kind where normal explanations stop feeling big enough, and the same symbols, animals, myths, instincts, and behaviours keep appearing across ancient scriptures, dreams, religions, folklore, and even modern science.",
+                    "Recently, that search pulled me deeper into the animal kingdom. At first, AnimalDex started as something simple and fun: collect animals like Pokemon. Scan animals. Identify them. Build your own collection. Discover wild, domestic, zoo, and farm animals. Almost like a real-world animal Pokedex.",
+                    "But the more I worked on it, the more I felt like it needed to align more closely with my heart. Animals are not just content. They are not background organisms in a human-dominated world. They are ancient symbols, living archetypes, biological teachers, frequencies, and principles.",
+                    "Then I remembered an esoteric idea I had heard from Santos Bonacci: that souls may learn through animals and focused archetypes. I am not presenting that as fact. Symbolically, it made me ask a better question: what if every animal carries a specific lesson?",
+                    "The dog teaches loyalty. The eagle teaches vision. The dolphin teaches communication and joy. The octopus teaches intelligent decentralization. The jellyfish teaches flow, transparency, and collective light. The lion teaches command. The cat teaches threshold awareness. The bee teaches service to the whole."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "From collection to decoding",
+                    images: [
+                        animalLessonImage(
+                            "animaldex-collect-animals-like-pokemon.webp",
+                            "AnimalDex app concept showing animals collected like cards, representing a real-world animal collection and identification experience",
+                            1200,
+                            800,
+                            "AnimalDex began as a way to collect animals, but evolved into a way to decode them."
+                        ),
+                        animalLessonImage(
+                            "animaldex-living-archive-animal-collection.webp",
+                            "AnimalDex animal collection showing different creatures as a living archive of lessons, symbols, and frequencies",
+                            1200,
+                            800,
+                            "Every creature has a secret. AnimalDex helps you decode it."
+                        )
+                    ]
+                }
+            },
+            {
+                title: "AnimalDex and the Idea of Animal Frequencies",
+                paragraphs: [
+                    "AnimalDex is not just about identifying species. It is about decoding them.",
+                    "When you look at an animal, you can ask deeper questions: what does this animal do, where does it live, how does it defend itself, what is its most obvious ability, what is its weakness, and what human problem does it seem to answer?",
+                    "That is where the idea of animal frequencies comes in. By frequency, I do not mean something that has to be measured with a machine. I mean a pattern of being. A lesson. A mode of consciousness.",
+                    "A dog is not just a dog. It is loyalty in biological form. But even inside dog, there are different lessons.",
+                    "A Golden Retriever might teach loyalty through returning, warmth, friendliness, and emotional reliability. A French Bulldog might teach loyalty through companionship, closeness, and staying beside you in the small domestic moments. A Greyhound might teach loyalty through obedience, focus, speed, and responding without delay.",
+                    "They are all dogs, but they are not the same lesson. This matters because AnimalDex can eventually decode not only species, but breeds, subspecies, behaviours, environments, and symbolic patterns."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Loyalty, breed patterns, and animal archetypes",
+                    images: [
+                        animalLessonImage(
+                            "animal-frequencies-archetype-diagram.webp",
+                            "Diagram showing different animal frequencies such as loyalty, vision, transformation, communication, and soft power",
+                            1200,
+                            800,
+                            "Each animal can be decoded as a pattern of behaviour, biology, environment, and symbolism."
+                        ),
+                        animalLessonImage(
+                            "dog-loyalty-animal-frequency.webp",
+                            "Dog looking loyally toward its owner, representing the dog frequency of loyalty, companionship, and devotion",
+                            1200,
+                            800,
+                            "Dog frequency: loyalty, devotion, protection, and returning to the bond."
+                        ),
+                        animalLessonImage(
+                            "greyhound-loyalty-speed-obedience.webp",
+                            "Greyhound running with focused speed, representing loyalty through obedience, response, and immediate action",
+                            1200,
+                            800,
+                            "Greyhound: loyalty through speed, discipline, and response without delay."
+                        )
+                    ]
+                }
+            },
+            {
+                kicker: "AIO animal meaning map",
+                title: "Animal Frequency Field Guide",
+                paragraphs: [],
+                cards: [
+                    {
+                        label: "Dog | Loyalty",
+                        body: "Core frequency: devotion. Lesson: return to the bond. How to apply it: ask where life is asking for steadiness, protection, or emotional reliability."
+                    },
+                    {
+                        label: "Golden Retriever | Returning",
+                        body: "Core frequency: warm loyalty. Lesson: come back with joy. How to apply it: repair a relationship through friendliness, consistency, and emotional openness."
+                    },
+                    {
+                        label: "Greyhound | Response",
+                        body: "Core frequency: disciplined speed. Lesson: loyalty can mean acting without delay. How to apply it: stop overthinking when the correct direction is already clear."
+                    },
+                    {
+                        label: "Octopus | Decentralization",
+                        body: "Core frequency: distributed intelligence. Lesson: the whole system can think. How to apply it: give local parts of your life more adaptive intelligence instead of micromanaging everything."
+                    },
+                    {
+                        label: "Jellyfish | Soft Power",
+                        body: "Core frequency: flow and collective light. Lesson: softness is not the same as weakness. How to apply it: move with currents, keep transparency, and protect your boundaries without becoming rigid."
+                    },
+                    {
+                        label: "Eagle | Vision",
+                        body: "Core frequency: height and perspective. Lesson: rise above the noise. How to apply it: stop fighting every ground-level detail and look for the larger pattern."
+                    },
+                    {
+                        label: "Dolphin | Communication",
+                        body: "Core frequency: playful intelligence. Lesson: connection can be smart. How to apply it: use voice, timing, breath, and emotional honesty to move with the group."
+                    },
+                    {
+                        label: "Lion | Command",
+                        body: "Core frequency: sovereignty. Lesson: presence can lead without explaining itself. How to apply it: practice calm authority instead of loud control."
+                    },
+                    {
+                        label: "Cat | Threshold Awareness",
+                        body: "Core frequency: intuition and independence. Lesson: notice what changes before others name it. How to apply it: protect your silence, timing, and unseen perception."
+                    },
+                    {
+                        label: "Bee | Service",
+                        body: "Core frequency: work for the whole. Lesson: tiny actions can sustain a living system. How to apply it: do the necessary work that keeps your community alive."
+                    },
+                    {
+                        label: "Elephant | Ancestral Memory",
+                        body: "Core frequency: family memory. Lesson: what is remembered shapes what survives. How to apply it: honor lineage, grief, route knowledge, and long-term care."
+                    },
+                    {
+                        label: "Wolf | Pack Intelligence",
+                        body: "Core frequency: coordinated survival. Lesson: intelligence can belong to the group. How to apply it: choose a pack with shared signals, roles, and responsibility."
+                    },
+                    {
+                        label: "Serpent | Transformation",
+                        body: "Core frequency: shedding and renewal. Lesson: growth can require leaving an old skin behind. How to apply it: release an identity that no longer carries life."
+                    },
+                    {
+                        label: "Whale | Deep Memory",
+                        body: "Core frequency: oceanic memory and song. Lesson: emotion can travel across distance. How to apply it: listen below the surface before deciding what a situation means."
+                    }
+                ]
+            },
+            {
+                title: "The Octopus: Intelligent Decentralization",
+                paragraphs: [
+                    "One of the clearest examples is the octopus. The octopus lives in the ocean, but it crawls along the sea floor. It has eight arms, a central brain, large neural clusters in its arms, three hearts, camouflage, a soft body, and a hard beak at the center.",
+                    "So if we decode it, we have to ask: why eight arms, why distributed intelligence, why camouflage, why three hearts, and why a soft body with one hard cutting point?",
+                    "The octopus looks like a hierarchy tree turned into an animal. There is a central intelligence, but the arms also process information locally. It is not one rigid command system. It is decentralized intelligence.",
+                    "Humans often build systems where everything must be controlled from the top: one leader, one boss, one central brain. But the octopus shows a different model. The center does not need to micromanage everything. The limbs can carry intelligence. The system can respond locally.",
+                    "Then there is the beak: a hard, sharp tool inside a soft ocean creature. Symbolically, this feels like the ability to break down dense material into digestible information.",
+                    "The octopus teaches adaptation without losing control, camouflage without weakness, softness with a hidden cutting edge, and distributed minds inside one living network."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Octopus intelligence",
+                    images: [
+                        animalLessonImage(
+                            "octopus-intelligent-decentralization.webp",
+                            "Octopus moving across the ocean floor, representing intelligent decentralization, camouflage, and distributed animal intelligence",
+                            800,
+                            450,
+                            "The octopus teaches distributed intelligence: one core mind, many thinking limbs."
+                        ),
+                        animalLessonImage(
+                            "octopus-tentacle-brain-diagram.webp",
+                            "Diagram of octopus intelligence showing a central brain and neural networks in the arms, symbolizing decentralized thinking",
+                            1200,
+                            800,
+                            "The octopus body looks like a living hierarchy tree, with intelligence distributed through the limbs."
+                        ),
+                        animalLessonImage(
+                            "octopus-camouflage-hidden-intelligence.webp",
+                            "Camouflaged octopus blending into the ocean floor, representing hidden intelligence, adaptation, and survival through transformation",
+                            1200,
+                            900,
+                            "Octopus frequency: adapt, decentralize, camouflage, and stay intelligent under pressure."
+                        )
+                    ]
+                },
+                speciesSlugs: ["octopus"]
+            },
+            {
+                title: "The Jellyfish: Collective Light and Soft Power",
+                paragraphs: [
+                    "Then there is the jellyfish, especially the Australian spotted jellyfish. These animals can increase rapidly when conditions suit them, and symbolically I find that fascinating.",
+                    "They look like stars floating in water. Their spots almost show the macrocosm and microcosm at the same time: a galaxy pattern inside a translucent body, stars inside the sea.",
+                    "They are soft, drifting, almost ghost-like. They do not look like animals in the ordinary sense. They look like ancient living cells, glowing embryos, drifting neurons, or immune cells of the ocean.",
+                    "Some jellyfish have relationships with algae, using sunlight as part of their survival system. That creates a powerful symbol: direct contact with light, internal self-sustaining energy, and collective existence.",
+                    "A single jellyfish may seem fragile. But in numbers, jellyfish become impossible to ignore. That is the frequency: soft body, hidden sting, collective power, light within.",
+                    "I connect this symbolically to the Age of Aquarius as a personal interpretation, not as scientific proof. It feels like a shift away from hard hierarchy and toward networks, transparency, sensitivity, and inner light."
+                ],
+                media: {
+                    type: "image",
+                    image: animalLessonImage(
+                        "australian-spotted-jellyfish-frequency.webp",
+                        "Australian spotted jellyfish floating in water, representing soft power, collective light, and translucent animal symbolism",
+                        1200,
+                        800,
+                        "The Australian spotted jellyfish looks like stars floating inside the ocean."
+                    )
+                },
+                speciesSlugs: ["jellyfish"]
+            },
+            {
+                title: "The Eagle: Vision Above the Noise",
+                paragraphs: [
+                    "The eagle is one of the oldest symbols of power, empire, prophecy, and divine vision. Why? Because the eagle lives above the noise.",
+                    "It sees from height. It does not crawl through confusion. It rises.",
+                    "Its lesson is not just be strong. The lion already teaches that. The eagle teaches perspective.",
+                    "When you are trapped inside emotional chaos, social drama, fear, or material problems, the eagle frequency says: rise higher. See the whole map. Stop reacting to every movement on the ground.",
+                    "In AnimalDex, eagle energy would suit someone who is stuck in small thinking, trapped in immediate problems, or unable to see the bigger mission. The eagle does not solve life by fighting everything on the ground. It solves life by changing altitude."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Eagle symbolism",
+                    images: [
+                        animalLessonImage(
+                            "eagle-vision-above-the-noise.webp",
+                            "Eagle soaring above mountains, representing vision, sovereignty, and the ability to rise above the noise",
+                            678,
+                            446,
+                            "The eagle does not solve life by fighting everything on the ground. It changes altitude."
+                        ),
+                        animalLessonImage(
+                            "eagle-symbolism.webp",
+                            "Symbolic eagle artwork representing conviction, direction, vision, and long-range spiritual focus",
+                            600,
+                            900,
+                            "Eagle frequency: perspective, focus, height, and long-range vision."
+                        )
+                    ]
+                },
+                speciesSlugs: ["bald-eagle"]
+            },
+            {
+                title: "The Dolphin: Communication, Play, and Emotional Intelligence",
+                paragraphs: [
+                    "Dolphins are another animal that modern science keeps proving we underestimated. They use sound in extraordinary ways. They live in complex social groups. They communicate, cooperate, play, and use echolocation to map their environment.",
+                    "The dolphin frequency is communication through joy. That matters because humans often separate intelligence from play. We think serious means smart. We think heavy means deep.",
+                    "Dolphins challenge that. They show that intelligence can be playful, social, fluid, sound-based, and emotional.",
+                    "A dolphin does not dominate the ocean like a shark. It navigates through connection, movement, sound, group awareness, and timing.",
+                    "In AnimalDex, dolphin energy would suit someone who has become too rigid, too isolated, too serious, or too disconnected from emotional intelligence. The dolphin teaches: communicate, breathe, play, and move with the group without losing yourself."
+                ],
+                media: {
+                    type: "image",
+                    image: animalLessonImage(
+                        "dolphin-communication-joy-frequency.webp",
+                        "Dolphins swimming together, representing communication, emotional intelligence, play, and social connection",
+                        1200,
+                        800,
+                        "The dolphin teaches that intelligence can be playful, social, emotional, and fluid."
+                    )
+                },
+                speciesSlugs: ["dolphin"]
+            },
+            {
+                title: "The Lion, Stag, Serpent, and Cat",
+                paragraphs: [
+                    "The lion teaches command. Not loudness. Command. A real lion does not need to explain itself. It carries presence. It is the frequency of sovereignty, courage, and controlled force.",
+                    "The stag teaches purity. It seeks clean water. It stands alert at the edge of the forest. It is sensitive, but not weak. It represents the soul searching for something higher.",
+                    "The serpent teaches transformation. It sheds skin. It moves through vibration. It is feared because it represents hidden knowledge, danger, renewal, and rebirth.",
+                    "The cat teaches threshold awareness. Cats sit between worlds: domestic but not fully owned, present but distant, affectionate but independent. They stare into corners, vanish silently, and seem to sense changes before we do.",
+                    "This is why animals have always appeared in myths, scriptures, temples, dreams, and folklore. Not because ancient people were stupid, but because they were reading nature symbolically."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Command and threshold awareness",
+                    images: [
+                        animalLessonImage(
+                            "lion-sovereignty-command-frequency.webp",
+                            "Lion standing with calm authority, representing sovereignty, courage, command, and controlled force",
+                            1200,
+                            800,
+                            "Lion frequency: command without explanation."
+                        ),
+                        animalLessonImage(
+                            "cat-threshold-awareness-invisible-worlds.webp",
+                            "Cat staring into an empty corner, representing threshold awareness, mystery, intuition, and sensitivity to unseen changes",
+                            1200,
+                            800,
+                            "Cat frequency: silence, timing, independence, and the threshold between worlds."
+                        )
+                    ]
+                },
+                speciesSlugs: ["lion"]
+            },
+            {
+                title: "Gorilla, Flamingo, Elephant, and Other Animal Archetypes",
+                paragraphs: [
+                    "Some extra animal portraits in this collection fit the AnimalDex framework naturally.",
+                    "The gorilla teaches presence: massive strength that does not need to become constant aggression. One way to read this animal is calm force, family gravity, and energy that speaks before action.",
+                    "The flamingo teaches composure: balance in shallow water, social display, and beauty that still depends on a precise feeding system.",
+                    "The elephant teaches ancestral memory: family bonds, grief, route knowledge, and the kind of intelligence that stretches across generations.",
+                    "These are not fixed commandments. They are symbolic lenses. In the AnimalDex framework, each animal can be read as biology, behaviour, environment, and ancient meaning braided together."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Extra symbolic animal portraits",
+                    images: [
+                        animalLessonImage(
+                            "gorilla-symbolism.webp",
+                            "Symbolic gorilla artwork representing presence, calm force, and protective strength",
+                            600,
+                            900,
+                            "Gorilla frequency: presence, grounded force, and strength that does not need to perform."
+                        ),
+                        animalLessonImage(
+                            "flamingo-symbolism.webp",
+                            "Symbolic flamingo artwork representing composure, balance, social display, and calm above shallow water",
+                            600,
+                            900,
+                            "Flamingo frequency: composure, balance, and visible grace."
+                        ),
+                        animalLessonImage(
+                            "elephant-symbolism.webp",
+                            "Symbolic elephant artwork representing memory, family bonds, ancestral wisdom, and long-term care",
+                            600,
+                            900,
+                            "Elephant frequency: memory, family, grief, and ancestral wisdom."
+                        )
+                    ]
+                },
+                speciesSlugs: ["gorilla", "greater-flamingo", "elephant"]
+            },
+            {
+                title: "Are Animals Here to Teach Us?",
+                paragraphs: [
+                    "After researching animal experiments, ancient scriptures, symbolism, scientists, and strange reports of animal intelligence, I keep coming back to one idea: every animal has its own lesson.",
+                    "This does not mean you have to believe literally that humans reincarnate into animals. But as a symbolic framework, it is powerful.",
+                    "Imagine someone who never learned loyalty. They may need the dog. Someone who never learned vision may need the eagle. Someone who never learned surrender may need the jellyfish. Someone who never learned transformation may need the serpent.",
+                    "Someone who never learned distributed intelligence may need the octopus. Someone who never learned emotional communication may need the dolphin. Maybe animals show us the qualities we are missing.",
+                    "Maybe they are mirrors. Maybe they are teachers. Maybe they are archetypes wearing bodies."
+                ],
+                pullQuote: "Maybe animals show us the qualities we are missing."
+            },
+            {
+                title: "Macrocosm, Microcosm, and Extinction",
+                paragraphs: [
+                    "This also changes how we look at extinction. When a species disappears, maybe we are not only losing biodiversity. Maybe we are losing a frequency: a symbolic teacher, a way of being, a solution to a human problem.",
+                    "If bees disappear, service to the whole disappears. If wolves disappear, pack intelligence disappears. If elephants disappear, ancestral memory disappears. If whales disappear, deep emotional memory disappears. If frogs disappear, sensitivity to environmental change disappears.",
+                    "If jellyfish increase, maybe softness, transparency, and collective survival are rising. This is not a replacement for ecology. We still need conservation science, habitat protection, and serious environmental action.",
+                    "But symbolism adds another layer. The animal kingdom may be reflecting human consciousness back to us. Species that grow, vanish, migrate, mutate, or return may be telling a story about the world we are creating."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Service and memory",
+                    images: [
+                        animalLessonImage(
+                            "bee-service-to-the-whole-frequency.webp",
+                            "Bee collecting nectar from a flower, representing service to the whole, cooperation, pollination, and sacred work",
+                            1000,
+                            700,
+                            "Bee frequency: service, cooperation, and the invisible work that keeps life moving."
+                        ),
+                        animalLessonImage(
+                            "elephant-symbolism.webp",
+                            "Symbolic elephant artwork representing ancestral memory, family bonds, mourning, and ancient wisdom",
+                            600,
+                            900,
+                            "Elephant frequency: memory, family, grief, and ancestral wisdom."
+                        )
+                    ]
+                },
+                speciesSlugs: ["honey-bee", "wolf", "elephant", "jellyfish"]
+            },
+            {
+                title: "How to Decode an Animal",
+                paragraphs: [
+                    "Here is the AnimalDex method I use.",
+                    "First, observe the body. Is it soft, armored, winged, venomous, camouflaged, huge, tiny, transparent, fast, slow, rooted, floating, crawling, or flying?",
+                    "Second, observe the environment. Does it live in water, sky, forest, desert, underground, city, mountain, reef, or darkness?",
+                    "Third, observe its defence. Does it run, hide, sting, bite, mimic, group together, freeze, poison, armor itself, or disappear?",
+                    "Fourth, observe its gift. What can it do that others cannot?",
+                    "Fifth, observe its weakness. Where is it vulnerable?",
+                    "Sixth, observe its relationship with humans. Do we fear it, worship it, farm it, eat it, protect it, ignore it, or keep it as a companion?",
+                    "Seventh, observe its ancient symbolism. What did older cultures say about it? After that, the animal lesson starts to reveal itself."
+                ],
+                media: {
+                    type: "image",
+                    image: animalLessonImage(
+                        "animaldex-animal-decoding-method.webp",
+                        "AnimalDex decoding method diagram showing body, environment, defence, gift, weakness, human relationship, and ancient symbolism",
+                        1200,
+                        800,
+                        "The AnimalDex method: observe the body, environment, defence, gift, weakness, human relationship, and ancient symbolism."
+                    )
+                }
+            },
+            {
+                title: "Final Thought",
+                paragraphs: [
+                    "Everything in this blog is open to your interpretation. I am not saying every idea here is proven science. Some of it is symbolic. Some of it is spiritual. Some of it is personal theory. Some of it is inspired by ancient traditions, animal behaviour, and the feeling that modern materialism does not explain everything.",
+                    "Next time you look at an animal, I hope you ask a different question. Not just: what species is it? Ask: what does it teach, what frequency does it carry, what problem does it solve, what part of me does it reflect, and what would happen if I learned to think like it?",
+                    "Maybe the dog is not just a pet. Maybe it is loyalty trying to reach you. Maybe the eagle is not just a bird. Maybe it is vision calling you upward. Maybe the jellyfish is not just a drifting organism. Maybe it is soft power showing you how to survive without force.",
+                    "AnimalDex helps you identify animals, collect them, and decode the lessons they carry. If you are trying to understand a situation in your life, type in your problem and discover which animal frequency fits the moment.",
+                    "Every creature has a secret. AnimalDex helps you decode it.",
+                    "If you want the stranger research side of this idea, read Animal Experiments They Won't Repeat - Ethics or Cover-Up?"
+                ],
+                inlineLinks: [
+                    {
+                        text: "Animal Experiments They Won't Repeat - Ethics or Cover-Up?",
+                        slug: "animal-experiments-they-wont-repeat-ethics-or-cover-up",
+                        href: "/blog/animal-experiments-they-wont-repeat-ethics-or-cover-up"
+                    }
+                ],
+                media: {
+                    type: "image",
+                    image: animalLessonImage(
+                        "animaldex-living-archive-animal-collection.webp",
+                        "AnimalDex animal collection showing different creatures as a living archive of lessons, symbols, and frequencies",
+                        1200,
+                        800,
+                        "Decode animals. Collect their lessons. Find the frequency that fits your situation."
+                    )
+                }
+            }
+        ],
+        faq: [
+            {
+                question: "What are animal frequencies?",
+                answer: "In AnimalDex, animal frequencies are symbolic patterns of behaviour, biology, environment, and meaning. They are personal interpretations, not measured scientific frequencies."
+            },
+            {
+                question: "What does it mean if every animal is a lesson?",
+                answer: "It means each animal can be read as a teacher: dog for loyalty, eagle for vision, octopus for decentralization, jellyfish for flow, and bee for service."
+            },
+            {
+                question: "Is AnimalDex a spiritual animal app?",
+                answer: "AnimalDex is an animal identification and collection app with a symbolic layer for people who want to reflect on animal meaning and archetypes."
+            },
+            {
+                question: "What does a dog symbolize?",
+                answer: "Dog symbolism often points to loyalty, devotion, companionship, protection, and returning to the bond."
+            },
+            {
+                question: "What does an octopus symbolize?",
+                answer: "In this framework, the octopus symbolizes intelligent decentralization, camouflage, adaptation, distributed sensing, and softness with a hidden edge."
+            },
+            {
+                question: "What does a jellyfish symbolize?",
+                answer: "Jellyfish symbolism here points to flow, transparency, soft power, collective light, sensitivity, and survival without rigid force."
+            },
+            {
+                question: "What does an eagle symbolize?",
+                answer: "The eagle symbolizes vision above the noise, perspective, sovereignty, long-range focus, and the ability to change altitude."
+            },
+            {
+                question: "What does a dolphin symbolize?",
+                answer: "The dolphin symbolizes communication, play, emotional intelligence, breath, sound, social connection, and joyful cooperation."
+            },
+            {
+                question: "How do I decode an animal's meaning?",
+                answer: "Observe its body, environment, defence, gift, weakness, relationship with humans, and ancient symbolism. Then ask what human problem that pattern seems to answer."
+            },
+            {
+                question: "Are these animal meanings proven science?",
+                answer: "No. The factual animal behaviour should be treated separately from the symbolism. The meanings are AnimalDex interpretation and personal theory."
+            },
+            {
+                question: "How does AnimalDex help decode animals?",
+                answer: "AnimalDex helps users identify animals, collect them, and connect species traits with symbolic lessons, archetypes, and reflection prompts."
+            }
+        ],
+        sources: [
+            {
+                label: "Nature: The autonomous arms of the octopus",
+                href: "https://www.nature.com/articles/laban.615"
+            },
+            {
+                label: "Frontiers in Physiology / PMC: Motor control pathways in the nervous system of Octopus vulgaris arm",
+                href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6478645/"
+            },
+            {
+                label: "NOAA Fisheries: Dolphin clicks, whistles, and echolocation",
+                href: "https://www.fisheries.noaa.gov/science-blog/eavesdropping-ocean-day-life-cetacean-acoustician"
+            },
+            {
+                label: "NOAA NCCOS: Why do some jellyfish bloom?",
+                href: "https://coastalscience.noaa.gov/news/why-do-some-jellyfish-bloom-a-new-theory-emerges/"
+            },
+            {
+                label: "National Science Foundation: Jellyfish blooms wax and wane in natural cycles",
+                href: "https://www.nsf.gov/news/jellyfish-blooms-wax-wane-natural-cycles"
+            },
+            {
+                label: "Britannica: Bestiary as a medieval animal-symbolism tradition",
+                href: "https://www.britannica.com/art/bestiary-medieval-literary-genre"
+            }
+        ]
+    },
     {
         slug: "animal-experiments-they-wont-repeat-ethics-or-cover-up",
         title: "Animal Experiments They Won’t Repeat — Ethics or Cover-Up?",
