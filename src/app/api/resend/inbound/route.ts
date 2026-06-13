@@ -1,18 +1,5 @@
 import {NextRequest, NextResponse} from "next/server";
-import {
-    createOrUpdateSupportThread,
-    createStoredReplyToken,
-    createSupportMessage,
-    getReplyLink,
-    isRecord,
-    normalizeEmailAddress,
-    normalizeInboundEmail,
-    ResendWebhookPayload,
-    retrieveReceivedEmail,
-    sendSupportForwardNotification,
-    stripHtmlToText,
-    updateSupportThread
-} from "@/lib/support";
+import {processInboundSupportEmail, ResendWebhookPayload, isRecord} from "@/lib/support";
 
 async function parseWebhookPayload(request: NextRequest): Promise<ResendWebhookPayload> {
     const rawPayload = await request.text();
@@ -77,56 +64,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ok: false, error: "Missing email data"}, {status: 400});
         }
 
-        const initialEmail = normalizeInboundEmail({
-            ...payload.data,
-            created_at: payload.data.created_at ?? payload.created_at
+        const result = await processInboundSupportEmail({
+            payload,
+            sendForwardNotification: true
         });
-        const email = await retrieveReceivedEmail(initialEmail);
-        const fromEmail = normalizeEmailAddress(email.from);
 
-        if (!fromEmail) {
-            console.error("[resend-inbound] Original sender is missing or invalid", {
-                emailId: email.emailId
+        if (result.status === "skipped") {
+            console.info("[resend-inbound] Duplicate inbound email ignored", {
+                emailId: result.emailId
             });
-            return NextResponse.json({ok: false, error: "Missing original sender"}, {status: 400});
+            return NextResponse.json({ok: true, duplicate: true});
         }
 
-        if (!email.html && !email.text) {
-            console.error("[resend-inbound] Inbound email body is unavailable after lookup", {
-                emailId: email.emailId
-            });
-            return NextResponse.json({ok: false, error: "Inbound email body unavailable"}, {status: 502});
-        }
-
-        const thread = await createOrUpdateSupportThread(email);
-        await createSupportMessage({
-            threadId: thread.id,
-            direction: "inbound",
-            fromEmail,
-            toEmail: email.to.join(", ") || "support@animaldex.app",
-            subject: email.subject ?? null,
-            textBody: email.text ?? stripHtmlToText(email.html ?? "") ?? null,
-            htmlBody: email.html ?? null,
-            resendEmailId: email.emailId ?? null,
-            rawPayload: payload
-        });
-        await updateSupportThread(thread.id);
-
-        const replyToken = await createStoredReplyToken(thread.id);
-        const resendEmailId = await sendSupportForwardNotification({
-            email,
-            replyLink: getReplyLink(replyToken.token)
-        });
-
-        if (resendEmailId) {
+        if (result.forwardResendEmailId) {
             console.info("[resend-inbound] Support notification forwarded", {
-                threadId: thread.id,
-                emailId: email.emailId,
-                resendEmailId
+                threadId: result.threadId,
+                emailId: result.emailId,
+                resendEmailId: result.forwardResendEmailId
             });
         }
 
-        return NextResponse.json({ok: true});
+        return NextResponse.json({ok: true, threadId: result.threadId});
     } catch (error) {
         console.error("[resend-inbound] Unexpected error", {
             error: error instanceof Error ? error.message : "Unknown error"

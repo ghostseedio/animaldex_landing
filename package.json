@@ -10,7 +10,8 @@
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",
-    "seo:audit:catalog-parity": "node scripts/generateCatalogWebsiteParityReport.js"
+    "seo:audit:catalog-parity": "node scripts/generateCatalogWebsiteParityReport.js",
+    "support:setup-webhook": "node scripts/setupResendSupportWebhook.js"
   },
   "dependencies": {
     "@types/node": "18.13.0",
@@ -28,6 +29,7 @@
     "remark-html": "^15.0.2",
     "resend": "^6.12.4",
     "solar-icon-set": "^1.0.0",
+    "standardwebhooks": "^1.0.0",
     "typescript": "4.9.5"
   },
   "devDependencies": {

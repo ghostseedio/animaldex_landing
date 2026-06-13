@@ -730,3 +730,143 @@ export async function sendSupportReply(input: {
 export function getSupportSenderEmail() {
     return getSupportFromEmail();
 }
+
+type ResendReceivedEmailListItem = {
+    id: string;
+    from?: string;
+    to?: string[];
+    subject?: string;
+    created_at?: string;
+    message_id?: string;
+};
+
+export async function listResendReceivedEmails(limit = 50) {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const response = await fetch(`https://api.resend.com/emails/receiving?limit=${safeLimit}`, {
+        headers: {
+            Authorization: `Bearer ${getRequiredResendApiKey()}`,
+            Accept: "application/json"
+        },
+        cache: "no-store"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Resend received-email list failed with status ${response.status}`);
+    }
+
+    const payload = await response.json();
+
+    if (!isRecord(payload) || !Array.isArray(payload.data)) {
+        return [] as ResendReceivedEmailListItem[];
+    }
+
+    return payload.data.filter((item): item is ResendReceivedEmailListItem => isRecord(item) && typeof item.id === "string");
+}
+
+export async function supportMessageExistsForResendEmailId(resendEmailId: string) {
+    const rows = await supabaseRequest<SupportMessage[]>(
+        `support_messages?resend_email_id=eq.${encoded(resendEmailId)}&select=id&limit=1`
+    );
+    return rows.length > 0;
+}
+
+export async function processInboundSupportEmail(input: {
+    payload?: ResendWebhookPayload;
+    emailId?: string;
+    sendForwardNotification?: boolean;
+}) {
+    const payloadData = input.payload?.data;
+    const webhookData = isRecord(payloadData) ? payloadData : null;
+    const emailId = input.emailId ?? asString(webhookData?.email_id) ?? asString(webhookData?.id);
+
+    if (!emailId && !webhookData) {
+        throw new Error("Inbound email metadata is missing an email id");
+    }
+
+    const initialEmail = normalizeInboundEmail({
+        ...(webhookData ?? {}),
+        email_id: emailId,
+        id: emailId,
+        created_at: webhookData?.created_at ?? input.payload?.created_at
+    });
+    const email = await retrieveReceivedEmail(initialEmail);
+    const fromEmail = normalizeEmailAddress(email.from);
+
+    if (!fromEmail) {
+        throw new Error("Inbound email is missing a valid sender");
+    }
+
+    if (!email.html && !email.text) {
+        throw new Error("Inbound email body is unavailable after lookup");
+    }
+
+    if (email.emailId && await supportMessageExistsForResendEmailId(email.emailId)) {
+        return {status: "skipped" as const, reason: "already_imported", emailId: email.emailId};
+    }
+
+    const thread = await createOrUpdateSupportThread(email);
+    const message = await createSupportMessage({
+        threadId: thread.id,
+        direction: "inbound",
+        fromEmail,
+        toEmail: email.to.join(", ") || getSupportFromEmail(),
+        subject: email.subject ?? null,
+        textBody: email.text ?? stripHtmlToText(email.html ?? "") ?? null,
+        htmlBody: email.html ?? null,
+        resendEmailId: email.emailId ?? null,
+        rawPayload: input.payload ?? null
+    });
+    await updateSupportThread(thread.id);
+
+    let forwardResendEmailId: string | null = null;
+
+    if (input.sendForwardNotification !== false) {
+        const replyToken = await createStoredReplyToken(thread.id);
+        forwardResendEmailId = await sendSupportForwardNotification({
+            email,
+            replyLink: getReplyLink(replyToken.token)
+        });
+    }
+
+    return {
+        status: "imported" as const,
+        threadId: thread.id,
+        messageId: message.id,
+        emailId: email.emailId ?? null,
+        forwardResendEmailId
+    };
+}
+
+export async function syncMissingReceivedEmailsFromResend(limit = 50) {
+    const receivedEmails = await listResendReceivedEmails(limit);
+    const results: Array<Awaited<ReturnType<typeof processInboundSupportEmail>>> = [];
+
+    for (const receivedEmail of receivedEmails) {
+        results.push(await processInboundSupportEmail({
+            emailId: receivedEmail.id,
+            payload: {
+                type: "email.received",
+                created_at: receivedEmail.created_at,
+                data: {
+                    email_id: receivedEmail.id,
+                    from: receivedEmail.from,
+                    to: receivedEmail.to,
+                    subject: receivedEmail.subject,
+                    created_at: receivedEmail.created_at,
+                    message_id: receivedEmail.message_id
+                }
+            },
+            sendForwardNotification: false
+        }));
+    }
+
+    const imported = results.filter((result) => result.status === "imported").length;
+    const skipped = results.filter((result) => result.status === "skipped").length;
+
+    return {
+        scanned: receivedEmails.length,
+        imported,
+        skipped,
+        results
+    };
+}

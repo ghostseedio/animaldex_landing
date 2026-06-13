@@ -64,6 +64,7 @@ export default function SupportInboxClient() {
     const [reply, setReply] = useState("");
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const canSend = useMemo(
@@ -173,6 +174,33 @@ export default function SupportInboxClient() {
         }
     }
 
+    async function syncFromResend() {
+        setSyncing(true);
+        setError(null);
+
+        try {
+            const response = await fetch("/api/admin/support/sync", {method: "POST"});
+            const body = await response.json() as {
+                ok: boolean;
+                imported?: number;
+                skipped?: number;
+                scanned?: number;
+                error?: string;
+            };
+
+            if (!response.ok || !body.ok) {
+                setError(body.error || "Unable to sync received emails from Resend.");
+                return;
+            }
+
+            await loadInbox(selectedThreadId);
+        } catch {
+            setError("Unable to sync received emails from Resend.");
+        } finally {
+            setSyncing(false);
+        }
+    }
+
     async function logout() {
         await fetch("/api/admin/support/logout", {method: "POST"});
         setAuthorized(false);
@@ -224,6 +252,14 @@ export default function SupportInboxClient() {
                         <h1 className="mt-1 font-display text-3xl text-white">Support Inbox</h1>
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={syncFromResend}
+                            disabled={syncing}
+                            className="rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {syncing ? "Syncing..." : "Sync from Resend"}
+                        </button>
                         <button
                             type="button"
                             onClick={() => loadInbox(selectedThreadId)}
