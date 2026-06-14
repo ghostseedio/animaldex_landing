@@ -106,6 +106,9 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedIndexesTitle")}</h2>
                 <div className="flex flex-wrap gap-3">
+                    <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
+                        {t("relatedSpecies")}
+                    </Link>
                     <Link href="/animal-meanings" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedMeanings")}
                     </Link>

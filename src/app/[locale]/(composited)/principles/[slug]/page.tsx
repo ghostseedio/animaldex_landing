@@ -4,7 +4,8 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {getBehavioralPrincipleProfile, getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
+import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
+import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -60,17 +61,19 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
         notFound();
     }
 
-    const speciesItems = principle.speciesSlugs
-        .slice(0, MAX_PRINCIPLE_SPECIES_ITEMS)
-        .map((slug) => {
-            const entry = getSpeciesBySlug(slug);
-            if (!entry) {
-                return null;
-            }
-            const profile = getBehavioralPrincipleProfile(entry.slug, speciesSystemsIntelligence[entry.slug], speciesSystemsIntelligence);
-            return profile ? {entry, profile} : null;
-        })
-        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    const speciesItems = (
+        await Promise.all(
+            principle.speciesSlugs.slice(0, MAX_PRINCIPLE_SPECIES_ITEMS).map(async (slug) => {
+                const entry = getSpeciesBySlug(slug);
+                if (!entry) {
+                    return null;
+                }
+
+                const profile = await resolveSpeciesBehaviorProfile(entry.slug);
+                return profile ? {entry, profile} : null;
+            })
+        )
+    ).filter((item): item is NonNullable<typeof item> => Boolean(item));
 
     const sampleProfile = speciesItems[0]?.profile;
     const breadcrumbSchema = {
@@ -112,6 +115,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 <p className="text-primary-200 font-medium uppercase tracking-[0.18em] text-sm">{t("eyebrow")}</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{principle.principle}</h1>
                 <p className="text-ink-200 text-lg md:text-xl">{sampleProfile?.motto}</p>
+                <p className="text-ink-300">{t("clusterIntro")}</p>
                 <p className="text-ink-300">{t("speciesCount", {count: principle.speciesCount})}</p>
             </div>
 
@@ -132,17 +136,31 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                         </Link>
                         <div className="flex flex-col gap-3">
                             <h2 className="font-display font-bold text-2xl text-white">{entry.name}</h2>
-                            <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{profile.motto}</p>
+                            <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">
+                                {t("speciesPrincipleLabel")}: {profile.principle}
+                            </p>
+                            <p className="text-primary-200">{profile.motto}</p>
                             <p className="text-ink-200">{profile.coreLesson}</p>
                             <p className="text-ink-300 text-sm">{profile.biologicalBasis}</p>
                         </div>
-                        <Link
-                            href={`/animals/${entry.slug}`}
-                            underline
-                            className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                        >
-                            {t("openAnimal")}
-                        </Link>
+                        <div className="flex flex-wrap gap-3 mt-auto">
+                            <Link
+                                href={`/animals/${entry.slug}`}
+                                underline
+                                className="text-primary-200 hover:text-primary-100 transition-colors"
+                            >
+                                {t("openAnimal")}
+                            </Link>
+                            {profile.hasCatalogLesson ? (
+                                <Link
+                                    href={`/animal-lessons/${entry.slug}`}
+                                    underline
+                                    className="text-primary-200 hover:text-primary-100 transition-colors"
+                                >
+                                    {t("openLesson")}
+                                </Link>
+                            ) : null}
+                        </div>
                     </article>
                 ))}
             </div>
@@ -150,6 +168,9 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedIndexesTitle")}</h2>
                 <div className="flex flex-wrap gap-3">
+                    <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
+                        {t("relatedSpecies")}
+                    </Link>
                     <Link href="/animal-meanings" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedMeanings")}
                     </Link>

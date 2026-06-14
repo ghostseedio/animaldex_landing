@@ -1,8 +1,7 @@
 import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {
     BehavioralPrincipleProfile,
-    getBehavioralPrincipleProfile,
-    getBehavioralPrinciplesIndex
+    getBehavioralPrincipleProfile
 } from "@/data/species-behavioral-principles";
 import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -36,16 +35,9 @@ function getClusterProfile(localProfile: BehavioralPrincipleProfile | null) {
         return {clusterPrinciple: null, clusterPrincipleSlug: null};
     }
 
-    const clusterExists = getBehavioralPrinciplesIndex(speciesSystemsIntelligence)
-        .some((entry) => entry.principleSlug === localProfile.principleSlug);
-
-    if (!clusterExists) {
-        return {clusterPrinciple: null, clusterPrincipleSlug: null};
-    }
-
     return {
-        clusterPrinciple: localProfile.principle,
-        clusterPrincipleSlug: localProfile.principleSlug
+        clusterPrinciple: localProfile.browseCluster,
+        clusterPrincipleSlug: localProfile.browseClusterSlug
     };
 }
 
@@ -224,7 +216,9 @@ export async function resolveSpeciesBehaviorProfile(slug: string): Promise<Resol
 
         return {
             principle: catalogLesson.principleName,
-            principleSlug: clusterProfile.clusterPrincipleSlug ?? toPrincipleSlug(catalogLesson.principleName),
+            principleSlug: toPrincipleSlug(catalogLesson.principleName),
+            browseCluster: localProfile?.browseCluster ?? clusterProfile.clusterPrinciple ?? catalogLesson.principleName,
+            browseClusterSlug: localProfile?.browseClusterSlug ?? clusterProfile.clusterPrincipleSlug ?? toPrincipleSlug(catalogLesson.principleName),
             motto: catalogLesson.shortMotto || localProfile?.motto || catalogLesson.coreLesson,
             coreLesson: catalogLesson.coreLesson,
             biologicalBasis: catalogLesson.biologicalBasis || localProfile?.biologicalBasis || "",

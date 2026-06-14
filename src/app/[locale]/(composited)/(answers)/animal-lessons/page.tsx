@@ -1,9 +1,7 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
+import ExploreKnowledgeLinks from "@/app/[locale]/(composited)/_components/explore-knowledge-links";
 import {getBehaviorLessonIndex} from "@/data/species-behavior-lessons";
-import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
-import {getSpeciesBySlug} from "@/data/species";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -13,8 +11,6 @@ type AnimalLessonsPageProps = {
         locale: string;
     };
 };
-
-const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
 
 export async function generateMetadata({params}: AnimalLessonsPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "animalLessons");
@@ -100,33 +96,25 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
             </div>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4">
-                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("clustersEyebrow")}</p>
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("clustersTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("clustersDescription")}</p>
+                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("strategyEyebrow")}</p>
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("strategyTitle")}</h2>
+                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("strategyDescription")}</p>
+                <Link href="/principles" underline className="text-primary-200 hover:text-primary-100 w-fit">
+                    {t("strategyLink")}
+                </Link>
             </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {principleIndex.map((principle) => (
-                    <section key={principle.principleSlug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">
-                        <h2 className="text-white font-display font-bold text-3xl">{principle.principle}</h2>
-                        <p className="text-primary-200">{principle.sampleMotto}</p>
-                        <div className="flex flex-wrap gap-2">
-                            {principle.speciesSlugs.slice(0, 4).map((slug) => {
-                                const entry = getSpeciesBySlug(slug);
-                                if (!entry) return null;
-                                return (
-                                    <Link key={slug} href={`/animals/${slug}`} className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-ink-200">
-                                        {entry.name}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                        <Link href={`/principles/${principle.principleSlug}`} underline className="text-primary-200 hover:text-primary-100 mt-auto">
-                            {t("openPrincipleCluster")}
-                        </Link>
-                    </section>
-                ))}
-            </div>
+            <ExploreKnowledgeLinks
+                title={t("exploreTitle")}
+                description={t("exploreDescription")}
+                labels={{
+                    species: t("exploreSpecies"),
+                    principles: t("explorePrinciples"),
+                    lessons: t("exploreLessons"),
+                    meanings: t("exploreMeanings"),
+                    symbolism: t("exploreSymbolism")
+                }}
+            />
         </article>
     );
 }

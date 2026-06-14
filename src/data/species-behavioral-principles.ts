@@ -4,6 +4,8 @@ import {SystemsIntelligenceEntry} from "@/data/content-schema";
 export type BehavioralPrincipleProfile = {
     principle: string;
     principleSlug: string;
+    browseCluster: string;
+    browseClusterSlug: string;
     motto: string;
     principleExpression?: string;
     coreLesson: string;
@@ -13,7 +15,11 @@ export type BehavioralPrincipleProfile = {
     source: "manual" | "systems_intelligence" | "inferred" | "fallback" | "catalog_db";
 };
 
-type CuratedBehavioralPrincipleProfile = Omit<BehavioralPrincipleProfile, "relatedSpeciesSlugs" | "source" | "principleSlug">;
+type BaseBehavioralPrincipleProfile = Omit<
+    BehavioralPrincipleProfile,
+    "relatedSpeciesSlugs" | "source" | "principleSlug" | "browseCluster" | "browseClusterSlug"
+>;
+type CuratedBehavioralPrincipleProfile = BaseBehavioralPrincipleProfile;
 
 const PRINCIPLE_BEST_FOR_MAP: Record<string, string[]> = {
     Memory: ["Strategy", "Discipline", "Long-Term Thinking"],
@@ -269,7 +275,7 @@ function inferPrincipleFromAnalysis(entry: SpeciesEntry): string | null {
     return null;
 }
 
-function buildFallbackProfileFromSystems(systemsEntry: SystemsIntelligenceEntry): Omit<BehavioralPrincipleProfile, "relatedSpeciesSlugs" | "source" | "principleSlug"> {
+function buildFallbackProfileFromSystems(systemsEntry: SystemsIntelligenceEntry): BaseBehavioralPrincipleProfile {
     const principle = inferPrincipleFromSystemsEntry(systemsEntry) ?? "Efficiency";
     return {
         principle,
@@ -280,7 +286,7 @@ function buildFallbackProfileFromSystems(systemsEntry: SystemsIntelligenceEntry)
     };
 }
 
-function buildFallbackProfileFromAnalysis(entry: SpeciesEntry): Omit<BehavioralPrincipleProfile, "relatedSpeciesSlugs" | "source" | "principleSlug"> {
+function buildFallbackProfileFromAnalysis(entry: SpeciesEntry): BaseBehavioralPrincipleProfile {
     const principle = inferPrincipleFromAnalysis(entry) ?? "Efficiency";
     return {
         principle,
@@ -291,11 +297,8 @@ function buildFallbackProfileFromAnalysis(entry: SpeciesEntry): Omit<BehavioralP
     };
 }
 
-function resolvePrincipleForSpecies(entry: SpeciesEntry, systemsMap: Record<string, SystemsIntelligenceEntry>) {
+function resolveBrowseClusterForSpecies(entry: SpeciesEntry, systemsMap: Record<string, SystemsIntelligenceEntry>) {
     const systemsEntry = systemsMap[entry.slug];
-    if (CURATED_PROFILES[entry.slug]?.principle) {
-        return CURATED_PROFILES[entry.slug].principle;
-    }
     if (systemsEntry) {
         return inferPrincipleFromSystemsEntry(systemsEntry) ?? "Efficiency";
     }
@@ -306,10 +309,10 @@ function buildPrincipleBuckets(systemsMap: Record<string, SystemsIntelligenceEnt
     const speciesSlugsByPrinciple = new Map<string, string[]>();
 
     for (const entry of speciesEntries) {
-        const principle = resolvePrincipleForSpecies(entry, systemsMap);
+        const browseCluster = resolveBrowseClusterForSpecies(entry, systemsMap);
         speciesSlugsByPrinciple.set(
-            principle,
-            [...(speciesSlugsByPrinciple.get(principle) ?? []), entry.slug]
+            browseCluster,
+            [...(speciesSlugsByPrinciple.get(browseCluster) ?? []), entry.slug]
         );
     }
 
@@ -340,6 +343,7 @@ function getProfileMap(systemsMap: Record<string, SystemsIntelligenceEntry>) {
 
     for (const speciesEntry of speciesEntries) {
         const systemsEntry = systemsMap[speciesEntry.slug];
+        const browseCluster = resolveBrowseClusterForSpecies(speciesEntry, systemsMap);
         const curated = CURATED_PROFILES[speciesEntry.slug];
         const profile = curated
             ? {...curated, source: "manual" as const}
@@ -353,12 +357,14 @@ function getProfileMap(systemsMap: Record<string, SystemsIntelligenceEntry>) {
                     source: inferPrincipleFromAnalysis(speciesEntry) ? "inferred" as const : "fallback" as const
                 };
         const curatedRelated = CURATED_RELATED_SPECIES[speciesEntry.slug] ?? [];
-        const inferredRelated = buildRelatedSpeciesSlugs(speciesEntry.slug, profile.principle, speciesSlugsByPrinciple);
+        const inferredRelated = buildRelatedSpeciesSlugs(speciesEntry.slug, browseCluster, speciesSlugsByPrinciple);
         const relatedSpeciesSlugs = Array.from(new Set([...curatedRelated, ...inferredRelated])).slice(0, 4);
 
         profileMap.set(speciesEntry.slug, {
             ...profile,
             principleSlug: toPrincipleSlug(profile.principle),
+            browseCluster,
+            browseClusterSlug: toPrincipleSlug(browseCluster),
             relatedSpeciesSlugs
         });
     }
@@ -390,16 +396,16 @@ export function getBehavioralPrinciplesIndex(systemsMap: Record<string, SystemsI
         if (!profile) {
             continue;
         }
-        const current = grouped.get(profile.principleSlug) ?? {
-            principle: profile.principle,
-            principleSlug: profile.principleSlug,
+        const current = grouped.get(profile.browseClusterSlug) ?? {
+            principle: profile.browseCluster,
+            principleSlug: profile.browseClusterSlug,
             speciesCount: 0,
             speciesSlugs: [],
-            sampleMotto: profile.motto
+            sampleMotto: buildMotto(profile.browseCluster)
         };
         current.speciesCount += 1;
         current.speciesSlugs.push(entry.slug);
-        grouped.set(profile.principleSlug, current);
+        grouped.set(profile.browseClusterSlug, current);
     }
 
     const index = Array.from(grouped.values()).sort((a, b) => b.speciesCount - a.speciesCount);

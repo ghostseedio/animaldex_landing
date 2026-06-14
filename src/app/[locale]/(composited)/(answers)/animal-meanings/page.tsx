@@ -1,10 +1,10 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
+import ExploreKnowledgeLinks from "@/app/[locale]/(composited)/_components/explore-knowledge-links";
 import {getSpeciesBySlug} from "@/data/species";
-import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {getScopedTranslator} from "@/loaders/translation";
 
 type AnimalMeaningsPageProps = {
     params: {
@@ -12,14 +12,27 @@ type AnimalMeaningsPageProps = {
     };
 };
 
-const pageTitle = "Animal Meanings";
-const pageDescription = "Explore biology-backed animal meanings from AnimalDex. Each meaning is grounded in observable behavior, adaptation patterns, and survival strategy.";
-const principleIndex = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
+const FEATURED_MEANING_SLUGS = [
+    "elephant",
+    "dolphin",
+    "owl",
+    "fox",
+    "snake",
+    "octopus",
+    "raven",
+    "cat",
+    "dragonfly",
+    "eagle",
+    "wolf",
+    "bear"
+] as const;
 
 export async function generateMetadata({params}: AnimalMeaningsPageProps): Promise<Metadata> {
+    const t = await getScopedTranslator(params.locale, "animalMeanings");
+
     return {
-        title: `${pageTitle} | AnimalDex`,
-        description: pageDescription,
+        title: t("metaTitle"),
+        description: t("metaDescription"),
         keywords: ["animal meanings", "animal meaning list", "biology backed animal meaning", "animal behavior meaning"],
         alternates: {
             canonical: getLocalePath(params.locale, "/animal-meanings"),
@@ -31,20 +44,25 @@ export async function generateMetadata({params}: AnimalMeaningsPageProps): Promi
         openGraph: {
             type: "article",
             locale: getMetadataLocale(params.locale),
-            title: `${pageTitle} | AnimalDex`,
-            description: pageDescription,
+            title: t("metaTitle"),
+            description: t("metaDescription"),
             url: getLocalePath(params.locale, "/animal-meanings"),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: `${pageTitle} | AnimalDex`}]
+            images: [{url: "/images/og.png", width: 1200, height: 630, alt: t("metaTitle")}]
         }
     };
 }
 
-export default function AnimalMeaningsPage({params}: AnimalMeaningsPageProps) {
+export default async function AnimalMeaningsPage({params}: AnimalMeaningsPageProps) {
+    const t = await getScopedTranslator(params.locale, "animalMeanings");
+    const featuredSpecies = FEATURED_MEANING_SLUGS
+        .map((slug) => getSpeciesBySlug(slug))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
-        name: pageTitle,
-        description: pageDescription,
+        name: t("title"),
+        description: t("description"),
         url: getAbsoluteUrl(params.locale, "/animal-meanings")
     };
 
@@ -52,33 +70,54 @@ export default function AnimalMeaningsPage({params}: AnimalMeaningsPageProps) {
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([schema])}} />
             <div className="flex flex-col gap-4 text-center items-center">
-                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">Meaning Index</p>
-                <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{pageTitle}</h1>
-                <p className="text-lg md:text-xl text-ink-200 max-w-4xl">{pageDescription}</p>
+                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("eyebrow")}</p>
+                <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{t("title")}</h1>
+                <p className="text-lg md:text-xl text-ink-200 max-w-4xl">{t("description")}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {principleIndex.map((principle) => (
-                    <section key={principle.principleSlug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">
-                        <h2 className="text-white font-display font-bold text-3xl">{principle.principle}</h2>
-                        <p className="text-primary-200 text-sm uppercase tracking-[0.15em]">{principle.sampleMotto}</p>
-                        <p className="text-ink-200">{principle.speciesCount} species</p>
-                        <div className="flex flex-wrap gap-2">
-                            {principle.speciesSlugs.slice(0, 4).map((slug) => {
-                                const entry = getSpeciesBySlug(slug);
-                                if (!entry) return null;
-                                return (
-                                    <Link key={slug} href={`/animals/${slug}`} className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-ink-200">
-                                        {entry.name}
-                                    </Link>
-                                );
-                            })}
+
+            <section className="rounded-4xl border border-primary-500/30 bg-primary-500/10 p-6 md:p-8 flex flex-col gap-4">
+                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("featuredEyebrow")}</p>
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("featuredTitle")}</h2>
+                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("featuredDescription")}</p>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {featuredSpecies.map((entry) => (
+                    <section key={entry.slug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">
+                        <h2 className="text-white font-display font-bold text-2xl md:text-3xl">{entry.name}</h2>
+                        <p className="text-ink-200">{entry.analysis.summary}</p>
+                        <div className="flex flex-wrap gap-3 mt-auto">
+                            <Link href={`/animals/${entry.slug}`} underline className="text-primary-200 hover:text-primary-100">
+                                {t("openAnimal")}
+                            </Link>
+                            <Link href={`/animal-lessons/${entry.slug}`} underline className="text-primary-200 hover:text-primary-100">
+                                {t("openLesson")}
+                            </Link>
                         </div>
-                        <Link href={`/principles/${principle.principleSlug}`} underline className="text-primary-200 hover:text-primary-100 mt-auto">
-                            Open principle hub
-                        </Link>
                     </section>
                 ))}
             </div>
+
+            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4">
+                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("strategyEyebrow")}</p>
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("strategyTitle")}</h2>
+                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("strategyDescription")}</p>
+                <Link href="/principles" underline className="text-primary-200 hover:text-primary-100 w-fit">
+                    {t("strategyLink")}
+                </Link>
+            </section>
+
+            <ExploreKnowledgeLinks
+                title={t("exploreTitle")}
+                description={t("exploreDescription")}
+                labels={{
+                    species: t("exploreSpecies"),
+                    principles: t("explorePrinciples"),
+                    lessons: t("exploreLessons"),
+                    meanings: t("exploreMeanings"),
+                    symbolism: t("exploreSymbolism")
+                }}
+            />
         </article>
     );
 }
