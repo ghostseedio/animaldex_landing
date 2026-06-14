@@ -117,6 +117,18 @@ function animalLessonImage(src: string, alt: string, width: number, height: numb
     };
 }
 
+const whatAnimalAmIImageBase = "/images/blog/what-animal-am-i";
+
+function whatAnimalAmIImage(src: string, alt: string, width: number, height: number, caption?: string) {
+    return {
+        src: `${whatAnimalAmIImageBase}/${src}`,
+        alt,
+        width,
+        height,
+        caption
+    };
+}
+
 const octopusSymbolismImageBase = "/images/blog/octopus-symbolism";
 
 function octopusSymbolismImage(src: string, alt: string, width: number, height: number, caption?: string) {
@@ -142,6 +154,247 @@ function snakeSymbolismImage(src: string, alt: string, width: number, height: nu
 }
 
 const blogPostsData: BlogPost[] = [
+    {
+        slug: "what-animal-am-i",
+        canonicalUrl: "https://animaldex.app/blog/what-animal-am-i",
+        title: "What Animal Am I? Find Out Which Animal You Are with AnimalDex",
+        description: "Find out which animal you are with AnimalDex Wild Profile, an adaptive animal identity flow that maps your answers into Origin, Apex, and Active animal patterns.",
+        publishedAt: "2026-06-14",
+        updatedAt: "2026-06-14",
+        featuredImage: whatAnimalAmIImage(
+            "wild-profile-hero.webp",
+            "AnimalDex app artwork for discovering what animal you are through Wild Profile",
+            1200,
+            630,
+            "AnimalDex turns the classic what animal am I question into a Wild Profile with three animal patterns."
+        ),
+        readingMinutes: 8,
+        author: "AnimalDex",
+        tags: ["What Animal Am I", "Animal Personality", "Wild Profile", "AnimalDex", "Animal Identity", "Personality Quiz"],
+        searchIntents: [
+            "what animal am I",
+            "what animal are you",
+            "find out which animal you are",
+            "animal personality quiz",
+            "animal identity app",
+            "what is my spirit animal app",
+            "AnimalDex Wild Profile",
+            "origin apex active animal profile"
+        ],
+        speciesSlugs: [],
+        systemsSpeciesSlugs: [],
+        tableOfContents: [
+            "Quick Answer",
+            "What Animal Am I in AnimalDex?",
+            "How the Wild Profile Flow Works",
+            "The Three Animal Roles",
+            "Why It Is Not a Static Quiz",
+            "How AnimalDex Chooses Your Animals",
+            "What Happens After Your Profile Is Created",
+            "Can Your Animal Change?",
+            "What Animal Are You If You Feel Like More Than One?",
+            "How to Find Out Which Animal You Are",
+            "Quick Summary",
+            "FAQ"
+        ],
+        sections: [
+            {
+                kicker: "Quick answer",
+                title: "Quick Answer",
+                paragraphs: [
+                    "If you are asking what animal am I, AnimalDex answers with a Wild Profile instead of a one-off quiz result.",
+                    "Your Wild Profile gives you three animal roles: Origin, Apex, and Active.",
+                    "Origin is your stable root pattern. Apex is how you tend to become under pressure. Active is your current, actionable animal pattern.",
+                    "The app gets there through an adaptive interview, not a fixed multiple-choice quiz. It looks for signal in your values, habits, fears, responsibilities, social style, favorite animals, self-image, environments, and recurring life patterns.",
+                    "Then AnimalDex scores candidate species from its animal catalog and asks AI to choose only from that shortlist. The result is designed to feel personal without letting the model invent random animals."
+                ],
+                pullQuote: "AnimalDex answers what animal am I with a three-part Wild Profile: Origin, Apex, and Active."
+            },
+            {
+                title: "What Animal Am I in AnimalDex?",
+                paragraphs: [
+                    "The what animal are you feature in AnimalDex is called Wild Profile.",
+                    "It lives inside the Identity area of the app. When you open Identity and switch to Wild Profile, AnimalDex either shows your existing animal triad or invites you to start the interview.",
+                    "The point is not to label you with a random animal for entertainment only. The point is to map your patterns to animals in a way that can be useful.",
+                    "A person may have one animal that feels like their lifelong baseline, another that appears when they are challenged, and another that describes what they need to act on right now.",
+                    "That is why AnimalDex does not stop at one answer."
+                ],
+                media: {
+                    type: "image",
+                    image: whatAnimalAmIImage(
+                        "animaldex-identity-phone.webp",
+                        "AnimalDex mobile app screen representing the Identity area and Wild Profile experience",
+                        512,
+                        1084,
+                        "Wild Profile lives in the Identity area of AnimalDex."
+                    )
+                }
+            },
+            {
+                title: "How the Wild Profile Flow Works",
+                paragraphs: [
+                    "The user flow is simple.",
+                    "First, open the Identity view in AnimalDex and switch to Wild Profile.",
+                    "If you already have a profile, the app shows your Origin, Apex, and Active animals.",
+                    "If you do not have a profile, or if you started but did not finish, the app shows Start Interview or Continue Interview.",
+                    "The interview is chat-style. AnimalDex asks a question, saves your answer, and then decides what to ask next based on what you already shared.",
+                    "When there is enough signal, the interview becomes ready for generation and you can create your Wild Profile."
+                ],
+                media: {
+                    type: "image",
+                    image: whatAnimalAmIImage(
+                        "wild-profile-app-interface.webp",
+                        "AnimalDex app interface artwork showing a polished mobile flow for discovering animal identity",
+                        1024,
+                        767,
+                        "The interview adapts as it learns more about your patterns."
+                    )
+                }
+            },
+            {
+                title: "The Three Animal Roles",
+                paragraphs: [
+                    "Most what animal are you quizzes give a single answer.",
+                    "AnimalDex uses three roles because people are not one flat trait.",
+                    "Your baseline can be different from your pressure response. Your current season can also be different from your lifelong pattern.",
+                    "That is why the Wild Profile separates Origin, Apex, and Active."
+                ],
+                table: {
+                    columns: ["Role", "Meaning"],
+                    rows: [
+                        {cells: ["Origin Animal", "Your stable root pattern: the baseline personality or lifelong behavioral style that tends to stay with you."]},
+                        {cells: ["Apex Animal", "Your strongest expression under pressure: how you become when challenged, stressed, defending something, or operating at intensity."]},
+                        {cells: ["Active Animal", "Your current pattern: the most actionable present-tense animal identity, and the one that can change most easily."]}
+                    ]
+                }
+            },
+            {
+                title: "Why It Is Not a Static Quiz",
+                paragraphs: [
+                    "A static animal quiz usually asks the same questions in the same order for every person.",
+                    "AnimalDex Wild Profile works differently.",
+                    "The interview generates the next question based on previous answers. If you talk about responsibility, pressure, solitude, ambition, loyalty, fear, imagination, conflict, care, exploration, or a favorite environment, the next question can follow that thread.",
+                    "It is looking for useful personal signal, not just trivia.",
+                    "That signal can include values, habits, fears, pressure responses, social style, responsibilities, favorite animals, self-image, environments you relate to, and recurring life patterns.",
+                    "The goal is to understand the shape of your behavior before choosing the animal."
+                ],
+                pullQuote: "The interview is adaptive because the best animal match depends on patterns, not just preferences."
+            },
+            {
+                title: "How AnimalDex Chooses Your Animals",
+                paragraphs: [
+                    "The important part is that the AI is not freely inventing animals.",
+                    "Before the final choice, AnimalDex derives trait scores from your answers and pulls life themes from the conversation. It loads animals from the catalog, including behavior-principle fields, and can optionally include collection evidence if your privacy settings allow it.",
+                    "Then it scores and shortlists candidate animals deterministically.",
+                    "Only after that does AI choose from the shortlist. It is constrained to the candidates that AnimalDex already selected from catalog data, behavior principles, game stats, interview themes, and optional collection evidence.",
+                    "That means the profile is not just a loose horoscope. It is a guided match between your signal and the app's animal system."
+                ],
+                media: {
+                    type: "image",
+                    image: whatAnimalAmIImage(
+                        "animaldex-animal-profile-results.webp",
+                        "AnimalDex app artwork representing animal profile results and structured animal identity matching",
+                        1024,
+                        688,
+                        "AnimalDex shortlists candidate animals before AI makes the final selection."
+                    )
+                }
+            },
+            {
+                title: "What Happens After Your Profile Is Created",
+                paragraphs: [
+                    "After you tap Generate Wild Profile, AnimalDex saves the active result to your identity profile.",
+                    "The app refreshes local state so the Wild Profile view can display your Origin, Apex, and Active animals.",
+                    "Public display is handled separately through privacy-aware public profile data. If a result is shown publicly, it respects the user's privacy settings.",
+                    "This is important because a Wild Profile is personal. The app is built so identity data can exist privately first, with public display treated as a separate layer."
+                ]
+            },
+            {
+                title: "Can Your Animal Change?",
+                paragraphs: [
+                    "Yes, but not every role changes the same way.",
+                    "Your Active animal is the most flexible because it represents your current, actionable pattern.",
+                    "AnimalDex can also use journal-based refresh logic to update Active or create an Apex suggestion from newer reflection data.",
+                    "Origin is different. Origin is the root pattern, so it does not change from a journal refresh. If you want to change Origin, you retake the questionnaire."
+                ]
+            },
+            {
+                title: "What Animal Are You If You Feel Like More Than One?",
+                paragraphs: [
+                    "Feeling like more than one animal is normal.",
+                    "You might be quiet in ordinary life but intense under pressure. You might be loyal at the root but restless in your current season. You might admire one animal while behaving more like another.",
+                    "That is exactly why AnimalDex uses a triad.",
+                    "One animal can explain your origin pattern. Another can explain your apex pressure pattern. Another can explain what is active right now.",
+                    "Instead of forcing one simple answer, Wild Profile gives your identity more structure."
+                ]
+            },
+            {
+                title: "How to Find Out Which Animal You Are",
+                paragraphs: [
+                    "To find out which animal you are, open AnimalDex, go to Identity, and choose Wild Profile.",
+                    "Start the interview and answer honestly. Short answers can work, but detailed answers give the system more signal.",
+                    "When the app has enough information, generate your Wild Profile.",
+                    "You will receive an Origin animal, an Apex animal, and an Active animal, each with evidence and meaning inside the app.",
+                    "If you want more animal meaning after that, explore the AnimalDex Blog for symbolism guides and animal pattern breakdowns."
+                ],
+                inlineLinks: [
+                    {
+                        text: "AnimalDex Blog",
+                        slug: "blog",
+                        href: "https://animaldex.app/blog"
+                    }
+                ]
+            },
+            {
+                title: "Quick Summary",
+                paragraphs: [],
+                cards: [
+                    {
+                        label: "Feature name",
+                        body: "Wild Profile in the Identity area."
+                    },
+                    {
+                        label: "Main result",
+                        body: "A three-animal profile: Origin, Apex, and Active."
+                    },
+                    {
+                        label: "Interview style",
+                        body: "Adaptive chat-style questions based on previous answers."
+                    },
+                    {
+                        label: "Signals used",
+                        body: "Values, habits, pressure responses, social style, responsibilities, favorite animals, self-image, environments, and life patterns."
+                    },
+                    {
+                        label: "Animal selection",
+                        body: "A deterministic candidate shortlist first, then AI chooses from that shortlist."
+                    },
+                    {
+                        label: "Privacy",
+                        body: "Collection evidence is optional when privacy allows, and public display is handled separately."
+                    }
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "What animal am I in AnimalDex?",
+                answer: "AnimalDex answers with a Wild Profile: Origin, Apex, and Active animals. Origin is your root pattern, Apex is your pressure pattern, and Active is your current actionable pattern."
+            },
+            {
+                question: "Is AnimalDex Wild Profile just a personality quiz?",
+                answer: "No. It uses an adaptive interview that asks follow-up questions based on previous answers, then matches your signal against candidate animals from the AnimalDex catalog."
+            },
+            {
+                question: "Can my AnimalDex animal change?",
+                answer: "Your Active animal can change more easily, and journal refresh can update Active or suggest Apex. Origin only changes through retaking the questionnaire."
+            },
+            {
+                question: "Does AI invent my animal result?",
+                answer: "No. AnimalDex first builds a candidate species shortlist from catalog data, behavior principles, game stats, interview themes, and optional collection evidence. AI must choose from that shortlist."
+            }
+        ]
+    },
     {
         slug: "snake-symbolism",
         canonicalUrl: "https://animaldex.app/blog/snake-symbolism",
