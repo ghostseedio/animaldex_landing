@@ -1329,6 +1329,7 @@ const blogPostsData: BlogPost[] = [
     },
     {
         slug: "octopus-symbolism",
+        canonicalUrl: "https://animaldex.app/blog/octopus-symbolism",
         title: "Octopus Symbolism: Decentralized Intelligence, Camouflage, and Hidden Adaptation",
         description: "Explore octopus symbolism through distributed intelligence, camouflage, regeneration, nervous system symbolism, ancient sea monster mythology, and the archetype of hidden adaptation.",
         publishedAt: "2026-06-14",
