@@ -11,10 +11,12 @@ import {challengeEntries} from "@/data/challenges";
 import {rankingPages} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
 import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
+import {getBehaviorLessonIndex} from "@/data/species-behavior-lessons";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const now = new Date();
+    const behaviorLessons = await getBehaviorLessonIndex();
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
@@ -138,6 +140,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
             url: getAbsoluteUrl(locale, `/principles/${item.principleSlug}`),
             lastModified: now
         }));
+        const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
+            url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`),
+            lastModified: now
+        }));
 
         return [
             ...staticEntries,
@@ -150,7 +156,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             ...challengePageEntries,
             ...rankingPageEntries,
             ...locationPageEntries,
-            ...principlePageEntries
+            ...principlePageEntries,
+            ...behaviorLessonPageEntries
         ];
     });
 

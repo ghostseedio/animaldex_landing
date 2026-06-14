@@ -23,9 +23,9 @@ import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
-import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
+import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
-import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -281,7 +281,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
-    const principleProfile = getBehavioralPrincipleProfile(entry.slug, systemsEntry, speciesSystemsIntelligence);
+    const principleProfile = await resolveSpeciesBehaviorProfile(entry.slug);
     const relatedPrincipleSpecies = principleProfile
         ? principleProfile.relatedSpeciesSlugs
             .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
@@ -396,32 +396,53 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const principleBreadcrumbSchema = principleProfile ? {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        itemListElement: [
-            {
-                "@type": "ListItem",
-                position: 1,
-                name: "Home",
-                item: getAbsoluteUrl(locale)
-            },
-            {
-                "@type": "ListItem",
-                position: 2,
-                name: "Principles",
-                item: getAbsoluteUrl(locale, "/principles")
-            },
-            {
-                "@type": "ListItem",
-                position: 3,
-                name: principleProfile.principle,
-                item: getAbsoluteUrl(locale, `/principles/${principleProfile.principleSlug}`)
-            },
-            {
-                "@type": "ListItem",
-                position: 4,
-                name: entry.name,
-                item: pageUrl
-            }
-        ]
+        itemListElement: principleProfile.hasCatalogLesson
+            ? [
+                {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: getAbsoluteUrl(locale)
+                },
+                {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Animal Lessons",
+                    item: getAbsoluteUrl(locale, "/animal-lessons")
+                },
+                {
+                    "@type": "ListItem",
+                    position: 3,
+                    name: entry.name,
+                    item: getAbsoluteUrl(locale, `/animal-lessons/${entry.slug}`)
+                }
+            ]
+            : [
+                {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: getAbsoluteUrl(locale)
+                },
+                {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Principles",
+                    item: getAbsoluteUrl(locale, "/principles")
+                },
+                ...(principleProfile.clusterPrincipleSlug ? [{
+                    "@type": "ListItem",
+                    position: 3,
+                    name: principleProfile.clusterPrinciple ?? principleProfile.principle,
+                    item: getAbsoluteUrl(locale, `/principles/${principleProfile.clusterPrincipleSlug}`)
+                }] : []),
+                {
+                    "@type": "ListItem",
+                    position: principleProfile.clusterPrincipleSlug ? 4 : 3,
+                    name: entry.name,
+                    item: pageUrl
+                }
+            ]
     } : null;
     const thingSchema = {
         "@context": "https://schema.org",
@@ -614,11 +635,27 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {t("principleTitle", {animal: entry.name})}
                     </h2>
                     <p className="text-ink-300 text-sm md:text-base">
-                        <span className="text-white">{t("principleHubLabel")}: </span>
-                        <Link href={`/principles/${principleProfile.principleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
-                            {principleProfile.principle}
-                        </Link>
+                        {principleProfile.hasCatalogLesson ? (
+                            <>
+                                <span className="text-white">{t("lessonPageLabel")}: </span>
+                                <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                    {t("lessonPageLink", {animal: entry.name})}
+                                </Link>
+                            </>
+                        ) : null}
+                        {principleProfile.clusterPrincipleSlug ? (
+                            <>
+                                {principleProfile.hasCatalogLesson ? " · " : null}
+                                <span className="text-white">{t("principleHubLabel")}: </span>
+                                <Link href={`/principles/${principleProfile.clusterPrincipleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                    {principleProfile.clusterPrinciple}
+                                </Link>
+                            </>
+                        ) : null}
                     </p>
+                    {principleProfile.motto ? (
+                        <p className="text-primary-200 text-lg md:text-xl">{principleProfile.motto}</p>
+                    ) : null}
                     <div className="flex flex-col gap-3">
                         <p className="text-ink-200 text-lg md:text-xl leading-8">
                             <span className="text-white">{t("principleLabel")}: </span>

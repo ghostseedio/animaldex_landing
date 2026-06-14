@@ -5,12 +5,15 @@ export type BehavioralPrincipleProfile = {
     principle: string;
     principleSlug: string;
     motto: string;
+    principleExpression?: string;
     coreLesson: string;
     biologicalBasis: string;
     bestFor: string[];
     relatedSpeciesSlugs: string[];
-    source: "manual" | "systems_intelligence" | "inferred" | "fallback";
+    source: "manual" | "systems_intelligence" | "inferred" | "fallback" | "catalog_db";
 };
+
+type CuratedBehavioralPrincipleProfile = Omit<BehavioralPrincipleProfile, "relatedSpeciesSlugs" | "source" | "principleSlug">;
 
 const PRINCIPLE_BEST_FOR_MAP: Record<string, string[]> = {
     Memory: ["Strategy", "Discipline", "Long-Term Thinking"],
@@ -25,13 +28,114 @@ const PRINCIPLE_BEST_FOR_MAP: Record<string, string[]> = {
     Efficiency: ["Energy Management", "Prioritization", "Sustainable Output"]
 };
 
-const CURATED_PROFILES: Record<string, Omit<BehavioralPrincipleProfile, "relatedSpeciesSlugs" | "source" | "principleSlug">> = {
+const CURATED_PROFILES: Record<string, CuratedBehavioralPrincipleProfile> = {
     elephant: {
-        principle: "Memory",
-        motto: "Remember routes. Reduce risk.",
-        coreLesson: "The lessons you already learned become your map for future decisions.",
-        biologicalBasis: "Elephants remember migration routes, water access points, and social relationships across years, then use that memory to reduce risk in changing environments.",
-        bestFor: PRINCIPLE_BEST_FOR_MAP.Memory
+        principle: "Living Archive",
+        principleExpression: "Remember what matters. Move with wisdom.",
+        motto: "Remember what matters.",
+        coreLesson: "Memory becomes wisdom when it protects the future.",
+        biologicalBasis:
+            "Elephants remember migration routes, water sources, social bonds, threats, and lost companions across long periods, turning experience into survival guidance for the herd.",
+        bestFor: ["Long-Term Thinking", "Family", "Strategy", "Emotional Intelligence"]
+    },
+    dolphin: {
+        principle: "Echo Social Intelligence",
+        principleExpression: "Find your people. Share the signal.",
+        motto: "Find your pod. Share the signal.",
+        coreLesson: "Clear communication becomes power when the environment is noisy.",
+        biologicalBasis:
+            "Dolphins combine echolocation, whistles, social learning, and coordinated movement to navigate murky water, hunt together, and maintain group bonds across distance.",
+        bestFor: ["Communication", "Leadership", "Collaboration", "Emotional Intelligence"]
+    },
+    octopus: {
+        principle: "Distributed Nervous Intelligence",
+        principleExpression: "Think with the whole body.",
+        motto: "Think with the whole body.",
+        coreLesson: "Flexible awareness beats rigid control when conditions change fast.",
+        biologicalBasis:
+            "Octopuses use a highly distributed nervous system, flexible arms, camouflage, problem-solving, and escape behavior to respond quickly without relying on one rigid command center.",
+        bestFor: ["Creativity", "Adaptability", "Nervous System Awareness", "Uncertain Environments"]
+    },
+    snake: {
+        principle: "Coiled Transformation",
+        principleExpression: "Shed the old skin. Keep the life force.",
+        motto: "Shed the old skin.",
+        coreLesson: "Efficient power often comes from removing what is unnecessary and perfecting what remains.",
+        biologicalBasis:
+            "Snakes use limbless movement, forked-tongue chemosensing, flexible skulls, shedding, coiling, venom or constriction, and ground contact to symbolize transformation, instinct, and hidden force.",
+        bestFor: ["Transformation", "Instinct", "Healing", "Hidden Power"]
+    },
+    fox: {
+        principle: "Clever Adaptation",
+        principleExpression: "Change route before the trap closes.",
+        motto: "Change route early.",
+        coreLesson: "Survival favors the one who reads the edge and adjusts early.",
+        biologicalBasis:
+            "Foxes use quiet movement, sharp hearing, opportunistic diet, denning behavior, and comfort at forest, field, and urban edges to survive through strategy rather than force.",
+        bestFor: ["Strategy", "Adaptability", "Cunning", "Uncertain Environments"]
+    },
+    cat: {
+        principle: "Threshold Independence",
+        principleExpression: "Stay soft. Keep your claws.",
+        motto: "Stay soft. Keep your claws.",
+        coreLesson: "Independence works best when comfort and readiness exist together.",
+        biologicalBasis:
+            "Cats combine retractable claws, night-adapted eyes, flexible bodies, stalking behavior, grooming rituals, and home-threshold living to move between affection, solitude, play, and predation.",
+        bestFor: ["Independence", "Boundaries", "Sensitivity", "Self-Trust"]
+    },
+    owl: {
+        principle: "Silent Night Vision",
+        principleExpression: "See what moves in the dark.",
+        motto: "See in the dark.",
+        coreLesson: "Wisdom begins where ordinary visibility ends.",
+        biologicalBasis:
+            "Owls combine forward-facing eyes, silent flight feathers, facial disks, night hearing, and patient perching to detect hidden movement with minimal noise.",
+        bestFor: ["Wisdom", "Observation", "Intuition", "Night Work"]
+    },
+    raven: {
+        principle: "Pattern Messenger",
+        principleExpression: "Remember the pattern. Speak from the shadow.",
+        motto: "Speak from the shadow.",
+        coreLesson: "Intelligence becomes power when memory, timing, and communication meet.",
+        biologicalBasis:
+            "Ravens use problem-solving, social memory, vocal mimicry, caching, carrion tracking, and bold black presence to operate as intelligent scavengers and symbolic messengers.",
+        bestFor: ["Intelligence", "Mystery", "Memory", "Communication"]
+    },
+    dragonfly: {
+        principle: "Transformation Precision",
+        principleExpression: "Change form. Strike clean.",
+        motto: "Change form. Strike clean.",
+        coreLesson: "Transformation becomes power when new vision creates new movement.",
+        biologicalBasis:
+            "Dragonflies begin life as aquatic nymphs, then emerge into agile aerial predators with independent wings and near-360-degree vision, symbolizing transformation plus precision.",
+        bestFor: ["Transformation", "Focus", "Timing", "New Identity"]
+    },
+    rhino: {
+        principle: "Sovereign Endurance",
+        principleExpression: "Do not be moved. Keep applying pressure.",
+        motto: "Do not be moved.",
+        coreLesson: "True power is not always explosive; sometimes it is the refusal to stop until reality bends.",
+        biologicalBasis:
+            "Rhinos are massive herbivores with thick skin, few natural predators as adults, solitary habits, forward-facing horn force, and grounded movement that symbolize persistence, protection, wealth, and self-contained power.",
+        bestFor: ["Endurance", "Protection", "Wealth", "Persistence"]
+    },
+    "white-rhinoceros": {
+        principle: "Sovereign Endurance",
+        principleExpression: "Do not be moved. Keep applying pressure.",
+        motto: "Do not be moved.",
+        coreLesson: "True power is not always explosive; sometimes it is the refusal to stop until reality bends.",
+        biologicalBasis:
+            "White rhinoceroses are large grazing herbivores with massive bodies, broad mouths, thick skin, horns, and few natural predators as adults, symbolizing grounded force, protection, wealth, and persistence.",
+        bestFor: ["Endurance", "Protection", "Wealth", "Persistence"]
+    },
+    "black-rhinoceros": {
+        principle: "Armored Direction",
+        principleExpression: "Choose the path. Push through it.",
+        motto: "Push through.",
+        coreLesson: "Focused direction becomes power when the whole body commits to one point.",
+        biologicalBasis:
+            "Black rhinoceroses are browsers with hooked lips, thick skin, strong bodies, horns, solitary habits, and intense territorial behavior, symbolizing concentrated force, self-direction, protection, and persistence.",
+        bestFor: ["Direction", "Protection", "Persistence", "Self-Command"]
     },
     "barn-owl": {
         principle: "Observation",
@@ -46,13 +150,6 @@ const CURATED_PROFILES: Record<string, Omit<BehavioralPrincipleProfile, "related
         coreLesson: "Flexible thinking compounds when you keep learning from feedback.",
         biologicalBasis: "Crows combine memory, social learning, and tool use to solve new problems in rapidly changing environments.",
         bestFor: PRINCIPLE_BEST_FOR_MAP.Adaptability
-    },
-    dolphin: {
-        principle: "Communication",
-        motto: "Signal clearly in noisy systems.",
-        coreLesson: "Shared signals improve coordination when conditions are noisy.",
-        biologicalBasis: "Dolphins pair echolocation with social communication so groups can sense, coordinate, and hunt effectively in low-visibility water.",
-        bestFor: PRINCIPLE_BEST_FOR_MAP.Communication
     },
     orangutan: {
         principle: "Memory",
@@ -75,13 +172,6 @@ const CURATED_PROFILES: Record<string, Omit<BehavioralPrincipleProfile, "related
         biologicalBasis: "Polar bears depend on sea-ice structure for hunting, making environmental tracking essential to survival performance.",
         bestFor: PRINCIPLE_BEST_FOR_MAP.Adaptability
     },
-    octopus: {
-        principle: "Adaptability",
-        motto: "Adapt shape, strategy, and timing.",
-        coreLesson: "Decentralized sensing and action can outperform rigid plans under pressure.",
-        biologicalBasis: "Octopuses use distributed neural control, flexible body geometry, and adaptive camouflage to solve dynamic threats quickly.",
-        bestFor: PRINCIPLE_BEST_FOR_MAP.Adaptability
-    },
     "komodo-dragon": {
         principle: "Efficiency",
         motto: "Spend energy where leverage is highest.",
@@ -93,6 +183,14 @@ const CURATED_PROFILES: Record<string, Omit<BehavioralPrincipleProfile, "related
 
 const CURATED_RELATED_SPECIES: Record<string, string[]> = {
     elephant: ["crow", "dolphin", "orangutan"],
+    dolphin: ["elephant", "crow", "gorilla"],
+    octopus: ["crow", "chameleon", "cuttlefish"],
+    fox: ["crow", "cat", "coyote"],
+    cat: ["fox", "lynx", "tiger"],
+    owl: ["barn-owl", "snowy-owl", "great-horned-owl"],
+    raven: ["crow", "magpie", "jackdaw"],
+    snake: ["king-cobra", "python", "rattlesnake"],
+    dragonfly: ["damselfly", "praying-mantis", "jumping-spider"],
     "barn-owl": ["snowy-owl", "great-horned-owl", "lynx"]
 };
 
