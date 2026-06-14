@@ -105,28 +105,16 @@ export default async function Home() {
             accent: "from-primary-500/14 via-primary-500/6 to-transparent"
         },
         {
-            href: "/principles",
-            title: t("download.principlesLink"),
-            description: t("download.principlesPrompt"),
-            accent: "from-primary-500/14 via-primary-300/8 to-transparent"
-        },
-        {
-            href: "/animal-meanings",
-            title: t("download.meaningsLink"),
-            description: t("download.meaningsPrompt"),
-            accent: "from-primary-400/16 via-primary-500/8 to-transparent"
+            href: "/animal-lessons",
+            title: t("download.lessonsLink"),
+            description: t("download.lessonsPrompt"),
+            accent: "from-primary-500/12 via-line-300/10 to-transparent"
         },
         {
             href: "/animal-symbolism",
             title: t("download.symbolismLink"),
             description: t("download.symbolismPrompt"),
             accent: "from-line-300/18 via-primary-400/8 to-transparent"
-        },
-        {
-            href: "/animal-lessons",
-            title: t("download.lessonsLink"),
-            description: t("download.lessonsPrompt"),
-            accent: "from-primary-500/12 via-line-300/10 to-transparent"
         }
     ];
     const webSiteSchema = {

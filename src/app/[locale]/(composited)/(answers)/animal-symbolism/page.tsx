@@ -133,9 +133,7 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                 description={t("exploreDescription")}
                 labels={{
                     species: t("exploreSpecies"),
-                    principles: t("explorePrinciples"),
                     lessons: t("exploreLessons"),
-                    meanings: t("exploreMeanings"),
                     symbolism: t("exploreSymbolism")
                 }}
             />

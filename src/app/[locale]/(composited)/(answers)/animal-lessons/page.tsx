@@ -109,9 +109,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                 description={t("exploreDescription")}
                 labels={{
                     species: t("exploreSpecies"),
-                    principles: t("explorePrinciples"),
                     lessons: t("exploreLessons"),
-                    meanings: t("exploreMeanings"),
                     symbolism: t("exploreSymbolism")
                 }}
             />

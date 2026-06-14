@@ -20,13 +20,11 @@ export default function Footer() {
             title: t("footerGroups.explore"),
             links: [
                 {href: "/animals", label: t("animals")},
-                {href: "/principles", label: t("principles")},
-                {href: "/animal-meanings", label: t("animalMeanings")},
-                {href: "/animal-symbolism", label: t("animalSymbolism")},
                 {href: "/animal-lessons", label: t("animalLessons")},
-                {href: "/locations", label: t("locations")},
+                {href: "/animal-symbolism", label: t("animalSymbolism")},
                 {href: "/comparisons", label: t("challenges")},
-                {href: "/rankings", label: t("rankings")}
+                {href: "/rankings", label: t("rankings")},
+                {href: "/locations", label: t("locations")}
             ]
         },
         {
@@ -34,17 +32,13 @@ export default function Footer() {
             links: [
                 {href: "/journal", label: t("journal")},
                 {href: "/blog", label: t("blog")},
-                {href: "/animal-wisdom", label: t("animalWisdom")},
-                {href: "/legal/privacy", label: t("privacy")},
-                {href: "/legal/terms", label: t("terms")},
-                {href: "mailto:support@animaldex.app", label: t("support")},
-                {href: "mailto:support@animaldex.app", label: t("contact")}
+                {href: "/animal-wisdom", label: t("animalWisdom")}
             ]
         }
     ];
     const socialLinks = [
         {href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon},
-        {href: "https://www.tiktok.com/@animaldex.app", label: "TikTok", icon: TikTokIcon},
+        {href: "https://www.tiktok.com/@animaldexapp", label: "TikTok", icon: TikTokIcon},
         {href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon}
     ];
 

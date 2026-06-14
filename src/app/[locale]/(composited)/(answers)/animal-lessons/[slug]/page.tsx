@@ -191,9 +191,6 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                     <Link href={`/animals/${lesson.slug}`} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("openAnimal")}
                     </Link>
-                    <Link href="/animal-meanings" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                        {t("relatedMeanings")}
-                    </Link>
                     <Link href="/animal-symbolism" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedSymbolism")}
                     </Link>

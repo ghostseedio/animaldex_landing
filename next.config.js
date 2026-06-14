@@ -12,6 +12,11 @@ module.exports = withNextIntl({
                 source: "/terms",
                 destination: "/legal/terms",
                 permanent: true
+            },
+            {
+                source: "/:locale(en|id)/animal-meanings",
+                destination: "/:locale/animal-lessons",
+                permanent: true
             }
         ];
     },

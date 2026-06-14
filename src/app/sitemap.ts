@@ -79,10 +79,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 lastModified: now
             },
             {
-                url: getAbsoluteUrl(locale, "/animal-meanings"),
-                lastModified: now
-            },
-            {
                 url: getAbsoluteUrl(locale, "/animal-symbolism"),
                 lastModified: now
             },

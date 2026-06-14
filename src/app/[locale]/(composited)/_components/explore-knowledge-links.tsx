@@ -5,9 +5,7 @@ type ExploreKnowledgeLinksProps = {
     description?: string;
     labels: {
         species: string;
-        principles: string;
         lessons: string;
-        meanings: string;
         symbolism: string;
     };
 };
@@ -23,14 +21,8 @@ export default function ExploreKnowledgeLinks({title, description, labels}: Expl
                 <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                     {labels.species}
                 </Link>
-                <Link href="/principles" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                    {labels.principles}
-                </Link>
                 <Link href="/animal-lessons" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                     {labels.lessons}
-                </Link>
-                <Link href="/animal-meanings" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                    {labels.meanings}
                 </Link>
                 <Link href="/animal-symbolism" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                     {labels.symbolism}
