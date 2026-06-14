@@ -56,6 +56,18 @@ export default function AnimalSymbolismPage({params}: AnimalSymbolismPageProps) 
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{pageTitle}</h1>
                 <p className="text-lg md:text-xl text-ink-200 max-w-4xl">{pageDescription}</p>
             </div>
+            <section className="rounded-3xl border border-primary-500/30 bg-primary-500/10 p-6 md:p-8 flex flex-col gap-3">
+                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">Featured symbolism guide</p>
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
+                    Octopus Symbolism
+                </h2>
+                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">
+                    Explore the octopus as a symbol of decentralized intelligence, nervous system awareness, camouflage, regeneration, and hidden adaptation.
+                </p>
+                <Link href="/blog/octopus-symbolism" underline className="text-primary-200 hover:text-primary-100 w-fit">
+                    Read the octopus symbolism guide
+                </Link>
+            </section>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {principleIndex.map((principle) => (
                     <section key={principle.principleSlug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">

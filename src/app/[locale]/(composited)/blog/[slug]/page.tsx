@@ -51,6 +51,45 @@ function renderSectionMedia(media: BlogMediaBlock) {
         return <ContentImageFigure image={media.image} />;
     }
 
+    if (media.type === "video") {
+        return (
+            <figure className="flex flex-col gap-3">
+                {media.title && (
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
+                        {media.title}
+                    </p>
+                )}
+                <div className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60 shadow-[0_24px_80px_-48px_rgba(8,15,26,0.95)]">
+                    <iframe
+                        src={media.embedUrl}
+                        title={media.title || "AnimalDex video"}
+                        className="aspect-video w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                    />
+                </div>
+                {(media.caption || media.watchUrl) && (
+                    <figcaption className="text-sm md:text-base text-ink-300">
+                        {media.caption}
+                        {media.watchUrl && (
+                            <>
+                                {" "}
+                                <a
+                                    href={media.watchUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
+                                >
+                                    Watch on YouTube
+                                </a>
+                            </>
+                        )}
+                    </figcaption>
+                )}
+            </figure>
+        );
+    }
+
     return (
         <div className="flex flex-col gap-4">
             {media.title && (

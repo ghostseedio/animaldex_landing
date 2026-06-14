@@ -17,7 +17,15 @@ export type ContentGalleryBlock = {
     images: ContentImage[];
 };
 
-export type BlogMediaBlock = ContentImageBlock | ContentGalleryBlock;
+export type ContentVideoBlock = {
+    type: "video";
+    title?: string;
+    embedUrl: string;
+    watchUrl: string;
+    caption?: string;
+};
+
+export type BlogMediaBlock = ContentImageBlock | ContentGalleryBlock | ContentVideoBlock;
 
 export type SystemsIntelligenceEntry = {
     roleTitle: string;
