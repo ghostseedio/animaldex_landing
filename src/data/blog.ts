@@ -20,6 +20,13 @@ export type BlogSectionCard = {
     };
 };
 
+export type BlogSectionTable = {
+    columns: string[];
+    rows: Array<{
+        cells: string[];
+    }>;
+};
+
 export type BlogSource = {
     label: string;
     href: string;
@@ -37,6 +44,7 @@ export type BlogSection = {
     title: string;
     paragraphs: string[];
     cards?: BlogSectionCard[];
+    table?: BlogSectionTable;
     inlineLinks?: BlogLink[];
     speciesSlugs?: string[];
     media?: BlogMediaBlock;
@@ -51,6 +59,7 @@ export type BlogFAQ = {
 
 export type BlogPost = CanonicalContentMetadata & {
     slug: string;
+    canonicalUrl?: string;
     readingMinutes: number;
     author?: string;
     tags: string[];
@@ -120,7 +129,472 @@ function octopusSymbolismImage(src: string, alt: string, width: number, height: 
     };
 }
 
+const snakeSymbolismImageBase = "/images/blog/snake-symbolism";
+
+function snakeSymbolismImage(src: string, alt: string, width: number, height: number, caption?: string) {
+    return {
+        src: `${snakeSymbolismImageBase}/${src}`,
+        alt,
+        width,
+        height,
+        caption
+    };
+}
+
 const blogPostsData: BlogPost[] = [
+    {
+        slug: "snake-symbolism",
+        canonicalUrl: "https://animaldex.app/blog/snake-symbolism",
+        title: "Snake Symbolism: Spine, DNA, Transformation, Occult Meaning & Hidden Sight",
+        description: "Explore snake symbolism through biology, ancient occult imagery, staffs, the spine, DNA, kundalini energy, ball python coils, slit eyes, transformation, and the idea that snakes can sense the past and future.",
+        publishedAt: "2026-06-14",
+        updatedAt: "2026-06-14",
+        featuredImage: snakeSymbolismImage(
+            "snake-symbolism-hero.webp",
+            "A symbolic snake in a dark mystical naturalist scene, representing spine, DNA, transformation, and hidden sight",
+            1350,
+            1179,
+            "The snake is one of the oldest and most powerful animal symbols in human history."
+        ),
+        readingMinutes: 10,
+        author: "AnimalDex",
+        tags: ["Snake Symbolism", "Animal Symbolism", "Animal Archetypes", "Occult Symbolism", "Reptile Symbolism", "AnimalDex"],
+        searchIntents: [
+            "snake symbolism",
+            "what does a snake symbolize",
+            "snake spiritual meaning",
+            "snake occult symbolism",
+            "snake archetype",
+            "snake spine symbolism",
+            "snake DNA symbolism",
+            "kundalini snake symbolism",
+            "ball python symbolism",
+            "snake slit eyes symbolism",
+            "snake dream meaning",
+            "animal symbolism snake"
+        ],
+        speciesSlugs: ["snake"],
+        systemsSpeciesSlugs: ["snake"],
+        tableOfContents: [
+            "Quick Answer",
+            "The Snake as a Symbol of the Spine",
+            "Why Snakes Appear on Staffs",
+            "Snake Symbolism and DNA",
+            "The Snake Lives Close to the Ground",
+            "Slit Eyes and Hidden Vision",
+            "Can Snakes See the Past and Future?",
+            "The Ball Python and the Symbolism of the Coil",
+            "Shedding Skin and Rebirth",
+            "Occult Snake Symbolism",
+            "The Snake as Kundalini Energy",
+            "Snake Symbolism in Dreams",
+            "Snake Archetype: The Hidden Current",
+            "What the Snake Teaches",
+            "Final Meaning of Snake Symbolism",
+            "Snake Symbolism Quick Summary",
+            "Related Animal Symbolism"
+        ],
+        sections: [
+            {
+                kicker: "Quick answer",
+                title: "Quick Answer",
+                paragraphs: [
+                    "The snake is one of the oldest and most powerful animal symbols in human history.",
+                    "It appears in ancient scriptures, occult systems, healing symbols, mythology, dreams, temples, staffs, spiritual traditions, and modern symbolic interpretations of DNA, the spine, and transformation.",
+                    "But the snake is not powerful as a symbol by accident. The snake's meaning comes from what it actually is.",
+                    "A snake has no legs, no arms, no obvious tools, and no armor like a turtle or crab. Yet it survives through sensitivity, timing, patience, vibration, stealth, venom, pressure, and total body awareness.",
+                    "It lives close to the earth. It moves like a wave. It sheds its skin. It coils before it strikes. It senses what others miss.",
+                    "The snake is not just evil or dangerous. The snake is a living symbol of hidden life force."
+                ],
+                pullQuote: "The snake is a living symbol of hidden life force."
+            },
+            {
+                title: "The Snake as a Symbol of the Spine",
+                paragraphs: [
+                    "One of the strongest symbolic connections is between the snake and the spine.",
+                    "The spine is the central column of the human body. It supports posture, carries nerve signals, protects the spinal cord, and connects the brain to the rest of the body.",
+                    "The snake's body looks like a spine set free.",
+                    "It is long, flexible, segmented, and controlled by precise waves of movement. A snake does not walk with separate limbs. Its entire body becomes the instrument of motion.",
+                    "Symbolically, this makes the snake feel like a living spinal column, a nerve pathway, a current moving through the body, a hidden force beneath consciousness, and energy traveling through the central axis.",
+                    "This is why snakes are often connected to inner power, life force, instinct, and awakened energy.",
+                    "In many esoteric interpretations, the snake represents energy rising through the body. The body becomes the staff. The spine becomes the central pillar. The snake becomes the living current moving through it."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-spine-symbolism.webp",
+                        "Snake body arranged like a human spine, symbolizing life force moving through the central column",
+                        1536,
+                        1024,
+                        "The snake's body looks like a spine set free."
+                    )
+                },
+                speciesSlugs: ["snake"]
+            },
+            {
+                title: "Why Snakes Appear on Staffs",
+                paragraphs: [
+                    "Snakes are often shown wrapped around staffs, rods, pillars, and trees.",
+                    "This image appears in many symbolic systems.",
+                    "The Rod of Asclepius, associated with healing and medicine, shows a single serpent wrapped around a staff. The caduceus, associated with Hermes or Mercury, shows two serpents winding around a central staff.",
+                    "These symbols are often interpreted in different ways depending on the tradition, but they commonly point toward healing, medicine, balance, life force, transformation, hidden knowledge, movement between worlds, and energy rising through the body.",
+                    "The staff can symbolize the central column. The serpent can symbolize the living current. Together, they create an image of power moving through structure.",
+                    "That is why the serpent-on-staff image feels so ancient and mysterious. It is not just a decorative symbol. It looks like energy wrapped around the axis of life."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-staff-symbolism.webp",
+                        "Serpent wrapped around an ancient staff, symbolizing healing, hidden knowledge, and energy rising through structure",
+                        1024,
+                        768,
+                        "The staff can symbolize the central column. The serpent can symbolize the living current."
+                    )
+                }
+            },
+            {
+                title: "Snake Symbolism and DNA",
+                paragraphs: [
+                    "The connection between snakes and DNA is a more modern symbolic interpretation, but it is easy to understand visually.",
+                    "DNA is shaped like a double helix. Two strands spiral around a central axis. Two snakes winding around a staff look strangely similar.",
+                    "Because of this, snakes can symbolically represent biological memory, inherited knowledge, life codes, genetic transformation, ancestral patterns, and the hidden design inside living things.",
+                    "The snake becomes a symbol of the code beneath the body.",
+                    "Not just the body itself, but the invisible pattern that builds the body.",
+                    "In this interpretation, the snake represents the deep biological script of life."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-dna-symbolism.webp",
+                        "Snake and double helix imagery representing DNA, inherited memory, and the hidden biological code of life",
+                        168,
+                        300,
+                        "The snake becomes a symbol of the code beneath the body."
+                    )
+                }
+            },
+            {
+                title: "The Snake Lives Close to the Ground",
+                paragraphs: [
+                    "A snake moves directly against the earth.",
+                    "It does not stand above the ground like a horse, bird, deer, or human. It feels the surface of the world with its whole body.",
+                    "This gives the snake a very different symbolic feeling.",
+                    "The snake represents grounded instinct.",
+                    "It senses vibration. It moves through pressure. It reads the environment through contact.",
+                    "This makes the snake a symbol of earth energy, instinct, survival awareness, hidden movement, subtle perception, ancient memory, and forces beneath the surface.",
+                    "Where a bird may symbolize sky, vision, and freedom, the snake symbolizes the undercurrent.",
+                    "It is not above the world. It is beneath, within, and touching the world."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-ground-symbolism.webp",
+                        "Snake moving close to the earth, symbolizing grounded instinct, vibration, and hidden movement",
+                        1536,
+                        1024,
+                        "The snake symbolizes the undercurrent: beneath, within, and touching the world."
+                    )
+                }
+            },
+            {
+                title: "Slit Eyes and Hidden Vision",
+                paragraphs: [
+                    "Many snakes have vertical slit pupils.",
+                    "These eyes give the snake a mysterious and intense appearance. Symbolically, slit eyes feel like narrow gates of perception.",
+                    "They do not feel soft, open, or emotional. They feel focused.",
+                    "A snake's gaze symbolizes precision, patience, and hidden awareness. It is the look of an animal that waits, watches, measures, and strikes only when the timing is right.",
+                    "The snake does not waste movement. It does not chase everything. It reads the moment.",
+                    "Symbolically, the snake's slit eyes may represent focused perception, seeing through illusion, waiting for the right moment, hidden knowledge, silent observation, predatory timing, and awareness of subtle movement.",
+                    "The snake sees differently. And because it sees differently, it symbolizes the ability to notice what others overlook."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-slit-eyes.webp",
+                        "Close-up of a snake eye with a vertical slit pupil, symbolizing focused perception and hidden vision",
+                        1024,
+                        887,
+                        "Slit eyes feel like narrow gates of perception."
+                    )
+                }
+            },
+            {
+                title: "Can Snakes See the Past and Future?",
+                paragraphs: [
+                    "There is a symbolic idea that snakes can see the past and future.",
+                    "This does not have to mean snakes literally predict the future like magic.",
+                    "Symbolically, the snake sees the past and future because it reads patterns.",
+                    "A snake can follow scent. It can sense vibration. It can detect heat. It can wait in stillness. It can feel what is moving through the ground.",
+                    "This makes the snake feel like an animal that reads invisible information.",
+                    "The past is found in trails, scent, movement, and what has already passed through the environment. The future is sensed through timing, tension, vibration, and what is about to move.",
+                    "The snake survives by understanding what came before and what is about to happen next.",
+                    "That is why it can symbolize prophecy, intuition, pattern recognition, and deep instinct.",
+                    "You can watch a short explanation of this idea here."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Snake hidden sight",
+                    images: [
+                        snakeSymbolismImage(
+                            "snake-past-future-symbolism.webp",
+                            "Symbolic snake image showing past and future motifs, representing pattern recognition, intuition, and hidden sight",
+                            1536,
+                            1024,
+                            "The snake survives by understanding what came before and what is about to happen next."
+                        )
+                    ]
+                },
+                subsections: [
+                    {
+                        title: "Watch: Snake Symbolism and Seeing Past/Future",
+                        paragraphs: [
+                            "Watch the AnimalDex short on snake symbolism and hidden sight."
+                        ],
+                        media: {
+                            type: "video",
+                            title: "Snake Symbolism Short",
+                            embedUrl: "https://www.youtube.com/embed/bMn2wZsol0g",
+                            watchUrl: "https://www.youtube.com/shorts/bMn2wZsol0g",
+                            caption: "AnimalDex short on snake symbolism, pattern reading, and the idea of sensing past and future."
+                        }
+                    }
+                ]
+            },
+            {
+                title: "The Ball Python and the Symbolism of the Coil",
+                paragraphs: [
+                    "Different snakes can carry different symbolic meanings.",
+                    "The ball python is especially interesting because of its coiling behavior.",
+                    "When threatened, a ball python often curls into a tight ball, protecting its head and center. It does not always respond by attacking. Sometimes it survives by turning inward.",
+                    "This makes the ball python a strong symbol of coiled potential, self-protection, inner transformation, contained energy, stillness before change, retreat before renewal, and the spiral before awakening.",
+                    "The coil is important.",
+                    "A coil is stored energy. It is not dead. It is waiting. It is compressed. It is protected. It is preparing.",
+                    "So the ball python may symbolize the stage of transformation where nothing looks like it is happening from the outside, but something powerful is forming within."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "ball-python-coil-symbolism.webp",
+                        "Ball python curled into a protective coil, symbolizing stored energy, self-protection, and inner transformation",
+                        600,
+                        363,
+                        "A coil is stored energy: waiting, compressed, protected, and preparing."
+                    )
+                }
+            },
+            {
+                title: "Shedding Skin and Rebirth",
+                paragraphs: [
+                    "The most obvious reason snakes symbolize transformation is that they shed their skin.",
+                    "A snake literally leaves behind an old outer layer.",
+                    "This is one of the clearest examples of biology becoming symbolism.",
+                    "Shedding skin can represent rebirth, renewal, letting go, transformation, leaving behind an old identity, growth, healing, and becoming new without becoming someone else.",
+                    "The snake does not become a different creature when it sheds. It becomes a renewed version of itself.",
+                    "That is a powerful symbolic lesson.",
+                    "Transformation is not always about becoming something completely different. Sometimes transformation is about removing the layer that no longer fits."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-shedding-skin-symbolism.webp",
+                        "Snake symbolism artwork with shed skin and rebirth motifs, representing renewal and transformation",
+                        1536,
+                        1024,
+                        "Transformation can mean removing the layer that no longer fits."
+                    )
+                }
+            },
+            {
+                title: "Occult Snake Symbolism",
+                paragraphs: [
+                    "In occult symbolism, the snake often represents hidden knowledge, spiritual energy, temptation, danger, healing, and awakening.",
+                    "It is a symbol of power that can either destroy or transform depending on how it is handled.",
+                    "This is why snake symbolism is often dual.",
+                    "The snake can mean poison or medicine. Danger or healing. Death or rebirth. Temptation or wisdom. Instinct or enlightenment.",
+                    "The snake is rarely simple. It represents energy before it is moralized.",
+                    "The same force can heal or harm.",
+                    "That is what makes the snake so powerful as an occult symbol. It is not good or evil by itself. It is raw force, hidden knowledge, and transformation.",
+                    "The question is how that force is used."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "occult-snake-symbolism.webp",
+                        "Occult snake symbolism with dark mystical details, representing hidden knowledge, danger, healing, and awakening",
+                        640,
+                        696,
+                        "The snake represents energy before it is moralized."
+                    )
+                }
+            },
+            {
+                title: "The Snake as Kundalini Energy",
+                paragraphs: [
+                    "In kundalini symbolism, the serpent is often imagined as coiled energy at the base of the spine.",
+                    "When awakened, this energy rises through the body.",
+                    "This gives the snake a powerful connection to the spine, the nervous system, consciousness, awakening, inner transformation, spiritual energy, and hidden potential.",
+                    "The coiled snake at the base of the spine is like sleeping power.",
+                    "It is not absent. It is waiting.",
+                    "When the snake rises, the hidden becomes conscious.",
+                    "This is why snake symbolism often feels connected to awakening. The snake is not just moving through the outer world. It is also moving through the inner body."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "kundalini-snake-symbolism.webp",
+                        "Kundalini serpent imagery rising through the body, symbolizing coiled energy, awakening, and the spine",
+                        313,
+                        400,
+                        "The coiled snake at the base of the spine is like sleeping power."
+                    )
+                }
+            },
+            {
+                title: "Snake Symbolism in Dreams",
+                paragraphs: [
+                    "In dreams, snakes can mean many different things depending on the emotional tone.",
+                    "A snake dream could symbolize fear, danger, temptation, healing, hidden truth, sexual energy, transformation, instinct, or something rising from the subconscious.",
+                    "The important question is not only what does a snake mean.",
+                    "The better question is: what was the snake doing?",
+                    "Was it hiding? Was it attacking? Was it shedding? Was it coiled? Was it calm? Was it watching you? Was it blocking a path? Was it moving toward you? Was it moving away?",
+                    "The behavior changes the meaning.",
+                    "A coiled snake may represent contained energy. A shedding snake may represent transformation. A striking snake may represent sudden truth, danger, or a force that can no longer be ignored. A calm snake may represent wisdom, healing, or instinct that is no longer feared."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-dream-symbolism.webp",
+                        "Dreamlike snake symbolism scene representing subconscious fear, healing, instinct, and transformation",
+                        1536,
+                        1024,
+                        "In dreams, the behavior of the snake changes the meaning."
+                    )
+                }
+            },
+            {
+                title: "Snake Archetype: The Hidden Current",
+                paragraphs: [
+                    "The snake archetype is the hidden current.",
+                    "It is the force beneath the surface.",
+                    "It is instinct before language. Movement before thought. Knowledge before explanation. Energy before form. Transformation before rebirth.",
+                    "The snake teaches that not all power is loud.",
+                    "Some power is silent, coiled, and waiting.",
+                    "The snake survives by sensing what others miss. It does not need legs because its whole body is a path. It does not need speed all the time because timing is more powerful than panic.",
+                    "The snake reminds us that transformation often begins underground, in the nervous system, in the spine, in instinct, in the hidden parts of the self."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-hidden-current-archetype.webp",
+                        "Tall mystical snake archetype image representing the hidden current beneath consciousness and transformation",
+                        1072,
+                        1920,
+                        "The snake archetype is the hidden current."
+                    )
+                },
+                pullQuote: "Some power is silent, coiled, and waiting."
+            },
+            {
+                title: "What the Snake Teaches",
+                paragraphs: [
+                    "The snake teaches several lessons.",
+                    "1. Stay close to your instincts. The snake survives through sensitivity. It reminds us to listen to subtle signals instead of ignoring them.",
+                    "2. Timing is power. A snake does not move randomly. It waits, watches, and acts when the moment is right.",
+                    "3. Transformation requires shedding. Growth often requires leaving behind an old layer.",
+                    "4. Hidden energy is still energy. Just because something is quiet does not mean it is weak.",
+                    "5. Fear can hide wisdom. Many people fear snakes, but that fear may be part of their symbolic power. The snake forces us to look at what we avoid.",
+                    "6. The body carries knowledge. The snake is not just a head. Its intelligence is in its whole body. It reminds us that awareness can be physical, instinctive, and embodied."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-symbolism-lesson.webp",
+                        "Ouroboros-style snake illustration representing cycles, instinct, transformation, and the lessons of snake symbolism",
+                        740,
+                        740,
+                        "The snake teaches that not all power is loud."
+                    )
+                }
+            },
+            {
+                title: "Final Meaning of Snake Symbolism",
+                paragraphs: [
+                    "The snake symbolizes hidden life force moving through the body and the earth.",
+                    "It represents the spine, DNA, instinct, healing, danger, transformation, rebirth, occult knowledge, and the ability to sense patterns before they become obvious.",
+                    "It is not only a creature of fear. It is a creature of awareness.",
+                    "The snake is a grounded current. A coiled pattern. A living spine. A hidden intelligence. A symbol of death and renewal. A force that can poison or heal.",
+                    "Most of all, the snake symbolizes transformation through direct contact with the unseen.",
+                    "It moves close to the ground, but its meaning reaches all the way into the spine, the nervous system, the ancient world, and the hidden code of life itself."
+                ],
+                media: {
+                    type: "image",
+                    image: snakeSymbolismImage(
+                        "snake-symbolism-final.webp",
+                        "Snake symbolism infographic showing transformation, wisdom, hidden power, spine, DNA, coils, and rebirth",
+                        1536,
+                        1024,
+                        "The snake is a grounded current, a coiled pattern, a living spine, and a hidden intelligence."
+                    )
+                }
+            },
+            {
+                title: "Snake Symbolism Quick Summary",
+                paragraphs: [],
+                table: {
+                    columns: ["Snake Trait", "Symbolic Meaning"],
+                    rows: [
+                        {cells: ["No legs", "Grounded instinct, earth current, direct contact with life"]},
+                        {cells: ["Long spine-like body", "Spine, nervous system, life force"]},
+                        {cells: ["Coiling", "Stored energy, protection, transformation"]},
+                        {cells: ["Shedding skin", "Rebirth, renewal, growth"]},
+                        {cells: ["Slit eyes", "Focus, hidden perception, timing"]},
+                        {cells: ["Venom", "Danger, medicine, dual power"]},
+                        {cells: ["Staff symbolism", "Healing, energy rising, central axis"]},
+                        {cells: ["DNA-like spiral", "Life code, inherited memory, biological pattern"]},
+                        {cells: ["Ball python coil", "Inner transformation, self-protection, potential"]},
+                        {cells: ["Ground movement", "Instinct, vibration, ancient awareness"]}
+                    ]
+                }
+            },
+            {
+                title: "Related Animal Symbolism",
+                paragraphs: [
+                    "If you enjoyed this breakdown, explore more AnimalDex symbolism guides.",
+                    "Start with Octopus Symbolism, then browse the full AnimalDex Blog."
+                ],
+                inlineLinks: [
+                    {
+                        text: "Octopus Symbolism",
+                        slug: "octopus-symbolism",
+                        href: "https://animaldex.app/blog/octopus-symbolism"
+                    },
+                    {
+                        text: "AnimalDex Blog",
+                        slug: "blog",
+                        href: "https://animaldex.app/blog"
+                    }
+                ]
+            }
+        ],
+        faq: [
+            {
+                question: "What does a snake symbolize?",
+                answer: "A snake commonly symbolizes hidden life force, transformation, instinct, healing, danger, rebirth, occult knowledge, and awareness of subtle patterns."
+            },
+            {
+                question: "Why is the snake connected to the spine?",
+                answer: "The snake's long, flexible, segmented body resembles a spine set free, which makes it a strong symbol for the central axis of the body, the nervous system, and energy moving through the body."
+            },
+            {
+                question: "What does snake shedding symbolize?",
+                answer: "Snake shedding symbolizes rebirth, renewal, growth, letting go, healing, and removing an old layer that no longer fits."
+            },
+            {
+                question: "What does a ball python symbolize?",
+                answer: "A ball python can symbolize coiled potential, self-protection, contained energy, inner transformation, and the stage where change is forming inside before it becomes visible outside."
+            }
+        ]
+    },
     {
         slug: "octopus-symbolism",
         title: "Octopus Symbolism: Decentralized Intelligence, Camouflage, and Hidden Adaptation",
@@ -1362,7 +1836,6 @@ const blogPostsData: BlogPost[] = [
                         )
                     ]
                 }
-                // TODO: The image map requested rats-global-memory-field-experiment.webp, but no matching raw source image was present in blog-content-temp.
             },
             {
                 title: "Why Would Mainstream Science Dismiss This?",

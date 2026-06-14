@@ -13,6 +13,7 @@ type BuildContentMetadataOptions = {
     publishedAt?: string;
     updatedAt?: string;
     tags?: string[];
+    canonicalUrl?: string;
 };
 
 export function buildContentMetadata({
@@ -24,18 +25,20 @@ export function buildContentMetadata({
     featuredImage,
     publishedAt,
     updatedAt,
-    tags
+    tags,
+    canonicalUrl
 }: BuildContentMetadataOptions): Metadata {
     const imageUrl = getAbsoluteAssetUrl(featuredImage.src);
     const brandedTitle = title.includes("AnimalDex") ? title : `${title} | AnimalDex`;
     const brandedImageAlt = featuredImage.alt.includes("AnimalDex") ? featuredImage.alt : `${featuredImage.alt} | AnimalDex`;
+    const resolvedCanonical = canonicalUrl || getLocalePath(locale, pathname);
 
     return {
         title,
         description,
         keywords,
         alternates: {
-            canonical: getLocalePath(locale, pathname),
+            canonical: resolvedCanonical,
             languages: localeConfig.locales.reduce((acc, localeItem) => {
                 acc[localeItem] = `/${localeItem}${pathname}`;
                 return acc;
@@ -48,7 +51,7 @@ export function buildContentMetadata({
             locale: getMetadataLocale(locale),
             title: brandedTitle,
             description,
-            url: getLocalePath(locale, pathname),
+            url: resolvedCanonical,
             publishedTime: publishedAt,
             modifiedTime: updatedAt,
             tags,

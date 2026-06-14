@@ -330,6 +330,56 @@ function renderSectionCards(cards: NonNullable<ReturnType<typeof getBlogPost>>["
     );
 }
 
+function renderSectionTable(table: NonNullable<ReturnType<typeof getBlogPost>>["sections"][number]["table"]) {
+    if (!table || table.columns.length === 0 || table.rows.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-line-300/80 bg-surface-800/60">
+            <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] border-collapse text-left">
+                    <thead>
+                        <tr className="border-b border-line-300/80 bg-surface-700/70">
+                            {table.columns.map((column) => (
+                                <th
+                                    key={column}
+                                    scope="col"
+                                    className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200"
+                                >
+                                    {column}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table.rows.map((row, rowIndex) => (
+                            <tr key={`${row.cells.join("-")}-${rowIndex}`} className="border-b border-line-300/60 last:border-b-0">
+                                {row.cells.map((cell, cellIndex) => {
+                                    const CellTag = cellIndex === 0 ? "th" : "td";
+
+                                    return (
+                                        <CellTag
+                                            key={`${cell}-${cellIndex}`}
+                                            scope={cellIndex === 0 ? "row" : undefined}
+                                            className={cellIndex === 0
+                                                ? "px-5 py-4 align-top text-base font-semibold text-white"
+                                                : "px-5 py-4 align-top text-base leading-7 text-ink-200"
+                                            }
+                                        >
+                                            {cell}
+                                        </CellTag>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 function renderTextWithLinks(text: string, links: BlogLink[]) {
     if (links.length === 0) {
         return text;
@@ -409,7 +459,8 @@ export async function generateMetadata({params}: BlogPostPageProps): Promise<Met
         featuredImage: post.featuredImage,
         publishedAt: post.publishedAt,
         updatedAt: post.updatedAt,
-        tags: post.tags
+        tags: post.tags,
+        canonicalUrl: post.canonicalUrl
     });
 }
 
@@ -445,7 +496,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
         t("ctaSupportThree")
     ];
 
-    const postUrl = getAbsoluteUrl(locale, `/blog/${post.slug}`);
+    const postUrl = post.canonicalUrl || getAbsoluteUrl(locale, `/blog/${post.slug}`);
     const schema = {
         "@context": "https://schema.org",
         "@type": "BlogPosting",
@@ -565,7 +616,11 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                                         </p>
                                     )}
                                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
-                                    {section.cards ? renderSectionCards(section.cards) : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
+                                    {section.table
+                                        ? renderSectionTable(section.table)
+                                        : section.cards
+                                            ? renderSectionCards(section.cards)
+                                            : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
                                     {section.pullQuote && renderPullQuote(section.pullQuote)}
                                     {section.media && renderSectionMedia(section.media)}
                                     {section.subsections && section.subsections.map((subsection) => (
