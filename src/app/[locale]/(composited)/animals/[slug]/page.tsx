@@ -396,7 +396,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const principleBreadcrumbSchema = principleProfile ? {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        itemListElement: principleProfile.hasCatalogLesson
+        itemListElement: principleProfile.hasLessonPage
             ? [
                 {
                     "@type": "ListItem",
@@ -635,7 +635,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {t("principleTitle", {animal: entry.name})}
                     </h2>
                     <p className="text-ink-300 text-sm md:text-base">
-                        {principleProfile.hasCatalogLesson ? (
+                        {principleProfile.hasLessonPage ? (
                             <>
                                 <span className="text-white">{t("lessonPageLabel")}: </span>
                                 <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
@@ -645,7 +645,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         ) : null}
                         {principleProfile.clusterPrincipleSlug ? (
                             <>
-                                {principleProfile.hasCatalogLesson ? " · " : null}
+                                {principleProfile.hasLessonPage ? " · " : null}
                                 <span className="text-white">{t("principleHubLabel")}: </span>
                                 <Link href={`/principles/${principleProfile.clusterPrincipleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
                                     {principleProfile.clusterPrinciple}

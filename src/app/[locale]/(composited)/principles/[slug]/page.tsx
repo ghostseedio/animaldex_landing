@@ -151,7 +151,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                             >
                                 {t("openAnimal")}
                             </Link>
-                            {profile.hasCatalogLesson ? (
+                            {profile.hasLessonPage ? (
                                 <Link
                                     href={`/animal-lessons/${entry.slug}`}
                                     underline

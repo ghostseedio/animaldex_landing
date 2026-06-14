@@ -1,6 +1,6 @@
 # Behavior Lessons Gap Report
 
-_Generated: 2026-06-14T13:27:49.088Z_
+_Generated: 2026-06-14T14:07:01.651Z_
 
 ## Summary
 
@@ -47,7 +47,7 @@ These pages still fall back to locally inferred principles until catalog backfil
 | Basilisk Lizard | `basilisk-lizard` | Precision | A fast move becomes extraordinary when it uses the environment in an unexpected way. |
 | Burrowing Parrot | `burrowing-parrot` | Efficiency | A species can solve home-building in ways its relatives never try. |
 | Carp | `carp` | Precision | In Carp, precision creates a repeatable survival edge when conditions are uncertain. |
-| Cat | `cat` | Adaptability | In Cat, adaptability creates a repeatable survival edge when conditions are uncertain. |
+| Cat | `cat` | Threshold Independence | Independence works best when comfort and readiness exist together. |
 | Chameleon | `chameleon` | Precision | Do not confuse stillness with inactivity. Good surveillance buys better timing than constant motion. |
 | Cicada | `cicada` | Precision | If you cannot win by being scarce, sometimes you win by arriving all at once. |
 | Coati | `coati` | Efficiency | A good sensing tool becomes more useful when many bodies can search at once. |
@@ -58,14 +58,14 @@ These pages still fall back to locally inferred principles until catalog backfil
 | Crocodile | `crocodile` | Efficiency | You do not need to dominate every square meter. Control the bottlenecks and the rest of the map starts behaving differently. |
 | Deer | `deer` | Precision | In Deer, precision creates a repeatable survival edge when conditions are uncertain. |
 | Dik-dik | `dik-dik` | Efficiency | Small systems stay safe by staying close to shelter and reacting early. |
-| Dolphin | `dolphin` | Communication | Shared signals improve coordination when conditions are noisy. |
-| Dragonfly | `dragonfly` | Precision | Precision compounds when sensing and maneuverability improve together instead of separately. |
+| Dolphin | `dolphin` | Echo Social Intelligence | Clear communication becomes power when the environment is noisy. |
+| Dragonfly | `dragonfly` | Transformation Precision | Transformation becomes power when new vision creates new movement. |
 | Drill Monkey | `drill-monkey` | Precision | Dense environments reward precision, patience, and the ability to read layered cover. |
 | Eagle | `eagle` | Efficiency | Use the energy already available in the environment. Systems that borrow momentum from context outperform systems that brute-force everything themselves. |
-| Elephant | `elephant` | Memory | The lessons you already learned become your map for future decisions. |
+| Elephant | `elephant` | Living Archive | Memory becomes wisdom when it protects the future. |
 | Finch | `finch` | Precision | In Finch, precision creates a repeatable survival edge when conditions are uncertain. |
 | Firefly | `firefly` | Observation | A strong signal is not necessarily a loud one. The best signals are energy-efficient, hard to confuse, and tuned to the right audience. |
-| Fox | `fox` | Adaptability | In Fox, adaptability creates a repeatable survival edge when conditions are uncertain. |
+| Fox | `fox` | Clever Adaptation | Survival favors the one who reads the edge and adjusts early. |
 | Gharial | `gharial` | Efficiency | Perfect tools often depend on perfect conditions. |
 | Giant Tortoise | `giant-tortoise` | Precision | In Giant Tortoise, precision creates a repeatable survival edge when conditions are uncertain. |
 | Giant Waxy Monkey Tree Frog | `giant-waxy-monkey-tree-frog` | Precision | Dense environments reward precision, patience, and the ability to read layered cover. |
@@ -85,14 +85,14 @@ These pages still fall back to locally inferred principles until catalog backfil
 | Mata Mata Turtle | `mata-mata-turtle` | Stealth | Confusion can be a powerful form of concealment. |
 | Norwegian Forest Cat | `norwegian-forest-cat` | Precision | In Norwegian Forest Cat, precision creates a repeatable survival edge when conditions are uncertain. |
 | Nyala | `nyala` | Efficiency | Patterns work best when they match the place where you move. |
-| Octopus | `octopus` | Adaptability | Decentralized sensing and action can outperform rigid plans under pressure. |
+| Octopus | `octopus` | Distributed Nervous Intelligence | Flexible awareness beats rigid control when conditions change fast. |
 | Orangutan | `orangutan` | Memory | Slow learning can outperform fast reacting in complex environments. |
 | Otter | `otter` | Adaptability | In Otter, adaptability creates a repeatable survival edge when conditions are uncertain. |
-| Owl | `owl` | Observation | In Owl, observation creates a repeatable survival edge when conditions are uncertain. |
+| Owl | `owl` | Silent Night Vision | Wisdom begins where ordinary visibility ends. |
 | Penguin | `penguin` | Teamwork | In Penguin, teamwork creates a repeatable survival edge when conditions are uncertain. |
 | Pigeon | `pigeon` | Memory | In Pigeon, memory creates a repeatable survival edge when conditions are uncertain. |
 | Poison Dart Frog | `poison-dart-frog` | Observation | If you must defend a small footprint, make the cost of testing you obvious. |
-| Raven | `raven` | Precision | In Raven, precision creates a repeatable survival edge when conditions are uncertain. |
+| Raven | `raven` | Pattern Messenger | Intelligence becomes power when memory, timing, and communication meet. |
 | Robin | `robin` | Precision | In Robin, precision creates a repeatable survival edge when conditions are uncertain. |
 | Sable | `sable` | Efficiency | Soft appearance can hide a very efficient system underneath. |
 | Sailfish | `sailfish` | Efficiency | At high speed, even small design advantages compound quickly. |
@@ -101,7 +101,7 @@ These pages still fall back to locally inferred principles until catalog backfil
 | Seal | `seal` | Precision | In Seal, precision creates a repeatable survival edge when conditions are uncertain. |
 | Shark | `shark` | Precision | In Shark, precision creates a repeatable survival edge when conditions are uncertain. |
 | Siberian Cat | `siberian-cat` | Precision | In Siberian Cat, precision creates a repeatable survival edge when conditions are uncertain. |
-| Snake | `snake` | Efficiency | Do not confuse missing parts with weakness. Some of the most efficient systems win by removing what they do not need and perfecting what remains. |
+| Snake | `snake` | Coiled Transformation | Efficient power often comes from removing what is unnecessary and perfecting what remains. |
 | Striped Polecat | `striped-polecat` | Observation | A strong warning can save energy by preventing the fight entirely. |
 | Termite | `termite` | Efficiency | Some of the best systems create value by turning low-grade input into usable output. Waste is often just a resource without the right processing stack. |
 | Tiger | `tiger` | Stealth | A high-value move beats a high-volume one. Save force for the window where surprise and position make the cost worth paying. |
@@ -213,16 +213,3 @@ Catalog rows with `core_lesson` and `landing_page_slug`, but no matching website
 2. Add website species pages for high-intent catalog-only animals, starting with numbered active catalog entries.
 3. Keep `/principles/*` as the 10-cluster browse layer; species-specific DB principles should surface through `/animal-lessons/[slug]`.
 4. Re-run `node scripts/generateBehaviorLessonsGapReport.js` after each behavior backfill batch.
-
-## Backfill Queue
-
-Import-ready prioritized CSV for the 67 website species missing catalog lessons:
-
-- [behavior-lessons-backfill-priority.csv](./behavior-lessons-backfill-priority.csv)
-- [behavior-lessons-backfill-priority.md](./behavior-lessons-backfill-priority.md)
-
-Regenerate with:
-
-```bash
-node scripts/generateBehaviorLessonsBackfillCsv.js
-```
