@@ -1,7 +1,10 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import ExploreKnowledgeLinks from "@/app/[locale]/(composited)/_components/explore-knowledge-links";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {getBehaviorLessonIndex} from "@/data/species-behavior-lessons";
+import {getSpeciesBySlug} from "@/data/species";
+import {getSpeciesImageAltText} from "@/data/species-images";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -10,7 +13,20 @@ type AnimalLessonsPageProps = {
     params: {
         locale: string;
     };
+    searchParams?: {
+        letter?: string | string[];
+    };
 };
+
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+function getSingleParam(value?: string | string[]) {
+    return Array.isArray(value) ? value[0] : value;
+}
+
+function getLetterHref(letter: string) {
+    return letter === "all" ? "/animal-lessons" : `/animal-lessons?letter=${letter}`;
+}
 
 export async function generateMetadata({params}: AnimalLessonsPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "animalLessons");
@@ -38,17 +54,22 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
     };
 }
 
-export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
+export default async function AnimalLessonsPage({params, searchParams}: AnimalLessonsPageProps) {
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const lessons = await getBehaviorLessonIndex();
+    const requestedLetter = getSingleParam(searchParams?.letter)?.toUpperCase() ?? "all";
+    const activeLetter = alphabet.includes(requestedLetter) ? requestedLetter : "all";
+    const visibleLessons = activeLetter === "all"
+        ? lessons
+        : lessons.filter((lesson) => lesson.displayName.toUpperCase().startsWith(activeLetter));
     const pageDescription = t("description");
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         name: t("title"),
         description: pageDescription,
-        url: getAbsoluteUrl(params.locale, "/animal-lessons"),
-        hasPart: lessons.slice(0, 120).map((lesson) => ({
+        url: getAbsoluteUrl(params.locale, activeLetter === "all" ? "/animal-lessons" : `/animal-lessons?letter=${activeLetter}`),
+        hasPart: visibleLessons.slice(0, 120).map((lesson) => ({
             "@type": "Article",
             headline: t("detailHeroTitle", {animal: lesson.displayName}),
             description: lesson.coreLesson,
@@ -72,27 +93,78 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                 <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("featuredDescription")}</p>
             </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {lessons.map((lesson) => (
-                    <section key={lesson.slug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">
-                        <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{lesson.principleName}</p>
-                        <h2 className="text-white font-display font-bold text-2xl md:text-3xl">{lesson.displayName}</h2>
-                        {lesson.shortMotto && <p className="text-primary-200">{lesson.shortMotto}</p>}
-                        <p className="text-ink-200">{lesson.coreLesson}</p>
-                        {lesson.bestUseCases.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {lesson.bestUseCases.slice(0, 3).map((item) => (
-                                    <span key={item} className="rounded-full border border-line-300/70 px-3 py-1 text-xs text-ink-200">
-                                        {item}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                        <Link href={`/animal-lessons/${lesson.slug}`} underline className="text-primary-200 hover:text-primary-100 mt-auto">
-                            {t("openLesson")}
+            <nav className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 md:p-6 flex flex-col gap-3" aria-label={t("alphabetLabel")}>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm uppercase tracking-[0.16em] font-medium text-primary-200">{t("alphabetLabel")}</p>
+                    <p className="text-sm text-ink-300">{t("filteredLessonCount", {count: visibleLessons.length})}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Link
+                        href={getLetterHref("all")}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                            activeLetter === "all"
+                                ? "border-primary-400 bg-primary-500/20 text-white"
+                                : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
+                        }`}
+                    >
+                        {t("filterAll")}
+                    </Link>
+                    {alphabet.map((letter) => (
+                        <Link
+                            key={letter}
+                            href={getLetterHref(letter)}
+                            className={`h-9 min-w-9 rounded-full border px-3 text-sm transition-colors flex items-center justify-center ${
+                                activeLetter === letter
+                                    ? "border-primary-400 bg-primary-500/20 text-white"
+                                    : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
+                            }`}
+                        >
+                            {letter}
                         </Link>
-                    </section>
-                ))}
+                    ))}
+                </div>
+            </nav>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {visibleLessons.map((lesson) => {
+                    const speciesEntry = getSpeciesBySlug(lesson.slug);
+                    const imageAlt = speciesEntry
+                        ? getSpeciesImageAltText(speciesEntry, "thumbnail")
+                        : `${lesson.displayName} animal lesson image on AnimalDex`;
+
+                    return (
+                        <section key={lesson.slug} className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3">
+                            <div className="flex items-start gap-4">
+                                <Link href={`/animal-lessons/${lesson.slug}`} className="block shrink-0" aria-label={t("detailHeroTitle", {animal: lesson.displayName})}>
+                                    <SpeciesArtworkImage
+                                        slug={lesson.slug}
+                                        alt={imageAlt}
+                                        className="h-20 w-20 rounded-2xl border border-line-300"
+                                        sizes="80px"
+                                    />
+                                </Link>
+                                <div className="min-w-0 flex flex-col gap-2">
+                                    <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{lesson.principleName}</p>
+                                    <h2 className="text-white font-display font-bold text-2xl md:text-3xl">{lesson.displayName}</h2>
+                                    {lesson.shortMotto && <p className="text-primary-200">{lesson.shortMotto}</p>}
+                                </div>
+                            </div>
+                            <p className="text-ink-200">{lesson.coreLesson}</p>
+                            {lesson.bestUseCases.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {lesson.bestUseCases.slice(0, 3).map((item) => (
+                                        <span key={item} className="rounded-full border border-line-300/70 px-3 py-1 text-xs text-ink-200">
+                                            {item}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            <Link href={`/animal-lessons/${lesson.slug}`} underline className="text-primary-200 hover:text-primary-100 mt-auto">
+                                {t("openLesson")}
+                            </Link>
+                        </section>
+                    );
+                })}
             </div>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4">
