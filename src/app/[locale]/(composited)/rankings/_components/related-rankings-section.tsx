@@ -38,13 +38,13 @@ export default function RelatedRankingsSection({
                             {item.categoryLabel}
                         </span>
                         <h3 className="font-display font-bold text-2xl text-white">
-                            <Link href={`/rankings/${item.slug}`} className="hover:text-primary-100 transition-colors">
+                            <Link href={`/tier-list/${item.slug}`} className="hover:text-primary-100 transition-colors">
                                 {item.title}
                             </Link>
                         </h3>
                         <p className="text-ink-200 text-base">{item.description}</p>
                         <Link
-                            href={`/rankings/${item.slug}`}
+                            href={`/tier-list/${item.slug}`}
                             className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
                             underline
                         >

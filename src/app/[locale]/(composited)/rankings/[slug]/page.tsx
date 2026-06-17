@@ -9,7 +9,7 @@ import RankingMethodology from "@/app/[locale]/(composited)/rankings/_components
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import {getChallenge} from "@/data/challenges";
-import {getRankingPage, getRelatedRankings, rankingPages} from "@/data/rankings";
+import {getExpandedRankingEntries, getRankingPage, getRankingTierListTitle, getRelatedRankings, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {getSpeciesBySlug} from "@/data/species";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -35,6 +35,12 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
+function getSchemaImageUrl(locale: string, imageSrc: string) {
+    return imageSrc.startsWith("http://") || imageSrc.startsWith("https://")
+        ? imageSrc
+        : getAbsoluteUrl(locale, imageSrc);
+}
+
 export async function generateMetadata({params}: RankingPageProps): Promise<Metadata> {
     const {locale, slug} = params;
     const ranking = getRankingPage(slug);
@@ -51,8 +57,8 @@ export async function generateMetadata({params}: RankingPageProps): Promise<Meta
 
     return buildContentMetadata({
         locale,
-        pathname: `/rankings/${ranking.slug}`,
-        title: ranking.title,
+        pathname: `${RANKING_CANONICAL_BASE_PATH}/${ranking.slug}`,
+        title: getRankingTierListTitle(ranking),
         description: ranking.description,
         keywords,
         featuredImage: ranking.featuredImage,
@@ -71,7 +77,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         notFound();
     }
 
-    const resolvedEntries = ranking.entries.map((entry) => {
+    const resolvedEntries = getExpandedRankingEntries(ranking).map((entry) => {
         const species = getSpeciesBySlug(entry.speciesSlug);
 
         if (!species) {
@@ -110,9 +116,10 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
             };
         })
         .filter((entry): entry is RelatedChallengeCard => Boolean(entry));
+    const title = getRankingTierListTitle(ranking);
     const relatedRankings = getRelatedRankings(ranking.slug, 3).map((page) => ({
         slug: page.slug,
-        title: page.title,
+        title: getRankingTierListTitle(page),
         description: page.description,
         categoryLabel: t(`categories.${page.category}`)
     }));
@@ -121,17 +128,17 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         t("ctaSupportTwo"),
         t("ctaSupportThree")
     ];
-    const pageUrl = getAbsoluteUrl(locale, `/rankings/${ranking.slug}`);
+    const pageUrl = getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${ranking.slug}`);
     const articleSchema = {
         "@context": "https://schema.org",
         "@type": "Article",
-        headline: ranking.title,
+        headline: title,
         description: ranking.description,
         datePublished: ranking.publishedAt,
         dateModified: ranking.updatedAt,
         inLanguage: locale,
         url: pageUrl,
-        image: getAbsoluteUrl(locale, ranking.featuredImage.src),
+        image: getSchemaImageUrl(locale, ranking.featuredImage.src),
         keywords: ranking.searchIntents.join(", "),
         author: {"@type": "Organization", name: "AnimalDex"},
         publisher: {"@type": "Organization", name: "AnimalDex"}
@@ -172,12 +179,12 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 "@type": "ListItem",
                 position: 2,
                 name: t("title"),
-                item: getAbsoluteUrl(locale, "/rankings")
+                item: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)
             },
             {
                 "@type": "ListItem",
                 position: 3,
-                name: ranking.title,
+                name: title,
                 item: pageUrl
             }
         ]
@@ -190,12 +197,12 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            <Link href="/rankings" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
+            <Link href={RANKING_CANONICAL_BASE_PATH} className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                 {t("back")}
             </Link>
 
             <RankingHero
-                title={ranking.title}
+                title={title}
                 description={ranking.description}
                 categoryLabel={t(`categories.${ranking.category}`)}
                 publishedLabel={t("published")}
@@ -222,11 +229,13 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     rank: t("rankLabel"),
                     animal: t("animalLabel"),
                     metric: t("metricLabel"),
+                    tier: t("tierLabel"),
                     whyItRanks: t("whyItRanksLabel"),
                     readSpecies: t("readSpecies")
                 }}
                 items={entries.map((entry) => ({
                     rank: entry.rank,
+                    tier: entry.tier,
                     speciesSlug: entry.species.slug,
                     speciesName: entry.species.name,
                     primaryMetric: entry.primaryMetric,
@@ -256,7 +265,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     <p className="text-ink-200 text-lg md:text-xl">{t("entryCardsDescription")}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {entries.map((entry) => (
+                    {entries.slice(0, 10).map((entry) => (
                         <RankingEntryCard
                             key={`${entry.rank}-${entry.species.slug}`}
                             rank={entry.rank}

@@ -8,9 +8,9 @@
   },
   {
     "eyebrowId": "read",
-    "name": "AnimalDex Journal",
+    "name": "AnimalDex Blog",
     "icon": "/images/downloads/journal.svg",
-    "href": "/journal",
+    "href": "/blog",
     "unavailable": false
   },
   {

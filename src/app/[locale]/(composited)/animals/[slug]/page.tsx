@@ -10,7 +10,7 @@ import SpeciesStatsSection from "@/app/[locale]/(composited)/animals/[slug]/spec
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import {getBlogPostsForSpecies} from "@/data/blog";
 import {getChallengesForSpecies} from "@/data/challenges";
-import {getRankingsForSpecies} from "@/data/rankings";
+import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {
     getSpeciesImageAltText,
@@ -1045,15 +1045,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     </p>
                                     <h3 className="font-display font-bold text-2xl text-white">
                                         <Link
-                                            href={`/rankings/${ranking.slug}`}
+                                            href={`/tier-list/${ranking.slug}`}
                                             className="hover:text-primary-100 transition-colors"
                                         >
-                                            {ranking.title}
+                                            {getRankingTierListTitle(ranking)}
                                         </Link>
                                     </h3>
                                     <p className="text-ink-200 text-base">{rankingEntry.shortReason}</p>
                                     <Link
-                                        href={`/rankings/${ranking.slug}`}
+                                        href={`/tier-list/${ranking.slug}`}
                                         className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
                                         underline
                                     >

@@ -265,7 +265,7 @@ function normalizeAnalysisError(value: string | null | undefined) {
     return value.trim();
 }
 
-function buildDeterministicCanonicalStats(entry: SpeciesEntry): SpeciesStats {
+export function buildDeterministicCanonicalStats(entry: SpeciesEntry): SpeciesStats {
     const category = entry.analysis.category.toLowerCase();
     const description = [
         entry.name,

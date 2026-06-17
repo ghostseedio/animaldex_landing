@@ -11,7 +11,11 @@
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",
     "seo:audit:catalog-parity": "node scripts/generateCatalogWebsiteParityReport.js",
-    "support:setup-webhook": "node scripts/setupResendSupportWebhook.js"
+    "support:setup-webhook": "node scripts/setupResendSupportWebhook.js",
+    "symbolism:generate": "node scripts/generateSymbolismPostFiles.cjs",
+    "symbolism:queue": "node scripts/generateSymbolismBlogQueue.cjs",
+    "symbolism:validate": "node scripts/validateSymbolismPosts.cjs",
+    "symbolism:seed-images": "node scripts/seedSymbolismImages.cjs"
   },
   "dependencies": {
     "@types/node": "18.13.0",

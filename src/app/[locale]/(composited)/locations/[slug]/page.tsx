@@ -12,7 +12,7 @@ import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_compon
 import {getBlogPost} from "@/data/blog";
 import {getChallenge} from "@/data/challenges";
 import {getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
-import {getRankingPage} from "@/data/rankings";
+import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
 import {buildContentMetadata} from "@/lib/content-metadata";
@@ -137,7 +137,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
         .filter((page): page is NonNullable<ReturnType<typeof getRankingPage>> => Boolean(page))
         .map((page) => ({
             slug: page.slug,
-            title: page.title,
+            title: getRankingTierListTitle(page),
             description: page.description,
             categoryLabel: rankingsT(`categories.${page.category}`)
         }));

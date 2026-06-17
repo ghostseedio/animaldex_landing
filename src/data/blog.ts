@@ -1,97 +1,31 @@
 import {getChallenge, getChallengesForSpecies} from "@/data/challenges";
-import {BlogMediaBlock, CanonicalContentMetadata} from "@/data/content-schema";
+import {BlogMediaBlock} from "@/data/content-schema";
+import {journalMigratedPosts} from "@/data/blog/journal-migrated-posts";
+import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
+import {
+    BlogFAQ,
+    BlogLink,
+    BlogPost,
+    BlogSection,
+    BlogSectionCard,
+    BlogSectionTable,
+    BlogSource,
+    BlogSubsection,
+    createAnimalSystemsPost
+} from "@/data/blog/types";
 
-export type BlogLink = {
-    text: string;
-    slug: string;
-    href?: string;
-    kind?: "species" | "challenge";
-};
+export type {
+    BlogFAQ,
+    BlogLink,
+    BlogPost,
+    BlogSection,
+    BlogSectionCard,
+    BlogSectionTable,
+    BlogSource,
+    BlogSubsection
+} from "@/data/blog/types";
 
-export type BlogSectionCard = {
-    label: string;
-    body: string;
-    links?: BlogLink[];
-    image?: {
-        src: string;
-        alt: string;
-        width: number;
-        height: number;
-    };
-};
-
-export type BlogSectionTable = {
-    columns: string[];
-    rows: Array<{
-        cells: string[];
-    }>;
-};
-
-export type BlogSource = {
-    label: string;
-    href: string;
-};
-
-export type BlogSubsection = {
-    title: string;
-    paragraphs: string[];
-    media?: BlogMediaBlock;
-    pullQuote?: string;
-};
-
-export type BlogSection = {
-    kicker?: string;
-    title: string;
-    paragraphs: string[];
-    cards?: BlogSectionCard[];
-    table?: BlogSectionTable;
-    inlineLinks?: BlogLink[];
-    speciesSlugs?: string[];
-    media?: BlogMediaBlock;
-    pullQuote?: string;
-    subsections?: BlogSubsection[];
-};
-
-export type BlogFAQ = {
-    question: string;
-    answer: string;
-};
-
-export type BlogPost = CanonicalContentMetadata & {
-    slug: string;
-    canonicalUrl?: string;
-    readingMinutes: number;
-    author?: string;
-    tags: string[];
-    searchIntents: string[];
-    speciesSlugs: string[];
-    systemsSpeciesSlugs?: string[];
-    relatedChallengeSlugs?: string[];
-    tableOfContents?: string[];
-    sections: BlogSection[];
-    faq?: BlogFAQ[];
-    sources?: BlogSource[];
-};
-
-type AnimalSystemsPostInput = Omit<BlogPost, "publishedAt" | "updatedAt" | "author" | "speciesSlugs" | "systemsSpeciesSlugs"> & {
-    speciesSlug: string;
-    author?: string;
-};
-
-function createAnimalSystemsPost({
-    speciesSlug,
-    author = "AnimalDex Systems Desk",
-    ...post
-}: AnimalSystemsPostInput): BlogPost {
-    return {
-        ...post,
-        publishedAt: "2026-04-10",
-        updatedAt: "2026-04-10",
-        author,
-        speciesSlugs: [speciesSlug],
-        systemsSpeciesSlugs: [speciesSlug]
-    };
-}
+export {createAnimalSystemsPost} from "@/data/blog/types";
 
 const forbiddenAnimalFilesImageBase = "/images/blog/forbidden-animal-files";
 
@@ -166,6 +100,8 @@ function axolotlSymbolismImage(src: string, alt: string, width: number, height: 
 }
 
 const blogPostsData: BlogPost[] = [
+    ...generatedSymbolismPosts,
+    ...journalMigratedPosts,
     {
         slug: "axolotl-symbolism",
         canonicalUrl: "https://animaldex.app/blog/axolotl-symbolism",
@@ -207,7 +143,6 @@ const blogPostsData: BlogPost[] = [
             "The Axolotl as a Symbol of Soft Resilience",
             "Innocence Under Threat",
             "Axolotl Symbolism in Mexican Culture",
-            "The Axolotl as the Inner Child",
             "What the Axolotl Teaches",
             "Final Meaning of Axolotl Symbolism",
             "Axolotl Symbolism Quick Summary",
@@ -479,32 +414,6 @@ const blogPostsData: BlogPost[] = [
                 }
             },
             {
-                title: "The Axolotl as the Inner Child",
-                paragraphs: [
-                    "The axolotl may be one of the strongest animal symbols for the inner child.",
-                    "Not the wounded inner child only, but the creative inner child.",
-                    "The curious part. The playful part. The imaginative part. The part that still wants to explore. The part that still believes strange things matter.",
-                    "When that part is healthy, life feels alive.",
-                    "When that part is damaged, everything becomes gray.",
-                    "The axolotl reminds us that the inner child is not something to outgrow.",
-                    "It is something to protect.",
-                    "It may be the source of regeneration itself.",
-                    "Because without curiosity, we stop growing.",
-                    "Without play, we stop imagining.",
-                    "Without wonder, we stop healing."
-                ],
-                media: {
-                    type: "image",
-                    image: axolotlSymbolismImage(
-                        "axolotl-inner-child.webp",
-                        "Axolotl inner child symbolism image with underwater wonder, imagination, and soft magical details",
-                        1536,
-                        1024,
-                        "The inner child is not something to outgrow. It is something to protect."
-                    )
-                }
-            },
-            {
                 title: "What the Axolotl Teaches",
                 paragraphs: [
                     "The axolotl teaches several lessons.",
@@ -572,10 +481,21 @@ const blogPostsData: BlogPost[] = [
                 }
             },
             {
+                title: "Explore on AnimalDex",
+                paragraphs: [
+                    "Continue learning about the axolotl through species facts, behavior lessons, and related survival strategies on AnimalDex."
+                ],
+                inlineLinks: [
+                    {text: "Axolotl species page", slug: "axolotl", href: "https://animaldex.app/animals/axolotl"},
+                    {text: "Axolotl animal lesson", slug: "axolotl", href: "https://animaldex.app/animal-lessons/axolotl"},
+                    {text: "Resilience survival strategies", slug: "resilience", href: "https://animaldex.app/principles/resilience"},
+                    {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
+                ]
+            },
+            {
                 title: "Related Animal Symbolism",
                 paragraphs: [
-                    "If you enjoyed this breakdown, explore more AnimalDex symbolism guides.",
-                    "Start with Snake Symbolism and Octopus Symbolism, then browse the full AnimalDex Blog."
+                    "If you enjoyed this breakdown, explore more AnimalDex symbolism guides."
                 ],
                 inlineLinks: [
                     {
@@ -589,9 +509,9 @@ const blogPostsData: BlogPost[] = [
                         href: "https://animaldex.app/blog/octopus-symbolism"
                     },
                     {
-                        text: "AnimalDex Blog",
-                        slug: "blog",
-                        href: "https://animaldex.app/blog"
+                        text: "Animal Symbolism hub",
+                        slug: "animal-symbolism",
+                        href: "https://animaldex.app/animal-symbolism"
                     }
                 ]
             }
@@ -635,7 +555,7 @@ const blogPostsData: BlogPost[] = [
     },
     {
         slug: "what-animal-am-i",
-        canonicalUrl: "https://animaldex.app/blog/what-animal-am-i",
+        canonicalUrl: "https://animaldex.app/what-animal-am-i",
         title: "What Animal Am I? Find Out Which Animal You Are with AnimalDex",
         description: "Find out which animal you are with AnimalDex Wild Profile, an adaptive animal identity flow that maps your answers into Origin, Apex, and Active animal patterns.",
         publishedAt: "2026-06-14",
@@ -814,9 +734,14 @@ const blogPostsData: BlogPost[] = [
                     "Start the interview and answer honestly. Short answers can work, but detailed answers give the system more signal.",
                     "When the app has enough information, generate your Wild Profile.",
                     "You will receive an Origin animal, an Apex animal, and an Active animal, each with evidence and meaning inside the app.",
-                    "If you want more animal meaning after that, explore the AnimalDex Blog for symbolism guides and animal pattern breakdowns."
+                    "For the full landing-page walkthrough, start at the What Animal Am I page, then explore the AnimalDex Blog for symbolism guides and animal pattern breakdowns."
                 ],
                 inlineLinks: [
+                    {
+                        text: "What Animal Am I",
+                        slug: "what-animal-am-i",
+                        href: "https://animaldex.app/what-animal-am-i"
+                    },
                     {
                         text: "AnimalDex Blog",
                         slug: "blog",
@@ -968,7 +893,8 @@ const blogPostsData: BlogPost[] = [
                 paragraphs: [
                     "Snakes are often shown wrapped around staffs, rods, pillars, and trees.",
                     "This image appears in many symbolic systems.",
-                    "The Rod of Asclepius, associated with healing and medicine, shows a single serpent wrapped around a staff. The caduceus, associated with Hermes or Mercury, shows two serpents winding around a central staff.",
+                    "The Rod of Asclepius, associated with healing and medicine, shows a single serpent wrapped around a staff. It is the traditional symbol of medicine and clinical healing.",
+                    "The caduceus, associated with Hermes or Mercury, shows two serpents winding around a winged staff. It is commonly used in commerce and logistics contexts and is often confused with the Rod of Asclepius in medical branding.",
                     "These symbols are often interpreted in different ways depending on the tradition, but they commonly point toward healing, medicine, balance, life force, transformation, hidden knowledge, movement between worlds, and energy rising through the body.",
                     "The staff can symbolize the central column. The serpent can symbolize the living current. Together, they create an image of power moving through structure.",
                     "That is why the serpent-on-staff image feels so ancient and mysterious. It is not just a decorative symbol. It looks like energy wrapped around the axis of life."
@@ -1289,21 +1215,37 @@ const blogPostsData: BlogPost[] = [
                 }
             },
             {
-                title: "Related Animal Symbolism",
+                title: "Explore on AnimalDex",
                 paragraphs: [
-                    "If you enjoyed this breakdown, explore more AnimalDex symbolism guides.",
-                    "Start with Octopus Symbolism, then browse the full AnimalDex Blog."
+                    "Continue learning about snakes through species facts, behavior lessons, and related survival strategies on AnimalDex."
                 ],
                 inlineLinks: [
+                    {text: "Snake species page", slug: "snake", href: "https://animaldex.app/animals/snake"},
+                    {text: "Snake animal lesson", slug: "snake", href: "https://animaldex.app/animal-lessons/snake"},
+                    {text: "Adaptability survival strategies", slug: "adaptability", href: "https://animaldex.app/principles/adaptability"},
+                    {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
+                ]
+            },
+            {
+                title: "Related Animal Symbolism",
+                paragraphs: [
+                    "If you enjoyed this breakdown, explore more AnimalDex symbolism guides."
+                ],
+                inlineLinks: [
+                    {
+                        text: "Axolotl Symbolism",
+                        slug: "axolotl-symbolism",
+                        href: "https://animaldex.app/blog/axolotl-symbolism"
+                    },
                     {
                         text: "Octopus Symbolism",
                         slug: "octopus-symbolism",
                         href: "https://animaldex.app/blog/octopus-symbolism"
                     },
                     {
-                        text: "AnimalDex Blog",
-                        slug: "blog",
-                        href: "https://animaldex.app/blog"
+                        text: "Animal Symbolism hub",
+                        slug: "animal-symbolism",
+                        href: "https://animaldex.app/animal-symbolism"
                     }
                 ]
             }
@@ -1324,6 +1266,28 @@ const blogPostsData: BlogPost[] = [
             {
                 question: "What does a ball python symbolize?",
                 answer: "A ball python can symbolize coiled potential, self-protection, contained energy, inner transformation, and the stage where change is forming inside before it becomes visible outside."
+            },
+            {
+                question: "What is the difference between the Rod of Asclepius and the caduceus?",
+                answer: "The Rod of Asclepius has one serpent on a plain staff and is the traditional symbol of medicine and healing. The caduceus has two serpents on a winged staff and is associated with Hermes, commerce, and messengers. They are often confused in modern medical branding."
+            },
+            {
+                question: "What does snake venom symbolize?",
+                answer: "Snake venom symbolizes dual power: the same force that can harm can also heal. It represents medicine and poison, danger and transformation, depending on dose and context."
+            }
+        ],
+        sources: [
+            {
+                label: "Britannica: Caduceus and Rod of Asclepius",
+                href: "https://www.britannica.com/topic/caduceus"
+            },
+            {
+                label: "Smithsonian: Why the Rod of Asclepius is the symbol of medicine",
+                href: "https://www.smithsonianmag.com/smart-news/why-snake-wrapped-around-stick-symbol-medicine-180973364/"
+            },
+            {
+                label: "IUCN Red List: Serpentes",
+                href: "https://www.iucnredlist.org/search?taxonomies=100006&searchType=species"
             }
         ]
     },
@@ -1451,8 +1415,7 @@ const blogPostsData: BlogPost[] = [
                     "It does not just think from one place. It processes the world through contact, motion, pressure, texture, and response. Each arm becomes like a channel of perception. Each movement becomes a kind of thought.",
                     "This is why the octopus can symbolize the nervous system itself: a network of signals, reactions, instincts, memories, and adaptations reaching into the unknown.",
                     "In AnimalDex symbolism, the octopus represents the ability to process many signals at once. It is the animal of embodied awareness, emotional intelligence, deep sensitivity, and adaptive response.",
-                    "The octopus teaches that intelligence is not always a single voice in the head. Sometimes intelligence is a whole-body network.",
-                    "For SEO language, this is the heart of octopus nervous system symbolism: octopus distributed intelligence, octopus as a symbol of the nervous system, and decentralized intelligence animal symbolism all point to the same core image."
+                    "The octopus teaches that intelligence is not always a single voice in the head. Sometimes intelligence is a whole-body network."
                 ],
                 media: {
                     type: "gallery",
@@ -1475,17 +1438,6 @@ const blogPostsData: BlogPost[] = [
                     ]
                 },
                 speciesSlugs: ["octopus"]
-            },
-            {
-                title: "Decentralized Intelligence",
-                paragraphs: [
-                    "One of the most fascinating things about the octopus is its nervous system. Unlike humans, whose intelligence feels strongly centered in the brain, the octopus has a large amount of neural processing distributed through its arms. Its arms can explore, taste, touch, grip, and respond with a surprising degree of local control.",
-                    "This gives the octopus a strange symbolic meaning: the octopus is not just smart. It is smart everywhere.",
-                    "Its intelligence is not only in one command center. It is spread across its body, senses, and contact with the world.",
-                    "Symbolically, this can represent thinking through experience, trusting more than one source of information, using intuition and environment, letting different parts of yourself solve different problems, moving without needing perfect central control, and building systems where intelligence is distributed instead of trapped at the top.",
-                    "The octopus is a symbol for people who do not think in straight lines. It is the animal of multidirectional awareness."
-                ],
-                pullQuote: "The octopus is not just smart. It is smart everywhere."
             },
             {
                 title: "The Arms: Eight Directions of Awareness",
@@ -1668,48 +1620,6 @@ const blogPostsData: BlogPost[] = [
                 ]
             },
             {
-                title: "Octopus Symbolism Summary",
-                paragraphs: [],
-                cards: [
-                    {
-                        label: "Distributed nervous system",
-                        body: "Symbolic meaning: decentralized intelligence, intuition, and body wisdom."
-                    },
-                    {
-                        label: "Eight arms",
-                        body: "Symbolic meaning: multidirectional awareness, reach, and complexity."
-                    },
-                    {
-                        label: "Camouflage",
-                        body: "Symbolic meaning: adaptation, protection, invisibility, and social masking."
-                    },
-                    {
-                        label: "Ink",
-                        body: "Symbolic meaning: misdirection, tactical retreat, and emergency boundaries."
-                    },
-                    {
-                        label: "Soft body",
-                        body: "Symbolic meaning: flexibility, softness as strength, and escape from rigidity."
-                    },
-                    {
-                        label: "Regeneration",
-                        body: "Symbolic meaning: healing, recovery, and rebuilding after loss."
-                    },
-                    {
-                        label: "Tool use",
-                        body: "Symbolic meaning: hidden genius, practical intelligence, and creative survival."
-                    },
-                    {
-                        label: "Ocean habitat",
-                        body: "Symbolic meaning: depth, mystery, unconscious emotion, and hidden knowledge."
-                    },
-                    {
-                        label: "Solitary nature",
-                        body: "Symbolic meaning: independence, self-containment, and private mastery."
-                    }
-                ]
-            },
-            {
                 title: "Final Interpretation",
                 paragraphs: [
                     "The octopus symbolizes decentralized intelligence, hidden adaptation, and the power of softness.",
@@ -1719,6 +1629,47 @@ const blogPostsData: BlogPost[] = [
                     "That is the deeper lesson of the octopus: not domination, not aggression, not armor, but awareness, flexibility, regeneration, mystery, and intelligence spread through every part of the self."
                 ],
                 pullQuote: "Become harder to capture."
+            },
+            {
+                title: "Octopus Symbolism Quick Summary",
+                paragraphs: [],
+                table: {
+                    columns: ["Octopus Trait", "Symbolic Meaning"],
+                    rows: [
+                        {cells: ["Distributed nervous system", "Decentralized intelligence, intuition, and body wisdom"]},
+                        {cells: ["Eight arms", "Multidirectional awareness, reach, and complexity"]},
+                        {cells: ["Camouflage", "Adaptation, protection, invisibility, and social masking"]},
+                        {cells: ["Ink", "Misdirection, tactical retreat, and emergency boundaries"]},
+                        {cells: ["Soft body", "Flexibility, softness as strength, and escape from rigidity"]},
+                        {cells: ["Regeneration", "Healing, recovery, and rebuilding after loss"]},
+                        {cells: ["Tool use", "Hidden genius, practical intelligence, and creative survival"]},
+                        {cells: ["Ocean habitat", "Depth, mystery, unconscious emotion, and hidden knowledge"]},
+                        {cells: ["Solitary nature", "Independence, self-containment, and private mastery"]}
+                    ]
+                }
+            },
+            {
+                title: "Explore on AnimalDex",
+                paragraphs: [
+                    "Continue learning about the octopus through species facts, behavior lessons, and related survival strategies on AnimalDex."
+                ],
+                inlineLinks: [
+                    {text: "Octopus species page", slug: "octopus", href: "https://animaldex.app/animals/octopus"},
+                    {text: "Octopus animal lesson", slug: "octopus", href: "https://animaldex.app/animal-lessons/octopus"},
+                    {text: "Adaptability survival strategies", slug: "adaptability", href: "https://animaldex.app/principles/adaptability"},
+                    {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
+                ]
+            },
+            {
+                title: "Related Animal Symbolism",
+                paragraphs: ["Explore more AnimalDex symbolism guides connected by theme, biology, or principle cluster."],
+                inlineLinks: [
+                    {text: "Axolotl Symbolism", slug: "axolotl-symbolism", href: "https://animaldex.app/blog/axolotl-symbolism"},
+                    {text: "Snake Symbolism", slug: "snake-symbolism", href: "https://animaldex.app/blog/snake-symbolism"},
+                    {text: "Blue-ringed Octopus Symbolism", slug: "blue-ringed-octopus-symbolism", href: "https://animaldex.app/blog/blue-ringed-octopus-symbolism"},
+                    {text: "Giant Pacific Octopus Symbolism", slug: "giant-pacific-octopus-symbolism", href: "https://animaldex.app/blog/giant-pacific-octopus-symbolism"},
+                    {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
+                ]
             }
         ],
         faq: [

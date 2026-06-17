@@ -3,7 +3,7 @@ import {Metadata} from "next";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
-import {rankingPages} from "@/data/rankings";
+import {getRankingTierListTitle, rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const rankingKeywords = Array.from(new Set(rankingPages.flatMap((page) => page.searchIntents)));
-    const title = messages.rankings?.metaTitle || "Animal Rankings";
+    const title = messages.rankings?.metaTitle || "Animal Tier Lists";
     const description = messages.rankings?.metaDescription || messages.meta?.description || "";
 
     return {
@@ -21,12 +21,12 @@ export async function generateMetadata(): Promise<Metadata> {
         description,
         keywords: [...baseKeywords, ...rankingKeywords],
         alternates: {
-            canonical: getLocalePath(locale, "/rankings"),
+            canonical: getLocalePath(locale, RANKING_CANONICAL_BASE_PATH),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/rankings`;
+                acc[localeItem] = `/${localeItem}${RANKING_CANONICAL_BASE_PATH}`;
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/rankings`
+                "x-default": `/${localeConfig.defaultLocale}${RANKING_CANONICAL_BASE_PATH}`
             } as Record<string, string>)
         },
         openGraph: {
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
             locale: getMetadataLocale(locale),
             title: `${title} | AnimalDex`,
             description,
-            url: getLocalePath(locale, "/rankings"),
+            url: getLocalePath(locale, RANKING_CANONICAL_BASE_PATH),
             images: [
                 {
                     url: "/images/placeholders/more-guide.svg",
@@ -56,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RankingsIndexPage() {
     const t = await getTranslations("rankings");
     const locale = await getLocale();
-    const pageUrl = getAbsoluteUrl(locale, "/rankings");
+    const pageUrl = getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH);
 
     const collectionSchema = {
         "@context": "https://schema.org",
@@ -72,8 +72,8 @@ export default async function RankingsIndexPage() {
         itemListElement: rankingPages.map((page, index) => ({
             "@type": "ListItem",
             position: index + 1,
-            url: getAbsoluteUrl(locale, `/rankings/${page.slug}`),
-            name: page.title
+            url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${page.slug}`),
+            name: getRankingTierListTitle(page)
         }))
     };
 
@@ -93,7 +93,7 @@ export default async function RankingsIndexPage() {
                         key={page.slug}
                         className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4"
                     >
-                        <Link href={`/rankings/${page.slug}`} className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60">
+                        <Link href={`${RANKING_CANONICAL_BASE_PATH}/${page.slug}`} className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60">
                             <Image
                                 src={page.featuredImage.src}
                                 alt={page.featuredImage.alt}
@@ -108,11 +108,11 @@ export default async function RankingsIndexPage() {
                                 {t(`categories.${page.category}`)}
                             </span>
                         </div>
-                        <h2 className="font-display font-bold text-3xl text-white">{page.title}</h2>
+                        <h2 className="font-display font-bold text-3xl text-white">{getRankingTierListTitle(page)}</h2>
                         <p className="text-ink-200 text-lg">{page.description}</p>
                         <p className="text-white text-lg leading-8">{page.quickAnswer}</p>
                         <Link
-                            href={`/rankings/${page.slug}`}
+                            href={`${RANKING_CANONICAL_BASE_PATH}/${page.slug}`}
                             className="mt-auto text-primary-200 text-lg hover:text-primary-100 transition-colors"
                             underline
                         >

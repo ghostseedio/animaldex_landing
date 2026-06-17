@@ -17,6 +17,66 @@ module.exports = withNextIntl({
                 source: "/:locale(en|id)/animal-meanings",
                 destination: "/:locale/animal-lessons",
                 permanent: true
+            },
+            {
+                source: "/rankings",
+                destination: "/tier-list",
+                permanent: true
+            },
+            {
+                source: "/rankings/:path*",
+                destination: "/tier-list/:path*",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/rankings",
+                destination: "/:locale/tier-list",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/rankings/:path*",
+                destination: "/:locale/tier-list/:path*",
+                permanent: true
+            },
+            {
+                source: "/journal",
+                destination: "/blog",
+                permanent: true
+            },
+            {
+                source: "/journal/feed.xml",
+                destination: "/blog/feed.xml",
+                permanent: true
+            },
+            {
+                source: "/journal/how-to-identify-animals-from-a-photo",
+                destination: "/blog/how-to-identify-animals-in-the-wild-2026-guide",
+                permanent: true
+            },
+            {
+                source: "/journal/:slug",
+                destination: "/blog/:slug",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/journal",
+                destination: "/:locale/blog",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/journal/feed.xml",
+                destination: "/:locale/blog/feed.xml",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/journal/how-to-identify-animals-from-a-photo",
+                destination: "/:locale/blog/how-to-identify-animals-in-the-wild-2026-guide",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/journal/:slug",
+                destination: "/:locale/blog/:slug",
+                permanent: true
             }
         ];
     },

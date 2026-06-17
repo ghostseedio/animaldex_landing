@@ -1,7 +1,9 @@
 import Link from "@/app/[locale]/_components/link";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 
 type RankingTableItem = {
     rank: number;
+    tier: string;
     speciesSlug: string;
     speciesName: string;
     primaryMetric: string;
@@ -15,6 +17,7 @@ type RankingTableProps = {
         rank: string;
         animal: string;
         metric: string;
+        tier: string;
         whyItRanks: string;
         readSpecies: string;
     };
@@ -29,11 +32,12 @@ export default function RankingTable({title, description, labels, items}: Rankin
                 <p className="text-ink-200 text-lg md:text-xl">{description}</p>
             </div>
             <div className="overflow-x-auto rounded-3xl border border-line-300/80 bg-surface-800/60">
-                <table className="w-full min-w-[720px] border-collapse">
+                <table className="w-full min-w-[880px] border-collapse">
                     <thead>
                         <tr className="border-b border-line-300/80 text-left">
                             <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.rank}</th>
                             <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.animal}</th>
+                            <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.tier}</th>
                             <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.metric}</th>
                             <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.whyItRanks}</th>
                             <th className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.readSpecies}</th>
@@ -46,10 +50,21 @@ export default function RankingTable({title, description, labels, items}: Rankin
                                 <td className="px-4 py-4">
                                     <Link
                                         href={`/animals/${item.speciesSlug}`}
-                                        className="text-white text-lg font-semibold hover:text-primary-100 transition-colors"
+                                        className="flex items-center gap-3 text-white text-lg font-semibold hover:text-primary-100 transition-colors"
                                     >
+                                        <SpeciesArtworkImage
+                                            slug={item.speciesSlug}
+                                            alt={`${item.speciesName} animal icon`}
+                                            className="h-12 w-12 rounded-2xl border border-line-300"
+                                            sizes="48px"
+                                        />
                                         {item.speciesName}
                                     </Link>
+                                </td>
+                                <td className="px-4 py-4">
+                                    <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-primary-500/30 bg-primary-500/10 px-3 text-sm font-bold text-primary-100">
+                                        {item.tier}
+                                    </span>
                                 </td>
                                 <td className="px-4 py-4 text-primary-200 text-base md:text-lg font-medium">{item.primaryMetric}</td>
                                 <td className="px-4 py-4 text-ink-200 text-base md:text-lg leading-7">{item.shortReason}</td>

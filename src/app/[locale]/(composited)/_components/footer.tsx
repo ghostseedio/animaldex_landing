@@ -20,17 +20,20 @@ export default function Footer() {
             title: t("footerGroups.explore"),
             links: [
                 {href: "/animals", label: t("animals")},
+                {href: "/what-animal-am-i", label: t("whatAnimalAmI")},
+                {href: "/principles", label: t("principles")},
                 {href: "/animal-lessons", label: t("animalLessons")},
                 {href: "/animal-symbolism", label: t("animalSymbolism")},
+                {href: "/pokemon-animals", label: t("pokemonAnimals")},
+                {href: "/animal-hybrids", label: t("animalHybrids")},
                 {href: "/comparisons", label: t("challenges")},
-                {href: "/rankings", label: t("rankings")},
+                {href: "/tier-list", label: t("rankings")},
                 {href: "/locations", label: t("locations")}
             ]
         },
         {
             title: t("footerGroups.resources"),
             links: [
-                {href: "/journal", label: t("journal")},
                 {href: "/blog", label: t("blog")},
                 {href: "/animal-wisdom", label: t("animalWisdom")}
             ]

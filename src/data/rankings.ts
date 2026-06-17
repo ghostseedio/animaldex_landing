@@ -1,4 +1,6 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
+import {buildDeterministicCanonicalStats, SpeciesStats} from "@/data/species-stats";
+import {speciesEntries, SpeciesEntry} from "@/data/species";
 
 export type RankingCategory =
     | "speed"
@@ -32,6 +34,12 @@ export type RankingEntry = {
     shortReason: string;
 };
 
+export type RankingTier = "S" | "A" | "B" | "C" | "D" | "E";
+
+export type ResolvedRankingEntry = RankingEntry & {
+    tier: RankingTier;
+};
+
 export type RankingFAQ = {
     question: string;
     answer: string;
@@ -55,6 +63,8 @@ export type RankingPage = CanonicalContentMetadata & {
 type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
 
 const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
+export const RANKING_CANONICAL_BASE_PATH = "/tier-list";
+const MIN_RANKING_TABLE_ENTRIES = 100;
 
 function getRankingImageSlug(page: RankingPageInput) {
     return page.title
@@ -1411,6 +1421,166 @@ export const rankingPages = assertUniqueRankingSlugs(rankingPagesData);
 
 export function getRankingPage(slug: string) {
     return rankingPages.find((page) => page.slug === slug);
+}
+
+export function getRankingTierListTitle(page: RankingPage) {
+    return page.title.replace(/: Top 10 Ranked$/i, ": Top 100 Tier List");
+}
+
+function clampScore(value: number) {
+    return Math.max(1, Math.min(100, Math.round(value)));
+}
+
+function textMatches(entry: SpeciesEntry, pattern: RegExp) {
+    return pattern.test([
+        entry.name,
+        entry.analysis.category,
+        entry.analysis.summary,
+        entry.analysis.habitat,
+        entry.analysis.nativeRange,
+        ...entry.analysis.identification
+    ].join(" ").toLowerCase());
+}
+
+function keywordBoost(entry: SpeciesEntry, pattern: RegExp, amount: number) {
+    return textMatches(entry, pattern) ? amount : 0;
+}
+
+function getRankingTier(score: number): RankingTier {
+    if (score >= 90) {
+        return "S";
+    }
+
+    if (score >= 75) {
+        return "A";
+    }
+
+    if (score >= 60) {
+        return "B";
+    }
+
+    if (score >= 45) {
+        return "C";
+    }
+
+    if (score >= 30) {
+        return "D";
+    }
+
+    return "E";
+}
+
+function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry: SpeciesEntry) {
+    const predatorBoost = keywordBoost(entry, /apex|predator|hunter|ambush|venom|fang|claw|talon|stalk|kills|shark|crocodile|snake/, 10);
+    const socialBoost = keywordBoost(entry, /social|pack|pod|colony|herd|group|coordinat|communicat|signal|call/, 10);
+    const fastBoost = keywordBoost(entry, /fast|swift|speed|quick|sprint|dart|dive|leap|glide|soar|torpedo|agile/, 10);
+    const armorBoost = keywordBoost(entry, /armor|armored|shell|scale|shield|fortress|carapace|exoskeleton/, 12);
+    const camouflageBoost = keywordBoost(entry, /camouflage|blend|hidden|conceal|cryptic|mimic|disguise|pattern/, 14);
+    const reproductiveBoost = keywordBoost(entry, /breed|breeding|egg|eggs|spawn|litter|colony|reproduct|mating|offspring/, 12);
+    const culturalBoost = keywordBoost(entry, /sacred|symbol|myth|royal|cultural|temple|divine|legend|revered|feared/, 12);
+
+    switch (category) {
+        case "speed":
+            return clampScore(stats.speed * 0.82 + stats.dominance * 0.08 + stats.size * 0.04 + stats.intelligence * 0.06 + fastBoost);
+        case "strength":
+            return clampScore(stats.dominance * 0.36 + stats.size * 0.42 + stats.speed * 0.08 + stats.intelligence * 0.06 + predatorBoost);
+        case "intelligence":
+            return clampScore(stats.intelligence * 0.78 + stats.dominance * 0.08 + stats.rarity * 0.06 + socialBoost);
+        case "danger":
+            return clampScore(stats.dominance * 0.45 + stats.size * 0.22 + stats.speed * 0.15 + stats.rarity * 0.08 + predatorBoost);
+        case "agility":
+            return clampScore(stats.speed * 0.52 + stats.intelligence * 0.18 + stats.dominance * 0.12 + fastBoost);
+        case "bite_force":
+            return clampScore(stats.dominance * 0.44 + stats.size * 0.34 + keywordBoost(entry, /crocodile|alligator|shark|hyena|hippo|jaguar|tiger|lion|wolf|bear|snake|fang|jaw|bite/, 18));
+        case "endurance":
+            return clampScore(stats.speed * 0.30 + stats.dominance * 0.24 + stats.rarity * 0.20 + stats.size * 0.10 + keywordBoost(entry, /migrat|endurance|distance|arctic|desert|ocean|tundra|marathon|persistent/, 14));
+        case "hunting":
+            return clampScore(stats.dominance * 0.40 + stats.speed * 0.22 + stats.intelligence * 0.18 + predatorBoost);
+        case "eyesight":
+            return clampScore(stats.speed * 0.22 + stats.intelligence * 0.25 + stats.dominance * 0.18 + keywordBoost(entry, /eagle|falcon|hawk|owl|raptor|eyesight|vision|visual|see|spot|gaze/, 24));
+        case "resilience":
+            return clampScore(stats.rarity * 0.30 + stats.dominance * 0.24 + stats.size * 0.15 + keywordBoost(entry, /resilien|surviv|tough|extreme|arctic|desert|deep|regenerat|stress|hardy/, 18));
+        case "armor":
+            return clampScore(stats.dominance * 0.28 + stats.size * 0.22 + stats.rarity * 0.10 + armorBoost);
+        case "stealth":
+            return clampScore(stats.speed * 0.22 + stats.intelligence * 0.24 + stats.dominance * 0.18 + keywordBoost(entry, /stealth|ambush|stalk|silent|night|hidden|conceal|camouflage|shadow/, 20));
+        case "teamwork":
+            return clampScore(stats.intelligence * 0.42 + stats.dominance * 0.18 + socialBoost + keywordBoost(entry, /pack|pod|colony|herd|hive|school|cooperat|team/, 16));
+        case "adaptability":
+            return clampScore(stats.intelligence * 0.34 + stats.rarity * 0.14 + stats.dominance * 0.18 + keywordBoost(entry, /adapt|urban|generalist|flexible|variable|range|opportun|change|wide/, 18));
+        case "camouflage":
+            return clampScore(stats.intelligence * 0.22 + stats.speed * 0.10 + camouflageBoost + keywordBoost(entry, /octopus|cuttlefish|chameleon|gecko|moth|frog|lizard/, 14));
+        case "strike":
+            return clampScore(stats.dominance * 0.34 + stats.speed * 0.30 + stats.size * 0.16 + keywordBoost(entry, /kick|strike|punch|mantis|cassowary|kangaroo|secretary|talon|sting|snap/, 18));
+        case "invasive":
+            return clampScore(stats.intelligence * 0.22 + stats.dominance * 0.18 + reproductiveBoost + keywordBoost(entry, /invasive|introduced|feral|spread|establish|urban|opportun|pest/, 18));
+        case "reproduction":
+            return clampScore(reproductiveBoost + stats.rarity * 0.10 + stats.dominance * 0.12 + keywordBoost(entry, /toad|frog|fish|insect|bee|ant|rabbit|rodent|rat|mouse/, 14));
+        case "reputation":
+            return clampScore(stats.dominance * 0.24 + stats.rarity * 0.16 + predatorBoost + keywordBoost(entry, /feared|reviled|ugly|nuisance|pest|danger|venom|sting|bite|parasite/, 16));
+        case "rarity":
+            return clampScore(stats.rarity * 0.86 + keywordBoost(entry, /rare|endangered|threatened|scarce|fragmented|vulnerable|decline/, 14));
+        case "fatality":
+            return clampScore(stats.dominance * 0.42 + stats.size * 0.18 + stats.speed * 0.12 + predatorBoost + keywordBoost(entry, /fatal|deadly|venom|attack|aggressive|human|sting|bite/, 16));
+        case "culture":
+            return clampScore(stats.intelligence * 0.12 + stats.dominance * 0.18 + stats.rarity * 0.14 + culturalBoost);
+        case "communication":
+            return clampScore(stats.intelligence * 0.44 + socialBoost + keywordBoost(entry, /vocal|call|song|whistle|click|signal|language|dance|alarm|display/, 18));
+        default:
+            return clampScore(stats.dominance * 0.30 + stats.speed * 0.15 + stats.size * 0.15 + stats.intelligence * 0.15 + stats.rarity * 0.25);
+    }
+}
+
+function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tier: RankingTier) {
+    return `${entry.name} lands in the ${tier} tier for ${page.category.replace(/_/g, " ")} based on AnimalDex canonical profile stats, species-guide traits, and category-specific biology signals.`;
+}
+
+export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES): ResolvedRankingEntry[] {
+    const pinnedSlugs = new Set(page.entries.map((entry) => entry.speciesSlug));
+    const targetCount = Math.min(Math.max(page.entries.length, minEntries), speciesEntries.length);
+    const scoredSpecies = speciesEntries
+        .map((entry) => {
+            const stats = buildDeterministicCanonicalStats(entry);
+            const score = getCategoryScore(page.category, stats, entry);
+
+            return {
+                entry,
+                score,
+                tier: getRankingTier(score)
+            };
+        });
+    const scoredBySlug = new Map(scoredSpecies.map((item) => [item.entry.slug, item]));
+    const pinnedEntries = page.entries
+        .map((entry): ResolvedRankingEntry | null => {
+            const scored = scoredBySlug.get(entry.speciesSlug);
+
+            if (!scored) {
+                return null;
+            }
+
+            return {
+                ...entry,
+                tier: scored.tier
+            };
+        })
+        .filter((entry): entry is ResolvedRankingEntry => Boolean(entry));
+    const generatedEntries = scoredSpecies
+        .filter((item) => !pinnedSlugs.has(item.entry.slug))
+        .sort((left, right) =>
+            right.score - left.score
+            || right.entry.analysis.rarityScore - left.entry.analysis.rarityScore
+            || left.entry.name.localeCompare(right.entry.name)
+        )
+        .slice(0, Math.max(0, targetCount - pinnedEntries.length))
+        .map((item, index): ResolvedRankingEntry => ({
+            rank: pinnedEntries.length + index + 1,
+            speciesSlug: item.entry.slug,
+            tier: item.tier,
+            primaryMetric: `${item.score}/100 category fit`,
+            shortReason: buildGeneratedRankingReason(page, item.entry, item.tier)
+        }));
+
+    return [...pinnedEntries, ...generatedEntries].slice(0, targetCount);
 }
 
 export function getRelatedRankings(slug: string, limit = 3) {

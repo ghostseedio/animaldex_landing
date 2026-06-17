@@ -81,6 +81,12 @@ export default function Header() {
                 <HeaderLink href="/animal-symbolism" mobile>
                     {t('animalSymbolism')}
                 </HeaderLink>
+                <HeaderLink href="/pokemon-animals" mobile>
+                    {t('pokemonAnimals')}
+                </HeaderLink>
+                <HeaderLink href="/animal-hybrids" mobile>
+                    {t('animalHybrids')}
+                </HeaderLink>
                 <HeaderLink href="/#more" mobile>
                     {t('discover')}
                 </HeaderLink>

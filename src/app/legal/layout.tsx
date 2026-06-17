@@ -2,6 +2,7 @@ import "@/app/[locale]/_assets/globals.css";
 import React, {ReactNode} from "react";
 import localFont from "next/font/local";
 import {Metadata} from "next";
+import GoogleAnalytics from "@/components/analytics/google-analytics";
 import {getSiteUrl} from "@/lib/site";
 
 const calSans = localFont({
@@ -56,6 +57,7 @@ export default function PublicLegalLayout({children}: { children: ReactNode }) {
             "--font-sans": "var(--font-onest)",
             "--font-display": "var(--font-cal-sans)"
         } as React.CSSProperties}>
+            <GoogleAnalytics />
             {children}
         </body>
         </html>

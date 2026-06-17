@@ -87,6 +87,9 @@ export default async function BlogIndexPage() {
                 <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">{t("eyebrow")}</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white max-w-4xl">{t("title")}</h1>
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{t("description")}</p>
+                <Link href="/blog/feed.xml" className="text-primary-200 text-lg hover:text-primary-100 transition-colors" underline>
+                    {t("rssLabel")}
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">

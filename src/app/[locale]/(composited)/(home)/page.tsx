@@ -51,12 +51,6 @@ export default async function Home() {
     }));
     const exploreLinks = [
         {
-            href: "/journal",
-            title: t("download.journalLink"),
-            description: t("download.journalPrompt"),
-            accent: "from-primary-500/18 via-primary-500/6 to-transparent"
-        },
-        {
             href: "/blog",
             title: t("download.blogLink"),
             description: t("download.blogPrompt"),
@@ -133,7 +127,7 @@ export default async function Home() {
         },
         potentialAction: {
             "@type": "SearchAction",
-            target: `${siteUrl}/journal`,
+            target: `${siteUrl}/blog`,
             "query-input": "required name=search_term_string"
         }
     };

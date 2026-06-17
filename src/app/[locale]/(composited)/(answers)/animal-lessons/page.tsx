@@ -15,6 +15,7 @@ type AnimalLessonsPageProps = {
     };
     searchParams?: {
         letter?: string | string[];
+        page?: string | string[];
     };
 };
 
@@ -62,20 +63,42 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
     const visibleLessons = activeLetter === "all"
         ? lessons
         : lessons.filter((lesson) => lesson.displayName.toUpperCase().startsWith(activeLetter));
+    const PAGE_SIZE = 12;
+    const requestedPage = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
+    const requestedPageValid = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const totalVisibleLessons = visibleLessons.length;
+    const totalPages = totalVisibleLessons === 0 ? 1 : Math.ceil(totalVisibleLessons / PAGE_SIZE);
+    const currentPage = Math.min(requestedPageValid, totalPages);
+    const paginatedLessons = visibleLessons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
     const pageDescription = t("description");
+    const indexPath = activeLetter === "all"
+        ? currentPage === 1
+            ? "/animal-lessons"
+            : `/animal-lessons?page=${currentPage}`
+        : currentPage === 1
+            ? `/animal-lessons?letter=${activeLetter}`
+            : `/animal-lessons?letter=${activeLetter}&page=${currentPage}`;
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         name: t("title"),
         description: pageDescription,
-        url: getAbsoluteUrl(params.locale, activeLetter === "all" ? "/animal-lessons" : `/animal-lessons?letter=${activeLetter}`),
-        hasPart: visibleLessons.slice(0, 120).map((lesson) => ({
+        url: getAbsoluteUrl(params.locale, indexPath),
+        hasPart: paginatedLessons.map((lesson) => ({
             "@type": "Article",
             headline: t("detailHeroTitle", {animal: lesson.displayName}),
             description: lesson.coreLesson,
             url: getAbsoluteUrl(params.locale, `/animal-lessons/${lesson.slug}`)
         }))
     };
+    function getPageHref(page: number) {
+        const base = activeLetter === "all" ? "/animal-lessons" : `/animal-lessons?letter=${activeLetter}`;
+        if (page <= 1) {
+            return base;
+        }
+
+        return base.includes("?") ? `${base}&page=${page}` : `${base}?page=${page}`;
+    }
 
     return (
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
@@ -96,7 +119,7 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
             <nav className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 md:p-6 flex flex-col gap-3" aria-label={t("alphabetLabel")}>
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-sm uppercase tracking-[0.16em] font-medium text-primary-200">{t("alphabetLabel")}</p>
-                    <p className="text-sm text-ink-300">{t("filteredLessonCount", {count: visibleLessons.length})}</p>
+                    <p className="text-sm text-ink-300">{t("filteredLessonCount", {count: paginatedLessons.length})}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Link
@@ -126,7 +149,7 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
             </nav>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {visibleLessons.map((lesson) => {
+                {paginatedLessons.map((lesson) => {
                     const speciesEntry = getSpeciesBySlug(lesson.slug);
                     const imageAlt = speciesEntry
                         ? getSpeciesImageAltText(speciesEntry, "thumbnail")
@@ -166,6 +189,34 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
                     );
                 })}
             </div>
+
+            {totalPages > 1 ? (
+                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
+                    <div className="text-sm md:text-base text-ink-300">{t("pageLabel", {page: currentPage, totalPages})}</div>
+
+                    <div className="flex items-center gap-3">
+                        {currentPage > 1 ? (
+                            <Link
+                                href={getPageHref(currentPage - 1)}
+                                className="rounded-2xl border border-line-300 px-4 py-2 text-sm font-semibold text-ink-200 transition-colors hover:border-primary-400 hover:text-white"
+                            >
+                                {t("previousPage")}
+                            </Link>
+                        ) : (
+                            <span />
+                        )}
+
+                        {currentPage < totalPages ? (
+                            <Link
+                                href={getPageHref(currentPage + 1)}
+                                className="rounded-2xl border border-line-300 px-4 py-2 text-sm font-semibold text-ink-200 transition-colors hover:border-primary-400 hover:text-white"
+                            >
+                                {t("nextPage")}
+                            </Link>
+                        ) : null}
+                    </div>
+                </section>
+            ) : null}
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("strategyEyebrow")}</p>

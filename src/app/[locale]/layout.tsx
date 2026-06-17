@@ -7,6 +7,7 @@ import {Metadata} from "next";
 import Cursor from "@/app/[locale]/_components/cursor";
 import NavigationProgress from "@/app/[locale]/_components/navigation-progress";
 import {loadLocaleMessages} from "@/loaders/locale";
+import GoogleAnalytics from "@/components/analytics/google-analytics";
 import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 
 const appStoreUrl = "https://apps.apple.com/app/6761607780";
@@ -59,6 +60,7 @@ export default function RootLayout(
             '--font-sans': 'var(--font-onest)',
             '--font-display': 'var(--font-cal-sans)',
         } as any}>
+            <GoogleAnalytics />
             <Cursor />
             <NavigationProgress />
             {children}

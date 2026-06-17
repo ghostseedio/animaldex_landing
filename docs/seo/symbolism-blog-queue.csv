@@ -1,0 +1,40 @@
+wave,priority_rank,species_slug,display_name,principle,target_keyword,status,blog_slug,image_count,sources_count,curated_profile,related_symbolism_slugs
+1,1,indus-river-dolphin,Indus River Dolphin,Observation,indus river dolphin meaning,live,indus-river-dolphin-symbolism,16,3,no,snowy-owl-symbolism|blue-ringed-octopus-symbolism|beluga-whale-symbolism
+1,2,snowy-owl,Snowy Owl,Observation,snowy owl meaning,live,snowy-owl-symbolism,16,3,no,indus-river-dolphin-symbolism|blue-ringed-octopus-symbolism|beluga-whale-symbolism
+1,3,blue-ringed-octopus,Blue-ringed Octopus,Observation,blue-ringed octopus meaning,live,blue-ringed-octopus-symbolism,16,3,no,indus-river-dolphin-symbolism|snowy-owl-symbolism|beluga-whale-symbolism
+1,4,beluga-whale,Beluga Whale,Observation,beluga whale meaning,live,beluga-whale-symbolism,16,3,no,indus-river-dolphin-symbolism|snowy-owl-symbolism|blue-ringed-octopus-symbolism
+1,5,tiger-salamander,Tiger Salamander,Resilience,tiger salamander meaning,live,tiger-salamander-symbolism,16,3,no,lionfish-symbolism
+1,6,gorilla,Gorilla,Memory,gorilla meaning,live,gorilla-symbolism,16,3,no,remora-symbolism|blue-whale-symbolism|elephant-symbolism
+1,7,black-rhinoceros,Black Rhinoceros,Precision,black rhinoceros meaning,live,black-rhinoceros-symbolism,16,3,no,antlion-symbolism|african-bush-elephant-symbolism|aardwolf-symbolism
+1,8,sumatran-orangutan,Sumatran Orangutan,Adaptability,sumatran orangutan meaning,live,sumatran-orangutan-symbolism,16,3,no,fox-symbolism|giant-pacific-octopus-symbolism|polar-bear-symbolism
+1,9,lionfish,Lionfish,Resilience,lionfish meaning,live,lionfish-symbolism,16,3,no,tiger-salamander-symbolism
+1,10,antlion,Spotted-winged Antlion,Precision,spotted-winged antlion meaning,live,antlion-symbolism,16,3,no,black-rhinoceros-symbolism|african-bush-elephant-symbolism|aardwolf-symbolism
+1,11,adelie-penguin,Adelie Penguin,Teamwork,adelie penguin meaning,live,adelie-penguin-symbolism,16,3,no,lion-symbolism|wolf-symbolism
+1,12,fox,Fox,Adaptability,fox meaning,live,fox-symbolism,16,3,yes,sumatran-orangutan-symbolism|giant-pacific-octopus-symbolism|polar-bear-symbolism
+1,13,remora,Remora,Memory,remora meaning,live,remora-symbolism,16,3,no,gorilla-symbolism|blue-whale-symbolism|elephant-symbolism
+1,14,blue-whale,Blue Whale,Memory,blue whale meaning,live,blue-whale-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|elephant-symbolism
+1,15,elephant,Elephant,Memory,elephant meaning,live,elephant-symbolism,16,3,yes,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,16,philippine-eagle,Philippine Eagle,Memory,philippine eagle meaning,live,philippine-eagle-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,17,giant-pacific-octopus,Giant Pacific Octopus,Adaptability,giant pacific octopus meaning,live,giant-pacific-octopus-symbolism,16,3,no,sumatran-orangutan-symbolism|fox-symbolism|polar-bear-symbolism
+1,18,polar-bear,Polar Bear,Adaptability,polar bear meaning,live,polar-bear-symbolism,16,3,no,sumatran-orangutan-symbolism|fox-symbolism|giant-pacific-octopus-symbolism
+1,19,great-white-shark,Great White Shark,Memory,great white shark meaning,live,great-white-shark-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,20,african-grey-parrot,African Grey Parrot,Memory,african grey parrot meaning,live,african-grey-parrot-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,21,alpine-newt,Alpine Newt,Memory,alpine newt meaning,live,alpine-newt-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,22,african-bush-elephant,African Bush Elephant,Precision,african bush elephant meaning,live,african-bush-elephant-symbolism,16,3,no,black-rhinoceros-symbolism|antlion-symbolism|aardwolf-symbolism
+1,23,andean-goose,Andean Goose,Memory,andean goose meaning,live,andean-goose-symbolism,16,3,no,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+1,24,aardwolf,Aardwolf,Precision,aardwolf meaning,live,aardwolf-symbolism,16,3,no,black-rhinoceros-symbolism|antlion-symbolism|african-bush-elephant-symbolism
+1,25,blue-tongued-skink,Blue-tongued Skink,Observation,blue-tongued skink meaning,live,blue-tongued-skink-symbolism,16,3,no,indus-river-dolphin-symbolism|snowy-owl-symbolism|blue-ringed-octopus-symbolism
+2,26,lion,Lion,Teamwork,lion meaning,live,lion-symbolism,16,3,no,adelie-penguin-symbolism|wolf-symbolism
+2,27,wolf,Wolf,Teamwork,wolf meaning,live,wolf-symbolism,16,3,no,adelie-penguin-symbolism|lion-symbolism
+2,28,dolphin,Dolphin,Communication,dolphin meaning,live,dolphin-symbolism,16,3,yes,
+2,29,eagle,Eagle,Efficiency,eagle meaning,live,eagle-symbolism,16,3,no,crocodile-symbolism|jellyfish-symbolism
+2,30,raven,Raven,Memory,raven meaning,live,raven-symbolism,16,3,yes,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+2,31,cat,Cat,Stealth,cat meaning,live,cat-symbolism,16,3,yes,tiger-symbolism|leopard-symbolism
+2,32,tiger,Tiger,Stealth,tiger meaning,live,tiger-symbolism,16,3,no,cat-symbolism|leopard-symbolism
+3,33,chameleon,Chameleon,Observation,chameleon meaning,live,chameleon-symbolism,16,3,no,indus-river-dolphin-symbolism|snowy-owl-symbolism|blue-ringed-octopus-symbolism
+3,34,crocodile,Crocodile,Efficiency,crocodile meaning,live,crocodile-symbolism,16,3,no,eagle-symbolism|jellyfish-symbolism
+3,35,leopard,Leopard,Stealth,leopard meaning,live,leopard-symbolism,16,3,no,cat-symbolism|tiger-symbolism
+3,36,jellyfish,Jellyfish,Efficiency,jellyfish meaning,live,jellyfish-symbolism,16,3,no,eagle-symbolism|crocodile-symbolism
+3,37,orangutan,Orangutan,Memory,orangutan meaning,live,orangutan-symbolism,16,3,yes,gorilla-symbolism|remora-symbolism|blue-whale-symbolism
+3,38,owl,Owl,Observation,owl meaning,live,owl-symbolism,16,3,yes,indus-river-dolphin-symbolism|snowy-owl-symbolism|blue-ringed-octopus-symbolism
+3,39,dragonfly,Dragonfly,Precision,dragonfly meaning,live,dragonfly-symbolism,16,3,yes,black-rhinoceros-symbolism|antlion-symbolism|african-bush-elephant-symbolism
