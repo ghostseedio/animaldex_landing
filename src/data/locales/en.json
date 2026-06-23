@@ -94,7 +94,7 @@
         "description": "See habitat, behavior, rarity, lookalikes, and field-guide facts at a glance.",
         "alt": "Placeholder visual for AnimalDex field guide details"
       },
-      "download": "Download on the App Store"
+      "download": "Download"
     },
     "team": {
       "title": "Made for how you discover animals",
@@ -402,7 +402,7 @@
     "collectorDescription": "These pages target card-collection and creature-game search intents while keeping the real-animal value proposition clear.",
     "ctaTitle": "Ready to start with your use case?",
     "ctaDescription": "Pick the path that fits your goals, then launch AnimalDex and build from your first sighting.",
-    "ctaButton": "Download on the App Store",
+    "ctaButton": "Download",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -739,7 +739,7 @@
     "back": "Back to Use Cases",
     "ctaTitle": "Turn this collection style into real animal discovery",
     "ctaDescription": "Use AnimalDex to scan, collect, and progress through real species with premium app polish.",
-    "ctaButton": "Download on the App Store",
+    "ctaButton": "Download",
     "homeButton": "Back to main landing",
     "appButton": "Get the app"
   },

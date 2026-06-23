@@ -94,7 +94,7 @@
         "description": "Lihat habitat, perilaku, rarity, lookalike, dan fakta field guide dengan cepat.",
         "alt": "Visual placeholder untuk detail field guide AnimalDex"
       },
-      "download": "Download di App Store"
+      "download": "Download"
     },
     "team": {
       "title": "Dibuat untuk cara kamu menemukan hewan",
@@ -400,7 +400,7 @@
     "collectorDescription": "Halaman ini menargetkan intent pencarian card-collection dan creature-game sambil menjaga nilai hewan nyata tetap jelas.",
     "ctaTitle": "Siap memulai sesuai use case kamu?",
     "ctaDescription": "Pilih jalur yang paling cocok dengan tujuanmu, lalu mulai AnimalDex dari penemuan pertamamu.",
-    "ctaButton": "Download di App Store",
+    "ctaButton": "Download",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -717,7 +717,7 @@
     "back": "Kembali ke Use Cases",
     "ctaTitle": "Ubah gaya koleksi ini jadi discovery hewan nyata",
     "ctaDescription": "Gunakan AnimalDex untuk memindai, mengoleksi, dan progres lewat spesies nyata dengan polish aplikasi premium.",
-    "ctaButton": "Download di App Store",
+    "ctaButton": "Download",
     "homeButton": "Kembali ke landing utama",
     "appButton": "Dapatkan aplikasinya"
   },
