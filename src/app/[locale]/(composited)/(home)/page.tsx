@@ -8,7 +8,6 @@ import TeamMember from "@/app/[locale]/(composited)/(home)/_components/team-memb
 import FeaturesOverview from "@/app/[locale]/(composited)/(home)/_components/features-overview";
 import Phone from "@/app/[locale]/(composited)/(home)/_components/phone";
 import {checkedIcons} from "@/loaders/icons";
-import Button from "@/app/[locale]/_components/button";
 import Marquee from "@/app/[locale]/_components/marquee";
 import {default as phone} from "@/data/phone.json";
 import {default as features} from "@/data/features.json";
@@ -20,6 +19,8 @@ import {localisePath} from "@/loaders/path";
 import {unsafelyLoadSVG} from "@/loaders/svg";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 
 const animalBackgroundImages = [
@@ -41,7 +42,6 @@ export default async function Home() {
     const locale = await getLocale();
     const siteUrl = getAbsoluteUrl(locale);
     const rootSiteUrl = getSiteUrl();
-    const appStoreUrl = "https://apps.apple.com/app/6761607780";
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
     const appSchemaDescription = "AnimalDex is an AI animal identifier app that helps users identify animals from photos and discover biology-backed animal meaning, symbolism, behavior lessons, and field-guide context.";
@@ -135,11 +135,11 @@ export default async function Home() {
         "@context": "https://schema.org",
         "@type": "MobileApplication",
         name: "AnimalDex",
-        operatingSystem: "iOS",
+        operatingSystem: "iOS, Android",
         applicationCategory: "EducationApplication",
         url: rootSiteUrl,
-        installUrl: appStoreUrl,
-        downloadUrl: appStoreUrl,
+        installUrl: [appStoreUrl, googlePlayUrl],
+        downloadUrl: [appStoreUrl, googlePlayUrl],
         image: socialImageUrl,
         screenshot: socialImageUrl,
         description: appSchemaDescription,
@@ -191,10 +191,10 @@ export default async function Home() {
         "@type": "SoftwareApplication",
         name: "AnimalDex",
         applicationCategory: "EducationApplication",
-        operatingSystem: "iOS",
+        operatingSystem: "iOS, Android",
         url: siteUrl,
-        installUrl: appStoreUrl,
-        downloadUrl: appStoreUrl,
+        installUrl: [appStoreUrl, googlePlayUrl],
+        downloadUrl: [appStoreUrl, googlePlayUrl],
         image: socialImageUrl,
         description: appSchemaDescription,
         offers: {
@@ -211,7 +211,7 @@ export default async function Home() {
         url: rootSiteUrl,
         logo: brandLogoUrl,
         image: brandLogoUrl,
-        sameAs: [appStoreUrl]
+        sameAs: storeLinks.map((store) => store.href)
     };
     const faqSchema = {
         "@context": "https://schema.org",
@@ -259,14 +259,7 @@ export default async function Home() {
                 >
                     {navT("privacy")}
                 </a>
-                <Link
-                    href="https://apps.apple.com/app/6761607780"
-                    className="md:hidden"
-                >
-                    <Button as="span">
-                        {t('more.download')}
-                    </Button>
-                </Link>
+                <StoreLinks className="md:hidden" />
                 <Phone
                     data={
                         phone.elements.map((item) => ({
@@ -393,13 +386,7 @@ export default async function Home() {
                     <p className="text-lg md:text-xl xl:text-2xl text-ink-200 w-full max-w-lg text-center">
                         {t("more.description")}
                     </p>
-                    <Link
-                        href="https://apps.apple.com/app/6761607780"
-                    >
-                        <Button as="span">
-                            {t('more.download')}
-                        </Button>
-                    </Link>
+                    <StoreLinks />
                 </figure>
             </section>
 

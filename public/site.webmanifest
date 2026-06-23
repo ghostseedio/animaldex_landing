@@ -1,7 +1,7 @@
 {
   "name": "AnimalDex",
   "short_name": "AnimalDex",
-  "description": "AI animal scanner, wildlife collection app, and collectible field guide for iPhone.",
+  "description": "AI animal scanner, wildlife collection app, and collectible field guide for iOS and Android.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050806",

@@ -3,6 +3,7 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {answerPages, getAnswerPage, getRelatedAnswerPages} from "@/data/answer-pages";
 import {getBlogPost} from "@/data/blog";
 import {getSpeciesBySlug} from "@/data/species";
@@ -260,9 +261,7 @@ export default async function AnswerPage({slug}: AnswerPageProps) {
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
                 <div className="flex justify-center flex-wrap gap-3">
-                    <Link href="https://apps.apple.com/app/6761607780">
-                        <Button as="span">{t("ctaButton")}</Button>
-                    </Link>
+                    <StoreLinks />
                     <Link href="/">
                         <Button as="span">{t("landingButton")}</Button>
                     </Link>

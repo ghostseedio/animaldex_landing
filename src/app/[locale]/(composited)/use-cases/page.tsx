@@ -6,6 +6,7 @@ import {collectorPages} from "@/data/collector-pages";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
@@ -151,11 +152,7 @@ export default async function UseCasesIndexPage() {
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <div className="flex justify-center">
-                    <Link href="https://apps.apple.com/app/6761607780" underline className="text-primary-200 text-lg hover:text-primary-100 transition-colors">
-                        {t("ctaButton")}
-                    </Link>
-                </div>
+                <StoreLinks variant="text" />
             </div>
         </section>
     );

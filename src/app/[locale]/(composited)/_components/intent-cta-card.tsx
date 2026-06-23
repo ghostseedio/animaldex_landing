@@ -1,5 +1,6 @@
 import Button from "@/app/[locale]/_components/button";
 import Link from "@/app/[locale]/_components/link";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
 type IntentCtaCardProps = {
     title: string;
@@ -17,18 +18,24 @@ export default function IntentCtaCard({
     title,
     description,
     buttonLabel,
-    buttonHref = "https://apps.apple.com/app/6761607780",
+    buttonHref,
     supportItems = [],
     secondaryLinks = []
 }: IntentCtaCardProps) {
+    const useStoreLinks = !buttonHref;
+
     return (
         <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
             <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{title}</h2>
             <p className="text-ink-200 text-lg md:text-xl">{description}</p>
             <div className="flex justify-center flex-wrap gap-3">
-                <Link href={buttonHref}>
-                    <Button as="span">{buttonLabel}</Button>
-                </Link>
+                {useStoreLinks ? (
+                    <StoreLinks />
+                ) : (
+                    <Link href={buttonHref}>
+                        <Button as="span">{buttonLabel}</Button>
+                    </Link>
+                )}
                 {secondaryLinks.map((item) => (
                     <Link
                         key={`${item.href}-${item.label}`}

@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Back to AnimalDex homepage",
     "title": "AnimalDex",
-    "description": "AI animal scanner, wildlife collection app, and collectible field guide for iPhone.",
+    "description": "AI animal scanner, wildlife collection app, and collectible field guide for iOS and Android.",
     "team": "Who It's For",
     "features": "Features",
     "download": "Get AnimalDex",
@@ -34,9 +34,9 @@
     },
     "credits": {
       "platform": "Built for",
-      "platformValue": "iPhone",
+      "platformValue": "iOS and Android",
       "status": "Status",
-      "statusValue": "live on the App Store"
+      "statusValue": "live on the App Store and Google Play"
     }
   },
   "home": {
@@ -46,7 +46,7 @@
     "description": "Scan real animals. Discover what they teach.",
     "supporting": "Use AI scanning to identify animals instantly, then learn biology-backed animal meaning, symbolism, and lessons from real behavior.",
     "phone": {
-      "phone": "AnimalDex iPhone preview",
+      "phone": "AnimalDex mobile app preview",
       "emojis": "Floating preview card for challenge stats",
       "update": "Floating preview card for an animal scan result",
       "speed": "Floating preview card for collection progress",
@@ -115,7 +115,7 @@
     },
     "download": {
       "title": "Start your next sighting with AnimalDex",
-      "description": "Download AnimalDex on the App Store and turn scans into cards, collections, and field-guide learning.",
+      "description": "Download AnimalDex on the App Store or Google Play and turn scans into cards, collections, and field-guide learning.",
       "launch": "Download on",
       "available": "Available on the",
       "beta": "Live app",

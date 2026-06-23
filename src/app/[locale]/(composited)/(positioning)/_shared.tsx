@@ -3,6 +3,7 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {collectorPages, getCollectorPage} from "@/data/collector-pages";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -103,9 +104,7 @@ export default async function CollectorLandingPage({slug}: PositioningPageResult
                     <Link href="/">
                         <Button as="span">{t("homeButton")}</Button>
                     </Link>
-                    <Link href="https://apps.apple.com/app/6761607780">
-                        <Button as="span">{t("appButton")}</Button>
-                    </Link>
+                    <StoreLinks />
                 </div>
             </div>
 
@@ -129,9 +128,7 @@ export default async function CollectorLandingPage({slug}: PositioningPageResult
                     <Link href="/">
                         <Button as="span">{t("homeButton")}</Button>
                     </Link>
-                    <Link href="https://apps.apple.com/app/6761607780">
-                        <Button as="span">{t("appButton")}</Button>
-                    </Link>
+                    <StoreLinks />
                 </div>
             </div>
         </article>

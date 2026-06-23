@@ -71,7 +71,7 @@ export const whatAnimalAmIPage = {
         },
         {
             question: "How do I get my real result?",
-            answer: "Download AnimalDex on the App Store, open Identity, and complete the Wild Profile interview. The app generates your personal Origin, Apex, and Active diagnosis there."
+            answer: "Download AnimalDex on the App Store or Google Play, open Identity, and complete the Wild Profile interview. The app generates your personal Origin, Apex, and Active diagnosis there."
         },
         {
             question: "Can my animal change?",

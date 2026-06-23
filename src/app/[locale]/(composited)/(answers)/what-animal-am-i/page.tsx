@@ -1,7 +1,7 @@
 import {Metadata} from "next";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import Button from "@/app/[locale]/_components/button";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {
     celebrityWildProfiles,
     whatAnimalAmIPage,
@@ -17,8 +17,6 @@ type WhatAnimalAmIPageProps = {
         locale: string;
     };
 };
-
-const appStoreUrl = "https://apps.apple.com/app/6761607780";
 
 export async function generateMetadata({params}: WhatAnimalAmIPageProps): Promise<Metadata> {
     const page = whatAnimalAmIPage;
@@ -127,9 +125,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         ))}
                     </div>
                     <div className="flex flex-wrap gap-3 pt-2">
-                        <Link href={appStoreUrl}>
-                            <Button as="span">{t("ctaButton")}</Button>
-                        </Link>
+                        <StoreLinks />
                         <Link href={`/blog/${page.blogSlug}`} underline className="text-primary-200 hover:text-primary-100 text-lg self-center">
                             {t("readDeepGuide")}
                         </Link>
@@ -210,9 +206,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl max-w-3xl mx-auto">{t("ctaDescription")}</p>
                 <div className="flex justify-center flex-wrap gap-3">
-                    <Link href={appStoreUrl}>
-                        <Button as="span">{t("ctaButton")}</Button>
-                    </Link>
+                    <StoreLinks />
                     <Link href="/blog/what-animal-am-i" underline className="text-primary-200 hover:text-primary-100 text-lg self-center">
                         {t("readDeepGuide")}
                     </Link>

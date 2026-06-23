@@ -13,7 +13,7 @@ export default function Footer() {
             links: [
                 {href: "/#features", label: t("features")},
                 {href: "/use-cases", label: t("useCases")},
-                {href: "https://apps.apple.com/app/6761607780", label: t("download")}
+                {href: "/#download", label: t("download")}
             ]
         },
         {

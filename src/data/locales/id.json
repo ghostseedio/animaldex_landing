@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Kembali ke beranda AnimalDex",
     "title": "AnimalDex",
-    "description": "Pemindai hewan AI, aplikasi koleksi satwa liar, dan field guide kolektibel untuk iPhone.",
+    "description": "Pemindai hewan AI, aplikasi koleksi satwa liar, dan field guide kolektibel untuk iOS dan Android.",
     "team": "Untuk Siapa",
     "features": "Fitur",
     "download": "Dapatkan AnimalDex",
@@ -34,9 +34,9 @@
     },
     "credits": {
       "platform": "Dibuat untuk",
-      "platformValue": "iPhone",
+      "platformValue": "iOS dan Android",
       "status": "Status",
-      "statusValue": "sudah tersedia di App Store"
+      "statusValue": "sudah tersedia di App Store dan Google Play"
     }
   },
   "home": {
@@ -46,7 +46,7 @@
     "description": "Pindai hewan nyata. Temukan pelajaran yang mereka ajarkan.",
     "supporting": "Gunakan pemindai AI untuk identifikasi instan, lalu pelajari meaning, symbolism, dan pelajaran hewan yang didukung biologi dan perilaku nyata.",
     "phone": {
-      "phone": "Pratinjau iPhone AnimalDex",
+      "phone": "Pratinjau aplikasi mobile AnimalDex",
       "emojis": "Kartu pratinjau statistik tantangan mengambang",
       "update": "Kartu pratinjau hasil scan hewan mengambang",
       "speed": "Kartu pratinjau progres koleksi mengambang",
@@ -113,7 +113,7 @@
     },
     "download": {
       "title": "Mulai penemuan berikutnya dengan AnimalDex",
-      "description": "Download AnimalDex di App Store dan ubah hasil scan jadi kartu, koleksi, dan pembelajaran field guide.",
+      "description": "Download AnimalDex di App Store atau Google Play dan ubah hasil scan jadi kartu, koleksi, dan pembelajaran field guide.",
       "launch": "Download di",
       "available": "Tersedia di",
       "beta": "Aplikasi live",
@@ -730,7 +730,7 @@
   "meta": {
     "fullTitle": "AnimalDex | pemindai hewan AI, aplikasi koleksi satwa liar, dan field guide",
     "title": "AnimalDex",
-    "description": "AnimalDex adalah aplikasi iPhone live untuk pemindaian hewan AI, koleksi satwa liar, pembelajaran field guide, dan jurnal kartu hewan kolektibel.",
+    "description": "AnimalDex adalah aplikasi iOS dan Android live untuk pemindaian hewan AI, koleksi satwa liar, pembelajaran field guide, dan jurnal kartu hewan kolektibel.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",

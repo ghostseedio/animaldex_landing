@@ -3,6 +3,7 @@ import {Metadata} from "next";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
+import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {locationPages} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
@@ -132,11 +133,7 @@ export default async function LocationsIndexPage() {
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("indexCtaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("indexCtaDescription")}</p>
-                <div className="flex justify-center">
-                    <Link href="https://apps.apple.com/app/6761607780">
-                        <Button as="span">{t("ctaButton")}</Button>
-                    </Link>
-                </div>
+                <StoreLinks />
             </div>
         </section>
     );

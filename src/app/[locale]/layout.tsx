@@ -9,8 +9,8 @@ import NavigationProgress from "@/app/[locale]/_components/navigation-progress";
 import {loadLocaleMessages} from "@/loaders/locale";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
+import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 
-const appStoreUrl = "https://apps.apple.com/app/6761607780";
 const brandIconUrl = "/images/logo.webp";
 const socialImageUrl = "/images/og.png";
 
@@ -99,6 +99,11 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             ios: {
                 url: appStoreUrl,
                 app_store_id: "6761607780",
+                app_name: "AnimalDex"
+            },
+            android: {
+                package: "app.animaldex",
+                url: googlePlayUrl,
                 app_name: "AnimalDex"
             }
         },
