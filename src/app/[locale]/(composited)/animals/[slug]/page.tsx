@@ -918,7 +918,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {t("moreWithPrincipleTitle", {principle: principleProfile.principle})}
                     </h2>
                     <p className="text-ink-200 text-lg md:text-xl">
-                        <Link href={`/principles/${principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
+                        <Link href={`/principles/${principleProfile.clusterPrincipleSlug ?? principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
                             {t("moreWithPrincipleHubLink", {principle: principleProfile.principle})}
                         </Link>
                     </p>

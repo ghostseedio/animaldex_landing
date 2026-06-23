@@ -4,9 +4,7 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
-import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {getPrincipleHubBySlug, resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -18,16 +16,11 @@ type PrinciplePageProps = {
     };
 };
 
-const principles = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
 const MAX_PRINCIPLE_SPECIES_ITEMS = 24;
-
-function getPrincipleBySlug(slug: string) {
-    return principles.find((item) => item.principleSlug === slug);
-}
 
 export async function generateMetadata({params}: PrinciplePageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "principles");
-    const principle = getPrincipleBySlug(params.slug);
+    const principle = await getPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         return {};
@@ -55,7 +48,7 @@ export async function generateMetadata({params}: PrinciplePageProps): Promise<Me
 
 export default async function PrincipleDetailPage({params}: PrinciplePageProps) {
     const t = await getScopedTranslator(params.locale, "principles");
-    const principle = getPrincipleBySlug(params.slug);
+    const principle = await getPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         notFound();
@@ -63,17 +56,13 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
 
     const speciesItems = (
         await Promise.all(
-            principle.speciesSlugs.slice(0, MAX_PRINCIPLE_SPECIES_ITEMS).map(async (slug) => {
-                const entry = getSpeciesBySlug(slug);
-                if (!entry) {
-                    return null;
-                }
-
-                const profile = await resolveSpeciesBehaviorProfile(entry.slug);
-                return profile ? {entry, profile} : null;
+            principle.lessons.slice(0, MAX_PRINCIPLE_SPECIES_ITEMS).map(async (lesson) => {
+                const entry = getSpeciesBySlug(lesson.slug);
+                const profile = await resolveSpeciesBehaviorProfile(lesson.slug);
+                return {entry, lesson, profile};
             })
         )
-    ).filter((item): item is NonNullable<typeof item> => Boolean(item));
+    );
 
     const sampleProfile = speciesItems[0]?.profile;
     const breadcrumbSchema = {
@@ -114,55 +103,68 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 font-medium uppercase tracking-[0.18em] text-sm">{t("eyebrow")}</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{principle.principle}</h1>
-                <p className="text-ink-200 text-lg md:text-xl">{sampleProfile?.motto}</p>
+                <p className="text-ink-200 text-lg md:text-xl">{sampleProfile?.motto ?? principle.sampleMotto}</p>
                 <p className="text-ink-300">{t("clusterIntro")}</p>
                 <p className="text-ink-300">{t("speciesCount", {count: principle.speciesCount})}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {speciesItems.map(({entry, profile}, index) => (
-                    <article
-                        key={entry.slug}
-                        className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-4"
-                    >
-                        <Link href={`/animals/${entry.slug}`} className="block">
-                            <SpeciesArtworkImage
-                                slug={entry.slug}
-                                alt={getSpeciesImageAltText(entry, "thumbnail")}
-                                priority={index < 3}
-                                className="aspect-[4/3] rounded-2xl border border-line-300"
-                                sizes="(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw"
-                            />
-                        </Link>
-                        <div className="flex flex-col gap-3">
-                            <h2 className="font-display font-bold text-2xl text-white">{entry.name}</h2>
-                            <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">
-                                {t("speciesPrincipleLabel")}: {profile.principle}
-                            </p>
-                            <p className="text-primary-200">{profile.motto}</p>
-                            <p className="text-ink-200">{profile.coreLesson}</p>
-                            <p className="text-ink-300 text-sm">{profile.biologicalBasis}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-3 mt-auto">
-                            <Link
-                                href={`/animals/${entry.slug}`}
-                                underline
-                                className="text-primary-200 hover:text-primary-100 transition-colors"
-                            >
-                                {t("openAnimal")}
+                {speciesItems.map(({entry, lesson, profile}, index) => {
+                    const detailHref = entry ? `/animals/${entry.slug}` : `/animal-lessons/${lesson.slug}`;
+                    const displayName = entry?.name ?? lesson.displayName;
+                    const imageAlt = entry
+                        ? getSpeciesImageAltText(entry, "thumbnail")
+                        : `${lesson.displayName} animal lesson image on AnimalDex`;
+                    const principleName = profile?.principle ?? lesson.principleName;
+                    const motto = profile?.motto ?? lesson.shortMotto;
+                    const coreLesson = profile?.coreLesson ?? lesson.coreLesson;
+                    const biologicalBasis = profile?.biologicalBasis ?? lesson.biologicalBasis;
+
+                    return (
+                        <article
+                            key={lesson.slug}
+                            className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-4"
+                        >
+                            <Link href={detailHref} className="block">
+                                <SpeciesArtworkImage
+                                    slug={lesson.slug}
+                                    alt={imageAlt}
+                                    imageFile={lesson.imageFile}
+                                    priority={index < 3}
+                                    className="aspect-[4/3] rounded-2xl border border-line-300"
+                                    sizes="(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw"
+                                />
                             </Link>
-                            {profile.hasLessonPage ? (
+                            <div className="flex flex-col gap-3">
+                                <h2 className="font-display font-bold text-2xl text-white">{displayName}</h2>
+                                <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">
+                                    {t("speciesPrincipleLabel")}: {principleName}
+                                </p>
+                                {motto ? <p className="text-primary-200">{motto}</p> : null}
+                                <p className="text-ink-200">{coreLesson}</p>
+                                {biologicalBasis ? <p className="text-ink-300 text-sm">{biologicalBasis}</p> : null}
+                            </div>
+                            <div className="flex flex-wrap gap-3 mt-auto">
+                                {entry ? (
+                                    <Link
+                                        href={`/animals/${entry.slug}`}
+                                        underline
+                                        className="text-primary-200 hover:text-primary-100 transition-colors"
+                                    >
+                                        {t("openAnimal")}
+                                    </Link>
+                                ) : null}
                                 <Link
-                                    href={`/animal-lessons/${entry.slug}`}
+                                    href={`/animal-lessons/${lesson.slug}`}
                                     underline
                                     className="text-primary-200 hover:text-primary-100 transition-colors"
                                 >
                                     {t("openLesson")}
                                 </Link>
-                            ) : null}
-                        </div>
-                    </article>
-                ))}
+                            </div>
+                        </article>
+                    );
+                })}
             </div>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">

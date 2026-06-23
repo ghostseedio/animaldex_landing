@@ -162,6 +162,7 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
                                     <SpeciesArtworkImage
                                         slug={lesson.slug}
                                         alt={imageAlt}
+                                        imageFile={lesson.imageFile}
                                         className="h-20 w-20 rounded-2xl border border-line-300"
                                         sizes="80px"
                                     />

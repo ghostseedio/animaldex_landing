@@ -1,8 +1,7 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import {speciesEntries, getSpeciesBySlug} from "@/data/species";
-import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {getSpeciesBySlug} from "@/data/species";
+import {getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -12,8 +11,6 @@ type PrinciplesIndexPageProps = {
         locale: string;
     };
 };
-
-const principles = getBehavioralPrinciplesIndex(speciesSystemsIntelligence);
 
 export async function generateMetadata({params}: PrinciplesIndexPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "principles");
@@ -34,6 +31,7 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
 
 export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageProps) {
     const t = await getScopedTranslator(params.locale, "principles");
+    const principles = await getPrincipleHubIndex();
     const breadcrumbSchema = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -67,10 +65,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
 
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                 {principles.map((principle) => {
-                    const sampleSpecies = principle.speciesSlugs
-                        .slice(0, 3)
-                        .map((slug) => getSpeciesBySlug(slug))
-                        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+                    const sampleLessons = principle.lessons.slice(0, 3);
 
                     return (
                         <article
@@ -81,15 +76,18 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                             <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{principle.sampleMotto}</p>
                             <p className="text-ink-200">{t("speciesCount", {count: principle.speciesCount})}</p>
                             <div className="flex flex-wrap gap-2">
-                                {sampleSpecies.map((entry) => (
-                                    <Link
-                                        key={entry.slug}
-                                        href={`/animals/${entry.slug}`}
-                                        className="rounded-full border border-line-300/70 px-3 py-1 text-ink-200 text-sm"
-                                    >
-                                        {entry.name}
-                                    </Link>
-                                ))}
+                                {sampleLessons.map((lesson) => {
+                                    const entry = getSpeciesBySlug(lesson.slug);
+                                    return (
+                                        <Link
+                                            key={lesson.slug}
+                                            href={entry ? `/animals/${entry.slug}` : `/animal-lessons/${lesson.slug}`}
+                                            className="rounded-full border border-line-300/70 px-3 py-1 text-ink-200 text-sm"
+                                        >
+                                            {entry?.name ?? lesson.displayName}
+                                        </Link>
+                                    );
+                                })}
                             </div>
                             <Link
                                 href={`/principles/${principle.principleSlug}`}

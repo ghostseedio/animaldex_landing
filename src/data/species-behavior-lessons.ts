@@ -18,7 +18,18 @@ export type SpeciesBehaviorLesson = {
     biologicalBasis: string;
     shortMotto: string;
     bestUseCases: string[];
+    imageFile: string | null;
     source: "catalog" | "local";
+};
+
+export type PrincipleHub = {
+    principle: string;
+    principleSlug: string;
+    speciesCount: number;
+    speciesSlugs: string[];
+    sampleMotto: string;
+    lessons: SpeciesBehaviorLesson[];
+    catalogLessonCount: number;
 };
 
 export type ResolvedSpeciesBehaviorProfile = BehavioralPrincipleProfile & {
@@ -53,6 +64,7 @@ type SpeciesCatalogLessonRow = {
     biological_basis?: string | null;
     short_motto?: string | null;
     best_use_cases?: unknown;
+    generation_metadata?: unknown;
 };
 
 const websiteSlugs = new Set(speciesEntries.map((entry) => entry.slug));
@@ -65,10 +77,19 @@ function parseBestUseCases(value: unknown): string[] {
     return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+function parseImageFile(value: unknown): string | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    const imageFile = (value as {image_file?: unknown}).image_file;
+    return typeof imageFile === "string" && imageFile.trim() ? imageFile.trim() : null;
+}
+
 function normalizeLessonRow(row: SpeciesCatalogLessonRow): SpeciesBehaviorLesson | null {
     const slug = row.landing_page_slug?.trim();
 
-    if (!slug || !websiteSlugs.has(slug) || !row.core_lesson?.trim() || !row.principle_name?.trim()) {
+    if (!slug || !row.core_lesson?.trim() || !row.principle_name?.trim()) {
         return null;
     }
 
@@ -84,6 +105,7 @@ function normalizeLessonRow(row: SpeciesCatalogLessonRow): SpeciesBehaviorLesson
         biologicalBasis: row.biological_basis?.trim() ?? "",
         shortMotto: row.short_motto?.trim() ?? "",
         bestUseCases: parseBestUseCases(row.best_use_cases),
+        imageFile: parseImageFile(row.generation_metadata),
         source: "catalog"
     };
 }
@@ -99,6 +121,7 @@ function buildLocalBehaviorLesson(entry: SpeciesEntry, profile: BehavioralPrinci
         biologicalBasis: profile.biologicalBasis,
         shortMotto: profile.motto,
         bestUseCases: profile.bestFor,
+        imageFile: null,
         source: "local"
     };
 }
@@ -123,12 +146,12 @@ function mergeCatalogAndLocalLessons(catalogLessons: SpeciesBehaviorLesson[]): S
 async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
     const config = getSupabaseConfig();
 
-    if (!config || !websiteSlugs.has(slug)) {
+    if (!config) {
         return null;
     }
 
     const searchParams = new URLSearchParams({
-        select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
+        select: "landing_page_slug,display_name,normalized_identity_key,generation_metadata,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
         landing_page_slug: `eq.${slug}`,
         core_lesson: "not.is.null",
         limit: "1"
@@ -174,7 +197,7 @@ async function fetchBehaviorLessonsFromSupabase(): Promise<SpeciesBehaviorLesson
 
     while (true) {
         const searchParams = new URLSearchParams({
-            select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
+            select: "landing_page_slug,display_name,normalized_identity_key,generation_metadata,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
             core_lesson: "not.is.null",
             principle_name: "not.is.null",
             landing_page_slug: "not.is.null",
@@ -225,10 +248,6 @@ export async function getBehaviorLessonIndex(): Promise<SpeciesBehaviorLesson[]>
 }
 
 export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
-    if (!websiteSlugs.has(slug)) {
-        return null;
-    }
-
     const catalogLesson = await fetchCatalogLessonBySlug(slug);
     if (catalogLesson) {
         return catalogLesson;
@@ -259,6 +278,61 @@ export async function getRelatedBehaviorLessons(slug: string, limit = 3): Promis
         .slice(0, limit);
 }
 
+function getLessonHubPrinciple(lesson: SpeciesBehaviorLesson) {
+    const systemsEntry = getSystemsIntelligenceBySpeciesSlug(lesson.slug);
+    const localProfile = getBehavioralPrincipleProfile(lesson.slug, systemsEntry, speciesSystemsIntelligence);
+    return localProfile?.browseCluster || lesson.principleName;
+}
+
+function pickHubMotto(lessons: SpeciesBehaviorLesson[]) {
+    return lessons.find((lesson) => lesson.shortMotto.trim())?.shortMotto
+        ?? lessons.find((lesson) => lesson.principleExpression?.trim())?.principleExpression
+        ?? lessons[0]?.coreLesson
+        ?? "";
+}
+
+export async function getPrincipleHubIndex(): Promise<PrincipleHub[]> {
+    const lessons = await getBehaviorLessonIndex();
+    const grouped = new Map<string, PrincipleHub>();
+
+    for (const lesson of lessons) {
+        const principle = getLessonHubPrinciple(lesson);
+        const principleSlug = toPrincipleSlug(principle);
+        const current = grouped.get(principleSlug) ?? {
+            principle,
+            principleSlug,
+            speciesCount: 0,
+            speciesSlugs: [],
+            sampleMotto: "",
+            lessons: [],
+            catalogLessonCount: 0
+        };
+
+        current.speciesCount += 1;
+        current.speciesSlugs.push(lesson.slug);
+        current.lessons.push(lesson);
+        if (lesson.source === "catalog") {
+            current.catalogLessonCount += 1;
+        }
+
+        grouped.set(principleSlug, current);
+    }
+
+    return Array.from(grouped.values())
+        .map((hub) => ({
+            ...hub,
+            lessons: hub.lessons.sort((left, right) => left.displayName.localeCompare(right.displayName)),
+            speciesSlugs: Array.from(new Set(hub.speciesSlugs)),
+            sampleMotto: pickHubMotto(hub.lessons)
+        }))
+        .sort((left, right) => right.speciesCount - left.speciesCount || left.principle.localeCompare(right.principle));
+}
+
+export async function getPrincipleHubBySlug(slug: string): Promise<PrincipleHub | null> {
+    const hubs = await getPrincipleHubIndex();
+    return hubs.find((hub) => hub.principleSlug === slug) ?? null;
+}
+
 export async function resolveSpeciesBehaviorProfile(slug: string): Promise<ResolvedSpeciesBehaviorProfile | null> {
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(slug);
     const localProfile = getBehavioralPrincipleProfile(slug, systemsEntry, speciesSystemsIntelligence);
@@ -286,8 +360,8 @@ export async function resolveSpeciesBehaviorProfile(slug: string): Promise<Resol
             source: "catalog_db",
             hasCatalogLesson: true,
             hasLessonPage: true,
-            clusterPrinciple: clusterProfile.clusterPrinciple,
-            clusterPrincipleSlug: clusterProfile.clusterPrincipleSlug
+            clusterPrinciple: clusterProfile.clusterPrinciple ?? catalogLesson.principleName,
+            clusterPrincipleSlug: clusterProfile.clusterPrincipleSlug ?? toPrincipleSlug(catalogLesson.principleName)
         };
     }
 

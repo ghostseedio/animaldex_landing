@@ -14,8 +14,8 @@ function getPublicStorageBaseUrl() {
     return getSupabaseUrl() ?? DEFAULT_SUPABASE_URL;
 }
 
-export function getSpeciesArtworkUrl(slug: string) {
-    const artworkPath = encodeStoragePath(`${slug}.webp`);
+export function getSpeciesArtworkUrl(slug: string, imageFile?: string | null) {
+    const artworkPath = encodeStoragePath(imageFile?.trim() || `${slug}.webp`);
 
     return `${getPublicStorageBaseUrl()}/storage/v1/object/public/${SPECIES_ARTWORK_BUCKET}/${artworkPath}`;
 }

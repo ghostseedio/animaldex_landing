@@ -21,7 +21,7 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
     const lesson = await getBehaviorLessonBySlug(params.slug);
     const speciesEntry = getSpeciesBySlug(params.slug);
 
-    if (!lesson || !speciesEntry) {
+    if (!lesson) {
         return {};
     }
 
@@ -41,10 +41,17 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
             "biology backed animal lessons",
             "animal behavior lessons"
         ],
-        featuredImage: {
-            ...speciesEntry.featuredImage,
-            alt: `${lesson.displayName} animal lesson on AnimalDex`
-        }
+        featuredImage: speciesEntry
+            ? {
+                ...speciesEntry.featuredImage,
+                alt: `${lesson.displayName} animal lesson on AnimalDex`
+            }
+            : {
+                src: "/images/og.png",
+                alt: `${lesson.displayName} animal lesson on AnimalDex`,
+                width: 1200,
+                height: 630
+            }
     });
 }
 
@@ -53,7 +60,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
     const lesson = await getBehaviorLessonBySlug(params.slug);
     const speciesEntry = getSpeciesBySlug(params.slug);
 
-    if (!lesson || !speciesEntry) {
+    if (!lesson) {
         notFound();
     }
 
@@ -151,7 +158,8 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                     </div>
                     <SpeciesArtworkImage
                         slug={lesson.slug}
-                        alt={getSpeciesImageAltText(speciesEntry, "featured")}
+                        alt={speciesEntry ? getSpeciesImageAltText(speciesEntry, "featured") : `${lesson.displayName} animal lesson image on AnimalDex`}
+                        imageFile={lesson.imageFile}
                         priority
                         className="aspect-[4/3] rounded-3xl border border-line-300"
                         sizes="(min-width: 1024px) 40vw, 100vw"
@@ -188,9 +196,11 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedIndexesTitle")}</h2>
                 <div className="flex flex-wrap gap-3">
-                    <Link href={`/animals/${lesson.slug}`} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                        {t("openAnimal")}
-                    </Link>
+                    {speciesEntry ? (
+                        <Link href={`/animals/${lesson.slug}`} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
+                            {t("openAnimal")}
+                        </Link>
+                    ) : null}
                     <Link href="/animal-symbolism" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedSymbolism")}
                     </Link>

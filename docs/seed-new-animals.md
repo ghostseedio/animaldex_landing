@@ -298,7 +298,7 @@ animals:
       value_low: 400
       value_typical: 1500
       value_high: 4500
-      value_basis: habitat_stewardship
+      value_basis: conservation_significance
       value_category: wild
       care_complexity: 38
       conservation_rarity: 24
@@ -436,7 +436,7 @@ animals:
       value_low: 100
       value_typical: 500
       value_high: 1500
-      value_basis: public_interest
+      value_basis: conservation_significance
       value_category: wild
       care_complexity: 22
       conservation_rarity: 8
@@ -528,7 +528,7 @@ animals:
       value_low: 150
       value_typical: 700
       value_high: 2200
-      value_basis: habitat_stewardship
+      value_basis: conservation_significance
       value_category: wild
       care_complexity: 28
       conservation_rarity: 24
@@ -804,7 +804,7 @@ animals:
       value_low: 500
       value_typical: 2500
       value_high: 9000
-      value_basis: habitat_stewardship
+      value_basis: conservation_significance
       value_category: wild
       care_complexity: 58
       conservation_rarity: 28
