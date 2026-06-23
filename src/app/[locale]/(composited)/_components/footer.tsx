@@ -3,7 +3,7 @@ import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import FooterLink from "@/app/[locale]/(composited)/_components/footer-link";
 import Link from "@/app/[locale]/_components/link";
 import {useTranslations} from "next-intl";
-import {ArrowSquareUpIcon, InstagramIcon, TikTokIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
+import {ArrowSquareUpIcon, InstagramIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
 
 export default function Footer() {
     const t = useTranslations("nav");
@@ -41,6 +41,7 @@ export default function Footer() {
     ];
     const socialLinks = [
         {href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon},
+        {href: "https://x.com/animaldexapp", label: "X", icon: XIcon},
         {href: "https://www.tiktok.com/@animaldexapp", label: "TikTok", icon: TikTokIcon},
         {href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon}
     ];

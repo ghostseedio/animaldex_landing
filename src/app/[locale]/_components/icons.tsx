@@ -216,6 +216,25 @@ export function TikTokIcon({className, size = 24}: IconProps) {
     );
 }
 
+export function XIcon({className, size = 24}: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M4 4h4.73l4.02 5.65L17.6 4H20l-6.13 7.14L20.5 20h-4.73l-4.3-6.05L6.28 20H3.88l6.47-7.53L4 4Zm3.42 1.8 9.25 12.4h.41L7.83 5.8h-.41Z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}
+
 export function YouTubeIcon({className, size = 24}: IconProps) {
     return (
         <svg
