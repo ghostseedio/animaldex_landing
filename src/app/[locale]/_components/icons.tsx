@@ -255,3 +255,21 @@ export function YouTubeIcon({className, size = 24}: IconProps) {
         </svg>
     );
 }
+export function FacebookIcon({ className, size = 24 }: IconProps) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M13.5 21V13.2H16.1L16.5 10H13.5V7.95c0-.93.26-1.55 1.59-1.55H16.6V3.54c-.26-.03-1.17-.11-2.22-.11-2.2 0-3.71 1.34-3.71 3.8V10H8.2v3.2h2.47V21h2.83Z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}

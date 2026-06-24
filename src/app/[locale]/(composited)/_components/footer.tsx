@@ -2,8 +2,8 @@ import Image from "next/image";
 import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import FooterLink from "@/app/[locale]/(composited)/_components/footer-link";
 import Link from "@/app/[locale]/_components/link";
-import {useTranslations} from "next-intl";
-import {ArrowSquareUpIcon, InstagramIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
+import { useTranslations } from "next-intl";
+import { ArrowSquareUpIcon, InstagramIcon, TikTokIcon, FacebookIcon, XIcon, YouTubeIcon } from "@/app/[locale]/_components/icons";
 
 export default function Footer() {
     const t = useTranslations("nav");
@@ -11,39 +11,44 @@ export default function Footer() {
         {
             title: t("footerGroups.product"),
             links: [
-                {href: "/#features", label: t("features")},
-                {href: "/use-cases", label: t("useCases")},
-                {href: "/#download", label: t("download")}
+                { href: "/#features", label: t("features") },
+                { href: "/use-cases", label: t("useCases") },
+                { href: "/#download", label: t("download") }
             ]
         },
         {
             title: t("footerGroups.explore"),
             links: [
-                {href: "/animals", label: t("animals")},
-                {href: "/what-animal-am-i", label: t("whatAnimalAmI")},
-                {href: "/principles", label: t("principles")},
-                {href: "/animal-lessons", label: t("animalLessons")},
-                {href: "/animal-symbolism", label: t("animalSymbolism")},
-                {href: "/pokemon-animals", label: t("pokemonAnimals")},
-                {href: "/animal-hybrids", label: t("animalHybrids")},
-                {href: "/comparisons", label: t("challenges")},
-                {href: "/tier-list", label: t("rankings")},
-                {href: "/locations", label: t("locations")}
+                { href: "/animals", label: t("animals") },
+                { href: "/what-animal-am-i", label: t("whatAnimalAmI") },
+                { href: "/principles", label: t("principles") },
+                { href: "/animal-lessons", label: t("animalLessons") },
+                { href: "/animal-symbolism", label: t("animalSymbolism") },
+                { href: "/pokemon-animals", label: t("pokemonAnimals") },
+                { href: "/animal-hybrids", label: t("animalHybrids") },
+                { href: "/comparisons", label: t("challenges") },
+                { href: "/tier-list", label: t("rankings") },
+                { href: "/locations", label: t("locations") }
             ]
         },
         {
             title: t("footerGroups.resources"),
             links: [
-                {href: "/blog", label: t("blog")},
-                {href: "/animal-wisdom", label: t("animalWisdom")}
+                { href: "/blog", label: t("blog") },
+                { href: "/animal-wisdom", label: t("animalWisdom") }
             ]
         }
     ];
     const socialLinks = [
-        {href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon},
-        {href: "https://x.com/animaldexapp", label: "X", icon: XIcon},
-        {href: "https://www.tiktok.com/@animaldexapp", label: "TikTok", icon: TikTokIcon},
-        {href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon}
+        {
+            href: "https://www.facebook.com/animaldex",
+            label: "Facebook",
+            icon: FacebookIcon
+        },
+        { href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon },
+        { href: "https://x.com/animaldexapp", label: "X", icon: XIcon },
+        { href: "https://www.tiktok.com/@animaldexapp", label: "TikTok", icon: TikTokIcon },
+        { href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon }
     ];
 
     return (
