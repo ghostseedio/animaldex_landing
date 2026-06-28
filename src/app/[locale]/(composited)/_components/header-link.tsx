@@ -16,7 +16,7 @@ export default function HeaderLink({href, children, mobile = false, ...props}: H
     return (
         <Link
             href={href}
-            className={"overflow-y-hidden " + (mobile ? "md:hidden" : "")}
+            className={`overflow-y-hidden ${mobile ? "md:hidden" : "hidden md:block"}`}
             onClick={() => setOpen(false)}
             {...props}
         >

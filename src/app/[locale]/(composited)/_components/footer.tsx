@@ -3,7 +3,8 @@ import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import FooterLink from "@/app/[locale]/(composited)/_components/footer-link";
 import Link from "@/app/[locale]/_components/link";
 import { useTranslations } from "next-intl";
-import { ArrowSquareUpIcon, InstagramIcon, TikTokIcon, FacebookIcon, XIcon, YouTubeIcon } from "@/app/[locale]/_components/icons";
+import {ArrowSquareUpIcon, FacebookIcon, InstagramIcon, RedditIcon, SubstackIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
+import {socialProfileUrls} from "@/lib/social-links";
 
 export default function Footer() {
     const t = useTranslations("nav");
@@ -11,6 +12,7 @@ export default function Footer() {
         {
             title: t("footerGroups.product"),
             links: [
+                { href: "/#more", label: t("howItWorks") },
                 { href: "/#features", label: t("features") },
                 { href: "/use-cases", label: t("useCases") },
                 { href: "/#download", label: t("download") }
@@ -19,36 +21,42 @@ export default function Footer() {
         {
             title: t("footerGroups.explore"),
             links: [
-                { href: "/animals", label: t("animals") },
-                { href: "/what-animal-am-i", label: t("whatAnimalAmI") },
-                { href: "/principles", label: t("principles") },
-                { href: "/animal-lessons", label: t("animalLessons") },
-                { href: "/animal-symbolism", label: t("animalSymbolism") },
-                { href: "/pokemon-animals", label: t("pokemonAnimals") },
-                { href: "/animal-hybrids", label: t("animalHybrids") },
+                { href: "/animals", label: t("browseAnimals") },
                 { href: "/comparisons", label: t("challenges") },
-                { href: "/tier-list", label: t("rankings") },
-                { href: "/locations", label: t("locations") }
+                { href: "/locations", label: t("locations") },
+                { href: "/what-animal-am-i", label: t("whatAnimalAmI") }
+            ]
+        },
+        {
+            title: t("footerGroups.wisdom"),
+            links: [
+                { href: "/animal-wisdom", label: t("animalWisdom") },
+                { href: "/animal-symbolism", label: t("animalSymbolism") },
+                { href: "/animal-lessons", label: t("animalLessons") },
+                { href: "/principles", label: t("principles") }
             ]
         },
         {
             title: t("footerGroups.resources"),
             links: [
-                { href: "/blog", label: t("blog") },
-                { href: "/animal-wisdom", label: t("animalWisdom") }
+                { href: "/blog", label: t("articlesGuides") },
+                { href: "/support", label: t("support") },
+                { href: "/contact", label: t("contact") }
             ]
         }
     ];
     const socialLinks = [
         {
-            href: "https://www.facebook.com/animaldex",
+            href: socialProfileUrls.facebook,
             label: "Facebook",
             icon: FacebookIcon
         },
-        { href: "https://www.instagram.com/animaldexapp/", label: "Instagram", icon: InstagramIcon },
-        { href: "https://x.com/animaldexapp", label: "X", icon: XIcon },
-        { href: "https://www.tiktok.com/@animaldexapp", label: "TikTok", icon: TikTokIcon },
-        { href: "https://www.youtube.com/@animaldexapp", label: "YouTube", icon: YouTubeIcon }
+        {href: socialProfileUrls.instagram, label: "Instagram", icon: InstagramIcon},
+        {href: socialProfileUrls.x, label: "X", icon: XIcon},
+        {href: socialProfileUrls.tiktok, label: "TikTok", icon: TikTokIcon},
+        {href: socialProfileUrls.youtube, label: "YouTube", icon: YouTubeIcon},
+        {href: socialProfileUrls.substack, label: "Substack", icon: SubstackIcon},
+        {href: socialProfileUrls.reddit, label: "Reddit", icon: RedditIcon}
     ];
 
     return (
@@ -68,8 +76,8 @@ export default function Footer() {
                     </div>
                     <p className="text-xl text-ink-200 w-full text-center xl:text-left">{t("description")}</p>
                 </div>
-                <div className="flex flex-col gap-10 w-full max-w-3xl items-center xl:items-start">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-12 gap-y-10 w-full place-items-center xl:place-items-start">
+                <div className="flex flex-col gap-10 w-full max-w-5xl items-center xl:items-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">
                         {footerSections.map(section => (
                             <div key={section.title} className="flex flex-col gap-4 items-center xl:items-start">
                                 <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-ink-400 text-center xl:text-left">
@@ -125,8 +133,6 @@ export default function Footer() {
             >
                 <FooterLink href="/legal/privacy">{t("privacy")}</FooterLink>
                 <FooterLink href="/legal/terms">{t("terms")}</FooterLink>
-                <FooterLink href="mailto:support@animaldex.app">{t("support")}</FooterLink>
-                <FooterLink href="mailto:support@animaldex.app">{t("contact")}</FooterLink>
             </nav>
             <div className="flex flex-col lg:flex-row w-full justify-center items-center gap-2 lg:gap-8 text-ink-300">
                 <div className="hover:font-semibold transition-all flex gap-1">

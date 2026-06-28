@@ -32,10 +32,10 @@ export async function generateAnswerPageMetadata(slug: string): Promise<Metadata
         alternates: {
             canonical: getLocalePath(locale, `/${entry.slug}`),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/${entry.slug}`;
+                acc[localeItem] = getLocalePath(localeItem, `/${entry.slug}`);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/${entry.slug}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, `/${entry.slug}`)
             } as Record<string, string>)
         },
         openGraph: {

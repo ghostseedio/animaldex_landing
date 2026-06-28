@@ -1,3 +1,5 @@
+import {localeConfig} from "@/i18n";
+
 const productionSiteUrl = "https://animaldex.app";
 
 export function getSiteUrl() {
@@ -14,6 +16,11 @@ export function getSiteUrl() {
 
 export function getLocalePath(locale: string, path = "") {
     const normalisedPath = path === "/" ? "" : path;
+
+    if (locale === localeConfig.defaultLocale) {
+        return normalisedPath || "/";
+    }
+
     return `/${locale}${normalisedPath}`;
 }
 

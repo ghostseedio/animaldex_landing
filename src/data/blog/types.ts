@@ -59,6 +59,8 @@ export type BlogFAQ = {
 export type BlogPost = CanonicalContentMetadata & {
     slug: string;
     canonicalUrl?: string;
+    originalPublicationUrl?: string;
+    originalPublicationLabel?: string;
     readingMinutes: number;
     author?: string;
     tags: string[];

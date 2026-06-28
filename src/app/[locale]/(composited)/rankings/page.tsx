@@ -23,10 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
         alternates: {
             canonical: getLocalePath(locale, RANKING_CANONICAL_BASE_PATH),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}${RANKING_CANONICAL_BASE_PATH}`;
+                acc[localeItem] = getLocalePath(localeItem, RANKING_CANONICAL_BASE_PATH);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}${RANKING_CANONICAL_BASE_PATH}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, RANKING_CANONICAL_BASE_PATH)
             } as Record<string, string>)
         },
         openGraph: {

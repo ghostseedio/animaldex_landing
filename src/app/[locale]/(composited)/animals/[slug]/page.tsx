@@ -44,10 +44,6 @@ type SpeciesTextLink = {
     slug: string;
 };
 
-function formatDate(locale: string, date: string) {
-    return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
-}
-
 function pluralizeWord(word: string) {
     const lowerWord = word.toLowerCase();
     const irregularPlurals: Record<string, string> = {
@@ -503,7 +499,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     };
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-12 md:py-20 flex flex-col gap-16 md:gap-24">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([
@@ -519,188 +515,193 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 {t("back")}
             </Link>
 
-            {featuredMediaList.length > 1 ? (
-                <FeaturedSpeciesImageCarousel
-                    slides={featuredMediaList.map((item) => ({
-                        captureId: item.captureId,
-                        src: getSpeciesImageRoute(entry.slug, item.captureId),
-                        alt: getSpeciesImageAltText(entry, "featured"),
-                        attribution: getSpeciesImageAttribution(item),
-                        contextLabel: item.contextLabel,
-                        locationDisplayLabel: item.locationDisplayLabel
-                    }))}
-                    rarityLabel={resolvedRarityLabel}
-                    battleTierLabel={battleTierLabel}
-                />
-            ) : (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-3 md:p-4">
-                    <div className="relative overflow-hidden rounded-[2rem]">
-                        <SpeciesImage
-                            slug={entry.slug}
-                            alt={getSpeciesImageAltText(entry, "featured")}
-                            priority
-                            className="aspect-[4/3] rounded-[2rem]"
-                        />
-                        <div className="absolute left-4 top-4 md:left-5 md:top-5 flex max-w-[calc(100%-2rem)] md:max-w-[calc(100%-2.5rem)] flex-col items-start gap-2">
-                            <div className="flex flex-wrap gap-2">
-                                <span className="rounded-full border border-amber-200/30 bg-gradient-to-r from-amber-500/70 via-orange-400/65 to-rose-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(245,158,11,0.28)]">
-                                    {resolvedRarityLabel}
-                                </span>
-                                {battleTierLabel ? (
-                                    <span className="rounded-full border border-cyan-200/30 bg-gradient-to-r from-sky-500/70 via-cyan-500/65 to-teal-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.24)]">
-                                        {battleTierLabel}
-                                    </span>
-                                ) : null}
-                            </div>
-                            {captureContextLabel && captureLocationLabel ? (
-                                <span className="max-w-[min(68vw,26rem)] truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
-                                    {captureLocationLabel}
+            <section className="relative overflow-hidden rounded-[2rem] border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
+                <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+                    <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
+                        <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-sm font-semibold text-amber-100">
+                                {resolvedRarityLabel}
+                            </span>
+                            <span className="rounded-full border border-primary-400/20 bg-primary-400/[0.08] px-3 py-1.5 text-sm font-semibold text-primary-100">
+                                {entry.analysis.category}
+                            </span>
+                            {battleTierLabel ? (
+                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-ink-100">
+                                    {battleTierLabel}
                                 </span>
                             ) : null}
                         </div>
-                        {captureContextLabel ? (
-                            <div className="absolute right-4 top-4 md:right-5 md:top-5">
-                                <span className="rounded-full border border-fuchsia-200/30 bg-gradient-to-r from-fuchsia-500/70 via-violet-500/65 to-indigo-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold uppercase tracking-[0.12em] text-white shadow-[0_12px_30px_rgba(168,85,247,0.24)]">
-                                    {captureContextLabel}
-                                </span>
-                            </div>
-                        ) : null}
-                        {!captureContextLabel && captureLocationLabel ? (
-                            <div className="absolute right-4 top-4 md:right-5 md:top-5 max-w-[min(75vw,32rem)]">
-                                <span className="block truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
-                                    {captureLocationLabel}
-                                </span>
-                            </div>
-                        ) : null}
-                    </div>
-                    {imageAttribution ? (
-                        <div className="px-2 pt-3">
-                            <p className="text-sm md:text-base text-ink-300">
-                                {imageAttribution}
+                        <div className="flex max-w-3xl flex-col gap-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/80">{t("fieldGuideLabel")}</p>
+                            <h1 className="font-display text-5xl font-bold tracking-tight text-white md:text-6xl lg:text-7xl">{entry.name}</h1>
+                            <p className="max-w-2xl text-lg leading-8 text-ink-200 md:text-xl">
+                                {t("profileDescription")}
                             </p>
                         </div>
-                    ) : null}
-                </section>
-            )}
+                        <SubtitleSpeaker
+                            text={heroSubtitle}
+                            locale={locale}
+                            cacheKey={`${locale}:${entry.slug}:${heroSubtitle}`}
+                            refreshUrl={`/api/species-subtitles/${entry.slug}?locale=${encodeURIComponent(locale)}`}
+                        />
+                        {principleProfile ? (
+                            <div className="border-l-2 border-amber-300/45 pl-5">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("principleLabel")}</p>
+                                <p className="mt-2 text-xl font-semibold text-white md:text-2xl">{principleProfile.principle}</p>
+                                {principleProfile.motto ? <p className="mt-1 text-ink-200">{principleProfile.motto}</p> : null}
+                            </div>
+                        ) : null}
+                        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                            <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
+                                {t("getAnimalDex")}
+                            </Link>
+                            <Link href="/animals" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-white/15 px-7 font-bold text-white transition-colors hover:border-primary-400 hover:text-primary-100">
+                                {t("browseAnimals")}
+                            </Link>
+                        </div>
+                    </div>
 
-            <div className="flex flex-col gap-4">
-                <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{entry.heroTitle}</h1>
-                <SubtitleSpeaker
-                    text={heroSubtitle}
-                    locale={locale}
-                    cacheKey={`${locale}:${entry.slug}:${heroSubtitle}`}
-                    refreshUrl={`/api/species-subtitles/${entry.slug}?locale=${encodeURIComponent(locale)}`}
-                />
-                <div className="text-ink-300 text-sm md:text-base flex flex-wrap gap-x-6 gap-y-3">
-                    <span>
-                        <span className="text-white">{t("scientificName")}: </span>
-                        {entry.analysis.scientificName}
-                    </span>
-                    <span>
-                        <span className="text-white">{t("category")}: </span>
-                        {entry.analysis.category}
-                    </span>
-                    <span>
-                        <span className="text-white">{t("published")}: </span>
-                        {formatDate(locale, entry.publishedAt)}
-                    </span>
-                    <span>
-                        <span className="text-white">{t("updated")}: </span>
-                        {formatDate(locale, entry.updatedAt)}
-                    </span>
+                    <div className="order-1 lg:order-2">
+                        {featuredMediaList.length > 1 ? (
+                            <FeaturedSpeciesImageCarousel
+                                slides={featuredMediaList.map((item) => ({
+                                    captureId: item.captureId,
+                                    src: getSpeciesImageRoute(entry.slug, item.captureId),
+                                    alt: getSpeciesImageAltText(entry, "featured"),
+                                    attribution: getSpeciesImageAttribution(item),
+                                    contextLabel: item.contextLabel,
+                                    locationDisplayLabel: item.locationDisplayLabel
+                                }))}
+                                rarityLabel={resolvedRarityLabel}
+                                battleTierLabel={battleTierLabel}
+                            />
+                        ) : featuredMedia?.imagePath ? (
+                            <div className="rounded-[2rem] border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
+                                <div className="relative overflow-hidden rounded-[1.5rem]">
+                                    <SpeciesImage
+                                        slug={entry.slug}
+                                        alt={getSpeciesImageAltText(entry, "featured")}
+                                        priority
+                                        className="aspect-[4/5] rounded-[1.5rem]"
+                                        sizes="(min-width: 1024px) 40vw, 100vw"
+                                    />
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent px-5 pb-5 pt-16">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">{t("animalDexCardLabel")}</p>
+                                        {captureContextLabel ? <p className="mt-1 text-lg font-semibold text-white">{captureContextLabel}</p> : null}
+                                        {captureLocationLabel ? <p className="mt-1 text-sm text-ink-100">{captureLocationLabel}</p> : null}
+                                    </div>
+                                </div>
+                                {imageAttribution ? <p className="px-2 pt-3 text-sm text-ink-300">{imageAttribution}</p> : null}
+                            </div>
+                        ) : (
+                            <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
+                                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-amber-200/20 bg-amber-200/[0.08] text-3xl text-amber-100">✦</div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
+                                <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
+                                <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
+                                <Link href="/#download" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
+                                    {t("getAnimalDex")}
+                                </Link>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden rounded-3xl bg-surface-900/55 md:grid-cols-5">
+                {[
+                    [t("scientificName"), entry.analysis.scientificName],
+                    [t("category"), entry.analysis.category],
+                    [t("habitatLabel"), entry.analysis.habitat],
+                    [t("rarityLabel"), `${resolvedRarityLabel} · ${resolvedRarityScore}/100`],
+                    [t("nativeRangeLabel"), entry.analysis.nativeRange]
+                ].map(([label, value], index) => (
+                    <div key={label} className={`min-w-0 px-5 py-5 md:px-6 ${index > 0 ? "border-l border-white/[0.07]" : ""} ${index > 1 ? "border-t border-white/[0.07] md:border-t-0" : ""}`}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{label}</p>
+                        <p className="mt-2 line-clamp-2 text-base font-medium text-white">{value}</p>
+                    </div>
+                ))}
+            </section>
 
             {principleProfile ? (
-                <nav className="rounded-3xl border border-line-300 bg-surface-900/70 backdrop-blur px-4 py-4 flex flex-wrap items-center gap-2 md:gap-3">
+                <nav className="sticky top-20 z-20 -mx-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-white/[0.08] bg-canvas-950/90 px-4 py-4 backdrop-blur-xl md:top-24 md:mx-0 md:rounded-2xl md:border md:px-6">
                     <span className="text-ink-300 text-xs uppercase tracking-[0.18em]">{t("jumpToLabel")}</span>
-                    <Link href="#meaning" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                    <Link href="#meaning" className="text-sm text-primary-200 hover:text-primary-100">
                         {t("anchorMeaning")}
                     </Link>
-                    <Link href="#symbolism" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                    <Link href="#symbolism" className="text-sm text-primary-200 hover:text-primary-100">
                         {t("anchorSymbolism")}
                     </Link>
-                    <Link href="#biological-basis" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                    <Link href="#biological-basis" className="text-sm text-primary-200 hover:text-primary-100">
                         {t("anchorBiologicalBasis")}
                     </Link>
-                    <Link href="#behavior" className="rounded-full border border-line-300/70 px-3 py-1 text-sm text-primary-200 hover:text-primary-100">
+                    <Link href="#behavior" className="text-sm text-primary-200 hover:text-primary-100">
                         {t("anchorBehavior")}
                     </Link>
                 </nav>
             ) : null}
 
             {principleProfile ? (
-                <section id="meaning" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
-                        {t("principleTitle", {animal: entry.name})}
-                    </h2>
-                    <p className="text-ink-300 text-sm md:text-base">
-                        {principleProfile.hasLessonPage ? (
-                            <>
-                                <span className="text-white">{t("lessonPageLabel")}: </span>
-                                <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
-                                    {t("lessonPageLink", {animal: entry.name})}
-                                </Link>
-                            </>
-                        ) : null}
-                        {principleProfile.clusterPrincipleSlug ? (
-                            <>
-                                {principleProfile.hasLessonPage ? " · " : null}
-                                <span className="text-white">{t("principleHubLabel")}: </span>
-                                <Link href={`/principles/${principleProfile.clusterPrincipleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
-                                    {principleProfile.clusterPrinciple}
-                                </Link>
-                            </>
-                        ) : null}
-                    </p>
-                    {principleProfile.motto ? (
-                        <p className="text-primary-200 text-lg md:text-xl">{principleProfile.motto}</p>
-                    ) : null}
-                    <div className="flex flex-col gap-3">
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">
-                            <span className="text-white">{t("principleLabel")}: </span>
-                            {principleProfile.principle}
-                        </p>
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">
-                            <span className="text-white">{t("coreLessonLabel")}: </span>
-                            {principleProfile.coreLesson}
-                        </p>
-                        <p id="biological-basis" className="text-ink-200 text-lg md:text-xl leading-8">
-                            <span className="text-white">{t("biologicalBasisLabel")}: </span>
-                            {renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}
-                        </p>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("bestForTitle")}</h3>
-                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                            {principleProfile.bestFor.map((item) => (
-                                <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                    </div>
-                    {relatedPrincipleSpecies.length > 0 ? (
-                        <div className="flex flex-col gap-3">
-                            <h3 className="text-xl md:text-2xl font-semibold text-white">
-                                {t("relatedPrincipleSpeciesTitle", {principle: principleProfile.principle})}
-                            </h3>
-                            <div className="flex flex-wrap gap-3">
-                                {relatedPrincipleSpecies.map((item) => (
-                                    <Link
-                                        key={item.slug}
-                                        href={`/animals/${item.slug}`}
-                                        className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm md:text-base"
-                                    >
-                                        {item.name}
+                <section id="meaning" className="scroll-mt-40 border-t border-white/10 pt-10 md:pt-16">
+                    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
+                        <div className="max-w-3xl">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">
+                                {t("lessonFromLabel", {animal: entry.name})}
+                            </p>
+                            <h2 className="mt-4 font-display text-4xl font-bold leading-tight text-white md:text-5xl">
+                                {principleProfile.motto ?? t("principleTitle", {animal: entry.name})}
+                            </h2>
+                            <p className="mt-6 text-xl leading-9 text-ink-100 md:text-2xl md:leading-10">
+                                {principleProfile.coreLesson}
+                            </p>
+                            <div id="biological-basis" className="mt-10 scroll-mt-40 border-l-2 border-primary-400/35 pl-5 md:pl-7">
+                                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-primary-100">{t("biologicalBasisLabel")}</h3>
+                                <p className="mt-3 text-lg leading-8 text-ink-200">
+                                    {renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}
+                                </p>
+                            </div>
+                            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                                {principleProfile.hasLessonPage ? (
+                                    <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                        {t("lessonPageLink", {animal: entry.name})}
                                     </Link>
-                                ))}
+                                ) : null}
+                                {principleProfile.clusterPrincipleSlug ? (
+                                    <Link href={`/principles/${principleProfile.clusterPrincipleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                        {principleProfile.clusterPrinciple}
+                                    </Link>
+                                ) : null}
                             </div>
                         </div>
-                    ) : null}
+                        <aside className="self-start rounded-3xl bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(40,70,49,0.16))] p-6 md:p-8">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{t("principleLabel")}</p>
+                            <p className="mt-3 font-display text-3xl font-bold text-white">{principleProfile.principle}</p>
+                            <h3 className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("bestForTitle")}</h3>
+                            <ul className="mt-4 flex flex-col gap-3 text-ink-100">
+                                {principleProfile.bestFor.map((item) => (
+                                    <li key={item} className="flex gap-3"><span className="text-amber-200">—</span><span>{item}</span></li>
+                                ))}
+                            </ul>
+                            {relatedPrincipleSpecies.length > 0 ? (
+                                <div className="mt-8 border-t border-white/[0.08] pt-6">
+                                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("relatedPrincipleSpeciesTitle", {principle: principleProfile.principle})}</h3>
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        {relatedPrincipleSpecies.map((item) => (
+                                            <Link key={item.slug} href={`/animals/${item.slug}`} className="text-sm text-primary-200 hover:text-primary-100">
+                                                {item.name}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                        </aside>
+                    </div>
                 </section>
             ) : null}
 
             {principleProfile ? (
-                <section id="symbolism" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+                <section id="symbolism" className="scroll-mt-40 border-t border-white/10 pt-10 md:pt-16">
+                    <div className="flex max-w-3xl flex-col gap-8">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
                         {t("symbolismTitle", {animal: entry.name})}
                     </h2>
@@ -724,10 +725,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             AnimalDex assigns this principle from observable biology: body design, behavioral strategy, and ecosystem role documented for {entry.name.toLowerCase()}.
                         </p>
                     </div>
+                    </div>
                 </section>
             ) : null}
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
             </section>
@@ -756,7 +758,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 }}
             />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("identifyTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.analysis.identification.map((item) => (
@@ -765,7 +767,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </ul>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="rounded-[2rem] bg-[linear-gradient(145deg,rgba(40,70,49,0.13),rgba(255,255,255,0.025))] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whereFoundTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("habitatLabel")}: </span>
@@ -805,7 +807,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-5">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("dietTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("dietSummaryLabel")}: </span>
@@ -825,7 +827,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </p>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="rounded-[2rem] bg-amber-200/[0.07] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("rareTitle", {animal: entry.name})}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     <span className="text-white">{t("rarityLabel")}: </span>
@@ -854,7 +856,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 />
             )}
 
-            <section id="behavior" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section id="behavior" className="scroll-mt-40 max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("behaviorTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.behaviorTraits.map((item) => (
@@ -863,7 +865,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </ul>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="rounded-[2rem] bg-white/[0.025] px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("interestingTitle", {animal: entry.name})}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.whyInteresting.map((item) => (
@@ -872,7 +874,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </ul>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("spottingTitle")}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.respectfulSpotting.map((item) => (
@@ -881,7 +883,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </ul>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="rounded-[2rem] bg-white/[0.025] px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("lookalikesTitle")}</h2>
                 <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
                     {entry.premiumDetails.lookalikes.map((item) => (

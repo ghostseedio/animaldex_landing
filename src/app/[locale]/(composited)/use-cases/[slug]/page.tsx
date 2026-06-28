@@ -34,10 +34,10 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
         alternates: {
             canonical: getLocalePath(locale, `/use-cases/${entry.slug}`),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/use-cases/${entry.slug}`;
+                acc[localeItem] = getLocalePath(localeItem, `/use-cases/${entry.slug}`);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/use-cases/${entry.slug}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, `/use-cases/${entry.slug}`)
             } as Record<string, string>)
         },
         openGraph: {

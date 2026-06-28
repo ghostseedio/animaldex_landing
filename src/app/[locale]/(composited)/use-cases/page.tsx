@@ -27,10 +27,10 @@ export async function generateMetadata(): Promise<Metadata> {
         alternates: {
             canonical: getLocalePath(locale, "/use-cases"),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/use-cases`;
+                acc[localeItem] = getLocalePath(localeItem, "/use-cases");
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/use-cases`
+                "x-default": getLocalePath(localeConfig.defaultLocale, "/use-cases")
             } as Record<string, string>)
         },
         openGraph: {

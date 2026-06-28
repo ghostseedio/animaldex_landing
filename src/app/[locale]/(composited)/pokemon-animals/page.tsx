@@ -35,10 +35,10 @@ export async function generateMetadata({params}: PokemonAnimalsIndexPageProps): 
         alternates: {
             canonical: getLocalePath(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}${POKEMON_ANIMAL_CANONICAL_BASE_PATH}`;
+                acc[localeItem] = getLocalePath(localeItem, POKEMON_ANIMAL_CANONICAL_BASE_PATH);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}${POKEMON_ANIMAL_CANONICAL_BASE_PATH}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)
             } as Record<string, string>)
         },
         openGraph: {

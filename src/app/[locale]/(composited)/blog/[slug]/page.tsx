@@ -521,7 +521,8 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                 "@type": "ImageObject",
                 url: getAbsoluteAssetUrl("/images/logo.webp")
             }
-        }
+        },
+        ...(post.originalPublicationUrl ? {isBasedOn: post.originalPublicationUrl} : {})
     };
     const faqSchema = post.faq && post.faq.length > 0 ? {
         "@context": "https://schema.org",
@@ -580,6 +581,19 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                     <span>{post.readingMinutes} {t("minutes")}</span>
                     {post.author && <span>{t("author")} {post.author}</span>}
                 </div>
+                {post.originalPublicationUrl ? (
+                    <p className="text-sm md:text-base text-ink-300">
+                        Originally published on{" "}
+                        <a
+                            href={post.originalPublicationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
+                        >
+                            {post.originalPublicationLabel ?? "AnimalDex’s Substack"}
+                        </a>
+                    </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                     {post.tags.map((tag) => (
                         <span key={tag} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs">

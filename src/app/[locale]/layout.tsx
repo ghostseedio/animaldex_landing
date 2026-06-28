@@ -165,10 +165,10 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
         alternates: {
             canonical: canonicalPath,
             languages: localeConfig.locales.reduce((acc, locale) => {
-                acc[locale] = "/" + locale;
+                acc[locale] = getLocalePath(locale);
                 return acc;
             }, {
-                "x-default": "/" + localeConfig.defaultLocale
+                "x-default": getLocalePath(localeConfig.defaultLocale)
             } as Record<string, string>)
         }
     };

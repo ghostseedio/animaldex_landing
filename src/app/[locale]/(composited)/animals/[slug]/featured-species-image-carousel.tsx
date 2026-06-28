@@ -34,7 +34,7 @@ export default function FeaturedSpeciesImageCarousel({
     const activeLocationLabel = activeSlide.captureId ? activeSlide.locationDisplayLabel : null;
 
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-3 md:p-4">
+        <section className="rounded-[2rem] border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
             <div className="relative overflow-hidden rounded-[2rem]">
                 <div className="relative overflow-hidden bg-surface-800/60 aspect-[4/3] rounded-[2rem]">
                     <Image
@@ -44,24 +44,24 @@ export default function FeaturedSpeciesImageCarousel({
                         fill
                         unoptimized
                         priority
-                        sizes="(min-width: 1280px) 960px, (min-width: 768px) 80vw, 100vw"
+                        sizes="(min-width: 1024px) 40vw, 100vw"
                         className="object-cover"
                     />
                 </div>
 
                 <div className="absolute left-4 top-4 md:left-5 md:top-5 flex max-w-[calc(100%-2rem)] md:max-w-[calc(100%-2.5rem)] flex-col items-start gap-2">
                     <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full border border-amber-200/30 bg-gradient-to-r from-amber-500/70 via-orange-400/65 to-rose-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(245,158,11,0.28)]">
+                        <span className="rounded-full border border-amber-200/25 bg-amber-950/65 backdrop-blur px-3 py-1.5 text-sm font-semibold text-amber-100">
                             {rarityLabel}
                         </span>
                         {battleTierLabel ? (
-                            <span className="rounded-full border border-cyan-200/30 bg-gradient-to-r from-sky-500/70 via-cyan-500/65 to-teal-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.24)]">
+                            <span className="rounded-full border border-white/15 bg-black/55 backdrop-blur px-3 py-1.5 text-sm font-semibold text-white">
                                 {battleTierLabel}
                             </span>
                         ) : null}
                     </div>
                     {activeSlide.contextLabel && activeLocationLabel ? (
-                        <span className="max-w-[min(68vw,26rem)] truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
+                        <span className="max-w-[min(68vw,26rem)] truncate rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-xs md:text-sm font-medium text-white backdrop-blur">
                             {activeLocationLabel}
                         </span>
                     ) : null}
@@ -69,14 +69,14 @@ export default function FeaturedSpeciesImageCarousel({
 
                 {activeSlide.contextLabel ? (
                     <div className="absolute right-4 top-4 md:right-5 md:top-5">
-                        <span className="rounded-full border border-fuchsia-200/30 bg-gradient-to-r from-fuchsia-500/70 via-violet-500/65 to-indigo-500/70 backdrop-blur px-4 py-2 text-sm md:text-base font-semibold uppercase tracking-[0.12em] text-white shadow-[0_12px_30px_rgba(168,85,247,0.24)]">
+                        <span className="rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
                             {activeSlide.contextLabel}
                         </span>
                     </div>
                 ) : null}
                 {!activeSlide.contextLabel && activeLocationLabel ? (
                     <div className="absolute right-4 top-4 md:right-5 md:top-5 max-w-[min(75vw,32rem)]">
-                        <span className="block truncate rounded-full border border-emerald-200/25 bg-gradient-to-r from-emerald-500/62 via-green-500/58 to-lime-500/58 px-3 py-1.5 text-xs md:text-sm font-medium text-white shadow-[0_10px_28px_rgba(34,197,94,0.2)] backdrop-blur">
+                        <span className="block truncate rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-xs md:text-sm font-medium text-white backdrop-blur">
                             {activeLocationLabel}
                         </span>
                     </div>

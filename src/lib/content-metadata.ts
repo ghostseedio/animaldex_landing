@@ -40,10 +40,10 @@ export function buildContentMetadata({
         alternates: {
             canonical: resolvedCanonical,
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}${pathname}`;
+                acc[localeItem] = getLocalePath(localeItem, pathname);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}${pathname}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, pathname)
             } as Record<string, string>)
         },
         openGraph: {

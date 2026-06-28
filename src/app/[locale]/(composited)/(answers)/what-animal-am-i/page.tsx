@@ -28,10 +28,10 @@ export async function generateMetadata({params}: WhatAnimalAmIPageProps): Promis
         alternates: {
             canonical: getLocalePath(params.locale, `/${page.slug}`),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/${page.slug}`;
+                acc[localeItem] = getLocalePath(localeItem, `/${page.slug}`);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/${page.slug}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, `/${page.slug}`)
             } as Record<string, string>)
         },
         openGraph: {

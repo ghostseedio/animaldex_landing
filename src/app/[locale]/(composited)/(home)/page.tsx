@@ -22,6 +22,7 @@ import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
+import {socialProfileUrlList} from "@/lib/social-links";
 
 const animalBackgroundImages = [
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp.webp",
@@ -211,7 +212,7 @@ export default async function Home() {
         url: rootSiteUrl,
         logo: brandLogoUrl,
         image: brandLogoUrl,
-        sameAs: storeLinks.map((store) => store.href)
+        sameAs: [...storeLinks.map((store) => store.href), ...socialProfileUrlList]
     };
     const faqSchema = {
         "@context": "https://schema.org",

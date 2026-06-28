@@ -1,6 +1,7 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Image from "next/image";
+import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {blogPosts} from "@/data/blog";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -9,59 +10,113 @@ import {localeConfig} from "@/i18n";
 import {answerPages} from "@/data/answer-pages";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
+const POSTS_PER_PAGE = 12;
+
+type BlogIndexPageProps = {
+    searchParams?: {
+        page?: string | string[];
+    };
+};
+
+function getSingleParam(value?: string | string[]) {
+    return Array.isArray(value) ? value[0] : value;
+}
+
+function getRequestedPage(value?: string | string[]) {
+    const page = Number.parseInt(getSingleParam(value) ?? "1", 10);
+    return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function getBlogPagePath(page: number) {
+    return page === 1 ? "/blog" : `/blog?page=${page}`;
+}
+
+function getPaginationItems(currentPage: number, totalPages: number) {
+    if (totalPages <= 7) {
+        return Array.from({length: totalPages}, (_, index) => index + 1);
+    }
+
+    const pages = Array.from(new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]))
+        .filter((page) => page >= 1 && page <= totalPages)
+        .sort((a, b) => a - b);
+
+    return pages.flatMap<(number | string)>((page, index) => {
+        const previousPage = pages[index - 1];
+        return previousPage && page - previousPage > 1
+            ? [`gap-${previousPage}-${page}`, page]
+            : [page];
+    });
+}
+
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({searchParams}: BlogIndexPageProps): Promise<Metadata> {
     const locale = await getLocale();
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const postKeywords = Array.from(new Set(blogPosts.flatMap((post) => post.searchIntents)));
     const title = messages.blog?.metaTitle || "AnimalDex Blog";
     const description = messages.blog?.metaDescription || messages.meta?.description || "";
+    const currentPage = getRequestedPage(searchParams?.page);
+    const pagePath = getBlogPagePath(currentPage);
+    const pageTitle = currentPage === 1
+        ? title
+        : `${title} – ${(messages.blog?.metaPageTitle || "Page {page}").replace("{page}", String(currentPage))}`;
 
     return {
-        title,
+        title: pageTitle,
         description,
         keywords: [...baseKeywords, ...postKeywords],
         alternates: {
-            canonical: getLocalePath(locale, "/blog"),
+            canonical: getLocalePath(locale, pagePath),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/blog`;
+                acc[localeItem] = getLocalePath(localeItem, pagePath);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/blog`
+                "x-default": getLocalePath(localeConfig.defaultLocale, pagePath)
             } as Record<string, string>)
         },
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
-            title: `${title} | AnimalDex`,
+            title: `${pageTitle} | AnimalDex`,
             description,
-            url: getLocalePath(locale, "/blog"),
+            url: getLocalePath(locale, pagePath),
             images: [
                 {
                     url: "/images/og.png",
                     width: 1200,
                     height: 630,
-                    alt: `${title} | AnimalDex`
+                    alt: `${pageTitle} | AnimalDex`
                 }
             ]
         },
         twitter: {
             card: "summary_large_image",
-            title: `${title} | AnimalDex`,
+            title: `${pageTitle} | AnimalDex`,
             description,
             images: ["/images/og.png"]
         }
     };
 }
 
-export default async function BlogIndexPage() {
+export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) {
     const t = await getTranslations("blog");
     const locale = await getLocale();
-    const pageUrl = getAbsoluteUrl(locale, "/blog");
+    const currentPage = getRequestedPage(searchParams?.page);
+    const totalPages = Math.max(1, Math.ceil(blogPosts.length / POSTS_PER_PAGE));
+
+    if (currentPage > totalPages) {
+        notFound();
+    }
+
+    const pagePath = getBlogPagePath(currentPage);
+    const pageUrl = getAbsoluteUrl(locale, pagePath);
+    const pageStart = (currentPage - 1) * POSTS_PER_PAGE;
+    const paginatedPosts = blogPosts.slice(pageStart, pageStart + POSTS_PER_PAGE);
+    const paginationItems = getPaginationItems(currentPage, totalPages);
     const schema = {
         "@context": "https://schema.org",
         "@type": "Blog",
@@ -69,7 +124,7 @@ export default async function BlogIndexPage() {
         description: t("description"),
         url: pageUrl,
         inLanguage: locale,
-        blogPost: blogPosts.map((post) => ({
+        blogPost: paginatedPosts.map((post) => ({
             "@type": "BlogPosting",
             headline: post.title,
             datePublished: post.publishedAt,
@@ -93,7 +148,7 @@ export default async function BlogIndexPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                {blogPosts.map((post) => (
+                {paginatedPosts.map((post) => (
                     <article
                         key={post.slug}
                         className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4"
@@ -104,7 +159,7 @@ export default async function BlogIndexPage() {
                                 alt={post.featuredImage.alt}
                                 width={post.featuredImage.width}
                                 height={post.featuredImage.height}
-                                sizes="(min-width: 1024px) 42vw, 100vw"
+                                sizes="(min-width: 1536px) 29vw, (min-width: 1024px) 44vw, 100vw"
                                 className="h-auto w-full object-cover"
                             />
                         </Link>
@@ -133,7 +188,57 @@ export default async function BlogIndexPage() {
                 ))}
             </div>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            {totalPages > 1 && (
+                <nav className="flex flex-col items-center gap-4" aria-label={t("paginationLabel")}>
+                    <p className="text-sm text-ink-300">
+                        {t("pageLabel", {page: currentPage, totalPages})}
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                        {currentPage > 1 && (
+                            <Link
+                                href={getBlogPagePath(currentPage - 1)}
+                                rel="prev"
+                                className="rounded-full border border-line-300 px-4 py-2 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                            >
+                                {t("previousPage")}
+                            </Link>
+                        )}
+                        {paginationItems.map((item) => typeof item === "number" ? (
+                            item === currentPage ? (
+                                <span
+                                    key={item}
+                                    aria-current="page"
+                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full bg-primary-400 px-3 font-bold text-canvas-950"
+                                >
+                                    {item}
+                                </span>
+                            ) : (
+                                <Link
+                                    key={item}
+                                    href={getBlogPagePath(item)}
+                                    aria-label={t("goToPage", {page: item})}
+                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full border border-line-300 px-3 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                                >
+                                    {item}
+                                </Link>
+                            )
+                        ) : (
+                            <span key={item} className="px-1 text-ink-400" aria-hidden="true">…</span>
+                        ))}
+                        {currentPage < totalPages && (
+                            <Link
+                                href={getBlogPagePath(currentPage + 1)}
+                                rel="next"
+                                className="rounded-full border border-line-300 px-4 py-2 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                            >
+                                {t("nextPage")}
+                            </Link>
+                        )}
+                    </div>
+                </nav>
+            )}
+
+            {currentPage === 1 && <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("answersHubTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("answersHubDescription")}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -147,7 +252,7 @@ export default async function BlogIndexPage() {
                         </article>
                     ))}
                 </div>
-            </section>
+            </section>}
 
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>

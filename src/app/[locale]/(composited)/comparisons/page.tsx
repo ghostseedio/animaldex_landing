@@ -77,10 +77,10 @@ export async function generateMetadata(): Promise<Metadata> {
         alternates: {
             canonical: getLocalePath(locale, "/comparisons"),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/comparisons`;
+                acc[localeItem] = getLocalePath(localeItem, "/comparisons");
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}/comparisons`
+                "x-default": getLocalePath(localeConfig.defaultLocale, "/comparisons")
             } as Record<string, string>)
         },
         openGraph: {

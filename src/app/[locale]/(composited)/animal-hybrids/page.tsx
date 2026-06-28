@@ -31,10 +31,10 @@ export async function generateMetadata({params}: AnimalHybridsIndexPageProps): P
         alternates: {
             canonical: getLocalePath(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}${ANIMAL_HYBRID_CANONICAL_BASE_PATH}`;
+                acc[localeItem] = getLocalePath(localeItem, ANIMAL_HYBRID_CANONICAL_BASE_PATH);
                 return acc;
             }, {
-                "x-default": `/${localeConfig.defaultLocale}${ANIMAL_HYBRID_CANONICAL_BASE_PATH}`
+                "x-default": getLocalePath(localeConfig.defaultLocale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)
             } as Record<string, string>)
         },
         openGraph: {

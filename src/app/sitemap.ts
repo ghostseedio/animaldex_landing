@@ -16,84 +16,72 @@ import {getBehaviorLessonIndex} from "@/data/species-behavior-lessons";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const now = new Date();
     const behaviorLessons = await getBehaviorLessonIndex();
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
-            lastModified: now
         },
         {
             url: new URL("/legal/terms", getSiteUrl()).toString(),
-            lastModified: now
         }
     ];
 
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
+        // Only the homepage is fully localized today. Keep untranslated catalogue,
+        // editorial, and SEO pages out of localized sitemap variants until their
+        // underlying content (not only the interface) is translated.
+        if (locale !== localeConfig.defaultLocale) {
+            return [{url: getAbsoluteUrl(locale)}];
+        }
+
         const staticEntries: MetadataRoute.Sitemap = [
             {
-                url: getAbsoluteUrl(locale),
-                lastModified: now
+                url: getAbsoluteUrl(locale)
             },
             {
-                url: getAbsoluteUrl(locale, "/legal/privacy"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/what-animal-am-i")
             },
             {
-                url: getAbsoluteUrl(locale, "/legal/terms"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/animals")
             },
             {
-                url: getAbsoluteUrl(locale, "/what-animal-am-i"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/use-cases")
             },
             {
-                url: getAbsoluteUrl(locale, "/animals"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/blog")
             },
             {
-                url: getAbsoluteUrl(locale, "/use-cases"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/support")
             },
             {
-                url: getAbsoluteUrl(locale, "/blog"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/contact")
             },
             {
-                url: getAbsoluteUrl(locale, "/comparisons"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/comparisons")
             },
             {
-                url: getAbsoluteUrl(locale, "/animal-wisdom"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/animal-wisdom")
             },
             {
-                url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH),
-                lastModified: now
+                url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)
             },
             {
-                url: getAbsoluteUrl(locale, "/locations"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/locations")
             },
             {
-                url: getAbsoluteUrl(locale, "/principles"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/principles")
             },
             {
-                url: getAbsoluteUrl(locale, "/animal-symbolism"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/animal-symbolism")
             },
             {
-                url: getAbsoluteUrl(locale, "/animal-lessons"),
-                lastModified: now
+                url: getAbsoluteUrl(locale, "/animal-lessons")
             },
             {
-                url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH),
-                lastModified: now
+                url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)
             },
             {
-                url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH),
-                lastModified: now
+                url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)
             }
         ];
 
@@ -108,8 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }));
 
         const collectorLandingPages = collectorPages.map((entry) => ({
-            url: getAbsoluteUrl(locale, `/${entry.slug}`),
-            lastModified: now
+            url: getAbsoluteUrl(locale, `/${entry.slug}`)
         }));
 
         const blogEntries = blogPosts.map((post) => ({
@@ -137,20 +124,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
         const principlePageEntries = getBehavioralPrinciplesIndex(speciesSystemsIntelligence).map((item) => ({
-            url: getAbsoluteUrl(locale, `/principles/${item.principleSlug}`),
-            lastModified: now
+            url: getAbsoluteUrl(locale, `/principles/${item.principleSlug}`)
         }));
         const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
-            url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`),
-            lastModified: now
+            url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`)
         }));
         const pokemonAnimalGenerationEntries = pokemonAnimalGenerations.map((generation) => ({
-            url: getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`),
-            lastModified: now
+            url: getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`)
         }));
         const pokemonAnimalPageEntries = pokemonAnimalEntries.map((entry) => ({
-            url: getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`),
-            lastModified: now
+            url: getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`)
         }));
         const animalHybridPageEntries = animalHybridEntries.map((entry) => ({
             url: getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),

@@ -40,9 +40,9 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
         alternates: {
             canonical: getLocalePath(params.locale, "/animal-lessons"),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = `/${localeItem}/animal-lessons`;
+                acc[localeItem] = getLocalePath(localeItem, "/animal-lessons");
                 return acc;
-            }, {"x-default": `/${localeConfig.defaultLocale}/animal-lessons`} as Record<string, string>)
+            }, {"x-default": getLocalePath(localeConfig.defaultLocale, "/animal-lessons")} as Record<string, string>)
         },
         openGraph: {
             type: "article",

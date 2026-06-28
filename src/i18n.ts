@@ -11,5 +11,6 @@ export default getRequestConfig(async ({locale}) => {
 
 export const localeConfig = {
     locales: ['en', 'id'],
-    defaultLocale: 'en'
+    defaultLocale: 'en',
+    localePrefix: 'as-needed' as const
 }

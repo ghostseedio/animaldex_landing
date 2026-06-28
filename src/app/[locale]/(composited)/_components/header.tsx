@@ -63,35 +63,17 @@ export default function Header() {
                         </Marquee>
                     </Button>
                 </Link>
-                <HeaderLink href="/#download" mobile>
-                    {t('download')}
-                </HeaderLink>
-                <HeaderLink href="/legal/privacy" mobile>
-                    {t('privacy')}
-                </HeaderLink>
-                <HeaderLink href="/legal/terms" mobile>
-                    {t('terms')}
-                </HeaderLink>
                 <HeaderLink href="/animals" mobile>
                     {t('animals')}
                 </HeaderLink>
-                <HeaderLink href="/animal-lessons" mobile>
-                    {t('animalLessons')}
+                <HeaderLink href="/animal-wisdom" mobile>
+                    {t('animalWisdom')}
                 </HeaderLink>
-                <HeaderLink href="/animal-symbolism" mobile>
-                    {t('animalSymbolism')}
+                <HeaderLink href="/blog" mobile>
+                    {t('blog')}
                 </HeaderLink>
-                <HeaderLink href="/pokemon-animals" mobile>
-                    {t('pokemonAnimals')}
-                </HeaderLink>
-                <HeaderLink href="/animal-hybrids" mobile>
-                    {t('animalHybrids')}
-                </HeaderLink>
-                <HeaderLink href="/#more" mobile>
-                    {t('discover')}
-                </HeaderLink>
-                <HeaderLink href="/#features" mobile>
-                    {t('collection')}
+                <HeaderLink href="/#download" mobile>
+                    {t('download')}
                 </HeaderLink>
             </HeaderMenu>
         </header>

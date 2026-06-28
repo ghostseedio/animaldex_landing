@@ -2,6 +2,7 @@ import {getChallenge, getChallengesForSpecies} from "@/data/challenges";
 import {BlogMediaBlock} from "@/data/content-schema";
 import {journalMigratedPosts} from "@/data/blog/journal-migrated-posts";
 import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
+import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-is-a-lesson";
 import {
     BlogFAQ,
     BlogLink,
@@ -4911,7 +4912,10 @@ const blogPostsData: BlogPost[] = [
     }
 ];
 
-export const blogPosts: BlogPost[] = [...blogPostsData]
+export const blogPosts: BlogPost[] = [
+    whatIfEveryAnimalIsALessonPost,
+    ...blogPostsData.filter((post) => post.slug !== whatIfEveryAnimalIsALessonPost.slug)
+]
     .sort((a, b) =>
         b.publishedAt.localeCompare(a.publishedAt)
         || (b.updatedAt || b.publishedAt).localeCompare(a.updatedAt || a.publishedAt)
