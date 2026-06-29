@@ -14,22 +14,35 @@ type PrinciplePageProps = {
         locale: string;
         slug: string;
     };
+    searchParams?: {
+        page?: string;
+    };
 };
 
-const MAX_PRINCIPLE_SPECIES_ITEMS = 24;
+const PRINCIPLE_SPECIES_PAGE_SIZE = 18;
 
-export async function generateMetadata({params}: PrinciplePageProps): Promise<Metadata> {
-    const t = await getScopedTranslator(params.locale, "principles");
+function parsePage(value?: string) {
+    const page = Number.parseInt(value ?? "1", 10);
+    return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export async function generateMetadata({params, searchParams}: PrinciplePageProps): Promise<Metadata> {
+    const t = await getScopedTranslator(params.locale, "qualities");
     const principle = await getPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         return {};
     }
 
+    const page = parsePage(searchParams?.page);
+    const basePath = `/qualities/${principle.principleSlug}`;
+    const pageSuffix = page > 1 ? ` — Page ${page}` : "";
+
     return buildContentMetadata({
         locale: params.locale,
-        pathname: `/principles/${principle.principleSlug}`,
-        title: t("detailMetaTitle", {principle: principle.principle}),
+        pathname: basePath,
+        canonicalUrl: page > 1 ? `${getAbsoluteUrl(params.locale, basePath)}?page=${page}` : undefined,
+        title: `${t("detailMetaTitle", {principle: principle.principle})}${pageSuffix}`,
         description: t("detailMetaDescription", {principle: principle.principle}),
         featuredImage: {
             src: "/images/og.png",
@@ -41,22 +54,26 @@ export async function generateMetadata({params}: PrinciplePageProps): Promise<Me
             `${principle.principle.toLowerCase()} animal meaning`,
             `${principle.principle.toLowerCase()} animal symbolism`,
             `${principle.principle.toLowerCase()} animal lesson`,
-            "biology-backed animal principles"
+            "biology-backed animal qualities"
         ]
     });
 }
 
-export default async function PrincipleDetailPage({params}: PrinciplePageProps) {
-    const t = await getScopedTranslator(params.locale, "principles");
+export default async function PrincipleDetailPage({params, searchParams}: PrinciplePageProps) {
+    const t = await getScopedTranslator(params.locale, "qualities");
     const principle = await getPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         notFound();
     }
 
+    const pageCount = Math.max(1, Math.ceil(principle.lessons.length / PRINCIPLE_SPECIES_PAGE_SIZE));
+    const currentPage = Math.min(parsePage(searchParams?.page), pageCount);
+    const pageStart = (currentPage - 1) * PRINCIPLE_SPECIES_PAGE_SIZE;
+    const pageLessons = principle.lessons.slice(pageStart, pageStart + PRINCIPLE_SPECIES_PAGE_SIZE);
     const speciesItems = (
         await Promise.all(
-            principle.lessons.slice(0, MAX_PRINCIPLE_SPECIES_ITEMS).map(async (lesson) => {
+            pageLessons.map(async (lesson) => {
                 const entry = getSpeciesBySlug(lesson.slug);
                 const profile = await resolveSpeciesBehaviorProfile(lesson.slug);
                 return {entry, lesson, profile};
@@ -78,14 +95,14 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
             {
                 "@type": "ListItem",
                 position: 2,
-                name: "Principles",
-                item: getAbsoluteUrl(params.locale, "/principles")
+                name: "Qualities",
+                item: getAbsoluteUrl(params.locale, "/qualities")
             },
             {
                 "@type": "ListItem",
                 position: 3,
                 name: principle.principle,
-                item: getAbsoluteUrl(params.locale, `/principles/${principle.principleSlug}`)
+                item: getAbsoluteUrl(params.locale, `/qualities/${principle.principleSlug}`)
             }
         ]
     };
@@ -96,7 +113,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([breadcrumbSchema])}}
             />
-            <Link href="/principles" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
+            <Link href="/qualities" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                 {t("back")}
             </Link>
 
@@ -166,6 +183,28 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                     );
                 })}
             </div>
+
+            {pageCount > 1 ? (
+                <nav className="flex items-center justify-center gap-4" aria-label={t("pageStatus", {page: currentPage, pages: pageCount})}>
+                    {currentPage > 1 ? (
+                        <Link
+                            href={`/qualities/${principle.principleSlug}${currentPage === 2 ? "" : `?page=${currentPage - 1}`}`}
+                            className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
+                        >
+                            ← {t("previousPage")}
+                        </Link>
+                    ) : <span />}
+                    <span className="text-sm text-ink-300">{t("pageStatus", {page: currentPage, pages: pageCount})}</span>
+                    {currentPage < pageCount ? (
+                        <Link
+                            href={`/qualities/${principle.principleSlug}?page=${currentPage + 1}`}
+                            className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
+                        >
+                            {t("nextPage")} →
+                        </Link>
+                    ) : <span />}
+                </nav>
+            ) : null}
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedIndexesTitle")}</h2>

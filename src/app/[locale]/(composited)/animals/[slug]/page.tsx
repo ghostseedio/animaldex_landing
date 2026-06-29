@@ -44,6 +44,10 @@ type SpeciesTextLink = {
     slug: string;
 };
 
+function toQualitySlug(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function pluralizeWord(word: string) {
     const lowerWord = word.toLowerCase();
     const irregularPlurals: Record<string, string> = {
@@ -278,6 +282,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
     const principleProfile = await resolveSpeciesBehaviorProfile(entry.slug);
+    const primaryQuality = principleProfile?.bestFor[0] ?? null;
+    const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
     const relatedPrincipleSpecies = principleProfile
         ? principleProfile.relatedSpeciesSlugs
             .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
@@ -423,18 +429,18 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 {
                     "@type": "ListItem",
                     position: 2,
-                    name: "Principles",
-                    item: getAbsoluteUrl(locale, "/principles")
+                    name: "Qualities",
+                    item: getAbsoluteUrl(locale, "/qualities")
                 },
-                ...(principleProfile.clusterPrincipleSlug ? [{
+                ...(primaryQualitySlug ? [{
                     "@type": "ListItem",
                     position: 3,
-                    name: principleProfile.clusterPrinciple ?? principleProfile.principle,
-                    item: getAbsoluteUrl(locale, `/principles/${principleProfile.clusterPrincipleSlug}`)
+                    name: primaryQuality ?? principleProfile.principle,
+                    item: getAbsoluteUrl(locale, `/qualities/${primaryQualitySlug}`)
                 }] : []),
                 {
                     "@type": "ListItem",
-                    position: principleProfile.clusterPrincipleSlug ? 4 : 3,
+                    position: primaryQualitySlug ? 4 : 3,
                     name: entry.name,
                     item: pageUrl
                 }
@@ -549,6 +555,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("principleLabel")}</p>
                                 <p className="mt-2 text-xl font-semibold text-white md:text-2xl">{principleProfile.principle}</p>
                                 {principleProfile.motto ? <p className="mt-1 text-ink-200">{principleProfile.motto}</p> : null}
+                                {principleProfile.principleExpression ? <p className="mt-2 text-sm leading-6 text-ink-300">{principleProfile.principleExpression}</p> : null}
                             </div>
                         ) : null}
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -654,6 +661,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <p className="mt-6 text-xl leading-9 text-ink-100 md:text-2xl md:leading-10">
                                 {principleProfile.coreLesson}
                             </p>
+                            {principleProfile.applicationExample ? (
+                                <div className="mt-8 rounded-3xl border border-amber-300/20 bg-amber-300/[0.07] p-5 md:p-7">
+                                    <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-100">{t("applicationExampleLabel")}</h3>
+                                    <p className="mt-3 text-lg leading-8 text-ink-100">{principleProfile.applicationExample}</p>
+                                </div>
+                            ) : null}
                             <div id="biological-basis" className="mt-10 scroll-mt-40 border-l-2 border-primary-400/35 pl-5 md:pl-7">
                                 <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-primary-100">{t("biologicalBasisLabel")}</h3>
                                 <p className="mt-3 text-lg leading-8 text-ink-200">
@@ -666,9 +679,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                         {t("lessonPageLink", {animal: entry.name})}
                                     </Link>
                                 ) : null}
-                                {principleProfile.clusterPrincipleSlug ? (
-                                    <Link href={`/principles/${principleProfile.clusterPrincipleSlug}`} className="text-primary-200 hover:text-primary-100" underline>
-                                        {principleProfile.clusterPrinciple}
+                                {primaryQualitySlug ? (
+                                    <Link href={`/qualities/${primaryQualitySlug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                        {primaryQuality}
                                     </Link>
                                 ) : null}
                             </div>
@@ -920,7 +933,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {t("moreWithPrincipleTitle", {principle: principleProfile.principle})}
                     </h2>
                     <p className="text-ink-200 text-lg md:text-xl">
-                        <Link href={`/principles/${principleProfile.clusterPrincipleSlug ?? principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
+                        <Link href={`/qualities/${primaryQualitySlug ?? principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
                             {t("moreWithPrincipleHubLink", {principle: principleProfile.principle})}
                         </Link>
                     </p>

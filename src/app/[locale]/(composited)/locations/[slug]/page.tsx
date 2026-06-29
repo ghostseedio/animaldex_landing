@@ -12,6 +12,7 @@ import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_compon
 import {getBlogPost} from "@/data/blog";
 import {getChallenge} from "@/data/challenges";
 import {getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
+import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/location-places";
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
@@ -92,6 +93,9 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
     if (!location) {
         notFound();
     }
+    const hasZooGuide = isPlaceCollectionIndexable(location.zoosAndParks);
+    const hasReserveGuide = isPlaceCollectionIndexable(location.wildlifeReserves);
+    const placeGuideLocationName = getPlaceGuideLocationName(location.slug, location.name);
 
     const resolvedAnimals = location.animalsToSpot.map((animal) => {
         const species = getSpeciesBySlug(animal.speciesSlug);
@@ -251,6 +255,29 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     </p>
                 ))}
             </section>
+
+            {(hasZooGuide || hasReserveGuide) && (
+                <section>
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("exploreAnimalPlacesTitle", {location: placeGuideLocationName})}</h2>
+                    <p className="mt-3 max-w-3xl text-ink-200 text-lg md:text-xl">{t("exploreAnimalPlacesDescription")}</p>
+                    <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        {hasZooGuide && (
+                            <Link href={`/locations/${location.slug}/zoos`} className="rounded-[1.75rem] bg-surface-900/80 p-6 transition hover:bg-surface-800">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{t("zoosAndParks")}</p>
+                                <h3 className="mt-2 font-display text-2xl font-bold text-white">{t("zoosIn", {location: placeGuideLocationName})}</h3>
+                                <p className="mt-2 leading-7 text-ink-200">{t("zoosLinkDescription")}</p>
+                            </Link>
+                        )}
+                        {hasReserveGuide && (
+                            <Link href={`/locations/${location.slug}/wildlife-reserves`} className="rounded-[1.75rem] bg-surface-900/80 p-6 transition hover:bg-surface-800">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{t("wildlifeReserves")}</p>
+                                <h3 className="mt-2 font-display text-2xl font-bold text-white">{t("reservesIn", {location: placeGuideLocationName})}</h3>
+                                <p className="mt-2 leading-7 text-ink-200">{t("reservesLinkDescription")}</p>
+                            </Link>
+                        )}
+                    </div>
+                </section>
+            )}
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whyItMattersTitle")}</h2>

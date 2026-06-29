@@ -1,4 +1,5 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
+import {getLocationPlaceCollections, WildlifePlace} from "@/data/location-places";
 
 export type LocationRegionType =
     | "country"
@@ -36,6 +37,8 @@ export type LocationPage = CanonicalContentMetadata & {
     relatedLocationSlugs?: string[];
     blogSlugs?: string[];
     faq?: LocationFAQ[];
+    zoosAndParks?: WildlifePlace[];
+    wildlifeReserves?: WildlifePlace[];
 };
 
 type LocationPageInput = Omit<LocationPage, "publishedAt" | "updatedAt" | "featuredImage"> & {
@@ -2451,7 +2454,9 @@ function assertLocationAnimalSpotCoverage(entries: LocationPage[], minimum = LOC
     return entries;
 }
 
-export const locationPages = assertUniqueLocationSlugs(assertLocationAnimalSpotCoverage(locationPagesData));
+export const locationPages = assertUniqueLocationSlugs(assertLocationAnimalSpotCoverage(
+    locationPagesData.map((page) => ({...page, ...getLocationPlaceCollections(page.slug)}))
+));
 
 export function getLocationPage(slug: string) {
     return locationPages.find((page) => page.slug === slug);

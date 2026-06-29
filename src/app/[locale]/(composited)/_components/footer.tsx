@@ -33,7 +33,7 @@ export default function Footer() {
                 { href: "/animal-wisdom", label: t("animalWisdom") },
                 { href: "/animal-symbolism", label: t("animalSymbolism") },
                 { href: "/animal-lessons", label: t("animalLessons") },
-                { href: "/principles", label: t("principles") }
+                { href: "/qualities", label: t("qualities") }
             ]
         },
         {

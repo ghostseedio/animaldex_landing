@@ -19,6 +19,26 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
+                source: "/principles",
+                destination: "/qualities",
+                permanent: true
+            },
+            {
+                source: "/principles/:path*",
+                destination: "/qualities/:path*",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/principles",
+                destination: "/:locale/qualities",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/principles/:path*",
+                destination: "/:locale/qualities/:path*",
+                permanent: true
+            },
+            {
                 source: "/rankings",
                 destination: "/tier-list",
                 permanent: true

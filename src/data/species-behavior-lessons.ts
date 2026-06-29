@@ -4,6 +4,7 @@ import {
     getBehavioralPrincipleProfile
 } from "@/data/species-behavioral-principles";
 import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {buildUsefulApplicationSentence} from "@/data/species-useful-application";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 const BEHAVIOR_LESSONS_REVALIDATE_SECONDS = 3600;
@@ -18,6 +19,7 @@ export type SpeciesBehaviorLesson = {
     biologicalBasis: string;
     shortMotto: string;
     bestUseCases: string[];
+    applicationExample: string;
     imageFile: string | null;
     source: "catalog" | "local";
 };
@@ -67,6 +69,16 @@ type SpeciesCatalogLessonRow = {
     generation_metadata?: unknown;
 };
 
+type SpeciesBehaviorPrincipleRow = {
+    species_profile_id?: string | null;
+    application_example?: string | null;
+};
+
+type SpeciesProfileLessonIdentityRow = {
+    id?: string | null;
+    landing_page_slug?: string | null;
+};
+
 const websiteSlugs = new Set(speciesEntries.map((entry) => entry.slug));
 
 function parseBestUseCases(value: unknown): string[] {
@@ -86,7 +98,14 @@ function parseImageFile(value: unknown): string | null {
     return typeof imageFile === "string" && imageFile.trim() ? imageFile.trim() : null;
 }
 
-function normalizeLessonRow(row: SpeciesCatalogLessonRow): SpeciesBehaviorLesson | null {
+function buildFallbackApplicationExample(slug: string, ...lessonText: Array<string | null | undefined>) {
+    return buildUsefulApplicationSentence(slug, lessonText.filter(Boolean).join(" "));
+}
+
+function normalizeLessonRow(
+    row: SpeciesCatalogLessonRow,
+    applicationExamples: ReadonlyMap<string, string> = new Map()
+): SpeciesBehaviorLesson | null {
     const slug = row.landing_page_slug?.trim();
 
     if (!slug || !row.core_lesson?.trim() || !row.principle_name?.trim()) {
@@ -105,6 +124,14 @@ function normalizeLessonRow(row: SpeciesCatalogLessonRow): SpeciesBehaviorLesson
         biologicalBasis: row.biological_basis?.trim() ?? "",
         shortMotto: row.short_motto?.trim() ?? "",
         bestUseCases: parseBestUseCases(row.best_use_cases),
+        applicationExample: applicationExamples.get(slug) ?? buildFallbackApplicationExample(
+            slug,
+            row.principle_name,
+            row.principle_expression,
+            row.core_lesson,
+            row.biological_basis,
+            row.short_motto
+        ),
         imageFile: parseImageFile(row.generation_metadata),
         source: "catalog"
     };
@@ -121,6 +148,14 @@ function buildLocalBehaviorLesson(entry: SpeciesEntry, profile: BehavioralPrinci
         biologicalBasis: profile.biologicalBasis,
         shortMotto: profile.motto,
         bestUseCases: profile.bestFor,
+        applicationExample: profile.applicationExample ?? buildFallbackApplicationExample(
+            entry.slug,
+            profile.principle,
+            profile.principleExpression,
+            profile.coreLesson,
+            profile.biologicalBasis,
+            profile.motto
+        ),
         imageFile: null,
         source: "local"
     };
@@ -168,10 +203,116 @@ async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLe
         }
 
         const [row] = await response.json() as SpeciesCatalogLessonRow[];
-        return row ? normalizeLessonRow(row) : null;
+        if (!row) {
+            return null;
+        }
+
+        const applicationExamples = await fetchApplicationExamplesFromSupabase(config, slug);
+        return normalizeLessonRow(row, applicationExamples);
     } catch {
         return null;
     }
+}
+
+async function fetchApplicationExamplesFromSupabase(
+    config: NonNullable<ReturnType<typeof getSupabaseConfig>>,
+    slug?: string
+): Promise<Map<string, string>> {
+    const examples = new Map<string, string>();
+    const profileSlugs = new Map<string, string>();
+    let offset = 0;
+
+    try {
+        while (true) {
+            const profileSearchParams = new URLSearchParams({
+                select: "id,landing_page_slug",
+                landing_page_slug: slug ? `eq.${slug}` : "not.is.null",
+                order: "landing_page_slug.asc",
+                limit: slug ? "1" : "1000",
+                offset: slug ? "0" : String(offset)
+            });
+            const profileResponse = await fetch(`${config.supabaseUrl}/rest/v1/species_profiles?${profileSearchParams.toString()}`, {
+                headers: config.headers,
+                next: {revalidate: BEHAVIOR_LESSONS_REVALIDATE_SECONDS}
+            });
+
+            if (!profileResponse.ok) {
+                return examples;
+            }
+
+            const profiles = await profileResponse.json() as SpeciesProfileLessonIdentityRow[];
+            if (!Array.isArray(profiles) || profiles.length === 0) {
+                return examples;
+            }
+
+            for (const profile of profiles) {
+                const profileId = profile.id?.trim();
+                const profileSlug = profile.landing_page_slug?.trim();
+                if (profileId && profileSlug) {
+                    profileSlugs.set(profileId, profileSlug);
+                }
+            }
+
+            if (slug || profiles.length < 1000) {
+                break;
+            }
+
+            offset += 1000;
+        }
+
+        offset = 0;
+        const speciesProfileId = slug ? profileSlugs.keys().next().value as string | undefined : undefined;
+        if (slug && !speciesProfileId) {
+            return examples;
+        }
+
+        while (true) {
+            const searchParams = new URLSearchParams({
+                select: "species_profile_id,application_example",
+                application_example: "not.is.null",
+                order: "species_profile_id.asc",
+                limit: slug ? "1" : "1000",
+                offset: slug ? "0" : String(offset)
+            });
+
+            if (speciesProfileId) {
+                searchParams.set("species_profile_id", `eq.${speciesProfileId}`);
+            }
+
+            const response = await fetch(`${config.supabaseUrl}/rest/v1/species_behavior_principles?${searchParams.toString()}`, {
+                headers: config.headers,
+                next: {revalidate: BEHAVIOR_LESSONS_REVALIDATE_SECONDS}
+            });
+
+            if (!response.ok) {
+                return examples;
+            }
+
+            const batch = await response.json() as SpeciesBehaviorPrincipleRow[];
+            if (!Array.isArray(batch) || batch.length === 0) {
+                break;
+            }
+
+            for (const row of batch) {
+                const profileId = row.species_profile_id?.trim();
+                const applicationExample = row.application_example?.trim();
+                const profileSlug = profileId ? profileSlugs.get(profileId) : null;
+                if (profileSlug && applicationExample) {
+                    examples.set(profileSlug, applicationExample);
+                }
+            }
+
+            if (slug || batch.length < 1000) {
+                break;
+            }
+
+            offset += 1000;
+        }
+    } catch {
+        return examples;
+    }
+
+    return examples;
 }
 
 function getSupabaseConfig() {
@@ -230,8 +371,10 @@ async function fetchBehaviorLessonsFromSupabase(): Promise<SpeciesBehaviorLesson
         offset += 1000;
     }
 
+    const applicationExamples = await fetchApplicationExamplesFromSupabase(config);
+
     return rows
-        .map(normalizeLessonRow)
+        .map((row) => normalizeLessonRow(row, applicationExamples))
         .filter((lesson): lesson is SpeciesBehaviorLesson => Boolean(lesson));
 }
 
@@ -278,12 +421,6 @@ export async function getRelatedBehaviorLessons(slug: string, limit = 3): Promis
         .slice(0, limit);
 }
 
-function getLessonHubPrinciple(lesson: SpeciesBehaviorLesson) {
-    const systemsEntry = getSystemsIntelligenceBySpeciesSlug(lesson.slug);
-    const localProfile = getBehavioralPrincipleProfile(lesson.slug, systemsEntry, speciesSystemsIntelligence);
-    return localProfile?.browseCluster || lesson.principleName;
-}
-
 function pickHubMotto(lessons: SpeciesBehaviorLesson[]) {
     return lessons.find((lesson) => lesson.shortMotto.trim())?.shortMotto
         ?? lessons.find((lesson) => lesson.principleExpression?.trim())?.principleExpression
@@ -291,31 +428,54 @@ function pickHubMotto(lessons: SpeciesBehaviorLesson[]) {
         ?? "";
 }
 
+function getLessonHubQualities(lesson: SpeciesBehaviorLesson) {
+    const qualities = lesson.bestUseCases
+        .map((quality) => quality.trim())
+        .filter(Boolean);
+
+    if (qualities.length > 0) {
+        return Array.from(new Map(
+            qualities.map((quality) => [toPrincipleSlug(quality), quality] as const)
+        ).values());
+    }
+
+    const systemsEntry = getSystemsIntelligenceBySpeciesSlug(lesson.slug);
+    const localProfile = getBehavioralPrincipleProfile(lesson.slug, systemsEntry, speciesSystemsIntelligence);
+    return [localProfile?.browseCluster || lesson.principleName];
+}
+
 export async function getPrincipleHubIndex(): Promise<PrincipleHub[]> {
     const lessons = await getBehaviorLessonIndex();
     const grouped = new Map<string, PrincipleHub>();
 
     for (const lesson of lessons) {
-        const principle = getLessonHubPrinciple(lesson);
-        const principleSlug = toPrincipleSlug(principle);
-        const current = grouped.get(principleSlug) ?? {
-            principle,
-            principleSlug,
-            speciesCount: 0,
-            speciesSlugs: [],
-            sampleMotto: "",
-            lessons: [],
-            catalogLessonCount: 0
-        };
+        for (const principle of getLessonHubQualities(lesson)) {
+            const principleSlug = toPrincipleSlug(principle);
+            if (!principleSlug) {
+                continue;
+            }
 
-        current.speciesCount += 1;
-        current.speciesSlugs.push(lesson.slug);
-        current.lessons.push(lesson);
-        if (lesson.source === "catalog") {
-            current.catalogLessonCount += 1;
+            const current = grouped.get(principleSlug) ?? {
+                principle,
+                principleSlug,
+                speciesCount: 0,
+                speciesSlugs: [],
+                sampleMotto: "",
+                lessons: [],
+                catalogLessonCount: 0
+            };
+
+            if (!current.speciesSlugs.includes(lesson.slug)) {
+                current.speciesCount += 1;
+                current.speciesSlugs.push(lesson.slug);
+                current.lessons.push(lesson);
+                if (lesson.source === "catalog") {
+                    current.catalogLessonCount += 1;
+                }
+            }
+
+            grouped.set(principleSlug, current);
         }
-
-        grouped.set(principleSlug, current);
     }
 
     return Array.from(grouped.values())
@@ -351,8 +511,10 @@ export async function resolveSpeciesBehaviorProfile(slug: string): Promise<Resol
             browseCluster: localProfile?.browseCluster ?? clusterProfile.clusterPrinciple ?? catalogLesson.principleName,
             browseClusterSlug: localProfile?.browseClusterSlug ?? clusterProfile.clusterPrincipleSlug ?? toPrincipleSlug(catalogLesson.principleName),
             motto: catalogLesson.shortMotto || localProfile?.motto || catalogLesson.coreLesson,
+            principleExpression: catalogLesson.principleExpression ?? localProfile?.principleExpression,
             coreLesson: catalogLesson.coreLesson,
             biologicalBasis: catalogLesson.biologicalBasis || localProfile?.biologicalBasis || "",
+            applicationExample: catalogLesson.applicationExample ?? localProfile?.applicationExample,
             bestFor: catalogLesson.bestUseCases.length > 0
                 ? catalogLesson.bestUseCases
                 : (localProfile?.bestFor ?? []),

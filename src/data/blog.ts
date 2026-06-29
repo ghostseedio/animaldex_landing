@@ -3,6 +3,7 @@ import {BlogMediaBlock} from "@/data/content-schema";
 import {journalMigratedPosts} from "@/data/blog/journal-migrated-posts";
 import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
 import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-is-a-lesson";
+import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
 import {
     BlogFAQ,
     BlogLink,
@@ -489,7 +490,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Axolotl species page", slug: "axolotl", href: "https://animaldex.app/animals/axolotl"},
                     {text: "Axolotl animal lesson", slug: "axolotl", href: "https://animaldex.app/animal-lessons/axolotl"},
-                    {text: "Resilience survival strategies", slug: "resilience", href: "https://animaldex.app/principles/resilience"},
+                    {text: "Resilience animal quality", slug: "resilience", href: "https://animaldex.app/qualities/resilience"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -1223,7 +1224,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Snake species page", slug: "snake", href: "https://animaldex.app/animals/snake"},
                     {text: "Snake animal lesson", slug: "snake", href: "https://animaldex.app/animal-lessons/snake"},
-                    {text: "Adaptability survival strategies", slug: "adaptability", href: "https://animaldex.app/principles/adaptability"},
+                    {text: "Adaptability animal quality", slug: "adaptability", href: "https://animaldex.app/qualities/adaptability"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -1657,7 +1658,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Octopus species page", slug: "octopus", href: "https://animaldex.app/animals/octopus"},
                     {text: "Octopus animal lesson", slug: "octopus", href: "https://animaldex.app/animal-lessons/octopus"},
-                    {text: "Adaptability survival strategies", slug: "adaptability", href: "https://animaldex.app/principles/adaptability"},
+                    {text: "Adaptability animal quality", slug: "adaptability", href: "https://animaldex.app/qualities/adaptability"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -4913,8 +4914,9 @@ const blogPostsData: BlogPost[] = [
 ];
 
 export const blogPosts: BlogPost[] = [
+    biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
-    ...blogPostsData.filter((post) => post.slug !== whatIfEveryAnimalIsALessonPost.slug)
+    ...blogPostsData.filter((post) => ![whatIfEveryAnimalIsALessonPost.slug, biomimicryInAnimalsPost.slug].includes(post.slug))
 ]
     .sort((a, b) =>
         b.publishedAt.localeCompare(a.publishedAt)

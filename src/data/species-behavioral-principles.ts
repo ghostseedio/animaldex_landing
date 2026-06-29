@@ -10,6 +10,7 @@ export type BehavioralPrincipleProfile = {
     principleExpression?: string;
     coreLesson: string;
     biologicalBasis: string;
+    applicationExample?: string;
     bestFor: string[];
     relatedSpeciesSlugs: string[];
     source: "manual" | "systems_intelligence" | "inferred" | "fallback" | "catalog_db";

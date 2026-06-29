@@ -1,15 +1,17 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import ChallengeHero from "@/app/[locale]/(composited)/challenges/_components/challenge-hero";
 import AnimalVsStatTable from "@/app/[locale]/(composited)/challenges/_components/animal-vs-stat-table";
 import ChallengeSpeciesStatsComparison from "@/app/[locale]/(composited)/challenges/_components/challenge-species-stats-comparison";
 import ScenarioBreakdown from "@/app/[locale]/(composited)/challenges/_components/scenario-breakdown";
 import ChallengeVerdictCard from "@/app/[locale]/(composited)/challenges/_components/challenge-verdict-card";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
+import ComparisonPageNavigation from "@/app/[locale]/(composited)/challenges/_components/comparison-page-navigation";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
-import {challengeEntries, getChallenge, getRelatedChallenges} from "@/data/challenges";
+import {getChallenge, getRelatedChallenges} from "@/data/challenges";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
@@ -17,82 +19,27 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
-type ChallengePageProps = {
-    params: {
-        locale: string;
-        slug: string;
-    };
-};
-
-type ChallengeCtaCopy = {
-    title: string;
-    description: string;
-    button: string;
-};
-
-type RelatedChallengeCard = {
-    slug: string;
-    title: string;
-    quickVerdict: string;
-    animalAName: string;
-    animalBName: string;
-    comparisonTypeLabel: string;
-};
+type Props = {params: {locale: string; slug: string}};
 
 function formatDate(locale: string, date: string) {
-    return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
+    return new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(new Date(date));
 }
 
-function buildChallengeCtaCopy(
-    comparisonType: string,
-    t: (key: string, values?: Record<string, string | number>) => string
-): ChallengeCtaCopy {
-    if (comparisonType === "battle") {
-        return {
-            title: t("ctaBattleTitle"),
-            description: t("ctaBattleDescription"),
-            button: t("ctaBattleButton")
-        };
-    }
-
-    if (comparisonType === "speed") {
-        return {
-            title: t("ctaSpeedTitle"),
-            description: t("ctaSpeedDescription"),
-            button: t("ctaSpeedButton")
-        };
-    }
-
-    return {
-        title: t("ctaDefaultTitle"),
-        description: t("ctaDefaultDescription"),
-        button: t("ctaDefaultButton")
-    };
+function getReadMinutes(parts: string[]) {
+    return Math.max(4, Math.ceil(parts.join(" ").trim().split(/\s+/).length / 210));
 }
 
-export async function generateMetadata({params}: ChallengePageProps): Promise<Metadata> {
-    const {locale, slug} = params;
-    const challenge = getChallenge(slug);
-
-    if (!challenge) {
-        return {};
-    }
-
+export async function generateMetadata({params}: Props): Promise<Metadata> {
+    const challenge = getChallenge(params.slug);
+    if (!challenge) return {};
     const animalA = getSpeciesBySlug(challenge.animalASlug);
     const animalB = getSpeciesBySlug(challenge.animalBSlug);
-    const keywords = [
-        ...challenge.searchIntents,
-        challenge.comparisonType,
-        animalA?.name || challenge.animalASlug,
-        animalB?.name || challenge.animalBSlug
-    ];
-
     return buildContentMetadata({
-        locale,
+        locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
         title: challenge.title,
         description: challenge.description,
-        keywords,
+        keywords: [...challenge.searchIntents, challenge.comparisonType, animalA?.name || challenge.animalASlug, animalB?.name || challenge.animalBSlug],
         featuredImage: challenge.featuredImage,
         publishedAt: challenge.publishedAt,
         updatedAt: challenge.updatedAt,
@@ -100,315 +47,101 @@ export async function generateMetadata({params}: ChallengePageProps): Promise<Me
     });
 }
 
-export default async function ChallengePage({params}: ChallengePageProps) {
+export default async function ComparisonDetailPage({params}: Props) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "comparisons");
     const challenge = getChallenge(slug);
-
-    if (!challenge) {
-        notFound();
-    }
+    if (!challenge) notFound();
 
     const animalA = getSpeciesBySlug(challenge.animalASlug);
     const animalB = getSpeciesBySlug(challenge.animalBSlug);
+    if (!animalA || !animalB) notFound();
 
-    if (!animalA || !animalB) {
-        notFound();
-    }
-
-    const [animalAStatsResult, animalBStatsResult] = await Promise.all([
-        resolveSpeciesStats(animalA.slug),
-        resolveSpeciesStats(animalB.slug)
-    ]);
+    const [animalAStatsResult, animalBStatsResult] = await Promise.all([resolveSpeciesStats(animalA.slug), resolveSpeciesStats(animalB.slug)]);
     const animalABattleTier = animalAStatsResult.stats ? getBattleTier(animalAStatsResult.stats) : null;
     const animalBBattleTier = animalBStatsResult.stats ? getBattleTier(animalBStatsResult.stats) : null;
-    const relatedChallenges = getRelatedChallenges(challenge.slug, 4)
-        .map((entry) => {
-            const relatedAnimalA = getSpeciesBySlug(entry.animalASlug);
-            const relatedAnimalB = getSpeciesBySlug(entry.animalBSlug);
 
-            if (!relatedAnimalA || !relatedAnimalB) {
-                return null;
-            }
+    const decisiveScenarios = challenge.scenarioBreakdown.filter((item) => item.winner === "animalA" || item.winner === "animalB");
+    const aWins = decisiveScenarios.filter((item) => item.winner === "animalA").length;
+    const bWins = decisiveScenarios.filter((item) => item.winner === "animalB").length;
+    const winnerSide = aWins === bWins ? challenge.scenarioBreakdown.find((item) => item.winner === "animalA" || item.winner === "animalB")?.winner : aWins > bWins ? "animalA" : "animalB";
+    const winner = winnerSide === "animalA" ? animalA : winnerSide === "animalB" ? animalB : null;
+    const winnerLabel = winner ? t("winner", {animal: winner.name}) : t("winnerLabels.depends");
+    const confidence = winner ? Math.min(94, 66 + Math.round((Math.max(aWins, bWins) / Math.max(1, decisiveScenarios.length)) * 26)) : 55;
+    const readMinutes = getReadMinutes([challenge.description, challenge.quickVerdict, ...challenge.shortAnswer, ...challenge.whyThisMatchupIsInteresting, ...challenge.statCategories.flatMap((item) => [item.animalAValue, item.animalBValue, item.takeaway]), ...challenge.scenarioBreakdown.flatMap((item) => [item.verdict, item.explanation]), ...challenge.finalTake, ...challenge.faq.flatMap((item) => [item.question, item.answer])]);
 
-            return {
-                slug: entry.slug,
-                title: entry.title,
-                quickVerdict: entry.quickVerdict,
-                animalAName: relatedAnimalA.name,
-                animalBName: relatedAnimalB.name,
-                comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`)
-            };
-        })
-        .filter((entry): entry is RelatedChallengeCard => Boolean(entry));
-    const systemsItems = getSystemsIntelligenceEntriesForSpeciesSlugs(challenge.systemsSpeciesSlugs || challenge.speciesSlugs)
-        .flatMap(({slug: speciesSlug, entry}) => {
-            const species = getSpeciesBySlug(speciesSlug);
+    const relatedChallenges = getRelatedChallenges(challenge.slug, 4).flatMap((entry) => {
+        const relatedA = getSpeciesBySlug(entry.animalASlug);
+        const relatedB = getSpeciesBySlug(entry.animalBSlug);
+        if (!relatedA || !relatedB) return [];
+        return [{slug: entry.slug, title: entry.title, quickVerdict: entry.quickVerdict, animalAName: relatedA.name, animalBName: relatedB.name, comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`), image: entry.featuredImage}];
+    });
+    const systemsItems = getSystemsIntelligenceEntriesForSpeciesSlugs(challenge.systemsSpeciesSlugs || challenge.speciesSlugs).flatMap(({slug: speciesSlug, entry}) => {
+        const species = getSpeciesBySlug(speciesSlug);
+        return species ? [{slug: speciesSlug, name: species.name, href: `/animals/${species.slug}`, entry}] : [];
+    });
 
-            if (!species) {
-                return [];
-            }
-
-            return [{
-                slug: speciesSlug,
-                name: species.name,
-                href: `/animals/${species.slug}`,
-                entry
-            }];
-        });
-    const ctaCopy = buildChallengeCtaCopy(challenge.comparisonType, t);
-    const ctaSupportItems = [
-        t("ctaSupportOne"),
-        t("ctaSupportTwo"),
-        t("ctaSupportThree")
-    ];
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
-    const articleSchema = {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        headline: challenge.title,
-        description: challenge.description,
-        datePublished: challenge.publishedAt,
-        dateModified: challenge.updatedAt,
-        inLanguage: locale,
-        url: pageUrl,
-        image: getAbsoluteUrl(locale, challenge.featuredImage.src),
-        keywords: challenge.searchIntents.join(", "),
-        author: {"@type": "Organization", name: "AnimalDex"},
-        publisher: {"@type": "Organization", name: "AnimalDex"},
-        about: [
-            {"@type": "Thing", name: animalA.name},
-            {"@type": "Thing", name: animalB.name},
-            {"@type": "Thing", name: challenge.comparisonType}
-        ]
-    };
-    const faqSchema = {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: challenge.faq.map((item) => ({
-            "@type": "Question",
-            name: item.question,
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: item.answer
-            }
-        }))
-    };
-    const breadcrumbSchema = {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: [
-            {
-                "@type": "ListItem",
-                position: 1,
-                name: "AnimalDex",
-                item: getAbsoluteUrl(locale)
-            },
-            {
-                "@type": "ListItem",
-                position: 2,
-                name: t("title"),
-                item: getAbsoluteUrl(locale, "/comparisons")
-            },
-            {
-                "@type": "ListItem",
-                position: 3,
-                name: challenge.title,
-                item: pageUrl
-            }
-        ]
-    };
+    const schemas = [
+        {"@context": "https://schema.org", "@type": "Article", headline: challenge.title, description: challenge.description, datePublished: challenge.publishedAt, dateModified: challenge.updatedAt, inLanguage: locale, url: pageUrl, image: getAbsoluteUrl(locale, challenge.featuredImage.src), author: {"@type": "Organization", name: "AnimalDex"}, publisher: {"@type": "Organization", name: "AnimalDex"}},
+        {"@context": "https://schema.org", "@type": "FAQPage", mainEntity: challenge.faq.map((item) => ({"@type": "Question", name: item.question, acceptedAnswer: {"@type": "Answer", text: item.answer}}))},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(locale)}, {"@type": "ListItem", position: 2, name: t("title"), item: getAbsoluteUrl(locale, "/comparisons")}, {"@type": "ListItem", position: 3, name: challenge.title, item: pageUrl}]}
+    ];
+
+    const speciesCards = [
+        {species: animalA, stats: animalAStatsResult.stats, tier: animalABattleTier},
+        {species: animalB, stats: animalBStatsResult.stats, tier: animalBBattleTier}
+    ];
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([articleSchema, faqSchema, breadcrumbSchema])}}
-            />
+        <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 py-12 md:px-8 md:py-20">
+            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
+            <Link href="/comparisons" className="w-fit text-sm text-primary-200 hover:text-primary-100" underline>{t("back")}</Link>
 
-            <Link href="/comparisons" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                {t("back")}
-            </Link>
+            <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
 
-            <ChallengeHero
-                challenge={challenge}
-                comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)}
-                animalAName={animalA.name}
-                animalBName={animalB.name}
-                publishedLabel={t("published")}
-                publishedValue={formatDate(locale, challenge.publishedAt)}
-                updatedLabel={t("updated")}
-                updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)}
-            />
+            <ComparisonPageNavigation title={challenge.title} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("jumpToSpeciesTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("jumpToSpeciesDescription")}</p>
-                <div className="flex flex-wrap gap-3">
-                    <Link
-                        href={`/animals/${animalA.slug}`}
-                        className="rounded-full border border-primary-500/30 px-4 py-3 text-primary-200 hover:text-primary-100 text-base md:text-lg"
-                    >
-                        {animalA.name}
-                    </Link>
-                    <Link
-                        href={`/animals/${animalB.slug}`}
-                        className="rounded-full border border-primary-500/30 px-4 py-3 text-primary-200 hover:text-primary-100 text-base md:text-lg"
-                    >
-                        {animalB.name}
-                    </Link>
-                </div>
-            </section>
+            <ChallengeVerdictCard title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} winner={winner ? {slug: winner.slug, name: winner.name} : undefined} winnerLabel={t("winnerBadge")} confidence={confidence} confidenceLabel={t("confidence")} fullAnalysisLabel={t("fullAnalysis")} />
 
-            <ChallengeVerdictCard
-                title={t("quickVerdictTitle")}
-                description={t("quickVerdictDescription")}
-                summary={challenge.quickVerdict}
-                paragraphs={challenge.shortAnswer}
-            />
-
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whyInterestingTitle")}</h2>
-                {challenge.whyThisMatchupIsInteresting.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
-            </section>
-
-            <ChallengeSpeciesStatsComparison
-                title={t("speciesStatsTitle")}
-                description={t("speciesStatsDescription")}
-                animalAName={animalA.name}
-                animalBName={animalB.name}
-                animalAResult={animalAStatsResult}
-                animalBResult={animalBStatsResult}
-                animalABattleTier={animalABattleTier}
-                animalBBattleTier={animalBBattleTier}
-                labels={{
-                    advantage: t("advantageLabel"),
-                    even: t("winnerLabels.even"),
-                    battleTierChip: t("battleTierChip", {tier: "{tier}"}),
-                    statsSourceLabel: t("statsSourceLabel"),
-                    dominance: t("dominanceStat"),
-                    speed: t("speedStat"),
-                    size: t("sizeStat"),
-                    intelligence: t("intelligenceStat"),
-                    rarity: t("rarityStat"),
-                    sourceSpeciesProfile: t("statsSourceSpeciesProfile"),
-                    sourceAnalysisBase: t("statsSourceAnalysisBase"),
-                    sourceAnalysisEffective: t("statsSourceAnalysisEffective"),
-                    sourceRawJson: t("statsSourceRawJson"),
-                    sourceGenerated: t("statsSourceGenerated"),
-                    sourceNone: t("statsSourceNone")
-                }}
-            />
-
-            <AnimalVsStatTable
-                title={t("statsTitle")}
-                description={t("statsDescription")}
-                animalAName={animalA.name}
-                animalBName={animalB.name}
-                items={challenge.statCategories}
-                labels={{
-                    advantage: t("advantageLabel"),
-                    takeaway: t("takeawayLabel"),
-                    animalAAdvantage: animalA.name,
-                    animalBAdvantage: animalB.name,
-                    even: t("winnerLabels.even"),
-                    depends: t("winnerLabels.depends")
-                }}
-            />
-
-            <ScenarioBreakdown
-                title={t("scenarioTitle")}
-                description={t("scenarioDescription")}
-                items={challenge.scenarioBreakdown}
-                labels={{
-                    winner: t("scenarioWinnerLabel"),
-                    animalA: animalA.name,
-                    animalB: animalB.name,
-                    draw: t("winnerLabels.draw"),
-                    depends: t("winnerLabels.depends")
-                }}
-            />
-
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("exploreAnimalsTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("exploreAnimalsDescription")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[animalA, animalB].map((species) => (
-                        <article
-                            key={species.slug}
-                            className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-3"
-                        >
-                            <h3 className="font-display font-bold text-2xl text-white">{species.name}</h3>
-                            <p className="text-ink-200 text-base md:text-lg">{species.analysis.summary}</p>
-                            <Link
-                                href={`/animals/${species.slug}`}
-                                className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                underline
-                            >
-                                {t("readSpecies")}
-                            </Link>
-                        </article>
+            <section className="grid gap-6 border-y border-line-300 py-9 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+                <div><p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">{t("editorialNote")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("whyDisagreeTitle")}</h2><p className="mt-4 text-base leading-7 text-ink-200">{challenge.whyThisMatchupIsInteresting[0]}</p></div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    {challenge.statCategories.slice(0, 3).map((item, index) => (
+                        <article key={item.key} className="border-l-2 border-amber-300/60 bg-gradient-to-r from-amber-500/10 to-transparent p-5"><span className="text-xs font-black text-amber-300">0{index + 1}</span><h3 className="mt-2 text-lg font-bold text-white">{item.label}</h3><p className="mt-2 text-sm leading-6 text-ink-200">{item.takeaway}</p></article>
                     ))}
                 </div>
+                {challenge.whyThisMatchupIsInteresting.length > 1 ? <details className="lg:col-start-2"><summary className="cursor-pointer font-semibold text-primary-200">{t("fullAnalysis")} +</summary><div className="mt-4 space-y-3">{challenge.whyThisMatchupIsInteresting.slice(1).map((paragraph) => <p key={paragraph} className="text-base leading-7 text-ink-200">{paragraph}</p>)}</div></details> : null}
             </section>
 
-            <SystemsIntelligenceSection
-                items={systemsItems}
-                labels={{
-                    title: t("systemsIntelligenceTitle"),
-                    description: t("systemsIntelligenceDescription"),
-                    systemRole: t("systemRoleLabel"),
-                    specializedHardware: t("specializedHardwareLabel"),
-                    systemsScript: t("systemsScriptLabel"),
-                    strategicInsight: t("strategicInsightLabel"),
-                    readSpeciesGuide: t("readSpeciesGuide")
-                }}
-            />
-
-            <ChallengeVerdictCard
-                title={t("finalTakeTitle")}
-                summary={challenge.finalTake[0]}
-                paragraphs={challenge.finalTake.slice(1)}
-            />
-
-            <IntentCtaCard
-                title={ctaCopy.title}
-                description={ctaCopy.description}
-                buttonLabel={ctaCopy.button}
-                supportItems={ctaSupportItems}
-                secondaryLinks={[
-                    {
-                        href: `/animals/${animalA.slug}`,
-                        label: t("trackSpecies", {animal: animalA.name})
-                    },
-                    {
-                        href: `/animals/${animalB.slug}`,
-                        label: t("trackSpecies", {animal: animalB.name})
-                    }
-                ]}
-            />
-
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("faqTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("faqDescription")}</p>
-                {challenge.faq.map((item) => (
-                    <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
-                        <h3 className="text-white text-xl font-semibold">{item.question}</h3>
-                        <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
-                    </div>
-                ))}
+            <section id="faq" className="scroll-mt-28 grid gap-6 lg:grid-cols-[0.65fr_1.35fr]">
+                <div><h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2><p className="mt-3 text-ink-200">{t("faqDescription")}</p></div>
+                <div className="divide-y divide-line-300 rounded-3xl border border-line-300 bg-surface-900/55 px-5 md:px-7">{challenge.faq.map((item) => <details key={item.question} className="group py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">{item.question}<span className="text-primary-300 transition group-open:rotate-45">+</span></summary><p className="mt-3 max-w-3xl text-base leading-7 text-ink-200">{item.answer}</p></details>)}</div>
             </section>
 
-            <RelatedChallengesSection
-                title={t("relatedTitle")}
-                description={t("relatedDescription")}
-                readChallengeLabel={t("readChallenge")}
-                items={relatedChallenges}
-            />
+            <ChallengeSpeciesStatsComparison title={t("speciesStatsTitle")} description={t("speciesStatsDescription")} animalAName={animalA.name} animalBName={animalB.name} animalAResult={animalAStatsResult} animalBResult={animalBStatsResult} animalABattleTier={animalABattleTier} animalBBattleTier={animalBBattleTier} labels={{advantage: t("advantageLabel"), even: t("winnerLabels.even"), battleTierChip: t("battleTierChip", {tier: "{tier}"}), dominance: t("dominanceStat"), speed: t("speedStat"), size: t("sizeStat"), intelligence: t("intelligenceStat"), rarity: t("rarityStat")}} />
+
+            <AnimalVsStatTable title={t("statsTitle")} description={t("statsDescription")} animalAName={animalA.name} animalBName={animalB.name} items={challenge.statCategories} labels={{advantage: t("advantageLabel"), takeaway: t("takeawayLabel"), animalAAdvantage: animalA.name, animalBAdvantage: animalB.name, even: t("winnerLabels.even"), depends: t("winnerLabels.depends")}} />
+
+            <section className="space-y-6 py-4">
+                <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("verdictTimelineEyebrow")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("verdictTimelineTitle")}</h2></div>
+                <div className="relative grid gap-3 md:grid-cols-3 xl:grid-cols-6">{challenge.statCategories.slice(0, 6).map((item, index) => { const name = item.advantage === "animalA" ? animalA.name : item.advantage === "animalB" ? animalB.name : item.advantage === "even" ? t("winnerLabels.even") : t("winnerLabels.depends"); return <article key={item.key} className="relative rounded-2xl border border-line-300 bg-surface-900/65 p-4"><span className={`mb-4 block h-2 w-2 rounded-full ${item.advantage === "animalA" ? "bg-emerald-400" : item.advantage === "animalB" ? "bg-sky-400" : "bg-amber-300"}`} /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-300">0{index + 1} · {item.label}</p><p className="mt-2 font-bold text-white">{name}</p></article>; })}</div>
+            </section>
+
+            <ScenarioBreakdown title={t("scenarioTitle")} description={t("scenarioDescription")} items={challenge.scenarioBreakdown} labels={{winner: t("scenarioWinnerLabel"), animalA: animalA.name, animalB: animalB.name, draw: t("winnerLabels.draw"), depends: t("winnerLabels.depends"), confidence: t("confidence"), select: t("selectScenario")}} />
+
+            <section id="meet-animals" className="scroll-mt-28 space-y-6">
+                <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("fieldProfiles")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("exploreAnimalsTitle")}</h2></div>
+                <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => <article key={species.slug} className="group overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900"><SpeciesArtworkImage slug={species.slug} alt={species.name} className="h-64 w-full transition duration-500 group-hover:scale-[1.02]" sizes="(min-width: 768px) 50vw, 100vw" /><div className="space-y-5 p-6 md:p-7"><div className="flex items-start justify-between gap-4"><div><h3 className="font-display text-3xl font-bold text-white">{species.name}</h3><p className="italic text-ink-300">{species.analysis.scientificName}</p></div>{tier ? <span className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-bold text-primary-100">{t("battleTierChip", {tier})}</span> : null}</div><p className="line-clamp-2 text-sm leading-6 text-ink-200">{species.analysis.habitat}</p><div className="grid grid-cols-3 gap-2 border-y border-line-300 py-4 text-center"><div><span className="block text-xs text-ink-300">{t("animalCategory")}</span><strong className="text-sm text-white">{species.analysis.category}</strong></div><div><span className="block text-xs text-ink-300">{t("speedStat")}</span><strong className="text-lg text-white">{stats?.speed ?? "—"}</strong></div><div><span className="block text-xs text-ink-300">{t("sizeStat")}</span><strong className="text-lg text-white">{stats?.size ?? "—"}</strong></div></div><Link href={`/animals/${species.slug}`} className="inline-flex font-bold text-primary-200 hover:text-primary-100" underline>{t("readSpecies")}</Link></div></article>)}</div>
+            </section>
+
+            <SystemsIntelligenceSection items={systemsItems} labels={{title: t("systemsIntelligenceTitle"), description: t("systemsIntelligenceDescription"), systemRole: t("systemRoleLabel"), specializedHardware: t("specializedHardwareLabel"), systemsScript: t("systemsScriptLabel"), strategicInsight: t("strategicInsightLabel"), readSpeciesGuide: t("readSpeciesGuide")}} />
+
+            <ChallengeVerdictCard title={t("finalTakeTitle")} summary={challenge.finalTake[0]} paragraphs={challenge.finalTake.slice(1)} fullAnalysisLabel={t("fullAnalysis")} />
+
+            <IntentCtaCard title={t(challenge.comparisonType === "battle" ? "ctaBattleTitle" : challenge.comparisonType === "speed" ? "ctaSpeedTitle" : "ctaDefaultTitle")} description={t(challenge.comparisonType === "battle" ? "ctaBattleDescription" : challenge.comparisonType === "speed" ? "ctaSpeedDescription" : "ctaDefaultDescription")} buttonLabel={t(challenge.comparisonType === "battle" ? "ctaBattleButton" : challenge.comparisonType === "speed" ? "ctaSpeedButton" : "ctaDefaultButton")} supportItems={[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")]} secondaryLinks={[{href: `/animals/${animalA.slug}`, label: t("trackSpecies", {animal: animalA.name})}, {href: `/animals/${animalB.slug}`, label: t("trackSpecies", {animal: animalB.name})}]} />
+
+            <RelatedChallengesSection title={t("relatedTitle")} description={t("relatedDescription")} readChallengeLabel={t("readChallenge")} items={relatedChallenges} />
         </article>
     );
 }

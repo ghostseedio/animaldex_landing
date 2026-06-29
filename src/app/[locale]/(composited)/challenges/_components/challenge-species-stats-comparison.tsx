@@ -1,6 +1,6 @@
 import type {SpeciesStatsResolution} from "@/data/species-stats";
 
-type ChallengeSpeciesStatsComparisonProps = {
+type Props = {
     title: string;
     description: string;
     animalAName: string;
@@ -9,273 +9,44 @@ type ChallengeSpeciesStatsComparisonProps = {
     animalBResult: SpeciesStatsResolution;
     animalABattleTier: string | null;
     animalBBattleTier: string | null;
-    labels: {
-        advantage: string;
-        even: string;
-        battleTierChip: string;
-        statsSourceLabel: string;
-        dominance: string;
-        speed: string;
-        size: string;
-        intelligence: string;
-        rarity: string;
-        sourceSpeciesProfile: string;
-        sourceAnalysisBase: string;
-        sourceAnalysisEffective: string;
-        sourceRawJson: string;
-        sourceGenerated: string;
-        sourceNone: string;
-    };
+    labels: Record<string, string>;
 };
 
-const STAT_ROWS = [
-    {
-        key: "dominance",
-        accentClassName: "from-amber-300 via-orange-300 to-rose-300",
-        badgeClassName: "border-amber-300/25 bg-amber-500/15 text-amber-100"
-    },
-    {
-        key: "speed",
-        accentClassName: "from-sky-300 via-cyan-300 to-emerald-300",
-        badgeClassName: "border-sky-300/25 bg-sky-500/15 text-sky-100"
-    },
-    {
-        key: "size",
-        accentClassName: "from-lime-300 via-emerald-300 to-teal-300",
-        badgeClassName: "border-emerald-300/25 bg-emerald-500/15 text-emerald-100"
-    },
-    {
-        key: "intelligence",
-        accentClassName: "from-fuchsia-300 via-pink-300 to-rose-300",
-        badgeClassName: "border-fuchsia-300/25 bg-fuchsia-500/15 text-fuchsia-100"
-    },
-    {
-        key: "rarity",
-        accentClassName: "from-yellow-200 via-amber-300 to-orange-400",
-        badgeClassName: "border-yellow-300/25 bg-yellow-500/15 text-yellow-100"
-    }
-] as const;
+const ROWS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
-type ComparisonSide = "animalA" | "animalB" | "even";
-
-function getSourceLabel(source: SpeciesStatsResolution["statsSource"], labels: ChallengeSpeciesStatsComparisonProps["labels"]) {
-    switch (source) {
-        case "species_profile":
-            return labels.sourceSpeciesProfile;
-        case "analysis_base":
-            return labels.sourceAnalysisBase;
-        case "analysis_effective":
-            return labels.sourceAnalysisEffective;
-        case "raw_json":
-            return labels.sourceRawJson;
-        case "generated":
-            return labels.sourceGenerated;
-        default:
-            return labels.sourceNone;
-    }
-}
-
-function getSourceClassName(source: SpeciesStatsResolution["statsSource"]) {
-    switch (source) {
-        case "species_profile":
-            return "border-emerald-300/25 bg-emerald-500/12 text-emerald-100";
-        case "analysis_base":
-            return "border-sky-300/25 bg-sky-500/12 text-sky-100";
-        case "analysis_effective":
-            return "border-amber-300/25 bg-amber-500/12 text-amber-100";
-        case "raw_json":
-            return "border-violet-300/25 bg-violet-500/12 text-violet-100";
-        case "generated":
-            return "border-slate-300/25 bg-slate-500/12 text-slate-100";
-        default:
-            return "border-line-300/80 bg-surface-900/70 text-ink-200";
-    }
-}
-
-function getEdge(a: number, b: number): ComparisonSide {
-    if (a === b) {
-        return "even";
-    }
-
-    return a > b ? "animalA" : "animalB";
-}
-
-function getEdgeClassName(edge: ComparisonSide) {
-    switch (edge) {
-        case "animalA":
-            return "border-emerald-300/25 bg-emerald-500/15 text-emerald-100";
-        case "animalB":
-            return "border-sky-300/25 bg-sky-500/15 text-sky-100";
-        default:
-            return "border-amber-300/25 bg-amber-500/15 text-amber-100";
-    }
-}
-
-function getStatLabel(
-    key: (typeof STAT_ROWS)[number]["key"],
-    labels: ChallengeSpeciesStatsComparisonProps["labels"]
-) {
-    switch (key) {
-        case "dominance":
-            return labels.dominance;
-        case "speed":
-            return labels.speed;
-        case "size":
-            return labels.size;
-        case "intelligence":
-            return labels.intelligence;
-        default:
-            return labels.rarity;
-    }
-}
-
-function getEdgeLabel(
-    edge: ComparisonSide,
-    animalAName: string,
-    animalBName: string,
-    labels: ChallengeSpeciesStatsComparisonProps["labels"]
-) {
-    if (edge === "animalA") {
-        return animalAName;
-    }
-
-    if (edge === "animalB") {
-        return animalBName;
-    }
-
-    return labels.even;
-}
-
-export default function ChallengeSpeciesStatsComparison({
-    title,
-    description,
-    animalAName,
-    animalBName,
-    animalAResult,
-    animalBResult,
-    animalABattleTier,
-    animalBBattleTier,
-    labels
-}: ChallengeSpeciesStatsComparisonProps) {
-    if (!animalAResult.stats || !animalBResult.stats) {
-        return null;
-    }
-
-    const animalAStats = animalAResult.stats;
-    const animalBStats = animalBResult.stats;
+export default function ChallengeSpeciesStatsComparison({title, description, animalAName, animalBName, animalAResult, animalBResult, animalABattleTier, animalBBattleTier, labels}: Props) {
+    if (!animalAResult.stats || !animalBResult.stats) return null;
 
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{title}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{description}</p>
+        <section id="stats" className="scroll-mt-28 space-y-6 py-4">
+            <div className="max-w-3xl">
+                <h2 className="font-display text-3xl font-bold text-white md:text-5xl">{title}</h2>
+                <p className="mt-3 text-base leading-7 text-ink-200 md:text-lg">{description}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                    {
-                        name: animalAName,
-                        result: animalAResult,
-                        battleTier: animalABattleTier,
-                        tierClassName: "border-emerald-300/25 bg-emerald-500/15 text-emerald-100"
-                    },
-                    {
-                        name: animalBName,
-                        result: animalBResult,
-                        battleTier: animalBBattleTier,
-                        tierClassName: "border-sky-300/25 bg-sky-500/15 text-sky-100"
-                    }
-                ].map((animal) => (
-                    <article
-                        key={animal.name}
-                        className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-4"
-                    >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="flex flex-col gap-1">
-                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
-                                    {animal.name}
-                                </p>
-                                <p className="text-sm md:text-base text-ink-300">
-                                    <span className="text-white">{labels.statsSourceLabel}: </span>
-                                    {getSourceLabel(animal.result.statsSource, labels)}
-                                </p>
-                            </div>
-                            {animal.battleTier ? (
-                                <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${animal.tierClassName}`}>
-                                    {labels.battleTierChip.replace("{tier}", animal.battleTier)}
-                                </span>
-                            ) : null}
-                        </div>
-                        <div className={`rounded-2xl border px-4 py-3 text-sm md:text-base ${getSourceClassName(animal.result.statsSource)}`}>
-                            {getSourceLabel(animal.result.statsSource, labels)}
-                        </div>
-                    </article>
-                ))}
-            </div>
+            <div className="overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900/80">
+                <div className="grid grid-cols-[1fr_6.5rem_1fr] items-center border-b border-line-300 bg-surface-800/70 px-3 py-5 text-center md:grid-cols-[1fr_11rem_1fr] md:px-6">
+                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalAName}</p>{animalABattleTier ? <span className="text-xs font-bold text-emerald-300">{labels.battleTierChip.replace("{tier}", animalABattleTier)}</span> : null}</div>
+                    <span className="text-xs font-black uppercase tracking-[0.18em] text-ink-300">VS</span>
+                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalBName}</p>{animalBBattleTier ? <span className="text-xs font-bold text-sky-300">{labels.battleTierChip.replace("{tier}", animalBBattleTier)}</span> : null}</div>
+                </div>
 
-            <div className="flex flex-col gap-4">
-                {STAT_ROWS.map((stat) => {
-                    const animalAValue = animalAStats[stat.key];
-                    const animalBValue = animalBStats[stat.key];
-                    const edge = getEdge(animalAValue, animalBValue);
-
+                {ROWS.map((key) => {
+                    const a = animalAResult.stats![key];
+                    const b = animalBResult.stats![key];
+                    const edge = a === b ? "even" : a > b ? "a" : "b";
                     return (
-                        <article
-                            key={stat.key}
-                            className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-4 md:p-5"
-                        >
-                            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_12rem_minmax(0,1fr)_10rem] gap-4 xl:items-center">
-                                <div className={`rounded-2xl border p-4 flex flex-col gap-3 ${edge === "animalA" ? "border-emerald-300/25 bg-emerald-500/10" : "border-line-300/80 bg-surface-950/60"}`}>
-                                    <div className="flex items-center justify-between gap-4">
-                                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
-                                            {animalAName}
-                                        </span>
-                                        <span className="font-display font-bold text-3xl text-white">{animalAValue}</span>
-                                    </div>
-                                    <div className="h-3 rounded-full bg-surface-950 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full bg-gradient-to-r ${stat.accentClassName}`}
-                                            style={{width: `${Math.max(6, animalAValue)}%`}}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col items-center justify-center gap-2 text-center">
-                                    <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${stat.badgeClassName}`}>
-                                        {getStatLabel(stat.key, labels)}
-                                    </span>
-                                    <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getEdgeClassName(edge)}`}>
-                                        {labels.advantage}: {getEdgeLabel(edge, animalAName, animalBName, labels)}
-                                    </span>
-                                    {edge !== "even" ? (
-                                        <span className="text-xs md:text-sm text-ink-300">
-                                            +{Math.abs(animalAValue - animalBValue)}
-                                        </span>
-                                    ) : null}
-                                </div>
-
-                                <div className={`rounded-2xl border p-4 flex flex-col gap-3 ${edge === "animalB" ? "border-sky-300/25 bg-sky-500/10" : "border-line-300/80 bg-surface-950/60"}`}>
-                                    <div className="flex items-center justify-between gap-4">
-                                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
-                                            {animalBName}
-                                        </span>
-                                        <span className="font-display font-bold text-3xl text-white">{animalBValue}</span>
-                                    </div>
-                                    <div className="h-3 rounded-full bg-surface-950 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full bg-gradient-to-r ${stat.accentClassName}`}
-                                            style={{width: `${Math.max(6, animalBValue)}%`}}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="xl:col-start-4">
-                                    <div className={`rounded-2xl border px-4 py-3 text-center text-sm font-semibold ${getEdgeClassName(edge)}`}>
-                                        {getEdgeLabel(edge, animalAName, animalBName, labels)}
-                                    </div>
-                                </div>
+                        <div key={key} title={`${labels.advantage}: ${edge === "a" ? animalAName : edge === "b" ? animalBName : labels.even}`} className="group grid grid-cols-[1fr_6.5rem_1fr] items-center border-b border-line-300/60 px-3 py-5 last:border-0 hover:bg-white/[0.025] md:grid-cols-[1fr_11rem_1fr] md:px-6">
+                            <div className={`flex items-center justify-end gap-3 ${edge === "a" ? "text-emerald-200" : "text-white"}`}>
+                                <span className="text-xl font-black md:text-2xl">{a}</span>
+                                <div className="hidden h-2 max-w-52 flex-1 overflow-hidden rounded-full bg-surface-950 sm:block"><div className="ml-auto h-full rounded-full bg-emerald-400 transition-all duration-700" style={{width: `${a}%`}} /></div>
                             </div>
-                        </article>
+                            <div className="text-center"><span className="text-xs font-bold uppercase tracking-[0.1em] text-ink-200 md:text-sm">{labels[key]}</span>{edge !== "even" ? <span className="mt-1 block text-[10px] font-bold text-primary-300 opacity-0 transition group-hover:opacity-100">+{Math.abs(a - b)}</span> : null}</div>
+                            <div className={`flex items-center gap-3 ${edge === "b" ? "text-sky-200" : "text-white"}`}>
+                                <div className="hidden h-2 max-w-52 flex-1 overflow-hidden rounded-full bg-surface-950 sm:block"><div className="h-full rounded-full bg-sky-400 transition-all duration-700" style={{width: `${b}%`}} /></div>
+                                <span className="text-xl font-black md:text-2xl">{b}</span>
+                            </div>
+                        </div>
                     );
                 })}
             </div>

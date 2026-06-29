@@ -9,14 +9,14 @@ import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
+import {isPlaceCollectionIndexable} from "@/data/location-places";
 import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalGenerations} from "@/data/pokemon-animal-counterparts";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
-import {getBehavioralPrinciplesIndex} from "@/data/species-behavioral-principles";
-import {getBehaviorLessonIndex} from "@/data/species-behavior-lessons";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const behaviorLessons = await getBehaviorLessonIndex();
+    const principleHubs = await getPrincipleHubIndex();
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
@@ -69,7 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 url: getAbsoluteUrl(locale, "/locations")
             },
             {
-                url: getAbsoluteUrl(locale, "/principles")
+                url: getAbsoluteUrl(locale, "/qualities")
             },
             {
                 url: getAbsoluteUrl(locale, "/animal-symbolism")
@@ -123,8 +123,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `/locations/${page.slug}`),
             lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
-        const principlePageEntries = getBehavioralPrinciplesIndex(speciesSystemsIntelligence).map((item) => ({
-            url: getAbsoluteUrl(locale, `/principles/${item.principleSlug}`)
+        const locationPlacePageEntries = locationPages.flatMap((page) => {
+            const entries: MetadataRoute.Sitemap = [];
+            const lastModified = new Date(page.updatedAt || page.publishedAt);
+            if (isPlaceCollectionIndexable(page.zoosAndParks)) {
+                entries.push({url: getAbsoluteUrl(locale, `/locations/${page.slug}/zoos`), lastModified});
+            }
+            if (isPlaceCollectionIndexable(page.wildlifeReserves)) {
+                entries.push({url: getAbsoluteUrl(locale, `/locations/${page.slug}/wildlife-reserves`), lastModified});
+            }
+            return entries;
+        });
+        const principlePageEntries = principleHubs.map((item) => ({
+            url: getAbsoluteUrl(locale, `/qualities/${item.principleSlug}`)
         }));
         const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
             url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`)
@@ -150,6 +161,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...challengePageEntries,
             ...rankingPageEntries,
             ...locationPageEntries,
+            ...locationPlacePageEntries,
             ...principlePageEntries,
             ...behaviorLessonPageEntries,
             ...pokemonAnimalGenerationEntries,
