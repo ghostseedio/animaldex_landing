@@ -179,7 +179,7 @@ export default async function UseCasesIndexPage() {
 
                         <p className="max-w-lg text-base leading-7 text-ink-200 md:text-lg">
                             AnimalDex works differently depending on what you bring to it — a pet to log, a bird you
-                            just spotted, or a collection you're building. Find the path that matches what you're
+                            just spotted, or a collection you&apos;re building. Find the path that matches what you&apos;re
                             actually trying to do.
                         </p>
 
