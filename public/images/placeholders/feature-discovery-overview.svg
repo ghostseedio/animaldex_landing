@@ -44,9 +44,9 @@
     <rect x="24.75" y="24.75" width="487.5" height="144.5" rx="27.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="48" y="70" fill="#31FF4F" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="4">DISCOVERY FEED</text>
-  <text x="48" y="116" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="36" font-weight="900">Real captures</text>
-  <text x="48" y="148" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="20" font-weight="700">Anti-fake capturing and community.</text>
+  <text x="48" y="70" fill="#31FF4F" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="4">MATCHUPS</text>
+  <text x="48" y="116" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="36" font-weight="900">Scenarios</text>
+  <text x="48" y="148" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="20" font-weight="700">Which animal would win?</text>
 
   <rect x="392" y="58" width="84" height="78" rx="26" fill="#12391C"/>
   <rect x="393" y="59" width="82" height="76" rx="25" stroke="#1E9638" stroke-width="2"/>
@@ -90,7 +90,7 @@
   <text x="81" y="288" text-anchor="middle" fill="#07100B" font-family="Arial, sans-serif" font-size="12" font-weight="900">WILD</text>
 
   <text x="44" y="404" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="20" font-weight="900">Polar Bear</text>
-  <text x="44" y="428" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Bear capture</text>
+  <text x="44" y="428" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Endurance</text>
   <rect x="44" y="444" width="52" height="22" rx="11" fill="#202320"/>
   <text x="70" y="460" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="12" font-weight="900">TIER A</text>
   <rect x="104" y="444" width="52" height="22" rx="11" fill="#0E2113"/>
@@ -102,9 +102,9 @@
     <rect x="192.75" y="194.75" width="150.5" height="280.5" rx="27.25" stroke="#215C2E" stroke-width="1.5"/>
   </g>
 
-  <text x="212" y="232" fill="#31FF4F" font-family="Arial, sans-serif" font-size="14" font-weight="900">COMPARISON</text>
-  <text x="212" y="258" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="21" font-weight="900">Bear</text>
-  <text x="212" y="282" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="21" font-weight="900">vs Shark</text>
+  <text x="212" y="232" fill="#31FF4F" font-family="Arial, sans-serif" font-size="14" font-weight="900">BATTLE CASE</text>
+  <text x="212" y="258" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="21" font-weight="900">Late</text>
+  <text x="212" y="282" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="21" font-weight="900">for Work</text>
 
   <rect x="212" y="306" width="52" height="52" rx="16" fill="#172428"/>
   <g clip-path="url(#polarMiniClip)">
@@ -138,9 +138,9 @@
   <rect x="268" y="376" width="56" height="24" rx="12" fill="#102B32"/>
   <text x="296" y="393" text-anchor="middle" fill="#58D4FF" font-family="Arial, sans-serif" font-size="12" font-weight="900">APEX</text>
 
-  <text x="212" y="430" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="14" font-weight="700">Land giant meets</text>
-  <text x="212" y="448" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="14" font-weight="700">ocean predator.</text>
-  <text x="212" y="466" fill="#F4D429" font-family="Arial, sans-serif" font-size="14" font-weight="900">Winner: shark</text>
+  <text x="212" y="430" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="14" font-weight="700">Winning</text>
+  <text x="212" y="448" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="14" font-weight="700">strategy:</text>
+  <text x="212" y="466" fill="#F4D429" font-family="Arial, sans-serif" font-size="14" font-weight="900">Momentum</text>
 
   <!-- Feed card 3: Great White Shark -->
   <g filter="url(#shadow)">
@@ -175,9 +175,9 @@
   <rect x="381" y="259" width="110" height="110" rx="21" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
 
   <text x="380" y="404" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="17" font-weight="900">Great White</text>
-  <text x="380" y="428" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Shark capture</text>
+  <text x="380" y="428" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Momentum</text>
   <rect x="380" y="444" width="52" height="22" rx="11" fill="#202320"/>
   <text x="406" y="460" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="12" font-weight="900">TIER S</text>
   <rect x="440" y="444" width="52" height="22" rx="11" fill="#0E2113"/>
-  <text x="466" y="460" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="12" font-weight="900">75%</text>
+  <text x="466" y="460" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="12" font-weight="900">85%</text>
 </svg>

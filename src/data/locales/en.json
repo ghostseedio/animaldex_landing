@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Back to AnimalDex homepage",
     "title": "AnimalDex",
-    "description": "AI animal scanner, wildlife collection app, and collectible field guide for iOS and Android.",
+    "description": "Every animal has a lesson.",
     "team": "Who It's For",
     "features": "Features",
     "download": "Get AnimalDex",
@@ -25,30 +25,30 @@
     "locations": "Wildlife Locations",
     "challenges": "Comparisons",
     "rankings": "Tier Lists",
-    "animalWisdom": "Animal Wisdom",
+    "animalWisdom": "Animal Guide",
     "howItWorks": "How It Works",
     "browseAnimals": "Browse Animals",
     "articlesGuides": "Articles & Guides",
     "footerGroups": {
       "product": "Product",
       "explore": "Animal Encyclopedia",
-      "wisdom": "Animal Wisdom",
+      "wisdom": "Animal Guide",
       "resources": "Resources",
       "follow": "Follow"
     },
     "credits": {
-      "platform": "Built for",
-      "platformValue": "iOS and Android",
-      "status": "Status",
-      "statusValue": "live on the App Store and Google Play"
+      "platform": "Copyright",
+      "platformValue": "© 2026 AnimalDex",
+      "status": "Company",
+      "statusValue": "GHOSTSEED LTD · No. 17287552"
     }
   },
   "home": {
     "title": "AnimalDex",
-    "tagline": "AI animal scanner and wildlife collection app",
+    "tagline": "Discover what animals can teach you.",
     "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
-    "description": "Scan real animals. Discover what they teach.",
-    "supporting": "Use AI scanning to identify animals instantly, then learn biology-backed animal meaning, symbolism, and lessons from real behavior.",
+    "description": "Discover what animals can teach you.",
+    "supporting": "Every encounter is a chance to learn how they succeed.",
     "phone": {
       "phone": "AnimalDex mobile app preview",
       "emojis": "Floating preview card for challenge stats",
@@ -58,51 +58,46 @@
       "settings": "Floating preview card for field guide details"
     },
     "features": {
-      "title": "Wait, it gets Wilder",
-      "description": "AnimalDex is more than a scanner — it turns every sighting into a card to keep, learn from, and collect.",
-      "settings": "Instant\nAI ID",
-      "music": "Animal\ncards",
-      "customization": "Your\nDex",
-      "wisdom": "Animal\nWisdom",
-      "wisdomDescription": "Learn simple life lessons from real animal behavior.",
-      "appliedInsight": "Optional Pro insights connect animal wisdom to your own goals.",
+      "title": "Wait… animals can teach me?",
+      "description": "Absolutely.",
+      "settings": "Discover\nLessons",
+      "music": "Real-life\nScenarios",
+      "customization": "Animal\nMind",
+      "wisdom": "Animal\nGuide",
+      "wisdomDescription": "Every animal has their own winning strategy.",
+      "appliedInsight": "Capture it and you it keep forever.",
       "more": "See the full\nexperience",
       "button": "Explore"
     },
     "more": {
-      "title": "Everything after the scan",
-      "description": "Go from quick ID to field-guide detail, collection progress, and smarter spotting in seconds.",
+      "title": "Where will you go?",
+      "description": "Take us on your next adventure!",
       "theme": {
-        "title": "AI animal analysis",
-        "description": "Get a fast ID with useful clues, then save the sighting as a premium card.",
-        "note": "*placeholder artwork until final app screenshots are swapped in",
+        "title": "Make encounters Memorable.",
+        "description": "Every animal has a story to tell.",
+        "note": "",
         "alt": "Placeholder visual for AnimalDex AI scan analysis"
       },
       "ui": {
-        "title": "Discovery that rewards curiosity",
-        "description": "Follow standout finds, spot what to learn next, and keep discovery feeling active.",
+        "title": "Grow with Nature",
+        "description": "Learn how animals win.",
         "alt": "Placeholder visual for AnimalDex discovery feed"
       },
       "design": {
-        "title": "A collectible wildlife journal",
-        "description": "Save trips, habitats, and everyday finds in a collection you will want to revisit.",
+        "title": "Make exploring Fun",
+        "description": "Collecting gets addictive!",
         "alt": "Placeholder visual for AnimalDex collection albums"
       },
       "speed": {
-        "title": "Progress, battles, and trading",
-        "description": "Add battles, trades, and progression without losing the real-animal learning.",
+        "title": "Become your Collection",
+        "description": "Whatever you collect, you gain",
         "alt": "Placeholder visual for AnimalDex challenge and trading systems"
-      },
-      "camera": {
-        "title": "Field-guide depth, not just a label",
-        "description": "See habitat, behavior, rarity, lookalikes, and field-guide facts at a glance.",
-        "alt": "Placeholder visual for AnimalDex field guide details"
       },
       "download": "Download"
     },
     "team": {
-      "title": "Made for how you discover animals",
-      "description": "Whether you spot animals on trips, with family, through photography, or for collection goals, AnimalDex makes every sighting more rewarding.",
+      "title": "You may like us if...",
+      "description": "We've noticed these types of users on AnimalDex:",
       "contact": "See why",
       "roles": {
         "collector": "Collectors",
@@ -118,14 +113,24 @@
       }
     },
     "download": {
-      "title": "Start your next sighting with AnimalDex",
-      "description": "Download AnimalDex on the App Store or Google Play and turn scans into cards, collections, and field-guide learning.",
+      "title": "Collect 'em all!",
+      "description": "Wherever there's animals. There's opportunity.",
       "launch": "Download on",
       "available": "Available on the",
       "beta": "Live app",
       "read": "Read the",
       "contact": "Ask about",
       "unavailable": "Available on",
+      "trust": {
+        "scanner": "AI Animal Scanner",
+        "collect": "Collect Real Animals",
+        "learn": "Learn From Nature"
+      },
+      "stats": {
+        "captures": "{count} Captures",
+        "users": "{count} Users",
+        "lessons": "{count} Lessons"
+      },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
       "blogLink": "Read the Blog",
       "answersPrompt": "Compare AI scanners, collecting apps, and the best fit for you.",
@@ -147,24 +152,84 @@
       "symbolismPrompt": "Read animal symbolism grounded in real behavior, not mystical claims.",
       "symbolismLink": "Animal Symbolism"
     },
+    "explore": {
+      "title": "Keep Exploring",
+      "description": "Adventure more into the wild. Your journey awaits.",
+      "cards": {
+        "tigerLion": {
+          "eyebrow": "Animal comparison",
+          "title": "Tiger vs Lion",
+          "description": "Who actually wins when biology, terrain, and social pressure collide?",
+          "cta": "Compare",
+          "alt": "Tiger portrait for a Tiger vs Lion comparison"
+        },
+        "wolfLessons": {
+          "eyebrow": "Animal lessons",
+          "title": "What Wolves Can Teach Us",
+          "description": "Pack intelligence, endurance, and the discipline of moving together.",
+          "cta": "Learn",
+          "alt": "Wolf in dramatic wildlife light"
+        },
+        "owlSymbolism": {
+          "eyebrow": "Animal symbolism",
+          "title": "What Does an Owl Represent?",
+          "description": "Night vision, patient observation, and wisdom that begins in darkness.",
+          "cta": "Discover",
+          "alt": "Owl portrait in dark atmospheric light"
+        },
+        "scannerGuide": {
+          "eyebrow": "Scanner guide",
+          "title": "AI Animal Scanner",
+          "description": "What a good animal scanner can see.",
+          "cta": "Read",
+          "alt": "AnimalDex wild profile preview for an AI scanner guide"
+        },
+        "rareAnimals": {
+          "eyebrow": "Rare animals",
+          "title": "The World’s Rarest Species",
+          "description": "Scarcity, and animals most people never see.",
+          "cta": "Explore",
+          "alt": "Black rhinoceros representing rare animals"
+        },
+        "lionProfile": {
+          "eyebrow": "Species profile",
+          "title": "Meet the Lion",
+          "description": "A social predator built around patience, pressure, and pride structure.",
+          "cta": "Meet",
+          "alt": "Lion portrait for a species profile"
+        },
+        "octopusMind": {
+          "eyebrow": "Animal mind",
+          "title": "The Octopus Problem",
+          "description": "Camouflage, escape intelligence, and a body that thinks differently.",
+          "cta": "Decode",
+          "alt": "Octopus symbolism hero image"
+        }
+      }
+    },
     "faq": {
-      "title": "Questions people ask before they start",
-      "description": "Quick answers before you start scanning and collecting.",
+      "title": "Still curious?",
+      "description": "Frequently asked questions from our users.",
+      "trust": {
+        "beginner": "Beginner friendly",
+        "families": "Built for families",
+        "behavior": "Based on real animal behaviour"
+      },
       "identify": {
+        "q": "Can I upload from my camera roll?",
+        "a": "Only after the animal has already been scanned. AnimalDex is built around real encounters first, then you can attach extra media from your camera roll to an existing capture."
+      },
+      "family": {
+        "q": "How do you stop people from cheating?",
+        "a": "We do not disclose the full system, but AnimalDex has anti-cheat checks in place to help protect real captures, collection value, and fair progression."
+      },
+      "game": {
         "q": "Is AnimalDex an animal identification app?",
         "a": "Yes. AnimalDex works as an animal scanner AI tool and identification app that helps with species and breed context, then keeps each sighting as a collectible entry."
       },
-      "family": {
-        "q": "Is AnimalDex good for kids and families?",
-        "a": "Yes. AnimalDex is built to be family-friendly, curiosity-first, and useful for zoo days, safari trips, and nature walks where kids and adults learn together."
-      },
-      "game": {
-        "q": "Is it just educational, or also a collecting game?",
-        "a": "Both. AnimalDex combines field-guide learning with collectible cards, sets, missions, challenges, and trading so it can feel like an animal card game or Pokémon-like animal app while staying useful for real-animal learning."
-      },
       "respect": {
-        "q": "Does AnimalDex encourage respectful wildlife observation?",
-        "a": "Yes. AnimalDex promotes curiosity over cruelty by encouraging non-invasive spotting, habitat awareness, and learning that does not involve harming or stressing animals."
+        "q": "Is it Free to Play?",
+        "a": "Yes. AnimalDex offers free credits when you start, you can then complete missions and earn more free credits. Paid plans are affordable and allow users to scan animals without limits."
       }
     }
   },
@@ -1223,9 +1288,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex | AI animal scanner, wildlife collection app, and field guide",
+    "fullTitle": "AnimalDex | Discover what animals can teach you",
     "title": "AnimalDex",
-    "description": "AnimalDex is an AI animal scanner and wildlife collection app that helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
+    "description": "Discover what animals can teach you. Every encounter is a chance to learn how they succeed.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",

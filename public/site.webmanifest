@@ -1,7 +1,7 @@
 {
   "name": "AnimalDex",
   "short_name": "AnimalDex",
-  "description": "AI animal scanner, wildlife collection app, and collectible field guide for iOS and Android.",
+  "description": "Discover what animals can teach you. Every encounter is a chance to learn how they succeed.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050806",

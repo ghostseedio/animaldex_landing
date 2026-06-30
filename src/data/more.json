@@ -6,8 +6,7 @@
       "width": 1024,
       "height": 750
     },
-    "icon": "/images/features/icon-analysis.svg",
-    "note": true
+    "icon": "/images/features/icon-analysis.svg"
   },
   {
     "id": "ui",
@@ -35,14 +34,5 @@
       "height": 686
     },
     "icon": "/images/features/icon-challenge.svg"
-  },
-  {
-    "id": "camera",
-    "img": {
-      "src": "/images/placeholders/more-guide.svg",
-      "width": 1024,
-      "height": 800
-    },
-    "icon": "/images/features/icon-guide.svg"
   }
 ]

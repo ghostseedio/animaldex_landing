@@ -74,7 +74,17 @@ export default function Footer() {
                             priority
                         />
                     </div>
-                    <p className="text-xl text-ink-200 w-full text-center xl:text-left">{t("description")}</p>
+                    <div className="flex w-full flex-col items-center gap-4">
+                        <div
+                            className="relative h-px w-28 overflow-hidden rounded-full bg-gradient-to-r from-transparent via-primary-100/80 to-transparent"
+                            aria-hidden="true"
+                        >
+                            <span className="absolute left-1/2 top-1/2 h-[3px] w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-200/70 blur-[1px]" />
+                        </div>
+                        <p className="text-center font-display text-xl font-bold leading-tight text-white">
+                            {t("description")}
+                        </p>
+                    </div>
                 </div>
                 <div className="flex flex-col gap-10 w-full max-w-5xl items-center xl:items-start">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">

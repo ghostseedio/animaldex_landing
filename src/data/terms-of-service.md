@@ -1,9 +1,14 @@
 ## AnimalDex Terms of Use
 #### Effective April 29, 2026
 
-These Terms of Use ("Terms") govern access to AnimalDex ("AnimalDex," "we," "our," or "the app"). By creating an account, using the app, uploading content, buying credits, subscribing to AnimalDex Pro, or using community features, you accept these Terms. If you do not accept them, do not use AnimalDex.
+These Terms of Use ("Terms") govern access to AnimalDex ("AnimalDex," "we," "our," or "the app"), operated by GHOSTSEED LTD. By creating an account, using the app, uploading content, buying credits, subscribing to AnimalDex Pro, or using community features, you accept these Terms. If you do not accept them, do not use AnimalDex.
 
 For questions, contact `support@animaldex.app`.
+
+## Operator Details
+GHOSTSEED LTD is a private limited company registered in England and Wales with company number 17287552.
+
+Registered office: 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE.
 
 ## Accounts
 Some features require an account. You are responsible for keeping your login credentials secure and for activity on your account. You must provide accurate account information and may not impersonate another person or misuse usernames, avatars, bios, profile fields, or public content.
@@ -69,3 +74,5 @@ To the fullest extent allowed by law, AnimalDex will not be liable for indirect,
 
 ## Contact
 For questions about these Terms, reports, moderation concerns, or account issues, contact `support@animaldex.app`.
+
+Operator: GHOSTSEED LTD, company number 17287552, registered office 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE.

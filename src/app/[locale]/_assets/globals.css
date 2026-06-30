@@ -25,3 +25,39 @@ button {
     background: #83ffae;
     color: #040705;
 }
+
+@keyframes ctaRise {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes ctaChip {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes ctaGlow {
+    0%, 100% {
+        opacity: 0.52;
+        transform: scale(0.96);
+    }
+
+    50% {
+        opacity: 0.84;
+        transform: scale(1.04);
+    }
+}

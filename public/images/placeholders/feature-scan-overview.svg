@@ -1,4 +1,5 @@
 <svg width="537" height="500" viewBox="0 0 537 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Discover Lessons</title>
   <defs>
     <linearGradient id="bg" x1="268.5" y1="0" x2="268.5" y2="500" gradientUnits="userSpaceOnUse">
       <stop stop-color="#111813"/>
@@ -31,26 +32,27 @@
   <rect width="537" height="500" rx="36" fill="url(#bg)"/>
   <rect x="0.75" y="0.75" width="535.5" height="498.5" rx="35.25" stroke="#2B352E" stroke-width="1.5"/>
 
-  <!-- Header result -->
+  <!-- Lesson result -->
   <g filter="url(#shadow)">
     <rect x="24" y="24" width="489" height="196" rx="28" fill="url(#panel)"/>
     <rect x="24.75" y="24.75" width="487.5" height="194.5" rx="27.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="48" y="70" fill="#31FF4F" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="4">AI SCAN RESULT</text>
-  <text x="48" y="120" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="38" font-weight="900">Instant species readout</text>
-  <text x="48" y="150" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="20" font-weight="700">Specific ID, rarity, traits, and collection card.</text>
+  <text x="48" y="70" fill="#31FF4F" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="4">ANIMAL PRINCIPLE</text>
+  <text x="48" y="123" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="48" font-weight="900">Resilience</text>
+  <rect x="48" y="152" width="156" height="34" rx="17" fill="url(#greenChip)"/>
+  <text x="126" y="174" text-anchor="middle" fill="#041006" font-family="Arial, sans-serif" font-size="16" font-weight="900">LEARNED</text>
 
-  <rect x="48" y="168" width="156" height="34" rx="17" fill="url(#greenChip)"/>
-  <text x="126" y="190" text-anchor="middle" fill="#041006" font-family="Arial, sans-serif" font-size="16" font-weight="900">CARD READY</text>
-
-  <rect x="220" y="168" width="92" height="34" rx="17" fill="#2A1E0F"/>
-  <rect x="220.75" y="168.75" width="90.5" height="32.5" rx="16.25" stroke="#B7832F" stroke-width="1.5"/>
-  <text x="266" y="190" text-anchor="middle" fill="#F4D36A" font-family="Arial, sans-serif" font-size="16" font-weight="900">TIER S</text>
-
-  <rect x="328" y="168" width="150" height="34" rx="17" fill="#202320"/>
-  <rect x="328.75" y="168.75" width="148.5" height="32.5" rx="16.25" stroke="#424A44" stroke-width="1.5"/>
-  <text x="403" y="190" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="14" font-weight="900">CRITICALLY RARE</text>
+  <circle cx="386" cy="122" r="72" fill="#101713"/>
+  <circle cx="386" cy="122" r="58" stroke="#31FF4F" stroke-opacity="0.28" stroke-width="3"/>
+  <circle cx="386" cy="122" r="36" stroke="#31FF4F" stroke-opacity="0.42" stroke-width="3"/>
+  <circle cx="386" cy="122" r="16" fill="#31FF4F" filter="url(#glow)"/>
+  <circle cx="386" cy="122" r="9" fill="#31FF4F"/>
+  <path d="M386 50 L401 122 L386 194 L371 122 Z" fill="#31FF4F" opacity="0.16"/>
+  <circle cx="322" cy="86" r="7" fill="#24D6C8"/>
+  <circle cx="440" cy="74" r="7" fill="#24D6C8"/>
+  <circle cx="450" cy="166" r="7" fill="#24D6C8"/>
+  <path d="M322 86 L386 122 L440 74 M386 122 L450 166" stroke="#24D6C8" stroke-opacity="0.36" stroke-width="3"/>
 
   <!-- Main animal card -->
   <g filter="url(#shadow)">
@@ -82,13 +84,12 @@
     <rect x="280.75" y="244.75" width="231.5" height="108.5" rx="27.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="304" y="282" fill="#9BA39D" font-family="Arial, sans-serif" font-size="15" font-weight="900" letter-spacing="2">VISIBLE CLUES</text>
-  <rect x="304" y="300" width="84" height="30" rx="15" fill="#202724"/>
-  <text x="346" y="320" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="14" font-weight="900">Single horn</text>
-  <rect x="398" y="300" width="92" height="30" rx="15" fill="#202724"/>
-  <text x="444" y="320" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="14" font-weight="900">Armor folds</text>
-  <rect x="304" y="330" width="182" height="6" rx="3" fill="#29312C"/>
-  <rect x="304" y="330" width="164" height="6" rx="3" fill="#24D6C8"/>
+  <text x="304" y="282" fill="#9BA39D" font-family="Arial, sans-serif" font-size="15" font-weight="900" letter-spacing="2">TRAITS</text>
+  <rect x="304" y="300" width="104" height="30" rx="15" fill="#202724"/>
+  <text x="356" y="320" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="13" font-weight="900">Protect</text>
+  <rect x="414" y="300" width="92" height="30" rx="15" fill="#202724"/>
+  <text x="460" y="320" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="12" font-weight="900">Strength</text>
+
 
   <!-- Insight card -->
   <g filter="url(#shadow)">
@@ -96,10 +97,11 @@
     <rect x="280.75" y="366.75" width="231.5" height="108.5" rx="27.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="304" y="404" fill="#31FF4F" font-family="Arial, sans-serif" font-size="15" font-weight="900" letter-spacing="2">APPLIED INSIGHT</text>
-  <text x="304" y="435" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="900">Ancient resilience</text>
-  <text x="304" y="462" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="16" font-weight="700">Move carefully when</text>
-  <text x="304" y="482" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="16" font-weight="700">the path is rare.</text>
+  <text x="304" y="404" fill="#31FF4F" font-family="Arial, sans-serif" font-size="15" font-weight="900" letter-spacing="2">LESSON</text>
+  <text x="304" y="435" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="900">Resilience</text>
+  <rect x="304" y="456" width="36" height="8" rx="4" fill="#31FF4F"/>
+  <rect x="348" y="456" width="70" height="8" rx="4" fill="#24D6C8"/>
+  <rect x="426" y="456" width="50" height="8" rx="4" fill="#31FF4F" opacity="0.5"/>
 
   <circle cx="488" cy="394" r="9" fill="#31FF4F" filter="url(#glow)"/>
   <circle cx="488" cy="394" r="5" fill="#31FF4F"/>

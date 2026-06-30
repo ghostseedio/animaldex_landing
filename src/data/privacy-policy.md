@@ -1,7 +1,12 @@
 ## AnimalDex Privacy Policy
 #### Effective April 29, 2026
 
-AnimalDex ("AnimalDex," "we," "our," or "the app") is operated for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
+AnimalDex ("AnimalDex," "we," "our," or "the app") is operated by GHOSTSEED LTD for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
+
+## Operator Details
+GHOSTSEED LTD is a private limited company registered in England and Wales with company number 17287552.
+
+Registered office: 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE.
 
 ## What AnimalDex Does
 AnimalDex helps users identify animals with AI analysis, save captures to a personal collection, participate in public discovery features, and use community features such as missions, trades, challenges, messages, reactions, reports, and blocks.
@@ -64,3 +69,5 @@ We may update this Privacy Policy as AnimalDex changes. When we do, we will revi
 
 ## Contact
 For privacy questions or account privacy requests, contact `support@animaldex.app`.
+
+Operator: GHOSTSEED LTD, company number 17287552, registered office 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE.

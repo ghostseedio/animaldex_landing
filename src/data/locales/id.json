@@ -25,22 +25,22 @@
     "locations": "Lokasi Satwa Liar",
     "challenges": "Comparisons",
     "rankings": "Tier List",
-    "animalWisdom": "Animal Wisdom",
+    "animalWisdom": "Animal Guide",
     "howItWorks": "Cara Kerjanya",
     "browseAnimals": "Jelajahi Hewan",
     "articlesGuides": "Artikel & Panduan",
     "footerGroups": {
       "product": "Produk",
       "explore": "Ensiklopedia Hewan",
-      "wisdom": "Animal Wisdom",
+      "wisdom": "Animal Guide",
       "resources": "Sumber",
       "follow": "Ikuti"
     },
     "credits": {
-      "platform": "Dibuat untuk",
-      "platformValue": "iOS dan Android",
-      "status": "Status",
-      "statusValue": "sudah tersedia di App Store dan Google Play"
+      "platform": "Hak cipta",
+      "platformValue": "© 2026 AnimalDex",
+      "status": "Perusahaan",
+      "statusValue": "GHOSTSEED LTD · No. 17287552"
     }
   },
   "home": {
@@ -63,7 +63,7 @@
       "settings": "Pemindai hewan\nAI",
       "music": "Feed\n discovery",
       "customization": "Jurnal\n koleksi",
-      "wisdom": "Animal\nWisdom",
+      "wisdom": "Animal\nGuide",
       "wisdomDescription": "Pelajari strategi praktis dari perilaku hewan nyata — dari kesabaran dan timing sampai kerja sama, fokus, dan adaptasi.",
       "appliedInsight": "Applied Insight membantu pengguna Pro menghubungkan strategi hewan ke tujuan pribadi mereka saat ini, secara privat dan opsional.",
       "more": "Lihat\n pengalaman lengkap",
@@ -93,11 +93,6 @@
         "description": "Tambahkan battle, trade, dan progres tanpa kehilangan sisi belajar tentang hewan nyata.",
         "alt": "Visual placeholder untuk sistem challenge dan trade AnimalDex"
       },
-      "camera": {
-        "title": "Kedalaman field guide, bukan cuma label",
-        "description": "Lihat habitat, perilaku, rarity, lookalike, dan fakta field guide dengan cepat.",
-        "alt": "Visual placeholder untuk detail field guide AnimalDex"
-      },
       "download": "Download"
     },
     "team": {
@@ -124,6 +119,16 @@
       "read": "Baca",
       "contact": "Tanyakan soal",
       "unavailable": "Tersedia di",
+      "trust": {
+        "scanner": "AI Animal Scanner",
+        "collect": "Koleksi Hewan Nyata",
+        "learn": "Belajar Dari Alam"
+      },
+      "stats": {
+        "captures": "{count} Capture",
+        "users": "{count} Pengguna",
+        "lessons": "{count} Pelajaran Perilaku Hewan"
+      },
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, spotting saat travel, dan panduan ramah satwa liar.",
       "blogLink": "Baca Blog",
       "answersPrompt": "Bandingkan AI scanner, aplikasi koleksi, dan pilihan yang paling cocok untukmu.",
@@ -145,9 +150,69 @@
       "symbolismPrompt": "Baca simbolisme hewan yang berakar pada perilaku nyata, bukan klaim mistis.",
       "symbolismLink": "Simbolisme Hewan"
     },
+    "explore": {
+      "title": "Terus Jelajahi",
+      "description": "Kamu baru melihat permukaannya. Ikuti pertanyaan yang membuat hewan terasa makin menarik.",
+      "cards": {
+        "tigerLion": {
+          "eyebrow": "Perbandingan hewan",
+          "title": "Harimau vs Singa",
+          "description": "Siapa yang menang saat biologi, medan, dan tekanan sosial bertemu?",
+          "cta": "Bandingkan",
+          "alt": "Potret harimau untuk perbandingan Harimau vs Singa"
+        },
+        "wolfLessons": {
+          "eyebrow": "Pelajaran hewan",
+          "title": "Apa yang Bisa Serigala Ajarkan?",
+          "description": "Kecerdasan kelompok, daya tahan, dan disiplin bergerak bersama.",
+          "cta": "Pelajari",
+          "alt": "Serigala dalam cahaya wildlife dramatis"
+        },
+        "owlSymbolism": {
+          "eyebrow": "Simbolisme hewan",
+          "title": "Apa Makna Burung Hantu?",
+          "description": "Penglihatan malam, observasi sabar, dan kebijaksanaan dalam gelap.",
+          "cta": "Temukan",
+          "alt": "Potret burung hantu dengan cahaya atmosferik gelap"
+        },
+        "scannerGuide": {
+          "eyebrow": "Panduan scanner",
+          "title": "Cara AI Mengenali Hewan",
+          "description": "Apa yang bisa dilihat scanner hewan yang baik, dan apa yang tetap butuh penilaian manusia.",
+          "cta": "Baca",
+          "alt": "Preview wild profile AnimalDex untuk panduan AI scanner"
+        },
+        "rareAnimals": {
+          "eyebrow": "Hewan langka",
+          "title": "Spesies Terlangka di Dunia",
+          "description": "Kelangkaan, tekanan konservasi, dan hewan yang jarang dilihat manusia.",
+          "cta": "Jelajahi",
+          "alt": "Badak hitam sebagai representasi hewan langka"
+        },
+        "lionProfile": {
+          "eyebrow": "Profil spesies",
+          "title": "Kenali Singa",
+          "description": "Predator sosial yang dibentuk oleh kesabaran, tekanan, dan struktur pride.",
+          "cta": "Kenali",
+          "alt": "Potret singa untuk profil spesies"
+        },
+        "octopusMind": {
+          "eyebrow": "Pikiran hewan",
+          "title": "Masalah Gurita",
+          "description": "Kamuflase, kecerdasan meloloskan diri, dan tubuh yang berpikir berbeda.",
+          "cta": "Pahami",
+          "alt": "Gambar hero simbolisme gurita"
+        }
+      }
+    },
     "faq": {
-      "title": "Pertanyaan sebelum mulai",
-      "description": "Jawaban singkat sebelum kamu mulai scan dan mengoleksi.",
+      "title": "Masih penasaran?",
+      "description": "Beberapa jawaban tenang sebelum kamu mulai scan, mengoleksi, dan belajar dari hewan nyata.",
+      "trust": {
+        "beginner": "Ramah untuk pemula",
+        "families": "Dibuat untuk keluarga",
+        "behavior": "Berdasar perilaku hewan nyata"
+      },
       "identify": {
         "q": "Apakah AnimalDex aplikasi identifikasi hewan?",
         "a": "Ya. AnimalDex bekerja sebagai animal scanner AI tool dan aplikasi identifikasi yang membantu konteks spesies maupun ras, lalu menyimpan setiap penemuan sebagai entri kolektibel."
