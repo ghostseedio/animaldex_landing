@@ -2,6 +2,7 @@ import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import type {AppCapture} from "@/data/authenticated-app";
 import {formatAppShortDateWithYear} from "@/lib/app-dates";
+import {formatAnimalDexNumber} from "@/lib/animaldex-number";
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
@@ -87,9 +88,9 @@ export function AppAvatar({src, name, size = "md"}: {src?: string | null; name: 
     return <span className={`${sizes[size]} flex shrink-0 items-center justify-center bg-white/5 font-black text-white/40 ring-1 ring-white/10`}>{name.slice(0, 1).toUpperCase()}</span>;
 }
 
-export function AppSegmentedControl<T extends string>({value, options, onChange}: {value: T; options: Array<{id: T; label: string}>; onChange: (value: T) => void}) {
+export function AppSegmentedControl<T extends string>({value, options, onChange, fullWidth = false}: {value: T; options: Array<{id: T; label: string}>; onChange: (value: T) => void; fullWidth?: boolean}) {
     return (
-        <div className="inline-flex rounded-2xl border border-white/10 bg-white/[0.04] p-1" role="tablist">
+        <div className={`${fullWidth ? "flex w-full" : "inline-flex"} rounded-2xl border border-white/10 bg-white/[0.04] p-1`} role="tablist">
             {options.map((option) => (
                 <button
                     key={option.id}
@@ -97,7 +98,7 @@ export function AppSegmentedControl<T extends string>({value, options, onChange}
                     role="tab"
                     aria-selected={value === option.id}
                     onClick={() => onChange(option.id)}
-                    className={`rounded-[0.9rem] px-4 py-2.5 text-sm font-black transition ${value === option.id ? "bg-primary-400 text-black shadow-sm" : `text-white/55 hover:text-white ${focusRing}`}`}
+                    className={`${fullWidth ? "flex-1" : ""} rounded-[0.9rem] px-4 py-2.5 text-sm font-black transition ${value === option.id ? "bg-primary-400 text-black shadow-sm" : `text-white/55 hover:text-white ${focusRing}`}`}
                 >
                     {option.label}
                 </button>
@@ -173,15 +174,17 @@ export function AppCaptureCard({capture, compact = false, locale = "en"}: {captu
     return (
         <article className={`group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/30 ${compact ? "flex" : ""}`}>
             <Link href={capture.href} className={`relative block overflow-hidden bg-white/5 ${compact ? "h-32 w-32 shrink-0" : "aspect-[4/3]"}`}>
-                <img src={capture.imageSrc} alt={capture.animalName} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+                <img src={capture.imageSrc} alt={capture.displayName} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
-                <span className="absolute right-3 top-3 rounded-full bg-primary-400 px-2.5 py-1 text-xs font-black text-black shadow-sm">{capture.score}</span>
+                {capture.indexNumber
+                    ? <span className="absolute right-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-xs font-black tabular-nums text-primary-200 shadow-sm">{formatAnimalDexNumber(capture.indexNumber)}</span>
+                    : null}
             </Link>
             <div className="min-w-0 p-4">
                 <h3 className="truncate font-display text-xl font-bold text-white">
-                    <Link href={capture.href} className="hover:text-primary-100">{capture.animalName}</Link>
+                    <Link href={capture.href} className="hover:text-primary-100">{capture.displayName}</Link>
                 </h3>
-                <p className="mt-1 truncate text-xs italic text-white/40">{capture.scientificName ?? capture.category ?? "AnimalDex capture"}</p>
+                {capture.principle ? <p className="mt-1 truncate text-xs font-semibold text-primary-200/80">{capture.principle}</p> : null}
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-bold text-white/55">
                     {capture.contextLabel ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{capture.contextLabel}</span> : null}
                     {date ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{date}</span> : null}

@@ -5,10 +5,10 @@ import ProfileSignOutButton from "@/app/[locale]/(composited)/u/[handle]/profile
 import ShareProfileButton from "@/app/[locale]/(composited)/u/[handle]/share-profile-button";
 import {getInstagramDisplayText, getPublicProfileCard, normalizePublicHandle} from "@/data/public-profiles";
 import {
+    buildOwnerCompletedSets,
     getMemberListedPacks,
-    getOwnerCompletedSets,
     getOwnerEndorsedCaptures,
-    getOwnerProfileProgression,
+    getOwnerTradeUnlockSummary,
     getProfileCreditsSummary,
     getProfileViewerState
 } from "@/data/profile-authenticated";
@@ -90,22 +90,16 @@ export default async function PublicProfilePage({params}: PublicProfilePageProps
     let memberExtras = null;
 
     if (viewer.isOwner) {
-        const [credits, progression, endorsedCaptures, completedSets] = await Promise.all([
+        const completedSets = buildOwnerCompletedSets(profile.powerSetCompletions);
+        const [credits, tradeUnlock, endorsedCaptures] = await Promise.all([
             getProfileCreditsSummary(),
-            getOwnerProfileProgression(),
-            getOwnerEndorsedCaptures(),
-            getOwnerCompletedSets()
+            getOwnerTradeUnlockSummary(profile.collectorScore),
+            getOwnerEndorsedCaptures()
         ]);
 
         ownerExtras = {
             credits,
-            tradeUnlock: progression
-                ? {
-                    verifiedOverallScore: progression.overallScore,
-                    requiredScore: progression.tradeUnlockScore,
-                    tradeUnlocked: progression.tradeUnlocked
-                }
-                : null,
+            tradeUnlock,
             endorsedCaptures,
             completedSets,
             completedSetsCount: completedSets.length,
@@ -237,6 +231,7 @@ export default async function PublicProfilePage({params}: PublicProfilePageProps
                     packBuyInApp: t("packBuyInApp"),
                     viewSignedInAs: t("viewSignedInAs")
                 }}
+                locale={params.locale}
                 localePrefix={localePrefix}
                 viewer={viewer}
                 ownerExtras={ownerExtras}

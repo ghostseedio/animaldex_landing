@@ -65,6 +65,8 @@ type PowerSetRow = {
     power_label: string;
     tier: string;
     species_count: number;
+    catalog_linked_count?: number | null;
+    reward_points?: number | null;
     completed_at: string | null;
 };
 
@@ -111,6 +113,8 @@ export type ProfilePowerSetCompletion = {
     powerLabel: string;
     tier: string;
     speciesCount: number;
+    catalogLinkedCount: number | null;
+    rewardPoints: number;
     completedAt: string | null;
 };
 
@@ -178,6 +182,15 @@ export type PublicProfileCard = {
 export function normalizePublicHandle(value: string) {
     const handle = value.trim().replace(/^@+/, "").toLowerCase();
     return HANDLE_PATTERN.test(handle) ? handle : null;
+}
+
+/** Matches iOS verified overall score: capture score + completed power-set reward points. */
+export function resolvePublicOverallScore(
+    baseScore: number,
+    powerSetRows: Array<Pick<PowerSetRow, "reward_points">>
+) {
+    const powerSetBonus = powerSetRows.reduce((sum, row) => sum + Number(row.reward_points ?? 0), 0);
+    return baseScore + powerSetBonus;
 }
 
 function getConfig() {
@@ -400,6 +413,13 @@ export function getInstagramDisplayText(value: string | null) {
     return value ? formatInstagramDisplay(value) : null;
 }
 
+export async function getAuthenticatedPublicProfileCard(): Promise<PublicProfileCard | null> {
+    const {getAuthenticatedUserProfile} = await import("@/data/user-captures");
+    const viewer = await getAuthenticatedUserProfile();
+    if (!viewer?.username) return null;
+    return getPublicProfileCard(viewer.username);
+}
+
 export async function getPublicProfileCard(rawHandle: string): Promise<PublicProfileCard | null> {
     const handle = normalizePublicHandle(rawHandle);
     if (!handle) return null;
@@ -448,7 +468,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         limit: "25"
     });
     const powerSetParams = new URLSearchParams({
-        select: "power_key,power_label,tier,species_count,completed_at",
+        select: "power_key,power_label,tier,species_count,catalog_linked_count,reward_points,completed_at",
         user_id: `eq.${profile.id}`,
         order: "completed_at.desc",
         limit: "16"
@@ -525,6 +545,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             rarity: capture.rarity
         }))
     );
+    const baseCollectorScore = Number(summary?.overall_score ?? allCaptures.reduce((total, capture) => total + capture.score, 0));
 
     return {
         userId: profile.id,
@@ -540,7 +561,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         indexedSpeciesCount,
         catalogSpeciesCount: speciesEntries.length,
         unindexedCount,
-        collectorScore: Number(summary?.overall_score ?? allCaptures.reduce((total, capture) => total + capture.score, 0)),
+        collectorScore: resolvePublicOverallScore(baseCollectorScore, powerSetRows),
         wildCount,
         zooCount,
         domesticCount,
@@ -562,6 +583,8 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             powerLabel: row.power_label,
             tier: row.tier,
             speciesCount: row.species_count,
+            catalogLinkedCount: row.catalog_linked_count != null ? Number(row.catalog_linked_count) : null,
+            rewardPoints: Number(row.reward_points ?? 0),
             completedAt: row.completed_at
         })),
         wildIdentity: toWildIdentity(identityRows[0], speciesByIdentity),

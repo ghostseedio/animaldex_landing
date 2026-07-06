@@ -1,10 +1,12 @@
-export type AppIconName = "home" | "collection" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close";
+export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "boltShield";
 
 export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconName; className?: string}) {
     const path: Record<AppIconName, React.ReactNode> = {
         home: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9v12h13V9M9 21v-6h6v6"/></>,
         collection: <><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></>,
         train: <><path d="M6 7v10M3 9v6m15-8v10m3-8v6M6 12h12"/></>,
+        arena: <><path d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3Z"/><path d="m13.3 6.5-4.1 6h3l-1 5 4.1-6h-3Z"/></>,
+        boltShield: <><path d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3Z"/><path d="m13.3 6.5-4.1 6h3l-1 5 4.1-6h-3Z"/></>,
         profile: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
         plus: <path d="M12 5v14M5 12h14"/>,
         bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,

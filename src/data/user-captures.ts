@@ -155,6 +155,7 @@ const USER_CAPTURE_MANIFEST_SELECT = [
     "species_profile_id",
     "normalized_identity_key",
     "confidence",
+    "score",
     "error_message",
     "completed_at",
     "capture_created_at",

@@ -1,13 +1,10 @@
 import "server-only";
 
 import {
-    getAppCaptures,
-    getAppProgression,
     type AppProgression
 } from "@/data/authenticated-app";
-import {buildPowerSetAlbums} from "@/data/power-sets";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import type {PublicProfileCapture} from "@/data/public-profiles";
+import type {PublicProfileCapture, ProfilePowerSetCompletion} from "@/data/public-profiles";
 import {getAuthenticatedUserProfile} from "@/data/user-captures";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -131,7 +128,91 @@ export async function getProfileCreditsSummary(): Promise<ProfileCreditsSummary 
 export async function getOwnerProfileProgression(): Promise<AppProgression | null> {
     const viewer = await getAuthenticatedUserProfile();
     if (!viewer) return null;
-    return getAppProgression();
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const {data: summary} = await supabase
+        .from("user_progression_summary_v1")
+        .select("verified_overall_score,trade_unlock_score,trade_unlocked_at")
+        .maybeSingle();
+
+    let row = summary as QueryRow | null;
+    if (!row) {
+        const {data: profile} = await supabase
+            .from("profiles")
+            .select("verified_overall_score,trade_unlocked_at")
+            .eq("id", viewer.id)
+            .maybeSingle();
+        row = profile as QueryRow | null;
+    }
+
+    const overallScore = Number(row?.verified_overall_score ?? 0);
+
+    return {
+        overallScore,
+        tradeUnlockScore: Number(row?.trade_unlock_score ?? 1000),
+        tradeUnlocked: Boolean(row?.trade_unlocked_at),
+        referralCode: null,
+        qualifiedReferrals: 0,
+        missions: []
+    };
+}
+
+export type OwnerTradeUnlockSummary = {
+    verifiedOverallScore: number;
+    requiredScore: number;
+    tradeUnlocked: boolean;
+};
+
+export async function getOwnerTradeUnlockSummary(overallScore: number): Promise<OwnerTradeUnlockSummary | null> {
+    const viewer = await getAuthenticatedUserProfile();
+    if (!viewer) return null;
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const {data: summary} = await supabase
+        .from("user_progression_summary_v1")
+        .select("trade_unlock_score,trade_unlocked_at")
+        .maybeSingle();
+
+    let row = summary as QueryRow | null;
+    if (!row) {
+        const {data: profile} = await supabase
+            .from("profiles")
+            .select("trade_unlocked_at")
+            .eq("id", viewer.id)
+            .maybeSingle();
+        row = profile as QueryRow | null;
+    }
+
+    return {
+        verifiedOverallScore: overallScore,
+        requiredScore: Number(row?.trade_unlock_score ?? 1000),
+        tradeUnlocked: Boolean(row?.trade_unlocked_at)
+    };
+}
+
+function normalizeCompletedSetTier(tier: string): ProfileCompletedSet["tier"] {
+    switch (tier.trim().toLowerCase()) {
+        case "gold":
+            return "Gold";
+        case "silver":
+            return "Silver";
+        default:
+            return "Bronze";
+    }
+}
+
+export function buildOwnerCompletedSets(completions: ProfilePowerSetCompletion[]): ProfileCompletedSet[] {
+    return completions.map((completion) => ({
+        key: completion.powerKey,
+        title: completion.powerLabel,
+        found: completion.speciesCount,
+        total: completion.catalogLinkedCount ?? completion.speciesCount,
+        tier: normalizeCompletedSetTier(completion.tier)
+    }));
 }
 
 export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndorsedCapture[]> {
@@ -177,29 +258,6 @@ export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndor
             return {...capture, endorsedStat: String(row.endorsed_stat)};
         })
         .filter((item): item is ProfileEndorsedCapture => Boolean(item));
-}
-
-export async function getOwnerCompletedSets(): Promise<ProfileCompletedSet[]> {
-    const captures = await getAppCaptures();
-    const albums = await buildPowerSetAlbums(captures);
-
-    return albums
-        .map((album) => {
-            const tier = album.isGoldMastered ? "Gold" : album.isCompleted ? "Silver" : null;
-
-            if (!tier) {
-                return null;
-            }
-
-            return {
-                key: album.key,
-                title: album.title,
-                found: album.found,
-                total: album.catalogLinkedCount || album.activeTier?.targetCount || album.found,
-                tier
-            };
-        })
-        .filter((set): set is ProfileCompletedSet => Boolean(set));
 }
 
 export async function getMemberListedPacks(sellerUserId: string, limit = 12): Promise<ProfileListedPack[]> {

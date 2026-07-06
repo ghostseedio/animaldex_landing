@@ -1,9 +1,15 @@
 import "server-only";
 
-import {getSpeciesBySlug, speciesEntries} from "@/data/species";
-import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
+import {fetchPowerSetCompletions} from "@/data/power-set-completions";
+import {getAuthenticatedPublicProfileCard, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
+import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
+import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
+import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAuthenticatedUserProfile, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
@@ -12,8 +18,21 @@ export type AppProfile = NonNullable<Awaited<ReturnType<typeof getAuthenticatedU
 export type AppCapture = UserCaptureSummary & {
     scientificName: string | null;
     category: string | null;
+    displayName: string;
+    principle: string | null;
+    indexNumber: number | null;
     href: string;
     imageSrc: string;
+};
+
+export type AppProfileSummary = {
+    captureCount: number;
+    uniqueSpecies: number;
+    indexedSpeciesCount: number;
+    overallScore: number;
+    wild: number;
+    zoo: number;
+    domestic: number;
 };
 
 export type AppMission = {
@@ -30,6 +49,7 @@ export type AppMission = {
 };
 
 export type AppProgression = {
+    /** Verified overall score from `user_progression_summary_v1` (matches iOS profile). */
     overallScore: number;
     tradeUnlockScore: number;
     tradeUnlocked: boolean;
@@ -145,6 +165,88 @@ async function findSpeciesForCaptureIdentityAsync(identity: string | null | unde
     return unified.find((entry) => speciesEntryMatchesIdentity(entry, normalized)) ?? null;
 }
 
+function findSpeciesForCapture(capture: UserCaptureSummary, catalog: SpeciesEntry[]) {
+    const profileId = capture.speciesProfileId?.trim().toLowerCase();
+
+    if (profileId) {
+        const byProfile = catalog.find((entry) => entry.speciesProfileId?.trim().toLowerCase() === profileId);
+        if (byProfile) {
+            return byProfile;
+        }
+    }
+
+    const identity = capture.speciesSlug?.trim().toLowerCase();
+
+    if (identity) {
+        const staticMatch = findSpeciesForCaptureIdentity(identity);
+        if (staticMatch) {
+            return staticMatch;
+        }
+
+        const catalogMatch = catalog.find((entry) => speciesEntryMatchesIdentity(entry, identity));
+        if (catalogMatch) {
+            return catalogMatch;
+        }
+    }
+
+    return null;
+}
+
+function resolveCapturePrinciple(species: SpeciesEntry | null, behaviorPrinciples: Awaited<ReturnType<typeof getCatalogBehaviorPrincipleIndex>>) {
+    if (!species) {
+        return null;
+    }
+
+    const legendaryBeast = getLegendaryEarthBeast(species.slug);
+    const catalogPrinciple = resolveCatalogBehaviorPrinciple(
+        behaviorPrinciples,
+        species.speciesProfileId,
+        species.normalizedIdentityKey
+    );
+    const staticPrinciple = getBehavioralPrincipleProfile(
+        species.slug,
+        speciesSystemsIntelligence[species.slug],
+        speciesSystemsIntelligence
+    );
+
+    return legendaryBeast?.power
+        ?? catalogPrinciple?.principleName
+        ?? staticPrinciple?.principle
+        ?? null;
+}
+
+function buildAppCapture(
+    capture: UserCaptureSummary,
+    species: SpeciesEntry | null,
+    principle: string | null = null
+): AppCapture {
+    return {
+        ...capture,
+        scientificName: species?.analysis.scientificName ?? capture.scientificName ?? null,
+        category: species?.analysis.category ?? null,
+        displayName: species?.name ?? capture.animalName,
+        principle,
+        indexNumber: getAnimalDexNumberFromEntry(species),
+        href: species ? `/animals/${species.slug}` : "/animals",
+        imageSrc: species
+            ? getSpeciesImageRoute(species.slug, capture.captureId)
+            : "/images/placeholders/species-no-image.svg"
+    };
+}
+
+async function enrichAppCaptures(captures: UserCaptureSummary[]): Promise<AppCapture[]> {
+    const [catalog, behaviorPrinciples] = await Promise.all([
+        getUnifiedSpeciesEntries(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+
+    return captures.map((capture) => {
+        const species = findSpeciesForCapture(capture, catalog);
+        const principle = resolveCapturePrinciple(species, behaviorPrinciples);
+        return buildAppCapture(capture, species, principle);
+    });
+}
+
 export type AppJournalEntry = {
     id: string;
     date: string;
@@ -191,31 +293,52 @@ export type AppCaptureDetail = {
 
 type QueryRow = Record<string, any>;
 
+async function getAuthenticatedSupabaseUser() {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return null;
+
+    return {supabase, user};
+}
+
+export function mapPublicProfileCaptureToAppCapture(capture: PublicProfileCapture): AppCapture {
+    return {
+        captureId: capture.id,
+        animalName: capture.animalName,
+        scientificName: null,
+        speciesSlug: capture.speciesSlug,
+        speciesProfileId: null,
+        confidence: null,
+        score: capture.score,
+        captureValidity: null,
+        learnedScenarioTags: [],
+        capturedAt: capture.capturedAt,
+        imageBucket: null,
+        imagePath: null,
+        contextLabel: capture.contextLabel,
+        locationDisplayLabel: null,
+        displayName: capture.animalName,
+        category: null,
+        principle: null,
+        indexNumber: null,
+        href: capture.href,
+        imageSrc: capture.imageSrc
+    };
+}
+
 export function decorateCapture(capture: UserCaptureSummary): AppCapture {
     const species = findSpeciesForCaptureIdentity(capture.speciesSlug);
-    return {
-        ...capture,
-        scientificName: species?.analysis.scientificName ?? null,
-        category: species?.analysis.category ?? null,
-        href: species ? `/animals/${species.slug}` : "/animals",
-        imageSrc: species
-            ? getSpeciesImageRoute(species.slug, capture.captureId)
-            : "/images/placeholders/species-no-image.svg"
-    };
+    const principle = resolveCapturePrinciple(species, {byProfileId: new Map(), byIdentityKey: new Map()});
+    return buildAppCapture(capture, species, principle);
 }
 
 export async function decorateCaptureAsync(capture: UserCaptureSummary): Promise<AppCapture> {
     const species = await findSpeciesForCaptureIdentityAsync(capture.speciesSlug);
-
-    return {
-        ...capture,
-        scientificName: species?.analysis.scientificName ?? null,
-        category: species?.analysis.category ?? null,
-        href: species ? `/animals/${species.slug}` : "/animals",
-        imageSrc: species
-            ? getSpeciesImageRoute(species.slug, capture.captureId)
-            : "/images/placeholders/species-no-image.svg"
-    };
+    const [behaviorPrinciples] = await Promise.all([getCatalogBehaviorPrincipleIndex()]);
+    const principle = resolveCapturePrinciple(species, behaviorPrinciples);
+    return buildAppCapture(capture, species, principle);
 }
 
 export async function getAuthenticatedAppContext() {
@@ -243,7 +366,121 @@ export async function getAppCreditBalance() {
 export async function getAppCaptures(limit = 2000) {
     const captures = await getUserCaptures(limit);
 
-    return Promise.all(captures.map(decorateCaptureAsync));
+    return enrichAppCaptures(captures);
+}
+
+export async function getAppTopCaptures(limit = 6) {
+    const session = await getAuthenticatedSupabaseUser();
+    if (!session) return [];
+
+    const {data, error} = await session.supabase
+        .from("discover_feed_v1")
+        .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,location_display_label")
+        .eq("user_id", session.user.id)
+        .order("score", {ascending: false})
+        .order("capture_created_at", {ascending: false})
+        .limit(limit);
+
+    if (error || !data?.length) {
+        return [];
+    }
+
+    const captures: UserCaptureSummary[] = (data as QueryRow[]).map((row) => ({
+        captureId: row.capture_id,
+        animalName: row.animal_name?.trim() || "Animal",
+        scientificName: null,
+        speciesSlug: row.normalized_identity_key?.trim() ?? null,
+        speciesProfileId: row.species_profile_id?.trim() ?? null,
+        confidence: null,
+        score: Number(row.score ?? 0),
+        captureValidity: null,
+        learnedScenarioTags: [],
+        capturedAt: row.capture_created_at ?? null,
+        imageBucket: null,
+        imagePath: null,
+        contextLabel: row.zoo_or_wild && row.zoo_or_wild !== "Unknown"
+            ? row.zoo_or_wild
+            : row.human_context ?? null,
+        locationDisplayLabel: row.location_display_label?.trim() ?? null
+    }));
+
+    return enrichAppCaptures(captures);
+}
+
+export async function getAppProfileSummary(): Promise<AppProfileSummary> {
+    const fallback: AppProfileSummary = {
+        captureCount: 0,
+        uniqueSpecies: 0,
+        indexedSpeciesCount: 0,
+        overallScore: 0,
+        wild: 0,
+        zoo: 0,
+        domestic: 0
+    };
+    const session = await getAuthenticatedSupabaseUser();
+
+    if (!session) {
+        return fallback;
+    }
+
+    const {data, error} = await session.supabase
+        .from("member_profile_summaries_v1")
+        .select("overall_score,capture_count,unique_species,indexed_species_count,wild_captures,zoo_captures,domestic_captures")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+    if (error || !data) {
+        const stats = await getUserCaptureStats();
+        return {
+            captureCount: stats.captureCount,
+            uniqueSpecies: stats.uniqueSpecies,
+            indexedSpeciesCount: stats.uniqueSpecies,
+            overallScore: stats.collectorScore,
+            wild: stats.wild,
+            zoo: stats.zoo,
+            domestic: stats.domestic
+        };
+    }
+
+    const row = data as QueryRow;
+
+    return {
+        captureCount: Number(row.capture_count ?? 0),
+        uniqueSpecies: Number(row.unique_species ?? 0),
+        indexedSpeciesCount: Number(row.indexed_species_count ?? row.unique_species ?? 0),
+        overallScore: Number(row.overall_score ?? 0),
+        wild: Number(row.wild_captures ?? 0),
+        zoo: Number(row.zoo_captures ?? 0),
+        domestic: Number(row.domestic_captures ?? 0)
+    };
+}
+
+export async function getAppCollectorScore() {
+    const publicCard = await getAuthenticatedPublicProfileCard();
+    if (publicCard) {
+        return publicCard.collectorScore;
+    }
+
+    const session = await getAuthenticatedSupabaseUser();
+    if (!session) return 0;
+
+    const [summary, powerSetResult] = await Promise.all([
+        getAppProfileSummary(),
+        session.supabase
+            .from("public_profile_power_set_completions_v1")
+            .select("reward_points")
+            .eq("user_id", session.user.id)
+    ]);
+
+    if (powerSetResult.data?.length) {
+        return resolvePublicOverallScore(summary.overallScore, powerSetResult.data as Array<{reward_points: number | null}>);
+    }
+
+    const powerSetCompletions = await fetchPowerSetCompletions();
+    return resolvePublicOverallScore(
+        summary.overallScore,
+        powerSetCompletions.map((completion) => ({reward_points: completion.rewardPoints}))
+    );
 }
 
 export function getCaptureStats(captures: AppCapture[]) {
@@ -268,18 +505,92 @@ export async function getAppCaptureStats() {
     };
 }
 
-export async function getAppProgression(): Promise<AppProgression> {
-    const supabase = createSupabaseServerClient();
-    const fallback: AppProgression = {overallScore: 0, tradeUnlockScore: 1000, tradeUnlocked: false, referralCode: null, qualifiedReferrals: 0, missions: []};
-    if (!supabase) return fallback;
+async function loadProgressionSummary(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
+    const viewResult = await supabase!
+        .from("user_progression_summary_v1")
+        .select("verified_overall_score,trade_unlock_score,trade_unlocked_at,referral_code,qualified_referral_count")
+        .maybeSingle();
 
-    await supabase.rpc("refresh_user_progression", {});
-    const [summaryResult, missionsResult] = await Promise.all([
-        supabase.from("user_progression_summary_v1").select("verified_overall_score,trade_unlock_score,trade_unlocked_at,referral_code,qualified_referral_count").limit(1).maybeSingle(),
-        supabase.from("user_mission_status_v1").select("slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count").order("sort_order", {ascending: true})
+    if (viewResult.data) {
+        return viewResult.data as QueryRow;
+    }
+
+    const [profileResult, referralResult] = await Promise.all([
+        supabase!
+            .from("profiles")
+            .select("verified_overall_score,trade_unlocked_at,referral_code")
+            .eq("id", userId)
+            .maybeSingle(),
+        supabase!
+            .from("user_referrals")
+            .select("id", {count: "exact", head: true})
+            .eq("inviter_user_id", userId)
+            .not("qualified_at", "is", null)
     ]);
-    const summary = summaryResult.data as QueryRow | null;
-    const rows = (missionsResult.data ?? []) as QueryRow[];
+
+    const profile = profileResult.data as QueryRow | null;
+
+    return {
+        verified_overall_score: profile?.verified_overall_score ?? 0,
+        trade_unlock_score: 1000,
+        trade_unlocked_at: profile?.trade_unlocked_at ?? null,
+        referral_code: profile?.referral_code ?? null,
+        qualified_referral_count: referralResult.count ?? 0
+    } satisfies QueryRow;
+}
+
+async function loadMissionStatus(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
+    const viewResult = await supabase!
+        .from("user_mission_status_v1")
+        .select("slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count")
+        .order("sort_order", {ascending: true});
+
+    if (viewResult.data?.length) {
+        return viewResult.data as QueryRow[];
+    }
+
+    const [definitionsResult, progressResult] = await Promise.all([
+        supabase!
+            .from("mission_definitions")
+            .select("slug,tier,sort_order,title,detail,reward_credits,target_count,unlock_score_min,requires_trade_unlocked,is_repeatable")
+            .order("sort_order", {ascending: true}),
+        supabase!
+            .from("user_mission_progress")
+            .select("mission_slug,progress_count,completed_count")
+            .eq("user_id", userId)
+    ]);
+
+    const progressBySlug = new Map(
+        ((progressResult.data ?? []) as QueryRow[]).map((row) => [String(row.mission_slug), row])
+    );
+
+    return ((definitionsResult.data ?? []) as QueryRow[]).map((row) => {
+        const progress = progressBySlug.get(String(row.slug));
+        return {
+            ...row,
+            progress_count: Number(progress?.progress_count ?? 0),
+            completed_count: Number(progress?.completed_count ?? 0)
+        };
+    });
+}
+
+export async function getAppProgression(): Promise<AppProgression> {
+    const fallback: AppProgression = {
+        overallScore: 0,
+        tradeUnlockScore: 1000,
+        tradeUnlocked: false,
+        referralCode: null,
+        qualifiedReferrals: 0,
+        missions: []
+    };
+    const session = await getAuthenticatedSupabaseUser();
+    if (!session) return fallback;
+
+    await session.supabase.rpc("refresh_user_progression", {});
+    const [summary, rows] = await Promise.all([
+        loadProgressionSummary(session.supabase, session.user.id),
+        loadMissionStatus(session.supabase, session.user.id)
+    ]);
     const overallScore = Number(summary?.verified_overall_score ?? 0);
     const tradeUnlocked = Boolean(summary?.trade_unlocked_at);
 

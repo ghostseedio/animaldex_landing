@@ -20,6 +20,8 @@ import type {
     ProfileViewerState
 } from "@/data/profile-authenticated";
 import {getCollectorScoreBand} from "@/lib/collector-score";
+import {APP_MODULE_THUMBNAILS} from "@/lib/app-module-thumbnails";
+import {formatAppInteger, formatAppUsd} from "@/lib/format-numbers";
 
 export type ProfileTab = "stats" | "history";
 
@@ -128,6 +130,7 @@ type ProfileContentProps = {
         recentCaptures: PublicProfileCapture[];
     };
     labels: ProfileContentLabels;
+    locale: string;
     appStoreUrl: string;
     shareButton: React.ReactNode;
     localePrefix: string;
@@ -186,6 +189,14 @@ function CaptureCard({capture, scoreLabel}: {capture: PublicProfileCapture; scor
     );
 }
 
+function ProfileShortcutThumbnail({src}: {src: string}) {
+    return (
+        <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10">
+            <Image src={src} alt="" width={44} height={44} unoptimized className="h-full w-full object-cover" />
+        </span>
+    );
+}
+
 function SectionHeader({
     icon,
     title,
@@ -212,11 +223,13 @@ function CollectorScoreCard({
     score,
     archetype,
     labels,
+    locale,
     tradeUnlock
 }: {
     score: number;
     archetype: string;
     labels: ProfileContentLabels;
+    locale: string;
     tradeUnlock?: {verifiedOverallScore: number; requiredScore: number; tradeUnlocked: boolean} | null;
 }) {
     const band = getCollectorScoreBand(score);
@@ -232,7 +245,7 @@ function CollectorScoreCard({
                     {band.tierLabel}
                 </span>
             </div>
-            <p className="mt-3 font-display text-5xl font-bold text-white">{score.toLocaleString()}</p>
+            <p className="mt-3 font-display text-5xl font-bold text-white">{formatAppInteger(score, locale)}</p>
             <p className="mt-2 text-lg font-semibold text-white/70">{archetype}</p>
             <p className="mt-1 text-sm text-white/40">{band.descriptor}</p>
             {tradeUnlock && !tradeUnlock.tradeUnlocked ? (
@@ -400,6 +413,7 @@ function tierTint(tier: string) {
 export default function ProfileContent({
     profile,
     labels,
+    locale,
     appStoreUrl,
     shareButton,
     localePrefix,
@@ -410,12 +424,9 @@ export default function ProfileContent({
     const [activeTab, setActiveTab] = useState<ProfileTab>("stats");
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
-        ? new Intl.NumberFormat(undefined, {style: "currency", currency: "USD", maximumFractionDigits: 0}).format(profile.collectionValueUsd)
+        ? formatAppUsd(profile.collectionValueUsd, locale)
         : null;
     const completedSetsCount = ownerExtras?.completedSetsCount ?? 0;
-    const overallScore = ownerExtras?.tradeUnlock != null
-        ? ownerExtras.tradeUnlock.verifiedOverallScore
-        : profile.collectorScore;
 
     return (
         <div className="flex flex-col gap-6 md:gap-8">
@@ -501,7 +512,7 @@ export default function ProfileContent({
                         ownerExtras.credits.isLow ? "border-orange-300/30 bg-orange-400/[0.08]" : "border-white/10 bg-surface-900/60"
                     }`}
                 >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-400/15 text-lg">⚡</span>
+                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.missions} />
                     <div className="min-w-0 text-left">
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.creditsTitle}</p>
                         <p className="mt-1 font-display text-xl font-bold text-white">
@@ -521,7 +532,7 @@ export default function ProfileContent({
                     href={`${localePrefix}/app/collection`}
                     className="flex items-center gap-4 rounded-[1.35rem] border border-white/10 bg-surface-900/60 px-4 py-4 transition hover:border-white/20"
                 >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-400/15 text-lg">🃏</span>
+                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.collection} />
                     <div className="min-w-0 text-left">
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.myCollection}</p>
                         <p className="mt-1 text-sm text-white/55">{labels.myCollectionDetail}</p>
@@ -534,7 +545,7 @@ export default function ProfileContent({
                     href={`${localePrefix}/app/train/wild-profile`}
                     className="flex items-center gap-4 rounded-[1.35rem] border border-primary-300/20 bg-primary-400/[0.08] px-4 py-4 transition hover:border-primary-300/35"
                 >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-400/20 text-lg">🐾</span>
+                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.wildProfile} />
                     <div className="min-w-0 text-left">
                         <p className="font-display text-lg font-bold text-white">{labels.discoverWildProfileTitle}</p>
                         <p className="mt-1 text-sm text-white/55">{labels.discoverWildProfileDetail}</p>
@@ -569,9 +580,10 @@ export default function ProfileContent({
             {activeTab === "stats" ? (
                 <div className="flex flex-col gap-4 md:gap-5">
                     <CollectorScoreCard
-                        score={overallScore}
+                        score={profile.collectorScore}
                         archetype={profile.collectionArchetype}
                         labels={labels}
+                        locale={locale}
                         tradeUnlock={ownerExtras?.tradeUnlock ?? null}
                     />
                     <SettingComparison wild={profile.wildCount} zoo={profile.zooCount} domestic={profile.domesticCount} labels={labels} />

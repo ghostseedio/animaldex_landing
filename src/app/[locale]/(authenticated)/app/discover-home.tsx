@@ -183,7 +183,7 @@ export default function DiscoverHome({
         <AppPage>
             <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div className="space-y-4">
-                    <img src={WORDMARK_SRC} alt="AnimalDex" className="h-7 w-auto max-w-[11.5rem] object-contain object-left" />
+                    <img src={WORDMARK_SRC} alt="AnimalDex" className="hidden h-7 w-auto max-w-[11.5rem] object-contain object-left md:block" />
                     <AppSegmentedControl
                         value={segment}
                         options={[
@@ -193,7 +193,7 @@ export default function DiscoverHome({
                         onChange={handleSegmentChange}
                     />
                 </div>
-                <AppPrimaryLink href="/app/capture" icon="camera">Scan an animal</AppPrimaryLink>
+                <AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>
             </header>
 
             {segment === "discover" ? (
@@ -211,7 +211,7 @@ export default function DiscoverHome({
                             icon="home"
                             title="Timeline is quiet"
                             detail="Check back soon, or make one of your animals public and comparison-ready."
-                            action={<AppPrimaryLink href="/app/capture" icon="camera">Scan an animal</AppPrimaryLink>}
+                            action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
                         />
                     )}
                 </div>

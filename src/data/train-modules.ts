@@ -3,8 +3,10 @@ import "server-only";
 import type {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {getAppJournalEntries} from "@/data/authenticated-app";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getMatchupArena} from "@/data/matchups";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import {APP_MODULE_THUMBNAILS, ARENA_MODULE_ACCENTS} from "@/lib/app-module-thumbnails";
 import type {SupabaseClient} from "@supabase/supabase-js";
 
 type QueryRow = Record<string, any>;
@@ -17,11 +19,17 @@ export type TrainModuleDefinition = {
     title: string;
     subtitle: string;
     icon: AppIconName;
+    thumbnailUrl: string;
+    accent: import("@/lib/app-module-thumbnails").ArenaModuleAccent;
     statusLabel: string | null;
 };
 
 export type TrainPageData = {
     modules: TrainModuleDefinition[];
+};
+
+export type ArenaPageData = TrainPageData & {
+    opponentCount: number;
 };
 
 const TRAIN_MODULE_CATALOG: Array<Pick<TrainModuleDefinition, "id" | "title" | "subtitle" | "icon">> = [
@@ -196,22 +204,52 @@ async function getTrainPackIndexStatus(supabase: SupabaseClient, userId: string)
     };
 }
 
-async function getTrainMissionIndexStatus(supabase: SupabaseClient) {
+async function getTrainMissionIndexStatus(supabase: SupabaseClient, userId: string) {
     const [summaryResult, missionsResult] = await Promise.all([
         supabase
             .from("user_progression_summary_v1")
             .select("verified_overall_score,trade_unlocked_at")
-            .limit(1)
             .maybeSingle(),
         supabase
             .from("user_mission_status_v1")
             .select("unlock_score_min,requires_trade_unlocked,completed_count")
     ]);
 
-    const overallScore = Number((summaryResult.data as QueryRow | null)?.verified_overall_score ?? 0);
-    const tradeUnlocked = Boolean((summaryResult.data as QueryRow | null)?.trade_unlocked_at);
+    let overallScore = Number((summaryResult.data as QueryRow | null)?.verified_overall_score ?? 0);
+    let tradeUnlocked = Boolean((summaryResult.data as QueryRow | null)?.trade_unlocked_at);
+    let missionRows = (missionsResult.data ?? []) as QueryRow[];
 
-    return ((missionsResult.data ?? []) as QueryRow[]).filter((row) => {
+    if (!summaryResult.data) {
+        const {data: profile} = await supabase
+            .from("profiles")
+            .select("verified_overall_score,trade_unlocked_at")
+            .eq("id", userId)
+            .maybeSingle();
+        overallScore = Number((profile as QueryRow | null)?.verified_overall_score ?? 0);
+        tradeUnlocked = Boolean((profile as QueryRow | null)?.trade_unlocked_at);
+    }
+
+    if (!missionRows.length) {
+        const [definitionsResult, progressResult] = await Promise.all([
+            supabase
+                .from("mission_definitions")
+                .select("slug,unlock_score_min,requires_trade_unlocked"),
+            supabase
+                .from("user_mission_progress")
+                .select("mission_slug,completed_count")
+                .eq("user_id", userId)
+        ]);
+        const progressBySlug = new Map(
+            ((progressResult.data ?? []) as QueryRow[]).map((row) => [String(row.mission_slug), row])
+        );
+        missionRows = ((definitionsResult.data ?? []) as QueryRow[]).map((row) => ({
+            unlock_score_min: row.unlock_score_min,
+            requires_trade_unlocked: row.requires_trade_unlocked,
+            completed_count: Number(progressBySlug.get(String(row.slug))?.completed_count ?? 0)
+        }));
+    }
+
+    return missionRows.filter((row) => {
         const locked = overallScore < Number(row.unlock_score_min ?? 0)
             || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked);
         return !locked && Number(row.completed_count ?? 0) === 0;
@@ -234,6 +272,8 @@ function buildTrainModules(
     return TRAIN_MODULE_CATALOG.map((module) => ({
         ...module,
         href: trainModuleHref(localePrefix, module.id),
+        thumbnailUrl: APP_MODULE_THUMBNAILS[module.id],
+        accent: ARENA_MODULE_ACCENTS[module.id],
         statusLabel: status[module.id]
     }));
 }
@@ -613,6 +653,29 @@ function mapTrainAnimalPackRows(rows: QueryRow[], userId: string): TrainAnimalPa
     }));
 }
 
+export async function getArenaPageData(localePrefix: string): Promise<ArenaPageData> {
+    const supabase = createSupabaseServerClient();
+    const pagePromise = getTrainPageData(localePrefix);
+
+    if (!supabase) {
+        const page = await pagePromise;
+        return {...page, opponentCount: 0};
+    }
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) {
+        const page = await pagePromise;
+        return {...page, opponentCount: 0};
+    }
+
+    const [page, arena] = await Promise.all([
+        pagePromise,
+        getMatchupArena(user.id, 48).catch(() => [])
+    ]);
+    return {...page, opponentCount: arena.length};
+}
+
+/** @deprecated Use getArenaPageData */
 export async function getTrainPageData(localePrefix: string): Promise<TrainPageData> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return emptyTrainPageData(localePrefix);
@@ -624,7 +687,7 @@ export async function getTrainPageData(localePrefix: string): Promise<TrainPageD
         getTrainDailyCompanionState(),
         getTrainWildProfileIndexStatus(supabase, user.id),
         getTrainPackIndexStatus(supabase, user.id),
-        getTrainMissionIndexStatus(supabase),
+        getTrainMissionIndexStatus(supabase, user.id),
         getTrainSetIndexStatus(supabase, user.id)
     ]);
 

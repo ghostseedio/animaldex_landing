@@ -16,16 +16,21 @@ type AppShellProps = {
 const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app", label: "Home", icon: "home"},
     {href: "/app/collection", label: "Collection", icon: "collection"},
-    {href: "/app/train", label: "Train", icon: "train"},
+    {href: "/app/arena", label: "Arena", icon: "arena"},
     {href: "/app/profile", label: "Profile", icon: "profile"}
 ];
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
-    {href: "/app/matchups", label: "Matchups", icon: "matchup"},
     {href: "/app/missions", label: "Missions", icon: "mission"},
     {href: "/app/sets", label: "Sets", icon: "sets"},
     {href: "/app/trades", label: "Trades", icon: "trade"}
 ];
+
+function isArenaRoute(pathname: string) {
+    return ["/app/arena", "/app/train", "/app/matchups", "/app/missions", "/app/sets"].some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+}
 
 function normalizedPath(pathname: string) {
     return pathname.replace(/^\/id(?=\/|$)/, "") || "/";
@@ -40,7 +45,11 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
     const pathname = normalizedPath(usePathname() || "/app");
     const router = useRouter();
     const [menuOpen, setMenuOpen] = useState(false);
-    const isActive = (href: string) => href === "/app" ? pathname === href : pathname.startsWith(href);
+    const isActive = (href: string) => {
+        if (href === "/app") return pathname === href;
+        if (href === "/app/arena") return isArenaRoute(pathname);
+        return pathname.startsWith(href);
+    };
 
     useEffect(() => {
         setMenuOpen(false);
@@ -119,9 +128,8 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
 
             <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl lg:hidden">
                 <div className="flex h-16 items-center justify-between px-4">
-                    <Link href="/app" className="flex items-center gap-2">
+                    <Link href="/app" aria-label="AnimalDex" className="flex items-center">
                         <img src="/images/logo.webp" alt="" className="h-9 w-9 rounded-xl ring-1 ring-white/10" />
-                        <span className="font-display text-lg font-bold">AnimalDex</span>
                     </Link>
                     <div className="flex items-center gap-2">
                         <CreditBalanceChip />

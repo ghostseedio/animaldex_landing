@@ -3,7 +3,8 @@
 import {useEffect, useMemo, useState} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
-import {AppPage, AppPageHeader, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import {AppPage, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
 import ChallengeWizardSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-wizard-sheet";
 import MatchupsArenaTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-arena-tab";
 import MatchupsHistoryTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-history-tab";
@@ -108,13 +109,36 @@ export default function MatchupsHub({
         setArena((current) => current.filter((item) => item.captureId !== result.defenderCaptureId));
     }
 
+    const winCount = history.filter((item) => item.viewerWon).length;
+    const netCredits = history.reduce((total, item) => total + item.creditsDelta, 0);
+    const netCreditsLabel = netCredits >= 0 ? `+${netCredits}` : `${netCredits}`;
+
     return (
         <AppPage>
-            <AppPageHeader
-                eyebrow="Scenario Arena"
-                title="Matchup Arena"
-                description="Challenge other animals, wager credits, and see which instincts win the scenario."
-            />
+            <div className="space-y-3">
+                <TrainBackLink />
+                <header className="space-y-2">
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.13em] text-primary-200/90">Scenario Arena</p>
+                    <h1 className="font-display text-[34px] font-black leading-none text-white">Matchup Arena</h1>
+                    <p className="text-base text-white/55">
+                        Challenge other animals, wager credits, and see which instincts win the scenario.
+                    </p>
+                </header>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5">
+                {[
+                    {label: "Available", value: arena.length, accent: "bg-primary-400"},
+                    {label: "Wins", value: winCount, accent: "bg-violet-400"},
+                    {label: "Net credits", value: netCreditsLabel, accent: "bg-amber-400"}
+                ].map((metric) => (
+                    <div key={metric.label} className="min-w-0 rounded-[18px] border border-white/[0.06] bg-white/[0.04] p-3">
+                        <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.08em] text-white/30">{metric.label}</p>
+                        <p className="mt-1.5 truncate font-display text-xl font-black tabular-nums text-white">{metric.value}</p>
+                        <div className={`mt-2 h-[3px] rounded-full ${metric.accent}`} />
+                    </div>
+                ))}
+            </div>
 
             <AppSegmentedControl
                 value={segment}
@@ -123,6 +147,7 @@ export default function MatchupsHub({
                     {id: "history", label: "History"}
                 ]}
                 onChange={setSegment}
+                fullWidth
             />
 
             {targetError ? (

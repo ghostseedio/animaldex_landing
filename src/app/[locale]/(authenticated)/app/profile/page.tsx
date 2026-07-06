@@ -10,21 +10,28 @@ import {
     AppStatBar,
     AppSurface
 } from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {getAuthenticatedAppContext, getAppCaptureStats, getAppCaptures, getAppProgression} from "@/data/authenticated-app";
+import {getAuthenticatedAppContext, getAppProgression, mapPublicProfileCaptureToAppCapture} from "@/data/authenticated-app";
 import {getDirectMessageUnreadCount} from "@/data/direct-messages";
+import {getAuthenticatedPublicProfileCard} from "@/data/public-profiles";
 
 export default async function ProfilePage({params}: {params: {locale: string}}) {
-    const [context, captures, progression, unreadMessageCount, stats] = await Promise.all([
+    const [context, progression, unreadMessageCount, publicCard] = await Promise.all([
         getAuthenticatedAppContext(),
-        getAppCaptures(6),
         getAppProgression(),
         getDirectMessageUnreadCount(),
-        getAppCaptureStats()
+        getAuthenticatedPublicProfileCard()
     ]);
     const profile = context!.profile;
     const displayName = profile.displayName ?? profile.username ?? "Collector";
     const completedMissions = progression.missions.filter((mission) => mission.completedCount).length;
     const availableMissions = progression.missions.filter((mission) => !mission.isLocked).length;
+    const collectorScore = publicCard?.collectorScore ?? 0;
+    const captureCount = publicCard?.captureCount ?? 0;
+    const indexedSpeciesCount = publicCard?.indexedSpeciesCount ?? 0;
+    const wildCount = publicCard?.wildCount ?? 0;
+    const zooCount = publicCard?.zooCount ?? 0;
+    const domesticCount = publicCard?.domesticCount ?? 0;
+    const topCaptures = (publicCard?.topCaptures ?? []).slice(0, 6).map(mapPublicProfileCaptureToAppCapture);
 
     return (
         <AppPage>
@@ -51,9 +58,9 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
             </AppSurface>
 
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <AppMetric label="Overall score" value={progression.overallScore} />
-                <AppMetric label="Captures" value={stats.captureCount} accent="blue" />
-                <AppMetric label="Species" value={stats.uniqueSpecies} />
+                <AppMetric label="Overall score" value={collectorScore} />
+                <AppMetric label="Captures" value={captureCount} accent="blue" />
+                <AppMetric label="Species" value={indexedSpeciesCount} />
                 <AppMetric label="Missions" value={availableMissions} accent="violet" detail={completedMissions ? `${completedMissions} complete` : undefined} />
             </section>
 
@@ -61,9 +68,9 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
                 <AppSurface>
                     <AppSectionTitle icon="location" title="Capture settings" />
                     <div className="mt-6 space-y-4">
-                        <AppStatBar label="Wild" value={stats.wild} total={stats.captureCount} color="bg-primary-400" />
-                        <AppStatBar label="Zoo" value={stats.zoo} total={stats.captureCount} color="bg-amber-400" />
-                        <AppStatBar label="Domestic" value={stats.domestic} total={stats.captureCount} color="bg-sky-400" />
+                        <AppStatBar label="Wild" value={wildCount} total={captureCount} color="bg-primary-400" />
+                        <AppStatBar label="Zoo" value={zooCount} total={captureCount} color="bg-amber-400" />
+                        <AppStatBar label="Domestic" value={domesticCount} total={captureCount} color="bg-sky-400" />
                     </div>
                 </AppSurface>
                 <AppSurface>
@@ -84,11 +91,11 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
                 </AppSurface>
             </section>
 
-            {captures.length ? (
+            {topCaptures.length ? (
                 <section className="space-y-5">
                     <AppSectionTitle icon="collection" title="Top finds" detail="Your highest-scoring captures" action={<Link href="/app/collection" className="text-sm font-bold text-primary-200 hover:text-primary-100">View collection</Link>} />
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {captures.map((capture) => <AppCaptureCard key={capture.captureId} capture={capture} locale={params.locale} />)}
+                        {topCaptures.map((capture) => <AppCaptureCard key={capture.captureId} capture={capture} locale={params.locale} />)}
                     </div>
                 </section>
             ) : null}
