@@ -13,6 +13,8 @@ import {additionalSpeciesDescriptorsTwelve} from "@/data/species-expansion-pack-
 import {additionalSpeciesDescriptorsThirteen} from "@/data/species-expansion-pack-13";
 import {additionalSpeciesDescriptorsFourteen} from "@/data/species-expansion-pack-14";
 import {additionalSpeciesDescriptorsFifteen} from "@/data/species-expansion-pack-15";
+import {additionalSpeciesDescriptorsSixteen} from "@/data/species-expansion-pack-16";
+import {additionalSpeciesDescriptorsSeventeen} from "@/data/legendary-earth-beasts-species";
 
 export const speciesDescriptors: Record<string, string> = {
     "white-headed-vulture": "The clean-sky carrion judge animal",
@@ -140,7 +142,9 @@ export const speciesDescriptors: Record<string, string> = {
     ...additionalSpeciesDescriptorsTwelve,
     ...additionalSpeciesDescriptorsThirteen,
     ...additionalSpeciesDescriptorsFourteen,
-    ...additionalSpeciesDescriptorsFifteen
+    ...additionalSpeciesDescriptorsFifteen,
+    ...additionalSpeciesDescriptorsSixteen,
+    ...additionalSpeciesDescriptorsSeventeen
 };
 
 export function getSpeciesDescriptorBySlug(slug: string) {

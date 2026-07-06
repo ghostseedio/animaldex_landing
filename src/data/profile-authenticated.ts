@@ -9,6 +9,7 @@ import {buildPowerSetAlbums} from "@/data/power-sets";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import type {PublicProfileCapture} from "@/data/public-profiles";
 import {getAuthenticatedUserProfile} from "@/data/user-captures";
+import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 type QueryRow = Record<string, any>;
@@ -85,7 +86,7 @@ function toCaptureFromFeedRow(
         capturedAt: row.capture_created_at ?? null,
         contextLabel: getContextLabel(row),
         href: speciesSlug ? `/animals/${speciesSlug}` : `/animals?q=${encodeURIComponent(row.animal_name?.trim() || "")}`,
-        imageSrc: `/api/species-images/capture?captureId=${encodeURIComponent(row.capture_id)}`,
+        imageSrc: getCaptureImageRoute(row.capture_id),
         dominance: Number(stats.dominance ?? 0) + Number(row.dominance_boost ?? 0),
         speed: Number(stats.speed ?? 0) + Number(row.speed_boost ?? 0),
         size: Number(stats.size ?? 0),

@@ -3,7 +3,7 @@ import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import {useCases} from "@/data/use-cases";
 import {collectorPages} from "@/data/collector-pages";
-import {blogPosts} from "@/data/blog";
+import {getIndexedBlogPosts} from "@/data/blog";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
@@ -13,6 +13,7 @@ import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalG
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const behaviorLessons = await getBehaviorLessonIndex();
@@ -102,7 +103,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `/${entry.slug}`)
         }));
 
-        const blogEntries = blogPosts.map((post) => ({
+        const blogEntries = getIndexedBlogPosts().map((post) => ({
             url: getAbsoluteUrl(locale, `/blog/${post.slug}`),
             lastModified: new Date(post.updatedAt || post.publishedAt)
         }));
@@ -153,6 +154,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
         }));
+        const captureAnimalsAppEntry = {
+            url: getAbsoluteUrl(locale, "/capture-animals-app"),
+            lastModified: new Date("2026-07-06")
+        };
+        const legendaryEarthBeastHubEntry = {
+            url: getAbsoluteUrl(locale, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH),
+            lastModified: new Date("2026-07-06")
+        };
+        const legendaryEarthBeastPageEntries = legendaryEarthBeastEntries.map((entry) => ({
+            url: getAbsoluteUrl(locale, `${LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}/${entry.slug}`),
+            lastModified: new Date(entry.updatedAt || entry.publishedAt)
+        }));
 
         return [
             ...staticEntries,
@@ -169,7 +182,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...behaviorLessonPageEntries,
             ...pokemonAnimalGenerationEntries,
             ...pokemonAnimalPageEntries,
-            ...animalHybridPageEntries
+            ...animalHybridPageEntries,
+            captureAnimalsAppEntry,
+            legendaryEarthBeastHubEntry,
+            ...legendaryEarthBeastPageEntries
         ];
     });
 

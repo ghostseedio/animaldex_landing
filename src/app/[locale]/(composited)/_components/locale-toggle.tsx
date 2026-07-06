@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "@/app/[locale]/_components/link";
+import {Link} from "next-intl";
 import {usePathname} from "next/navigation";
 import {localeConfig} from "@/i18n";
 
@@ -9,8 +9,27 @@ const localeFlags: Record<string, string> = {
     id: "🇮🇩"
 };
 
+function getPathnameWithoutLocale(pathname: string) {
+    for (const locale of localeConfig.locales) {
+        if (pathname === `/${locale}`) {
+            return "/";
+        }
+
+        if (pathname.startsWith(`/${locale}/`)) {
+            return pathname.slice(locale.length + 1) || "/";
+        }
+
+        if (pathname.startsWith(`/${locale}?`) || pathname.startsWith(`/${locale}#`)) {
+            return pathname.slice(locale.length + 1) || "/";
+        }
+    }
+
+    return pathname;
+}
+
 export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
-    const path = usePathname();
+    const pathname = usePathname();
+    const unprefixedPath = getPathnameWithoutLocale(pathname || "/");
     const currentFlag = localeFlags[currentLocale] ?? currentLocale.toUpperCase();
 
     return (
@@ -27,7 +46,7 @@ export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
                 {localeConfig.locales.map((locale) => (
                     <Link
                         key={locale}
-                        href={path || "/"}
+                        href={unprefixedPath}
                         locale={locale}
                         className={"flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-surface-800 " +
                             (locale === currentLocale ? "text-primary-500" : "text-ink-200")}

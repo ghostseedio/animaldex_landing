@@ -13,6 +13,8 @@ import {additionalSpeciesSubtitleStoriesTwelve} from "@/data/species-expansion-p
 import {additionalSpeciesSubtitleStoriesThirteen} from "@/data/species-expansion-pack-13";
 import {additionalSpeciesSubtitleStoriesFourteen} from "@/data/species-expansion-pack-14";
 import {additionalSpeciesSubtitleStoriesFifteen} from "@/data/species-expansion-pack-15";
+import {additionalSpeciesSubtitleStoriesSixteen} from "@/data/species-expansion-pack-16";
+import {additionalSpeciesSubtitleStoriesSeventeen} from "@/data/legendary-earth-beasts-species";
 import {appendUsefulApplicationSentence} from "@/data/species-useful-application";
 
 const rawSpeciesSubtitleStories: Record<string, string> = {
@@ -141,7 +143,9 @@ const rawSpeciesSubtitleStories: Record<string, string> = {
     ...additionalSpeciesSubtitleStoriesTwelve,
     ...additionalSpeciesSubtitleStoriesThirteen,
     ...additionalSpeciesSubtitleStoriesFourteen,
-    ...additionalSpeciesSubtitleStoriesFifteen
+    ...additionalSpeciesSubtitleStoriesFifteen,
+    ...additionalSpeciesSubtitleStoriesSixteen,
+    ...additionalSpeciesSubtitleStoriesSeventeen
 };
 
 export const speciesSubtitleStories: Record<string, string> = Object.fromEntries(

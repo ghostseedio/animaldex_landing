@@ -5,12 +5,14 @@ import {AppEmpty, AppPage, AppPrimaryLink, AppSegmentedControl} from "@/app/[loc
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineItem} from "@/data/discover-timeline";
-import {useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
 
 const WORDMARK_SRC = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-text.webp";
+const DISCOVER_PAGE_SIZE = 12;
+const COLLECTOR_BATCH_SIZE = 8;
 
 function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
     if (!items.length) return null;
@@ -95,11 +97,87 @@ export default function DiscoverHome({
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
+    const [timelineItems, setTimelineItems] = useState(timeline);
+    const [hasMoreTimeline, setHasMoreTimeline] = useState(timeline.length >= DISCOVER_PAGE_SIZE);
+    const [isLoadingTimeline, setIsLoadingTimeline] = useState(false);
+    const [visibleCollectorCount, setVisibleCollectorCount] = useState(COLLECTOR_BATCH_SIZE);
+    const timelineSentinelRef = useRef<HTMLDivElement | null>(null);
+    const collectorSentinelRef = useRef<HTMLDivElement | null>(null);
+    const visibleCollectors = useMemo(() => collectors.slice(0, visibleCollectorCount), [collectors, visibleCollectorCount]);
+    const hasMoreCollectors = visibleCollectorCount < collectors.length;
 
     function handleSegmentChange(next: DiscoverSegment) {
         setSegment(next);
         router.replace(next === "collectors" ? "/app?view=collectors" : "/app");
     }
+
+    useEffect(() => {
+        setTimelineItems(timeline);
+        setHasMoreTimeline(timeline.length >= DISCOVER_PAGE_SIZE);
+    }, [timeline]);
+
+    useEffect(() => {
+        setVisibleCollectorCount(COLLECTOR_BATCH_SIZE);
+    }, [collectors]);
+
+    const loadNextTimelinePage = useCallback(async () => {
+        if (isLoadingTimeline || !hasMoreTimeline) return;
+        setIsLoadingTimeline(true);
+        try {
+            const params = new URLSearchParams({
+                offset: String(timelineItems.length),
+                limit: String(DISCOVER_PAGE_SIZE)
+            });
+            const response = await fetch(`/api/app/discover?${params.toString()}`, {
+                headers: {Accept: "application/json"}
+            });
+            if (!response.ok) {
+                setHasMoreTimeline(false);
+                return;
+            }
+            const payload = await response.json() as {timeline?: DiscoverTimelineItem[]; hasMore?: boolean};
+            const nextItems = payload.timeline ?? [];
+            setTimelineItems((current) => {
+                const seen = new Set(current.map((item) => item.id));
+                const merged = [...current];
+                for (const item of nextItems) {
+                    if (seen.has(item.id)) continue;
+                    seen.add(item.id);
+                    merged.push(item);
+                }
+                return merged;
+            });
+            setHasMoreTimeline(Boolean(payload.hasMore) && nextItems.length > 0);
+        } finally {
+            setIsLoadingTimeline(false);
+        }
+    }, [hasMoreTimeline, isLoadingTimeline, timelineItems.length]);
+
+    useEffect(() => {
+        if (segment !== "discover" || !hasMoreTimeline) return undefined;
+        const node = timelineSentinelRef.current;
+        if (!node) return undefined;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                void loadNextTimelinePage();
+            }
+        }, {rootMargin: "500px 0px"});
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [segment, hasMoreTimeline, loadNextTimelinePage]);
+
+    useEffect(() => {
+        if (segment !== "collectors" || !hasMoreCollectors) return undefined;
+        const node = collectorSentinelRef.current;
+        if (!node) return undefined;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setVisibleCollectorCount((current) => Math.min(current + COLLECTOR_BATCH_SIZE, collectors.length));
+            }
+        }, {rootMargin: "500px 0px"});
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [segment, hasMoreCollectors, collectors.length]);
 
     return (
         <AppPage>
@@ -121,9 +199,12 @@ export default function DiscoverHome({
             {segment === "discover" ? (
                 <div className="mx-auto max-w-2xl space-y-6">
                     <FeaturedStrip items={featured} />
-                    {timeline.length ? (
+                    {timelineItems.length ? (
                         <section className="space-y-4">
-                            {timeline.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
+                            {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
+                            {hasMoreTimeline ? (
+                                <div ref={timelineSentinelRef} aria-hidden="true" className="h-8" />
+                            ) : null}
                         </section>
                     ) : (
                         <AppEmpty
@@ -136,7 +217,10 @@ export default function DiscoverHome({
                 </div>
             ) : collectors.length ? (
                 <section className="mx-auto max-w-3xl space-y-3">
-                    {collectors.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {visibleCollectors.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {hasMoreCollectors ? (
+                        <div ref={collectorSentinelRef} aria-hidden="true" className="h-px" />
+                    ) : null}
                 </section>
             ) : (
                 <AppEmpty icon="collection" title="No collectors yet" detail="Public collector profiles will appear here as the community grows." />

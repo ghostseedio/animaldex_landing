@@ -15,6 +15,7 @@ import SpeciesFieldGuideAccordion from "@/app/[locale]/(composited)/animals/[slu
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
+import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
 import {getChallengesForSpecies} from "@/data/challenges";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
@@ -40,6 +41,13 @@ import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {
+    getLegendaryEarthBeast,
+    getRelatedLegendaryEarthBeasts,
+    LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH
+} from "@/data/legendary-earth-beasts";
+import {getLegendaryCatalogSeedByBeastSlug} from "@/data/legendary-earth-beasts-catalog-seed";
+import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast-capture";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
@@ -338,12 +346,21 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         redirect(getLocalePath(locale, `/animals/${entry.slug}`));
     }
 
+    const legendaryBeast = getLegendaryEarthBeast(entry.slug);
+    const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
+    const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
     const unifiedSpeciesEntries = entry.databaseSource ? await getUnifiedSpeciesEntries() : speciesEntries;
     const unifiedSpeciesBySlug = new Map(unifiedSpeciesEntries.map((item) => [item.slug, item]));
-    const staticRelated = getRelatedSpecies(entry.slug, 3);
-    const related = staticRelated.length > 0
-        ? staticRelated
-        : getAutomaticRelatedSpecies(entry, unifiedSpeciesEntries, 3);
+    const related = legendaryBeast
+        ? getRelatedLegendaryEarthBeasts(entry.slug, 3)
+            .map((beast) => unifiedSpeciesBySlug.get(beast.slug) ?? getSpeciesBySlug(beast.slug))
+            .filter((item): item is SpeciesEntry => Boolean(item))
+        : (() => {
+            const staticRelated = getRelatedSpecies(entry.slug, 3);
+            return staticRelated.length > 0
+                ? staticRelated
+                : getAutomaticRelatedSpecies(entry, unifiedSpeciesEntries, 3);
+        })();
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
@@ -762,6 +779,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div className="flex flex-wrap gap-2">
                             {animalDexNumber ? <AnimalDexNumberBadge number={animalDexNumber} /> : null}
+                            {legendaryBeast ? <LegendaryEarthBeastBadge compact /> : null}
                             <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-sm font-semibold text-amber-100">
                                 {resolvedRarityLabel}
                             </span>
@@ -856,6 +874,27 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
                 </div>
             </section>
+
+            {legendaryBeast ? (
+                <section className="rounded-[1.75rem] border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Legendary Earth Beast · Tier {legendaryBeast.tier}</p>
+                    <h2 className="mt-2 font-display text-3xl font-bold text-white">
+                        {legendaryCatalogSeed?.captureSite ?? legendaryBeast.captureSite}
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-base leading-7 text-ink-200 md:text-lg">
+                        {legendaryBeast.lesson}
+                    </p>
+                    {legendaryCaptureNote ? (
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-100/90">{legendaryCaptureNote}</p>
+                    ) : null}
+                    <Link
+                        href={`${LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}/${legendaryBeast.slug}`}
+                        className="mt-5 inline-flex rounded-2xl border border-amber-300/35 px-5 py-3 text-sm font-bold text-amber-100 transition hover:border-amber-200 hover:text-white"
+                    >
+                        Read the {legendaryBeast.legendaryFormName} travel guide
+                    </Link>
+                </section>
+            ) : null}
 
             <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden rounded-3xl bg-surface-900/55 md:grid-cols-5">
                 {[

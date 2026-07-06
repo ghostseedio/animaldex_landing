@@ -3,6 +3,7 @@ import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, speciesEntries, SpeciesRarityStatusKey} from "@/data/species";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {buildSpeciesDirectoryImageState} from "@/data/species-images";
 import {isNativeRangeRegionKey} from "@/data/native-range";
 import {getLocationPage} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -118,6 +119,9 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
         page: Number.isFinite(page) ? page : 1,
         entries: unifiedSpeciesEntries
     });
+    const directoryImageState = Object.fromEntries(
+        (await buildSpeciesDirectoryImageState(directoryPage.entries)).entries()
+    );
 
     const schema = {
         "@context": "https://schema.org",
@@ -140,7 +144,7 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
 
             <div className="flex flex-col gap-5 text-center items-center max-w-5xl mx-auto">
                 <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">{t("eyebrow")}</p>
-                <h1 className="font-display font-bold text-6xl md:text-7xl lg:text-8xl text-white tracking-tight">{t("title")}</h1>
+                <h1 className="max-w-[12ch] font-display text-3xl font-bold leading-tight tracking-tight text-white sm:max-w-full sm:text-6xl md:text-7xl lg:text-8xl">{t("title")}</h1>
                 <p className="text-xl md:text-2xl text-ink-100 max-w-4xl">{t("description")}</p>
                 <p className="text-base md:text-lg text-ink-300 max-w-3xl">{t("heroSupporting")}</p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
@@ -186,7 +190,7 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                     <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{t("featuredTitle")}</h2>
                     <p className="text-ink-200 text-lg md:text-xl">{t("featuredDescription")}</p>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-6">
                     {featuredAnimals.map((animal) => (
                         <Link key={animal.slug} href={`/animals/${animal.slug}`} className="group overflow-hidden rounded-3xl bg-surface-800/50">
                             <SpeciesImage
@@ -226,6 +230,7 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                 <SpeciesDirectory
                     locale={locale}
                     speciesEntries={directoryPage.entries}
+                    directoryImageState={directoryImageState}
                     currentPage={directoryPage.currentPage}
                     totalPages={directoryPage.totalPages}
                     currentQuery={directoryPage.query}

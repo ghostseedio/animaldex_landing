@@ -1,5 +1,6 @@
 import {getSpeciesDescriptorBySlug} from "@/data/species-descriptors";
 import {getSpeciesSubtitleStoryBySlug} from "@/data/species-subtitle-stories";
+import {getLegendaryEarthBeastSubtitle} from "@/data/legendary-earth-beasts-species";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export type SpeciesSubtitleRecord = {
@@ -62,6 +63,12 @@ async function fetchSpeciesSubtitleFromSupabase(locale: string, slug: string, op
 }
 
 export async function getSpeciesSubtitle(slug: string, locale = "en", options?: SpeciesSubtitleOptions): Promise<SpeciesSubtitleRecord> {
+    const legendarySubtitle = getLegendaryEarthBeastSubtitle(slug);
+
+    if (legendarySubtitle) {
+        return legendarySubtitle;
+    }
+
     const supabaseRecord = await fetchSpeciesSubtitleFromSupabase(locale, slug, options);
 
     if (supabaseRecord) {

@@ -117,6 +117,56 @@ module.exports = withNextIntl({
                 source: "/:locale(en|id)/journal/:slug",
                 destination: "/:locale/blog/:slug",
                 permanent: true
+            },
+            {
+                source: "/blog/legendary-earth-beasts",
+                destination: "/legendary-earth-beasts",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/blog/legendary-earth-beasts",
+                destination: "/:locale/legendary-earth-beasts",
+                permanent: true
+            },
+            {
+                source: "/blog/capture-animals-app",
+                destination: "/capture-animals-app",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/blog/capture-animals-app",
+                destination: "/:locale/capture-animals-app",
+                permanent: true
+            },
+            {
+                source: "/animal-identification-app",
+                destination: "/best-animal-identification-app",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/animal-identification-app",
+                destination: "/:locale/best-animal-identification-app",
+                permanent: true
+            },
+            {
+                source: "/real-life-pokedex",
+                destination: "/pokemon-like-animal-game",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/real-life-pokedex",
+                destination: "/:locale/pokemon-like-animal-game",
+                permanent: true
+            },
+            {
+                source: "/wildlife-spotting-app",
+                destination: "/collect-real-animals-app",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/wildlife-spotting-app",
+                destination: "/:locale/collect-real-animals-app",
+                permanent: true
             }
         ];
     },

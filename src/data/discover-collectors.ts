@@ -2,6 +2,7 @@ import "server-only";
 
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
+import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 type QueryRow = Record<string, unknown>;
@@ -40,8 +41,7 @@ function resolveBestFindImage(captureId: string | null, slug: string | null) {
         if (species) return getSpeciesImageRoute(species.slug, captureId);
     }
 
-    const searchParams = new URLSearchParams({captureId});
-    return `/api/species-images/capture?${searchParams.toString()}`;
+    return getCaptureImageRoute(captureId);
 }
 
 export async function getDiscoverCollectors(limit = 24, offset = 0): Promise<DiscoverCollectorItem[]> {

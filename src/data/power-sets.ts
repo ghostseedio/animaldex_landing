@@ -1,13 +1,19 @@
 import "server-only";
 
+import {cache} from "react";
 import type {AppCapture} from "@/data/authenticated-app";
+import {decorateCapture} from "@/data/authenticated-app";
+import {getUserCaptures} from "@/data/user-captures";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {powerSetTierRewardBreakdown, type PowerSetRewardBreakdown} from "@/data/power-set-rewards";
-import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import type {SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
-import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {
+    catalogLookupToken,
+    collectionIdentityKey
+} from "@/lib/collection-discovery";
+import {resolveCollectionIdentityToken, COLLECTION_IDENTITY_ALIASES} from "@/lib/collection-identity-aliases";
 import {canonicalPowerKey, displayPowerLabel} from "@/lib/power-set-tags";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
@@ -114,6 +120,7 @@ type CatalogRow = {
     animaldex_number: number;
     best_use_cases: unknown;
     display_name: string | null;
+    scientific_name: string | null;
 };
 
 function clean(value: string | null | undefined) {
@@ -239,6 +246,10 @@ function ownedSpeciesProfileIds(
             continue;
         }
 
+        if (capture.speciesProfileId) {
+            owned.add(capture.speciesProfileId);
+        }
+
         const species = lookupSpeciesForCapture(capture, speciesIndex);
 
         if (species?.speciesProfileId) {
@@ -311,14 +322,121 @@ function contextWeight(capture: AppCapture) {
 }
 
 function isEligibleCapture(capture: AppCapture) {
-    return capture.score > 0;
+    if (capture.captureValidity) {
+        return capture.captureValidity === "valid_live_capture" || capture.captureValidity === "unclear_capture";
+    }
+
+    const name = capture.animalName.trim().toLowerCase();
+
+    if (!name || name === "unknown animal") {
+        return false;
+    }
+
+    if (capture.confidence != null && capture.confidence < 0.4) {
+        return false;
+    }
+
+    return true;
 }
 
-function speciesIdentityKey(capture: AppCapture) {
-    const identity = capture.speciesSlug?.trim().toLowerCase();
+function shouldShowUncertaintyFallback(capture: AppCapture) {
+    const name = capture.animalName.trim().toLowerCase();
 
-    if (identity) {
-        return identity;
+    if (!name || name === "unknown animal") {
+        return true;
+    }
+
+    if (capture.confidence != null && capture.confidence < 0.4) {
+        return true;
+    }
+
+    return false;
+}
+
+function shouldExcludeFromPowerSetMatching(capture: AppCapture) {
+    return !isEligibleCapture(capture) || shouldShowUncertaintyFallback(capture);
+}
+
+function buildCatalogProfileIndex(catalogRows: Map<string, CatalogRow>) {
+    const profileByToken = new Map<string, string>();
+
+    for (const row of Array.from(catalogRows.values())) {
+        const profileId = row.species_profile_id.trim().toLowerCase();
+        const identityKey = row.normalized_identity_key.trim().toLowerCase();
+
+        profileByToken.set(profileId, profileId);
+        profileByToken.set(identityKey, profileId);
+
+        const displayToken = catalogLookupToken(row.display_name);
+        if (displayToken) {
+            profileByToken.set(resolveCollectionIdentityToken(displayToken), profileId);
+        }
+
+        const scientificToken = catalogLookupToken(row.scientific_name);
+        if (scientificToken) {
+            profileByToken.set(resolveCollectionIdentityToken(scientificToken), profileId);
+        }
+    }
+
+    for (const [alias, canonicalKey] of Object.entries(COLLECTION_IDENTITY_ALIASES)) {
+        const profileId = profileByToken.get(canonicalKey);
+
+        if (profileId) {
+            profileByToken.set(alias, profileId);
+        }
+    }
+
+    return profileByToken;
+}
+
+function catalogProfileIdForCapture(capture: AppCapture, profileByToken: Map<string, string>) {
+    const directProfileId = capture.speciesProfileId?.trim().toLowerCase();
+
+    if (directProfileId) {
+        return directProfileId;
+    }
+
+    for (const raw of [
+        capture.speciesSlug,
+        catalogLookupToken(capture.speciesSlug),
+        catalogLookupToken(capture.scientificName),
+        catalogLookupToken(capture.animalName)
+    ]) {
+        const token = catalogLookupToken(raw) ?? raw?.trim().toLowerCase().replace(/-/g, "_");
+
+        if (!token) {
+            continue;
+        }
+
+        const resolved = resolveCollectionIdentityToken(token);
+        const profileId = profileByToken.get(resolved) ?? profileByToken.get(token);
+
+        if (profileId) {
+            return profileId;
+        }
+    }
+
+    return null;
+}
+
+/** Matches iOS PowerSetMatcher.speciesIdentityKey, with catalog profile dedupe. */
+function speciesIdentityKey(capture: AppCapture, profileByToken: Map<string, string>) {
+    const catalogProfileId = catalogProfileIdForCapture(capture, profileByToken);
+
+    if (catalogProfileId) {
+        return `spid:${catalogProfileId}`;
+    }
+
+    const collectionKey = collectionIdentityKey(capture);
+
+    if (collectionKey) {
+        return collectionKey;
+    }
+
+    const profileId = capture.speciesProfileId?.trim().toLowerCase();
+
+    if (profileId) {
+        return `spid:${profileId}`;
     }
 
     const name = capture.animalName.trim().toLowerCase();
@@ -387,15 +505,7 @@ function resolveCatalogSpecies(
         return null;
     }
 
-    const catalogBestFor = parseBestUseCases(catalogRow?.best_use_cases);
-    const localProfile = getBehavioralPrincipleProfile(
-        entry.slug,
-        speciesSystemsIntelligence[entry.slug],
-        speciesSystemsIntelligence
-    );
-    const bestUseCases = catalogBestFor.length > 0
-        ? catalogBestFor
-        : (localProfile?.bestFor ?? []);
+    const bestUseCases = parseBestUseCases(catalogRow?.best_use_cases);
 
     if (bestUseCases.length === 0) {
         return null;
@@ -425,7 +535,7 @@ async function fetchCatalogRows() {
 
     for (let offset = 0; ; offset += pageSize) {
         const params = new URLSearchParams({
-            select: "species_profile_id,normalized_identity_key,identity_kind,animaldex_number,best_use_cases,display_name",
+            select: "species_profile_id,normalized_identity_key,identity_kind,animaldex_number,best_use_cases,display_name,scientific_name",
             animaldex_number: "not.is.null",
             order: "animaldex_number.asc",
             limit: String(pageSize),
@@ -458,16 +568,80 @@ async function fetchCatalogRows() {
     return map;
 }
 
-async function buildCatalogPowerSpecies() {
+function catalogRowToPowerSpecies(row: CatalogRow): CatalogPowerSpecies | null {
+    if (!row.species_profile_id) {
+        return null;
+    }
+
+    if (typeof row.animaldex_number !== "number" || row.animaldex_number < 1) {
+        return null;
+    }
+
+    if (clean(row.identity_kind)?.toLowerCase() === "breed") {
+        return null;
+    }
+
+    const bestUseCases = parseBestUseCases(row.best_use_cases);
+
+    if (bestUseCases.length === 0) {
+        return null;
+    }
+
+    const slug = row.normalized_identity_key.replace(/_/g, "-");
+
+    return {
+        speciesProfileId: row.species_profile_id,
+        normalizedIdentityKey: row.normalized_identity_key,
+        slug,
+        name: clean(row.display_name) ?? displayPowerLabel(slug),
+        identityKind: clean(row.identity_kind),
+        animalDexNumber: row.animaldex_number,
+        bestUseCases
+    };
+}
+
+function mergeCatalogPowerSpecies(unifiedEntries: Awaited<ReturnType<typeof getUnifiedSpeciesEntries>>, catalogRows: Map<string, CatalogRow>) {
+    const merged = new Map<string, CatalogPowerSpecies>();
+
+    for (const entry of unifiedEntries) {
+        const resolved = resolveCatalogSpecies(entry, catalogRows);
+
+        if (resolved?.speciesProfileId) {
+            merged.set(resolved.speciesProfileId, resolved);
+        }
+    }
+
+    for (const row of Array.from(catalogRows.values())) {
+        if (!row.species_profile_id || merged.has(row.species_profile_id)) {
+            continue;
+        }
+
+        const supplemental = catalogRowToPowerSpecies(row);
+
+        if (supplemental) {
+            merged.set(row.species_profile_id, supplemental);
+        }
+    }
+
+    return Array.from(merged.values());
+}
+
+const getCatalogPowerContext = cache(async function getCatalogPowerContext() {
     const [unifiedEntries, catalogRows] = await Promise.all([
         getUnifiedSpeciesEntries(),
         fetchCatalogRows()
     ]);
 
-    return unifiedEntries
-        .map((entry) => resolveCatalogSpecies(entry, catalogRows))
-        .filter((entry): entry is CatalogPowerSpecies => Boolean(entry));
-}
+    return {
+        catalogRows,
+        species: mergeCatalogPowerSpecies(unifiedEntries, catalogRows)
+    };
+});
+
+const buildCatalogPowerSpecies = cache(async function buildCatalogPowerSpecies() {
+    const context = await getCatalogPowerContext();
+    return context.species;
+});
 
 function powerLinkedCounts(species: CatalogPowerSpecies[]) {
     const counts = new Map<string, number>();
@@ -481,7 +655,11 @@ function powerLinkedCounts(species: CatalogPowerSpecies[]) {
     return counts;
 }
 
-function discoverPowerKeys(catalogCounts: Map<string, number>, captures: AppCapture[], speciesIndex: ReturnType<typeof buildSpeciesIndex>) {
+function discoverPowerKeys(
+    catalogCounts: Map<string, number>,
+    captures: AppCapture[],
+    catalogRows: Map<string, CatalogRow>
+) {
     const keys = new Set<string>();
 
     catalogCounts.forEach((count, key) => {
@@ -491,11 +669,11 @@ function discoverPowerKeys(catalogCounts: Map<string, number>, captures: AppCapt
     });
 
     for (const capture of captures) {
-        if (!isEligibleCapture(capture)) {
+        if (shouldExcludeFromPowerSetMatching(capture)) {
             continue;
         }
 
-        for (const key of canonicalPowerKeysForCapture(capture, speciesIndex)) {
+        for (const key of canonicalPowerKeysForCapture(capture, catalogRows)) {
             keys.add(key);
         }
     }
@@ -513,6 +691,16 @@ function discoverPowerKeys(catalogCounts: Map<string, number>, captures: AppCapt
 }
 
 function lookupSpeciesForCapture(capture: AppCapture, speciesIndex: ReturnType<typeof buildSpeciesIndex>) {
+    const profileId = capture.speciesProfileId?.trim();
+
+    if (profileId) {
+        const byProfile = speciesIndex.byProfileId.get(profileId);
+
+        if (byProfile) {
+            return byProfile;
+        }
+    }
+
     const identity = capture.speciesSlug?.trim().toLowerCase();
 
     if (identity) {
@@ -526,36 +714,84 @@ function lookupSpeciesForCapture(capture: AppCapture, speciesIndex: ReturnType<t
     return name ? speciesIndex.byName.get(name) ?? null : null;
 }
 
-function canonicalPowerKeysForCapture(capture: AppCapture, speciesIndex: ReturnType<typeof buildSpeciesIndex>) {
-    const species = lookupSpeciesForCapture(capture, speciesIndex);
+function catalogBestUseCasesForCapture(capture: AppCapture, catalogRows: Map<string, CatalogRow>) {
+    const profileId = capture.speciesProfileId?.trim();
 
-    if (!species) {
-        return [] as string[];
+    if (profileId) {
+        const row = catalogRows.get(profileId);
+
+        if (row) {
+            return parseBestUseCases(row.best_use_cases);
+        }
     }
 
-    return canonicalPowerKeysForSpecies(species);
+    const identity = capture.speciesSlug?.trim().toLowerCase();
+
+    if (identity) {
+        const normalized = identity.replace(/-/g, "_");
+        const row = catalogRows.get(identity) ?? catalogRows.get(normalized);
+
+        if (row) {
+            return parseBestUseCases(row.best_use_cases);
+        }
+    }
+
+    return [] as string[];
+}
+
+function canonicalPowerKeysForCapture(capture: AppCapture, catalogRows: Map<string, CatalogRow>) {
+    const keys = new Set<string>();
+
+    for (const tag of capture.learnedScenarioTags ?? []) {
+        const key = canonicalPowerKey(tag);
+
+        if (key) {
+            keys.add(key);
+        }
+    }
+
+    for (const useCase of catalogBestUseCasesForCapture(capture, catalogRows)) {
+        const key = canonicalPowerKey(useCase);
+
+        if (key) {
+            keys.add(key);
+        }
+    }
+
+    return Array.from(keys);
 }
 
 function distinctSpeciesMatches(
     powerKey: string,
     captures: AppCapture[],
-    speciesIndex: ReturnType<typeof buildSpeciesIndex>
+    speciesIndex: ReturnType<typeof buildSpeciesIndex>,
+    catalogRows: Map<string, CatalogRow>
 ) {
     const normalized = canonicalPowerKey(powerKey);
     const matches = new Map<string, AppCapture>();
+    const profileByToken = buildCatalogProfileIndex(catalogRows);
 
     for (const capture of captures) {
-        if (!isEligibleCapture(capture)) {
+        if (shouldExcludeFromPowerSetMatching(capture)) {
             continue;
         }
 
-        if (!canonicalPowerKeysForCapture(capture, speciesIndex).includes(normalized)) {
+        if (!canonicalPowerKeysForCapture(capture, catalogRows).includes(normalized)) {
             continue;
         }
 
-        const identity = speciesIdentityKey(capture);
+        const identity = speciesIdentityKey(capture, profileByToken);
+        const existing = matches.get(identity);
 
-        if (!matches.has(identity)) {
+        if (!existing) {
+            matches.set(identity, capture);
+            continue;
+        }
+
+        const existingTime = existing.capturedAt ? Date.parse(existing.capturedAt) : 0;
+        const candidateTime = capture.capturedAt ? Date.parse(capture.capturedAt) : 0;
+
+        if (candidateTime > existingTime || (candidateTime === existingTime && capture.captureId > existing.captureId)) {
             matches.set(identity, capture);
         }
     }
@@ -563,15 +799,19 @@ function distinctSpeciesMatches(
     return matches;
 }
 
-function scoresFromCaptures(captures: AppCapture[], speciesIndex: ReturnType<typeof buildSpeciesIndex>) {
+function scoresFromCaptures(
+    captures: AppCapture[],
+    speciesIndex: ReturnType<typeof buildSpeciesIndex>,
+    catalogRows: Map<string, CatalogRow>
+) {
     const grouped = new Map<string, {label: string; score: number; captureIds: Set<string>}>();
 
     for (const capture of captures) {
-        if (!isEligibleCapture(capture)) {
+        if (shouldExcludeFromPowerSetMatching(capture)) {
             continue;
         }
 
-        const tags = canonicalPowerKeysForCapture(capture, speciesIndex);
+        const tags = canonicalPowerKeysForCapture(capture, catalogRows);
         const weight = contextWeight(capture);
 
         for (const key of tags) {
@@ -689,13 +929,48 @@ async function getApexGapPowerKeys() {
     return [];
 }
 
+async function getServerBestForTagScores(): Promise<BestForTagScore[]> {
+    const supabase = createSupabaseServerClient();
+
+    if (!supabase) {
+        return [];
+    }
+
+    const {data: {user}} = await supabase.auth.getUser();
+
+    if (!user) {
+        return [];
+    }
+
+    const {data} = await supabase
+        .from("profile_best_for_tag_scores")
+        .select("tag_key,tag_label,score")
+        .eq("user_id", user.id);
+
+    return ((data ?? []) as Array<{tag_key?: string; tag_label?: string; score?: number}>)
+        .map((row) => ({
+            tagKey: canonicalPowerKey(String(row.tag_key ?? "")),
+            tagLabel: String(row.tag_label ?? ""),
+            score: Number(row.score ?? 0)
+        }))
+        .filter((row) => row.tagKey && row.tagLabel.trim());
+}
+
 async function buildCurationContext(
     captures: AppCapture[],
     catalogCounts: Map<string, number>,
-    speciesIndex: ReturnType<typeof buildSpeciesIndex>
+    speciesIndex: ReturnType<typeof buildSpeciesIndex>,
+    catalogRows: Map<string, CatalogRow>
 ) {
-    const apexGapPowerKeys = await getApexGapPowerKeys();
-    const weakKeys = weakBestForPowerKeys(scoresFromCaptures(captures, speciesIndex));
+    const [apexGapPowerKeys, serverBestForScores] = await Promise.all([
+        getApexGapPowerKeys(),
+        getServerBestForTagScores()
+    ]);
+    const weakKeys = weakBestForPowerKeys(
+        serverBestForScores.length > 0
+            ? serverBestForScores
+            : scoresFromCaptures(captures, speciesIndex, catalogRows)
+    );
     const starterKeys = apexGapPowerKeys.length === 0 && weakKeys.length === 0
         ? starterPowerKeys(catalogCounts)
         : [];
@@ -748,10 +1023,11 @@ function buildAlbum(
     captures: AppCapture[],
     catalogCounts: Map<string, number>,
     speciesIndex: ReturnType<typeof buildSpeciesIndex>,
-    context: PowerSetCurationContext
+    context: PowerSetCurationContext,
+    catalogRows: Map<string, CatalogRow>
 ): PowerSetAlbum | null {
     const catalogLinkedCount = catalogCounts.get(key) ?? 0;
-    const matches = distinctSpeciesMatches(key, captures, speciesIndex);
+    const matches = distinctSpeciesMatches(key, captures, speciesIndex, catalogRows);
     const matchedCaptures = Array.from(matches.values()).sort((left, right) => {
         const leftTime = left.capturedAt ? Date.parse(left.capturedAt) : 0;
         const rightTime = right.capturedAt ? Date.parse(right.capturedAt) : 0;
@@ -799,20 +1075,57 @@ function buildAlbum(
     return isVisible(album, context) ? album : null;
 }
 
-export async function buildPowerSetAlbums(captures: AppCapture[]) {
-    const species = await buildCatalogPowerSpecies();
-    const speciesIndex = buildSpeciesIndex(species);
-    const catalogCounts = powerLinkedCounts(species);
-    const context = await buildCurationContext(captures, catalogCounts, speciesIndex);
-    const keys = discoverPowerKeys(catalogCounts, captures, speciesIndex);
+export async function buildPowerSetAlbums(captures: AppCapture[], species?: CatalogPowerSpecies[]) {
+    const context = await getCatalogPowerContext();
+    const catalogSpecies = species ?? context.species;
+    const catalogRows = context.catalogRows;
+    const speciesIndex = buildSpeciesIndex(catalogSpecies);
+    const catalogCounts = powerLinkedCounts(catalogSpecies);
+    const curation = await buildCurationContext(captures, catalogCounts, speciesIndex, catalogRows);
+    const keys = discoverPowerKeys(catalogCounts, captures, catalogRows);
 
     return keys
-        .map((key) => buildAlbum(key, captures, catalogCounts, speciesIndex, context))
+        .map((key) => buildAlbum(key, captures, catalogCounts, speciesIndex, curation, catalogRows))
         .filter((album): album is PowerSetAlbum => Boolean(album));
 }
 
+export type PowerSetPageData = {
+    powerSets: PowerSetAlbum[];
+    summary: ReturnType<typeof summarizePowerSets>;
+    catalogSetCount: number;
+};
+
+export async function getPowerSetPageData(): Promise<PowerSetPageData> {
+    const rawCaptures = await getUserCaptures(2000);
+    const captures = rawCaptures.map(decorateCapture).filter(isEligibleCapture);
+    const {species} = await getCatalogPowerContext();
+    const powerSets = await buildPowerSetAlbums(captures, species);
+    const summary = summarizePowerSets(powerSets);
+
+    void syncPowerSetCompletionsInBackground(powerSets);
+
+    return {
+        powerSets,
+        summary,
+        catalogSetCount: powerLinkedCounts(species).size
+    };
+}
+
+async function syncPowerSetCompletionsInBackground(albums: PowerSetAlbum[]) {
+    try {
+        const {syncPowerSetCompletions} = await import("@/data/power-set-completions");
+        await syncPowerSetCompletions(albums);
+    } catch {
+        // Best-effort sync should not block page render.
+    }
+}
+
+function hasStartedPowerSetProgress(album: PowerSetAlbum) {
+    return album.found > 0;
+}
+
 export function summarizePowerSets(albums: PowerSetAlbum[]) {
-    const active = albums.filter((album) => !album.isCompleted);
+    const active = albums.filter((album) => !album.isCompleted && hasStartedPowerSetProgress(album));
     const completed = albums.filter((album) => album.isCompleted);
     const goldMastered = completed.filter((album) => album.isGoldMastered);
 
@@ -826,10 +1139,9 @@ export function summarizePowerSets(albums: PowerSetAlbum[]) {
     };
 }
 
-export async function getCatalogPowerSetCount() {
-    const species = await buildCatalogPowerSpecies();
-
-    return powerLinkedCounts(species).size;
+export async function getCatalogPowerSetCount(species?: CatalogPowerSpecies[]) {
+    const catalogSpecies = species ?? await buildCatalogPowerSpecies();
+    return powerLinkedCounts(catalogSpecies).size;
 }
 
 export async function getPowerSetAlbumByKey(key: string, captures: AppCapture[]) {

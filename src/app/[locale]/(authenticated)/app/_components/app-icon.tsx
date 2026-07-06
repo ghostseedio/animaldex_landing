@@ -1,4 +1,4 @@
-export type AppIconName = "home" | "collection" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close";
+export type AppIconName = "home" | "collection" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close";
 
 export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconName; className?: string}) {
     const path: Record<AppIconName, React.ReactNode> = {
@@ -12,6 +12,7 @@ export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconNam
         send: <><path d="m22 2-7 8"/><path d="m22 2-10 20-3-9-9Z"/></>,
         mission: <><path d="M9 4h6l1 3h3v14H5V7h3Z"/><path d="m9 14 2 2 4-5"/></>,
         sets: <><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></>,
+        matchup: <><path d="M8 4h8l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"/><path d="M9 12h6M12 9v6"/></>,
         trade: <><path d="M4 7h14l-3-3m3 3-3 3M20 17H6l3 3m-3-3 3-3"/></>,
         search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
         filter: <path d="M4 6h16M7 12h10m-7 6h4"/>,

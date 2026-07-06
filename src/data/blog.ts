@@ -4,6 +4,7 @@ import {journalMigratedPosts} from "@/data/blog/journal-migrated-posts";
 import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
 import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-is-a-lesson";
 import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
+import {captureAnimalsAppPost} from "@/data/blog/capture-animals-app";
 import {
     BlogFAQ,
     BlogLink,
@@ -4914,14 +4915,21 @@ const blogPostsData: BlogPost[] = [
 ];
 
 export const blogPosts: BlogPost[] = [
+    captureAnimalsAppPost,
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
-    ...blogPostsData.filter((post) => ![whatIfEveryAnimalIsALessonPost.slug, biomimicryInAnimalsPost.slug].includes(post.slug))
+    ...blogPostsData.filter((post) => ![whatIfEveryAnimalIsALessonPost.slug, biomimicryInAnimalsPost.slug, captureAnimalsAppPost.slug].includes(post.slug))
 ]
     .sort((a, b) =>
         b.publishedAt.localeCompare(a.publishedAt)
         || (b.updatedAt || b.publishedAt).localeCompare(a.updatedAt || a.publishedAt)
     );
+
+const canonicalLandingBlogSlugs = new Set(["capture-animals-app"]);
+
+export function getIndexedBlogPosts() {
+    return blogPosts.filter((post) => !canonicalLandingBlogSlugs.has(post.slug));
+}
 
 export function getBlogPost(slug: string) {
     return blogPosts.find((post) => post.slug === slug);

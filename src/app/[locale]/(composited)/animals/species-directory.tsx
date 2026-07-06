@@ -1,11 +1,13 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import Image from "next/image";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
-import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
-import {getSpeciesImageAltText} from "@/data/species-images";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
+import {getSpeciesImageAltText, type SpeciesDirectoryImageState} from "@/data/species-images";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getSpeciesRarityStatusKey, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
 import SpeciesRegionMap from "./species-region-map";
@@ -38,6 +40,7 @@ type SpeciesDirectoryCopy = {
 type SpeciesDirectoryProps = {
     locale: string;
     speciesEntries: SpeciesEntry[];
+    directoryImageState: Record<string, SpeciesDirectoryImageState>;
     currentPage: number;
     totalPages: number;
     currentQuery: string;
@@ -78,9 +81,154 @@ function getLocationChipLabel(entry: SpeciesEntry) {
         : getNativeRangeRegionLabel(firstRegion);
 }
 
+function CatalogPawPlaceholder({muted = false}: {muted?: boolean}) {
+    return (
+        <div
+            className={[
+                "flex h-full w-full items-center justify-center",
+                muted ? "text-white/20" : "text-primary-200/70"
+            ].join(" ")}
+            aria-hidden="true"
+        >
+            <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="currentColor">
+                <ellipse cx="12" cy="17.5" rx="5.2" ry="4.4" />
+                <circle cx="7.1" cy="10.2" r="2.35" />
+                <circle cx="10.4" cy="7.6" r="2.35" />
+                <circle cx="13.6" cy="7.6" r="2.35" />
+                <circle cx="16.9" cy="10.2" r="2.35" />
+            </svg>
+        </div>
+    );
+}
+
+function CatalogUncapturedSilhouette({
+    src,
+    alt,
+    onError
+}: {
+    src: string;
+    alt: string;
+    onError: () => void;
+}) {
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className="absolute inset-0 h-full w-full object-contain brightness-0 invert"
+            onError={onError}
+        />
+    );
+}
+
+function CatalogGlyphThumbnail({
+    entry,
+    animalDexNumber,
+    imageState
+}: {
+    entry: SpeciesEntry;
+    animalDexNumber: number | null;
+    imageState: SpeciesDirectoryImageState;
+}) {
+    const gradientId = `catalog-glyph-fill-${entry.slug}`;
+    const depthGradientId = `catalog-glyph-depth-${entry.slug}`;
+    const imageAlt = getSpeciesImageAltText(entry, "thumbnail");
+    const hasPublicCapture = imageState.hasPublicCapture;
+    const [showPlaceholder, setShowPlaceholder] = useState(false);
+    const iconSrc = getSpeciesArtworkUrl(entry.slug);
+    const isLegendary = Boolean(getLegendaryEarthBeast(entry.slug));
+
+    return (
+        <div className="relative h-20 w-20 shrink-0 overflow-visible sm:h-24 sm:w-24">
+            <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+                <svg
+                    viewBox="0 0 100 100"
+                    focusable="false"
+                    className="h-full w-full overflow-visible"
+                >
+                <defs>
+                    <linearGradient id={gradientId} x1="12" y1="10" x2="88" y2="90" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#83ffae" stopOpacity="0.30" />
+                        <stop offset="58%" stopColor="#83ffae" stopOpacity="0.14" />
+                        <stop offset="100%" stopColor="#83ffae" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id={depthGradientId} x1="50" y1="0" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#83ffae" stopOpacity="0.27" />
+                        <stop offset="54%" stopColor="#9b7cff" stopOpacity="0.16" />
+                        <stop offset="100%" stopColor="#9b7cff" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <path
+                    d="M50 2C69 0 78 8 83 18C96 28 99 39 96 49C92 67 87 79 80 84C68 96 55 101 43 98C29 95 16 90 10 79C3 67 -1 55 2 44C5 25 10 16 20 12C28 4 40 0 50 2Z"
+                    fill={`url(#${gradientId})`}
+                    className="blur-[0.4px]"
+                />
+                <path
+                    d="M50 2C69 0 78 8 83 18C96 28 99 39 96 49C92 67 87 79 80 84C68 96 55 101 43 98C29 95 16 90 10 79C3 67 -1 55 2 44C5 25 10 16 20 12C28 4 40 0 50 2Z"
+                    fill="none"
+                    stroke="#83ffae"
+                    strokeOpacity="0.26"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    transform="translate(4 3) scale(.92)"
+                    className="blur-[0.6px] transition-opacity duration-300 group-hover:opacity-100"
+                />
+                <path
+                    d="M50 2C69 0 78 8 83 18C96 28 99 39 96 49C92 67 87 79 80 84C68 96 55 101 43 98C29 95 16 90 10 79C3 67 -1 55 2 44C5 25 10 16 20 12C28 4 40 0 50 2Z"
+                    fill={`url(#${depthGradientId})`}
+                    transform="translate(-4 -2) scale(.84)"
+                    className="origin-center transition-transform duration-300 group-hover:scale-90"
+                />
+                <path
+                    d="M50 2C69 0 78 8 83 18C96 28 99 39 96 49C92 67 87 79 80 84C68 96 55 101 43 98C29 95 16 90 10 79C3 67 -1 55 2 44C5 25 10 16 20 12C28 4 40 0 50 2Z"
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeOpacity="0.12"
+                    strokeWidth="0.8"
+                    transform="translate(-1 -1) scale(1.01)"
+                />
+            </svg>
+            </div>
+
+            <div className="absolute inset-0 z-[1] flex items-center justify-center">
+                <div className="relative h-14 w-14 transition-transform duration-300 group-hover:scale-[1.04] sm:h-[4.35rem] sm:w-[4.35rem]">
+                    {showPlaceholder ? (
+                        <CatalogPawPlaceholder muted={!hasPublicCapture} />
+                    ) : hasPublicCapture ? (
+                        <Image
+                            src={iconSrc}
+                            fill
+                            unoptimized
+                            sizes="72px"
+                            className="object-contain"
+                            onError={() => setShowPlaceholder(true)}
+                            alt={imageAlt}
+                        />
+                    ) : (
+                        <CatalogUncapturedSilhouette
+                            src={iconSrc}
+                            alt={imageAlt}
+                            onError={() => setShowPlaceholder(true)}
+                        />
+                    )}
+                </div>
+            </div>
+            <div className="absolute right-1 top-1 z-[2] flex flex-col items-end gap-1">
+                {isLegendary ? (
+                    <span className="rounded-full border border-amber-400/35 bg-amber-400/90 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] text-black">
+                        S
+                    </span>
+                ) : null}
+                <AnimalDexNumberBadge number={animalDexNumber} compact showNewWhenMissing />
+            </div>
+        </div>
+    );
+}
+
 export default function SpeciesDirectory({
     locale,
     speciesEntries,
+    directoryImageState,
     currentPage,
     totalPages,
     currentQuery,
@@ -287,52 +435,48 @@ export default function SpeciesDirectory({
             ) : null}
 
             {speciesEntries.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {speciesEntries.map((entry) => {
                         const animalDexNumber = getAnimalDexNumberFromEntry(entry);
+                        const locationChipLabel = getLocationChipLabel(entry);
+                        const rarityLabel = copy.rarityStatuses[getSpeciesRarityStatusKey(entry.analysis.rarityScore)];
+                        const animalDexLabel = animalDexNumber ? `#${String(animalDexNumber).padStart(3, "0")}` : "NEW";
 
                         return (
-                        <article key={entry.slug} className="group overflow-hidden rounded-3xl bg-surface-900/70 flex flex-col">
-                            <div className="relative">
-                                <SpeciesImage
-                                    slug={entry.slug}
-                                    alt={getSpeciesImageAltText(entry, "thumbnail")}
-                                    className="aspect-[16/10] transition-transform duration-500 group-hover:scale-[1.02]"
-                                    sizes="(min-width: 1280px) 28vw, (min-width: 768px) 44vw, 100vw"
-                                />
-                                {animalDexNumber ? (
-                                    <div className="absolute right-3 top-3">
-                                        <AnimalDexNumberBadge number={animalDexNumber} compact />
+                        <Link
+                            key={entry.slug}
+                            href={`/animals/${entry.slug}`}
+                            className="group flex min-h-[7rem] items-center gap-3 rounded-[1.375rem] border border-line-300/80 bg-surface-900/70 p-3 shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-0.5 hover:border-primary-400/45 hover:bg-surface-800/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200 sm:min-h-[8rem] sm:gap-4 sm:p-4"
+                            aria-label={`${copy.readSpecies}: ${entry.name}`}
+                        >
+                            <CatalogGlyphThumbnail
+                                entry={entry}
+                                animalDexNumber={animalDexNumber}
+                                imageState={directoryImageState[entry.slug] ?? {hasPublicCapture: false, captureId: null}}
+                            />
+                            <article className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="font-mono text-[0.68rem] font-black uppercase tracking-[0.16em] text-primary-200">{animalDexLabel}</p>
+                                        <h2 className="mt-1 truncate font-display text-xl font-bold text-white transition-colors group-hover:text-primary-100 sm:text-2xl">{entry.name}</h2>
+                                        <p className="truncate text-sm italic text-ink-400">{entry.analysis.scientificName}</p>
                                     </div>
-                                ) : null}
-                            </div>
-                            <div className="p-5 flex flex-col gap-3 flex-1">
-                                <div className="flex flex-wrap gap-2">
-                                    <span className="rounded-full bg-primary-500/10 px-2.5 py-1 text-primary-200 text-xs font-semibold">
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <span className="max-w-full truncate rounded-full bg-primary-500/10 px-2.5 py-1 text-xs font-semibold text-primary-200">
                                         {entry.analysis.category}
                                     </span>
-                                    {getLocationChipLabel(entry) ? (
-                                        <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-ink-200 text-xs font-semibold">
-                                            {getLocationChipLabel(entry)}
+                                    {locationChipLabel ? (
+                                        <span className="max-w-[8.5rem] truncate rounded-full bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-ink-200 sm:max-w-[10rem]">
+                                            {locationChipLabel}
                                         </span>
                                     ) : null}
-                                    <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-ink-200 text-xs font-semibold">
-                                        {copy.rarityStatuses[getSpeciesRarityStatusKey(entry.analysis.rarityScore)]}
+                                    <span className="max-w-[8.5rem] truncate rounded-full bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-ink-200 sm:max-w-[10rem]">
+                                        {rarityLabel}
                                     </span>
                                 </div>
-                                <div>
-                                    <h2 className="font-display font-bold text-2xl text-white">{entry.name}</h2>
-                                    <p className="text-sm italic text-ink-400">{entry.analysis.scientificName}</p>
-                                </div>
-                                <p className="text-ink-300 leading-6 max-h-12 overflow-hidden">{entry.analysis.summary}</p>
-                                <Link
-                                    href={`/animals/${entry.slug}`}
-                                    className="mt-auto pt-1 text-primary-200 font-semibold hover:text-primary-100 transition-colors"
-                                >
-                                    {copy.readSpecies} →
-                                </Link>
-                            </div>
-                        </article>
+                            </article>
+                        </Link>
                         );
                     })}
                 </div>

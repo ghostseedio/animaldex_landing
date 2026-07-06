@@ -6,6 +6,9 @@ export const SPECIES_NO_IMAGE_SRC = "/images/placeholders/species-no-image.svg";
 
 type DiscoverFeedCandidate = {
     capture_id?: string;
+    species_profile_id?: string | null;
+    normalized_identity_key?: string | null;
+    scientific_name?: string | null;
     animal_name?: string | null;
     profile_username?: string | null;
     location_display_label?: string | null;
@@ -19,6 +22,9 @@ type DiscoverFeedCandidate = {
 
 type AnalysisResultCandidate = {
     capture_id: string;
+    species_profile_id?: string | null;
+    normalized_identity_key?: string | null;
+    scientific_name?: string | null;
     confidence?: number | null;
     captures?: {
         created_at?: string | null;
@@ -48,7 +54,287 @@ export type FeaturedMedia = {
 
 export type SpeciesImageReference = FeaturedMedia;
 
+export type SpeciesDirectoryImageState = {
+    hasPublicCapture: boolean;
+    captureId: string | null;
+};
+
 type SpeciesImageAltVariant = "featured" | "thumbnail" | "metadata";
+
+const DISCOVER_FEED_IMAGE_SELECT = [
+    "capture_id",
+    "species_profile_id",
+    "normalized_identity_key",
+    "scientific_name",
+    "animal_name",
+    "profile_username",
+    "location_display_label",
+    "human_context",
+    "zoo_or_wild",
+    "image_bucket",
+    "image_path",
+    "image_mime_type",
+    "image_media_kind"
+].join(",");
+
+function postgrestInFilter(values: string[]) {
+    const uniqueValues = Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+
+    return `in.(${uniqueValues.map((value) => `"${value.replaceAll("\"", "\\\"")}"`).join(",")})`;
+}
+
+function chunkValues<T>(items: T[], size: number) {
+    const chunks: T[][] = [];
+
+    for (let index = 0; index < items.length; index += size) {
+        chunks.push(items.slice(index, index + size));
+    }
+
+    return chunks;
+}
+
+function registerSpeciesDirectoryMatch(
+    index: Map<string, Map<string, Set<string>>>,
+    column: string,
+    value: string | null | undefined,
+    slug: string
+) {
+    const trimmed = value?.trim();
+
+    if (!trimmed) {
+        return;
+    }
+
+    if (!index.has(column)) {
+        index.set(column, new Map());
+    }
+
+    const valueMap = index.get(column)!;
+
+    if (!valueMap.has(trimmed)) {
+        valueMap.set(trimmed, new Set());
+    }
+
+    valueMap.get(trimmed)!.add(slug);
+}
+
+function registerNormalizedIdentityKeyVariants(
+    index: Map<string, Map<string, Set<string>>>,
+    value: string | null | undefined,
+    slug: string
+) {
+    const trimmed = value?.trim();
+
+    if (!trimmed) {
+        return;
+    }
+
+    registerSpeciesDirectoryMatch(index, "normalized_identity_key", trimmed, slug);
+
+    const withUnderscores = trimmed.replaceAll("-", "_");
+
+    if (withUnderscores !== trimmed) {
+        registerSpeciesDirectoryMatch(index, "normalized_identity_key", withUnderscores, slug);
+    }
+
+    const withHyphens = trimmed.replaceAll("_", "-");
+
+    if (withHyphens !== trimmed) {
+        registerSpeciesDirectoryMatch(index, "normalized_identity_key", withHyphens, slug);
+    }
+}
+
+function buildSpeciesDirectoryMatchIndex(entries: SpeciesEntry[]) {
+    const index = new Map<string, Map<string, Set<string>>>();
+
+    for (const entry of entries) {
+        for (const candidate of buildDiscoverFeedCandidates(entry)) {
+            if (candidate.column === "normalized_identity_key") {
+                registerNormalizedIdentityKeyVariants(index, candidate.value, entry.slug);
+            } else {
+                registerSpeciesDirectoryMatch(index, candidate.column, candidate.value, entry.slug);
+            }
+        }
+
+        registerNormalizedIdentityKeyVariants(index, entry.slug, entry.slug);
+        registerNormalizedIdentityKeyVariants(index, entry.normalizedIdentityKey ?? entry.slug, entry.slug);
+    }
+
+    return index;
+}
+
+function applyDiscoverFeedRowsToDirectoryState(
+    rows: DiscoverFeedCandidate[],
+    matchIndex: Map<string, Map<string, Set<string>>>,
+    stateBySlug: Map<string, SpeciesDirectoryImageState>
+) {
+    for (const row of rows) {
+        if (!isUsableDiscoverFeedImage(row) || !row.capture_id) {
+            continue;
+        }
+
+        const matchedSlugs = new Set<string>();
+        const columns: Array<keyof DiscoverFeedCandidate> = [
+            "species_profile_id",
+            "normalized_identity_key",
+            "scientific_name",
+            "animal_name"
+        ];
+
+        for (const column of columns) {
+            const value = row[column];
+
+            if (typeof value !== "string") {
+                continue;
+            }
+
+            const slugs = matchIndex.get(column)?.get(value.trim());
+
+            if (slugs) {
+                for (const slug of Array.from(slugs)) {
+                    matchedSlugs.add(slug);
+                }
+            }
+        }
+
+        for (const slug of Array.from(matchedSlugs)) {
+            const current = stateBySlug.get(slug);
+
+            if (!current || current.hasPublicCapture) {
+                continue;
+            }
+
+            stateBySlug.set(slug, {
+                hasPublicCapture: true,
+                captureId: row.capture_id
+            });
+        }
+    }
+}
+
+async function fetchDiscoverFeedRowsByColumn(column: string, values: string[]) {
+    const config = getSupabaseConfig();
+
+    if (!config || values.length === 0) {
+        return [] as DiscoverFeedCandidate[];
+    }
+
+    const rows: DiscoverFeedCandidate[] = [];
+
+    for (const chunk of chunkValues(values, 40)) {
+        const searchParams = new URLSearchParams({
+            select: DISCOVER_FEED_IMAGE_SELECT,
+            [column]: postgrestInFilter(chunk),
+            limit: "1000"
+        });
+
+        try {
+            const response = await fetch(`${config.supabaseUrl}/rest/v1/discover_feed_v1?${searchParams.toString()}`, {
+                headers: getSupabaseHeaders(config.anonKey),
+                next: {revalidate: 3600}
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            rows.push(...await response.json() as DiscoverFeedCandidate[]);
+        } catch {
+            continue;
+        }
+    }
+
+    return rows;
+}
+
+async function fetchAnalysisCaptureIdsByColumn(column: string, values: string[]) {
+    const config = getSupabaseConfig();
+
+    if (!config || values.length === 0) {
+        return [] as AnalysisResultCandidate[];
+    }
+
+    const rows: AnalysisResultCandidate[] = [];
+
+    for (const chunk of chunkValues(values, 40)) {
+        const searchParams = new URLSearchParams({
+            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,confidence,captures!inner(created_at)",
+            completed_at: "not.is.null",
+            [column]: postgrestInFilter(chunk),
+            "captures.is_discoverable": "eq.true",
+            "captures.status": "eq.ready",
+            limit: "1000",
+            order: "confidence.desc"
+        });
+
+        try {
+            const response = await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
+                headers: getSupabaseHeaders(config.anonKey),
+                next: {revalidate: 3600}
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            rows.push(...await response.json() as AnalysisResultCandidate[]);
+        } catch {
+            continue;
+        }
+    }
+
+    return rows;
+}
+
+function applyAnalysisRowsToDirectoryState(
+    rows: AnalysisResultCandidate[],
+    matchIndex: Map<string, Map<string, Set<string>>>,
+    stateBySlug: Map<string, SpeciesDirectoryImageState>
+) {
+    for (const row of rows) {
+        const captureId = row.capture_id?.trim();
+
+        if (!captureId) {
+            continue;
+        }
+
+        const matchedSlugs = new Set<string>();
+        const columns: Array<keyof AnalysisResultCandidate> = [
+            "species_profile_id",
+            "normalized_identity_key",
+            "scientific_name"
+        ];
+
+        for (const column of columns) {
+            const value = row[column];
+
+            if (typeof value !== "string") {
+                continue;
+            }
+
+            const slugs = matchIndex.get(column)?.get(value.trim());
+
+            if (slugs) {
+                for (const slug of Array.from(slugs)) {
+                    matchedSlugs.add(slug);
+                }
+            }
+        }
+
+        for (const slug of Array.from(matchedSlugs)) {
+            const current = stateBySlug.get(slug);
+
+            if (!current || current.hasPublicCapture) {
+                continue;
+            }
+
+            stateBySlug.set(slug, {
+                hasPublicCapture: true,
+                captureId
+            });
+        }
+    }
+}
 
 function getSupabaseConfig() {
     const supabaseUrl = getSupabaseUrl();
@@ -148,7 +434,7 @@ async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): P
 
     for (const candidate of buildDiscoverFeedCandidates(entry)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind",
+            select: DISCOVER_FEED_IMAGE_SELECT,
             [candidate.column]: `eq.${candidate.value}`,
             limit: "12"
         });
@@ -185,7 +471,7 @@ async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<st
 
     for (const candidate of buildSpeciesKeyCandidates(entry)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,confidence,captures!inner(created_at)",
+            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,confidence,captures!inner(created_at)",
             completed_at: "not.is.null",
             [candidate.column]: `eq.${candidate.value}`,
             "captures.is_discoverable": "eq.true",
@@ -373,6 +659,46 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
 }
 
 export async function getPublicCaptureImageReference(captureId: string, entry?: SpeciesEntry | null): Promise<FeaturedMedia | null> {
+    const normalizedCaptureId = captureId.trim();
+    if (!normalizedCaptureId) return null;
+
+    const [image] = await fetchCaptureImages([normalizedCaptureId]);
+    if (image) {
+        const discoverFeedMatch = await fetchDiscoverFeedCapture(normalizedCaptureId);
+        return createSpeciesImageReference({
+            captureId: normalizedCaptureId,
+            imageBucket: image.storage_bucket,
+            imagePath: image.storage_path,
+            mimeType: image.mime_type,
+            mediaKind: image.media_kind,
+            animalName: discoverFeedMatch?.animal_name ?? entry?.name ?? "AnimalDex capture",
+            username: discoverFeedMatch?.profile_username?.trim() || null,
+            contextLabel: discoverFeedMatch ? getContextLabel(discoverFeedMatch) : null,
+            locationDisplayLabel: getLocationDisplayLabel(discoverFeedMatch?.location_display_label)
+        });
+    }
+
+    const candidate = await fetchDiscoverFeedCapture(normalizedCaptureId);
+    if (!candidate?.capture_id) return null;
+
+    if (isUsableDiscoverFeedImage(candidate) && candidate.image_bucket && candidate.image_path) {
+        return createSpeciesImageReference({
+            captureId: candidate.capture_id,
+            imageBucket: candidate.image_bucket,
+            imagePath: candidate.image_path,
+            mimeType: candidate.image_mime_type ?? null,
+            mediaKind: candidate.image_media_kind ?? null,
+            animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
+            username: candidate.profile_username?.trim() || null,
+            contextLabel: getContextLabel(candidate),
+            locationDisplayLabel: getLocationDisplayLabel(candidate.location_display_label)
+        });
+    }
+
+    return null;
+}
+
+async function fetchDiscoverFeedCapture(captureId: string): Promise<DiscoverFeedCandidate | null> {
     const config = getSupabaseConfig();
     if (!config) return null;
 
@@ -389,39 +715,58 @@ export async function getPublicCaptureImageReference(captureId: string, entry?: 
         });
         if (!response.ok) return null;
         const [candidate] = await response.json() as DiscoverFeedCandidate[];
-        if (!candidate?.capture_id) return null;
-
-        if (isUsableDiscoverFeedImage(candidate) && candidate.image_bucket && candidate.image_path) {
-            return createSpeciesImageReference({
-                captureId: candidate.capture_id,
-                imageBucket: candidate.image_bucket,
-                imagePath: candidate.image_path,
-                mimeType: candidate.image_mime_type ?? null,
-                mediaKind: candidate.image_media_kind ?? null,
-                animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
-                username: candidate.profile_username?.trim() || null,
-                contextLabel: getContextLabel(candidate),
-                locationDisplayLabel: getLocationDisplayLabel(candidate.location_display_label)
-            });
-        }
-
-        const [image] = await fetchCaptureImages([candidate.capture_id]);
-        if (!image) return null;
-
-        return createSpeciesImageReference({
-            captureId: candidate.capture_id,
-            imageBucket: image.storage_bucket,
-            imagePath: image.storage_path,
-            mimeType: image.mime_type,
-            mediaKind: image.media_kind,
-            animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
-            username: candidate.profile_username?.trim() || null,
-            contextLabel: getContextLabel(candidate),
-            locationDisplayLabel: getLocationDisplayLabel(candidate.location_display_label)
-        });
+        return candidate ?? null;
     } catch {
         return null;
     }
+}
+
+export async function buildSpeciesDirectoryImageState(entries: SpeciesEntry[]) {
+    const stateBySlug = new Map<string, SpeciesDirectoryImageState>(
+        entries.map((entry) => [entry.slug, {hasPublicCapture: false, captureId: null}])
+    );
+
+    if (entries.length === 0) {
+        return stateBySlug;
+    }
+
+    const matchIndex = buildSpeciesDirectoryMatchIndex(entries);
+
+    for (const [column, valueMap] of Array.from(matchIndex.entries())) {
+        const rows = await fetchDiscoverFeedRowsByColumn(column, Array.from(valueMap.keys()));
+        applyDiscoverFeedRowsToDirectoryState(rows, matchIndex, stateBySlug);
+    }
+
+    const unresolvedEntries = entries.filter((entry) => !stateBySlug.get(entry.slug)?.hasPublicCapture);
+
+    if (unresolvedEntries.length > 0) {
+        const unresolvedMatchIndex = buildSpeciesDirectoryMatchIndex(unresolvedEntries);
+        const analysisRows: AnalysisResultCandidate[] = [];
+
+        for (const [column, valueMap] of Array.from(unresolvedMatchIndex.entries())) {
+            analysisRows.push(...await fetchAnalysisCaptureIdsByColumn(column, Array.from(valueMap.keys())));
+        }
+
+        const captureIds = Array.from(new Set(
+            analysisRows
+                .map((row) => row.capture_id?.trim())
+                .filter((captureId): captureId is string => Boolean(captureId))
+        ));
+        const images = await fetchCaptureImages(captureIds.slice(0, 120));
+        const captureIdsWithPhotos = new Set(images.map((image) => image.capture_id));
+
+        for (const row of analysisRows) {
+            const captureId = row.capture_id?.trim();
+
+            if (!captureId || !captureIdsWithPhotos.has(captureId)) {
+                continue;
+            }
+
+            applyAnalysisRowsToDirectoryState([row], unresolvedMatchIndex, stateBySlug);
+        }
+    }
+
+    return stateBySlug;
 }
 
 export async function getSpeciesRepresentativeImageReference(slug: string, entryOverride?: SpeciesEntry | null): Promise<FeaturedMedia | null> {

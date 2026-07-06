@@ -2,7 +2,15 @@ import "server-only";
 
 import type {SpeciesEntry} from "@/data/species";
 import {speciesEntries} from "@/data/species";
+import {
+    getBiologyAnchorSlugsToExclude,
+    getLegendaryCatalogSeedByBeastSlug,
+    getLegendaryCatalogSeedByBiologyLandingSlug
+} from "@/data/legendary-earth-beasts-catalog-seed";
+import {enrichLegendaryEarthBeastSpeciesEntry, legendaryEarthBeastSpeciesSlugs} from "@/data/legendary-earth-beasts-species";
 import {mergeCatalogMetadata} from "@/lib/animaldex-number";
+import {dedupeCatalogSpeciesEntries} from "@/lib/catalog-species-dedupe";
+import {resolveCollectionIdentityToken} from "@/lib/collection-identity-aliases";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type CatalogRow = {
@@ -72,8 +80,78 @@ const GUIDE_SELECT = [
 
 const INDEXED_PROFILE_SELECT = "id,animaldex_number,catalog_status";
 
-let catalogCache: {expiresAt: number; entries: SpeciesEntry[]} | null = null;
+export type CatalogBehaviorPrinciple = {
+    principleName: string;
+    coreLesson: string | null;
+    bestUseCases: string[];
+};
+
+type CatalogBehaviorPrincipleIndex = {
+    byProfileId: Map<string, CatalogBehaviorPrinciple>;
+    byIdentityKey: Map<string, CatalogBehaviorPrinciple>;
+};
+
+let catalogCache: {
+    expiresAt: number;
+    entries: SpeciesEntry[];
+    behaviorPrinciples: CatalogBehaviorPrincipleIndex;
+} | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000;
+
+function parseBestUseCases(value: unknown) {
+    if (!Array.isArray(value)) return [] as string[];
+    return value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter(Boolean);
+}
+
+function behaviorPrincipleFromRow(row: CatalogRow): CatalogBehaviorPrinciple | null {
+    const principleName = clean(row.principle_name);
+    if (!principleName) return null;
+
+    return {
+        principleName,
+        coreLesson: clean(row.core_lesson),
+        bestUseCases: parseBestUseCases(row.best_use_cases)
+    };
+}
+
+function buildBehaviorPrincipleIndex(catalogRows: CatalogRow[]) {
+    const byProfileId = new Map<string, CatalogBehaviorPrinciple>();
+    const byIdentityKey = new Map<string, CatalogBehaviorPrinciple>();
+
+    for (const row of catalogRows) {
+        const principle = behaviorPrincipleFromRow(row);
+        if (!principle) continue;
+
+        byProfileId.set(row.species_profile_id.toLowerCase(), principle);
+
+        const identityKey = clean(row.normalized_identity_key)?.toLowerCase();
+        if (identityKey) {
+            byIdentityKey.set(identityKey, principle);
+        }
+    }
+
+    return {byProfileId, byIdentityKey};
+}
+
+export function resolveCatalogBehaviorPrinciple(
+    index: CatalogBehaviorPrincipleIndex,
+    speciesProfileId: string | null | undefined,
+    normalizedIdentityKey: string | null | undefined
+): CatalogBehaviorPrinciple | null {
+    const profileId = clean(speciesProfileId)?.toLowerCase();
+    if (profileId && index.byProfileId.has(profileId)) {
+        return index.byProfileId.get(profileId) ?? null;
+    }
+
+    const identityKey = clean(normalizedIdentityKey)?.toLowerCase();
+    if (identityKey && index.byIdentityKey.has(identityKey)) {
+        return index.byIdentityKey.get(identityKey) ?? null;
+    }
+
+    return null;
+}
 
 function clean(value: string | null | undefined) {
     const trimmed = value?.trim();
@@ -262,14 +340,26 @@ async function loadDatabaseEntries() {
             guides.get(row.species_profile_id) ?? null
         ));
     }
-    return Array.from(bySlug.values());
+    return {
+        entries: Array.from(bySlug.values()),
+        behaviorPrinciples: buildBehaviorPrincipleIndex(catalogRows)
+    };
 }
 
 export async function getDatabaseSpeciesEntries() {
     if (catalogCache && catalogCache.expiresAt > Date.now()) return catalogCache.entries;
-    const entries = await loadDatabaseEntries();
-    catalogCache = {entries, expiresAt: Date.now() + CACHE_TTL_MS};
+    const {entries, behaviorPrinciples} = await loadDatabaseEntries();
+    catalogCache = {entries, behaviorPrinciples, expiresAt: Date.now() + CACHE_TTL_MS};
     return entries;
+}
+
+export async function getCatalogBehaviorPrincipleIndex() {
+    if (catalogCache && catalogCache.expiresAt > Date.now()) {
+        return catalogCache.behaviorPrinciples;
+    }
+
+    await getDatabaseSpeciesEntries();
+    return catalogCache?.behaviorPrinciples ?? {byProfileId: new Map(), byIdentityKey: new Map()};
 }
 
 export async function getDatabaseSpeciesBySlug(slug: string) {
@@ -289,24 +379,71 @@ export async function getDatabaseSpeciesBySlug(slug: string) {
     }) ?? null;
 }
 
-export async function getResolvedSpeciesBySlug(slug: string) {
-    const normalized = slug.trim().toLowerCase();
-    const staticEntry = speciesEntries.find((entry) => entry.slug === normalized) ?? null;
-    const databaseEntry = await getDatabaseSpeciesBySlug(normalized);
-
-    if (staticEntry) {
-        return mergeCatalogMetadata(staticEntry, databaseEntry);
+function resolveLegendaryCatalogEntry(staticEntry: SpeciesEntry, databaseEntries: SpeciesEntry[]) {
+    const seed = getLegendaryCatalogSeedByBeastSlug(staticEntry.slug);
+    if (!seed) {
+        return staticEntry;
     }
 
-    return databaseEntry;
+    const biologyCatalogEntry = databaseEntries.find((entry) => entry.slug === seed.biologyLandingSlug) ?? null;
+    return enrichLegendaryEarthBeastSpeciesEntry(staticEntry, biologyCatalogEntry);
+}
+
+export async function getResolvedSpeciesBySlug(slug: string) {
+    const normalized = slug.trim().toLowerCase();
+    const canonicalSlug = resolveCollectionIdentityToken(normalized.replace(/-/g, "_")).replace(/_/g, "-");
+    const slugCandidates = canonicalSlug === normalized
+        ? [normalized]
+        : [canonicalSlug, normalized];
+    const databaseEntries = await getDatabaseSpeciesEntries();
+
+    for (const candidate of slugCandidates) {
+        const staticEntry = speciesEntries.find((entry) => entry.slug === candidate) ?? null;
+        const databaseEntry = databaseEntries.find((entry) => entry.slug === candidate) ?? null;
+
+        if (staticEntry && legendaryEarthBeastSpeciesSlugs.has(staticEntry.slug)) {
+            return resolveLegendaryCatalogEntry(staticEntry, databaseEntries);
+        }
+
+        if (staticEntry) {
+            return mergeCatalogMetadata(staticEntry, databaseEntry);
+        }
+
+        const biologySeed = getLegendaryCatalogSeedByBiologyLandingSlug(candidate);
+        if (biologySeed) {
+            const beastStaticEntry = speciesEntries.find((entry) => entry.slug === biologySeed.beastSlug) ?? null;
+            if (beastStaticEntry) {
+                return resolveLegendaryCatalogEntry(beastStaticEntry, databaseEntries);
+            }
+        }
+
+        if (databaseEntry) {
+            return databaseEntry;
+        }
+    }
+
+    return null;
 }
 
 export async function getUnifiedSpeciesEntries() {
     const databaseEntries = await getDatabaseSpeciesEntries();
     const databaseBySlug = new Map(databaseEntries.map((entry) => [entry.slug, entry]));
     const staticSlugs = new Set(speciesEntries.map((entry) => entry.slug));
-    const enrichedStatic = speciesEntries.map((entry) => mergeCatalogMetadata(entry, databaseBySlug.get(entry.slug)));
+    const biologyAnchorSlugs = getBiologyAnchorSlugsToExclude();
+    const enrichedStatic = speciesEntries.map((entry) => {
+        if (legendaryEarthBeastSpeciesSlugs.has(entry.slug)) {
+            const seed = getLegendaryCatalogSeedByBeastSlug(entry.slug);
+            const biologyCatalogEntry = seed ? databaseBySlug.get(seed.biologyLandingSlug) ?? null : null;
+            return enrichLegendaryEarthBeastSpeciesEntry(entry, biologyCatalogEntry);
+        }
 
-    return [...enrichedStatic, ...databaseEntries.filter((entry) => !staticSlugs.has(entry.slug))]
-        .sort((left, right) => left.name.localeCompare(right.name));
+        return mergeCatalogMetadata(entry, databaseBySlug.get(entry.slug));
+    });
+
+    return dedupeCatalogSpeciesEntries(
+        [
+            ...enrichedStatic,
+            ...databaseEntries.filter((entry) => !staticSlugs.has(entry.slug) && !biologyAnchorSlugs.has(entry.slug))
+        ]
+    ).sort((left, right) => left.name.localeCompare(right.name));
 }

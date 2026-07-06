@@ -87,7 +87,7 @@ export default async function WildProfilePage({params}: {params: {locale: string
                         <a href={appStoreUrl} className="inline-flex rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
                             {profile.hasInProgressInterview ? "Continue in app" : "Start interview in app"}
                         </a>
-                        <AppPrimaryLink href="/answers/what-animal-am-i">Learn about Wild Profile</AppPrimaryLink>
+                        <AppPrimaryLink href="/what-animal-am-i">Learn about Wild Profile</AppPrimaryLink>
                     </div>
                 </section>
             ) : (

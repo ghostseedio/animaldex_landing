@@ -2,6 +2,7 @@ import "server-only";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolveCollectionArchetype} from "@/lib/collection-archetype";
+import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
@@ -251,7 +252,7 @@ function toPublicCapture(
     row: PublicCaptureRow,
     speciesSlug: string | null
 ): PublicProfileCapture {
-    const imageSrc = `/api/species-images/capture?captureId=${encodeURIComponent(row.capture_id)}`;
+    const imageSrc = getCaptureImageRoute(row.capture_id);
     const stats = row.game_stats ?? {};
 
     return {

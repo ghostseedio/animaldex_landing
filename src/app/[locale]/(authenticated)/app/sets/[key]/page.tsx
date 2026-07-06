@@ -3,20 +3,21 @@ import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import PowerSetDetailView from "@/app/[locale]/(authenticated)/app/sets/power-set-detail-view";
 import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
-import {getAppCaptures} from "@/data/authenticated-app";
+import {decorateCapture} from "@/data/authenticated-app";
 import {syncPowerSetCompletions} from "@/data/power-set-completions";
 import {getPowerSetDetail} from "@/data/power-sets";
+import {getUserCaptures} from "@/data/user-captures";
 
 export default async function PowerSetDetailPage({params}: {params: {key: string}}) {
     const powerKey = decodeURIComponent(params.key);
-    const captures = await getAppCaptures();
+    const captures = (await getUserCaptures(2000)).map(decorateCapture);
     const detail = await getPowerSetDetail(powerKey, captures);
 
     if (!detail) {
         notFound();
     }
 
-    await syncPowerSetCompletions([detail.album]);
+    void syncPowerSetCompletions([detail.album]);
 
     return (
         <div className="space-y-8">

@@ -3,7 +3,8 @@ import "server-only";
 import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {getSpeciesImageRoute} from "@/data/species-images";
-import {getAuthenticatedUserProfile, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
+import {getAuthenticatedUserProfile, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
+import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export type AppProfile = NonNullable<Awaited<ReturnType<typeof getAuthenticatedUserProfile>>>;
@@ -66,6 +67,20 @@ export type AppTrade = {
     receiverSlug: string | null;
 };
 
+export type AppCreditOffer = {
+    id: string;
+    bidderUserId: string;
+    targetOwnerUserId: string;
+    targetCaptureId: string;
+    targetAnimalName: string;
+    bidderName: string;
+    ownerName: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    expiresAt: string;
+};
+
 export type AppAlbum = {
     id: string;
     name: string;
@@ -80,6 +95,29 @@ export type AppPowerSet = {
     captureIds: string[];
 };
 
+function speciesEntryMatchesIdentity(
+    entry: {slug: string; normalizedIdentityKey?: string | null; speciesProfileId?: string | null},
+    identity: string
+) {
+    const normalized = identity.trim().toLowerCase();
+    const slugCandidates = collectionIdentityMatchKeys(normalized.replace(/-/g, "_"));
+
+    if (slugCandidates.includes(entry.slug.replace(/-/g, "_"))) {
+        return true;
+    }
+
+    const entryIdentity = entry.normalizedIdentityKey?.toLowerCase();
+
+    if (entryIdentity && slugCandidates.includes(entryIdentity)) {
+        return true;
+    }
+
+    return entry.slug === normalized
+        || entry.slug === normalized.replace(/_/g, "-")
+        || entryIdentity === normalized
+        || entry.speciesProfileId?.toLowerCase() === normalized;
+}
+
 function findSpeciesForCaptureIdentity(identity: string | null | undefined) {
     if (!identity) {
         return null;
@@ -87,10 +125,7 @@ function findSpeciesForCaptureIdentity(identity: string | null | undefined) {
 
     const normalized = identity.trim().toLowerCase();
 
-    return speciesEntries.find((entry) => entry.slug === normalized
-        || entry.slug === normalized.replace(/_/g, "-")
-        || entry.normalizedIdentityKey?.toLowerCase() === normalized
-        || entry.speciesProfileId?.toLowerCase() === normalized) ?? null;
+    return speciesEntries.find((entry) => speciesEntryMatchesIdentity(entry, normalized)) ?? null;
 }
 
 async function findSpeciesForCaptureIdentityAsync(identity: string | null | undefined) {
@@ -107,10 +142,7 @@ async function findSpeciesForCaptureIdentityAsync(identity: string | null | unde
 
     const unified = await getUnifiedSpeciesEntries();
 
-    return unified.find((entry) => entry.slug === normalized
-        || entry.slug === normalized.replace(/_/g, "-")
-        || entry.normalizedIdentityKey?.toLowerCase() === normalized
-        || entry.speciesProfileId?.toLowerCase() === normalized) ?? null;
+    return unified.find((entry) => speciesEntryMatchesIdentity(entry, normalized)) ?? null;
 }
 
 export type AppJournalEntry = {
@@ -192,7 +224,23 @@ export async function getAuthenticatedAppContext() {
     return {profile};
 }
 
-export async function getAppCaptures(limit = 160) {
+export async function getAppCreditBalance() {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const {data} = await supabase
+        .from("credit_balances")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    return data?.balance == null ? 0 : Number(data.balance);
+}
+
+export async function getAppCaptures(limit = 2000) {
     const captures = await getUserCaptures(limit);
 
     return Promise.all(captures.map(decorateCaptureAsync));
@@ -207,6 +255,15 @@ export function getCaptureStats(captures: AppCapture[]) {
         wild: captures.filter((capture) => capture.contextLabel === "Wild").length,
         zoo: captures.filter((capture) => capture.contextLabel === "Zoo").length,
         domestic: captures.filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm").length,
+        catalogSize: speciesEntries.length
+    };
+}
+
+export async function getAppCaptureStats() {
+    const stats = await getUserCaptureStats();
+
+    return {
+        ...stats,
         catalogSize: speciesEntries.length
     };
 }
@@ -348,6 +405,27 @@ export async function getAppTrades(limit = 40): Promise<AppTrade[]> {
         expiresAt: row.expires_at,
         offererSlug: speciesEntries.find((entry) => entry.name.toLowerCase() === String(row.offerer_animal_name || "").toLowerCase())?.slug ?? null,
         receiverSlug: speciesEntries.find((entry) => entry.name.toLowerCase() === String(row.receiver_animal_name || "").toLowerCase())?.slug ?? null
+    }));
+}
+
+export async function getAppCreditOffers(limit = 40): Promise<AppCreditOffer[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+    const {data} = await supabase.from("capture_credit_offer_detail_v1")
+        .select("id,bidder_user_id,target_owner_user_id,target_capture_id,amount,status,created_at,expires_at,target_animal_name,bidder_profile_display_name,owner_profile_display_name")
+        .order("created_at", {ascending: false}).limit(limit);
+    return ((data ?? []) as QueryRow[]).map((row) => ({
+        id: row.id,
+        bidderUserId: row.bidder_user_id,
+        targetOwnerUserId: row.target_owner_user_id,
+        targetCaptureId: row.target_capture_id,
+        targetAnimalName: row.target_animal_name || "Animal",
+        bidderName: row.bidder_profile_display_name || "Collector",
+        ownerName: row.owner_profile_display_name || "Collector",
+        amount: Number(row.amount ?? 0),
+        status: row.status,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at
     }));
 }
 

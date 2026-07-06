@@ -2,6 +2,9 @@ import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
 import {getDiscoverCollectors} from "@/data/discover-collectors";
 import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
 
+const INITIAL_DISCOVER_TIMELINE_LIMIT = 12;
+const INITIAL_COLLECTOR_LIMIT = 12;
+
 export default async function AppHomePage({
     searchParams,
     params
@@ -10,8 +13,8 @@ export default async function AppHomePage({
     params: {locale: string};
 }) {
     const [{timeline, featured}, collectors] = await Promise.all([
-        getDiscoverTimelineBundle(60),
-        getDiscoverCollectors(24)
+        getDiscoverTimelineBundle(INITIAL_DISCOVER_TIMELINE_LIMIT),
+        getDiscoverCollectors(INITIAL_COLLECTOR_LIMIT)
     ]);
     const initialSegment = searchParams?.view === "collectors" ? "collectors" : "discover";
 

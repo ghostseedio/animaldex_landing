@@ -3,7 +3,7 @@ import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {blogPosts} from "@/data/blog";
+import {getIndexedBlogPosts} from "@/data/blog";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
@@ -56,7 +56,8 @@ export async function generateMetadata({searchParams}: BlogIndexPageProps): Prom
     const locale = await getLocale();
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
-    const postKeywords = Array.from(new Set(blogPosts.flatMap((post) => post.searchIntents)));
+    const indexedBlogPosts = getIndexedBlogPosts();
+    const postKeywords = Array.from(new Set(indexedBlogPosts.flatMap((post) => post.searchIntents)));
     const title = messages.blog?.metaTitle || "AnimalDex Blog";
     const description = messages.blog?.metaDescription || messages.meta?.description || "";
     const currentPage = getRequestedPage(searchParams?.page);
@@ -105,8 +106,9 @@ export async function generateMetadata({searchParams}: BlogIndexPageProps): Prom
 export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) {
     const t = await getTranslations("blog");
     const locale = await getLocale();
+    const indexedBlogPosts = getIndexedBlogPosts();
     const currentPage = getRequestedPage(searchParams?.page);
-    const totalPages = Math.max(1, Math.ceil(blogPosts.length / POSTS_PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(indexedBlogPosts.length / POSTS_PER_PAGE));
 
     if (currentPage > totalPages) {
         notFound();
@@ -115,7 +117,7 @@ export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) 
     const pagePath = getBlogPagePath(currentPage);
     const pageUrl = getAbsoluteUrl(locale, pagePath);
     const pageStart = (currentPage - 1) * POSTS_PER_PAGE;
-    const paginatedPosts = blogPosts.slice(pageStart, pageStart + POSTS_PER_PAGE);
+    const paginatedPosts = indexedBlogPosts.slice(pageStart, pageStart + POSTS_PER_PAGE);
     const paginationItems = getPaginationItems(currentPage, totalPages);
     const schema = {
         "@context": "https://schema.org",

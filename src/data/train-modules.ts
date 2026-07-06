@@ -1,13 +1,11 @@
 import "server-only";
 
-import {
-    getAppCaptures,
-    getAppJournalEntries,
-    getAppProgression
-} from "@/data/authenticated-app";
-import {buildPowerSetAlbums, getCatalogPowerSetCount, summarizePowerSets} from "@/data/power-sets";
+import type {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import {getAppJournalEntries} from "@/data/authenticated-app";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import type {SupabaseClient} from "@supabase/supabase-js";
 
 type QueryRow = Record<string, any>;
 
@@ -16,13 +14,48 @@ export type TrainModuleId = "dailyCompanion" | "wildProfile" | "packs" | "missio
 export type TrainModuleDefinition = {
     id: TrainModuleId;
     href: string;
-    eyebrow: string;
     title: string;
     subtitle: string;
-    thumbnailUrl: string;
-    accentClass: string;
+    icon: AppIconName;
     statusLabel: string | null;
 };
+
+export type TrainPageData = {
+    modules: TrainModuleDefinition[];
+};
+
+const TRAIN_MODULE_CATALOG: Array<Pick<TrainModuleDefinition, "id" | "title" | "subtitle" | "icon">> = [
+    {
+        id: "dailyCompanion",
+        title: "Daily Companion",
+        subtitle: "Journal alignment and companion proofs.",
+        icon: "calendar"
+    },
+    {
+        id: "wildProfile",
+        title: "Wild Profile",
+        subtitle: "Origin, Apex, and Active roles.",
+        icon: "profile"
+    },
+    {
+        id: "packs",
+        title: "Sealed Packs",
+        subtitle: "List, sell, and open ten-capture packs.",
+        icon: "grid"
+    },
+    {
+        id: "missions",
+        title: "Missions",
+        subtitle: "Progression milestones and credit rewards.",
+        icon: "mission"
+    },
+    {
+        id: "sets",
+        title: "Power Sets",
+        subtitle: "Set completion across your collection.",
+        icon: "sets"
+    }
+];
 
 export type TrainIdentityRole = {
     label: string;
@@ -94,13 +127,128 @@ export type TrainDailyCompanionState = {
     recentJournalDate: string | null;
 };
 
-const TRAIN_THUMBNAILS = {
-    dailyCompanion: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/batfish-journal-thumbnail.webp",
-    wildProfile: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/lion-identity-thumbnail.webp",
-    packs: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/create-a-pack-2-thumbnail.webp",
-    missions: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-missions-thumbnail.webp",
-    sets: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/sets-thumbnail.webp"
-};
+function trainModuleHref(localePrefix: string, id: TrainModuleId) {
+    switch (id) {
+        case "dailyCompanion":
+            return `${localePrefix}/app/train/daily-companion`;
+        case "wildProfile":
+            return `${localePrefix}/app/train/wild-profile`;
+        case "packs":
+            return `${localePrefix}/app/train/packs`;
+        case "missions":
+            return `${localePrefix}/app/missions`;
+        case "sets":
+            return `${localePrefix}/app/sets`;
+    }
+}
+
+async function getTrainWildProfileIndexStatus(supabase: SupabaseClient, userId: string) {
+    const [profileResult, sessionResult] = await Promise.all([
+        supabase
+            .from("user_identity_profiles")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("status", "active")
+            .limit(1)
+            .maybeSingle(),
+        supabase
+            .from("identity_questionnaire_sessions")
+            .select("id")
+            .eq("user_id", userId)
+            .in("status", ["in_progress", "ready_for_generation", "generating"])
+            .limit(1)
+    ]);
+
+    return {
+        hasProfile: Boolean(profileResult.data),
+        hasInProgressInterview: Boolean((sessionResult.data ?? []).length)
+    };
+}
+
+async function getTrainPackIndexStatus(supabase: SupabaseClient, userId: string) {
+    const [unopenedResult, eligibleResult, lockedResult] = await Promise.all([
+        supabase
+            .from("animal_pack_marketplace_v1")
+            .select("id", {count: "exact", head: true})
+            .eq("buyer_user_id", userId)
+            .eq("status", "sold")
+            .is("opened_at", null),
+        supabase
+            .from("owned_capture_manifest_v1")
+            .select("capture_id,battle_power")
+            .eq("user_id", userId)
+            .eq("is_discoverable", true)
+            .not("game_stats", "is", null)
+            .limit(12),
+        supabase
+            .from("my_sealed_pack_locked_capture_ids_v1")
+            .select("capture_id")
+    ]);
+
+    const locked = new Set(((lockedResult.data ?? []) as QueryRow[]).map((row) => String(row.capture_id ?? "")));
+    const eligibleCount = ((eligibleResult.data ?? []) as QueryRow[])
+        .filter((row) => row.capture_id && !locked.has(String(row.capture_id)) && Number(row.battle_power ?? 0) > 0)
+        .length;
+
+    return {
+        unopenedPacks: unopenedResult.count ?? 0,
+        canList: eligibleCount >= 10
+    };
+}
+
+async function getTrainMissionIndexStatus(supabase: SupabaseClient) {
+    const [summaryResult, missionsResult] = await Promise.all([
+        supabase
+            .from("user_progression_summary_v1")
+            .select("verified_overall_score,trade_unlocked_at")
+            .limit(1)
+            .maybeSingle(),
+        supabase
+            .from("user_mission_status_v1")
+            .select("unlock_score_min,requires_trade_unlocked,completed_count")
+    ]);
+
+    const overallScore = Number((summaryResult.data as QueryRow | null)?.verified_overall_score ?? 0);
+    const tradeUnlocked = Boolean((summaryResult.data as QueryRow | null)?.trade_unlocked_at);
+
+    return ((missionsResult.data ?? []) as QueryRow[]).filter((row) => {
+        const locked = overallScore < Number(row.unlock_score_min ?? 0)
+            || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked);
+        return !locked && Number(row.completed_count ?? 0) === 0;
+    }).length;
+}
+
+async function getTrainSetIndexStatus(supabase: SupabaseClient, userId: string) {
+    const {count} = await supabase
+        .from("profile_power_set_completions")
+        .select("power_key", {count: "exact", head: true})
+        .eq("user_id", userId);
+
+    return count ?? 0;
+}
+
+function buildTrainModules(
+    localePrefix: string,
+    status: Record<TrainModuleId, string | null>
+): TrainModuleDefinition[] {
+    return TRAIN_MODULE_CATALOG.map((module) => ({
+        ...module,
+        href: trainModuleHref(localePrefix, module.id),
+        statusLabel: status[module.id]
+    }));
+}
+
+function emptyTrainPageData(localePrefix: string): TrainPageData {
+    return {
+        modules: buildTrainModules(localePrefix, {
+            dailyCompanion: null,
+            wildProfile: null,
+            packs: null,
+            missions: null,
+            sets: null
+        })
+    };
+}
 
 function readNumber(row: QueryRow, key: string, fallback = 0) {
     const value = Number(row[key] ?? fallback);
@@ -187,7 +335,7 @@ function toTrainPackCapture(row: QueryRow): TrainPackCapture | null {
         scientificName: typeof row.scientific_name === "string" && row.scientific_name.trim() ? row.scientific_name.trim() : null,
         speciesSlug: typeof row.normalized_identity_key === "string" && row.normalized_identity_key.trim() ? row.normalized_identity_key.trim().replace(/_/g, "-") : null,
         capturedAt: row.capture_created_at ?? null,
-        imageSrc: `/api/species-images/capture?captureId=${encodeURIComponent(captureId)}`,
+        imageSrc: getCaptureImageRoute(captureId),
         isDiscoverable: row.is_discoverable === true,
         isChallengeReady: row.is_challenge_ready === true,
         challengeHealth: readNumber(row, "challenge_health", 0),
@@ -465,78 +613,42 @@ function mapTrainAnimalPackRows(rows: QueryRow[], userId: string): TrainAnimalPa
     }));
 }
 
-export async function getTrainModules(localePrefix: string): Promise<TrainModuleDefinition[]> {
-    const [captures, progression, dailyCompanion, wildProfile, packs, totalSetCount, eligiblePackCaptures] = await Promise.all([
-        getAppCaptures(),
-        getAppProgression(),
-        getTrainDailyCompanionState(),
-        getTrainWildProfileState(),
-        getTrainAnimalPacks(),
-        getCatalogPowerSetCount(),
-        getTrainPackEligibleCaptures()
-    ]);
-    const powerSetAlbums = await buildPowerSetAlbums(captures);
-    const powerSetSummary = summarizePowerSets(powerSetAlbums);
-    const inProgressSetCount = powerSetSummary.inProgressCount;
-    const startedSetCount = powerSetAlbums.filter((album) => album.found > 0).length;
-    const activeMissionCount = progression.missions.filter((mission) => !mission.isLocked && mission.completedCount === 0).length;
-    const unopenedPackCount = packs.filter((pack) => pack.isBuyer && pack.status === "sold" && !pack.openedAt).length;
-    const modules: TrainModuleDefinition[] = [
-        {
-            id: "dailyCompanion",
-            href: `${localePrefix}/app/train/daily-companion`,
-            eyebrow: "Daily",
-            title: "Daily Companion",
-            subtitle: "Companion tasks, proofs, and stat growth.",
-            thumbnailUrl: TRAIN_THUMBNAILS.dailyCompanion,
-            accentClass: "text-primary-200",
-            statusLabel: dailyCompanion.completedToday ? "Done today" : null
-        },
-        {
-            id: "wildProfile",
-            href: `${localePrefix}/app/train/wild-profile`,
-            eyebrow: "Identity",
-            title: "Wild Profile",
-            subtitle: "Origin, Apex, and Active animal roles.",
-            thumbnailUrl: TRAIN_THUMBNAILS.wildProfile,
-            accentClass: "text-violet-300",
-            statusLabel: wildProfile.hasInProgressInterview ? "In progress" : wildProfile.hasProfile ? "Complete" : null
-        },
-        {
-            id: "packs",
-            href: `${localePrefix}/app/train/packs`,
-            eyebrow: "Sealed",
-            title: "Your Packs",
-            subtitle: "Open purchased packs or build a sealed listing.",
-            thumbnailUrl: TRAIN_THUMBNAILS.packs,
-            accentClass: "text-orange-300",
-            statusLabel: unopenedPackCount > 0
-                ? unopenedPackCount === 1 ? "1 unopened" : `${unopenedPackCount} unopened`
-                : eligiblePackCaptures.length >= 10 ? "Ready" : null
-        },
-        {
-            id: "missions",
-            href: `${localePrefix}/app/missions`,
-            eyebrow: "Progress",
-            title: "Missions",
-            subtitle: "Earn credits through progression milestones.",
-            thumbnailUrl: TRAIN_THUMBNAILS.missions,
-            accentClass: "text-primary-200",
-            statusLabel: activeMissionCount > 0 ? `${activeMissionCount} active` : null
-        },
-        {
-            id: "sets",
-            href: `${localePrefix}/app/sets`,
-            eyebrow: "Collect",
-            title: "Sets",
-            subtitle: "Track tailored set progress from your captures.",
-            thumbnailUrl: TRAIN_THUMBNAILS.sets,
-            accentClass: "text-primary-200",
-            statusLabel: inProgressSetCount > 0
-                ? totalSetCount > 0 ? `${inProgressSetCount}/${totalSetCount} in progress` : `${inProgressSetCount} in progress`
-                : startedSetCount > 0 ? `${startedSetCount} started` : null
-        }
-    ];
+export async function getTrainPageData(localePrefix: string): Promise<TrainPageData> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return emptyTrainPageData(localePrefix);
 
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return emptyTrainPageData(localePrefix);
+
+    const [dailyCompanion, wildProfile, packs, activeMissions, completedSets] = await Promise.all([
+        getTrainDailyCompanionState(),
+        getTrainWildProfileIndexStatus(supabase, user.id),
+        getTrainPackIndexStatus(supabase, user.id),
+        getTrainMissionIndexStatus(supabase),
+        getTrainSetIndexStatus(supabase, user.id)
+    ]);
+
+    return {
+        modules: buildTrainModules(localePrefix, {
+            dailyCompanion: dailyCompanion.completedToday ? "Complete today" : null,
+            wildProfile: wildProfile.hasInProgressInterview
+                ? "In progress"
+                : wildProfile.hasProfile
+                    ? "Profile ready"
+                    : null,
+            packs: packs.unopenedPacks > 0
+                ? packs.unopenedPacks === 1 ? "1 ready to open" : `${packs.unopenedPacks} ready to open`
+                : packs.canList ? "Ready to list" : null,
+            missions: activeMissions > 0 ? `${activeMissions} active` : null,
+            sets: completedSets > 0
+                ? completedSets === 1 ? "1 set completed" : `${completedSets} sets completed`
+                : null
+        })
+    };
+}
+
+/** @deprecated Use getTrainPageData */
+export async function getTrainModules(localePrefix: string): Promise<TrainModuleDefinition[]> {
+    const {modules} = await getTrainPageData(localePrefix);
     return modules;
 }

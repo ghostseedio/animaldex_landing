@@ -14,6 +14,8 @@ import {additionalSpeciesEntriesInputTwelve} from "@/data/species-expansion-pack
 import {additionalSpeciesEntriesInputThirteen} from "@/data/species-expansion-pack-13";
 import {additionalSpeciesEntriesInputFourteen} from "@/data/species-expansion-pack-14";
 import {additionalSpeciesEntriesInputFifteen} from "@/data/species-expansion-pack-15";
+import {additionalSpeciesEntriesInputSixteen} from "@/data/species-expansion-pack-16";
+import {additionalSpeciesEntriesInputSeventeen} from "@/data/legendary-earth-beasts-species";
 import {NativeRangeRegionKey, speciesMatchesNativeRangeRegion} from "@/data/native-range";
 import {getLocationAnimalSpeciesSlugs} from "@/data/locations";
 
@@ -83,6 +85,7 @@ export type SpeciesDirectoryPage = {
 export const SPECIES_DIRECTORY_PAGE_SIZE = 48;
 
 type SpeciesEntryInput = Omit<SpeciesEntry, "heroTitle" | "publishedAt" | "updatedAt" | "featuredImage" | "searchIntents" | "relatedSpecies" | "premiumDetails"> & {
+    heroTitle?: string;
     premiumDetails?: SpeciesPremiumDetails;
     relatedSpecies?: string[];
     searchIntents?: string[];
@@ -121,7 +124,9 @@ function createSpeciesEntry({
     analysis,
     premiumDetails,
     relatedSpecies = [],
-    searchIntents = []
+    searchIntents = [],
+    databaseSource,
+    heroTitle
 }: SpeciesEntryInput): SpeciesEntry {
     const normalizedName = name.toLowerCase();
 
@@ -130,7 +135,7 @@ function createSpeciesEntry({
         name,
         speciesProfileId,
         normalizedIdentityKey: normalizedIdentityKey ?? slug,
-        heroTitle: `${name} — Identification, Habitat, Rarity & Facts`,
+        heroTitle: heroTitle ?? `${name} — Identification, Habitat, Rarity & Facts`,
         publishedAt: "2026-04-10",
         updatedAt: "2026-04-10",
         featuredImage: {
@@ -153,7 +158,8 @@ function createSpeciesEntry({
         ],
         analysis,
         premiumDetails: premiumDetails ?? buildDefaultPremiumDetails(name, analysis),
-        relatedSpecies
+        relatedSpecies,
+        databaseSource
     };
 }
 
@@ -4001,7 +4007,9 @@ const speciesData: SpeciesEntry[] = [
     ...additionalSpeciesEntriesInputTwelve.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputThirteen.map(createSpeciesEntry),
     ...additionalSpeciesEntriesInputFourteen.map(createSpeciesEntry),
-    ...additionalSpeciesEntriesInputFifteen.map(createSpeciesEntry)
+    ...additionalSpeciesEntriesInputFifteen.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputSixteen.map(createSpeciesEntry),
+    ...additionalSpeciesEntriesInputSeventeen.map(createSpeciesEntry)
 ];
 
 export const speciesEntries: SpeciesEntry[] = [...assertUniqueSpeciesSlugs(speciesData)]

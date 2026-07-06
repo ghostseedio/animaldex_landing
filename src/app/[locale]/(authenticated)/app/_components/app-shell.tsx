@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 
 type AppShellProps = {
     children: React.ReactNode;
@@ -20,6 +21,7 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
 ];
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
+    {href: "/app/matchups", label: "Matchups", icon: "matchup"},
     {href: "/app/missions", label: "Missions", icon: "mission"},
     {href: "/app/sets", label: "Sets", icon: "sets"},
     {href: "/app/trades", label: "Trades", icon: "trade"}
@@ -95,18 +97,21 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                 </nav>
 
                 <div className="mt-auto space-y-4">
+                    <CreditBalanceChip className="w-full justify-center px-4 py-2.5" />
                     <Link href="/app/capture" className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-400 to-violet-500 px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_40px_-24px_rgba(139,92,246,0.9)] transition hover:brightness-105">
                         <AppIcon name="camera" />
                         Add capture
                     </Link>
-                    <div className="flex items-center gap-3 border-t border-white/[0.08] px-2 pt-4">
-                        {profile.avatarUrl
-                            ? <img src={profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" />
-                            : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}
-                        <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{profile.displayName}</p>
-                            <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "Collector"}</p>
-                        </div>
+                    <div className="flex items-center gap-2 border-t border-white/[0.08] px-1 pt-4">
+                        <Link href="/app/profile" aria-label="Open profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
+                            {profile.avatarUrl
+                                ? <img src={profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" />
+                                : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-bold">{profile.displayName}</p>
+                                <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "Collector"}</p>
+                            </div>
+                        </Link>
                         <button onClick={signOut} className="ml-auto text-xs font-bold text-white/35 transition hover:text-white">Exit</button>
                     </div>
                 </div>
@@ -119,6 +124,7 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                         <span className="font-display text-lg font-bold">AnimalDex</span>
                     </Link>
                     <div className="flex items-center gap-2">
+                        <CreditBalanceChip />
                         <Link href="/app/messages" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name="message" />
                             {unreadMessageCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
@@ -138,6 +144,15 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                 <>
                     <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setMenuOpen(false)} />
                     <div className="fixed inset-x-4 top-[4.75rem] z-50 max-h-[70vh] overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#141414]/95 p-3 shadow-2xl backdrop-blur-xl lg:hidden">
+                        <Link href="/app/profile" className="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 transition hover:bg-white/[0.07]">
+                            {profile.avatarUrl
+                                ? <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+                                : <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-white">{profile.displayName}</p>
+                                <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "View profile"}</p>
+                            </div>
+                        </Link>
                         <p className="px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/25">More</p>
                         {utilityLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                         {utilityLink("/app/messages", "Messages", "message", unreadMessageCount)}

@@ -1,8 +1,12 @@
 import "server-only";
 
+import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
+import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 type QueryRow = Record<string, unknown>;
@@ -21,13 +25,24 @@ export type DiscoverCaptureItem = {
     captureId: string;
     date: string;
     sortRank: 2;
+    activityBadge: string;
+    activityLine: string | null;
+    title: string | null;
+    notes: string | null;
+    cardStyle: string | null;
     animalName: string;
+    headlineSupportingName: string | null;
     speciesSlug: string | null;
     score: number;
     endorsementCount: number;
+    viewerEndorsementStat: string | null;
     rarity: number;
     contextLabel: string | null;
     locationLabel: string | null;
+    lifeStage: string | null;
+    genderGuess: string | null;
+    confidence: number | null;
+    typeTags: string[];
     collector: DiscoverCollectorRef;
     imageSrc: string;
     href: string;
@@ -35,8 +50,21 @@ export type DiscoverCaptureItem = {
     breedGuess: string | null;
     conservationTier: string | null;
     totalProgressionXP: number;
+    level: number;
+    recentProgressionSource: string | null;
     animalDexNumber: number | null;
     mediaCount: number;
+    hasVideoMedia: boolean;
+    isMediaRefreshActivity: boolean;
+    isChallengeReady: boolean;
+    isChallengeAvailable: boolean;
+    challengeHealth: number;
+    challengeStake: number;
+    learnedPrinciple: string | null;
+    learnedExpression: string | null;
+    bestForTags: string[];
+    statBoosts: Record<string, number>;
+    comparisonBoosts: Record<string, number>;
     gameStats: Record<string, number>;
 };
 
@@ -74,6 +102,19 @@ export type DiscoverFusionItem = {
     href: string;
 };
 
+export type DiscoverChallengeParticipant = {
+    userId: string;
+    captureId: string;
+    animalName: string;
+    displayName: string;
+    username: string | null;
+    avatarUrl: string | null;
+    imageSrc: string;
+    battleTier: string | null;
+    battlePower: number | null;
+    href: string | null;
+};
+
 export type DiscoverChallengeItem = {
     kind: "challenge";
     id: string;
@@ -81,10 +122,20 @@ export type DiscoverChallengeItem = {
     sortRank: 3;
     scenarioTitle: string | null;
     scenarioDomain: string | null;
+    scenarioFamily: string | null;
+    scenarioDescription: string | null;
     chosenStat: string | null;
+    decidingEdgeLabel: string | null;
+    winnerUserId: string | null;
     winnerCaptureId: string | null;
-    attacker: {captureId: string; animalName: string; username: string | null; imageSrc: string};
-    defender: {captureId: string; animalName: string; username: string | null; imageSrc: string};
+    payoutAmount: number;
+    attackerContextScore: number | null;
+    defenderContextScore: number | null;
+    outcomeLine: string;
+    winningsLine: string | null;
+    activitySummary: string;
+    attacker: DiscoverChallengeParticipant;
+    defender: DiscoverChallengeParticipant;
 };
 
 export type DiscoverTradeItem = {
@@ -126,9 +177,51 @@ function readNumber(row: QueryRow, key: string) {
     return Number.isFinite(value) ? value : 0;
 }
 
+function readNullableNumber(row: QueryRow, key: string) {
+    if (row[key] == null) return null;
+    const value = Number(row[key]);
+    return Number.isFinite(value) ? value : null;
+}
+
+function readBoolean(row: QueryRow, key: string) {
+    return row[key] === true;
+}
+
 function readStats(row: QueryRow) {
     const stats = row.game_stats;
     return stats && typeof stats === "object" && !Array.isArray(stats) ? stats as Record<string, number> : {};
+}
+
+function readStringArray(row: QueryRow, key: string) {
+    const value = row[key];
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => typeof item === "string" ? item.trim() : "")
+        .filter(Boolean);
+}
+
+function readObjectArray(row: QueryRow, key: string) {
+    const value = row[key];
+    if (!Array.isArray(value)) return [] as QueryRow[];
+    return value.filter((item): item is QueryRow => Boolean(item) && typeof item === "object" && !Array.isArray(item)) as QueryRow[];
+}
+
+function readNestedString(row: QueryRow, keys: string[]) {
+    let value: unknown = row;
+    for (const key of keys) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+        value = (value as QueryRow)[key];
+    }
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function formatLabel(value: string | null) {
+    if (!value) return null;
+    return value
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function toSpeciesSlug(identityKey: string | null) {
@@ -170,15 +263,29 @@ function collectorFromRow(row: QueryRow, prefix = "profile"): DiscoverCollectorR
     };
 }
 
-function resolveImageSrc(captureId: string, slug: string | null) {
+function resolveImageSrc(
+    captureId: string,
+    slug: string | null,
+    image?: {
+        bucket?: string | null;
+        path?: string | null;
+        mimeType?: string | null;
+        mediaKind?: string | null;
+    }
+) {
     if (slug) {
         const species = getSpeciesBySlug(slug);
         if (species) return getSpeciesImageRoute(species.slug, captureId);
     }
 
     if (captureId) {
-        const searchParams = new URLSearchParams({captureId});
-        return `/api/species-images/capture?${searchParams.toString()}`;
+        const params = new URLSearchParams();
+        if (image?.bucket) params.set("bucket", image.bucket);
+        if (image?.path) params.set("path", image.path);
+        if (image?.mimeType) params.set("mime", image.mimeType);
+        if (image?.mediaKind) params.set("kind", image.mediaKind);
+        const query = params.toString();
+        return query ? `${getCaptureImageRoute(captureId)}?${query}` : getCaptureImageRoute(captureId);
     }
 
     return PLACEHOLDER_IMAGE;
@@ -191,6 +298,9 @@ function resolveHref(slug: string | null) {
 }
 
 function endorsementCount(row: QueryRow) {
+    const aggregate = readNullableNumber(row, "endorsement_count");
+    if (aggregate != null) return aggregate;
+
     return readNumber(row, "dominance_endorsements")
         + readNumber(row, "speed_endorsements")
         + readNumber(row, "size_endorsements")
@@ -204,12 +314,260 @@ function parseDate(value: string | null) {
     return Number.isFinite(ms) ? ms : 0;
 }
 
-function mapCaptureRow(row: QueryRow): DiscoverCaptureItem {
+function animalLevel(totalProgressionXP: number) {
+    return Math.min(100, Math.floor(Math.sqrt(Math.max(0, totalProgressionXP))) + 1);
+}
+
+function mediaKind(value: unknown) {
+    return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function mediaAssets(row: QueryRow) {
+    return readObjectArray(row, "media_assets");
+}
+
+function hasVideoMedia(row: QueryRow) {
+    const primaryKind = mediaKind(row.image_media_kind);
+    return primaryKind === "loop" || primaryKind === "video" || mediaAssets(row).some((asset) => {
+        const ref = asset.reference && typeof asset.reference === "object" && !Array.isArray(asset.reference)
+            ? asset.reference as QueryRow
+            : asset;
+        const kind = mediaKind(ref.media_kind ?? ref.mediaKind);
+        return kind === "loop" || kind === "video";
+    });
+}
+
+function mediaCount(row: QueryRow) {
+    const assets = mediaAssets(row);
+    return Math.max(1, assets.length);
+}
+
+function isMediaRefreshActivity(row: QueryRow) {
+    const count = mediaCount(row);
+    const feedActivityAt = parseDate(readString(row, "feed_activity_at"));
+    const captureCreatedAt = parseDate(readString(row, "capture_created_at"));
+    return count > 1 && feedActivityAt > 0 && captureCreatedAt > 0 && feedActivityAt - captureCreatedAt > 120_000;
+}
+
+function timelineActivityBadge(row: QueryRow) {
+    const count = mediaCount(row);
+    const video = hasVideoMedia(row);
+    if (isMediaRefreshActivity(row)) return video ? "Added media" : "Added photos";
+    if (count > 1) return video ? `${count} media` : `${count} photos`;
+    return "Capture";
+}
+
+function learnedPrinciples(row: QueryRow) {
+    return readObjectArray(row, "learned_sub_principles");
+}
+
+function primaryLearnedPrincipleName(row: QueryRow) {
+    const principles = learnedPrinciples(row);
+    const equipped = principles.find((item) => item.is_equipped === true) ?? principles[0];
+    return readString(equipped ?? {}, "receiver_principle_name");
+}
+
+function formatDecidingStatLabel(value: string | null) {
+    if (!value) return null;
+    return value
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function challengeWinnerXpAmount(attackerWon: boolean, item: {
+    attackerContextScore: number | null;
+    defenderContextScore: number | null;
+}) {
+    const winnerScore = attackerWon ? item.attackerContextScore : item.defenderContextScore;
+    if (winnerScore == null) return 10;
+    return winnerScore >= 85 ? 15 : 10;
+}
+
+function challengeActivitySummary(input: {
+    winnerAnimalName: string;
+    loserAnimalName: string;
+    scenarioFamily: string | null;
+    winnerXpAmount: number;
+}) {
+    const scenarioText = input.scenarioFamily
+        ? ` in a ${formatScenarioFamilyLabel(input.scenarioFamily) ?? input.scenarioFamily} scenario`
+        : "";
+    return `${input.winnerAnimalName} proved the best fit${scenarioText}. +${input.winnerXpAmount} XP. ${input.loserAnimalName} still gained +3 XP.`;
+}
+
+function challengeOutcomeLine(input: {
+    scenarioTitle: string | null;
+    chosenStat: string | null;
+    winnerDisplayName: string;
+}) {
+    if (input.scenarioTitle) {
+        return `${input.scenarioTitle} favored ${input.winnerDisplayName}`;
+    }
+
+    const statLabel = formatDecidingStatLabel(input.chosenStat);
+    if (statLabel) {
+        return `${input.winnerDisplayName} had the edge on ${statLabel}`;
+    }
+
+    return `${input.winnerDisplayName} had the edge`;
+}
+
+function challengeWinningsLine(winnerDisplayName: string, payoutAmount: number) {
+    if (payoutAmount <= 0) return null;
+    return `${winnerDisplayName} won ${payoutAmount} credit${payoutAmount === 1 ? "" : "s"}`;
+}
+
+function mapChallengeParticipant(
+    row: QueryRow,
+    side: "attacker" | "defender"
+): DiscoverChallengeParticipant {
+    const captureId = readString(row, `${side}_capture_id`) ?? "";
+    const userId = readString(row, `${side}_user_id`) ?? "";
+    const username = readString(row, `${side}_profile_username`);
+    const displayName = readString(row, `${side}_profile_display_name`)
+        ?? (username ? `@${username}` : "Collector");
+    const avatarUrl = readString(row, `${side}_profile_avatar_url`);
+    const headline = resolveChallengeAnalysisHeadlineDisplay(row, side);
+
+    return {
+        userId,
+        captureId,
+        animalName: headline.animalName,
+        displayName,
+        username,
+        avatarUrl,
+        imageSrc: resolveImageSrc(captureId, null, {
+            bucket: readString(row, `${side}_image_bucket`),
+            path: readString(row, `${side}_image_path`),
+            mimeType: readString(row, `${side}_image_mime_type`),
+            mediaKind: readString(row, `${side}_image_media_kind`)
+        }),
+        battleTier: readString(row, `${side}_tier`),
+        battlePower: readNullableNumber(row, `${side}_battle_power`),
+        href: username ? `/u/${encodeURIComponent(username)}` : null
+    };
+}
+
+function learnedBestForTags(row: QueryRow) {
+    const principles = learnedPrinciples(row);
+    const prioritized = principles.find((item) => item.is_equipped === true) ? principles.filter((item) => item.is_equipped === true) : principles;
+    const seen = new Set<string>();
+    const tags: string[] = [];
+
+    for (const principle of prioritized) {
+        const scenarioTags = Array.isArray(principle.scenario_tags) ? principle.scenario_tags : [];
+        for (const tag of scenarioTags) {
+            const label = typeof tag === "string" ? tag.trim() : "";
+            const key = label.toLowerCase();
+            if (!label || seen.has(key)) continue;
+            seen.add(key);
+            tags.push(label);
+            if (tags.length >= 4) return tags;
+        }
+    }
+
+    return tags;
+}
+
+function statBoosts(row: QueryRow) {
+    return {
+        dominance: readNumber(row, "dominance_boost"),
+        speed: readNumber(row, "speed_boost"),
+        intelligence: readNumber(row, "intelligence_boost")
+    };
+}
+
+function comparisonBoosts(row: QueryRow) {
+    return {
+        dominance: readNumber(row, "comparison_dominance_boost"),
+        speed: readNumber(row, "comparison_speed_boost"),
+        size: readNumber(row, "comparison_size_boost"),
+        intelligence: readNumber(row, "comparison_intelligence_boost"),
+        rarity: readNumber(row, "comparison_rarity_boost")
+    };
+}
+
+async function buildAnimalDexNumberIndex() {
+    const entries = await getUnifiedSpeciesEntries();
+    const index = new Map<string, number>();
+
+    for (const entry of entries) {
+        const number = getAnimalDexNumberFromEntry(entry);
+        if (!number) continue;
+
+        index.set(entry.slug.toLowerCase(), number);
+
+        if (entry.normalizedIdentityKey) {
+            index.set(entry.normalizedIdentityKey.toLowerCase(), number);
+            index.set(entry.normalizedIdentityKey.toLowerCase().replace(/_/g, "-"), number);
+        }
+
+        if (entry.speciesProfileId) {
+            index.set(entry.speciesProfileId.toLowerCase(), number);
+        }
+    }
+
+    return index;
+}
+
+function resolveAnimalDexNumber(
+    row: QueryRow,
+    slug: string | null,
+    species: ReturnType<typeof getSpeciesBySlug> | null,
+    animalDexNumbers: Map<string, number>
+) {
+    const staticNumber = species ? getAnimalDexNumberFromEntry(species) : null;
+    if (staticNumber) return staticNumber;
+
+    const speciesProfileId = readString(row, "species_profile_id")?.toLowerCase();
+    if (speciesProfileId && animalDexNumbers.has(speciesProfileId)) {
+        return animalDexNumbers.get(speciesProfileId) ?? null;
+    }
+
+    const identityKey = readString(row, "normalized_identity_key")?.toLowerCase();
+    if (identityKey) {
+        return animalDexNumbers.get(identityKey)
+            ?? animalDexNumbers.get(identityKey.replace(/_/g, "-"))
+            ?? null;
+    }
+
+    return slug ? animalDexNumbers.get(slug) ?? null : null;
+}
+
+function mapCaptureRow(
+    row: QueryRow,
+    animalDexNumbers: Map<string, number>,
+    behaviorPrinciples: Awaited<ReturnType<typeof getCatalogBehaviorPrincipleIndex>>
+): DiscoverCaptureItem {
     const captureId = readString(row, "capture_id") ?? "";
     const slug = toSpeciesSlug(readString(row, "normalized_identity_key"));
     const stats = readStats(row);
     const species = slug ? getSpeciesBySlug(slug) : null;
-    const mediaAssets = Array.isArray(row.media_assets) ? row.media_assets : [];
+    const catalogPrinciple = resolveCatalogBehaviorPrinciple(
+        behaviorPrinciples,
+        readString(row, "species_profile_id"),
+        readString(row, "normalized_identity_key")
+    );
+    const progressionXP = readNumber(row, "total_progression_xp");
+    const collector = collectorFromRow(row);
+    const refreshedMedia = isMediaRefreshActivity(row);
+    const learnedPrincipleName = primaryLearnedPrincipleName(row);
+    const headline = resolveCaptureHeadlineDisplay({
+        animalName: readString(row, "animal_name"),
+        scientificName: readString(row, "scientific_name"),
+        breedGuess: readString(row, "breed_guess"),
+        breedConfidence: readNullableNumber(row, "breed_confidence"),
+        confidence: readNullableNumber(row, "confidence"),
+        normalizedIdentityKey: readString(row, "normalized_identity_key"),
+        humanContext: readString(row, "human_context"),
+        zooOrWild: readString(row, "zoo_or_wild"),
+        premiumDetails: row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
+            ? row.premium_details as Record<string, unknown>
+            : null
+    });
+    const animalName = headline.animalName;
+    const catalogBestFor = catalogPrinciple?.bestUseCases ?? [];
+    const learnedTags = learnedBestForTags(row);
 
     return {
         kind: "capture",
@@ -217,22 +575,46 @@ function mapCaptureRow(row: QueryRow): DiscoverCaptureItem {
         captureId,
         date: readString(row, "feed_activity_at") ?? readString(row, "capture_created_at") ?? new Date(0).toISOString(),
         sortRank: 2,
-        animalName: readString(row, "animal_name") ?? "Animal",
+        activityBadge: timelineActivityBadge(row),
+        activityLine: refreshedMedia ? `${collector.name} added ${hasVideoMedia(row) ? "media" : "photos"} to ${animalName}` : null,
+        title: readString(row, "capture_title"),
+        notes: readString(row, "capture_notes"),
+        cardStyle: formatLabel(readString(row, "card_style")),
+        animalName,
+        headlineSupportingName: headline.headlineSupportingName,
         speciesSlug: slug,
         score: readNumber(row, "score"),
         endorsementCount: endorsementCount(row),
+        viewerEndorsementStat: formatLabel(readString(row, "viewer_endorsement_stat")),
         rarity: readNumber(stats, "rarity"),
         contextLabel: getContextLabel(row),
         locationLabel: readString(row, "location_display_label"),
-        collector: collectorFromRow(row),
+        lifeStage: formatLabel(readString(row, "life_stage")),
+        genderGuess: formatLabel(readString(row, "gender_guess")),
+        confidence: readNullableNumber(row, "confidence"),
+        typeTags: readStringArray(row, "type_tags").map((tag) => formatLabel(tag) ?? tag).slice(0, 5),
+        collector,
         imageSrc: resolveImageSrc(captureId, slug),
         href: resolveHref(slug),
         scientificName: readString(row, "scientific_name"),
         breedGuess: readString(row, "breed_guess"),
         conservationTier: readString(row, "conservation_tier"),
-        totalProgressionXP: readNumber(row, "total_progression_xp"),
-        animalDexNumber: species ? getAnimalDexNumberFromEntry(species) : null,
-        mediaCount: Math.max(1, mediaAssets.length),
+        totalProgressionXP: progressionXP,
+        level: animalLevel(progressionXP),
+        recentProgressionSource: formatLabel(readString(row, "recent_progression_source")),
+        animalDexNumber: resolveAnimalDexNumber(row, slug, species, animalDexNumbers),
+        mediaCount: mediaCount(row),
+        hasVideoMedia: hasVideoMedia(row),
+        isMediaRefreshActivity: refreshedMedia,
+        isChallengeReady: readBoolean(row, "is_challenge_ready"),
+        isChallengeAvailable: readBoolean(row, "challenge_available"),
+        challengeHealth: readNumber(row, "challenge_health") || 3,
+        challengeStake: readNumber(row, "challenge_stake") || 1,
+        learnedPrinciple: catalogPrinciple?.principleName ?? learnedPrincipleName,
+        learnedExpression: null,
+        bestForTags: catalogBestFor.length ? catalogBestFor.slice(0, 4) : learnedTags,
+        statBoosts: statBoosts(row),
+        comparisonBoosts: comparisonBoosts(row),
         gameStats: stats
     };
 }
@@ -285,30 +667,51 @@ function mapFusionRow(row: QueryRow): DiscoverFusionItem {
 
 function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
     const id = readString(row, "id") ?? "";
-    const attackerCaptureId = readString(row, "attacker_capture_id") ?? "";
-    const defenderCaptureId = readString(row, "defender_capture_id") ?? "";
+    const attacker = mapChallengeParticipant(row, "attacker");
+    const defender = mapChallengeParticipant(row, "defender");
+    const winnerCaptureId = readString(row, "winner_capture_id");
+    const winnerUserId = readString(row, "winner_user_id");
+    const attackerWon = winnerCaptureId === attacker.captureId;
+    const winner = attackerWon ? attacker : defender;
+    const loser = attackerWon ? defender : attacker;
+    const scenarioTitle = readString(row, "scenario_title");
+    const chosenStat = readString(row, "chosen_stat");
+    const scenarioFamily = normalizeScenarioFamily(readString(row, "scenario_family"));
+    const payoutAmount = readNumber(row, "payout_amount");
+    const attackerContextScore = readNullableNumber(row, "attacker_context_score");
+    const defenderContextScore = readNullableNumber(row, "defender_context_score");
+    const winnerXpAmount = challengeWinnerXpAmount(attackerWon, {attackerContextScore, defenderContextScore});
 
     return {
         kind: "challenge",
         id: `challenge-${id}`,
         date: readString(row, "created_at") ?? new Date(0).toISOString(),
         sortRank: 3,
-        scenarioTitle: readString(row, "scenario_title"),
+        scenarioTitle,
         scenarioDomain: readString(row, "scenario_domain"),
-        chosenStat: readString(row, "chosen_stat"),
-        winnerCaptureId: readString(row, "winner_capture_id"),
-        attacker: {
-            captureId: attackerCaptureId,
-            animalName: readString(row, "attacker_animal_name") ?? "Animal",
-            username: readString(row, "attacker_profile_username"),
-            imageSrc: resolveImageSrc(attackerCaptureId, null)
-        },
-        defender: {
-            captureId: defenderCaptureId,
-            animalName: readString(row, "defender_animal_name") ?? "Animal",
-            username: readString(row, "defender_profile_username"),
-            imageSrc: resolveImageSrc(defenderCaptureId, null)
-        }
+        scenarioFamily,
+        scenarioDescription: readString(row, "scenario_description"),
+        chosenStat,
+        decidingEdgeLabel: readString(row, "deciding_edge_label"),
+        winnerUserId,
+        winnerCaptureId,
+        payoutAmount,
+        attackerContextScore,
+        defenderContextScore,
+        outcomeLine: challengeOutcomeLine({
+            scenarioTitle,
+            chosenStat,
+            winnerDisplayName: winner.displayName
+        }),
+        winningsLine: challengeWinningsLine(winner.displayName, payoutAmount),
+        activitySummary: challengeActivitySummary({
+            winnerAnimalName: winner.animalName,
+            loserAnimalName: loser.animalName,
+            scenarioFamily,
+            winnerXpAmount
+        }),
+        attacker,
+        defender
     };
 }
 
@@ -329,7 +732,12 @@ function mapTradeRow(row: QueryRow): DiscoverTradeItem {
             name: readString(row, "offerer_profile_display_name") ?? (offererUsername ? `@${offererUsername}` : "Collector"),
             username: offererUsername,
             animalName: readString(row, "offerer_animal_name") ?? "Animal",
-            imageSrc: resolveImageSrc(offererCaptureId, null),
+            imageSrc: resolveImageSrc(offererCaptureId, null, {
+                bucket: readString(row, "offerer_image_bucket"),
+                path: readString(row, "offerer_image_path"),
+                mimeType: readString(row, "offerer_image_mime_type"),
+                mediaKind: readString(row, "offerer_image_media_kind")
+            }),
             href: offererUsername ? `/u/${encodeURIComponent(offererUsername)}` : null
         },
         receiver: {
@@ -337,7 +745,12 @@ function mapTradeRow(row: QueryRow): DiscoverTradeItem {
             name: readString(row, "receiver_profile_display_name") ?? (receiverUsername ? `@${receiverUsername}` : "Collector"),
             username: receiverUsername,
             animalName: readString(row, "receiver_animal_name") ?? "Animal",
-            imageSrc: resolveImageSrc(receiverCaptureId, null),
+            imageSrc: resolveImageSrc(receiverCaptureId, null, {
+                bucket: readString(row, "receiver_image_bucket"),
+                path: readString(row, "receiver_image_path"),
+                mimeType: readString(row, "receiver_image_mime_type"),
+                mediaKind: readString(row, "receiver_image_media_kind")
+            }),
             href: receiverUsername ? `/u/${encodeURIComponent(receiverUsername)}` : null
         }
     };
@@ -455,54 +868,182 @@ export function buildDiscoverFeatured(captures: DiscoverCaptureItem[]): Discover
     return result;
 }
 
+const discoverChallengeSelect = [
+    "id", "created_at", "attacker_user_id", "attacker_capture_id", "defender_user_id", "defender_capture_id",
+    "attacker_battle_power", "defender_battle_power", "attacker_tier", "defender_tier",
+    "winner_user_id", "winner_capture_id", "chosen_stat", "attacker_stat_value", "defender_stat_value",
+    "resolution_rule", "points_awarded", "rewarded", "stake_amount", "escrow_amount", "payout_amount", "burn_amount",
+    "scenario_key", "scenario_family", "scenario_domain", "scenario_title", "scenario_description",
+    "deciding_edge_label", "attacker_context_score", "defender_context_score",
+    "winner_explanation", "strategic_insight", "scenario_version",
+    "attacker_profile_display_name", "attacker_profile_username", "attacker_profile_avatar_url", "attacker_profile_instagram_url",
+    "defender_profile_display_name", "defender_profile_username", "defender_profile_avatar_url", "defender_profile_instagram_url",
+    "attacker_animal_name", "attacker_scientific_name", "attacker_breed_guess", "attacker_breed_confidence",
+    "attacker_human_context", "attacker_life_stage", "attacker_gender_guess", "attacker_gender_confidence",
+    "attacker_zoo_or_wild", "attacker_conservation_tier", "attacker_confidence", "attacker_type_tags",
+    "attacker_signals", "attacker_raw_json", "attacker_game_stats", "attacker_premium_details", "attacker_place_or_habitat_label",
+    "attacker_image_bucket", "attacker_image_path", "attacker_image_mime_type", "attacker_image_media_kind", "attacker_image_duration_ms",
+    "defender_animal_name", "defender_scientific_name", "defender_breed_guess", "defender_breed_confidence",
+    "defender_human_context", "defender_life_stage", "defender_gender_guess", "defender_gender_confidence",
+    "defender_zoo_or_wild", "defender_conservation_tier", "defender_confidence", "defender_type_tags",
+    "defender_signals", "defender_raw_json", "defender_game_stats", "defender_premium_details", "defender_place_or_habitat_label",
+    "defender_image_bucket", "defender_image_path", "defender_image_mime_type", "defender_image_media_kind", "defender_image_duration_ms"
+].join(",");
+
+const richFeedSelect = [
+    "capture_id",
+    "user_id",
+    "feed_activity_at",
+    "capture_created_at",
+    "capture_title",
+    "capture_notes",
+    "card_style",
+    "card_auto_style",
+    "image_filter",
+    "image_rotation_degrees",
+    "image_zoom_scale",
+    "image_offset_x",
+    "image_offset_y",
+    "is_challenge_ready",
+    "challenge_health",
+    "challenge_health_updated_at",
+    "challenge_stake",
+    "challenge_available",
+    "dominance_boost",
+    "speed_boost",
+    "intelligence_boost",
+    "comparison_dominance_boost",
+    "comparison_speed_boost",
+    "comparison_size_boost",
+    "comparison_intelligence_boost",
+    "comparison_rarity_boost",
+    "learned_sub_principles",
+    "total_progression_xp",
+    "recent_progression_source",
+    "dominance_endorsements",
+    "speed_endorsements",
+    "size_endorsements",
+    "intelligence_endorsements",
+    "rarity_endorsements",
+    "endorsement_count",
+    "viewer_endorsement_stat",
+    "last_stat_boost_at",
+    "location_lat",
+    "location_lng",
+    "location_display_label",
+    "image_bucket",
+    "image_path",
+    "image_mime_type",
+    "image_media_kind",
+    "image_duration_ms",
+    "media_assets",
+    "animal_name",
+    "scientific_name",
+    "breed_guess",
+    "breed_confidence",
+    "human_context",
+    "life_stage",
+    "gender_guess",
+    "gender_confidence",
+    "zoo_or_wild",
+    "conservation_tier",
+    "confidence",
+    "type_tags",
+    "signals",
+    "raw_json",
+    "game_stats",
+    "species_profile_id",
+    "normalized_identity_key",
+    "observed_market_modifiers",
+    "price_estimate",
+    "premium_details",
+    "place_or_habitat_label",
+    "completed_at",
+    "profile_display_name",
+    "profile_username",
+    "profile_avatar_url",
+    "profile_instagram_url",
+    "score"
+].join(",");
+
+const compatibilityFeedSelect = [
+    "capture_id",
+    "user_id",
+    "feed_activity_at",
+    "capture_created_at",
+    "animal_name",
+    "scientific_name",
+    "breed_guess",
+    "conservation_tier",
+    "normalized_identity_key",
+    "score",
+    "human_context",
+    "zoo_or_wild",
+    "location_display_label",
+    "profile_display_name",
+    "profile_username",
+    "profile_avatar_url",
+    "dominance_endorsements",
+    "speed_endorsements",
+    "size_endorsements",
+    "intelligence_endorsements",
+    "rarity_endorsements",
+    "game_stats",
+    "total_progression_xp",
+    "media_assets"
+].join(",");
+
+async function fetchDiscoverFeedRows(limit: number) {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [] as QueryRow[];
+
+    const requestedLimit = Math.max(limit, 24);
+    const richResult = await supabase
+        .from("discover_feed_v1")
+        .select(richFeedSelect)
+        .order("feed_activity_at", {ascending: false})
+        .limit(requestedLimit);
+
+    if (!richResult.error) {
+        return (richResult.data ?? []) as unknown as QueryRow[];
+    }
+
+    const fallbackResult = await supabase
+        .from("discover_feed_v1")
+        .select(compatibilityFeedSelect)
+        .order("feed_activity_at", {ascending: false})
+        .limit(requestedLimit);
+
+    return (fallbackResult.data ?? []) as unknown as QueryRow[];
+}
+
 export async function getDiscoverTimelineBundle(limit = 60) {
     const supabase = createSupabaseServerClient();
     if (!supabase) {
         return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[]};
     }
 
-    const feedSelect = [
-        "capture_id",
-        "user_id",
-        "feed_activity_at",
-        "capture_created_at",
-        "animal_name",
-        "scientific_name",
-        "breed_guess",
-        "conservation_tier",
-        "normalized_identity_key",
-        "score",
-        "human_context",
-        "zoo_or_wild",
-        "location_display_label",
-        "profile_display_name",
-        "profile_username",
-        "profile_avatar_url",
-        "dominance_endorsements",
-        "speed_endorsements",
-        "size_endorsements",
-        "intelligence_endorsements",
-        "rarity_endorsements",
-        "game_stats",
-        "total_progression_xp",
-        "media_assets"
-    ].join(",");
+    const activityLimit = Math.max(8, Math.min(16, Math.ceil(limit / 2)));
 
     const [
-        feedResult,
+        feedRows,
         alignmentResult,
         fusionResult,
         challengeResult,
-        tradeResult
+        tradeResult,
+        animalDexNumbers,
+        behaviorPrinciples
     ] = await Promise.all([
-        supabase.from("discover_feed_v1").select(feedSelect).order("feed_activity_at", {ascending: false}).limit(Math.max(limit, 40)),
-        supabase.from("discover_alignment_timeline_v1").select("*").order("completed_at", {ascending: false}).limit(30),
-        supabase.from("discover_principle_fusion_timeline_v1").select("*").order("created_at", {ascending: false}).limit(30),
-        supabase.from("discover_challenge_history_v1").select("id,created_at,scenario_title,scenario_domain,chosen_stat,winner_user_id,winner_capture_id,attacker_capture_id,defender_capture_id,attacker_animal_name,defender_animal_name,attacker_profile_username,defender_profile_username").order("created_at", {ascending: false}).limit(30),
-        supabase.from("discover_trade_history_v1").select("id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name").order("completed_at", {ascending: false}).limit(30)
+        fetchDiscoverFeedRows(limit),
+        supabase.from("discover_alignment_timeline_v1").select("*").order("completed_at", {ascending: false}).limit(activityLimit),
+        supabase.from("discover_principle_fusion_timeline_v1").select("*").order("created_at", {ascending: false}).limit(activityLimit),
+        supabase.from("discover_challenge_history_v1").select(discoverChallengeSelect).order("created_at", {ascending: false}).limit(activityLimit),
+        supabase.from("discover_trade_history_v1").select("id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind").order("completed_at", {ascending: false}).limit(activityLimit),
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
     ]);
 
-    const captures = ((feedResult.data ?? []) as unknown as QueryRow[]).map(mapCaptureRow);
+    const captures = feedRows.map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
     const alignments = ((alignmentResult.data ?? []) as unknown as QueryRow[]).map(mapAlignmentRow);
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
     const challenges = ((challengeResult.data ?? []) as unknown as QueryRow[]).map(mapChallengeRow);
@@ -512,4 +1053,55 @@ export async function getDiscoverTimelineBundle(limit = 60) {
         timeline: buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, limit),
         featured: buildDiscoverFeatured(captures)
     };
+}
+
+export async function getChallengeArenaCaptures(excludeUserId: string | null, limit = 48): Promise<DiscoverCaptureItem[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+
+    let query = supabase
+        .from("challenge_feed_v1")
+        .select(richFeedSelect)
+        .order("capture_created_at", {ascending: false})
+        .limit(limit);
+
+    if (excludeUserId) {
+        query = query.neq("user_id", excludeUserId);
+    }
+
+    const {data, error} = await query;
+    if (error) return [];
+
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+    return ((data ?? []) as unknown as QueryRow[])
+        .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
+        .filter((item) => item.isChallengeAvailable && item.challengeHealth > 0);
+}
+
+export async function getChallengeArenaCaptureById(captureId: string, excludeUserId: string | null): Promise<DiscoverCaptureItem | null> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    let query = supabase
+        .from("challenge_feed_v1")
+        .select(richFeedSelect)
+        .eq("capture_id", captureId)
+        .limit(1);
+
+    if (excludeUserId) {
+        query = query.neq("user_id", excludeUserId);
+    }
+
+    const {data, error} = await query;
+    if (error || !data?.length) return null;
+
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+    const item = mapCaptureRow(data[0] as unknown as QueryRow, animalDexNumbers, behaviorPrinciples);
+    return item.isChallengeAvailable && item.challengeHealth > 0 ? item : null;
 }

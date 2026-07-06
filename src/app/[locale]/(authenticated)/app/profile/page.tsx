@@ -10,20 +10,21 @@ import {
     AppStatBar,
     AppSurface
 } from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {getAuthenticatedAppContext, getAppCaptures, getAppPowerSets, getAppProgression, getCaptureStats} from "@/data/authenticated-app";
+import {getAuthenticatedAppContext, getAppCaptureStats, getAppCaptures, getAppProgression} from "@/data/authenticated-app";
 import {getDirectMessageUnreadCount} from "@/data/direct-messages";
 
 export default async function ProfilePage({params}: {params: {locale: string}}) {
-    const [context, captures, progression, unreadMessageCount] = await Promise.all([
+    const [context, captures, progression, unreadMessageCount, stats] = await Promise.all([
         getAuthenticatedAppContext(),
-        getAppCaptures(),
+        getAppCaptures(6),
         getAppProgression(),
-        getDirectMessageUnreadCount()
+        getDirectMessageUnreadCount(),
+        getAppCaptureStats()
     ]);
     const profile = context!.profile;
-    const stats = getCaptureStats(captures);
-    const sets = await getAppPowerSets(captures);
     const displayName = profile.displayName ?? profile.username ?? "Collector";
+    const completedMissions = progression.missions.filter((mission) => mission.completedCount).length;
+    const availableMissions = progression.missions.filter((mission) => !mission.isLocked).length;
 
     return (
         <AppPage>
@@ -50,10 +51,10 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
             </AppSurface>
 
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <AppMetric label="Overall score" value={progression.overallScore || stats.collectorScore} />
+                <AppMetric label="Overall score" value={progression.overallScore} />
                 <AppMetric label="Captures" value={stats.captureCount} accent="blue" />
                 <AppMetric label="Species" value={stats.uniqueSpecies} />
-                <AppMetric label="Sets active" value={sets.length} accent="violet" />
+                <AppMetric label="Missions" value={availableMissions} accent="violet" detail={completedMissions ? `${completedMissions} complete` : undefined} />
             </section>
 
             <section className="grid gap-5 lg:grid-cols-2">
@@ -71,7 +72,7 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
                         {[
                             ["Missions complete", progression.missions.filter((mission) => mission.completedCount).length],
                             ["Qualified referrals", progression.qualifiedReferrals],
-                            ["Power sets", sets.length],
+                            ["Available missions", availableMissions],
                             ["Trading", progression.tradeUnlocked ? "Unlocked" : "Locked"]
                         ].map(([label, value]) => (
                             <div key={String(label)} className="rounded-xl bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
@@ -87,7 +88,7 @@ export default async function ProfilePage({params}: {params: {locale: string}}) 
                 <section className="space-y-5">
                     <AppSectionTitle icon="collection" title="Top finds" detail="Your highest-scoring captures" action={<Link href="/app/collection" className="text-sm font-bold text-primary-200 hover:text-primary-100">View collection</Link>} />
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {captures.slice(0, 6).map((capture) => <AppCaptureCard key={capture.captureId} capture={capture} locale={params.locale} />)}
+                        {captures.map((capture) => <AppCaptureCard key={capture.captureId} capture={capture} locale={params.locale} />)}
                     </div>
                 </section>
             ) : null}

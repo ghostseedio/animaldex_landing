@@ -413,6 +413,9 @@ export default function ProfileContent({
         ? new Intl.NumberFormat(undefined, {style: "currency", currency: "USD", maximumFractionDigits: 0}).format(profile.collectionValueUsd)
         : null;
     const completedSetsCount = ownerExtras?.completedSetsCount ?? 0;
+    const overallScore = ownerExtras?.tradeUnlock != null
+        ? ownerExtras.tradeUnlock.verifiedOverallScore
+        : profile.collectorScore;
 
     return (
         <div className="flex flex-col gap-6 md:gap-8">
@@ -566,7 +569,7 @@ export default function ProfileContent({
             {activeTab === "stats" ? (
                 <div className="flex flex-col gap-4 md:gap-5">
                     <CollectorScoreCard
-                        score={profile.collectorScore}
+                        score={overallScore}
                         archetype={profile.collectionArchetype}
                         labels={labels}
                         tradeUnlock={ownerExtras?.tradeUnlock ?? null}

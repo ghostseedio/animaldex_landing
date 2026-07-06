@@ -1,5 +1,10 @@
 import {getSpeciesBySlug, speciesEntries, SpeciesEntry} from "@/data/species";
 import {
+    buildLegendaryBehaviorLessonFromSeed,
+    getLegendaryCatalogSeedByBeastSlug,
+    getLegendaryCatalogSeedByBiologyLandingSlug
+} from "@/data/legendary-earth-beasts-catalog-seed";
+import {
     BehavioralPrincipleProfile,
     getBehavioralPrincipleProfile
 } from "@/data/species-behavioral-principles";
@@ -179,7 +184,42 @@ function mergeCatalogAndLocalLessons(catalogLessons: SpeciesBehaviorLesson[]): S
     return [...catalogLessons, ...localLessons].sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
+function buildLegendarySeedBehaviorLesson(seed: ReturnType<typeof getLegendaryCatalogSeedByBeastSlug>) {
+    if (!seed) return null;
+
+    const lesson = buildLegendaryBehaviorLessonFromSeed(seed);
+
+    return {
+        slug: seed.beastSlug,
+        displayName: seed.displayName,
+        normalizedIdentityKey: seed.normalizedIdentityKey,
+        principleName: lesson.principleName,
+        principleExpression: lesson.principleExpression,
+        coreLesson: lesson.coreLesson,
+        biologicalBasis: lesson.biologicalBasis,
+        shortMotto: lesson.shortMotto,
+        bestUseCases: lesson.bestUseCases,
+        applicationExample: buildFallbackApplicationExample(
+            seed.beastSlug,
+            lesson.principleName,
+            lesson.principleExpression,
+            lesson.coreLesson,
+            lesson.biologicalBasis,
+            lesson.shortMotto
+        ),
+        imageFile: null,
+        source: "catalog" as const
+    };
+}
+
 async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
+    const legendarySeed = getLegendaryCatalogSeedByBeastSlug(slug) ?? getLegendaryCatalogSeedByBiologyLandingSlug(slug);
+    const legendaryLesson = buildLegendarySeedBehaviorLesson(legendarySeed);
+
+    if (legendaryLesson) {
+        return legendaryLesson;
+    }
+
     const config = getSupabaseConfig();
 
     if (!config) {

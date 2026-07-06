@@ -1,11 +1,13 @@
 "use client";
 
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {canonicalPowerKey, displayPowerLabel} from "@/lib/power-set-tags";
 import {formatAnimalDexNumber} from "@/lib/animaldex-number";
+import {LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
+import type {CollectionDiscoveryStats} from "@/lib/collection-discovery";
 
 export type CatalogSpecies = {
     slug: string;
@@ -16,6 +18,7 @@ export type CatalogSpecies = {
     rarity: number;
     gameStats: Record<string, number> | null;
     principle: string;
+    catalogLesson: string | null;
     lesson: string;
     powers: string[];
     captured: boolean;
@@ -27,6 +30,8 @@ export type CatalogSpecies = {
     hasIndexNumber?: boolean;
     identityKind: string | null;
     isBreed: boolean;
+    isLegendary: boolean;
+    legendaryTier: "S" | null;
 };
 
 type ContentMode = "animals" | "powers" | "lessons";
@@ -57,6 +62,9 @@ const DEFAULT_FILTERS: CatalogFilters = {
     powerSort: "mostLinked",
     lessonSort: "alphabetical"
 };
+
+const ANIMAL_BATCH_SIZE = 40;
+const FACET_BATCH_SIZE = 24;
 
 const OWNERSHIP_OPTIONS: Array<{id: Ownership; label: string}> = [
     {id: "all", label: "All"},
@@ -115,9 +123,12 @@ function matchesSearch(item: CatalogSpecies, query: string) {
         item.scientificName,
         item.category,
         item.principle,
+        item.catalogLesson,
         item.lesson,
         ...item.powers
-    ].map(normalizedSearchText);
+    ]
+        .filter((field): field is string => Boolean(field))
+        .map(normalizedSearchText);
 
     if (fields.some((field) => field.includes(normalizedQuery))) {
         return true;
@@ -274,18 +285,34 @@ function SortOption<T extends string>({id, title, detail, selected, onSelect}: {
     );
 }
 
-export default function CollectionCatalog({species}: {species: CatalogSpecies[]}) {
+export default function CollectionCatalog({
+    species,
+    discoveryStats
+}: {
+    species: CatalogSpecies[];
+    discoveryStats: CollectionDiscoveryStats;
+}) {
     const [query, setQuery] = useState("");
     const [appliedQuery, setAppliedQuery] = useState("");
     const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
     const [pendingFilters, setPendingFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
     const [layout, setLayout] = useState<Layout>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [visibleAnimalCount, setVisibleAnimalCount] = useState(ANIMAL_BATCH_SIZE);
+    const [visiblePowerCount, setVisiblePowerCount] = useState(FACET_BATCH_SIZE);
+    const [visibleLessonCount, setVisibleLessonCount] = useState(FACET_BATCH_SIZE);
+    const animalSentinelRef = useRef<HTMLDivElement | null>(null);
+    const powerSentinelRef = useRef<HTMLDivElement | null>(null);
+    const lessonSentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const indexedCount = species.filter((item) => item.hasIndexNumber).length;
-    const breedCount = species.filter((item) => item.isBreed).length;
-    const discovered = species.filter((item) => item.captured).length;
-    const indexedEntries = useMemo(() => species.filter((item) => item.hasIndexNumber), [species]);
+    const indexedCount = discoveryStats.indexed;
+    const breedCount = discoveryStats.breeds;
+    const discovered = discoveryStats.found;
+    const remaining = discoveryStats.remaining;
+    const indexedEntries = useMemo(
+        () => species.filter((item) => item.hasIndexNumber && !item.isBreed),
+        [species]
+    );
 
     const filteredAnimals = useMemo(() => {
         const items = species
@@ -301,6 +328,7 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
 
         for (const item of indexedEntries) {
             const keys = Array.from(new Set(item.powers.map(canonicalPowerKey).filter(Boolean)));
+            if (!keys.length) continue;
             for (const key of keys) {
                 const name = displayPowerLabel(key);
                 if (queryKey && !normalizedSearchText(name).includes(queryKey)) continue;
@@ -327,7 +355,7 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
         const queryKey = normalizedSearchText(appliedQuery);
 
         for (const item of indexedEntries) {
-            const name = item.principle.trim();
+            const name = item.catalogLesson?.trim();
             if (!name) continue;
             if (queryKey && !normalizedSearchText(name).includes(queryKey)) continue;
 
@@ -360,6 +388,12 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
     const activeFilters = hasActiveFilters(appliedFilters, appliedQuery);
     const pendingChangeCount = countPendingChanges(query, appliedQuery, pendingFilters, appliedFilters);
     const hasPendingChanges = pendingChangeCount > 0;
+    const visibleAnimals = useMemo(() => filteredAnimals.slice(0, visibleAnimalCount), [filteredAnimals, visibleAnimalCount]);
+    const visiblePowerFacets = useMemo(() => powerFacets.slice(0, visiblePowerCount), [powerFacets, visiblePowerCount]);
+    const visibleLessonFacets = useMemo(() => lessonFacets.slice(0, visibleLessonCount), [lessonFacets, visibleLessonCount]);
+    const hasMoreAnimals = visibleAnimalCount < filteredAnimals.length;
+    const hasMorePowers = visiblePowerCount < powerFacets.length;
+    const hasMoreLessons = visibleLessonCount < lessonFacets.length;
 
     const searchPlaceholder = appliedFilters.contentMode === "animals"
         ? "Search species, lesson, or animal power"
@@ -401,10 +435,55 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
         };
     }, [filtersOpen]);
 
+    useEffect(() => {
+        setVisibleAnimalCount(ANIMAL_BATCH_SIZE);
+        setVisiblePowerCount(FACET_BATCH_SIZE);
+        setVisibleLessonCount(FACET_BATCH_SIZE);
+    }, [appliedFilters, appliedQuery, layout]);
+
+    useEffect(() => {
+        if (appliedFilters.contentMode !== "animals" || !hasMoreAnimals) return undefined;
+        const node = animalSentinelRef.current;
+        if (!node) return undefined;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setVisibleAnimalCount((current) => Math.min(current + ANIMAL_BATCH_SIZE, filteredAnimals.length));
+            }
+        }, {rootMargin: "700px 0px"});
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [appliedFilters.contentMode, hasMoreAnimals, filteredAnimals.length]);
+
+    useEffect(() => {
+        if (appliedFilters.contentMode !== "powers" || !hasMorePowers) return undefined;
+        const node = powerSentinelRef.current;
+        if (!node) return undefined;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setVisiblePowerCount((current) => Math.min(current + FACET_BATCH_SIZE, powerFacets.length));
+            }
+        }, {rootMargin: "700px 0px"});
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [appliedFilters.contentMode, hasMorePowers, powerFacets.length]);
+
+    useEffect(() => {
+        if (appliedFilters.contentMode !== "lessons" || !hasMoreLessons) return undefined;
+        const node = lessonSentinelRef.current;
+        if (!node) return undefined;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setVisibleLessonCount((current) => Math.min(current + FACET_BATCH_SIZE, lessonFacets.length));
+            }
+        }, {rootMargin: "700px 0px"});
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [appliedFilters.contentMode, hasMoreLessons, lessonFacets.length]);
+
     return (
         <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-white/45">
-                <span>{indexedCount} indexed · {breedCount} breeds · {discovered} found · {species.length - discovered} left</span>
+                <span>{indexedCount} indexed · {breedCount} breeds · {discovered} found · {remaining} left</span>
                 <span>
                     {appliedFilters.contentMode === "animals"
                         ? `${filteredAnimals.length} shown`
@@ -436,6 +515,15 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
                 </label>
 
                 <p className="text-xs text-white/40">{matchedSummary}</p>
+
+                <div className="flex flex-wrap gap-2">
+                    <Link
+                        href={LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}
+                        className="rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 transition hover:border-amber-300/40"
+                    >
+                        Legendary Earth Beasts
+                    </Link>
+                </div>
 
                 <div className="flex gap-3">
                     <button
@@ -610,33 +698,52 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
             ) : null}
 
             {appliedFilters.contentMode === "animals" ? (
-                <div className={layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "space-y-3"}>
-                    {filteredAnimals.map((item) => (
-                        <Link
-                            key={item.slug}
-                            href={`/animals/${item.slug}`}
-                            className={`group overflow-hidden rounded-[1.35rem] border shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/35 ${item.captured ? "border-white/10 bg-[#121212]" : "border-white/[0.06] bg-[#101010]"} ${layout === "list" ? "flex items-center" : "block"}`}
-                        >
-                            <div className={`relative overflow-hidden bg-white/[0.03] ${layout === "list" ? "h-28 w-28 shrink-0" : "aspect-square"}`}>
-                                <img src={item.imageSrc} alt="" loading="lazy" className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${item.captured ? "" : "grayscale opacity-25"}`} />
-                                {!item.captured ? <span className="absolute inset-0 flex items-center justify-center text-white/35"><AppIcon name="lock" /></span> : null}
-                                {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">NEW</span>}
-                                {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}
-                            </div>
-                            <div className="min-w-0 p-3.5">
-                                <h2 className="truncate font-display text-lg font-bold text-white">{item.name}</h2>
-                                <p className="mt-1 truncate text-xs italic text-white/35">{item.scientificName}</p>
-                                <div className="mt-3 flex items-center justify-between gap-2">
-                                    <span className="truncate text-[0.62rem] font-black uppercase tracking-wider text-primary-200/75">{item.principle}</span>
-                                    <span className="text-[0.62rem] font-bold text-white/25">R{item.gameStats?.rarity ?? item.rarity}</span>
+                <>
+                    <div className={layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "space-y-3"}>
+                        {visibleAnimals.map((item) => (
+                            <Link
+                                key={item.slug}
+                                href={`/animals/${item.slug}`}
+                                className={`group overflow-hidden rounded-[1.35rem] border shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/35 ${item.captured ? "border-white/10 bg-[#121212]" : "border-white/[0.06] bg-[#101010]"} ${layout === "list" ? "flex items-center" : "block"}`}
+                            >
+                                <div className={`relative overflow-hidden bg-white/[0.03] ${layout === "list" ? "h-28 w-28 shrink-0" : "aspect-square"}`}>
+                                    <img src={item.imageSrc} alt="" loading="lazy" className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${item.captured ? "" : "grayscale opacity-25"}`} />
+                                    {!item.captured ? <span className="absolute inset-0 flex items-center justify-center text-white/35"><AppIcon name="lock" /></span> : null}
+                                    {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">NEW</span>}
+                                    {item.isLegendary ? (
+                                        <span className="absolute bottom-2 left-2 right-2 truncate rounded-full border border-amber-400/35 bg-amber-400/90 px-2 py-1 text-center text-[0.58rem] font-black uppercase tracking-[0.08em] text-black">
+                                            S-tier Legendary
+                                        </span>
+                                    ) : null}
+                                    {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+                                <div className="min-w-0 p-3.5">
+                                    <h2 className="truncate font-display text-lg font-bold text-white">{item.name}</h2>
+                                    <p className="mt-1 truncate text-xs italic text-white/35">{item.scientificName}</p>
+                                    <div className="mt-3 flex items-center justify-between gap-2">
+                                        <span className="truncate text-[0.62rem] font-black uppercase tracking-wider text-primary-200/75">{item.principle}</span>
+                                        <span className="text-[0.62rem] font-bold text-white/25">R{item.gameStats?.rarity ?? item.rarity}</span>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                    {hasMoreAnimals ? (
+                        <div ref={animalSentinelRef} className="flex justify-center py-3">
+                            <button
+                                type="button"
+                                onClick={() => setVisibleAnimalCount((current) => Math.min(current + ANIMAL_BATCH_SIZE, filteredAnimals.length))}
+                                className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
+                            >
+                                Load more animals
+                            </button>
+                        </div>
+                    ) : null}
+                </>
             ) : appliedFilters.contentMode === "powers" ? (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {powerFacets.map((facet) => {
+                <>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {visiblePowerFacets.map((facet) => {
                         const percent = facet.count ? Math.round(facet.found / facet.count * 100) : 0;
                         return (
                             <AppSurface key={facet.key}>
@@ -657,10 +764,23 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
                             </AppSurface>
                         );
                     })}
-                </div>
+                    </div>
+                    {hasMorePowers ? (
+                        <div ref={powerSentinelRef} className="flex justify-center py-3">
+                            <button
+                                type="button"
+                                onClick={() => setVisiblePowerCount((current) => Math.min(current + FACET_BATCH_SIZE, powerFacets.length))}
+                                className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
+                            >
+                                Load more powers
+                            </button>
+                        </div>
+                    ) : null}
+                </>
             ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {lessonFacets.map((facet) => {
+                <>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {visibleLessonFacets.map((facet) => {
                         const percent = facet.count ? Math.round(facet.found / facet.count * 100) : 0;
                         return (
                             <AppSurface key={facet.name}>
@@ -681,7 +801,19 @@ export default function CollectionCatalog({species}: {species: CatalogSpecies[]}
                             </AppSurface>
                         );
                     })}
-                </div>
+                    </div>
+                    {hasMoreLessons ? (
+                        <div ref={lessonSentinelRef} className="flex justify-center py-3">
+                            <button
+                                type="button"
+                                onClick={() => setVisibleLessonCount((current) => Math.min(current + FACET_BATCH_SIZE, lessonFacets.length))}
+                                className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/50 transition hover:border-white/20 hover:text-white"
+                            >
+                                Load more lessons
+                            </button>
+                        </div>
+                    ) : null}
+                </>
             )}
         </div>
     );

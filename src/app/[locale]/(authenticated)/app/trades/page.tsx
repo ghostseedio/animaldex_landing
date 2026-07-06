@@ -1,17 +1,20 @@
 import {AppEmpty, AppMetric, AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import TradesClient from "@/app/[locale]/(authenticated)/app/trades/trades-client";
-import {getAuthenticatedAppContext, getAppCaptures, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
+import {getAuthenticatedAppContext, getAppCaptures, getAppCreditOffers, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
 
 export default async function TradesPage({params}: {params: {locale: string}}) {
-    const [context, progression, trades, captures, feed] = await Promise.all([
+    const [context, progression, trades, creditOffers, captures, feed] = await Promise.all([
         getAuthenticatedAppContext(),
         getAppProgression(),
         getAppTrades(),
+        getAppCreditOffers(),
         getAppCaptures(),
         getAppDiscoverFeed(60)
     ]);
-    const pending = trades.filter((trade) => trade.status === "pending").length;
-    const completed = trades.filter((trade) => trade.status === "accepted").length;
+    const pendingTrades = trades.filter((trade) => trade.status === "pending").length;
+    const pendingCredits = creditOffers.filter((offer) => offer.status === "pending").length;
+    const completedTrades = trades.filter((trade) => trade.status === "accepted").length;
+    const completedCredits = creditOffers.filter((offer) => offer.status === "accepted").length;
     const publicCaptures = feed.filter((item) => item.ownerUserId !== context!.profile.id);
 
     return (
@@ -19,15 +22,23 @@ export default async function TradesPage({params}: {params: {locale: string}}) {
             <AppPageHeader
                 eyebrow="Collector exchange"
                 title="Trades"
-                description="Create and review animal-for-animal offers using the same server validation and capture locks as the iOS app."
+                description="Swap animals or bid credits for another collector's capture, using the same server validation and escrow rules as the iOS app."
             />
-            <section className="grid grid-cols-3 gap-3">
-                <AppMetric label="Pending" value={pending} accent="gold" />
-                <AppMetric label="Completed" value={completed} />
+            <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <AppMetric label="Pending trades" value={pendingTrades} accent="gold" />
+                <AppMetric label="Pending credits" value={pendingCredits} accent="gold" />
+                <AppMetric label="Completed" value={completedTrades + completedCredits} />
                 <AppMetric label="Trade access" value={progression.tradeUnlocked ? "Open" : "Locked"} accent="violet" />
             </section>
             {progression.tradeUnlocked ? (
-                <TradesClient trades={trades} userId={context!.profile.id} captures={captures} discover={publicCaptures} locale={params.locale} />
+                <TradesClient
+                    trades={trades}
+                    creditOffers={creditOffers}
+                    userId={context!.profile.id}
+                    captures={captures}
+                    discover={publicCaptures}
+                    locale={params.locale}
+                />
             ) : (
                 <AppEmpty
                     icon="trade"

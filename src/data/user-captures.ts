@@ -1,11 +1,17 @@
 import type {SpeciesEntry} from "@/data/species";
+import {catalogLookupToken} from "@/lib/collection-discovery";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export type UserCaptureSummary = {
     captureId: string;
     animalName: string;
+    scientificName: string | null;
     speciesSlug: string | null;
+    speciesProfileId: string | null;
+    confidence: number | null;
     score: number;
+    captureValidity: string | null;
+    learnedScenarioTags: string[];
     capturedAt: string | null;
     imageBucket: string | null;
     imagePath: string | null;
@@ -13,10 +19,26 @@ export type UserCaptureSummary = {
     locationDisplayLabel: string | null;
 };
 
-type DiscoverFeedUserRow = {
+export type UserCaptureStats = {
+    captureCount: number;
+    uniqueSpecies: number;
+    collectorScore: number;
+    wild: number;
+    zoo: number;
+    domestic: number;
+    sampledCount: number;
+    sampleLimitReached: boolean;
+};
+
+type OwnedCaptureManifestRow = {
     capture_id?: string;
     animal_name?: string | null;
+    scientific_name?: string | null;
+    species_profile_id?: string | null;
     normalized_identity_key?: string | null;
+    confidence?: number | null;
+    error_message?: string | null;
+    completed_at?: string | null;
     score?: number | null;
     capture_created_at?: string | null;
     image_bucket?: string | null;
@@ -24,9 +46,13 @@ type DiscoverFeedUserRow = {
     human_context?: string | null;
     zoo_or_wild?: string | null;
     location_display_label?: string | null;
+    learned_sub_principles?: unknown;
+    raw_json?: unknown;
 };
 
-function getContextLabel(row: Pick<DiscoverFeedUserRow, "zoo_or_wild" | "human_context">) {
+type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "score" | "human_context" | "zoo_or_wild">;
+
+function getContextLabel(row: Pick<OwnedCaptureManifestRow, "zoo_or_wild" | "human_context">) {
     const zooOrWild = row.zoo_or_wild?.trim();
 
     if (zooOrWild && zooOrWild !== "Unknown") {
@@ -47,18 +73,73 @@ function getContextLabel(row: Pick<DiscoverFeedUserRow, "zoo_or_wild" | "human_c
     }
 }
 
-function toUserCaptureSummary(row: DiscoverFeedUserRow): UserCaptureSummary | null {
+function isEligibleManifestRow(row: OwnedCaptureManifestRow) {
+    if (!row.capture_id?.trim() || !row.completed_at) return false;
+    return !row.error_message?.trim();
+}
+
+function parseCaptureValidity(raw: unknown) {
+    if (!raw || typeof raw !== "object") {
+        return null;
+    }
+
+    const model = (raw as {model?: unknown}).model;
+
+    if (!model || typeof model !== "object") {
+        return null;
+    }
+
+    const validity = (model as {capture_validity?: unknown}).capture_validity;
+
+    return typeof validity === "string" ? validity.trim() : null;
+}
+
+function parseLearnedScenarioTags(value: unknown) {
+    if (!Array.isArray(value)) {
+        return [] as string[];
+    }
+
+    const tags: string[] = [];
+
+    for (const item of value) {
+        if (!item || typeof item !== "object") {
+            continue;
+        }
+
+        const scenarioTags = (item as {scenario_tags?: unknown; scenarioTags?: unknown}).scenario_tags
+            ?? (item as {scenarioTags?: unknown}).scenarioTags;
+
+        if (!Array.isArray(scenarioTags)) {
+            continue;
+        }
+
+        for (const tag of scenarioTags) {
+            if (typeof tag === "string" && tag.trim()) {
+                tags.push(tag.trim());
+            }
+        }
+    }
+
+    return tags;
+}
+
+function toUserCaptureSummary(row: OwnedCaptureManifestRow): UserCaptureSummary | null {
     const captureId = row.capture_id?.trim();
 
-    if (!captureId) {
+    if (!captureId || !isEligibleManifestRow(row)) {
         return null;
     }
 
     return {
         captureId,
         animalName: row.animal_name?.trim() ?? "Animal",
+        scientificName: row.scientific_name?.trim() ?? null,
         speciesSlug: row.normalized_identity_key?.trim() ?? null,
+        speciesProfileId: row.species_profile_id?.trim() ?? null,
+        confidence: row.confidence ?? null,
         score: row.score ?? 0,
+        captureValidity: parseCaptureValidity(row.raw_json),
+        learnedScenarioTags: parseLearnedScenarioTags(row.learned_sub_principles),
         capturedAt: row.capture_created_at ?? null,
         imageBucket: row.image_bucket ?? null,
         imagePath: row.image_path ?? null,
@@ -66,6 +147,25 @@ function toUserCaptureSummary(row: DiscoverFeedUserRow): UserCaptureSummary | nu
         locationDisplayLabel: row.location_display_label?.trim() ?? null
     };
 }
+
+const USER_CAPTURE_MANIFEST_SELECT = [
+    "capture_id",
+    "animal_name",
+    "scientific_name",
+    "species_profile_id",
+    "normalized_identity_key",
+    "confidence",
+    "error_message",
+    "completed_at",
+    "capture_created_at",
+    "image_bucket",
+    "image_path",
+    "human_context",
+    "zoo_or_wild",
+    "location_display_label",
+    "learned_sub_principles",
+    "raw_json"
+].join(",");
 
 export async function getAuthenticatedUserId() {
     const supabase = createSupabaseServerClient();
@@ -79,7 +179,7 @@ export async function getAuthenticatedUserId() {
     return user?.id ?? null;
 }
 
-export async function getUserCaptures(limit = 120): Promise<UserCaptureSummary[]> {
+export async function getUserCaptures(limit = 2000): Promise<UserCaptureSummary[]> {
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {
@@ -92,21 +192,91 @@ export async function getUserCaptures(limit = 120): Promise<UserCaptureSummary[]
         return [];
     }
 
-    const {data, error} = await supabase
-        .from("discover_feed_v1")
-        .select("capture_id,animal_name,normalized_identity_key,score,capture_created_at,image_bucket,image_path,human_context,zoo_or_wild,location_display_label")
-        .eq("user_id", user.id)
-        .order("score", {ascending: false})
-        .order("capture_created_at", {ascending: false})
-        .limit(limit);
+    const pageSize = 240;
+    const rows: OwnedCaptureManifestRow[] = [];
 
-    if (error || !data) {
-        return [];
+    for (let offset = 0; offset < limit; offset += pageSize) {
+        const {data, error} = await supabase
+            .from("owned_capture_manifest_v1")
+            .select(USER_CAPTURE_MANIFEST_SELECT)
+            .eq("user_id", user.id)
+            .not("completed_at", "is", null)
+            .order("capture_created_at", {ascending: false})
+            .range(offset, offset + pageSize - 1);
+
+        if (error || !data?.length) {
+            break;
+        }
+
+        rows.push(...(data as OwnedCaptureManifestRow[]));
+        if (data.length < pageSize) {
+            break;
+        }
     }
 
-    return (data as DiscoverFeedUserRow[])
+    return rows
         .map(toUserCaptureSummary)
         .filter((item): item is UserCaptureSummary => Boolean(item));
+}
+
+export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptureStats> {
+    const emptyStats: UserCaptureStats = {
+        captureCount: 0,
+        uniqueSpecies: 0,
+        collectorScore: 0,
+        wild: 0,
+        zoo: 0,
+        domestic: 0,
+        sampledCount: 0,
+        sampleLimitReached: false
+    };
+    const supabase = createSupabaseServerClient();
+
+    if (!supabase) {
+        return emptyStats;
+    }
+
+    const {data: {user}} = await supabase.auth.getUser();
+
+    if (!user) {
+        return emptyStats;
+    }
+
+    const {data, error, count} = await supabase
+        .from("owned_capture_manifest_v1")
+        .select("capture_id,animal_name,normalized_identity_key,human_context,zoo_or_wild,score,completed_at,error_message", {count: "exact"})
+        .eq("user_id", user.id)
+        .not("completed_at", "is", null)
+        .order("capture_created_at", {ascending: false})
+        .limit(sampleLimit);
+
+    if (error || !data) {
+        return emptyStats;
+    }
+
+    const rows = (data as OwnedCaptureManifestRow[]).filter(isEligibleManifestRow);
+    const uniqueSpecies = new Set(
+        rows.map((row) => row.normalized_identity_key?.trim() || row.animal_name?.trim().toLowerCase() || row.capture_id?.trim())
+            .filter(Boolean)
+    );
+    const wild = rows.filter((row) => getContextLabel(row) === "Wild").length;
+    const zoo = rows.filter((row) => getContextLabel(row) === "Zoo").length;
+    const domestic = rows.filter((row) => {
+        const label = getContextLabel(row);
+        return label === "Domestic" || label === "Farm";
+    }).length;
+    const captureCount = count ?? rows.length;
+
+    return {
+        captureCount,
+        uniqueSpecies: uniqueSpecies.size,
+        collectorScore: rows.reduce((sum, row) => sum + Number(row.score ?? 0), 0),
+        wild,
+        zoo,
+        domestic,
+        sampledCount: rows.length,
+        sampleLimitReached: rows.length < captureCount
+    };
 }
 
 export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24): Promise<UserCaptureSummary[]> {
@@ -118,8 +288,22 @@ export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24)
 
     return captures.filter((capture) => {
         const captureKey = capture.speciesSlug?.toLowerCase() ?? null;
+        const animalToken = catalogLookupToken(capture.animalName);
+        const scientificToken = catalogLookupToken(capture.scientificName);
 
         if (captureKey === slug || captureKey === identityKey) {
+            return true;
+        }
+
+        if (animalToken && (animalToken === identityKey || animalToken === slug.replace(/-/g, "_"))) {
+            return true;
+        }
+
+        if (scientificToken && (scientificToken === identityKey || scientificToken === slug.replace(/-/g, "_"))) {
+            return true;
+        }
+
+        if (profileId && capture.speciesProfileId?.toLowerCase() === profileId.toLowerCase()) {
             return true;
         }
 

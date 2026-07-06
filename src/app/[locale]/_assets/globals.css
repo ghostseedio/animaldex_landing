@@ -61,3 +61,20 @@ button {
         transform: scale(1.04);
     }
 }
+
+@keyframes credit-delta-rise {
+    0% {
+        opacity: 0;
+        transform: translateY(8px) scale(0.92);
+    }
+
+    18% {
+        opacity: 1;
+        transform: translateY(0) scale(1.08);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-18px) scale(0.96);
+    }
+}
