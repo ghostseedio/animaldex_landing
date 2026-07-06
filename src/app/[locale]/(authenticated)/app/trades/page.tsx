@@ -1,16 +1,18 @@
 import {AppEmpty, AppMetric, AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import TradesClient from "@/app/[locale]/(authenticated)/app/trades/trades-client";
-import {getAuthenticatedAppContext, getAppCaptures, getAppCreditOffers, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
+import {decorateCapture, getAuthenticatedAppContext, getAppCreditOffers, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
+import {getUserCaptures} from "@/data/user-captures";
 
 export default async function TradesPage({params}: {params: {locale: string}}) {
-    const [context, progression, trades, creditOffers, captures, feed] = await Promise.all([
+    const [context, progression, trades, creditOffers, rawCaptures, feed] = await Promise.all([
         getAuthenticatedAppContext(),
         getAppProgression(),
         getAppTrades(),
         getAppCreditOffers(),
-        getAppCaptures(),
-        getAppDiscoverFeed(60)
+        getUserCaptures(2000),
+        getAppDiscoverFeed(120)
     ]);
+    const captures = rawCaptures.map(decorateCapture);
     const pendingTrades = trades.filter((trade) => trade.status === "pending").length;
     const pendingCredits = creditOffers.filter((offer) => offer.status === "pending").length;
     const completedTrades = trades.filter((trade) => trade.status === "accepted").length;

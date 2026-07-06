@@ -5,10 +5,11 @@ import {useRouter} from "next/navigation";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import {AppBadge, AppSegmentedControl, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import TradeCapturePicker, {useTradeCaptureOptions} from "@/app/[locale]/(authenticated)/app/trades/trade-capture-picker";
 import type {AppCapture, AppCreditOffer, AppDiscoverItem, AppTrade} from "@/data/authenticated-app";
 import {formatAppDateTime} from "@/lib/app-dates";
 
-const selectClass = "w-full rounded-xl border border-white/10 bg-black px-3 py-3 text-sm text-white outline-none transition focus:border-primary-400/40";
+const inputClass = "w-full rounded-xl border border-white/10 bg-black px-3 py-3 text-sm text-white outline-none transition focus:border-primary-400/40";
 const MIN_CREDIT_AMOUNT = 1;
 const MAX_CREDIT_AMOUNT = 5000;
 const DEFAULT_CREDIT_AMOUNT = 25;
@@ -44,6 +45,8 @@ export default function TradesClient({
     const [theirCapture, setTheirCapture] = useState("");
     const [creditTarget, setCreditTarget] = useState("");
     const [creditAmount, setCreditAmount] = useState(String(DEFAULT_CREDIT_AMOUNT));
+
+    const {mine: myCaptureOptions, public: publicCaptureOptions} = useTradeCaptureOptions(captures, discover, locale);
 
     const parsedCreditAmount = Number(creditAmount.trim());
     const clampedCreditAmount = Number.isFinite(parsedCreditAmount)
@@ -121,7 +124,7 @@ export default function TradesClient({
         setCreating(false);
     }
 
-    const canCreateAnimalOffer = Boolean(discover.length && captures.length);
+    const canCreateAnimalOffer = Boolean(publicCaptureOptions.length && myCaptureOptions.length);
 
     return (
         <div className="space-y-4">
@@ -149,41 +152,52 @@ export default function TradesClient({
 
                     {offerMode === "animal" ? (
                         <>
-                            <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-end">
-                                <label className="block">
-                                    <span className="mb-2 block text-xs font-bold text-white/35">Your animal</span>
-                                    <select value={myCapture} onChange={(event) => setMyCapture(event.target.value)} className={selectClass}>
-                                        <option value="">Choose capture</option>
-                                        {captures.map((item) => <option key={item.captureId} value={item.captureId}>{item.animalName} · {item.score}</option>)}
-                                    </select>
-                                </label>
-                                <AppIcon name="trade" className="mx-auto hidden h-6 w-6 text-violet-300 md:block" />
-                                <label className="block">
-                                    <span className="mb-2 block text-xs font-bold text-white/35">Collector animal</span>
-                                    <select value={theirCapture} onChange={(event) => setTheirCapture(event.target.value)} className={selectClass}>
-                                        <option value="">Choose public capture</option>
-                                        {discover.map((item) => <option key={item.captureId} value={item.captureId}>{item.animalName} · {item.collectorName} · {item.score}</option>)}
-                                    </select>
-                                </label>
+                            <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-start">
+                                <TradeCapturePicker
+                                    label="Your animal"
+                                    placeholder="Choose from your collection"
+                                    sheetTitle="Your animals"
+                                    sheetDescription="Search your captures and pick one to offer."
+                                    emptyLabel="No captures match your search."
+                                    options={myCaptureOptions}
+                                    value={myCapture}
+                                    onChange={setMyCapture}
+                                />
+                                <AppIcon name="trade" className="mx-auto hidden h-6 w-6 text-violet-300 md:mt-12 md:block" />
+                                <TradeCapturePicker
+                                    label="Collector animal"
+                                    placeholder="Choose a public capture"
+                                    sheetTitle="Public captures"
+                                    sheetDescription="Browse discoverable animals from other collectors."
+                                    emptyLabel="No public captures match your search."
+                                    options={publicCaptureOptions}
+                                    value={theirCapture}
+                                    onChange={setTheirCapture}
+                                />
                             </div>
                             <button
                                 type="button"
                                 disabled={creating || !myCapture || !theirCapture}
                                 onClick={createAnimalOffer}
-                                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40"
+                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
                             >
                                 {creating ? "Creating offer…" : "Review and send trade"}
                             </button>
                         </>
                     ) : (
                         <>
-                            <label className="mt-5 block">
-                                <span className="mb-2 block text-xs font-bold text-white/35">Requested animal</span>
-                                <select value={creditTarget} onChange={(event) => setCreditTarget(event.target.value)} className={selectClass}>
-                                    <option value="">Choose public capture</option>
-                                    {discover.map((item) => <option key={item.captureId} value={item.captureId}>{item.animalName} · {item.collectorName} · {item.score}</option>)}
-                                </select>
-                            </label>
+                            <div className="mt-5">
+                                <TradeCapturePicker
+                                    label="Requested animal"
+                                    placeholder="Choose a public capture"
+                                    sheetTitle="Public captures"
+                                    sheetDescription="Pick the animal you want to bid credits for."
+                                    emptyLabel="No public captures match your search."
+                                    options={publicCaptureOptions}
+                                    value={creditTarget}
+                                    onChange={setCreditTarget}
+                                />
+                            </div>
                             <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-4">
                                 <p className="text-xs font-bold uppercase tracking-wider text-amber-200/70">Credit bid</p>
                                 <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -196,7 +210,7 @@ export default function TradesClient({
                                             step={1}
                                             value={creditAmount}
                                             onChange={(event) => setCreditAmount(event.target.value.replace(/[^\d]/g, ""))}
-                                            className={selectClass}
+                                            className={inputClass}
                                         />
                                     </label>
                                     <p className="pb-3 text-sm font-bold text-amber-200/80">credits</p>
@@ -211,7 +225,7 @@ export default function TradesClient({
                                 type="button"
                                 disabled={creating || !canCreateCreditOffer}
                                 onClick={createCreditOffer}
-                                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40"
+                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
                             >
                                 {creating ? "Sending offer…" : "Review and send credit offer"}
                             </button>

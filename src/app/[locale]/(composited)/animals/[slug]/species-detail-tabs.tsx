@@ -65,7 +65,9 @@ export default function SpeciesDetailTabs({
                             <button
                                 key={tab.id}
                                 type="button"
+                                id={`species-tab-${tab.id}`}
                                 aria-selected={isActive}
+                                aria-controls={`species-tabpanel-${tab.id}`}
                                 role="tab"
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex min-h-[3rem] items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-sm font-semibold transition-colors md:min-h-[3.25rem] md:px-3 ${
@@ -82,9 +84,18 @@ export default function SpeciesDetailTabs({
                 </div>
             </nav>
 
-            <div role="tabpanel">
-                {panelMap[activeTab]}
-            </div>
+            {(Object.keys(panelMap) as SpeciesDetailTab[]).map((tabId) => (
+                <div
+                    key={tabId}
+                    id={`species-tabpanel-${tabId}`}
+                    role="tabpanel"
+                    aria-labelledby={`species-tab-${tabId}`}
+                    hidden={activeTab !== tabId}
+                    className={activeTab === tabId ? "flex flex-col gap-10 md:gap-14" : "hidden"}
+                >
+                    {panelMap[tabId]}
+                </div>
+            ))}
         </div>
     );
 }

@@ -28,7 +28,7 @@ export default async function SetsPage() {
 
             <section className="overflow-hidden rounded-[1.4rem] border border-white/10 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)]">
                 <div
-                    className="relative h-44 bg-cover bg-center"
+                    className="relative h-[27.5rem] bg-cover bg-center"
                     style={{backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.72)), url(${SETS_HERO})`}}
                 >
                     <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-5">

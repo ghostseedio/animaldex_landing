@@ -1,5 +1,9 @@
 import type {SpeciesEntry} from "@/data/species";
 import {getDatabaseSpeciesBySlug} from "@/data/database-species-pages";
+import {
+    buildSpeciesCaptureMatchCandidates,
+    captureMatchesSpeciesEntry
+} from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export type SpeciesRankingItem = {
@@ -20,6 +24,9 @@ export type SpeciesRankingItem = {
 type DiscoverFeedRankingRow = {
     capture_id?: string;
     animal_name?: string | null;
+    breed_guess?: string | null;
+    normalized_identity_key?: string | null;
+    species_profile_id?: string | null;
     profile_username?: string | null;
     profile_display_name?: string | null;
     location_display_label?: string | null;
@@ -48,37 +55,11 @@ function getSupabaseConfig() {
 }
 
 function buildSpeciesKeyCandidates(entry: SpeciesEntry) {
-    const seen = new Set<string>();
-    const candidates: {column: string; value: string}[] = [];
+    return buildSpeciesCaptureMatchCandidates(entry);
+}
 
-    const push = (column: string, value: string | null | undefined) => {
-        const trimmed = value?.trim();
-
-        if (!trimmed) {
-            return;
-        }
-
-        const key = `${column}:${trimmed}`;
-
-        if (seen.has(key)) {
-            return;
-        }
-
-        seen.add(key);
-        candidates.push({column, value: trimmed});
-    };
-
-    push("species_profile_id", entry.speciesProfileId);
-    push("normalized_identity_key", entry.normalizedIdentityKey ?? entry.slug);
-
-    if (entry.slug.includes("-")) {
-        push("normalized_identity_key", entry.slug.replaceAll("-", "_"));
-    }
-
-    push("scientific_name", entry.analysis.scientificName);
-    push("animal_name", entry.name);
-
-    return candidates;
+function filterRankingRowsForEntry(entry: SpeciesEntry, rows: DiscoverFeedRankingRow[]) {
+    return rows.filter((row) => captureMatchesSpeciesEntry(entry, row));
 }
 
 function isRankableRow(row: DiscoverFeedRankingRow) {
@@ -208,7 +189,7 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
 
     searchParams.set(
         "select",
-        "capture_id,animal_name,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,raw_json"
+        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,raw_json"
     );
     searchParams.set("order", "score.desc,capture_created_at.desc");
 
@@ -236,7 +217,7 @@ export async function getSpeciesRankings(entry: SpeciesEntry, limit = 24): Promi
             [candidate.column]: `eq.${candidate.value}`,
             limit: String(limit)
         });
-        const rows = prepareRankingRows(await fetchDiscoverFeedRankings(searchParams));
+        const rows = prepareRankingRows(filterRankingRowsForEntry(resolvedEntry, await fetchDiscoverFeedRankings(searchParams)));
 
         if (rows.length > 0) {
             return toRankingItems(rows).slice(0, limit);
@@ -248,7 +229,10 @@ export async function getSpeciesRankings(entry: SpeciesEntry, limit = 24): Promi
         animal_name: `ilike.${normalizedName}`,
         limit: String(Math.max(limit * 2, 48))
     });
-    const rows = prepareRankingRows(await fetchDiscoverFeedRankings(searchParams))
+    const rows = prepareRankingRows(filterRankingRowsForEntry(
+        resolvedEntry,
+        await fetchDiscoverFeedRankings(searchParams)
+    ))
         .filter((row) => normalizeAnimalName(row.animal_name ?? "") === normalizedName);
 
     return toRankingItems(rows).slice(0, limit);

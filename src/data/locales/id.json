@@ -671,6 +671,7 @@
     "back": "Kembali ke Halaman Spesies",
     "scientificName": "Nama ilmiah",
     "category": "Kategori",
+    "breedLabel": "Ras",
     "published": "Dipublikasikan",
     "updated": "Diperbarui",
     "whatIsTitle": "Apa itu {animal}?",

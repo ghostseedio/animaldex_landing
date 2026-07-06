@@ -1,11 +1,116 @@
 "use client";
 
+import Image from "next/image";
 import {useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import type {CaptureProgressState} from "@/data/species-growth";
+import type {CaptureProgressState} from "@/data/species-growth-types";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
 
 const ENDORSEMENT_STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+function SizeScaleArtworkIcon({
+    slug,
+    alt,
+    size
+}: {
+    slug: string;
+    alt: string;
+    size: number;
+}) {
+    const [showPlaceholder, setShowPlaceholder] = useState(false);
+
+    if (showPlaceholder) {
+        return (
+            <div
+                className="flex items-center justify-center rounded-[10px] bg-white/[0.06] text-white/35"
+                style={{width: size, height: size}}
+                aria-hidden="true"
+            >
+                <svg viewBox="0 0 24 24" className="h-[55%] w-[55%]" fill="currentColor">
+                    <ellipse cx="12" cy="17.5" rx="5.2" ry="4.4" />
+                    <circle cx="7.1" cy="10.2" r="2.35" />
+                    <circle cx="10.4" cy="7.6" r="2.35" />
+                    <circle cx="13.6" cy="7.6" r="2.35" />
+                    <circle cx="16.9" cy="10.2" r="2.35" />
+                </svg>
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative shrink-0 overflow-hidden" style={{width: size, height: size}}>
+            <Image
+                src={getSpeciesArtworkUrl(slug)}
+                alt={alt}
+                fill
+                unoptimized
+                sizes={`${size}px`}
+                className="object-contain brightness-0 invert opacity-[0.78]"
+                onError={() => setShowPlaceholder(true)}
+            />
+        </div>
+    );
+}
+
+function SizeScaleRuler({
+    speciesName,
+    speciesSlug,
+    score
+}: {
+    speciesName: string;
+    speciesSlug: string;
+    score: number;
+}) {
+    const markerX = Math.min(Math.max(score, 7), 93);
+
+    return (
+        <div className="overflow-x-auto rounded-[20px] border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,0.04),#121212,rgba(148,84,250,0.08))]">
+            <div className="relative h-[150px] min-w-[560px]">
+                <div className="absolute left-[18px] right-[18px] top-[86px]">
+                    <div className="h-2.5 rounded-full bg-gradient-to-r from-white/10 via-violet-400/15 to-[#38fa47]/10" />
+                    <div className="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+                        <span>Tiny</span>
+                        <span>Pet</span>
+                        <span>Giant</span>
+                    </div>
+                </div>
+
+                {SIZE_SCALE_ANCHORS.map((anchor) => (
+                    <div
+                        key={anchor.slug}
+                        className="absolute top-[98px] flex w-[70px] -translate-x-1/2 flex-col items-center gap-1.5 text-center"
+                        style={{left: `${anchor.position}%`}}
+                    >
+                        <SizeScaleArtworkIcon slug={anchor.slug} alt={anchor.label} size={34} />
+                        <span className="block text-[10px] font-semibold text-white/40">{anchor.label}</span>
+                    </div>
+                ))}
+
+                <div
+                    className="absolute top-3 flex max-w-[150px] -translate-x-1/2 flex-col items-center gap-1.5 text-center"
+                    style={{left: `${markerX}%`}}
+                >
+                    <div className="flex items-center gap-2 rounded-lg bg-[#1f1f1f]/90 px-2 py-1">
+                        <SizeScaleArtworkIcon slug={speciesSlug} alt={speciesName} size={30} />
+                        <span className="max-w-24 truncate text-[11px] font-semibold text-white">{speciesName}</span>
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">Scale {score}</span>
+                </div>
+
+                <span
+                    className="absolute top-[74px] block h-16 w-[3px] -translate-x-1/2 bg-gradient-to-b from-[#38fa47] to-violet-400 shadow-[0_0_18px_rgba(56,250,71,0.36)]"
+                    style={{left: `${markerX}%`}}
+                />
+                <span
+                    className="absolute top-[103px] block h-3 w-3 -translate-x-1/2 rounded-full bg-[#38fa47] shadow-[0_0_14px_rgba(56,250,71,0.38)]"
+                    style={{left: `${markerX}%`}}
+                />
+            </div>
+        </div>
+    );
+}
 
 function levelPresentation(totalXP: number) {
     const xp = Math.max(0, totalXP);
@@ -45,11 +150,13 @@ export function SpeciesLevelProgress({progress}: {progress: CaptureProgressState
 export function SpeciesEndorsementAndSize({
     progress,
     speciesName,
+    speciesSlug,
     sizeScore,
     isAuthenticated
 }: {
     progress: CaptureProgressState | null;
     speciesName: string;
+    speciesSlug: string;
     sizeScore: number | null;
     isAuthenticated: boolean;
 }) {
@@ -87,13 +194,15 @@ export function SpeciesEndorsementAndSize({
             {sizeScore != null ? (
                 <section className="rounded-[20px] border border-[#38fa47]/15 bg-[linear-gradient(145deg,rgba(56,250,71,0.12),rgba(56,250,71,0.06),#1f1f1f)] p-4">
                     <p className="text-xs font-medium text-white/40">Size scale</p>
-                    <div className="mt-3 flex items-start justify-between gap-3"><div><h3 className="text-[17px] font-semibold text-white">{sizeLabel}</h3><p className="mt-1 text-xs font-medium text-white/60">Uses the canonical size stat for consistent placement</p></div><span className="rounded-full bg-gradient-to-r from-[#38fa47]/20 to-violet-400/20 px-3 py-2 text-lg font-extrabold text-[#38fa47]">{score}/100</span></div>
-                    <div className="mt-4 overflow-x-auto rounded-[20px] border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,0.04),#121212,rgba(148,84,250,0.08))]">
-                        <div className="relative h-[150px] min-w-[560px]">
-                            <div className="absolute left-[18px] right-[18px] top-[86px] h-2.5 rounded-full bg-gradient-to-r from-white/10 via-violet-400/15 to-[#38fa47]/10" />
-                            <div className="absolute top-8 -translate-x-1/2 text-center" style={{left: `${score}%`}}><span className="block max-w-28 truncate rounded-lg bg-[#1f1f1f] px-2 py-1 text-[11px] font-semibold text-white">{speciesName}</span><span className="mx-auto mt-1 block h-16 w-[3px] bg-gradient-to-b from-[#38fa47] to-violet-400" /></div>
-                            {[{p:2,l:"Butterfly"},{p:16,l:"Cat"},{p:30,l:"Dog"},{p:52,l:"Horse"},{p:82,l:"Elephant"},{p:98,l:"Whale Shark"}].map((anchor) => <div key={anchor.l} className="absolute top-[101px] w-[70px] -translate-x-1/2 text-center" style={{left:`${anchor.p}%`}}><span className="mx-auto block h-2 w-2 rounded-full bg-white/35"/><span className="mt-2 block text-[10px] font-semibold text-white/40">{anchor.l}</span></div>)}
+                    <div className="mt-3 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 className="text-[17px] font-semibold text-white">{sizeLabel}</h3>
+                            <p className="mt-1 text-xs font-medium text-white/60">Uses the canonical size stat for consistent placement</p>
                         </div>
+                        <span className="rounded-full bg-gradient-to-r from-[#38fa47]/20 to-violet-400/20 px-3 py-2 text-lg font-extrabold text-[#38fa47]">{score}/100</span>
+                    </div>
+                    <div className="mt-4">
+                        <SizeScaleRuler speciesName={speciesName} speciesSlug={speciesSlug} score={score} />
                     </div>
                 </section>
             ) : null}

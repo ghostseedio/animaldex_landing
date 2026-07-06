@@ -1,4 +1,5 @@
 import {getSpeciesBySlug} from "@/data/species";
+import {isBreedSpeciesEntry} from "@/lib/species-breed";
 
 const GENERIC_ANIMAL_LABELS = new Set([
     "animal",
@@ -97,6 +98,7 @@ export function resolveCaptureDisplayName(input: CaptureDisplayNameInput) {
     const species = slug ? getSpeciesBySlug(slug) : null;
     const speciesName = species?.name ?? null;
     const identityKind = species?.databaseSource?.identityKind?.toLowerCase() ?? null;
+    const isBreed = species ? isBreedSpeciesEntry(species) : identityKind === "breed";
 
     if (captureTitle && captureTitle.toLowerCase() !== animalName?.toLowerCase()) {
         return captureTitle;
@@ -104,7 +106,7 @@ export function resolveCaptureDisplayName(input: CaptureDisplayNameInput) {
 
     if (breedGuess) {
         if (isGenericAnimalLabel(animalName)) return breedGuess;
-        if (identityKind === "breed") return breedGuess;
+        if (isBreed) return breedGuess;
         if (isMoreSpecific(breedGuess, animalName)) return breedGuess;
     }
 

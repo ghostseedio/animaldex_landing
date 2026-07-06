@@ -1,8 +1,31 @@
+import "server-only";
+
 import type {SpeciesEntry} from "@/data/species";
 import {getSpeciesBySlug} from "@/data/species";
+import {
+    type FeaturedMedia,
+    SPECIES_NO_IMAGE_SRC,
+    type SpeciesDirectoryImageState,
+    type SpeciesImageReference,
+    getSpeciesImageAltText,
+    getSpeciesImageAttribution,
+    getSpeciesImageRoute
+} from "@/lib/species-image-public";
+import {
+    buildSpeciesCaptureMatchCandidates,
+    captureMatchesSpeciesEntry
+} from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
-export const SPECIES_NO_IMAGE_SRC = "/images/placeholders/species-no-image.svg";
+export {
+    SPECIES_NO_IMAGE_SRC,
+    type FeaturedMedia,
+    type SpeciesDirectoryImageState,
+    type SpeciesImageReference,
+    getSpeciesImageAltText,
+    getSpeciesImageAttribution,
+    getSpeciesImageRoute
+};
 
 type DiscoverFeedCandidate = {
     capture_id?: string;
@@ -10,6 +33,7 @@ type DiscoverFeedCandidate = {
     normalized_identity_key?: string | null;
     scientific_name?: string | null;
     animal_name?: string | null;
+    breed_guess?: string | null;
     profile_username?: string | null;
     location_display_label?: string | null;
     human_context?: string | null;
@@ -25,6 +49,7 @@ type AnalysisResultCandidate = {
     species_profile_id?: string | null;
     normalized_identity_key?: string | null;
     scientific_name?: string | null;
+    breed_guess?: string | null;
     confidence?: number | null;
     captures?: {
         created_at?: string | null;
@@ -40,33 +65,13 @@ type CaptureImageRow = {
     sort_order: number | null;
 };
 
-export type FeaturedMedia = {
-    captureId: string | null;
-    imageBucket: string | null;
-    imagePath: string | null;
-    mimeType: string | null;
-    mediaKind: string | null;
-    animalName: string | null;
-    username: string | null;
-    contextLabel: string | null;
-    locationDisplayLabel: string | null;
-};
-
-export type SpeciesImageReference = FeaturedMedia;
-
-export type SpeciesDirectoryImageState = {
-    hasPublicCapture: boolean;
-    captureId: string | null;
-};
-
-type SpeciesImageAltVariant = "featured" | "thumbnail" | "metadata";
-
 const DISCOVER_FEED_IMAGE_SELECT = [
     "capture_id",
     "species_profile_id",
     "normalized_identity_key",
     "scientific_name",
     "animal_name",
+    "breed_guess",
     "profile_username",
     "location_display_label",
     "human_context",
@@ -148,7 +153,7 @@ function buildSpeciesDirectoryMatchIndex(entries: SpeciesEntry[]) {
     const index = new Map<string, Map<string, Set<string>>>();
 
     for (const entry of entries) {
-        for (const candidate of buildDiscoverFeedCandidates(entry)) {
+        for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
             if (candidate.column === "normalized_identity_key") {
                 registerNormalizedIdentityKeyVariants(index, candidate.value, entry.slug);
             } else {
@@ -166,7 +171,8 @@ function buildSpeciesDirectoryMatchIndex(entries: SpeciesEntry[]) {
 function applyDiscoverFeedRowsToDirectoryState(
     rows: DiscoverFeedCandidate[],
     matchIndex: Map<string, Map<string, Set<string>>>,
-    stateBySlug: Map<string, SpeciesDirectoryImageState>
+    stateBySlug: Map<string, SpeciesDirectoryImageState>,
+    entriesBySlug: Map<string, SpeciesEntry>
 ) {
     for (const row of rows) {
         if (!isUsableDiscoverFeedImage(row) || !row.capture_id) {
@@ -178,7 +184,8 @@ function applyDiscoverFeedRowsToDirectoryState(
             "species_profile_id",
             "normalized_identity_key",
             "scientific_name",
-            "animal_name"
+            "animal_name",
+            "breed_guess"
         ];
 
         for (const column of columns) {
@@ -198,6 +205,12 @@ function applyDiscoverFeedRowsToDirectoryState(
         }
 
         for (const slug of Array.from(matchedSlugs)) {
+            const entry = entriesBySlug.get(slug);
+
+            if (entry && !captureMatchesSpeciesEntry(entry, row)) {
+                continue;
+            }
+
             const current = stateBySlug.get(slug);
 
             if (!current || current.hasPublicCapture) {
@@ -258,7 +271,7 @@ async function fetchAnalysisCaptureIdsByColumn(column: string, values: string[])
 
     for (const chunk of chunkValues(values, 40)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,confidence,captures!inner(created_at)",
+            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,breed_guess,confidence,captures!inner(created_at)",
             completed_at: "not.is.null",
             [column]: postgrestInFilter(chunk),
             "captures.is_discoverable": "eq.true",
@@ -289,7 +302,8 @@ async function fetchAnalysisCaptureIdsByColumn(column: string, values: string[])
 function applyAnalysisRowsToDirectoryState(
     rows: AnalysisResultCandidate[],
     matchIndex: Map<string, Map<string, Set<string>>>,
-    stateBySlug: Map<string, SpeciesDirectoryImageState>
+    stateBySlug: Map<string, SpeciesDirectoryImageState>,
+    entriesBySlug: Map<string, SpeciesEntry>
 ) {
     for (const row of rows) {
         const captureId = row.capture_id?.trim();
@@ -302,7 +316,8 @@ function applyAnalysisRowsToDirectoryState(
         const columns: Array<keyof AnalysisResultCandidate> = [
             "species_profile_id",
             "normalized_identity_key",
-            "scientific_name"
+            "scientific_name",
+            "breed_guess"
         ];
 
         for (const column of columns) {
@@ -322,6 +337,12 @@ function applyAnalysisRowsToDirectoryState(
         }
 
         for (const slug of Array.from(matchedSlugs)) {
+            const entry = entriesBySlug.get(slug);
+
+            if (entry && !captureMatchesSpeciesEntry(entry, row)) {
+                continue;
+            }
+
             const current = stateBySlug.get(slug);
 
             if (!current || current.hasPublicCapture) {
@@ -345,29 +366,6 @@ function getSupabaseConfig() {
     }
 
     return {supabaseUrl, anonKey};
-}
-
-function buildSpeciesKeyCandidates(entry: SpeciesEntry) {
-    return [
-        entry.speciesProfileId
-            ? {column: "species_profile_id", value: entry.speciesProfileId}
-            : null,
-        (entry.normalizedIdentityKey ?? entry.slug)
-            ? {column: "normalized_identity_key", value: entry.normalizedIdentityKey ?? entry.slug}
-            : null,
-        entry.analysis.scientificName
-            ? {column: "scientific_name", value: entry.analysis.scientificName}
-            : null
-    ].filter((item): item is {column: string; value: string} => Boolean(item?.value));
-}
-
-function buildDiscoverFeedCandidates(entry: SpeciesEntry) {
-    return [
-        ...buildSpeciesKeyCandidates(entry),
-        entry.name
-            ? {column: "animal_name", value: entry.name}
-            : null
-    ].filter((item): item is {column: string; value: string} => Boolean(item?.value));
 }
 
 function isUsableDiscoverFeedImage(row: DiscoverFeedCandidate) {
@@ -432,7 +430,7 @@ async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): P
         return [];
     }
 
-    for (const candidate of buildDiscoverFeedCandidates(entry)) {
+    for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
         const searchParams = new URLSearchParams({
             select: DISCOVER_FEED_IMAGE_SELECT,
             [candidate.column]: `eq.${candidate.value}`,
@@ -449,7 +447,8 @@ async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): P
                 continue;
             }
 
-            const rows = await response.json() as DiscoverFeedCandidate[];
+            const rows = (await response.json() as DiscoverFeedCandidate[])
+                .filter((row) => captureMatchesSpeciesEntry(entry, row));
 
             if (rows.length > 0) {
                 return rows;
@@ -469,9 +468,9 @@ async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<st
         return [];
     }
 
-    for (const candidate of buildSpeciesKeyCandidates(entry)) {
+    for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,confidence,captures!inner(created_at)",
+            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,breed_guess,confidence,captures!inner(created_at)",
             completed_at: "not.is.null",
             [candidate.column]: `eq.${candidate.value}`,
             "captures.is_discoverable": "eq.true",
@@ -490,7 +489,8 @@ async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<st
                 continue;
             }
 
-            const rows = await response.json() as AnalysisResultCandidate[];
+            const rows = (await response.json() as AnalysisResultCandidate[])
+                .filter((row) => captureMatchesSpeciesEntry(entry, row));
             const sortedRows = rows.sort((a, b) => {
                 const confidenceDelta = (b.confidence ?? 0) - (a.confidence ?? 0);
 
@@ -730,16 +730,18 @@ export async function buildSpeciesDirectoryImageState(entries: SpeciesEntry[]) {
         return stateBySlug;
     }
 
+    const entriesBySlug = new Map(entries.map((entry) => [entry.slug, entry]));
     const matchIndex = buildSpeciesDirectoryMatchIndex(entries);
 
     for (const [column, valueMap] of Array.from(matchIndex.entries())) {
         const rows = await fetchDiscoverFeedRowsByColumn(column, Array.from(valueMap.keys()));
-        applyDiscoverFeedRowsToDirectoryState(rows, matchIndex, stateBySlug);
+        applyDiscoverFeedRowsToDirectoryState(rows, matchIndex, stateBySlug, entriesBySlug);
     }
 
     const unresolvedEntries = entries.filter((entry) => !stateBySlug.get(entry.slug)?.hasPublicCapture);
 
     if (unresolvedEntries.length > 0) {
+        const unresolvedEntriesBySlug = new Map(unresolvedEntries.map((entry) => [entry.slug, entry]));
         const unresolvedMatchIndex = buildSpeciesDirectoryMatchIndex(unresolvedEntries);
         const analysisRows: AnalysisResultCandidate[] = [];
 
@@ -762,7 +764,7 @@ export async function buildSpeciesDirectoryImageState(entries: SpeciesEntry[]) {
                 continue;
             }
 
-            applyAnalysisRowsToDirectoryState([row], unresolvedMatchIndex, stateBySlug);
+            applyAnalysisRowsToDirectoryState([row], unresolvedMatchIndex, stateBySlug, unresolvedEntriesBySlug);
         }
     }
 
@@ -773,36 +775,4 @@ export async function getSpeciesRepresentativeImageReference(slug: string, entry
     const references = await getSpeciesImageReferences(slug, 1, entryOverride);
 
     return references[0] ?? null;
-}
-
-export function getSpeciesImageRoute(slug: string, captureId?: string | null) {
-    if (!captureId) {
-        return `/api/species-images/${slug}`;
-    }
-
-    const searchParams = new URLSearchParams({captureId});
-    return `/api/species-images/${slug}?${searchParams.toString()}`;
-}
-
-export function getSpeciesImageAltText(entry: SpeciesEntry, variant: SpeciesImageAltVariant = "featured") {
-    const scientificName = entry.analysis.scientificName ? ` (${entry.analysis.scientificName})` : "";
-
-    switch (variant) {
-        case "thumbnail":
-            return `${entry.name}${scientificName} thumbnail image on AnimalDex`;
-        case "metadata":
-            return `${entry.name}${scientificName} animal image and species guide on AnimalDex`;
-        default:
-            return `${entry.name}${scientificName} featured animal image on AnimalDex`;
-    }
-}
-
-export function getSpeciesImageAttribution(reference: SpeciesImageReference | null) {
-    if (!reference?.imagePath) {
-        return null;
-    }
-
-    return reference.username
-        ? `Captured by @${reference.username}`
-        : "Captured by AnimalDex member";
 }

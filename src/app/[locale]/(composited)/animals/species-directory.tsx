@@ -7,7 +7,7 @@ import Link from "@/app/[locale]/_components/link";
 import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
-import {getSpeciesImageAltText, type SpeciesDirectoryImageState} from "@/data/species-images";
+import {getSpeciesImageAltText, type SpeciesDirectoryImageState} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getSpeciesRarityStatusKey, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
 import SpeciesRegionMap from "./species-region-map";

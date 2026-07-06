@@ -1,4 +1,5 @@
 import type {SpeciesStatsResolution} from "@/data/species-stats";
+import SpeciesRadarStats from "@/app/[locale]/(composited)/animals/[slug]/species-radar-stats";
 
 type SpeciesStatsLabels = {
     title: string;
@@ -25,14 +26,6 @@ type SpeciesStatsSectionProps = {
     battleTier?: string | null;
     labels: SpeciesStatsLabels;
 };
-
-const STAT_LABEL_ORDER = [
-    {key: "dominance", colorClassName: "from-amber-300 via-orange-300 to-rose-300"},
-    {key: "speed", colorClassName: "from-sky-300 via-cyan-300 to-emerald-300"},
-    {key: "size", colorClassName: "from-lime-300 via-emerald-300 to-teal-300"},
-    {key: "intelligence", colorClassName: "from-fuchsia-300 via-pink-300 to-rose-300"},
-    {key: "rarity", colorClassName: "from-yellow-200 via-amber-300 to-orange-400"}
-] as const;
 
 function getSourceLabel(source: SpeciesStatsResolution["statsSource"], labels: SpeciesStatsLabels) {
     switch (source) {
@@ -90,25 +83,7 @@ export default function SpeciesStatsSection({result, battleTier = null, labels}:
                 ) : null}
             </div>
 
-            <div className="flex flex-col gap-4">
-                {STAT_LABEL_ORDER.map((stat) => (
-                    <article
-                        key={stat.key}
-                        className="rounded-3xl border border-line-300 bg-surface-950/60 p-5 flex flex-col gap-4"
-                    >
-                        <div className="flex items-center justify-between gap-4">
-                            <h3 className="text-white text-sm uppercase tracking-[0.24em]">{statLabels[stat.key]}</h3>
-                            <span className="font-display font-bold text-4xl text-white shrink-0">{stats[stat.key]}</span>
-                        </div>
-                        <div className="h-3 rounded-full bg-surface-800 overflow-hidden">
-                            <div
-                                className={`h-full rounded-full bg-gradient-to-r ${stat.colorClassName}`}
-                                style={{width: `${Math.max(6, Math.min(100, stats[stat.key]))}%`}}
-                            />
-                        </div>
-                    </article>
-                ))}
-            </div>
+            <SpeciesRadarStats stats={stats} labels={statLabels} />
         </section>
     );
 }

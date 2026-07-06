@@ -21,8 +21,9 @@ export function mergeCatalogMetadata(staticEntry: SpeciesEntry, catalogEntry: Sp
 
     return {
         ...staticEntry,
-        speciesProfileId: staticEntry.speciesProfileId ?? catalogEntry.speciesProfileId,
-        normalizedIdentityKey: staticEntry.normalizedIdentityKey ?? catalogEntry.normalizedIdentityKey,
-        databaseSource: staticEntry.databaseSource ?? catalogEntry.databaseSource
+        name: catalogEntry.name || staticEntry.name,
+        speciesProfileId: catalogEntry.speciesProfileId ?? staticEntry.speciesProfileId,
+        normalizedIdentityKey: catalogEntry.normalizedIdentityKey ?? staticEntry.normalizedIdentityKey,
+        databaseSource: catalogEntry.databaseSource
     };
 }

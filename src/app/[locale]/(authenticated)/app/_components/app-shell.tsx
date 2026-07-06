@@ -26,6 +26,22 @@ const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/trades", label: "Trades", icon: "trade"}
 ];
 
+const PREFETCH_ROUTES = [
+    "/app",
+    "/app/collection",
+    "/app/arena",
+    "/app/profile",
+    "/app/missions",
+    "/app/sets",
+    "/app/trades",
+    "/app/messages",
+    "/app/notifications"
+];
+
+function localePrefix(pathname: string) {
+    return pathname.startsWith("/id/") ? "/id" : "";
+}
+
 function isArenaRoute(pathname: string) {
     return ["/app/arena", "/app/train", "/app/matchups", "/app/missions", "/app/sets"].some(
         (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -55,6 +71,13 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
         setMenuOpen(false);
     }, [pathname]);
 
+    useEffect(() => {
+        const prefix = localePrefix(pathname);
+        for (const route of PREFETCH_ROUTES) {
+            router.prefetch(`${prefix}${route}`);
+        }
+    }, [pathname, router]);
+
     async function signOut() {
         await fetch("/api/auth/logout", {method: "POST"});
         router.push("/account");
@@ -71,14 +94,14 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
     };
 
     const navLink = (item: typeof mainLinks[number], mobile = false) => (
-        <Link key={item.href} href={item.href} className={navClass(isActive(item.href), mobile)}>
+        <Link key={item.href} href={item.href} prefetch className={navClass(isActive(item.href), mobile)}>
             <AppIcon name={item.icon} className={mobile ? "h-5 w-5" : "h-[1.15rem] w-[1.15rem]"} />
             <span>{item.label}</span>
         </Link>
     );
 
     const utilityLink = (href: string, label: string, icon: AppIconName, badge = 0) => (
-        <Link key={href} href={href} className={navClass(isActive(href))}>
+        <Link key={href} href={href} prefetch className={navClass(isActive(href))}>
             <AppIcon name={icon} />
             {label}
             <NavBadge count={badge} />

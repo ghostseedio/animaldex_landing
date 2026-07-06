@@ -11,7 +11,7 @@ import type {
     PublicProfileCapture,
     PublicWildIdentity
 } from "@/data/public-profiles";
-import {getSpeciesImageRoute} from "@/data/species-images";
+import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import type {
     ProfileCompletedSet,
     ProfileCreditsSummary,

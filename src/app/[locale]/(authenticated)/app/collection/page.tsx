@@ -3,11 +3,12 @@ import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/
 import type {CatalogSpecies} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
 import {getAppCaptures} from "@/data/authenticated-app";
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
-import {getLegendaryEarthBeast, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {isBreedSpeciesEntry} from "@/lib/species-breed";
 import {
     buildCollectionDiscoveryIndex,
     buildCollectionDiscoveryStats,
@@ -67,7 +68,7 @@ export default async function CollectionPage() {
             imageSrc: getSpeciesImageRoute(entry.slug, capture?.captureId),
             hasIndexNumber: animalDexNumber != null,
             identityKind: entry.databaseSource?.identityKind ?? null,
-            isBreed: entry.databaseSource?.identityKind?.toLowerCase() === "breed",
+            isBreed: isBreedSpeciesEntry(entry),
             isLegendary: Boolean(legendaryBeast),
             legendaryTier: legendaryBeast?.tier ?? null
         };
@@ -83,14 +84,7 @@ export default async function CollectionPage() {
                 eyebrow="AnimalDex"
                 title="Collection"
                 description="Browse the indexed field guide, track discoveries, and explore the powers and lessons connected to every animal."
-                action={(
-                    <div className="flex flex-wrap gap-2">
-                        <AppPrimaryLink href={LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} icon="spark">
-                            Legendary beasts
-                        </AppPrimaryLink>
-                        <AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>
-                    </div>
-                )}
+                action={<AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>}
             />
 
             <AppSurface>

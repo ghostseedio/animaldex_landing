@@ -3,7 +3,7 @@ import {getDiscoverCollectors} from "@/data/discover-collectors";
 import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
 
 const INITIAL_DISCOVER_TIMELINE_LIMIT = 12;
-const INITIAL_COLLECTOR_LIMIT = 12;
+const INITIAL_COLLECTOR_LIMIT = 24;
 
 export default async function AppHomePage({
     searchParams,

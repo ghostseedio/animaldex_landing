@@ -50,6 +50,7 @@ import {getLegendaryCatalogSeedByBeastSlug} from "@/data/legendary-earth-beasts-
 import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast-capture";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
+import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
 export const revalidate = 3600;
 
@@ -406,6 +407,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ? getBattleTier(statsResult.stats)
         : null;
     const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
+    const isBreed = isBreedSpeciesEntry(entry);
+    const displayCategory = speciesDisplayCategory(entry);
     const animalDexNumber = getAnimalDexNumberFromEntry(entry);
     const compareWithLinks = Array.from(
         new Map(
@@ -783,8 +786,13 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-sm font-semibold text-amber-100">
                                 {resolvedRarityLabel}
                             </span>
+                            {isBreed ? (
+                                <span className="rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-sm font-semibold text-violet-100">
+                                    {t("breedLabel")}
+                                </span>
+                            ) : null}
                             <span className="rounded-full border border-primary-400/20 bg-primary-400/[0.08] px-3 py-1.5 text-sm font-semibold text-primary-100">
-                                {entry.analysis.category}
+                                {displayCategory}
                             </span>
                             {battleTierLabel ? (
                                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-ink-100">
@@ -899,7 +907,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden rounded-3xl bg-surface-900/55 md:grid-cols-5">
                 {[
                     [t("scientificName"), entry.analysis.scientificName],
-                    [t("category"), entry.analysis.category],
+                    [t("category"), displayCategory],
                     [t("habitatLabel"), entry.analysis.habitat],
                     [t("rarityLabel"), `${resolvedRarityLabel} · ${resolvedRarityScore}/100`],
                     [t("nativeRangeLabel"), entry.analysis.nativeRange]
@@ -1062,6 +1070,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         <SpeciesEndorsementAndSize
                             progress={growthContext.progress}
                             speciesName={entry.name}
+                            speciesSlug={entry.slug}
                             sizeScore={statsResult.stats?.size ?? null}
                             isAuthenticated={growthContext.isAuthenticated}
                         />

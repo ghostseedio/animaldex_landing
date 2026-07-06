@@ -7,6 +7,7 @@ export const COLLECTION_IDENTITY_ALIASES: Record<string, string> = {
     african_lion: "lion",
     asiatic_lion: "lion",
     indian_lion: "lion",
+    lioness: "lion",
     panthera_leo: "lion",
 
     // Brown bear (Ursus arctos)

@@ -6,7 +6,6 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {canonicalPowerKey, displayPowerLabel} from "@/lib/power-set-tags";
 import {formatAnimalDexNumber} from "@/lib/animaldex-number";
-import {LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 import type {CollectionDiscoveryStats} from "@/lib/collection-discovery";
 
 export type CatalogSpecies = {
@@ -515,15 +514,6 @@ export default function CollectionCatalog({
                 </label>
 
                 <p className="text-xs text-white/40">{matchedSummary}</p>
-
-                <div className="flex flex-wrap gap-2">
-                    <Link
-                        href={LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}
-                        className="rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 transition hover:border-amber-300/40"
-                    >
-                        Legendary Earth Beasts
-                    </Link>
-                </div>
 
                 <div className="flex gap-3">
                     <button

@@ -671,6 +671,7 @@
     "back": "Back to Species Pages",
     "scientificName": "Scientific name",
     "category": "Category",
+    "breedLabel": "Breed",
     "published": "Published",
     "updated": "Updated",
     "whatIsTitle": "What is a {animal}?",

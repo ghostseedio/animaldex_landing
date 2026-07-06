@@ -929,48 +929,14 @@ async function getApexGapPowerKeys() {
     return [];
 }
 
-async function getServerBestForTagScores(): Promise<BestForTagScore[]> {
-    const supabase = createSupabaseServerClient();
-
-    if (!supabase) {
-        return [];
-    }
-
-    const {data: {user}} = await supabase.auth.getUser();
-
-    if (!user) {
-        return [];
-    }
-
-    const {data} = await supabase
-        .from("profile_best_for_tag_scores")
-        .select("tag_key,tag_label,score")
-        .eq("user_id", user.id);
-
-    return ((data ?? []) as Array<{tag_key?: string; tag_label?: string; score?: number}>)
-        .map((row) => ({
-            tagKey: canonicalPowerKey(String(row.tag_key ?? "")),
-            tagLabel: String(row.tag_label ?? ""),
-            score: Number(row.score ?? 0)
-        }))
-        .filter((row) => row.tagKey && row.tagLabel.trim());
-}
-
 async function buildCurationContext(
     captures: AppCapture[],
     catalogCounts: Map<string, number>,
     speciesIndex: ReturnType<typeof buildSpeciesIndex>,
     catalogRows: Map<string, CatalogRow>
 ) {
-    const [apexGapPowerKeys, serverBestForScores] = await Promise.all([
-        getApexGapPowerKeys(),
-        getServerBestForTagScores()
-    ]);
-    const weakKeys = weakBestForPowerKeys(
-        serverBestForScores.length > 0
-            ? serverBestForScores
-            : scoresFromCaptures(captures, speciesIndex, catalogRows)
-    );
+    const apexGapPowerKeys = await getApexGapPowerKeys();
+    const weakKeys = weakBestForPowerKeys(scoresFromCaptures(captures, speciesIndex, catalogRows));
     const starterKeys = apexGapPowerKeys.length === 0 && weakKeys.length === 0
         ? starterPowerKeys(catalogCounts)
         : [];

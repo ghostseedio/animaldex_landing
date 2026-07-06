@@ -60,13 +60,9 @@ export type CaptureComparisonState = {
     isOwnedByCurrentUser: boolean;
 };
 
-export type CaptureProgressState = {
-    captureId: string;
-    totalProgressionXP: number;
-    endorsementCount: number;
-    viewerEndorsementStat: string | null;
-    isOwnedByCurrentUser: boolean;
-};
+import type {CaptureProgressState} from "@/data/species-growth-types";
+
+export type {CaptureProgressState};
 
 export type SpeciesGrowthContext = {
     isAuthenticated: boolean;

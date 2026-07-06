@@ -9,7 +9,7 @@ import {
 } from "@/data/legendary-earth-beasts-catalog-seed";
 import {enrichLegendaryEarthBeastSpeciesEntry, legendaryEarthBeastSpeciesSlugs} from "@/data/legendary-earth-beasts-species";
 import {mergeCatalogMetadata} from "@/lib/animaldex-number";
-import {dedupeCatalogSpeciesEntries} from "@/lib/catalog-species-dedupe";
+import {dedupeCatalogSpeciesEntries, speciesCatalogIdentityKey} from "@/lib/catalog-species-dedupe";
 import {resolveCollectionIdentityToken} from "@/lib/collection-identity-aliases";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
@@ -346,11 +346,29 @@ async function loadDatabaseEntries() {
     };
 }
 
+export function invalidateDatabaseSpeciesCache() {
+    catalogCache = null;
+}
+
 export async function getDatabaseSpeciesEntries() {
     if (catalogCache && catalogCache.expiresAt > Date.now()) return catalogCache.entries;
     const {entries, behaviorPrinciples} = await loadDatabaseEntries();
     catalogCache = {entries, behaviorPrinciples, expiresAt: Date.now() + CACHE_TTL_MS};
     return entries;
+}
+
+function resolveDatabaseEntryForStatic(
+    staticEntry: SpeciesEntry,
+    databaseBySlug: Map<string, SpeciesEntry>,
+    databaseEntries: SpeciesEntry[]
+) {
+    const directMatch = databaseBySlug.get(staticEntry.slug);
+    if (directMatch) {
+        return directMatch;
+    }
+
+    const canonicalKey = speciesCatalogIdentityKey(staticEntry);
+    return databaseEntries.find((entry) => speciesCatalogIdentityKey(entry) === canonicalKey) ?? null;
 }
 
 export async function getCatalogBehaviorPrincipleIndex() {
@@ -437,7 +455,7 @@ export async function getUnifiedSpeciesEntries() {
             return enrichLegendaryEarthBeastSpeciesEntry(entry, biologyCatalogEntry);
         }
 
-        return mergeCatalogMetadata(entry, databaseBySlug.get(entry.slug));
+        return mergeCatalogMetadata(entry, resolveDatabaseEntryForStatic(entry, databaseBySlug, databaseEntries));
     });
 
     return dedupeCatalogSpeciesEntries(

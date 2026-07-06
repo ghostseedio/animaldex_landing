@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {SpeakerOffIcon, SpeakerOnIcon} from "@/app/[locale]/_components/icons";
 
 type SubtitleSpeakerProps = {
@@ -34,12 +34,6 @@ const FEMALE_VOICE_HINTS = [
     "google us english"
 ];
 
-declare global {
-    interface Window {
-        __animalDexLastSpokenKey?: string;
-    }
-}
-
 function buildSegments(text: string): SubtitleSegment[] {
     const matches = Array.from(text.matchAll(/\S+|\s+/g));
 
@@ -61,12 +55,15 @@ function getActiveSegmentIndex(segments: SubtitleSegment[], charIndex: number | 
 
 function pickVoice(locale: string) {
     const normalizedLocale = locale.toLowerCase();
+    const speechLocale = normalizedLocale.includes("-") ? normalizedLocale : `${normalizedLocale}-US`;
     const baseLocale = normalizedLocale.split("-")[0];
     const voices = window.speechSynthesis.getVoices();
     const localeMatches = voices.filter((voice) => {
         const voiceLocale = voice.lang.toLowerCase();
 
-        return voiceLocale.startsWith(normalizedLocale) || voiceLocale.startsWith(baseLocale);
+        return voiceLocale.startsWith(speechLocale)
+            || voiceLocale.startsWith(normalizedLocale)
+            || voiceLocale.startsWith(baseLocale);
     });
     const rankedMatches = localeMatches
         .map((voice) => {
@@ -83,17 +80,141 @@ function pickVoice(locale: string) {
     return rankedMatches[0]?.voice ?? localeMatches[0] ?? voices[0] ?? null;
 }
 
+function normalizeSpeechLocale(locale: string) {
+    const normalizedLocale = locale.toLowerCase();
+
+    return normalizedLocale.includes("-") ? normalizedLocale : `${normalizedLocale}-US`;
+}
+
 export default function SubtitleSpeaker({text, locale, cacheKey, refreshUrl}: SubtitleSpeakerProps) {
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const speakGenerationRef = useRef(0);
+    const resumeIntervalRef = useRef<number | null>(null);
+    const autoplayAttemptedKeyRef = useRef<string | null>(null);
     const [voiceRevision, setVoiceRevision] = useState(0);
-    const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+    const [autoplayEnabled, setAutoplayEnabled] = useState(true);
     const [hasLoadedPreference, setHasLoadedPreference] = useState(false);
     const [activeCharIndex, setActiveCharIndex] = useState<number | null>(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [displayText, setDisplayText] = useState(text);
     const segments = buildSegments(displayText);
     const activeSegmentIndex = getActiveSegmentIndex(segments, activeCharIndex);
-    const effectiveCacheKey = `${cacheKey}:${displayText}`;
+    const speechLocale = normalizeSpeechLocale(locale);
+    const narrationKey = `${cacheKey}:${displayText}`;
+
+    const clearResumeInterval = useCallback(() => {
+        if (resumeIntervalRef.current !== null) {
+            window.clearInterval(resumeIntervalRef.current);
+            resumeIntervalRef.current = null;
+        }
+    }, []);
+
+    const stopSpeaking = useCallback(() => {
+        speakGenerationRef.current += 1;
+        clearResumeInterval();
+
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+
+        utteranceRef.current = null;
+        setIsSpeaking(false);
+        setActiveCharIndex(null);
+    }, [clearResumeInterval]);
+
+    const speakNow = useCallback((mode: "autoplay" | "manual") => {
+        if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+            return;
+        }
+
+        const trimmedText = displayText.trim();
+
+        if (!trimmedText) {
+            return;
+        }
+
+        if (mode === "autoplay" && !autoplayEnabled) {
+            return;
+        }
+
+        const generation = speakGenerationRef.current + 1;
+        speakGenerationRef.current = generation;
+        clearResumeInterval();
+        window.speechSynthesis.cancel();
+
+        const startSpeaking = () => {
+            if (generation !== speakGenerationRef.current) {
+                return;
+            }
+
+            const voices = window.speechSynthesis.getVoices();
+
+            if (voices.length === 0) {
+                window.setTimeout(startSpeaking, 200);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(trimmedText);
+            utterance.lang = speechLocale;
+            utterance.rate = 0.92;
+            utterance.pitch = 1.08;
+
+            const voice = pickVoice(locale);
+
+            if (voice) {
+                utterance.voice = voice;
+            }
+
+            utterance.onstart = () => {
+                if (generation !== speakGenerationRef.current) {
+                    return;
+                }
+
+                setIsSpeaking(true);
+                setActiveCharIndex(0);
+            };
+            utterance.onboundary = (event) => {
+                if (generation !== speakGenerationRef.current) {
+                    return;
+                }
+
+                if (typeof event.charIndex === "number") {
+                    setActiveCharIndex(event.charIndex);
+                }
+            };
+            utterance.onend = () => {
+                if (generation !== speakGenerationRef.current) {
+                    return;
+                }
+
+                clearResumeInterval();
+                utteranceRef.current = null;
+                setIsSpeaking(false);
+                setActiveCharIndex(null);
+            };
+            utterance.onerror = () => {
+                if (generation !== speakGenerationRef.current) {
+                    return;
+                }
+
+                clearResumeInterval();
+                utteranceRef.current = null;
+                setIsSpeaking(false);
+                setActiveCharIndex(null);
+            };
+
+            utteranceRef.current = utterance;
+            window.speechSynthesis.speak(utterance);
+
+            resumeIntervalRef.current = window.setInterval(() => {
+                if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+            }, 200);
+        };
+
+        window.setTimeout(startSpeaking, 60);
+    }, [autoplayEnabled, clearResumeInterval, displayText, locale, speechLocale]);
 
     useEffect(() => {
         setDisplayText(text);
@@ -141,11 +262,15 @@ export default function SubtitleSpeaker({text, locale, cacheKey, refreshUrl}: Su
         const savedPreference = window.localStorage.getItem(AUDIO_PREFERENCE_KEY);
 
         if (savedPreference === "false") {
-            setIsAudioEnabled(false);
+            setAutoplayEnabled(false);
         }
 
         setHasLoadedPreference(true);
     }, []);
+
+    useEffect(() => {
+        autoplayAttemptedKeyRef.current = null;
+    }, [narrationKey]);
 
     useEffect(() => {
         if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -156,6 +281,7 @@ export default function SubtitleSpeaker({text, locale, cacheKey, refreshUrl}: Su
             setVoiceRevision((value) => value + 1);
         };
 
+        window.speechSynthesis.getVoices();
         window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
 
         return () => {
@@ -164,117 +290,69 @@ export default function SubtitleSpeaker({text, locale, cacheKey, refreshUrl}: Su
     }, []);
 
     useEffect(() => {
-        if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        if (!hasLoadedPreference || !autoplayEnabled || !displayText.trim()) {
             return;
         }
 
-        if (!hasLoadedPreference) {
+        if (autoplayAttemptedKeyRef.current === narrationKey) {
             return;
         }
 
-        if (!isAudioEnabled) {
-            window.speechSynthesis.cancel();
-            utteranceRef.current = null;
-            setIsSpeaking(false);
-            setActiveCharIndex(null);
-            return;
-        }
+        autoplayAttemptedKeyRef.current = narrationKey;
+        speakNow("autoplay");
+    }, [autoplayEnabled, displayText, hasLoadedPreference, narrationKey, speakNow, voiceRevision]);
 
-        if (window.__animalDexLastSpokenKey === effectiveCacheKey || !displayText.trim()) {
-            return;
-        }
-
-        if (window.speechSynthesis.getVoices().length === 0) {
-            const retryTimer = window.setTimeout(() => {
-                setVoiceRevision((value) => value + 1);
-            }, 250);
-
-            return () => {
-                window.clearTimeout(retryTimer);
-            };
-        }
-
-        window.__animalDexLastSpokenKey = effectiveCacheKey;
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(displayText);
-        utterance.lang = locale;
-        utterance.rate = 0.92;
-        utterance.pitch = 1.08;
-
-        const voice = pickVoice(locale);
-
-        if (voice) {
-            utterance.voice = voice;
-        }
-
-        utterance.onstart = () => {
-            setIsSpeaking(true);
-            setActiveCharIndex(0);
-        };
-        utterance.onboundary = (event) => {
-            if (typeof event.charIndex === "number") {
-                setActiveCharIndex(event.charIndex);
-            }
-        };
-        utterance.onend = () => {
-            setIsSpeaking(false);
-            setActiveCharIndex(null);
-            utteranceRef.current = null;
-        };
-        utterance.onerror = () => {
-            setIsSpeaking(false);
-            setActiveCharIndex(null);
-            utteranceRef.current = null;
-        };
-
-        utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
-
+    useEffect(() => {
         return () => {
-            if (utteranceRef.current === utterance) {
-                window.speechSynthesis.cancel();
-                utteranceRef.current = null;
-            }
+            stopSpeaking();
         };
-    }, [displayText, effectiveCacheKey, hasLoadedPreference, isAudioEnabled, locale, voiceRevision]);
+    }, [stopSpeaking]);
 
-    function handleToggleAudio() {
+    function handleSpeakerClick() {
         if (typeof window === "undefined" || !("speechSynthesis" in window)) {
             return;
         }
 
-        const nextValue = !isAudioEnabled;
-
-        setIsAudioEnabled(nextValue);
-        window.localStorage.setItem(AUDIO_PREFERENCE_KEY, String(nextValue));
-
-        if (!nextValue) {
-            window.speechSynthesis.cancel();
-            window.__animalDexLastSpokenKey = effectiveCacheKey;
-            setIsSpeaking(false);
-            setActiveCharIndex(null);
+        if (isSpeaking) {
+            stopSpeaking();
             return;
         }
 
-        window.__animalDexLastSpokenKey = "";
-        setActiveCharIndex(null);
+        if (!autoplayEnabled) {
+            setAutoplayEnabled(true);
+            window.localStorage.setItem(AUDIO_PREFERENCE_KEY, "true");
+        }
+
+        speakNow("manual");
     }
+
+    function handleDisableAutoplay() {
+        setAutoplayEnabled(false);
+        window.localStorage.setItem(AUDIO_PREFERENCE_KEY, "false");
+        stopSpeaking();
+    }
+
+    const statusLabel = !autoplayEnabled
+        ? "Voice off"
+        : isSpeaking
+            ? "Narrating"
+            : "Tap to listen";
 
     return (
         <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
                 <button
                     type="button"
-                    onClick={handleToggleAudio}
+                    onClick={handleSpeakerClick}
+                    onDoubleClick={handleDisableAutoplay}
                     className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-300 bg-surface-900/90 text-primary-100 transition-colors hover:border-primary-200 hover:text-primary-50"
-                    aria-label={isAudioEnabled ? "Mute subtitle narration" : "Play subtitle narration"}
-                    title={isAudioEnabled ? "Mute subtitle narration" : "Play subtitle narration"}
+                    aria-label={isSpeaking ? "Stop subtitle narration" : "Play subtitle narration"}
+                    title={isSpeaking ? "Stop narration (double-click to turn off autoplay)" : "Listen to subtitle (double-click to turn off autoplay)"}
                 >
-                    {isAudioEnabled ? <SpeakerOnIcon size={20}/> : <SpeakerOffIcon size={20}/>}
+                    {autoplayEnabled ? <SpeakerOnIcon size={20}/> : <SpeakerOffIcon size={20}/>}
                 </button>
                 <span className="text-xs uppercase tracking-[0.24em] text-ink-300">
-                    {isAudioEnabled ? (isSpeaking ? "Narrating" : "Voice ready") : "Voice off"}
+                    {statusLabel}
                 </span>
             </div>
 

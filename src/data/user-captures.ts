@@ -40,7 +40,7 @@ type OwnedCaptureManifestRow = {
     confidence?: number | null;
     error_message?: string | null;
     completed_at?: string | null;
-    score?: number | null;
+    total_progression_xp?: number | null;
     capture_created_at?: string | null;
     image_bucket?: string | null;
     image_path?: string | null;
@@ -51,7 +51,7 @@ type OwnedCaptureManifestRow = {
     raw_json?: unknown;
 };
 
-type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "score" | "human_context" | "zoo_or_wild">;
+type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "total_progression_xp" | "human_context" | "zoo_or_wild">;
 
 function getContextLabel(row: Pick<OwnedCaptureManifestRow, "zoo_or_wild" | "human_context">) {
     return getCaptureContextLabel(row);
@@ -121,7 +121,7 @@ function toUserCaptureSummary(row: OwnedCaptureManifestRow): UserCaptureSummary 
         speciesSlug: row.normalized_identity_key?.trim() ?? null,
         speciesProfileId: row.species_profile_id?.trim() ?? null,
         confidence: row.confidence ?? null,
-        score: row.score ?? 0,
+        score: Number(row.total_progression_xp ?? 0),
         captureValidity: parseCaptureValidity(row.raw_json),
         learnedScenarioTags: parseLearnedScenarioTags(row.learned_sub_principles),
         capturedAt: row.capture_created_at ?? null,
@@ -139,7 +139,7 @@ const USER_CAPTURE_MANIFEST_SELECT = [
     "species_profile_id",
     "normalized_identity_key",
     "confidence",
-    "score",
+    "total_progression_xp",
     "error_message",
     "completed_at",
     "capture_created_at",
@@ -229,7 +229,7 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
 
     const {data, error, count} = await supabase
         .from("owned_capture_manifest_v1")
-        .select("capture_id,animal_name,normalized_identity_key,human_context,zoo_or_wild,score,completed_at,error_message", {count: "exact"})
+        .select("capture_id,animal_name,normalized_identity_key,human_context,zoo_or_wild,total_progression_xp,completed_at,error_message", {count: "exact"})
         .eq("user_id", user.id)
         .not("completed_at", "is", null)
         .order("capture_created_at", {ascending: false})
@@ -250,7 +250,7 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
     return {
         captureCount,
         uniqueSpecies: uniqueSpecies.size,
-        collectorScore: rows.reduce((sum, row) => sum + Number(row.score ?? 0), 0),
+        collectorScore: rows.reduce((sum, row) => sum + Number(row.total_progression_xp ?? 0), 0),
         wild,
         zoo,
         domestic,

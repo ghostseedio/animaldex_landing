@@ -5,14 +5,14 @@ import {AppEmpty, AppPage, AppPrimaryLink, AppSegmentedControl} from "@/app/[loc
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineItem} from "@/data/discover-timeline";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
 
 const WORDMARK_SRC = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-text.webp";
 const DISCOVER_PAGE_SIZE = 12;
-const COLLECTOR_BATCH_SIZE = 8;
+const COLLECTOR_PAGE_SIZE = 24;
 
 function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
     if (!items.length) return null;
@@ -55,14 +55,18 @@ function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
             <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h3 className="truncate font-display text-xl font-bold text-white">{collector.displayName}</h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate font-display text-xl font-bold text-white">{collector.displayName}</h3>
+                            {collector.isPro ? <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.12em] text-amber-100">Pro</span> : null}
+                        </div>
                         {collector.username ? <p className="text-sm text-white/40">@{collector.username}</p> : null}
+                        <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/35">{collector.scoreTierLabel}</p>
                     </div>
-                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black">{collector.overallScore}</span>
+                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black">{collector.collectorScore.toLocaleString()}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-bold text-white/50">
                     <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.captureCount} captures</span>
-                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.uniqueSpecies} species</span>
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.indexedSpeciesCount}/{collector.catalogSpeciesCount} indexed</span>
                     {collector.rareFinds > 0 ? <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-amber-200">{collector.rareFinds} rare</span> : null}
                 </div>
                 {collector.bio ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/40">{collector.bio}</p> : null}
@@ -98,13 +102,13 @@ export default function DiscoverHome({
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
     const [timelineItems, setTimelineItems] = useState(timeline);
+    const [collectorItems, setCollectorItems] = useState(collectors);
     const [hasMoreTimeline, setHasMoreTimeline] = useState(timeline.length >= DISCOVER_PAGE_SIZE);
+    const [hasMoreCollectors, setHasMoreCollectors] = useState(collectors.length >= COLLECTOR_PAGE_SIZE);
     const [isLoadingTimeline, setIsLoadingTimeline] = useState(false);
-    const [visibleCollectorCount, setVisibleCollectorCount] = useState(COLLECTOR_BATCH_SIZE);
+    const [isLoadingCollectors, setIsLoadingCollectors] = useState(false);
     const timelineSentinelRef = useRef<HTMLDivElement | null>(null);
     const collectorSentinelRef = useRef<HTMLDivElement | null>(null);
-    const visibleCollectors = useMemo(() => collectors.slice(0, visibleCollectorCount), [collectors, visibleCollectorCount]);
-    const hasMoreCollectors = visibleCollectorCount < collectors.length;
 
     function handleSegmentChange(next: DiscoverSegment) {
         setSegment(next);
@@ -117,8 +121,42 @@ export default function DiscoverHome({
     }, [timeline]);
 
     useEffect(() => {
-        setVisibleCollectorCount(COLLECTOR_BATCH_SIZE);
+        setCollectorItems(collectors);
+        setHasMoreCollectors(collectors.length >= COLLECTOR_PAGE_SIZE);
     }, [collectors]);
+
+    const loadNextCollectorPage = useCallback(async () => {
+        if (isLoadingCollectors || !hasMoreCollectors) return;
+        setIsLoadingCollectors(true);
+        try {
+            const params = new URLSearchParams({
+                offset: String(collectorItems.length),
+                limit: String(COLLECTOR_PAGE_SIZE)
+            });
+            const response = await fetch(`/api/app/collectors?${params.toString()}`, {
+                headers: {Accept: "application/json"}
+            });
+            if (!response.ok) {
+                setHasMoreCollectors(false);
+                return;
+            }
+            const payload = await response.json() as {collectors?: DiscoverCollectorItem[]; hasMore?: boolean};
+            const nextItems = payload.collectors ?? [];
+            setCollectorItems((current) => {
+                const seen = new Set(current.map((item) => item.userId));
+                const merged = [...current];
+                for (const item of nextItems) {
+                    if (seen.has(item.userId)) continue;
+                    seen.add(item.userId);
+                    merged.push(item);
+                }
+                return merged;
+            });
+            setHasMoreCollectors(Boolean(payload.hasMore) && nextItems.length > 0);
+        } finally {
+            setIsLoadingCollectors(false);
+        }
+    }, [collectorItems.length, hasMoreCollectors, isLoadingCollectors]);
 
     const loadNextTimelinePage = useCallback(async () => {
         if (isLoadingTimeline || !hasMoreTimeline) return;
@@ -172,12 +210,12 @@ export default function DiscoverHome({
         if (!node) return undefined;
         const observer = new IntersectionObserver((entries) => {
             if (entries.some((entry) => entry.isIntersecting)) {
-                setVisibleCollectorCount((current) => Math.min(current + COLLECTOR_BATCH_SIZE, collectors.length));
+                void loadNextCollectorPage();
             }
         }, {rootMargin: "500px 0px"});
         observer.observe(node);
         return () => observer.disconnect();
-    }, [segment, hasMoreCollectors, collectors.length]);
+    }, [segment, hasMoreCollectors, loadNextCollectorPage]);
 
     return (
         <AppPage>
@@ -215,9 +253,9 @@ export default function DiscoverHome({
                         />
                     )}
                 </div>
-            ) : collectors.length ? (
+            ) : collectorItems.length ? (
                 <section className="mx-auto max-w-3xl space-y-3">
-                    {visibleCollectors.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
                     {hasMoreCollectors ? (
                         <div ref={collectorSentinelRef} aria-hidden="true" className="h-px" />
                     ) : null}

@@ -2,7 +2,7 @@
 
 import Link from "@/app/[locale]/_components/link";
 import type {SpeciesRankingItem} from "@/data/species-rankings";
-import {getSpeciesImageRoute} from "@/data/species-images";
+import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 type SpeciesRankingCarouselProps = {
     speciesSlug: string;
