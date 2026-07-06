@@ -40,14 +40,19 @@ function categoryForBeast(beast: LegendaryEarthBeast) {
     return "Mammal";
 }
 
-export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast) {
+export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast): SpeciesEntry {
     const seed = getLegendaryCatalogSeedByBeastSlug(beast.slug);
     const captureSite = seed?.captureSite ?? beast.captureSite;
 
-    const baseInput = {
+    const baseInput: SpeciesEntry = {
         slug: beast.slug,
         name: beast.legendaryFormName,
+        heroTitle: beast.legendaryFormName,
+        publishedAt: beast.publishedAt,
+        updatedAt: beast.updatedAt,
+        featuredImage: beast.featuredImage,
         normalizedIdentityKey: seed?.normalizedIdentityKey ?? beast.slug.replace(/-/g, "_"),
+
         analysis: {
             summary: seed?.speciesSpotlight ?? beast.quickAnswer,
             scientificName: beast.scientificName,
@@ -63,6 +68,7 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
             rarityScore: seed?.canonicalGameStats.rarity ?? LEGENDARY_RARITY_SCORE,
             rarityReason: `${beast.legendaryFormName} is an S-tier Legendary Earth Beast that can only be captured at ${captureSite}.`
         },
+
         premiumDetails: {
             behaviorTraits: seed?.signatureTraits ?? beast.biologyAnchor,
             whyInteresting: seed?.interestingFacts ?? beast.placeStory,
@@ -71,6 +77,7 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
                 : [`Capture is only valid at ${captureSite}.`, "Observe respectfully from safe public viewpoints."],
             lookalikes: beast.speciesSlug ? [`Biology inspired by ${beast.displayName}`] : []
         },
+
         relatedSpecies: [],
         searchIntents: [...beast.searchIntents, beast.legendaryFormName, captureSite]
     };
@@ -79,10 +86,12 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
         return baseInput;
     }
 
-    return mergeLegendaryEarthBeastSpeciesEntry(baseInput as SpeciesEntry, seed);
+    return mergeLegendaryEarthBeastSpeciesEntry(baseInput, seed);
 }
 
-export const additionalSpeciesEntriesInputSeventeen = legendaryEarthBeastEntries.map(buildLegendaryEarthBeastSpeciesInput);
+export const additionalSpeciesEntriesInputSeventeen = legendaryEarthBeastEntries.map(
+    buildLegendaryEarthBeastSpeciesInput
+);
 
 export const additionalSpeciesDescriptorsSeventeen = Object.fromEntries(
     legendaryEarthBeastEntries.map((beast) => {
@@ -94,14 +103,19 @@ export const additionalSpeciesDescriptorsSeventeen = Object.fromEntries(
 export const additionalSpeciesSubtitleStoriesSeventeen = Object.fromEntries(
     legendaryEarthBeastEntries.map((beast) => {
         const seed = getLegendaryCatalogSeedByBeastSlug(beast.slug);
+
         return [
             beast.slug,
-            beast.placeStory[0] ?? seed?.speciesSpotlight ?? `${beast.legendaryFormName} is tied to ${beast.captureSite.split(",")[0]}.`
+            beast.placeStory[0] ??
+                seed?.speciesSpotlight ??
+                `${beast.legendaryFormName} is tied to ${beast.captureSite.split(",")[0]}.`
         ];
     })
 ) as Record<string, string>;
 
-export const legendaryEarthBeastSpeciesSlugs = new Set(legendaryEarthBeastEntries.map((beast) => beast.slug));
+export const legendaryEarthBeastSpeciesSlugs = new Set(
+    legendaryEarthBeastEntries.map((beast) => beast.slug)
+);
 
 export function getLegendaryEarthBeastSubtitle(slug: string) {
     const beast = legendaryEarthBeastEntries.find((entry) => entry.slug === slug);
@@ -122,6 +136,7 @@ export function enrichLegendaryEarthBeastSpeciesEntry(
     catalogEntry?: SpeciesEntry | null
 ) {
     const seed = getLegendaryCatalogSeedByBeastSlug(staticEntry.slug);
+
     if (!seed) {
         return staticEntry;
     }
