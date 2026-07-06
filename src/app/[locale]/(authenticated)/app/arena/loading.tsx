@@ -6,8 +6,8 @@ export default function ArenaLoading() {
                 <div className="h-4 w-full max-w-sm rounded bg-white/[0.04]" />
             </div>
             <div className="overflow-hidden rounded-[24px] border border-white/[0.08]">
-                <div className="h-[132px] bg-white/[0.05]" />
-                <div className="space-y-3 bg-[#141414] p-[18px]">
+                <div className="h-[132px] bg-[linear-gradient(135deg,rgb(8,35,15)_0%,rgba(56,250,71,0.42)_48%,rgb(15,82,31)_100%)]" />
+                <div className="space-y-3 bg-gradient-to-b from-[#141714] to-[#1f1f1f] p-[18px]">
                     <div className="h-16 rounded bg-white/[0.05]" />
                     <div className="h-10 rounded-full bg-white/[0.05]" />
                 </div>

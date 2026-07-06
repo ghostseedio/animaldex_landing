@@ -3,6 +3,7 @@ import "server-only";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolveCollectionArchetype} from "@/lib/collection-archetype";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
@@ -193,6 +194,34 @@ export function resolvePublicOverallScore(
     return baseScore + powerSetBonus;
 }
 
+export type ProfileSettingCounts = {
+    wild: number;
+    zoo: number;
+    domestic: number;
+};
+
+/** Matches iOS `resolvedMemberSettingCounts`: prefer summary, but fall back when exact totals are zero. */
+export function resolveProfileSettingCounts(
+    exact: ProfileSettingCounts | null | undefined,
+    fallback: ProfileSettingCounts
+): ProfileSettingCounts {
+    const exactWild = Number(exact?.wild ?? 0);
+    const exactZoo = Number(exact?.zoo ?? 0);
+    const exactDomestic = Number(exact?.domestic ?? 0);
+    const exactTotal = exactWild + exactZoo + exactDomestic;
+    const fallbackTotal = fallback.wild + fallback.zoo + fallback.domestic;
+
+    if (exactTotal === 0 && fallbackTotal > 0) {
+        return fallback;
+    }
+
+    if (exact) {
+        return {wild: exactWild, zoo: exactZoo, domestic: exactDomestic};
+    }
+
+    return fallback;
+}
+
 function getConfig() {
     const url = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
@@ -235,21 +264,7 @@ async function fetchPublicProfileSummary(userId: string) {
 }
 
 function getContextLabel(row: Pick<PublicCaptureRow, "zoo_or_wild" | "human_context">) {
-    const setting = row.zoo_or_wild?.trim();
-    if (setting && setting !== "Unknown") return setting;
-
-    switch (row.human_context?.trim()) {
-        case "Pet":
-            return "Domestic";
-        case "Livestock":
-            return "Farm";
-        case "Captive":
-            return "Zoo";
-        case "Free-ranging":
-            return "Wild";
-        default:
-            return null;
-    }
+    return getCaptureContextLabel(row);
 }
 
 function toSpeciesSlug(identityKey: string | null | undefined) {
@@ -517,17 +532,21 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     const sampledSpeciesCount = new Set(
         allCaptures.map((capture) => capture.speciesSlug ?? capture.animalName.toLowerCase())
     ).size;
-    const sampledWildCount = allCaptures.filter((capture) => capture.contextLabel === "Wild").length;
-    const sampledZooCount = allCaptures.filter((capture) => capture.contextLabel === "Zoo").length;
-    const sampledDomesticCount = allCaptures.filter((capture) =>
-        capture.contextLabel === "Domestic" || capture.contextLabel === "Farm"
-    ).length;
+    const settingSourceRows = recentRows.length > 0 ? recentRows : topRows;
+    const sampledSettingCounts = countCaptureSettingLabels(settingSourceRows);
     const unindexedCount = allCaptures.filter((capture) => !capture.isIndexed).length;
 
     const captureCount = Number(summary?.capture_count ?? allCaptures.length);
-    const wildCount = Number(summary?.wild_captures ?? sampledWildCount);
-    const zooCount = Number(summary?.zoo_captures ?? sampledZooCount);
-    const domesticCount = Number(summary?.domestic_captures ?? sampledDomesticCount);
+    const settingCounts = resolveProfileSettingCounts(
+        summary
+            ? {
+                wild: Number(summary.wild_captures ?? 0),
+                zoo: Number(summary.zoo_captures ?? 0),
+                domestic: Number(summary.domestic_captures ?? 0)
+            }
+            : null,
+        {wild: sampledSettingCounts.wild, zoo: sampledSettingCounts.zoo, domestic: sampledSettingCounts.domestic}
+    );
     const indexedSpeciesCount = Number(summary?.indexed_species_count ?? summary?.unique_species ?? sampledSpeciesCount);
 
     const locationVisits = buildLocationVisits(
@@ -562,9 +581,9 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         catalogSpeciesCount: speciesEntries.length,
         unindexedCount,
         collectorScore: resolvePublicOverallScore(baseCollectorScore, powerSetRows),
-        wildCount,
-        zooCount,
-        domesticCount,
+        wildCount: settingCounts.wild,
+        zooCount: settingCounts.zoo,
+        domesticCount: settingCounts.domestic,
         rareFinds: Number(summary?.rare_finds ?? 0),
         tradesMade: Number(summary?.trades_made ?? 0),
         missionsCompleted: Number(summary?.missions_completed ?? 0),

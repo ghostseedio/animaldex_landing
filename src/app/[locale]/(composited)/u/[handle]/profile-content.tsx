@@ -197,6 +197,16 @@ function ProfileShortcutThumbnail({src}: {src: string}) {
     );
 }
 
+function ProfileShortcutBoltIcon() {
+    return (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 ring-1 ring-amber-300/25 text-amber-200">
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+                <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+            </svg>
+        </span>
+    );
+}
+
 function SectionHeader({
     icon,
     title,
@@ -512,7 +522,7 @@ export default function ProfileContent({
                         ownerExtras.credits.isLow ? "border-orange-300/30 bg-orange-400/[0.08]" : "border-white/10 bg-surface-900/60"
                     }`}
                 >
-                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.missions} />
+                    <ProfileShortcutBoltIcon />
                     <div className="min-w-0 text-left">
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.creditsTitle}</p>
                         <p className="mt-1 font-display text-xl font-bold text-white">
@@ -532,7 +542,7 @@ export default function ProfileContent({
                     href={`${localePrefix}/app/collection`}
                     className="flex items-center gap-4 rounded-[1.35rem] border border-white/10 bg-surface-900/60 px-4 py-4 transition hover:border-white/20"
                 >
-                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.collection} />
+                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.missions} />
                     <div className="min-w-0 text-left">
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.myCollection}</p>
                         <p className="mt-1 text-sm text-white/55">{labels.myCollectionDetail}</p>

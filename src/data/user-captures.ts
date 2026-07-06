@@ -1,5 +1,6 @@
 import type {SpeciesEntry} from "@/data/species";
 import {catalogLookupToken} from "@/lib/collection-discovery";
+import {countCaptureSettingLabels, getCaptureContextLabel, type CaptureSettingRow} from "@/lib/capture-setting-label";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export type UserCaptureSummary = {
@@ -53,24 +54,7 @@ type OwnedCaptureManifestRow = {
 type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "score" | "human_context" | "zoo_or_wild">;
 
 function getContextLabel(row: Pick<OwnedCaptureManifestRow, "zoo_or_wild" | "human_context">) {
-    const zooOrWild = row.zoo_or_wild?.trim();
-
-    if (zooOrWild && zooOrWild !== "Unknown") {
-        return zooOrWild;
-    }
-
-    switch (row.human_context?.trim()) {
-        case "Pet":
-            return "Domestic";
-        case "Livestock":
-            return "Farm";
-        case "Captive":
-            return "Zoo";
-        case "Free-ranging":
-            return "Wild";
-        default:
-            return null;
-    }
+    return getCaptureContextLabel(row);
 }
 
 function isEligibleManifestRow(row: OwnedCaptureManifestRow) {
@@ -260,12 +244,7 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
         rows.map((row) => row.normalized_identity_key?.trim() || row.animal_name?.trim().toLowerCase() || row.capture_id?.trim())
             .filter(Boolean)
     );
-    const wild = rows.filter((row) => getContextLabel(row) === "Wild").length;
-    const zoo = rows.filter((row) => getContextLabel(row) === "Zoo").length;
-    const domestic = rows.filter((row) => {
-        const label = getContextLabel(row);
-        return label === "Domestic" || label === "Farm";
-    }).length;
+    const {wild, zoo, domestic} = countCaptureSettingLabels(rows);
     const captureCount = count ?? rows.length;
 
     return {
@@ -278,6 +257,66 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
         sampledCount: rows.length,
         sampleLimitReached: rows.length < captureCount
     };
+}
+
+export async function getUserCaptureSettingCounts() {
+    const empty = {wild: 0, zoo: 0, domestic: 0};
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return empty;
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    const rows: CaptureSettingRow[] = [];
+    const pageSize = 500;
+
+    for (let offset = 0; offset < 10000; offset += pageSize) {
+        const {data, error} = await supabase
+            .from("owned_capture_manifest_v1")
+            .select("zoo_or_wild,human_context,completed_at,error_message,capture_id")
+            .eq("user_id", user.id)
+            .not("completed_at", "is", null)
+            .order("capture_created_at", {ascending: false})
+            .range(offset, offset + pageSize - 1);
+
+        if (error || !data?.length) {
+            break;
+        }
+
+        for (const row of data as OwnedCaptureManifestRow[]) {
+            if (isEligibleManifestRow(row)) {
+                rows.push(row);
+            }
+        }
+
+        if (data.length < pageSize) {
+            break;
+        }
+    }
+
+    if (rows.length > 0) {
+        return countCaptureSettingLabels(rows);
+    }
+
+    for (let offset = 0; offset < 5000; offset += pageSize) {
+        const {data, error} = await supabase
+            .from("discover_feed_v1")
+            .select("zoo_or_wild,human_context")
+            .eq("user_id", user.id)
+            .order("capture_created_at", {ascending: false})
+            .range(offset, offset + pageSize - 1);
+
+        if (error || !data?.length) {
+            break;
+        }
+
+        rows.push(...(data as CaptureSettingRow[]));
+        if (data.length < pageSize) {
+            break;
+        }
+    }
+
+    return countCaptureSettingLabels(rows);
 }
 
 export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24): Promise<UserCaptureSummary[]> {

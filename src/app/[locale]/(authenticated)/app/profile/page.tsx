@@ -10,27 +10,29 @@ import {
     AppStatBar,
     AppSurface
 } from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {getAuthenticatedAppContext, getAppProgression, mapPublicProfileCaptureToAppCapture} from "@/data/authenticated-app";
+import {getAuthenticatedAppContext, getAppProfileSettingCounts, getAppProfileSummary, getAppProgression, mapPublicProfileCaptureToAppCapture} from "@/data/authenticated-app";
 import {getDirectMessageUnreadCount} from "@/data/direct-messages";
 import {getAuthenticatedPublicProfileCard} from "@/data/public-profiles";
 
 export default async function ProfilePage({params}: {params: {locale: string}}) {
-    const [context, progression, unreadMessageCount, publicCard] = await Promise.all([
+    const [context, progression, unreadMessageCount, publicCard, profileSummary, settingCounts] = await Promise.all([
         getAuthenticatedAppContext(),
         getAppProgression(),
         getDirectMessageUnreadCount(),
-        getAuthenticatedPublicProfileCard()
+        getAuthenticatedPublicProfileCard(),
+        getAppProfileSummary(),
+        getAppProfileSettingCounts()
     ]);
     const profile = context!.profile;
     const displayName = profile.displayName ?? profile.username ?? "Collector";
     const completedMissions = progression.missions.filter((mission) => mission.completedCount).length;
     const availableMissions = progression.missions.filter((mission) => !mission.isLocked).length;
     const collectorScore = publicCard?.collectorScore ?? 0;
-    const captureCount = publicCard?.captureCount ?? 0;
-    const indexedSpeciesCount = publicCard?.indexedSpeciesCount ?? 0;
-    const wildCount = publicCard?.wildCount ?? 0;
-    const zooCount = publicCard?.zooCount ?? 0;
-    const domesticCount = publicCard?.domesticCount ?? 0;
+    const captureCount = publicCard?.captureCount ?? profileSummary.captureCount;
+    const indexedSpeciesCount = publicCard?.indexedSpeciesCount ?? profileSummary.indexedSpeciesCount;
+    const wildCount = settingCounts.wild;
+    const zooCount = settingCounts.zoo;
+    const domesticCount = settingCounts.domestic;
     const topCaptures = (publicCard?.topCaptures ?? []).slice(0, 6).map(mapPublicProfileCaptureToAppCapture);
 
     return (

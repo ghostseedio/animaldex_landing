@@ -34,7 +34,7 @@ type AccountLoginFormProps = {
 
 const previewCards = [
     {slug: "barn-owl", name: "Barn Owl", rotate: "-rotate-6", offset: "translate-x-0"},
-    {slug: "wolf", name: "Wolf", rotate: "rotate-3", offset: "translate-x-6 md:translate-x-10"},
+    {slug: "mantis-shrimp", name: "Mantis Shrimp", rotate: "rotate-3", offset: "translate-x-6 md:translate-x-10"},
     {slug: "red-fox", name: "Red Fox", rotate: "-rotate-2", offset: "translate-x-3 md:translate-x-6"}
 ] as const;
 

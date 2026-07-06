@@ -1,6 +1,5 @@
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
-import ArenaTintedImage from "@/app/[locale]/(authenticated)/app/arena/_components/arena-tinted-image";
 import {APP_MODULE_THUMBNAILS} from "@/lib/app-module-thumbnails";
 
 function matchupStatusLabel(count: number) {
@@ -16,12 +15,18 @@ export default function ArenaMatchupsHero({opponentCount}: {opponentCount: numbe
             href="/app/matchups"
             className="group block overflow-hidden rounded-[24px] shadow-[0_10px_20px_rgba(139,92,246,0.14)] ring-[1.5px] ring-primary-400/45 transition active:scale-[0.99]"
         >
-            <div className="relative h-[132px] overflow-hidden">
-                <ArenaTintedImage
+            <div className="relative h-[132px] w-full overflow-hidden">
+                <div
+                    className="absolute inset-0 bg-[linear-gradient(135deg,rgb(8,35,15)_0%,rgba(56,250,71,0.42)_48%,rgb(15,82,31)_100%)]"
+                    aria-hidden="true"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                     src={APP_MODULE_THUMBNAILS.matchupsHero}
-                    accent="neon"
-                    desaturated={false}
-                    className="absolute inset-0"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                    loading="eager"
+                    decoding="async"
                 />
                 <div
                     className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent to-black/[0.55]"
@@ -29,7 +34,7 @@ export default function ArenaMatchupsHero({opponentCount}: {opponentCount: numbe
                 />
             </div>
 
-            <div className="bg-gradient-to-b from-[#141714] to-[#141414] p-[18px]">
+            <div className="bg-gradient-to-b from-[#141714] to-[#1f1f1f] p-[18px]">
                 <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
                         <span className="inline-flex rounded-full bg-primary-400/[0.14] px-[9px] py-[5px] text-[0.62rem] font-black uppercase tracking-[0.08em] text-primary-300">

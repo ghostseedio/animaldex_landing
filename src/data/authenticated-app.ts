@@ -3,12 +3,12 @@ import "server-only";
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
-import {getAuthenticatedPublicProfileCard, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
+import {getAuthenticatedPublicProfileCard, resolveProfileSettingCounts, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
-import {getAuthenticatedUserProfile, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
+import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -453,6 +453,18 @@ export async function getAppProfileSummary(): Promise<AppProfileSummary> {
         zoo: Number(row.zoo_captures ?? 0),
         domestic: Number(row.domestic_captures ?? 0)
     };
+}
+
+export async function getAppProfileSettingCounts() {
+    const [summary, captureSettings] = await Promise.all([
+        getAppProfileSummary(),
+        getUserCaptureSettingCounts()
+    ]);
+
+    return resolveProfileSettingCounts(
+        {wild: summary.wild, zoo: summary.zoo, domestic: summary.domestic},
+        captureSettings
+    );
 }
 
 export async function getAppCollectorScore() {
