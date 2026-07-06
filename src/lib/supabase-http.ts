@@ -39,6 +39,23 @@ export function getSupabaseServiceKey() {
         ?? readTrimmedEnv("SUPABASE_SERVICE_KEY");
 }
 
+export function isSupabaseJwtKey(key: string | null | undefined) {
+    const trimmed = key?.trim();
+
+    return Boolean(trimmed && trimmed.startsWith("eyJ") && trimmed.length > 100);
+}
+
+/** Auth/session clients must use a JWT anon key, or service role on the server as fallback. */
+export function getSupabaseAuthKey() {
+    const anonKey = getSupabasePublicKey();
+
+    if (isSupabaseJwtKey(anonKey)) {
+        return anonKey;
+    }
+
+    return getSupabaseServiceKey();
+}
+
 export function getSupabaseServerReadKey() {
     return getSupabaseServiceKey() ?? getSupabasePublicKey();
 }

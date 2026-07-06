@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {
-    getSpeciesImageReferences,
+    getPublicCaptureImageReference,
     getSpeciesRepresentativeImageReference,
     SPECIES_NO_IMAGE_SRC
 } from "@/data/species-images";
@@ -10,6 +10,8 @@ import {
     getSupabaseServiceKey,
     getSupabaseUrl
 } from "@/lib/supabase-http";
+import {getSpeciesBySlug} from "@/data/species";
+import {getDatabaseSpeciesBySlug} from "@/data/database-species-pages";
 
 function encodeStoragePath(path: string) {
     return path
@@ -48,9 +50,10 @@ function toAbsoluteSignedUrl(supabaseUrl: string, signedUrl: string) {
 
 export async function GET(request: NextRequest, {params}: {params: {slug: string}}) {
     const captureId = request.nextUrl.searchParams.get("captureId");
+    const entry = getSpeciesBySlug(params.slug) ?? await getDatabaseSpeciesBySlug(params.slug);
     const reference = captureId
-        ? (await getSpeciesImageReferences(params.slug)).find((item) => item.captureId === captureId) ?? null
-        : await getSpeciesRepresentativeImageReference(params.slug);
+        ? await getPublicCaptureImageReference(captureId, entry)
+        : await getSpeciesRepresentativeImageReference(params.slug, entry);
     const {supabaseUrl, anonKey, serviceRoleKey} = getSupabaseConfig();
 
     if (!reference || !supabaseUrl || !reference.imageBucket || !reference.imagePath) {

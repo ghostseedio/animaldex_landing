@@ -1,17 +1,25 @@
 import {Metadata} from "next";
-import {notFound} from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
+import SpeciesLessonValueSection from "@/app/[locale]/(composited)/animals/[slug]/species-lesson-value-section";
+import {SpeciesEndorsementAndSize, SpeciesLevelProgress} from "@/app/[locale]/(composited)/animals/[slug]/species-progress-interactive";
 import SpeciesStatsSection from "@/app/[locale]/(composited)/animals/[slug]/species-stats-section";
+import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/species-detail-tabs";
+import SpeciesFieldGuideAccordion from "@/app/[locale]/(composited)/animals/[slug]/species-field-guide-accordion";
+import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
+import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import {getBlogPostsForSpecies} from "@/data/blog";
 import {getChallengesForSpecies} from "@/data/challenges";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
+import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {
     getSpeciesImageAltText,
     getSpeciesImageAttribution,
@@ -21,14 +29,19 @@ import {
 } from "@/data/species-images";
 import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
+import {resolveSpeciesLessonValue} from "@/data/species-lesson-value";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
-import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import type {SpeciesEntry} from "@/data/species";
+import {getPrincipleHubBySlug, resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {getSpeciesRankings} from "@/data/species-rankings";
+import {getSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
 export const revalidate = 3600;
 
@@ -46,6 +59,47 @@ type SpeciesTextLink = {
 
 function toQualitySlug(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+const RELATED_NAME_STOP_WORDS = new Set(["animal", "common", "domestic", "eastern", "greater", "lesser", "northern", "southern", "western"]);
+
+function getRelatedNameTokens(entry: SpeciesEntry) {
+    return new Set(
+        entry.name.toLowerCase().split(/[^a-z0-9]+/)
+            .filter((token) => token.length >= 4 && !RELATED_NAME_STOP_WORDS.has(token))
+    );
+}
+
+function getScientificGenus(entry: SpeciesEntry) {
+    const scientificName = entry.analysis.scientificName.trim();
+
+    if (!scientificName || scientificName.toLowerCase().includes("under review")) {
+        return null;
+    }
+
+    return scientificName.split(/\s+/)[0]?.toLowerCase() ?? null;
+}
+
+function getAutomaticRelatedSpecies(entry: SpeciesEntry, entries: SpeciesEntry[], limit = 3) {
+    const currentTokens = getRelatedNameTokens(entry);
+    const currentGenus = getScientificGenus(entry);
+
+    return entries
+        .filter((candidate) => candidate.slug !== entry.slug)
+        .map((candidate) => {
+            const candidateTokens = getRelatedNameTokens(candidate);
+            const sharedNameTokens = Array.from(currentTokens).filter((token) => candidateTokens.has(token)).length;
+            const candidateGenus = getScientificGenus(candidate);
+            const sameGenus = Boolean(currentGenus && candidateGenus === currentGenus);
+            const sameSpecificCategory = entry.analysis.category !== "Animal" && candidate.analysis.category === entry.analysis.category;
+            const score = (sameGenus ? 100 : 0) + sharedNameTokens * 20 + (sameSpecificCategory ? 5 : 0);
+
+            return {candidate, score};
+        })
+        .filter(({score}) => score > 0)
+        .sort((left, right) => right.score - left.score || left.candidate.name.localeCompare(right.candidate.name))
+        .slice(0, limit)
+        .map(({candidate}) => candidate);
 }
 
 function pluralizeWord(word: string) {
@@ -227,7 +281,7 @@ function renderListItemWithSpeciesLink(text: string, currentSlug: string) {
 
 export async function generateMetadata({params}: SpeciesPageProps): Promise<Metadata> {
     const {locale, slug} = params;
-    const entry = getSpeciesBySlug(slug);
+    const entry = await getResolvedSpeciesBySlug(slug);
 
     if (!entry) {
         return {};
@@ -236,7 +290,7 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
     const title = `${entry.name} Meaning, Symbolism, Lessons, Habitat & Facts`;
     const description = `${entry.name}: ${entry.analysis.summary} Explore biology-backed ${entry.name.toLowerCase()} meaning, symbolism, lessons, behavior, habitat, and related animals with AnimalDex.`;
 
-    return buildContentMetadata({
+    const metadata = buildContentMetadata({
         locale,
         pathname: `/animals/${entry.slug}`,
         title,
@@ -264,19 +318,32 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         updatedAt: entry.updatedAt,
         tags: entry.searchIntents
     });
+
+    return entry.databaseSource && !entry.databaseSource.seoIndexable
+        ? {...metadata, robots: {index: false, follow: true}}
+        : metadata;
 }
 
 export default async function SpeciesPage({params}: SpeciesPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "animals");
     const rankingsT = await getScopedTranslator(locale, "rankings");
-    const entry = getSpeciesBySlug(slug);
+    const entry = await getResolvedSpeciesBySlug(slug);
 
     if (!entry) {
         notFound();
     }
 
-    const related = getRelatedSpecies(entry.slug, 3);
+    if (entry.slug !== slug.trim().toLowerCase()) {
+        redirect(getLocalePath(locale, `/animals/${entry.slug}`));
+    }
+
+    const unifiedSpeciesEntries = entry.databaseSource ? await getUnifiedSpeciesEntries() : speciesEntries;
+    const unifiedSpeciesBySlug = new Map(unifiedSpeciesEntries.map((item) => [item.slug, item]));
+    const staticRelated = getRelatedSpecies(entry.slug, 3);
+    const related = staticRelated.length > 0
+        ? staticRelated
+        : getAutomaticRelatedSpecies(entry, unifiedSpeciesEntries, 3);
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
@@ -284,31 +351,45 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const principleProfile = await resolveSpeciesBehaviorProfile(entry.slug);
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
-    const relatedPrincipleSpecies = principleProfile
-        ? principleProfile.relatedSpeciesSlugs
-            .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
-            .filter((relatedEntry): relatedEntry is NonNullable<typeof relatedEntry> => Boolean(relatedEntry))
-        : [];
+    const primaryQualityHub = primaryQualitySlug ? await getPrincipleHubBySlug(primaryQualitySlug) : null;
+    const relatedPowerSpecies = primaryQualityHub
+        ? primaryQualityHub.lessons
+            .filter((lesson) => lesson.slug !== entry.slug)
+            .slice(0, 3)
+            .map((lesson) => unifiedSpeciesBySlug.get(lesson.slug))
+            .filter((relatedEntry): relatedEntry is SpeciesEntry => Boolean(relatedEntry))
+        : principleProfile
+            ? principleProfile.relatedSpeciesSlugs
+                .map((relatedSlug) => unifiedSpeciesBySlug.get(relatedSlug))
+                .filter((relatedEntry): relatedEntry is SpeciesEntry => Boolean(relatedEntry))
+            : [];
     const dietContent = getSpeciesDietContent(entry);
+    const databaseFieldGuide = entry.databaseSource?.fieldGuide;
     const spottingContent = getSpeciesSpottingContent(entry);
     const {descriptor, subtitleStory} = await getSpeciesSubtitle(entry.slug, locale);
     const miniSystemsSummary = getMiniSystemsBySpeciesSlug(entry.slug);
-    const statsResult = await resolveSpeciesStats(entry.slug);
-    const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8);
-    const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug);
+    const statsResult = await resolveSpeciesStats(entry.slug, entry);
+    const lessonValueResult = statsResult.stats
+        ? await resolveSpeciesLessonValue(entry, statsResult.stats)
+        : null;
+    const rankingItems = await getSpeciesRankings(entry);
+    const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
+    const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug, entry);
+    const growthContext = await getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null);
     const imageAttribution = getSpeciesImageAttribution(featuredMedia);
     const captureContextLabel = featuredMedia?.imagePath ? featuredMedia.contextLabel : null;
     const captureLocationLabel = featuredMedia?.captureId && featuredMedia.imageBucket && featuredMedia.imagePath
         ? featuredMedia.locationDisplayLabel
         : null;
-    const resolvedRarityScore = statsResult.stats && statsResult.statsSource !== "generated"
+    const resolvedRarityScore = statsResult.stats
         ? statsResult.stats.rarity
         : entry.analysis.rarityScore;
     const resolvedRarityLabel = rarityLabel(resolvedRarityScore);
-    const battleTier = statsResult.stats && statsResult.statsSource !== "generated"
+    const battleTier = statsResult.stats
         ? getBattleTier(statsResult.stats)
         : null;
     const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
+    const animalDexNumber = getAnimalDexNumberFromEntry(entry);
     const compareWithLinks = Array.from(
         new Map(
             relatedChallenges.map((challenge) => {
@@ -429,14 +510,14 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 {
                     "@type": "ListItem",
                     position: 2,
-                    name: "Qualities",
-                    item: getAbsoluteUrl(locale, "/qualities")
+                    name: "Powers",
+                    item: getAbsoluteUrl(locale, "/powers")
                 },
                 ...(primaryQualitySlug ? [{
                     "@type": "ListItem",
                     position: 3,
                     name: primaryQuality ?? principleProfile.principle,
-                    item: getAbsoluteUrl(locale, `/qualities/${primaryQualitySlug}`)
+                    item: getAbsoluteUrl(locale, `/powers/${primaryQualitySlug}`)
                 }] : []),
                 {
                     "@type": "ListItem",
@@ -504,6 +585,161 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         } : {})
     };
 
+    const fieldGuideSections = [
+        {
+            id: "introduction",
+            title: t("fieldGuideIntroductionTitle", {animal: entry.name}),
+            content: (
+                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
+                    <p>{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
+                    <div>
+                        <h4 className="text-base font-semibold text-white">{t("identifyTitle", {animal: entry.name})}</h4>
+                        <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
+                            {entry.analysis.identification.map((item) => (
+                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                    {entry.premiumDetails.whyInteresting.length > 0 ? (
+                        <div>
+                            <h4 className="text-base font-semibold text-white">{t("interestingTitle", {animal: entry.name})}</h4>
+                            <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
+                                {entry.premiumDetails.whyInteresting.map((item) => (
+                                    <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : null}
+                </div>
+            )
+        },
+        {
+            id: "environment",
+            title: t("fieldGuideEnvironmentTitle", {habitat: entry.analysis.habitat.split(",")[0] ?? entry.name}),
+            content: (
+                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
+                    <p>
+                        <span className="text-white">{t("habitatLabel")}: </span>
+                        {renderTextWithSpeciesLinks(entry.analysis.habitat, entry.slug)}
+                    </p>
+                    <p>
+                        <span className="text-white">{t("nativeRangeLabel")}: </span>
+                        {renderTextWithSpeciesLinks(entry.analysis.nativeRange, entry.slug)}
+                    </p>
+                    <NativeRangeMapCard
+                        entry={entry}
+                        labels={{
+                            title: t("nativeRangeCardTitle"),
+                            description: t("nativeRangeCardDescription"),
+                            missingAssets: t("nativeRangeMissingAssets")
+                        }}
+                    />
+                    <div className="flex flex-col gap-4">
+                        <p>{renderTextWithSpeciesLinks(spottingContent.summary, entry.slug)}</p>
+                        <ul className="flex list-disc flex-col gap-2 pl-5">
+                            {spottingContent.locations.map((item) => (
+                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), entry.slug)}</li>
+                            ))}
+                        </ul>
+                        <ul className="flex list-disc flex-col gap-2 pl-5">
+                            {spottingContent.tips.map((item) => (
+                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )
+        },
+        {
+            id: "diet",
+            title: t("fieldGuideDietTitle"),
+            content: (
+                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
+                    <p>{renderTextWithSpeciesLinks(databaseFieldGuide?.dietSummary ?? dietContent.summary, entry.slug)}</p>
+                    {!databaseFieldGuide?.dietSummary ? (
+                        <>
+                            <ul className="flex list-disc flex-col gap-2 pl-5">
+                                {dietContent.foods.map((item) => (
+                                    <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                ))}
+                            </ul>
+                            <p className="text-ink-300">{renderTextWithSpeciesLinks(dietContent.note, entry.slug)}</p>
+                        </>
+                    ) : null}
+                </div>
+            )
+        },
+        ...(databaseFieldGuide?.predatorsSummary ? [{
+            id: "predators",
+            title: "Predators, threats, and defense",
+            content: <p className="text-lg leading-8 text-ink-200">{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, entry.slug)}</p>
+        }] : []),
+        ...(databaseFieldGuide && (databaseFieldGuide.sleepPattern || databaseFieldGuide.lifespanEstimate) ? [{
+            id: "life-cycle",
+            title: "Daily rhythm and lifespan",
+            content: (
+                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
+                    {databaseFieldGuide.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, entry.slug)}</p> : null}
+                    {databaseFieldGuide.lifespanEstimate ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.lifespanEstimate, entry.slug)}</p> : null}
+                </div>
+            )
+        }] : []),
+        ...(databaseFieldGuide && (databaseFieldGuide.femaleOffspringNotes || databaseFieldGuide.sexDifferenceNotes) ? [{
+            id: "reproduction",
+            title: "Offspring and sex differences",
+            content: (
+                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
+                    {databaseFieldGuide.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, entry.slug)}</p> : null}
+                    {databaseFieldGuide.sexDifferenceNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sexDifferenceNotes, entry.slug)}</p> : null}
+                </div>
+            )
+        }] : []),
+        {
+            id: "behavior",
+            title: t("fieldGuideBehaviorTitle", {animal: entry.name}),
+            content: (
+                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
+                    {entry.premiumDetails.behaviorTraits.map((item) => (
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                    ))}
+                </ul>
+            )
+        },
+        ...(principleProfile ? [{
+            id: "meaning",
+            title: t("fieldGuideMeaningTitle", {principle: principleProfile.principle}),
+            content: (
+                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
+                    <p>{entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.</p>
+                    <p>{principleProfile.coreLesson}</p>
+                    <p>{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}</p>
+                </div>
+            )
+        }] : []),
+        {
+            id: "spotting",
+            title: t("fieldGuideSpottingTitle"),
+            content: (
+                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
+                    {entry.premiumDetails.respectfulSpotting.map((item) => (
+                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                    ))}
+                </ul>
+            )
+        },
+        ...(entry.premiumDetails.lookalikes.length > 0 ? [{
+            id: "lookalikes",
+            title: t("fieldGuideLookalikesTitle"),
+            content: (
+                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
+                    {entry.premiumDetails.lookalikes.map((item) => (
+                        <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug)}</li>
+                    ))}
+                </ul>
+            )
+        }] : [])
+    ];
+
     return (
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-12 md:py-20 flex flex-col gap-16 md:gap-24">
             <script
@@ -525,6 +761,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div className="flex flex-wrap gap-2">
+                            {animalDexNumber ? <AnimalDexNumberBadge number={animalDexNumber} /> : null}
                             <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-sm font-semibold text-amber-100">
                                 {resolvedRarityLabel}
                             </span>
@@ -550,14 +787,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             cacheKey={`${locale}:${entry.slug}:${heroSubtitle}`}
                             refreshUrl={`/api/species-subtitles/${entry.slug}?locale=${encodeURIComponent(locale)}`}
                         />
-                        {principleProfile ? (
-                            <div className="border-l-2 border-amber-300/45 pl-5">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("principleLabel")}</p>
-                                <p className="mt-2 text-xl font-semibold text-white md:text-2xl">{principleProfile.principle}</p>
-                                {principleProfile.motto ? <p className="mt-1 text-ink-200">{principleProfile.motto}</p> : null}
-                                {principleProfile.principleExpression ? <p className="mt-2 text-sm leading-6 text-ink-300">{principleProfile.principleExpression}</p> : null}
-                            </div>
-                        ) : null}
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                             <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
                                 {t("getAnimalDex")}
@@ -576,15 +805,22 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     src: getSpeciesImageRoute(entry.slug, item.captureId),
                                     alt: getSpeciesImageAltText(entry, "featured"),
                                     attribution: getSpeciesImageAttribution(item),
+                                    username: item.username,
                                     contextLabel: item.contextLabel,
                                     locationDisplayLabel: item.locationDisplayLabel
                                 }))}
                                 rarityLabel={resolvedRarityLabel}
                                 battleTierLabel={battleTierLabel}
+                                animalDexNumber={animalDexNumber}
                             />
                         ) : featuredMedia?.imagePath ? (
                             <div className="rounded-[2rem] border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
                                 <div className="relative overflow-hidden rounded-[1.5rem]">
+                                    {animalDexNumber ? (
+                                        <div className="absolute right-3 top-3 z-10">
+                                            <AnimalDexNumberBadge number={animalDexNumber} compact />
+                                        </div>
+                                    ) : null}
                                     <SpeciesImage
                                         slug={entry.slug}
                                         alt={getSpeciesImageAltText(entry, "featured")}
@@ -598,7 +834,13 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                         {captureLocationLabel ? <p className="mt-1 text-sm text-ink-100">{captureLocationLabel}</p> : null}
                                     </div>
                                 </div>
-                                {imageAttribution ? <p className="px-2 pt-3 text-sm text-ink-300">{imageAttribution}</p> : null}
+                                {imageAttribution ? (
+                                    <p className="px-2 pt-3 text-sm text-ink-300">
+                                        {featuredMedia?.username ? (
+                                            <Link href={`/u/${encodeURIComponent(featuredMedia.username)}`} className="hover:text-primary-100">{imageAttribution}</Link>
+                                        ) : imageAttribution}
+                                    </p>
+                                ) : null}
                             </div>
                         ) : (
                             <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
@@ -630,280 +872,266 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 ))}
             </section>
 
-            {principleProfile ? (
-                <nav className="sticky top-20 z-20 -mx-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-white/[0.08] bg-canvas-950/90 px-4 py-4 backdrop-blur-xl md:top-24 md:mx-0 md:rounded-2xl md:border md:px-6">
-                    <span className="text-ink-300 text-xs uppercase tracking-[0.18em]">{t("jumpToLabel")}</span>
-                    <Link href="#meaning" className="text-sm text-primary-200 hover:text-primary-100">
-                        {t("anchorMeaning")}
-                    </Link>
-                    <Link href="#symbolism" className="text-sm text-primary-200 hover:text-primary-100">
-                        {t("anchorSymbolism")}
-                    </Link>
-                    <Link href="#biological-basis" className="text-sm text-primary-200 hover:text-primary-100">
-                        {t("anchorBiologicalBasis")}
-                    </Link>
-                    <Link href="#behavior" className="text-sm text-primary-200 hover:text-primary-100">
-                        {t("anchorBehavior")}
-                    </Link>
-                </nav>
-            ) : null}
+            <SpeciesDetailTabs
+                defaultTab="story"
+                labels={{
+                    story: t("tabStory"),
+                    progress: t("tabProgress"),
+                    growth: t("tabGrowth")
+                }}
+                story={(
+                    <div className="flex flex-col gap-10 md:gap-16">
+                        {principleProfile ? (
+                            <section id="meaning" className="scroll-mt-40">
+                                <div className="overflow-hidden rounded-[1.75rem] border border-amber-200/15 bg-[linear-gradient(145deg,rgba(180,139,72,0.1),rgba(34,58,41,0.14))] p-5 md:p-8">
+                                    <div>
+                                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
+                                            <span aria-hidden="true">✦</span>
+                                            {t("animalPowerLabel")}
+                                        </div>
+                                        <p className="mt-3 font-display text-3xl font-bold text-white md:text-4xl">
+                                            {principleProfile.principle}
+                                        </p>
+                                        {principleProfile.motto ? (
+                                            <p className="mt-2 text-lg font-semibold text-amber-100 md:text-xl">
+                                                {principleProfile.motto}
+                                            </p>
+                                        ) : null}
+                                        {principleProfile.principleExpression ? (
+                                            <p className="mt-2 text-sm leading-6 text-ink-300 md:text-base">
+                                                {principleProfile.principleExpression}
+                                            </p>
+                                        ) : null}
+                                    </div>
 
-            {principleProfile ? (
-                <section id="meaning" className="scroll-mt-40 border-t border-white/10 pt-10 md:pt-16">
-                    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
-                        <div className="max-w-3xl">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">
-                                {t("lessonFromLabel", {animal: entry.name})}
-                            </p>
-                            <h2 className="mt-4 font-display text-4xl font-bold leading-tight text-white md:text-5xl">
-                                {principleProfile.motto ?? t("principleTitle", {animal: entry.name})}
-                            </h2>
-                            <p className="mt-6 text-xl leading-9 text-ink-100 md:text-2xl md:leading-10">
-                                {principleProfile.coreLesson}
-                            </p>
-                            {principleProfile.applicationExample ? (
-                                <div className="mt-8 rounded-3xl border border-amber-300/20 bg-amber-300/[0.07] p-5 md:p-7">
-                                    <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-100">{t("applicationExampleLabel")}</h3>
-                                    <p className="mt-3 text-lg leading-8 text-ink-100">{principleProfile.applicationExample}</p>
-                                </div>
-                            ) : null}
-                            <div id="biological-basis" className="mt-10 scroll-mt-40 border-l-2 border-primary-400/35 pl-5 md:pl-7">
-                                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-primary-100">{t("biologicalBasisLabel")}</h3>
-                                <p className="mt-3 text-lg leading-8 text-ink-200">
-                                    {renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}
-                                </p>
-                            </div>
-                            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                                {principleProfile.hasLessonPage ? (
-                                    <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
-                                        {t("lessonPageLink", {animal: entry.name})}
-                                    </Link>
-                                ) : null}
-                                {primaryQualitySlug ? (
-                                    <Link href={`/qualities/${primaryQualitySlug}`} className="text-primary-200 hover:text-primary-100" underline>
-                                        {primaryQuality}
-                                    </Link>
-                                ) : null}
-                            </div>
-                        </div>
-                        <aside className="self-start rounded-3xl bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(40,70,49,0.16))] p-6 md:p-8">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{t("principleLabel")}</p>
-                            <p className="mt-3 font-display text-3xl font-bold text-white">{principleProfile.principle}</p>
-                            <h3 className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("bestForTitle")}</h3>
-                            <ul className="mt-4 flex flex-col gap-3 text-ink-100">
-                                {principleProfile.bestFor.map((item) => (
-                                    <li key={item} className="flex gap-3"><span className="text-amber-200">—</span><span>{item}</span></li>
-                                ))}
-                            </ul>
-                            {relatedPrincipleSpecies.length > 0 ? (
-                                <div className="mt-8 border-t border-white/[0.08] pt-6">
-                                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("relatedPrincipleSpeciesTitle", {principle: principleProfile.principle})}</h3>
-                                    <div className="mt-4 flex flex-wrap gap-2">
-                                        {relatedPrincipleSpecies.map((item) => (
-                                            <Link key={item.slug} href={`/animals/${item.slug}`} className="text-sm text-primary-200 hover:text-primary-100">
-                                                {item.name}
+                                    <div className="mt-8 border-l-2 border-amber-300/55 pl-5 md:pl-6">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/90">
+                                            {t("whatItTeachesLabel")}
+                                        </p>
+                                        <p className="mt-3 text-xl leading-9 text-white md:text-2xl md:leading-10">
+                                            {principleProfile.coreLesson}
+                                        </p>
+                                    </div>
+
+                                    {principleProfile.applicationExample ? (
+                                        <div className="mt-8 rounded-2xl border border-amber-300/20 bg-black/15 p-5 md:p-6">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-100">
+                                                {t("tryItLabel")}
+                                            </p>
+                                            <p className="mt-3 text-lg leading-8 text-ink-100">
+                                                {principleProfile.applicationExample}
+                                            </p>
+                                        </div>
+                                    ) : null}
+
+                                    <div id="biological-basis" className="mt-8 scroll-mt-40">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">
+                                            {t("natureProofLabel")}
+                                        </p>
+                                        <p className="mt-3 text-lg leading-8 text-ink-200">
+                                            {renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}
+                                        </p>
+                                    </div>
+
+                                    {principleProfile.bestFor.length > 0 ? (
+                                        <div className="mt-8">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">
+                                                {t("useItForLabel")}
+                                            </p>
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {principleProfile.bestFor.map((item) => (
+                                                    <span
+                                                        key={item}
+                                                        className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-medium text-ink-100"
+                                                    >
+                                                        {item}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/[0.08] pt-6 text-sm">
+                                        {principleProfile.hasLessonPage ? (
+                                            <Link href={`/animal-lessons/${entry.slug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                                {t("lessonPageLink", {animal: entry.name})}
                                             </Link>
-                                        ))}
+                                        ) : null}
+                                        {primaryQualitySlug ? (
+                                            <Link href={`/powers/${primaryQualitySlug}`} className="text-primary-200 hover:text-primary-100" underline>
+                                                {primaryQuality}
+                                            </Link>
+                                        ) : null}
                                     </div>
                                 </div>
-                            ) : null}
-                        </aside>
-                    </div>
-                </section>
-            ) : null}
 
-            {principleProfile ? (
-                <section id="symbolism" className="scroll-mt-40 border-t border-white/10 pt-10 md:pt-16">
-                    <div className="flex max-w-3xl flex-col gap-8">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">
-                        {t("symbolismTitle", {animal: entry.name})}
-                    </h2>
-                    <div className="flex flex-col gap-2">
-                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionOne", {animal: entry.name.toLowerCase()})}</h3>
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">
-                            {entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.
-                        </p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionTwo", {animal: entry.name.toLowerCase()})}</h3>
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">{principleProfile.coreLesson}</p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionThree")}</h3>
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}</p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <h3 className="text-xl md:text-2xl font-semibold text-white">{t("symbolismQuestionFour")}</h3>
-                        <p className="text-ink-200 text-lg md:text-xl leading-8">
-                            AnimalDex assigns this principle from observable biology: body design, behavioral strategy, and ecosystem role documented for {entry.name.toLowerCase()}.
-                        </p>
-                    </div>
-                    </div>
-                </section>
-            ) : null}
+                                {relatedPowerSpecies.length > 0 && primaryQuality ? (
+                                    <aside className="mt-8 rounded-3xl bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(40,70,49,0.16))] p-6 md:p-8">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">
+                                            {t("relatedPrincipleSpeciesTitle", {principle: primaryQuality})}
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            {relatedPowerSpecies.map((item) => (
+                                                <Link key={item.slug} href={`/animals/${item.slug}`} className="text-sm text-primary-200 hover:text-primary-100">
+                                                    {item.name}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </aside>
+                                ) : null}
+                            </section>
+                        ) : null}
 
-            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whatIsTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
-            </section>
+                        <SpeciesFieldGuideAccordion
+                            headerTitle={principleProfile
+                                ? t("fieldGuideHeaderTitle", {principle: principleProfile.principle})
+                                : t("fieldGuideHeaderTitleFallback", {animal: entry.name})}
+                            headerDescription={t("fieldGuideHeaderDescription")}
+                            sections={fieldGuideSections}
+                            defaultOpenId="introduction"
+                        />
+                    </div>
+                )}
+                progress={(
+                    <div className="flex flex-col gap-10 md:gap-16">
+                        <SpeciesLevelProgress progress={growthContext.progress} />
 
-            <SpeciesStatsSection
-                result={statsResult}
-                battleTier={battleTier}
-                labels={{
-                    title: t("statsTitle", {animal: entry.name}),
-                    description: t("statsDescription"),
-                    battleTierChip: battleTierLabel ?? t("battleTierChip", {tier: "{tier}"}),
-                    sourceLabel: t("statsSourceLabel"),
-                    dominance: t("dominanceStat"),
-                    speed: t("speedStat"),
-                    size: t("sizeStat"),
-                    intelligence: t("intelligenceStat"),
-                    rarity: t("rarityStat"),
-                    sourceSpeciesProfile: t("statsSourceSpeciesProfile"),
-                    sourceAnalysisBase: t("statsSourceAnalysisBase"),
-                    sourceAnalysisEffective: t("statsSourceAnalysisEffective"),
-                    sourceRawJson: t("statsSourceRawJson"),
-                    sourceGenerated: t("statsSourceGenerated"),
-                    sourceNone: t("statsSourceNone"),
-                    unavailableTitle: t("statsUnavailableTitle"),
-                    unavailableDescription: t("statsUnavailableDescription")
-                }}
+                        <SpeciesStatsSection
+                            result={statsResult}
+                            battleTier={battleTier}
+                            labels={{
+                                title: t("statsTitle", {animal: entry.name}),
+                                description: t("statsDescription"),
+                                battleTierChip: battleTierLabel ?? t("battleTierChip", {tier: "{tier}"}),
+                                sourceLabel: t("statsSourceLabel"),
+                                dominance: t("dominanceStat"),
+                                speed: t("speedStat"),
+                                size: t("sizeStat"),
+                                intelligence: t("intelligenceStat"),
+                                rarity: t("rarityStat"),
+                                sourceSpeciesProfile: t("statsSourceSpeciesProfile"),
+                                sourceAnalysisBase: t("statsSourceAnalysisBase"),
+                                sourceAnalysisEffective: t("statsSourceAnalysisEffective"),
+                                sourceRawJson: t("statsSourceRawJson"),
+                                sourceGenerated: t("statsSourceGenerated"),
+                                sourceNone: t("statsSourceNone"),
+                                unavailableTitle: t("statsUnavailableTitle"),
+                                unavailableDescription: t("statsUnavailableDescription")
+                            }}
+                        />
+
+                        <SpeciesEndorsementAndSize
+                            progress={growthContext.progress}
+                            speciesName={entry.name}
+                            sizeScore={statsResult.stats?.size ?? null}
+                            isAuthenticated={growthContext.isAuthenticated}
+                        />
+
+                        {lessonValueResult ? (
+                            <SpeciesLessonValueSection
+                                result={lessonValueResult}
+                                locale={locale === "id" ? "id-ID" : "en-US"}
+                                labels={{
+                                    title: t("lessonValueTitle"),
+                                    estimatedLabel: t("lessonValueEstimated"),
+                                    rangeLabel: t("lessonValueRange"),
+                                    rangeOnlyLabel: t("lessonValueRangeOnly"),
+                                    confidenceLabel: t("lessonValueConfidence"),
+                                    footer: t("lessonValueFooter"),
+                                    disclaimer: t("lessonValueDisclaimer"),
+                                    stewardshipBasis: t("lessonValueStewardshipBasis"),
+                                    generatedBasis: t("lessonValueGeneratedBasis")
+                                }}
+                            />
+                        ) : null}
+
+                        <SpeciesRankingCarousel
+                            speciesSlug={entry.slug}
+                            speciesName={entry.name}
+                            items={rankingItems}
+                            labels={{
+                                title: t("rankingsTitle", {animal: entry.name}),
+                                description: t("rankingsDescription"),
+                                empty: t("rankingsEmpty"),
+                                rankLabel: t("rankingsRankLabel"),
+                                scoreLabel: t("rankingsScoreLabel"),
+                                byPhotographer: t("rankingsByPhotographer")
+                            }}
+                        />
+
+                        <section className="rounded-[2rem] bg-amber-200/[0.07] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
+                            <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("rareTitle", {animal: entry.name})}</h2>
+                            <p className="text-ink-200 text-lg md:text-xl leading-8">
+                                <span className="text-white">{t("rarityLabel")}: </span>
+                                {resolvedRarityLabel} ({resolvedRarityScore}/100)
+                            </p>
+                            <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.rarityReason, entry.slug)}</p>
+                        </section>
+
+                        {systemsEntry ? (
+                            <SystemsIntelligenceSection
+                                items={[
+                                    {
+                                        slug: entry.slug,
+                                        name: entry.name,
+                                        entry: systemsEntry
+                                    }
+                                ]}
+                                labels={{
+                                    title: t("systemsIntelligenceTitle"),
+                                    description: t("systemsIntelligenceDescription"),
+                                    systemRole: t("systemRoleLabel"),
+                                    specializedHardware: t("specializedHardwareLabel"),
+                                    systemsScript: t("systemsScriptLabel"),
+                                    strategicInsight: t("strategicInsightLabel")
+                                }}
+                            />
+                        ) : null}
+                    </div>
+                )}
+                growth={(
+                    <SpeciesGrowthPanel
+                        speciesSlug={entry.slug}
+                        speciesName={entry.name}
+                        lessonSlug={principleProfile?.hasLessonPage ? entry.slug : null}
+                        qualitySlug={primaryQualitySlug}
+                        qualityName={primaryQuality}
+                        growth={growthContext}
+                        labels={{
+                            apexPathEyebrow: t("growthApexPathEyebrow"),
+                            apexInsightTitle: t("growthApexInsightTitle"),
+                            apexInsightDescription: t("growthApexInsightDescription"),
+                            useThisPower: t("growthUseThisPower"),
+                            acceptChallenge: t("growthAcceptChallenge"),
+                            challengeInProgress: t("growthChallengeInProgress"),
+                            challengeCompleted: t("growthChallengeCompleted"),
+                            challengeProofApp: t("growthChallengeProofApp"),
+                            challengeWaiting: t("growthChallengeWaiting"),
+                            wildProfileCta: t("growthWildProfileCta"),
+                            refreshWildProfileCta: t("growthRefreshWildProfileCta"),
+                            powerFusionTitle: t("growthPowerFusionTitle"),
+                            powerFusionDescription: t("growthPowerFusionDescription"),
+                            fusePowers: t("growthFusePowers"),
+                            fusionCostLabel: t("growthFusionCostLabel"),
+                            fusionLearnedCount: t("growthFusionLearnedCount"),
+                            fusionNoDonors: t("growthFusionNoDonors"),
+                            fusionSelectDonor: t("growthFusionSelectDonor"),
+                            fusionSearchPlaceholder: t("growthFusionSearchPlaceholder"),
+                            fusionSubmit: t("growthFusionSubmit"),
+                            fusionSuccess: t("growthFusionSuccess"),
+                            bestFor: t("growthBestFor"),
+                            collectedAnimalsTitle: t("growthYourCapturesTitle", {animal: entry.name}),
+                            signInPrompt: t("growthSignInPrompt"),
+                            signInButton: t("growthSignInButton"),
+                            emptyCapturesTitle: t("growthEmptyCapturesTitle"),
+                            emptyCapturesDescription: t("growthEmptyCapturesDescription"),
+                            scoreLabel: t("growthScoreLabel"),
+                            openLesson: t("growthOpenLesson", {animal: entry.name}),
+                            openPower: t("growthOpenPower", {power: "{power}"})
+                        }}
+                    />
+                )}
             />
-
-            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("identifyTitle", {animal: entry.name})}</h2>
-                <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                    {entry.analysis.identification.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                    ))}
-                </ul>
-            </section>
-
-            <section className="rounded-[2rem] bg-[linear-gradient(145deg,rgba(40,70,49,0.13),rgba(255,255,255,0.025))] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whereFoundTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    <span className="text-white">{t("habitatLabel")}: </span>
-                    {renderTextWithSpeciesLinks(entry.analysis.habitat, entry.slug)}
-                </p>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    <span className="text-white">{t("nativeRangeLabel")}: </span>
-                    {renderTextWithSpeciesLinks(entry.analysis.nativeRange, entry.slug)}
-                </p>
-                <NativeRangeMapCard
-                    entry={entry}
-                    labels={{
-                        title: t("nativeRangeCardTitle"),
-                        description: t("nativeRangeCardDescription"),
-                        missingAssets: t("nativeRangeMissingAssets")
-                    }}
-                />
-                <div className="mt-2 flex flex-col gap-4">
-                    <h3 className="text-xl md:text-2xl font-semibold text-white">{t("wildSpottingTitle", {animal: entry.name})}</h3>
-                    <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(spottingContent.summary, entry.slug)}</p>
-                    <div className="flex flex-col gap-3">
-                        <h4 className="text-lg md:text-xl font-semibold text-white">{t("wildSpottingLocationsLabel")}</h4>
-                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                            {spottingContent.locations.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), entry.slug)}</li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                        <h4 className="text-lg md:text-xl font-semibold text-white">{t("wildSpottingTipsLabel")}</h4>
-                        <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                            {spottingContent.tips.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-5">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("dietTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    <span className="text-white">{t("dietSummaryLabel")}: </span>
-                    {renderTextWithSpeciesLinks(dietContent.summary, entry.slug)}
-                </p>
-                <div className="flex flex-col gap-3">
-                    <h3 className="text-xl md:text-2xl font-semibold text-white">{t("dietFoodsLabel")}</h3>
-                    <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                        {dietContent.foods.map((item) => (
-                            <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                        ))}
-                    </ul>
-                </div>
-                <p className="text-ink-300 text-base md:text-lg leading-8">
-                    <span className="text-white">{t("dietFieldNoteLabel")}: </span>
-                    {renderTextWithSpeciesLinks(dietContent.note, entry.slug)}
-                </p>
-            </section>
-
-            <section className="rounded-[2rem] bg-amber-200/[0.07] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("rareTitle", {animal: entry.name})}</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    <span className="text-white">{t("rarityLabel")}: </span>
-                    {resolvedRarityLabel} ({resolvedRarityScore}/100)
-                </p>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{renderTextWithSpeciesLinks(entry.analysis.rarityReason, entry.slug)}</p>
-            </section>
-
-            {systemsEntry && (
-                <SystemsIntelligenceSection
-                    items={[
-                        {
-                            slug: entry.slug,
-                            name: entry.name,
-                            entry: systemsEntry
-                        }
-                    ]}
-                    labels={{
-                        title: t("systemsIntelligenceTitle"),
-                        description: t("systemsIntelligenceDescription"),
-                        systemRole: t("systemRoleLabel"),
-                        specializedHardware: t("specializedHardwareLabel"),
-                        systemsScript: t("systemsScriptLabel"),
-                        strategicInsight: t("strategicInsightLabel")
-                    }}
-                />
-            )}
-
-            <section id="behavior" className="scroll-mt-40 max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("behaviorTitle", {animal: entry.name})}</h2>
-                <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                    {entry.premiumDetails.behaviorTraits.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                    ))}
-                </ul>
-            </section>
-
-            <section className="rounded-[2rem] bg-white/[0.025] px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("interestingTitle", {animal: entry.name})}</h2>
-                <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                    {entry.premiumDetails.whyInteresting.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                    ))}
-                </ul>
-            </section>
-
-            <section className="max-w-3xl border-t border-white/10 pt-10 md:pt-16 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("spottingTitle")}</h2>
-                <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                    {entry.premiumDetails.respectfulSpotting.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
-                    ))}
-                </ul>
-            </section>
-
-            <section className="rounded-[2rem] bg-white/[0.025] px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("lookalikesTitle")}</h2>
-                <ul className="flex flex-col gap-2 text-ink-200 text-lg md:text-xl list-disc pl-5">
-                    {entry.premiumDetails.lookalikes.map((item) => (
-                        <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug)}</li>
-                    ))}
-                </ul>
-            </section>
 
             <section className="flex flex-col gap-4">
                 <h2 className="font-display font-bold text-4xl text-white">{t("relatedTitle")}</h2>
@@ -927,18 +1155,18 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             </section>
 
-            {principleProfile && relatedPrincipleSpecies.length > 0 ? (
+            {primaryQuality && relatedPowerSpecies.length > 0 ? (
                 <section className="flex flex-col gap-4">
                     <h2 className="font-display font-bold text-4xl text-white">
-                        {t("moreWithPrincipleTitle", {principle: principleProfile.principle})}
+                        {t("moreWithPrincipleTitle", {principle: primaryQuality})}
                     </h2>
                     <p className="text-ink-200 text-lg md:text-xl">
-                        <Link href={`/qualities/${primaryQualitySlug ?? principleProfile.principleSlug}`} underline className="text-primary-200 hover:text-primary-100">
-                            {t("moreWithPrincipleHubLink", {principle: principleProfile.principle})}
+                        <Link href={`/powers/${primaryQualitySlug}`} underline className="text-primary-200 hover:text-primary-100">
+                            {t("moreWithPrincipleHubLink", {principle: primaryQuality})}
                         </Link>
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedPrincipleSpecies.map((item) => (
+                        {relatedPowerSpecies.map((item) => (
                             <article
                                 key={`principle-${item.slug}`}
                                 className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"

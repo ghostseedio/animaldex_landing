@@ -490,7 +490,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Axolotl species page", slug: "axolotl", href: "https://animaldex.app/animals/axolotl"},
                     {text: "Axolotl animal lesson", slug: "axolotl", href: "https://animaldex.app/animal-lessons/axolotl"},
-                    {text: "Resilience animal quality", slug: "resilience", href: "https://animaldex.app/qualities/resilience"},
+                    {text: "Resilience animal power", slug: "resilience", href: "https://animaldex.app/powers/resilience"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -1224,7 +1224,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Snake species page", slug: "snake", href: "https://animaldex.app/animals/snake"},
                     {text: "Snake animal lesson", slug: "snake", href: "https://animaldex.app/animal-lessons/snake"},
-                    {text: "Adaptability animal quality", slug: "adaptability", href: "https://animaldex.app/qualities/adaptability"},
+                    {text: "Adaptability animal power", slug: "adaptability", href: "https://animaldex.app/powers/adaptability"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -1658,7 +1658,7 @@ const blogPostsData: BlogPost[] = [
                 inlineLinks: [
                     {text: "Octopus species page", slug: "octopus", href: "https://animaldex.app/animals/octopus"},
                     {text: "Octopus animal lesson", slug: "octopus", href: "https://animaldex.app/animal-lessons/octopus"},
-                    {text: "Adaptability animal quality", slug: "adaptability", href: "https://animaldex.app/qualities/adaptability"},
+                    {text: "Adaptability animal power", slug: "adaptability", href: "https://animaldex.app/powers/adaptability"},
                     {text: "Animal Symbolism hub", slug: "animal-symbolism", href: "https://animaldex.app/animal-symbolism"}
                 ]
             },
@@ -2121,10 +2121,10 @@ const blogPostsData: BlogPost[] = [
                     "After researching animal experiments, ancient scriptures, symbolism, scientists, and strange reports of animal intelligence, I keep coming back to one idea: every animal has its own lesson.",
                     "This does not mean you have to believe literally that humans reincarnate into animals. But as a symbolic framework, it is powerful.",
                     "Imagine someone who never learned loyalty. They may need the dog. Someone who never learned vision may need the eagle. Someone who never learned surrender may need the jellyfish. Someone who never learned transformation may need the serpent.",
-                    "Someone who never learned distributed intelligence may need the octopus. Someone who never learned emotional communication may need the dolphin. Maybe animals show us the qualities we are missing.",
+                    "Someone who never learned distributed intelligence may need the octopus. Someone who never learned emotional communication may need the dolphin. Maybe animals show us the powers we are missing.",
                     "Maybe they are mirrors. Maybe they are teachers. Maybe they are archetypes wearing bodies."
                 ],
-                pullQuote: "Maybe animals show us the qualities we are missing."
+                pullQuote: "Maybe animals show us the powers we are missing."
             },
             {
                 title: "Macrocosm, Microcosm, and Extinction",

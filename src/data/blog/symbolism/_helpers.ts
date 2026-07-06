@@ -50,7 +50,7 @@ function exploreLinks(speciesSlug: string, principleCluster: string) {
     return [
         {text: `${speciesSlug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")} species page`, slug: speciesSlug, href: `${SITE}/animals/${speciesSlug}`},
         {text: "Animal lesson", slug: speciesSlug, href: `${SITE}/animal-lessons/${speciesSlug}`},
-        {text: `${principleCluster} animal quality`, slug: principleSlug, href: `${SITE}/qualities/${principleSlug}`},
+        {text: `${principleCluster} animal power`, slug: principleSlug, href: `${SITE}/powers/${principleSlug}`},
         {text: "Animal Symbolism hub", slug: "animal-symbolism", href: `${SITE}/animal-symbolism`}
     ];
 }

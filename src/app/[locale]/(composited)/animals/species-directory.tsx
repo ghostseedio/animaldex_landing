@@ -3,8 +3,10 @@
 import {useEffect, useState} from "react";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
 import {getSpeciesImageAltText} from "@/data/species-images";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getSpeciesRarityStatusKey, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
 import SpeciesRegionMap from "./species-region-map";
 import {getNativeRangeRegionLabel, NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
@@ -286,14 +288,24 @@ export default function SpeciesDirectory({
 
             {speciesEntries.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
-                    {speciesEntries.map((entry) => (
+                    {speciesEntries.map((entry) => {
+                        const animalDexNumber = getAnimalDexNumberFromEntry(entry);
+
+                        return (
                         <article key={entry.slug} className="group overflow-hidden rounded-3xl bg-surface-900/70 flex flex-col">
-                            <SpeciesImage
-                                slug={entry.slug}
-                                alt={getSpeciesImageAltText(entry, "thumbnail")}
-                                className="aspect-[16/10] transition-transform duration-500 group-hover:scale-[1.02]"
-                                sizes="(min-width: 1280px) 28vw, (min-width: 768px) 44vw, 100vw"
-                            />
+                            <div className="relative">
+                                <SpeciesImage
+                                    slug={entry.slug}
+                                    alt={getSpeciesImageAltText(entry, "thumbnail")}
+                                    className="aspect-[16/10] transition-transform duration-500 group-hover:scale-[1.02]"
+                                    sizes="(min-width: 1280px) 28vw, (min-width: 768px) 44vw, 100vw"
+                                />
+                                {animalDexNumber ? (
+                                    <div className="absolute right-3 top-3">
+                                        <AnimalDexNumberBadge number={animalDexNumber} compact />
+                                    </div>
+                                ) : null}
+                            </div>
                             <div className="p-5 flex flex-col gap-3 flex-1">
                                 <div className="flex flex-wrap gap-2">
                                     <span className="rounded-full bg-primary-500/10 px-2.5 py-1 text-primary-200 text-xs font-semibold">
@@ -321,7 +333,8 @@ export default function SpeciesDirectory({
                                 </Link>
                             </div>
                         </article>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-8 md:p-10 text-center flex flex-col gap-3">

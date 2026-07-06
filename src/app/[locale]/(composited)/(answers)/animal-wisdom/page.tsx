@@ -57,13 +57,13 @@ const wisdomPaths = [
     {
         number: "03",
         label: "Patterns",
-        title: "Animal Qualities",
-        description: "Browse practical qualities connected to animal behavior, from precision and observation to cooperation, memory, and adaptation.",
-        href: "/qualities",
-        cta: "Explore animal qualities",
+        title: "Animal Powers",
+        description: "Browse practical powers connected to animal behavior, from precision and observation to cooperation, memory, and adaptation.",
+        href: "/powers",
+        cta: "Explore animal powers",
         examples: [
-            {label: "Precision", href: "/qualities/precision"},
-            {label: "Observation", href: "/qualities/observation"}
+            {label: "Precision", href: "/powers/precision"},
+            {label: "Observation", href: "/powers/observation"}
         ]
     }
 ];
@@ -74,15 +74,15 @@ const featuredEssay = blogPosts.find((post) => post.slug === "what-if-every-anim
 const faq = [
     {
         question: "What is Animal Wisdom in AnimalDex?",
-        answer: "Animal Wisdom is AnimalDex's home for animal symbolism, lessons from real behavior, and animal qualities such as patience, timing, teamwork, focus, and adaptability."
+        answer: "Animal Wisdom is AnimalDex's home for animal symbolism, lessons from real behavior, and animal powers such as patience, timing, teamwork, focus, and adaptability."
     },
     {
         question: "Are Animal Wisdom lessons based on real behavior?",
         answer: "Yes. AnimalDex connects interpretation to observable biology, ecology, and repeatable behavior rather than presenting metaphor as scientific fact."
     },
     {
-        question: "What is the difference between symbolism, lessons, and qualities?",
-        answer: "Symbolism explores cultural and interpretive meaning, lessons turn behavior into practical takeaways, and qualities group animals by strengths expressed through recurring behavior in nature."
+        question: "What is the difference between symbolism, lessons, and powers?",
+        answer: "Symbolism explores cultural and interpretive meaning, lessons turn behavior into practical takeaways, and powers group animals by strengths expressed through recurring behavior in nature."
     },
     {
         question: "Does Animal Wisdom replace the animal scanner or card collection?",
@@ -100,7 +100,7 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
             "Animal Wisdom",
             "animal symbolism",
             "lessons from animals",
-            "animal qualities",
+            "animal powers",
             "learn from animals",
             "animal behavior strategies",
             "animal self-improvement"
@@ -156,7 +156,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
             {"@type": "Thing", name: "Animal behavior"},
             {"@type": "Thing", name: "Animal symbolism"},
             {"@type": "Thing", name: "Lessons from animals"},
-            {"@type": "Thing", name: "Animal qualities"}
+            {"@type": "Thing", name: "Animal powers"}
         ]
     };
     const faqSchema = {

@@ -106,7 +106,8 @@ function normalizeLessonRow(
     row: SpeciesCatalogLessonRow,
     applicationExamples: ReadonlyMap<string, string> = new Map()
 ): SpeciesBehaviorLesson | null {
-    const slug = row.landing_page_slug?.trim();
+    const slug = row.landing_page_slug?.trim()
+        ?? row.normalized_identity_key?.trim().replace(/_/g, "-");
 
     if (!slug || !row.core_lesson?.trim() || !row.principle_name?.trim()) {
         return null;
@@ -187,7 +188,7 @@ async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLe
 
     const searchParams = new URLSearchParams({
         select: "landing_page_slug,display_name,normalized_identity_key,generation_metadata,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
-        landing_page_slug: `eq.${slug}`,
+        or: `(landing_page_slug.eq.${slug},normalized_identity_key.eq.${slug.replace(/-/g, "_")})`,
         core_lesson: "not.is.null",
         limit: "1"
     });

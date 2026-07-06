@@ -2,12 +2,15 @@
 
 import {useState} from "react";
 import Image from "next/image";
+import Link from "@/app/[locale]/_components/link";
+import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 
 type FeaturedSpeciesImageCarouselSlide = {
     captureId: string | null;
     src: string;
     alt: string;
     attribution: string | null;
+    username: string | null;
     contextLabel: string | null;
     locationDisplayLabel: string | null;
 };
@@ -16,12 +19,14 @@ type FeaturedSpeciesImageCarouselProps = {
     slides: FeaturedSpeciesImageCarouselSlide[];
     rarityLabel: string;
     battleTierLabel: string | null;
+    animalDexNumber?: number | null;
 };
 
 export default function FeaturedSpeciesImageCarousel({
     slides,
     rarityLabel,
-    battleTierLabel
+    battleTierLabel,
+    animalDexNumber = null
 }: FeaturedSpeciesImageCarouselProps) {
     const [index, setIndex] = useState(0);
     const activeSlide = slides[index] ?? slides[0];
@@ -68,10 +73,15 @@ export default function FeaturedSpeciesImageCarousel({
                 </div>
 
                 {activeSlide.contextLabel ? (
-                    <div className="absolute right-4 top-4 md:right-5 md:top-5">
+                    <div className="absolute right-4 top-4 md:right-5 md:top-5 flex flex-col items-end gap-2">
+                        {animalDexNumber ? <AnimalDexNumberBadge number={animalDexNumber} compact /> : null}
                         <span className="rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
                             {activeSlide.contextLabel}
                         </span>
+                    </div>
+                ) : animalDexNumber ? (
+                    <div className="absolute right-4 top-4 md:right-5 md:top-5">
+                        <AnimalDexNumberBadge number={animalDexNumber} compact />
                     </div>
                 ) : null}
                 {!activeSlide.contextLabel && activeLocationLabel ? (
@@ -122,7 +132,11 @@ export default function FeaturedSpeciesImageCarousel({
             {activeSlide.attribution ? (
                 <div className="px-2 pt-3">
                     <p className="text-sm md:text-base text-ink-300">
-                        {activeSlide.attribution}
+                        {activeSlide.username ? (
+                            <Link href={`/u/${encodeURIComponent(activeSlide.username)}`} className="hover:text-primary-100">
+                                {activeSlide.attribution}
+                            </Link>
+                        ) : activeSlide.attribution}
                     </p>
                 </div>
             ) : null}

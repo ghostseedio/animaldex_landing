@@ -1,5 +1,6 @@
 import type {SpeciesEntry} from "@/data/species";
 import {getSpeciesBySlug} from "@/data/species";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {
     getSupabaseHeaders,
     getSupabaseServerReadKey,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/supabase-http";
 
 const SPECIES_STATS_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
-const SPECIES_STATS_REVALIDATE_SECONDS = 3600;
+const PLACEHOLDER_SCIENTIFIC_NAME = "Scientific classification under review";
 
 type SpeciesStatsKey = (typeof SPECIES_STATS_KEYS)[number];
 
@@ -210,7 +211,7 @@ function buildSpeciesKeyCandidates(entry: SpeciesEntry): SpeciesKeyCandidate[] {
                 value: entry.slug.replaceAll("-", "_")
             }
             : null,
-        entry.analysis.scientificName
+        entry.analysis.scientificName && entry.analysis.scientificName !== PLACEHOLDER_SCIENTIFIC_NAME
             ? {
                 analysisColumn: "scientific_name",
                 profileColumn: "scientific_name",
@@ -385,7 +386,7 @@ async function fetchSpeciesProfile(entry: SpeciesEntry) {
         try {
             const response = await fetch(`${config.supabaseUrl}/rest/v1/species_profiles?${searchParams.toString()}`, {
                 headers: getSupabaseHeaders(config.key),
-                next: {revalidate: SPECIES_STATS_REVALIDATE_SECONDS}
+                cache: "no-store"
             });
 
             if (!response.ok) {
@@ -492,7 +493,7 @@ async function fetchAnalysisStats(entry: SpeciesEntry) {
         try {
             const response = await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
                 headers: getSupabaseHeaders(config.key),
-                next: {revalidate: SPECIES_STATS_REVALIDATE_SECONDS}
+                cache: "no-store"
             });
 
             if (!response.ok) {
@@ -687,8 +688,12 @@ async function generateAndPersistCanonicalStats(
     };
 }
 
-export async function resolveSpeciesStats(slug: string): Promise<SpeciesStatsResolution> {
-    const entry = getSpeciesBySlug(slug);
+function getCatalogCanonicalStats(entry: SpeciesEntry) {
+    return parseSpeciesStats(entry.databaseSource?.canonicalGameStats);
+}
+
+export async function resolveSpeciesStats(slug: string, entryOverride?: SpeciesEntry | null): Promise<SpeciesStatsResolution> {
+    const entry = entryOverride ?? getSpeciesBySlug(slug) ?? await getResolvedSpeciesBySlug(slug);
 
     if (!entry) {
         return {
@@ -701,11 +706,21 @@ export async function resolveSpeciesStats(slug: string): Promise<SpeciesStatsRes
     }
 
     const speciesProfile = await fetchSpeciesProfile(entry);
-    const canonicalStats = parseSpeciesStats(speciesProfile?.canonical_game_stats);
+    const profileStats = parseSpeciesStats(speciesProfile?.canonical_game_stats);
 
-    if (canonicalStats) {
+    if (profileStats) {
         return {
-            stats: canonicalStats,
+            stats: profileStats,
+            statsSource: "species_profile",
+            ...getResolvedIdentity(entry, speciesProfile)
+        };
+    }
+
+    const catalogStats = getCatalogCanonicalStats(entry);
+
+    if (catalogStats) {
+        return {
+            stats: catalogStats,
             statsSource: "species_profile",
             ...getResolvedIdentity(entry, speciesProfile)
         };

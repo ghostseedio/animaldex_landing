@@ -54,17 +54,17 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
     const title = t("metaTitle");
     const metadata = buildContentMetadata({
         locale: params.locale,
-        pathname: "/qualities",
+        pathname: "/powers",
         title,
         description: t("metaDescription"),
         featuredImage: {
             src: "/images/og.png",
-            alt: "Animal qualities on AnimalDex",
+            alt: "Animal powers on AnimalDex",
             width: 1200,
             height: 630
         },
         keywords: [
-            "animal qualities",
+            "animal powers",
             "animal survival strategies",
             "lessons from animal behavior",
             "animal teamwork memory precision",
@@ -141,7 +141,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 "@type": "ListItem",
                 position: 2,
                 name: t("eyebrow"),
-                item: getAbsoluteUrl(params.locale, "/qualities")
+                item: getAbsoluteUrl(params.locale, "/powers")
             }
         ]
     };
@@ -150,11 +150,11 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
         "@type": "CollectionPage",
         name: t("title"),
         description: t("description"),
-        url: getAbsoluteUrl(params.locale, "/qualities"),
+        url: getAbsoluteUrl(params.locale, "/powers"),
         hasPart: principles.map((principle) => ({
             "@type": "CollectionPage",
             name: principle.principle,
-            url: getAbsoluteUrl(params.locale, `/qualities/${principle.principleSlug}`),
+            url: getAbsoluteUrl(params.locale, `/powers/${principle.principleSlug}`),
             numberOfItems: principle.speciesCount
         }))
     };
@@ -243,7 +243,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{t("featuredTitle")}</p>
                         <div className="mt-4 divide-y divide-white/[0.09]">
                             {featuredPrinciples.map((principle) => (
-                                <Link key={principle.principleSlug} href={`/qualities/${principle.principleSlug}`} className="group flex items-center justify-between gap-5 py-4">
+                                <Link key={principle.principleSlug} href={`/powers/${principle.principleSlug}`} className="group flex items-center justify-between gap-5 py-4">
                                     <div>
                                         <p className="font-display text-2xl font-bold text-white">{principle.principle}</p>
                                         <p className="mt-1 line-clamp-1 text-sm text-ink-300">{principle.sampleMotto}</p>

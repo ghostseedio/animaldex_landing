@@ -5,9 +5,11 @@ import Button from "@/app/[locale]/_components/button";
 import Marquee from "@/app/[locale]/_components/marquee";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import HeaderMenu from "@/app/[locale]/(composited)/_components/header-menu";
+import HeaderAuthLink from "@/app/[locale]/(composited)/_components/header-auth-link";
 
-export default function Header() {
+export default function Header({locale}: {locale?: string}) {
     const currentLocale = useLocale();
+    const resolvedLocale = locale ?? currentLocale;
     const t = useTranslations("nav");
 
     return (
@@ -48,6 +50,7 @@ export default function Header() {
                 >
                     {t('animals')}
                 </HeaderLink>
+                <HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} />
                 <Link
                     href="/#download"
                     className="hidden md:block"
@@ -71,6 +74,12 @@ export default function Header() {
                 </HeaderLink>
                 <HeaderLink href="/blog" mobile>
                     {t('blog')}
+                </HeaderLink>
+                <HeaderLink href="/account" mobile>
+                    {t('signIn')}
+                </HeaderLink>
+                <HeaderLink href="/app" mobile>
+                    {t('myAnimals')}
                 </HeaderLink>
                 <HeaderLink href="/#download" mobile>
                     {t('download')}

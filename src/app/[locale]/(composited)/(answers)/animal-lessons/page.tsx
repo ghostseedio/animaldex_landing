@@ -358,7 +358,7 @@ export default async function AnimalLessonsPage({params, searchParams}: AnimalLe
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">{t("strategyEyebrow")}</p>
                 <h2 className="mt-2 font-display text-3xl font-bold text-white">{t("strategyTitle")}</h2>
                 <p className="mt-3 max-w-3xl text-ink-200">{t("strategyDescription")}</p>
-                <Link href="/qualities" className="mt-5 inline-flex font-bold text-primary-200 hover:text-primary-100">{t("strategyLink")} →</Link>
+                <Link href="/powers" className="mt-5 inline-flex font-bold text-primary-200 hover:text-primary-100">{t("strategyLink")} →</Link>
             </section>
 
             <div className="mt-10">

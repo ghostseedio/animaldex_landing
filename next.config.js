@@ -20,22 +20,42 @@ module.exports = withNextIntl({
             },
             {
                 source: "/principles",
-                destination: "/qualities",
+                destination: "/powers",
                 permanent: true
             },
             {
                 source: "/principles/:path*",
-                destination: "/qualities/:path*",
+                destination: "/powers/:path*",
                 permanent: true
             },
             {
                 source: "/:locale(en|id)/principles",
-                destination: "/:locale/qualities",
+                destination: "/:locale/powers",
                 permanent: true
             },
             {
                 source: "/:locale(en|id)/principles/:path*",
-                destination: "/:locale/qualities/:path*",
+                destination: "/:locale/powers/:path*",
+                permanent: true
+            },
+            {
+                source: "/qualities",
+                destination: "/powers",
+                permanent: true
+            },
+            {
+                source: "/qualities/:path*",
+                destination: "/powers/:path*",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/qualities",
+                destination: "/:locale/powers",
+                permanent: true
+            },
+            {
+                source: "/:locale(en|id)/qualities/:path*",
+                destination: "/:locale/powers/:path*",
                 permanent: true
             },
             {
@@ -97,6 +117,34 @@ module.exports = withNextIntl({
                 source: "/:locale(en|id)/journal/:slug",
                 destination: "/:locale/blog/:slug",
                 permanent: true
+            }
+        ];
+    },
+    async rewrites() {
+        return [
+            {
+                source: "/.well-known/apple-app-site-association",
+                destination: "/api/apple-app-site-association"
+            },
+            {
+                source: "/.well-known/assetlinks.json",
+                destination: "/api/assetlinks"
+            },
+            {
+                source: "/powers",
+                destination: "/qualities"
+            },
+            {
+                source: "/powers/:path*",
+                destination: "/qualities/:path*"
+            },
+            {
+                source: "/:locale(en|id)/powers",
+                destination: "/:locale/qualities"
+            },
+            {
+                source: "/:locale(en|id)/powers/:path*",
+                destination: "/:locale/qualities/:path*"
             }
         ];
     },

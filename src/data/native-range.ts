@@ -182,11 +182,18 @@ const AVAILABLE_VECTOR_REGIONS = new Set<NativeRangeRegionKey>([
     "east_asia",
     "australia_oceania",
     "arctic_antarctic",
+    "arctic_ocean",
+    "southern_ocean",
     "indian_ocean",
     "coral_triangle",
     "southeast_asia_coastal",
     "australia_coastal"
 ]);
+
+const REGION_OVERLAY_FALLBACKS: Partial<Record<NativeRangeRegionKey, NativeRangeRegionKey>> = {
+    arctic_ocean: "arctic_antarctic",
+    southern_ocean: "arctic_antarctic"
+};
 
 export const DIRECTORY_NATIVE_RANGE_REGION_KEYS: NativeRangeRegionKey[] = [
     "north_america",
@@ -637,11 +644,15 @@ export function getNativeRangeAccent(region: NativeRangeRegionKey) {
 }
 
 export function getNativeRangeOverlayAssetPath(region: NativeRangeRegionKey) {
-    if (!AVAILABLE_VECTOR_REGIONS.has(region)) {
+    const resolvedRegion = AVAILABLE_VECTOR_REGIONS.has(region)
+        ? region
+        : REGION_OVERLAY_FALLBACKS[region];
+
+    if (!resolvedRegion) {
         return null;
     }
 
-    return `/images/native-range/range_${region}.svg`;
+    return `/images/native-range/range_${resolvedRegion}.svg`;
 }
 
 export function getAvailableNativeRangeRegions(regions: NativeRangeRegionKey[]) {

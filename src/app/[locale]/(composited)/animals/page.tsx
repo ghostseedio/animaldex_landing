@@ -2,6 +2,7 @@ import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, speciesEntries, SpeciesRarityStatusKey} from "@/data/species";
+import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {isNativeRangeRegionKey} from "@/data/native-range";
 import {getLocationPage} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -107,13 +108,15 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
     const statusParam = getSingleParam(searchParams?.status);
     const status = statusParam && isSpeciesRarityStatusKey(statusParam) ? statusParam : "all";
     const page = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
+    const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
         region,
         location,
         status,
-        page: Number.isFinite(page) ? page : 1
+        page: Number.isFinite(page) ? page : 1,
+        entries: unifiedSpeciesEntries
     });
 
     const schema = {

@@ -35,7 +35,7 @@ export async function generateMetadata({params, searchParams}: PrinciplePageProp
     }
 
     const page = parsePage(searchParams?.page);
-    const basePath = `/qualities/${principle.principleSlug}`;
+    const basePath = `/powers/${principle.principleSlug}`;
     const pageSuffix = page > 1 ? ` — Page ${page}` : "";
 
     return buildContentMetadata({
@@ -54,7 +54,7 @@ export async function generateMetadata({params, searchParams}: PrinciplePageProp
             `${principle.principle.toLowerCase()} animal meaning`,
             `${principle.principle.toLowerCase()} animal symbolism`,
             `${principle.principle.toLowerCase()} animal lesson`,
-            "biology-backed animal qualities"
+            "biology-backed animal powers"
         ]
     });
 }
@@ -96,13 +96,13 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
                 "@type": "ListItem",
                 position: 2,
                 name: "Qualities",
-                item: getAbsoluteUrl(params.locale, "/qualities")
+                item: getAbsoluteUrl(params.locale, "/powers")
             },
             {
                 "@type": "ListItem",
                 position: 3,
                 name: principle.principle,
-                item: getAbsoluteUrl(params.locale, `/qualities/${principle.principleSlug}`)
+                item: getAbsoluteUrl(params.locale, `/powers/${principle.principleSlug}`)
             }
         ]
     };
@@ -113,7 +113,7 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([breadcrumbSchema])}}
             />
-            <Link href="/qualities" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
+            <Link href="/powers" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                 {t("back")}
             </Link>
 
@@ -188,7 +188,7 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
                 <nav className="flex items-center justify-center gap-4" aria-label={t("pageStatus", {page: currentPage, pages: pageCount})}>
                     {currentPage > 1 ? (
                         <Link
-                            href={`/qualities/${principle.principleSlug}${currentPage === 2 ? "" : `?page=${currentPage - 1}`}`}
+                            href={`/powers/${principle.principleSlug}${currentPage === 2 ? "" : `?page=${currentPage - 1}`}`}
                             className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
                         >
                             ← {t("previousPage")}
@@ -197,7 +197,7 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
                     <span className="text-sm text-ink-300">{t("pageStatus", {page: currentPage, pages: pageCount})}</span>
                     {currentPage < pageCount ? (
                         <Link
-                            href={`/qualities/${principle.principleSlug}?page=${currentPage + 1}`}
+                            href={`/powers/${principle.principleSlug}?page=${currentPage + 1}`}
                             className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
                         >
                             {t("nextPage")} →

@@ -286,8 +286,8 @@ function getReferenceKey(reference: Pick<FeaturedMedia, "captureId" | "imageBuck
     return reference.captureId ?? `${reference.imageBucket}:${reference.imagePath}`;
 }
 
-export async function getSpeciesImageReferences(slug: string, limit = 8): Promise<FeaturedMedia[]> {
-    const entry = getSpeciesBySlug(slug);
+export async function getSpeciesImageReferences(slug: string, limit = 8, entryOverride?: SpeciesEntry | null): Promise<FeaturedMedia[]> {
+    const entry = entryOverride ?? getSpeciesBySlug(slug);
 
     if (!entry) {
         return [];
@@ -372,8 +372,60 @@ export async function getSpeciesImageReferences(slug: string, limit = 8): Promis
     return references.slice(0, limit);
 }
 
-export async function getSpeciesRepresentativeImageReference(slug: string): Promise<FeaturedMedia | null> {
-    const references = await getSpeciesImageReferences(slug, 1);
+export async function getPublicCaptureImageReference(captureId: string, entry?: SpeciesEntry | null): Promise<FeaturedMedia | null> {
+    const config = getSupabaseConfig();
+    if (!config) return null;
+
+    const searchParams = new URLSearchParams({
+        select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind",
+        capture_id: `eq.${captureId}`,
+        limit: "1"
+    });
+
+    try {
+        const response = await fetch(`${config.supabaseUrl}/rest/v1/discover_feed_v1?${searchParams}`, {
+            headers: getSupabaseHeaders(config.anonKey),
+            next: {revalidate: 3600}
+        });
+        if (!response.ok) return null;
+        const [candidate] = await response.json() as DiscoverFeedCandidate[];
+        if (!candidate?.capture_id) return null;
+
+        if (isUsableDiscoverFeedImage(candidate) && candidate.image_bucket && candidate.image_path) {
+            return createSpeciesImageReference({
+                captureId: candidate.capture_id,
+                imageBucket: candidate.image_bucket,
+                imagePath: candidate.image_path,
+                mimeType: candidate.image_mime_type ?? null,
+                mediaKind: candidate.image_media_kind ?? null,
+                animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
+                username: candidate.profile_username?.trim() || null,
+                contextLabel: getContextLabel(candidate),
+                locationDisplayLabel: getLocationDisplayLabel(candidate.location_display_label)
+            });
+        }
+
+        const [image] = await fetchCaptureImages([candidate.capture_id]);
+        if (!image) return null;
+
+        return createSpeciesImageReference({
+            captureId: candidate.capture_id,
+            imageBucket: image.storage_bucket,
+            imagePath: image.storage_path,
+            mimeType: image.mime_type,
+            mediaKind: image.media_kind,
+            animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
+            username: candidate.profile_username?.trim() || null,
+            contextLabel: getContextLabel(candidate),
+            locationDisplayLabel: getLocationDisplayLabel(candidate.location_display_label)
+        });
+    } catch {
+        return null;
+    }
+}
+
+export async function getSpeciesRepresentativeImageReference(slug: string, entryOverride?: SpeciesEntry | null): Promise<FeaturedMedia | null> {
+    const references = await getSpeciesImageReferences(slug, 1, entryOverride);
 
     return references[0] ?? null;
 }

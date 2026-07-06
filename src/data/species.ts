@@ -48,6 +48,21 @@ export type SpeciesEntry = {
     analysis: SpeciesAnalysis;
     premiumDetails: SpeciesPremiumDetails;
     relatedSpecies: string[];
+    databaseSource?: {
+        animalDexNumber: number;
+        identityKind?: string | null;
+        canonicalGameStats?: Record<string, number> | null;
+        seoIndexable: boolean;
+        fieldGuideVersion: string | null;
+        fieldGuide: {
+            dietSummary: string | null;
+            predatorsSummary: string | null;
+            sleepPattern: string | null;
+            lifespanEstimate: string | null;
+            femaleOffspringNotes: string | null;
+            sexDifferenceNotes: string | null;
+        };
+    };
 };
 
 export type SpeciesDirectoryLetter = "all" | string;
@@ -4005,7 +4020,8 @@ export function getSpeciesDirectoryPage({
     region = "all",
     location = "all",
     status = "all",
-    pageSize = SPECIES_DIRECTORY_PAGE_SIZE
+    pageSize = SPECIES_DIRECTORY_PAGE_SIZE,
+    entries = speciesEntries
 }: {
     page?: number;
     query?: string;
@@ -4014,6 +4030,7 @@ export function getSpeciesDirectoryPage({
     location?: string | "all";
     status?: SpeciesRarityStatusKey | "all";
     pageSize?: number;
+    entries?: SpeciesEntry[];
 }): SpeciesDirectoryPage {
     const normalizedQuery = query.trim().toLowerCase();
     const normalizedLetter = letter === "all" ? "all" : letter.trim().slice(0, 1).toUpperCase();
@@ -4024,7 +4041,7 @@ export function getSpeciesDirectoryPage({
         ? null
         : new Set(getLocationAnimalSpeciesSlugs(normalizedLocation));
 
-    const filtered = speciesEntries.filter((entry) => {
+    const filtered = entries.filter((entry) => {
         const matchesLetter = normalizedLetter === "all" || entry.name.toUpperCase().startsWith(normalizedLetter);
 
         if (!matchesLetter) {

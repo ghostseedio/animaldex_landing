@@ -123,7 +123,7 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                 <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("strategyEyebrow")}</p>
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("strategyTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("strategyDescription")}</p>
-                <Link href="/qualities" underline className="text-primary-200 hover:text-primary-100 w-fit">
+                <Link href="/powers" underline className="text-primary-200 hover:text-primary-100 w-fit">
                     {t("strategyLink")}
                 </Link>
             </section>

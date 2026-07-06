@@ -369,7 +369,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                         </Link>
                     ) : null}
                     {principleHub ? (
-                        <Link href={`/qualities/${principleHub.principleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
+                        <Link href={`/powers/${principleHub.principleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">{t("relatedPrinciples", {principle: lesson.principleName})}</p>
                             <p className="mt-2 text-lg font-semibold text-white">{t("lessonCount", {count: principleHub.speciesCount})}</p>
                         </Link>

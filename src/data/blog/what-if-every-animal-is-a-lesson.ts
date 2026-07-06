@@ -129,7 +129,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
         {
             title: "Noah's Ark and the Spectrum of Consciousness",
             paragraphs: [
-                "What if Noah’s Ark was not only a story about preserving biological species? What if it was also a story about preserving a spectrum of qualities?",
+                "What if Noah’s Ark was not only a story about preserving biological species? What if it was also a story about preserving a spectrum of powers?",
                 "The courage of the lion. The memory of the elephant. The loyalty of the dog. The independence of the cat. The cooperation of the wolf. The precision of the owl. The momentum of the shark. The transformation of the butterfly.",
                 "In that symbolic sense, every animal is an ark of consciousness. Humans seem to contain many of these patterns, but we are often poor at balancing them."
             ],

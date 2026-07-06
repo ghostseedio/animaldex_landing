@@ -270,7 +270,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
                 {text: "Animal Wisdom", slug: "animal-wisdom", href: "/animal-wisdom"},
                 {text: "Animal Symbolism", slug: "animal-symbolism", href: "/animal-symbolism"},
                 {text: "Lessons from Animals", slug: "animal-lessons", href: "/animal-lessons"},
-                {text: "Animal Qualities", slug: "qualities", href: "/qualities"},
+                {text: "Animal Powers", slug: "powers", href: "/powers"},
                 {text: "What If Every Animal Is a Lesson?", slug: "what-if-every-animal-is-a-lesson", href: "/blog/what-if-every-animal-is-a-lesson"},
                 {text: "Get AnimalDex", slug: "download", href: "/#download"}
             ]
