@@ -163,46 +163,46 @@ async function loadAllDiscoverCollectors() {
     }
 
     const collectors = summaryRows
-        .map((summary) => {
-            const userId = readString(summary, "user_id") ?? "";
-            const profile = profilesById.get(userId);
-            const username = readString(profile ?? {}, "username");
-            if (!username) return null;
+    .map<DiscoverCollectorItem | null>((summary) => {
+        const userId = readString(summary, "user_id") ?? "";
+        const profile = profilesById.get(userId);
+        const username = readString(profile ?? {}, "username");
+        if (!username) return null;
 
-            const baseScore = readNumber(summary, "overall_score");
-            const collectorScore = resolvePublicOverallScore(
-                baseScore,
-                powerSetsByUser.get(userId) ?? []
-            );
-            const bestFindId = readString(summary, "best_find_id");
-            const bestFind = bestFindId ? bestFindsById.get(bestFindId) : null;
-            const indexedSpeciesCount = readNumber(summary, "indexed_species_count")
-                || readNumber(summary, "unique_species");
+        const baseScore = readNumber(summary, "overall_score");
+        const collectorScore = resolvePublicOverallScore(
+            baseScore,
+            powerSetsByUser.get(userId) ?? []
+        );
+        const bestFindId = readString(summary, "best_find_id");
+        const bestFind = bestFindId ? bestFindsById.get(bestFindId) : null;
+        const indexedSpeciesCount = readNumber(summary, "indexed_species_count")
+            || readNumber(summary, "unique_species");
 
-            return {
-                userId,
-                displayName: readString(profile ?? {}, "display_name") ?? username,
-                username,
-                avatarUrl: readString(profile ?? {}, "avatar_url"),
-                bio: readString(profile ?? {}, "bio"),
-                isPro: profile?.is_pro === true,
-                collectorScore,
-                scoreTierLabel: getCollectorScoreBand(collectorScore).tierLabel,
-                captureCount: readNumber(summary, "capture_count"),
-                indexedSpeciesCount,
-                catalogSpeciesCount,
-                rareFinds: readNumber(summary, "rare_finds"),
-                bestFindAnimalName: readString(bestFind ?? {}, "animal_name"),
-                bestFindImageSrc: resolveBestFindImage(bestFindId, bestFind),
-                href: `/u/${encodeURIComponent(username)}`
-            } satisfies DiscoverCollectorItem;
-        })
-        .filter((item): item is DiscoverCollectorItem => Boolean(item))
-        .sort((left, right) => {
-            const scoreDelta = right.collectorScore - left.collectorScore;
-            if (scoreDelta !== 0) return scoreDelta;
-            return (left.username ?? "").localeCompare(right.username ?? "");
-        });
+        return {
+            userId,
+            displayName: readString(profile ?? {}, "display_name") ?? username,
+            username,
+            avatarUrl: readString(profile ?? {}, "avatar_url"),
+            bio: readString(profile ?? {}, "bio"),
+            isPro: profile?.is_pro === true,
+            collectorScore,
+            scoreTierLabel: getCollectorScoreBand(collectorScore).tierLabel,
+            captureCount: readNumber(summary, "capture_count"),
+            indexedSpeciesCount,
+            catalogSpeciesCount,
+            rareFinds: readNumber(summary, "rare_finds"),
+            bestFindAnimalName: readString(bestFind ?? {}, "animal_name"),
+            bestFindImageSrc: resolveBestFindImage(bestFindId, bestFind),
+            href: `/u/${encodeURIComponent(username)}`
+        };
+    })
+    .filter((item): item is DiscoverCollectorItem => item !== null)
+    .sort((left, right) => {
+        const scoreDelta = right.collectorScore - left.collectorScore;
+        if (scoreDelta !== 0) return scoreDelta;
+        return (left.username ?? "").localeCompare(right.username ?? "");
+    });
 
     collectorListCache = {items: collectors, expiresAt: Date.now() + COLLECTOR_LIST_CACHE_TTL_MS};
     return collectors;
