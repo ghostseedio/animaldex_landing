@@ -6,7 +6,7 @@ import {
     legendaryEarthBeastEntries,
     type LegendaryEarthBeast
 } from "@/data/legendary-earth-beasts";
-import type {SpeciesEntry} from "@/data/species";
+import type { SpeciesEntry } from "@/data/species";
 
 const LEGENDARY_RARITY_SCORE = 94;
 
@@ -49,7 +49,7 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
         name: beast.legendaryFormName,
         heroTitle: beast.legendaryFormName,
         publishedAt: beast.publishedAt,
-        updatedAt: beast.updatedAt,
+        updatedAt: beast.updatedAt ?? beast.publishedAt,
         featuredImage: beast.featuredImage,
         normalizedIdentityKey: seed?.normalizedIdentityKey ?? beast.slug.replace(/-/g, "_"),
 
@@ -107,8 +107,8 @@ export const additionalSpeciesSubtitleStoriesSeventeen = Object.fromEntries(
         return [
             beast.slug,
             beast.placeStory[0] ??
-                seed?.speciesSpotlight ??
-                `${beast.legendaryFormName} is tied to ${beast.captureSite.split(",")[0]}.`
+            seed?.speciesSpotlight ??
+            `${beast.legendaryFormName} is tied to ${beast.captureSite.split(",")[0]}.`
         ];
     })
 ) as Record<string, string>;
