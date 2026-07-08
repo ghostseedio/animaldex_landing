@@ -10,6 +10,7 @@ import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesImageAltText, type SpeciesDirectoryImageState} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getSpeciesRarityStatusKey, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
+import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import SpeciesRegionMap from "./species-region-map";
 import {getNativeRangeRegionLabel, NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
 
@@ -34,6 +35,7 @@ type SpeciesDirectoryCopy = {
     previousPage: string;
     nextPage: string;
     pageLabel: string;
+    battleTierChip: string;
     rarityStatuses: Record<SpeciesRarityStatusKey, string>;
 };
 
@@ -54,6 +56,33 @@ type SpeciesDirectoryProps = {
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const rarityOrder: SpeciesRarityStatusKey[] = ["relatively-common", "uncommon", "rare", "very-rare"];
 const SCROLL_RESTORE_KEY = "animaldex-animals-scroll-y";
+const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+function getBattleTierFromEntry(entry: SpeciesEntry): AnimalBattleTier | null {
+    if (getLegendaryEarthBeast(entry.slug)) {
+        return "S";
+    }
+
+    const rawStats = entry.databaseSource?.canonicalGameStats;
+
+    if (!rawStats) {
+        return null;
+    }
+
+    const stats = {} as SpeciesStats;
+
+    for (const key of STAT_KEYS) {
+        const value = Number(rawStats[key]);
+
+        if (!Number.isFinite(value)) {
+            return null;
+        }
+
+        stats[key] = value;
+    }
+
+    return getBattleTier(stats);
+}
 
 function formatPageLabel(template: string, page: number, totalPages: number) {
     return template.replace("{page}", String(page)).replace("{totalPages}", String(totalPages));
@@ -440,7 +469,10 @@ export default function SpeciesDirectory({
                         const animalDexNumber = getAnimalDexNumberFromEntry(entry);
                         const locationChipLabel = getLocationChipLabel(entry);
                         const rarityLabel = copy.rarityStatuses[getSpeciesRarityStatusKey(entry.analysis.rarityScore)];
-                        const animalDexLabel = animalDexNumber ? `#${String(animalDexNumber).padStart(3, "0")}` : "NEW";
+                        const battleTier = getBattleTierFromEntry(entry);
+                        const battleTierLabel = battleTier
+                            ? copy.battleTierChip.replace("{tier}", battleTier)
+                            : null;
 
                         return (
                         <Link
@@ -457,7 +489,9 @@ export default function SpeciesDirectory({
                             <article className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="font-mono text-[0.68rem] font-black uppercase tracking-[0.16em] text-primary-200">{animalDexLabel}</p>
+                                        {battleTierLabel ? (
+                                            <p className="font-mono text-[0.68rem] font-black uppercase tracking-[0.16em] text-ink-200">{battleTierLabel}</p>
+                                        ) : null}
                                         <h2 className="mt-1 truncate font-display text-xl font-bold text-white transition-colors group-hover:text-primary-100 sm:text-2xl">{entry.name}</h2>
                                         <p className="truncate text-sm italic text-ink-400">{entry.analysis.scientificName}</p>
                                     </div>

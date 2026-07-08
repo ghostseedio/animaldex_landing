@@ -1,6 +1,11 @@
 import type {SpeciesEntry} from "@/data/species";
 import {getSpeciesBySlug} from "@/data/species";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import type {AnimalBattleTier, SpeciesStats} from "@/lib/battle-tier";
+import {getBattlePower, getBattleTier} from "@/lib/battle-tier";
+
+export type {AnimalBattleTier, SpeciesStats};
+export {getBattlePower, getBattleTier};
 import {
     getSupabaseHeaders,
     getSupabaseServerReadKey,
@@ -12,9 +17,6 @@ const SPECIES_STATS_KEYS = ["dominance", "speed", "size", "intelligence", "rarit
 const PLACEHOLDER_SCIENTIFIC_NAME = "Scientific classification under review";
 
 type SpeciesStatsKey = (typeof SPECIES_STATS_KEYS)[number];
-
-export type SpeciesStats = Record<SpeciesStatsKey, number>;
-export type AnimalBattleTier = "E" | "D" | "C" | "B" | "A" | "S";
 
 export type SpeciesStatsSource =
     | "species_profile"
@@ -99,42 +101,6 @@ function getWriteSupabaseConfig() {
 
 function clampStatValue(value: number) {
     return Math.max(1, Math.min(100, Math.round(value)));
-}
-
-export function getBattlePower(stats: SpeciesStats) {
-    return Math.round(
-        stats.dominance * 0.30
-        + stats.speed * 0.15
-        + stats.size * 0.15
-        + stats.intelligence * 0.15
-        + stats.rarity * 0.25
-    );
-}
-
-export function getBattleTier(stats: SpeciesStats): AnimalBattleTier {
-    const battlePower = getBattlePower(stats);
-
-    if (battlePower < 25) {
-        return "E";
-    }
-
-    if (battlePower < 40) {
-        return "D";
-    }
-
-    if (battlePower < 55) {
-        return "C";
-    }
-
-    if (battlePower < 70) {
-        return "B";
-    }
-
-    if (battlePower < 85) {
-        return "A";
-    }
-
-    return "S";
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

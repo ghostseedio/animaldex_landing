@@ -16,6 +16,7 @@ import {
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {resolveCaptureImageGrade, type CaptureGradeSource} from "@/lib/capture-grade";
 
 export {
     SPECIES_NO_IMAGE_SRC,
@@ -27,7 +28,7 @@ export {
     getSpeciesImageRoute
 };
 
-type DiscoverFeedCandidate = {
+type DiscoverFeedCandidate = CaptureGradeSource & {
     capture_id?: string;
     species_profile_id?: string | null;
     normalized_identity_key?: string | null;
@@ -44,7 +45,7 @@ type DiscoverFeedCandidate = {
     image_media_kind?: string | null;
 };
 
-type AnalysisResultCandidate = {
+type AnalysisResultCandidate = CaptureGradeSource & {
     capture_id: string;
     species_profile_id?: string | null;
     normalized_identity_key?: string | null;
@@ -79,7 +80,36 @@ const DISCOVER_FEED_IMAGE_SELECT = [
     "image_bucket",
     "image_path",
     "image_mime_type",
-    "image_media_kind"
+    "image_media_kind",
+    "confidence",
+    "breed_confidence",
+    "signals",
+    "premium_details",
+    "observed_market_modifiers",
+    "dominance_endorsements",
+    "speed_endorsements",
+    "size_endorsements",
+    "intelligence_endorsements",
+    "rarity_endorsements",
+    "raw_json"
+].join(",");
+
+const ANALYSIS_CAPTURE_SELECT = [
+    "capture_id",
+    "species_profile_id",
+    "normalized_identity_key",
+    "scientific_name",
+    "animal_name",
+    "breed_guess",
+    "confidence",
+    "breed_confidence",
+    "human_context",
+    "zoo_or_wild",
+    "signals",
+    "premium_details",
+    "observed_market_modifiers",
+    "raw_json",
+    "captures!inner(created_at)"
 ].join(",");
 
 function postgrestInFilter(values: string[]) {
@@ -271,7 +301,7 @@ async function fetchAnalysisCaptureIdsByColumn(column: string, values: string[])
 
     for (const chunk of chunkValues(values, 40)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,breed_guess,confidence,captures!inner(created_at)",
+            select: ANALYSIS_CAPTURE_SELECT,
             completed_at: "not.is.null",
             [column]: postgrestInFilter(chunk),
             "captures.is_discoverable": "eq.true",
@@ -461,7 +491,7 @@ async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): P
     return [];
 }
 
-async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<string[]> {
+async function fetchAnalysisCandidatesBySpecies(entry: SpeciesEntry): Promise<AnalysisResultCandidate[]> {
     const config = getSupabaseConfig();
 
     if (!config) {
@@ -470,7 +500,7 @@ async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<st
 
     for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
         const searchParams = new URLSearchParams({
-            select: "capture_id,species_profile_id,normalized_identity_key,scientific_name,breed_guess,confidence,captures!inner(created_at)",
+            select: ANALYSIS_CAPTURE_SELECT,
             completed_at: "not.is.null",
             [candidate.column]: `eq.${candidate.value}`,
             "captures.is_discoverable": "eq.true",
@@ -500,10 +530,9 @@ async function fetchAnalysisCaptureIdsBySpecies(entry: SpeciesEntry): Promise<st
 
                 return new Date(b.captures?.created_at ?? 0).getTime() - new Date(a.captures?.created_at ?? 0).getTime();
             });
-            const captureIds = sortedRows.map((row) => row.capture_id).filter(Boolean);
 
-            if (captureIds.length > 0) {
-                return captureIds;
+            if (sortedRows.length > 0) {
+                return sortedRows;
             }
         } catch {
             continue;
@@ -550,6 +579,7 @@ function createSpeciesImageReference(input: {
     imagePath: string | null;
     mimeType: string | null;
     mediaKind: string | null;
+    imageGrade: string | null;
     animalName: string | null;
     username: string | null;
     contextLabel: string | null;
@@ -561,6 +591,7 @@ function createSpeciesImageReference(input: {
         imagePath: input.imagePath,
         mimeType: input.mimeType,
         mediaKind: input.mediaKind,
+        imageGrade: input.imageGrade,
         animalName: input.animalName,
         username: input.username,
         contextLabel: input.contextLabel,
@@ -599,7 +630,12 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
     const discoverFeedCaptureIds = discoverFeedCandidates
         .map((candidate) => candidate.capture_id)
         .filter((captureId): captureId is string => Boolean(captureId));
-    const fallbackCaptureIds = discoverFeedCaptureIds.length > 0 ? discoverFeedCaptureIds : await fetchAnalysisCaptureIdsBySpecies(entry);
+    const analysisCandidates = discoverFeedCaptureIds.length > 0
+        ? []
+        : await fetchAnalysisCandidatesBySpecies(entry);
+    const fallbackCaptureIds = discoverFeedCaptureIds.length > 0
+        ? discoverFeedCaptureIds
+        : analysisCandidates.map((row) => row.capture_id).filter(Boolean);
     const directDiscoverFeedImages = discoverFeedCandidates.filter((candidate) => isUsableDiscoverFeedImage(candidate));
 
     for (const candidate of directDiscoverFeedImages) {
@@ -613,6 +649,7 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
             imagePath: candidate.image_path,
             mimeType: candidate.image_mime_type ?? null,
             mediaKind: candidate.image_media_kind ?? null,
+            imageGrade: resolveCaptureImageGrade(candidate),
             animalName: candidate.animal_name ?? null,
             username: candidate.profile_username?.trim() || null,
             contextLabel: getContextLabel(candidate),
@@ -636,6 +673,7 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
 
         if (image) {
             const discoverFeedMatch = discoverFeedCandidates.find((candidate) => candidate.capture_id === captureId);
+            const analysisMatch = analysisCandidates.find((candidate) => candidate.capture_id === captureId);
 
             pushReference(createSpeciesImageReference({
                 captureId,
@@ -643,7 +681,8 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
                 imagePath: image.storage_path,
                 mimeType: image.mime_type,
                 mediaKind: image.media_kind,
-                animalName: entry.name,
+                imageGrade: resolveCaptureImageGrade(discoverFeedMatch ?? analysisMatch),
+                animalName: discoverFeedMatch?.animal_name ?? entry.name,
                 username: discoverFeedMatch?.profile_username?.trim() || null,
                 contextLabel: discoverFeedMatch ? getContextLabel(discoverFeedMatch) : null,
                 locationDisplayLabel: getLocationDisplayLabel(discoverFeedMatch?.location_display_label)
@@ -671,6 +710,7 @@ export async function getPublicCaptureImageReference(captureId: string, entry?: 
             imagePath: image.storage_path,
             mimeType: image.mime_type,
             mediaKind: image.media_kind,
+            imageGrade: resolveCaptureImageGrade(discoverFeedMatch),
             animalName: discoverFeedMatch?.animal_name ?? entry?.name ?? "AnimalDex capture",
             username: discoverFeedMatch?.profile_username?.trim() || null,
             contextLabel: discoverFeedMatch ? getContextLabel(discoverFeedMatch) : null,
@@ -688,6 +728,7 @@ export async function getPublicCaptureImageReference(captureId: string, entry?: 
             imagePath: candidate.image_path,
             mimeType: candidate.image_mime_type ?? null,
             mediaKind: candidate.image_media_kind ?? null,
+            imageGrade: resolveCaptureImageGrade(candidate),
             animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
             username: candidate.profile_username?.trim() || null,
             contextLabel: getContextLabel(candidate),
@@ -703,7 +744,7 @@ async function fetchDiscoverFeedCapture(captureId: string): Promise<DiscoverFeed
     if (!config) return null;
 
     const searchParams = new URLSearchParams({
-        select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind",
+        select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json",
         capture_id: `eq.${captureId}`,
         limit: "1"
     });

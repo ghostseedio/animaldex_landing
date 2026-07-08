@@ -6,7 +6,6 @@ import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-ca
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
-import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
 import SpeciesLessonValueSection from "@/app/[locale]/(composited)/animals/[slug]/species-lesson-value-section";
 import {SpeciesEndorsementAndSize, SpeciesLevelProgress} from "@/app/[locale]/(composited)/animals/[slug]/species-progress-interactive";
 import SpeciesStatsSection from "@/app/[locale]/(composited)/animals/[slug]/species-stats-section";
@@ -394,11 +393,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
     const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug, entry);
     const growthContext = await getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null);
-    const imageAttribution = getSpeciesImageAttribution(featuredMedia);
-    const captureContextLabel = featuredMedia?.imagePath ? featuredMedia.contextLabel : null;
-    const captureLocationLabel = featuredMedia?.captureId && featuredMedia.imageBucket && featuredMedia.imagePath
-        ? featuredMedia.locationDisplayLabel
-        : null;
+    const heroFeaturedMedia = featuredMediaList.length > 0
+        ? featuredMediaList
+        : featuredMedia?.imagePath
+            ? [featuredMedia]
+            : [];
     const resolvedRarityScore = statsResult.stats
         ? statsResult.stats.rarity
         : entry.analysis.rarityScore;
@@ -407,6 +406,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ? getBattleTier(statsResult.stats)
         : null;
     const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
+    const formatCaptureGradeLabel = (grade: string | null | undefined) => {
+        const normalizedGrade = grade?.trim();
+        return normalizedGrade ? `Grade ${normalizedGrade}` : null;
+    };
     const isBreed = isBreedSpeciesEntry(entry);
     const displayCategory = speciesDisplayCategory(entry);
     const animalDexNumber = getAnimalDexNumberFromEntry(entry);
@@ -824,50 +827,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
 
                     <div className="order-1 lg:order-2">
-                        {featuredMediaList.length > 1 ? (
+                        {heroFeaturedMedia.length > 0 ? (
                             <FeaturedSpeciesImageCarousel
-                                slides={featuredMediaList.map((item) => ({
+                                slides={heroFeaturedMedia.map((item) => ({
                                     captureId: item.captureId,
                                     src: getSpeciesImageRoute(entry.slug, item.captureId),
                                     alt: getSpeciesImageAltText(entry, "featured"),
+                                    gradeLabel: formatCaptureGradeLabel(item.imageGrade),
                                     attribution: getSpeciesImageAttribution(item),
                                     username: item.username,
                                     contextLabel: item.contextLabel,
                                     locationDisplayLabel: item.locationDisplayLabel
                                 }))}
                                 rarityLabel={resolvedRarityLabel}
-                                battleTierLabel={battleTierLabel}
-                                animalDexNumber={animalDexNumber}
                             />
-                        ) : featuredMedia?.imagePath ? (
-                            <div className="rounded-[2rem] border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
-                                <div className="relative overflow-hidden rounded-[1.5rem]">
-                                    {animalDexNumber ? (
-                                        <div className="absolute right-3 top-3 z-10">
-                                            <AnimalDexNumberBadge number={animalDexNumber} compact />
-                                        </div>
-                                    ) : null}
-                                    <SpeciesImage
-                                        slug={entry.slug}
-                                        alt={getSpeciesImageAltText(entry, "featured")}
-                                        priority
-                                        className="aspect-[4/5] rounded-[1.5rem]"
-                                        sizes="(min-width: 1024px) 40vw, 100vw"
-                                    />
-                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent px-5 pb-5 pt-16">
-                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">{t("animalDexCardLabel")}</p>
-                                        {captureContextLabel ? <p className="mt-1 text-lg font-semibold text-white">{captureContextLabel}</p> : null}
-                                        {captureLocationLabel ? <p className="mt-1 text-sm text-ink-100">{captureLocationLabel}</p> : null}
-                                    </div>
-                                </div>
-                                {imageAttribution ? (
-                                    <p className="px-2 pt-3 text-sm text-ink-300">
-                                        {featuredMedia?.username ? (
-                                            <Link href={`/u/${encodeURIComponent(featuredMedia.username)}`} className="hover:text-primary-100">{imageAttribution}</Link>
-                                        ) : imageAttribution}
-                                    </p>
-                                ) : null}
-                            </div>
                         ) : (
                             <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
                                 <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-amber-200/20 bg-amber-200/[0.08] text-3xl text-amber-100">✦</div>

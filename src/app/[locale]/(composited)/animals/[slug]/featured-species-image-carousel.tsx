@@ -3,12 +3,12 @@
 import {useState} from "react";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 
 type FeaturedSpeciesImageCarouselSlide = {
     captureId: string | null;
     src: string;
     alt: string;
+    gradeLabel: string | null;
     attribution: string | null;
     username: string | null;
     contextLabel: string | null;
@@ -18,15 +18,11 @@ type FeaturedSpeciesImageCarouselSlide = {
 type FeaturedSpeciesImageCarouselProps = {
     slides: FeaturedSpeciesImageCarouselSlide[];
     rarityLabel: string;
-    battleTierLabel: string | null;
-    animalDexNumber?: number | null;
 };
 
 export default function FeaturedSpeciesImageCarousel({
     slides,
-    rarityLabel,
-    battleTierLabel,
-    animalDexNumber = null
+    rarityLabel
 }: FeaturedSpeciesImageCarouselProps) {
     const [index, setIndex] = useState(0);
     const activeSlide = slides[index] ?? slides[0];
@@ -59,9 +55,9 @@ export default function FeaturedSpeciesImageCarousel({
                         <span className="rounded-full border border-amber-200/25 bg-amber-950/65 backdrop-blur px-3 py-1.5 text-sm font-semibold text-amber-100">
                             {rarityLabel}
                         </span>
-                        {battleTierLabel ? (
+                        {activeSlide.gradeLabel ? (
                             <span className="rounded-full border border-white/15 bg-black/55 backdrop-blur px-3 py-1.5 text-sm font-semibold text-white">
-                                {battleTierLabel}
+                                {activeSlide.gradeLabel}
                             </span>
                         ) : null}
                     </div>
@@ -74,14 +70,9 @@ export default function FeaturedSpeciesImageCarousel({
 
                 {activeSlide.contextLabel ? (
                     <div className="absolute right-4 top-4 md:right-5 md:top-5 flex flex-col items-end gap-2">
-                        {animalDexNumber ? <AnimalDexNumberBadge number={animalDexNumber} compact /> : null}
                         <span className="rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.12em] text-white backdrop-blur">
                             {activeSlide.contextLabel}
                         </span>
-                    </div>
-                ) : animalDexNumber ? (
-                    <div className="absolute right-4 top-4 md:right-5 md:top-5">
-                        <AnimalDexNumberBadge number={animalDexNumber} compact />
                     </div>
                 ) : null}
                 {!activeSlide.contextLabel && activeLocationLabel ? (

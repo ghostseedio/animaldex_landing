@@ -8,6 +8,7 @@ export type FeaturedMedia = {
     imagePath: string | null;
     mimeType: string | null;
     mediaKind: string | null;
+    imageGrade: string | null;
     animalName: string | null;
     username: string | null;
     contextLabel: string | null;

@@ -259,6 +259,7 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                         previousPage: "Previous",
                         nextPage: "Next",
                         pageLabel: "Page {page} of {totalPages}",
+                        battleTierChip: t("battleTierChip", {tier: "{tier}"}),
                         rarityStatuses: {
                             "very-rare": t("rarityStatuses.veryRare"),
                             "rare": t("rarityStatuses.rare"),
