@@ -10,7 +10,8 @@ import {
 import {enrichLegendaryEarthBeastSpeciesEntry, legendaryEarthBeastSpeciesSlugs} from "@/data/legendary-earth-beasts-species";
 import {mergeCatalogMetadata} from "@/lib/animaldex-number";
 import {dedupeCatalogSpeciesEntries, speciesCatalogIdentityKey} from "@/lib/catalog-species-dedupe";
-import {resolveCollectionIdentityToken} from "@/lib/collection-identity-aliases";
+import {resolveCollectionIdentityToken, setRuntimeSpeciesIdentityAliases} from "@/lib/collection-identity-aliases";
+import {isNonCanonicalLifeStageCatalogIdentity, resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type CatalogRow = {
@@ -317,7 +318,32 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
     }
 }
 
+type IdentityAliasRow = {
+    alias_key: string;
+    canonical_key: string;
+};
+
+async function loadSpeciesIdentityAliases() {
+    try {
+        const rows = await fetchRows<IdentityAliasRow>("species_identity_aliases", "alias_key,canonical_key");
+        if (!rows.length) {
+            setRuntimeSpeciesIdentityAliases(null);
+            return;
+        }
+
+        const aliases = Object.fromEntries(
+            rows
+                .map((row) => [row.alias_key?.trim().toLowerCase(), row.canonical_key?.trim().toLowerCase()] as const)
+                .filter(([alias, canonical]) => Boolean(alias && canonical))
+        );
+        setRuntimeSpeciesIdentityAliases(aliases);
+    } catch {
+        setRuntimeSpeciesIdentityAliases(null);
+    }
+}
+
 async function loadDatabaseEntries() {
+    await loadSpeciesIdentityAliases();
     const [indexedProfileRows, catalogRows, guideRows] = await Promise.all([
         fetchRows<IndexedProfileRow>("species_profiles", INDEXED_PROFILE_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
         fetchRows<CatalogRow>("species_catalog_v1", CATALOG_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
@@ -331,6 +357,10 @@ async function loadDatabaseEntries() {
     const guides = new Map(guideRows.map((row) => [row.species_profile_id, row]));
     const bySlug = new Map<string, SpeciesEntry>();
     for (const row of catalogRows) {
+        if (isNonCanonicalLifeStageCatalogIdentity(row.normalized_identity_key)) {
+            continue;
+        }
+
         const animalDexNumber = indexedNumbers.get(row.species_profile_id);
         if (animalDexNumber === undefined) continue;
         const slug = databaseSpeciesCanonicalSlug(row);
@@ -409,7 +439,9 @@ function resolveLegendaryCatalogEntry(staticEntry: SpeciesEntry, databaseEntries
 
 export async function getResolvedSpeciesBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
-    const canonicalSlug = resolveCollectionIdentityToken(normalized.replace(/-/g, "_")).replace(/_/g, "-");
+    const identityKey = normalized.replace(/-/g, "_");
+    const canonicalIdentity = resolveCollectionIdentityToken(identityKey);
+    const canonicalSlug = resolveCanonicalSlugFromIdentity(canonicalIdentity) ?? canonicalIdentity.replace(/_/g, "-");
     const slugCandidates = canonicalSlug === normalized
         ? [normalized]
         : [canonicalSlug, normalized];

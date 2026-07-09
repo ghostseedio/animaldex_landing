@@ -512,10 +512,11 @@ async function loadMessages(threadId: string) {
     );
 }
 
-export async function loadSupportThreads(limit = 50) {
-    const safeLimit = Math.min(Math.max(limit, 1), 100);
+export async function loadSupportThreads(options?: {limit?: number; offset?: number}) {
+    const safeLimit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
+    const safeOffset = Math.max(options?.offset ?? 0, 0);
     return await supabaseRequest<SupportThread[]>(
-        `support_threads?select=*&order=updated_at.desc&limit=${safeLimit}`
+        `support_threads?select=*&order=updated_at.desc&limit=${safeLimit}&offset=${safeOffset}`
     );
 }
 

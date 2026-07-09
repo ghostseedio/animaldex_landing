@@ -13,6 +13,7 @@ import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/specie
 import SpeciesFieldGuideAccordion from "@/app/[locale]/(composited)/animals/[slug]/species-field-guide-accordion";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
+import SpeciesLifeStagesSection from "@/app/[locale]/(composited)/animals/[slug]/species-life-stages-section";
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
@@ -40,6 +41,7 @@ import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {shouldNoindexLifeStageAliasSlug} from "@/lib/species-life-stage-policy";
 import {
     getLegendaryEarthBeast,
     getRelatedLegendaryEarthBeasts,
@@ -329,7 +331,9 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
 
     return entry.databaseSource && !entry.databaseSource.seoIndexable
         ? {...metadata, robots: {index: false, follow: true}}
-        : metadata;
+        : shouldNoindexLifeStageAliasSlug(slug, entry.slug)
+            ? {...metadata, robots: {index: false, follow: true}}
+            : metadata;
 }
 
 export default async function SpeciesPage({params}: SpeciesPageProps) {
@@ -393,6 +397,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
     const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug, entry);
     const growthContext = await getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null);
+    const speciesCaptures = growthContext.speciesCaptures;
     const heroFeaturedMedia = featuredMediaList.length > 0
         ? featuredMediaList
         : featuredMedia?.imagePath
@@ -1079,6 +1084,18 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 byPhotographer: t("rankingsByPhotographer")
                             }}
                         />
+
+                        {speciesCaptures.length > 0 ? (
+                            <SpeciesLifeStagesSection
+                                speciesName={entry.name}
+                                captures={speciesCaptures}
+                                labels={{
+                                    title: "Life stages you've seen",
+                                    description: `Captures on this page keep their original scan labels and count toward ${entry.name}.`,
+                                    captureTitle: "Your capture"
+                                }}
+                            />
+                        ) : null}
 
                         <section className="rounded-[2rem] bg-amber-200/[0.07] px-6 py-8 md:px-10 md:py-12 flex flex-col gap-4">
                             <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("rareTitle", {animal: entry.name})}</h2>

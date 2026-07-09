@@ -11,6 +11,7 @@ import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
+import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export type AppProfile = NonNullable<Awaited<ReturnType<typeof getAuthenticatedUserProfile>>>;
@@ -19,6 +20,10 @@ export type AppCapture = UserCaptureSummary & {
     scientificName: string | null;
     category: string | null;
     displayName: string;
+    lifeStageChip: string | null;
+    countsAsLine: string | null;
+    capturedAsLine: string | null;
+    sameSpeciesHelper: string | null;
     principle: string | null;
     indexNumber: number | null;
     href: string;
@@ -178,14 +183,18 @@ function findSpeciesForCapture(capture: UserCaptureSummary, catalog: SpeciesEntr
     const identity = capture.speciesSlug?.trim().toLowerCase();
 
     if (identity) {
+        const identityKeys = new Set(collectionIdentityMatchKeys(identity));
+        const catalogMatch = catalog.find((entry) => {
+            const entryIdentity = (entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_")).toLowerCase();
+            return identityKeys.has(entryIdentity) || speciesEntryMatchesIdentity(entry, identity);
+        });
+        if (catalogMatch) {
+            return catalogMatch;
+        }
+
         const staticMatch = findSpeciesForCaptureIdentity(identity);
         if (staticMatch) {
             return staticMatch;
-        }
-
-        const catalogMatch = catalog.find((entry) => speciesEntryMatchesIdentity(entry, identity));
-        if (catalogMatch) {
-            return catalogMatch;
         }
     }
 
@@ -220,11 +229,30 @@ function buildAppCapture(
     species: SpeciesEntry | null,
     principle: string | null = null
 ): AppCapture {
+    const variant = resolveCaptureVariantDisplay({
+        animalName: capture.animalName,
+        lifeStage: capture.lifeStage,
+        normalizedIdentityKey: capture.speciesSlug,
+        canonicalSpecies: species
+            ? {
+                name: species.name,
+                slug: species.slug,
+                normalizedIdentityKey: species.normalizedIdentityKey,
+                speciesProfileId: species.speciesProfileId,
+                animalDexNumber: getAnimalDexNumberFromEntry(species)
+            }
+            : null
+    });
+
     return {
         ...capture,
         scientificName: species?.analysis.scientificName ?? capture.scientificName ?? null,
         category: species?.analysis.category ?? null,
-        displayName: species?.name ?? capture.animalName,
+        displayName: variant.title,
+        lifeStageChip: variant.lifeStageChip,
+        countsAsLine: variant.countsAsLine,
+        capturedAsLine: variant.capturedAsLine,
+        sameSpeciesHelper: variant.sameSpeciesHelper,
         principle,
         indexNumber: getAnimalDexNumberFromEntry(species),
         href: species ? `/animals/${species.slug}` : "/animals",
@@ -391,6 +419,7 @@ export async function getAppTopCaptures(limit = 6) {
         scientificName: null,
         speciesSlug: row.normalized_identity_key?.trim() ?? null,
         speciesProfileId: row.species_profile_id?.trim() ?? null,
+        lifeStage: null,
         confidence: null,
         score: Number(row.score ?? 0),
         captureValidity: null,

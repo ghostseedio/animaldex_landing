@@ -34,9 +34,30 @@ type SafeSupportThread = {
 type InboxResponse = {
     ok: boolean;
     threads?: SupportThreadSummary[];
+    hasMore?: boolean;
     thread?: SafeSupportThread | null;
     error?: string;
 };
+
+const THREADS_PAGE_SIZE = 15;
+
+function buildThreadsPath(options?: {threadId?: string | null; offset?: number; includeThreads?: boolean}) {
+    const params = new URLSearchParams();
+
+    if (options?.threadId) {
+        params.set("threadId", options.threadId);
+    }
+
+    if (options?.includeThreads === false) {
+        params.set("includeThreads", "false");
+    } else {
+        params.set("limit", String(THREADS_PAGE_SIZE));
+        params.set("offset", String(options?.offset ?? 0));
+    }
+
+    const query = params.toString();
+    return query ? `/api/admin/support/threads?${query}` : "/api/admin/support/threads";
+}
 
 function formatDate(value: string) {
     const date = new Date(value);
@@ -63,6 +84,8 @@ export default function SupportInboxClient() {
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
     const [reply, setReply] = useState("");
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMoreThreads, setHasMoreThreads] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -77,16 +100,14 @@ export default function SupportInboxClient() {
         setError(null);
 
         try {
-            const path = threadId
-                ? `/api/admin/support/threads?threadId=${encodeURIComponent(threadId)}`
-                : "/api/admin/support/threads";
-            const response = await fetch(path, {cache: "no-store"});
+            const response = await fetch(buildThreadsPath({threadId, offset: 0}), {cache: "no-store"});
             const body = await response.json() as InboxResponse;
 
             if (response.status === 401) {
                 setAuthorized(false);
                 setThreads([]);
                 setSelectedThread(null);
+                setHasMoreThreads(false);
                 return;
             }
 
@@ -99,12 +120,66 @@ export default function SupportInboxClient() {
             const nextThread = body.thread ?? null;
             setAuthorized(true);
             setThreads(nextThreads);
+            setHasMoreThreads(Boolean(body.hasMore));
             setSelectedThread(nextThread);
             setSelectedThreadId(nextThread?.id ?? nextThreads[0]?.id ?? null);
         } catch {
             setError("Unable to load support inbox.");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function loadThreadDetail(threadId: string) {
+        setError(null);
+
+        try {
+            const response = await fetch(buildThreadsPath({threadId, includeThreads: false}), {cache: "no-store"});
+            const body = await response.json() as InboxResponse;
+
+            if (response.status === 401) {
+                setAuthorized(false);
+                setThreads([]);
+                setSelectedThread(null);
+                setHasMoreThreads(false);
+                return;
+            }
+
+            if (!response.ok || !body.ok) {
+                setError(body.error || "Unable to load support thread.");
+                return;
+            }
+
+            setSelectedThread(body.thread ?? null);
+        } catch {
+            setError("Unable to load support thread.");
+        }
+    }
+
+    async function loadMoreThreads() {
+        if (!hasMoreThreads || loadingMore) {
+            return;
+        }
+
+        setLoadingMore(true);
+        setError(null);
+
+        try {
+            const response = await fetch(buildThreadsPath({offset: threads.length}), {cache: "no-store"});
+            const body = await response.json() as InboxResponse;
+
+            if (!response.ok || !body.ok) {
+                setError(body.error || "Unable to load more support threads.");
+                return;
+            }
+
+            const nextThreads = body.threads ?? [];
+            setThreads((current) => [...current, ...nextThreads]);
+            setHasMoreThreads(Boolean(body.hasMore));
+        } catch {
+            setError("Unable to load more support threads.");
+        } finally {
+            setLoadingMore(false);
         }
     }
 
@@ -207,6 +282,7 @@ export default function SupportInboxClient() {
         setThreads([]);
         setSelectedThread(null);
         setSelectedThreadId(null);
+        setHasMoreThreads(false);
     }
 
     if (authorized === false) {
@@ -245,7 +321,7 @@ export default function SupportInboxClient() {
 
     return (
         <main className="min-h-screen bg-canvas-950 text-ink-100">
-            <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col">
+            <div className="mx-auto flex h-screen w-full max-w-7xl flex-col overflow-hidden">
                 <header className="flex flex-col gap-3 border-b border-line-300 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                     <div>
                         <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary-200">AnimalDex</p>
@@ -283,8 +359,8 @@ export default function SupportInboxClient() {
                     </div>
                 )}
 
-                <div className="grid flex-1 grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
-                    <aside className="border-b border-line-300 lg:border-b-0 lg:border-r">
+                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
+                    <aside className="min-h-0 overflow-y-auto border-b border-line-300 lg:border-b-0 lg:border-r">
                         {loading && threads.length === 0 && (
                             <div className="p-4 text-sm text-ink-300">Loading inbox...</div>
                         )}
@@ -301,7 +377,7 @@ export default function SupportInboxClient() {
                                         type="button"
                                         onClick={() => {
                                             setSelectedThreadId(thread.id);
-                                            loadInbox(thread.id);
+                                            loadThreadDetail(thread.id);
                                         }}
                                         className={`block w-full px-4 py-4 text-left transition ${selected ? "bg-surface-900" : "hover:bg-surface-900/60"}`}
                                     >
@@ -319,9 +395,21 @@ export default function SupportInboxClient() {
                                 );
                             })}
                         </div>
+                        {hasMoreThreads && (
+                            <div className="border-t border-line-300 p-4">
+                                <button
+                                    type="button"
+                                    onClick={loadMoreThreads}
+                                    disabled={loadingMore}
+                                    className="w-full rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {loadingMore ? "Loading..." : "Load older threads"}
+                                </button>
+                            </div>
+                        )}
                     </aside>
 
-                    <section className="flex min-h-[60vh] flex-col">
+                    <section className="flex min-h-0 flex-col overflow-hidden">
                         {!selectedThread && (
                             <div className="flex flex-1 items-center justify-center p-8 text-sm text-ink-300">
                                 Select a support thread.
@@ -357,7 +445,7 @@ export default function SupportInboxClient() {
                                     ))}
                                 </div>
 
-                                <form onSubmit={submitReply} className="border-t border-line-300 bg-surface-900 px-4 py-5 sm:px-6">
+                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-4 py-5 sm:px-6">
                                     <label htmlFor="admin-support-reply" className="text-sm font-bold text-white">
                                         Reply
                                     </label>

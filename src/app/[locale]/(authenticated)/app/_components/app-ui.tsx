@@ -184,6 +184,14 @@ export function AppCaptureCard({capture, compact = false, locale = "en"}: {captu
                 <h3 className="truncate font-display text-xl font-bold text-white">
                     <Link href={capture.href} className="hover:text-primary-100">{capture.displayName}</Link>
                 </h3>
+                {capture.lifeStageChip ? (
+                    <span className="mt-2 inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/60">
+                        {capture.lifeStageChip}
+                    </span>
+                ) : null}
+                {capture.countsAsLine ? (
+                    <p className="mt-2 truncate text-sm text-white/50">{capture.countsAsLine}</p>
+                ) : null}
                 {capture.principle ? <p className="mt-1 truncate text-xs font-semibold text-primary-200/80">{capture.principle}</p> : null}
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-bold text-white/55">
                     {capture.contextLabel ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{capture.contextLabel}</span> : null}

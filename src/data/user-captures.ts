@@ -1,5 +1,7 @@
 import type {SpeciesEntry} from "@/data/species";
 import {catalogLookupToken} from "@/lib/collection-discovery";
+import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
+import {resolveCanonicalIdentityKey} from "@/lib/species-life-stage-policy";
 import {countCaptureSettingLabels, getCaptureContextLabel, type CaptureSettingRow} from "@/lib/capture-setting-label";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
@@ -9,6 +11,7 @@ export type UserCaptureSummary = {
     scientificName: string | null;
     speciesSlug: string | null;
     speciesProfileId: string | null;
+    lifeStage: string | null;
     confidence: number | null;
     score: number;
     captureValidity: string | null;
@@ -37,6 +40,7 @@ type OwnedCaptureManifestRow = {
     scientific_name?: string | null;
     species_profile_id?: string | null;
     normalized_identity_key?: string | null;
+    life_stage?: string | null;
     confidence?: number | null;
     error_message?: string | null;
     completed_at?: string | null;
@@ -120,6 +124,7 @@ function toUserCaptureSummary(row: OwnedCaptureManifestRow): UserCaptureSummary 
         scientificName: row.scientific_name?.trim() ?? null,
         speciesSlug: row.normalized_identity_key?.trim() ?? null,
         speciesProfileId: row.species_profile_id?.trim() ?? null,
+        lifeStage: row.life_stage?.trim() ?? null,
         confidence: row.confidence ?? null,
         score: Number(row.total_progression_xp ?? 0),
         captureValidity: parseCaptureValidity(row.raw_json),
@@ -138,6 +143,7 @@ const USER_CAPTURE_MANIFEST_SELECT = [
     "scientific_name",
     "species_profile_id",
     "normalized_identity_key",
+    "life_stage",
     "confidence",
     "total_progression_xp",
     "error_message",
@@ -323,7 +329,9 @@ export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24)
     const captures = await getUserCaptures(Math.max(limit * 3, 48));
     const slug = entry.slug;
     const identityKey = (entry.normalizedIdentityKey ?? slug).toLowerCase();
-    const profileId = entry.speciesProfileId;
+    const canonicalIdentityKey = resolveCanonicalIdentityKey(identityKey) ?? identityKey;
+    const identityMatchKeys = new Set(collectionIdentityMatchKeys(canonicalIdentityKey));
+    const profileId = entry.speciesProfileId?.toLowerCase() ?? null;
     const animalName = entry.name.trim().toLowerCase();
 
     return captures.filter((capture) => {
@@ -331,23 +339,27 @@ export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24)
         const animalToken = catalogLookupToken(capture.animalName);
         const scientificToken = catalogLookupToken(capture.scientificName);
 
-        if (captureKey === slug || captureKey === identityKey) {
+        if (captureKey && identityMatchKeys.has(captureKey)) {
             return true;
         }
 
-        if (animalToken && (animalToken === identityKey || animalToken === slug.replace(/-/g, "_"))) {
+        if (captureKey === slug || captureKey === identityKey || captureKey === canonicalIdentityKey) {
             return true;
         }
 
-        if (scientificToken && (scientificToken === identityKey || scientificToken === slug.replace(/-/g, "_"))) {
+        if (animalToken && identityMatchKeys.has(animalToken)) {
             return true;
         }
 
-        if (profileId && capture.speciesProfileId?.toLowerCase() === profileId.toLowerCase()) {
+        if (scientificToken && identityMatchKeys.has(scientificToken)) {
             return true;
         }
 
-        if (profileId && captureKey === profileId.toLowerCase()) {
+        if (profileId && capture.speciesProfileId?.toLowerCase() === profileId) {
+            return true;
+        }
+
+        if (profileId && captureKey === profileId) {
             return true;
         }
 

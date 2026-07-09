@@ -192,8 +192,16 @@ function CaptureCard({
         <h3 className="font-display text-2xl font-bold text-white">
           <Link href={item.href}>{item.animalName}</Link>
         </h3>
+        {item.lifeStageChip ? (
+          <span className="inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/65">
+            {item.lifeStageChip}
+          </span>
+        ) : null}
         {item.headlineSupportingName ? (
           <p className="text-sm text-white/55">{item.headlineSupportingName}</p>
+        ) : null}
+        {item.sameSpeciesHelper ? (
+          <p className="text-xs text-white/40">{item.sameSpeciesHelper}</p>
         ) : null}
         {item.learnedPrinciple ? (
           <p className="flex items-center gap-2 text-sm text-white/55">

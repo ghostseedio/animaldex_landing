@@ -63,21 +63,53 @@ export const COLLECTION_IDENTITY_ALIASES: Record<string, string> = {
     black_rhino: "black_rhinoceros",
 
     // Bengal tiger regional names
-    indian_tiger: "bengal_tiger"
+    indian_tiger: "bengal_tiger",
+
+    // Life-stage / form aliases → canonical indexed species
+    monarch_caterpillar: "monarch_butterfly",
+    kea_juvenile: "kea",
+    leatherback_hatchling: "leatherback_sea_turtle",
+    eastern_tiger_swallowtail_caterpillar: "eastern_tiger_swallowtail",
+    ratel_cub: "honey_badger"
 };
+
+let runtimeIdentityAliases: Record<string, string> | null = null;
+
+export function setRuntimeSpeciesIdentityAliases(aliases: Record<string, string> | null) {
+    runtimeIdentityAliases = aliases;
+    refreshCollectionIdentityAliasLookup();
+}
+
+export function getMergedIdentityAliases() {
+    return {
+        ...COLLECTION_IDENTITY_ALIASES,
+        ...(runtimeIdentityAliases ?? {})
+    };
+}
 
 const CANONICAL_ALIAS_LOOKUP = new Map<string, Set<string>>();
 
-for (const [alias, canonical] of Object.entries(COLLECTION_IDENTITY_ALIASES)) {
-    if (!CANONICAL_ALIAS_LOOKUP.has(canonical)) {
-        CANONICAL_ALIAS_LOOKUP.set(canonical, new Set());
-    }
+function rebuildCanonicalAliasLookup() {
+    CANONICAL_ALIAS_LOOKUP.clear();
 
-    CANONICAL_ALIAS_LOOKUP.get(canonical)!.add(alias);
+    for (const [alias, canonical] of Object.entries(getMergedIdentityAliases())) {
+        if (!CANONICAL_ALIAS_LOOKUP.has(canonical)) {
+            CANONICAL_ALIAS_LOOKUP.set(canonical, new Set());
+        }
+
+        CANONICAL_ALIAS_LOOKUP.get(canonical)!.add(alias);
+    }
+}
+
+rebuildCanonicalAliasLookup();
+
+export function refreshCollectionIdentityAliasLookup() {
+    rebuildCanonicalAliasLookup();
 }
 
 export function resolveCollectionIdentityToken(token: string) {
-    return COLLECTION_IDENTITY_ALIASES[token] ?? token;
+    const normalized = token.trim().toLowerCase().replace(/-/g, "_");
+    return getMergedIdentityAliases()[normalized] ?? normalized;
 }
 
 /** All normalized tokens that should match the same catalog / collection identity. */

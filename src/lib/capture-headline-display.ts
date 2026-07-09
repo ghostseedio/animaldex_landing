@@ -1,3 +1,10 @@
+import {getSpeciesBySlug} from "@/data/species";
+import {
+    identityKeyToSlug,
+    resolveCanonicalIdentityKey,
+    resolveCaptureVariantDisplay
+} from "@/lib/species-life-stage-policy";
+
 type CaptureHeadlineInput = {
     animalName?: string | null;
     scientificName?: string | null;
@@ -5,14 +12,18 @@ type CaptureHeadlineInput = {
     breedConfidence?: number | null;
     confidence?: number | null;
     normalizedIdentityKey?: string | null;
+    lifeStage?: string | null;
     humanContext?: string | null;
     zooOrWild?: string | null;
     premiumDetails?: Record<string, unknown> | null;
+    canonicalDisplayName?: string | null;
 };
 
 export type CaptureHeadlineDisplay = {
     animalName: string;
     headlineSupportingName: string | null;
+    lifeStageChip: string | null;
+    sameSpeciesHelper: string | null;
 };
 
 const WEAK_REFINED_WORDS = new Set([
@@ -204,13 +215,52 @@ function displayHeadlineTitle(input: CaptureHeadlineInput) {
     return withConfidencePrefix(baseName, input.confidence);
 }
 
+function resolveCanonicalDisplayName(input: CaptureHeadlineInput) {
+    if (clean(input.canonicalDisplayName)) {
+        return clean(input.canonicalDisplayName);
+    }
+
+    const canonicalKey = resolveCanonicalIdentityKey(input.normalizedIdentityKey);
+    if (!canonicalKey) return null;
+
+    const slug = identityKeyToSlug(canonicalKey);
+    return getSpeciesBySlug(slug)?.name ?? displayNameFromCatalogToken(canonicalKey);
+}
+
 export function resolveCaptureHeadlineDisplay(input: CaptureHeadlineInput): CaptureHeadlineDisplay {
+    const canonicalName = resolveCanonicalDisplayName(input);
+    const variant = resolveCaptureVariantDisplay({
+        animalName: clean(input.animalName) ?? "Animal",
+        lifeStage: input.lifeStage,
+        normalizedIdentityKey: input.normalizedIdentityKey,
+        canonicalSpecies: canonicalName
+            ? {
+                name: canonicalName,
+                slug: identityKeyToSlug(resolveCanonicalIdentityKey(input.normalizedIdentityKey) ?? "")
+            }
+            : null
+    });
+
+    if (variant.isStageVariant) {
+        return {
+            animalName: withConfidencePrefix(variant.title, input.confidence),
+            headlineSupportingName: variant.countsAsLine,
+            lifeStageChip: variant.lifeStageChip,
+            sameSpeciesHelper: variant.sameSpeciesHelper
+        };
+    }
+
     const animalName = displayHeadlineTitle(input);
     const headlineSupportingName = preferredDisplayIdentityGuess(input)
         ? displayBroadAnimalName(input)
         : null;
 
-    return {animalName, headlineSupportingName};
+    return {
+        animalName,
+        headlineSupportingName,
+        lifeStageChip: variant.lifeStageChip,
+        sameSpeciesHelper: null
+    };
 }
 
 export function resolveChallengeAnalysisHeadlineDisplay(row: Record<string, unknown>, prefix: "attacker" | "defender"): CaptureHeadlineDisplay {

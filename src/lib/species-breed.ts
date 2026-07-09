@@ -1,4 +1,5 @@
 import type {SpeciesEntry} from "@/data/species";
+import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 
 const BREED_CATEGORY_MARKERS = ["domestic breed", "domestic dog", "domestic cat"];
 
@@ -75,6 +76,10 @@ export function buildSpeciesCaptureMatchCandidates(entry: SpeciesEntry) {
 
     push("species_profile_id", entry.speciesProfileId);
     push("normalized_identity_key", entry.normalizedIdentityKey ?? entry.slug);
+
+    for (const aliasKey of collectionIdentityMatchKeys(entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_"))) {
+        push("normalized_identity_key", aliasKey);
+    }
 
     if (entry.slug.includes("-")) {
         push("normalized_identity_key", entry.slug.replaceAll("-", "_"));

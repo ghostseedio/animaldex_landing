@@ -18,6 +18,7 @@ import {additionalSpeciesEntriesInputSixteen} from "@/data/species-expansion-pac
 import {additionalSpeciesEntriesInputSeventeen} from "@/data/legendary-earth-beasts-species";
 import {NativeRangeRegionKey, speciesMatchesNativeRangeRegion} from "@/data/native-range";
 import {getLocationAnimalSpeciesSlugs} from "@/data/locations";
+import {speciesDirectoryMatchesQuery} from "@/lib/species-life-stage-policy";
 
 export type SpeciesAnalysis = {
     summary: string;
@@ -4078,18 +4079,7 @@ export function getSpeciesDirectoryPage({
             return true;
         }
 
-        const haystack = [
-            entry.name,
-            entry.analysis.scientificName,
-            entry.analysis.category,
-            entry.analysis.summary,
-            entry.analysis.habitat,
-            entry.analysis.nativeRange
-        ]
-            .join(" ")
-            .toLowerCase();
-
-        return haystack.includes(normalizedQuery);
+        return speciesDirectoryMatchesQuery(entry, normalizedQuery);
     });
 
     const total = filtered.length;

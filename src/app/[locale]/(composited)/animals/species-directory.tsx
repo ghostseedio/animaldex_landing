@@ -9,6 +9,7 @@ import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesImageAltText, type SpeciesDirectoryImageState} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {speciesDirectorySearchMatch} from "@/lib/species-life-stage-policy";
 import {getSpeciesRarityStatusKey, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import SpeciesRegionMap from "./species-region-map";
@@ -473,6 +474,9 @@ export default function SpeciesDirectory({
                         const battleTierLabel = battleTier
                             ? copy.battleTierChip.replace("{tier}", battleTier)
                             : null;
+                        const searchMatch = currentQuery.trim()
+                            ? speciesDirectorySearchMatch(entry, currentQuery)
+                            : null;
 
                         return (
                         <Link
@@ -493,6 +497,12 @@ export default function SpeciesDirectory({
                                             <p className="font-mono text-[0.68rem] font-black uppercase tracking-[0.16em] text-ink-200">{battleTierLabel}</p>
                                         ) : null}
                                         <h2 className="mt-1 truncate font-display text-xl font-bold text-white transition-colors group-hover:text-primary-100 sm:text-2xl">{entry.name}</h2>
+                                        {searchMatch?.aliasMatchLabel ? (
+                                            <p className="truncate text-xs text-ink-300">{searchMatch.aliasMatchLabel}</p>
+                                        ) : null}
+                                        {searchMatch?.helperText ? (
+                                            <p className="truncate text-xs text-primary-200/80">{searchMatch.helperText}</p>
+                                        ) : null}
                                         <p className="truncate text-sm italic text-ink-400">{entry.analysis.scientificName}</p>
                                     </div>
                                 </div>

@@ -1,6 +1,7 @@
 import type {SpeciesEntry} from "@/data/species";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {COLLECTION_IDENTITY_ALIASES, resolveCollectionIdentityToken} from "@/lib/collection-identity-aliases";
+import {isNonCanonicalLifeStageCatalogIdentity} from "@/lib/species-life-stage-policy";
 
 function normalizeIdentityToken(value: string) {
     return value.trim().toLowerCase().replace(/-/g, "_");
@@ -62,11 +63,19 @@ function pickCanonicalCatalogEntry(canonicalKey: string, group: SpeciesEntry[]) 
         })[0];
 }
 
+/** Drop hidden life-stage duplicate profiles before canonical catalog dedupe. */
+export function filterCanonicalCatalogSpeciesEntries(entries: SpeciesEntry[]) {
+    return entries.filter((entry) => {
+        const identityKey = entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_");
+        return !isNonCanonicalLifeStageCatalogIdentity(identityKey);
+    });
+}
+
 /** Collapse alias catalog rows (e.g. african_lion + lion) onto one canonical species entry. */
 export function dedupeCatalogSpeciesEntries(entries: SpeciesEntry[]) {
     const groups = new Map<string, SpeciesEntry[]>();
 
-    for (const entry of entries) {
+    for (const entry of filterCanonicalCatalogSpeciesEntries(entries)) {
         const canonicalKey = speciesCatalogIdentityKey(entry);
         const group = groups.get(canonicalKey) ?? [];
         group.push(entry);

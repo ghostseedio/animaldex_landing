@@ -6,6 +6,7 @@ import {getSpeciesImageRoute} from "@/data/species-images";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
+import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
@@ -32,6 +33,8 @@ export type DiscoverCaptureItem = {
     cardStyle: string | null;
     animalName: string;
     headlineSupportingName: string | null;
+    lifeStageChip: string | null;
+    sameSpeciesHelper: string | null;
     speciesSlug: string | null;
     score: number;
     endorsementCount: number;
@@ -291,10 +294,11 @@ function resolveImageSrc(
     return PLACEHOLDER_IMAGE;
 }
 
-function resolveHref(slug: string | null) {
-    if (!slug) return "/animals";
-    const species = getSpeciesBySlug(slug);
-    return species ? `/animals/${species.slug}` : "/animals";
+function resolveHref(slug: string | null, identityKey: string | null = null) {
+    const canonicalSlug = resolveCanonicalSlugFromIdentity(identityKey) ?? slug;
+    if (!canonicalSlug) return "/animals";
+    const species = getSpeciesBySlug(canonicalSlug);
+    return species ? `/animals/${species.slug}` : `/animals/${canonicalSlug}`;
 }
 
 function endorsementCount(row: QueryRow) {
@@ -540,13 +544,15 @@ function mapCaptureRow(
     behaviorPrinciples: Awaited<ReturnType<typeof getCatalogBehaviorPrincipleIndex>>
 ): DiscoverCaptureItem {
     const captureId = readString(row, "capture_id") ?? "";
-    const slug = toSpeciesSlug(readString(row, "normalized_identity_key"));
+    const identityKey = readString(row, "normalized_identity_key");
+    const slug = toSpeciesSlug(identityKey);
+    const canonicalSlug = resolveCanonicalSlugFromIdentity(identityKey) ?? slug;
+    const species = canonicalSlug ? getSpeciesBySlug(canonicalSlug) : null;
     const stats = readStats(row);
-    const species = slug ? getSpeciesBySlug(slug) : null;
     const catalogPrinciple = resolveCatalogBehaviorPrinciple(
         behaviorPrinciples,
         readString(row, "species_profile_id"),
-        readString(row, "normalized_identity_key")
+        identityKey
     );
     const progressionXP = readNumber(row, "total_progression_xp");
     const collector = collectorFromRow(row);
@@ -558,7 +564,9 @@ function mapCaptureRow(
         breedGuess: readString(row, "breed_guess"),
         breedConfidence: readNullableNumber(row, "breed_confidence"),
         confidence: readNullableNumber(row, "confidence"),
-        normalizedIdentityKey: readString(row, "normalized_identity_key"),
+        normalizedIdentityKey: identityKey,
+        lifeStage: readString(row, "life_stage"),
+        canonicalDisplayName: species?.name ?? null,
         humanContext: readString(row, "human_context"),
         zooOrWild: readString(row, "zoo_or_wild"),
         premiumDetails: row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
@@ -582,7 +590,9 @@ function mapCaptureRow(
         cardStyle: formatLabel(readString(row, "card_style")),
         animalName,
         headlineSupportingName: headline.headlineSupportingName,
-        speciesSlug: slug,
+        lifeStageChip: headline.lifeStageChip,
+        sameSpeciesHelper: headline.sameSpeciesHelper,
+        speciesSlug: canonicalSlug,
         score: readNumber(row, "score"),
         endorsementCount: endorsementCount(row),
         viewerEndorsementStat: formatLabel(readString(row, "viewer_endorsement_stat")),
@@ -594,8 +604,8 @@ function mapCaptureRow(
         confidence: readNullableNumber(row, "confidence"),
         typeTags: readStringArray(row, "type_tags").map((tag) => formatLabel(tag) ?? tag).slice(0, 5),
         collector,
-        imageSrc: resolveImageSrc(captureId, slug),
-        href: resolveHref(slug),
+        imageSrc: resolveImageSrc(captureId, canonicalSlug),
+        href: resolveHref(slug, identityKey),
         scientificName: readString(row, "scientific_name"),
         breedGuess: readString(row, "breed_guess"),
         conservationTier: readString(row, "conservation_tier"),
@@ -622,7 +632,8 @@ function mapCaptureRow(
 function mapAlignmentRow(row: QueryRow): DiscoverAlignmentItem {
     const proofId = readString(row, "proof_id") ?? "";
     const rewardedCaptureId = readString(row, "rewarded_capture_id") ?? "";
-    const slug = toSpeciesSlug(readString(row, "normalized_identity_key"));
+    const identityKey = readString(row, "normalized_identity_key");
+    const slug = toSpeciesSlug(identityKey);
 
     return {
         kind: "alignment",
@@ -637,7 +648,7 @@ function mapAlignmentRow(row: QueryRow): DiscoverAlignmentItem {
         rewardedAnimalName: readString(row, "rewarded_animal_name") ?? "Animal",
         collector: collectorFromRow(row),
         imageSrc: resolveImageSrc(rewardedCaptureId, slug),
-        href: resolveHref(slug)
+        href: resolveHref(slug, identityKey)
     };
 }
 
