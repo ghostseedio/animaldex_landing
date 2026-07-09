@@ -699,7 +699,7 @@ function mergeCaptureGradeSource(source: CaptureGradeSource | null | undefined) 
         imageQuality: parseImageQuality(model?.image_quality),
         authenticityStatus: readTrimmedString(model?.authenticity_status).toLowerCase(),
         typeTags: Array.isArray(model?.type_tags)
-            ? model.type_tags.filter((tag): tag is string => typeof tag === "string")
+            ? model?.type_tags.filter((tag): tag is string => typeof tag === "string") ?? []
             : [],
         normalizedIdentityKey: sanitizedDisplayValue(model?.normalized_identity_key),
         signals: (source?.signals && typeof source.signals === "object" ? source.signals : {}) as AnalysisSignals,
@@ -708,9 +708,7 @@ function mergeCaptureGradeSource(source: CaptureGradeSource | null | undefined) 
             : {}) as PremiumDetails,
         market: (source?.observed_market_modifiers && typeof source.observed_market_modifiers === "object"
             ? source.observed_market_modifiers
-            : model?.observed_market_modifiers && typeof model.observed_market_modifiers === "object"
-                ? model.observed_market_modifiers
-                : {}) as ObservedMarketModifiers,
+            : {}) as ObservedMarketModifiers,
         priceEstimate: model?.price_estimate ?? null,
         totalEndorsements: asNumber(source?.dominance_endorsements)
             + asNumber(source?.speed_endorsements)

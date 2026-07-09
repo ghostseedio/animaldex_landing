@@ -332,12 +332,13 @@ async function getAuthenticatedSupabaseUser() {
 }
 
 export function mapPublicProfileCaptureToAppCapture(capture: PublicProfileCapture): AppCapture {
-    return {
+    const summary: UserCaptureSummary = {
         captureId: capture.id,
         animalName: capture.animalName,
         scientificName: null,
         speciesSlug: capture.speciesSlug,
         speciesProfileId: null,
+        lifeStage: null,
         confidence: null,
         score: capture.score,
         captureValidity: null,
@@ -346,11 +347,13 @@ export function mapPublicProfileCaptureToAppCapture(capture: PublicProfileCaptur
         imageBucket: null,
         imagePath: null,
         contextLabel: capture.contextLabel,
-        locationDisplayLabel: null,
-        displayName: capture.animalName,
-        category: null,
-        principle: null,
-        indexNumber: null,
+        locationDisplayLabel: null
+    };
+    const species = findSpeciesForCaptureIdentity(capture.speciesSlug);
+    const built = buildAppCapture(summary, species, null);
+
+    return {
+        ...built,
         href: capture.href,
         imageSrc: capture.imageSrc
     };
