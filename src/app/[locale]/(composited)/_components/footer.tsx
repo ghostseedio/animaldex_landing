@@ -22,6 +22,7 @@ export default function Footer() {
             title: t("footerGroups.explore"),
             links: [
                 { href: "/animals", label: t("browseAnimals") },
+                { href: "/tier-list", label: t("rankings") },
                 { href: "/comparisons", label: t("challenges") },
                 { href: "/locations", label: t("locations") },
                 { href: "/what-animal-am-i", label: t("whatAnimalAmI") }
