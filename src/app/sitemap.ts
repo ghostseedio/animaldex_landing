@@ -92,12 +92,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(entry.updatedAt)
         }));
 
-        const speciesPages = unifiedSpeciesEntries
-            .filter((entry) => !entry.databaseSource || entry.databaseSource.seoIndexable)
-            .map((entry) => ({
+        const speciesPages = unifiedSpeciesEntries.map((entry) => ({
             url: getAbsoluteUrl(locale, `/animals/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
-            }));
+        }));
 
         const collectorLandingPages = collectorPages.map((entry) => ({
             url: getAbsoluteUrl(locale, `/${entry.slug}`)

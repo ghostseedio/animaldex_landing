@@ -230,13 +230,7 @@ function mapDatabaseSpecies(row: CatalogRow, guide: FieldGuideRow | null): Speci
     const habitat = clean(guide?.typical_habitat) ?? metadataRange(row) ?? `${name} habitat data is maintained in the live AnimalDex field guide.`;
     const nativeRange = metadataRange(row) ?? habitat;
     const scientificName = clean(row.scientific_name) ?? "Scientific classification under review";
-    const hasStrongGuide = Boolean(
-        guide && guide.field_guide_version !== "v1_pending" &&
-        (clean(guide.species_spotlight) || clean(guide.species_subtitle_story)) &&
-        (signatureTraits.length >= 2 || interestingFacts.length >= 2)
-    );
-    const hasPrinciple = Boolean(clean(row.principle_name) && clean(row.core_lesson) && clean(row.biological_basis));
-    const seoIndexable = hasStrongGuide && hasPrinciple;
+    const seoIndexable = true;
     const publishedAt = row.created_at || new Date().toISOString();
     const updatedAt = [row.updated_at, guide?.updated_at].filter(Boolean).sort().at(-1) ?? publishedAt;
 
