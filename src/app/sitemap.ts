@@ -13,12 +13,22 @@ import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalG
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {speciesEntries} from "@/data/species";
 import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
+
+async function getSitemapSpeciesEntries() {
+    try {
+        return await getUnifiedSpeciesEntries();
+    } catch (error) {
+        console.error("Unable to load unified species catalog for sitemap. Falling back to static species entries.", error);
+        return speciesEntries;
+    }
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const behaviorLessons = await getBehaviorLessonIndex();
     const principleHubs = await getPrincipleHubIndex();
-    const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
+    const unifiedSpeciesEntries = await getSitemapSpeciesEntries();
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
