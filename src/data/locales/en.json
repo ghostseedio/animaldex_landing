@@ -296,7 +296,7 @@
     "quickAnswerTitle": "Quick answer",
     "quickAnswerDescription": "Start with the direct answer, then use the ranking, methodology, and context below to understand what the headline really means.",
     "tableTitle": "Tier-list table",
-    "tableDescription": "Every tier-list table includes at least 100 ranked species, animal icons, tier labels, and links back into species pages.",
+    "tableDescription": "This tier-list table includes {count} ranked species, animal icons, tier labels, and links back into species pages.",
     "rankLabel": "Rank",
     "animalLabel": "Animal",
     "tierLabel": "Tier",
@@ -325,6 +325,7 @@
     "categories": {
       "speed": "Speed",
       "strength": "Strength",
+      "size": "Size",
       "intelligence": "Intelligence",
       "danger": "Danger",
       "agility": "Agility",

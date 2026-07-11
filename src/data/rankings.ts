@@ -5,6 +5,7 @@ import {speciesEntries, SpeciesEntry} from "@/data/species";
 export type RankingCategory =
     | "speed"
     | "strength"
+    | "size"
     | "intelligence"
     | "danger"
     | "agility"
@@ -35,6 +36,7 @@ export type RankingEntry = {
 };
 
 export type RankingTier = "S" | "A" | "B" | "C" | "D" | "E";
+export type RankingStatKey = keyof SpeciesStats;
 
 export type ResolvedRankingEntry = RankingEntry & {
     tier: RankingTier;
@@ -58,6 +60,8 @@ export type RankingPage = CanonicalContentMetadata & {
     relatedChallengeSlugs?: string[];
     relatedRankingSlugs?: string[];
     systemsSpeciesSlugs?: string[];
+    statRankingKey?: RankingStatKey;
+    statRankingLimit?: number;
 };
 
 type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
@@ -65,6 +69,7 @@ type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "feature
 const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
 export const RANKING_CANONICAL_BASE_PATH = "/tier-list";
 const MIN_RANKING_TABLE_ENTRIES = 100;
+const STAT_RANKING_TABLE_ENTRIES = 250;
 
 function getRankingImageSlug(page: RankingPageInput) {
     return page.title
@@ -95,6 +100,8 @@ const rankingPagesData: RankingPage[] = [
         title: "Fastest Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the fastest animals in the world, with explicit separation between air, land, and water speed so the answer stays biologically honest.",
         category: "speed",
+        statRankingKey: "speed",
+        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "fastest animals",
             "fastest animal in the world",
@@ -207,10 +214,65 @@ const rankingPagesData: RankingPage[] = [
         systemsSpeciesSlugs: ["elephant", "orca", "tiger"]
     }),
     createRankingPage({
+        slug: "biggest-animals",
+        title: "Biggest Animals in the World: Top 10 Ranked",
+        description: "A structured ranking of the biggest animals in the world, using the AnimalDex size stat to compare body scale across sea, land, and air.",
+        category: "size",
+        statRankingKey: "size",
+        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
+        searchIntents: [
+            "biggest animals",
+            "largest animals in the world",
+            "biggest animal in the world",
+            "largest land animals",
+            "largest sea animals"
+        ],
+        quickAnswer: "Blue whale is the cleanest biggest-animal answer overall, while elephant is the clearest land-animal answer. The full AnimalDex table ranks 250 species by the canonical size stat so large marine animals, megafauna, reptiles, birds, and unusually large invertebrates can be compared in one place.",
+        introduction: [
+            "Biggest animal can mean overall body mass, length, height, or practical field-guide scale. This page uses the AnimalDex size stat as the shared comparison layer, then keeps habitat context visible so sea giants and land giants are not treated as identical animals.",
+            "The table below is built from AnimalDex species stats rather than a hand-picked top 10 only. That makes it useful as a broad index of large animals, not just a short trivia answer."
+        ],
+        methodology: [
+            "Ranking order is driven by the AnimalDex canonical size stat, with database profile stats used when available and deterministic species stats used as the fallback for static entries.",
+            "The size stat is designed for AnimalDex collection and comparison, so it reflects practical body-scale dominance rather than one single measurement such as length or weight alone.",
+            "When species have the same size score, the ranking uses rarity and name ordering as stable tie-breakers so the table remains deterministic."
+        ],
+        entries: [
+            {rank: 1, speciesSlug: "blue-whale", primaryMetric: "Top size stat", shortReason: "Blue whale is the clearest overall body-scale leader in any biggest-animal comparison."},
+            {rank: 2, speciesSlug: "elephant", primaryMetric: "Elite land size stat", shortReason: "Elephant is the strongest land-based size answer because its mass and height dominate terrestrial comparisons."},
+            {rank: 3, speciesSlug: "giraffe", primaryMetric: "Extreme height profile", shortReason: "Giraffe ranks high because vertical scale changes how it feeds, moves, and is recognized in the field."},
+            {rank: 4, speciesSlug: "white-rhinoceros", primaryMetric: "Massive megafauna build", shortReason: "White rhinoceros combines heavy body mass with a broad, forceful terrestrial profile."},
+            {rank: 5, speciesSlug: "hippopotamus", primaryMetric: "Heavy semi-aquatic body", shortReason: "Hippopotamus earns its place because its compact frame carries enormous mass and close-range force."},
+            {rank: 6, speciesSlug: "orca", primaryMetric: "Large marine predator scale", shortReason: "Orca brings high marine size into a fast, intelligent predator body."},
+            {rank: 7, speciesSlug: "great-white-shark", primaryMetric: "Large apex fish profile", shortReason: "Great white shark ranks as one of the clearest large-bodied predatory fish in AnimalDex."},
+            {rank: 8, speciesSlug: "crocodile", primaryMetric: "Large reptile body scale", shortReason: "Crocodile adds major reptile mass and length to the biggest-animal conversation."},
+            {rank: 9, speciesSlug: "ostrich", primaryMetric: "Largest bird body plan", shortReason: "Ostrich stands out as the largest living bird and a major land-speed size outlier."},
+            {rank: 10, speciesSlug: "gorilla", primaryMetric: "Large primate build", shortReason: "Gorilla represents heavy primate size, strength, and social presence in one species profile."}
+        ],
+        breakdown: [
+            "Blue whale and elephant are the easiest headline answers, but the top 250 table is more useful for AnimalDex because it shows the broader body-scale ladder across categories.",
+            "A size stat also helps comparison pages avoid confusing different measurements. Length, height, and mass all matter, but a single canonical score makes the table scannable."
+        ],
+        faq: [
+            {
+                question: "What is the biggest animal in the world?",
+                answer: "Blue whale is the clearest biggest animal overall."
+            },
+            {
+                question: "What is the biggest land animal?",
+                answer: "Elephant is the clearest biggest land animal in this ranking."
+            }
+        ],
+        relatedRankingSlugs: ["strongest-animals", "rarest-animals", "most-dangerous-animals"],
+        systemsSpeciesSlugs: ["blue-whale", "elephant", "orca"]
+    }),
+    createRankingPage({
         slug: "smartest-animals",
         title: "Smartest Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the smartest animals in the world, balancing social intelligence, problem solving, communication, and adaptive behavior.",
         category: "intelligence",
+        statRankingKey: "intelligence",
+        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "smartest animals",
             "most intelligent animals",
@@ -267,6 +329,8 @@ const rankingPagesData: RankingPage[] = [
         title: "Most Dangerous Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the most dangerous animals in the world, balancing lethality, aggression, encounter risk, and the ability to impose fatal force.",
         category: "danger",
+        statRankingKey: "dominance",
+        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "most dangerous animals",
             "most dangerous animal in the world",
@@ -1202,6 +1266,8 @@ const rankingPagesData: RankingPage[] = [
         title: "Rarest Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the rarest animals in the world, blending scarcity, vulnerability, and conservation pressure to answer the overlap between rarest and most endangered wildlife.",
         category: "rarity",
+        statRankingKey: "rarity",
+        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "rarest animals in the world",
             "most endangered animals in the world",
@@ -1424,7 +1490,8 @@ export function getRankingPage(slug: string) {
 }
 
 export function getRankingTierListTitle(page: RankingPage) {
-    return page.title.replace(/: Top 10 Ranked$/i, ": Top 100 Tier List");
+    const tableSize = page.statRankingKey ? page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES : MIN_RANKING_TABLE_ENTRIES;
+    return page.title.replace(/: Top 10 Ranked$/i, `: Top ${tableSize} Tier List`);
 }
 
 function clampScore(value: number) {
@@ -1468,6 +1535,62 @@ function getRankingTier(score: number): RankingTier {
     }
 
     return "E";
+}
+
+function readRankingStats(entry: SpeciesEntry): SpeciesStats {
+    const databaseStats = entry.databaseSource?.canonicalGameStats;
+    const keys: RankingStatKey[] = ["dominance", "speed", "size", "intelligence", "rarity"];
+
+    if (
+        databaseStats
+        && keys.every((key) => Number.isFinite(Number(databaseStats[key])))
+    ) {
+        return keys.reduce((stats, key) => ({
+            ...stats,
+            [key]: clampScore(Number(databaseStats[key]))
+        }), {} as SpeciesStats);
+    }
+
+    return buildDeterministicCanonicalStats(entry);
+}
+
+function formatStatMetric(statKey: RankingStatKey, score: number) {
+    return `${score}/100 ${statKey.replace(/_/g, " ")} stat`;
+}
+
+function buildStatRankingReason(entry: SpeciesEntry, statKey: RankingStatKey, score: number, tier: RankingTier) {
+    return `${entry.name} ranks in the ${tier} tier for ${statKey.replace(/_/g, " ")} with an AnimalDex ${statKey.replace(/_/g, " ")} stat of ${score}/100.`;
+}
+
+function getStatRankingEntries(page: RankingPage, entries: SpeciesEntry[]): ResolvedRankingEntry[] {
+    const statKey = page.statRankingKey;
+
+    if (!statKey) {
+        return [];
+    }
+
+    return entries
+        .map((entry) => {
+            const stats = readRankingStats(entry);
+            const score = stats[statKey];
+            const tier = getRankingTier(score);
+
+            return {entry, stats, score, tier};
+        })
+        .sort((left, right) =>
+            right.score - left.score
+            || right.stats.rarity - left.stats.rarity
+            || right.stats.dominance - left.stats.dominance
+            || left.entry.name.localeCompare(right.entry.name)
+        )
+        .slice(0, Math.min(page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES, entries.length))
+        .map((item, index): ResolvedRankingEntry => ({
+            rank: index + 1,
+            speciesSlug: item.entry.slug,
+            tier: item.tier,
+            primaryMetric: formatStatMetric(statKey, item.score),
+            shortReason: buildStatRankingReason(item.entry, statKey, item.score, item.tier)
+        }));
 }
 
 function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry: SpeciesEntry) {
@@ -1535,12 +1658,16 @@ function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tie
     return `${entry.name} lands in the ${tier} tier for ${page.category.replace(/_/g, " ")} based on AnimalDex canonical profile stats, species-guide traits, and category-specific biology signals.`;
 }
 
-export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES): ResolvedRankingEntry[] {
+export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES, entries = speciesEntries): ResolvedRankingEntry[] {
+    if (page.statRankingKey) {
+        return getStatRankingEntries(page, entries);
+    }
+
     const pinnedSlugs = new Set(page.entries.map((entry) => entry.speciesSlug));
-    const targetCount = Math.min(Math.max(page.entries.length, minEntries), speciesEntries.length);
-    const scoredSpecies = speciesEntries
+    const targetCount = Math.min(Math.max(page.entries.length, minEntries), entries.length);
+    const scoredSpecies = entries
         .map((entry) => {
-            const stats = buildDeterministicCanonicalStats(entry);
+            const stats = readRankingStats(entry);
             const score = getCategoryScore(page.category, stats, entry);
 
             return {

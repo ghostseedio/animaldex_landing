@@ -296,7 +296,7 @@
     "quickAnswerTitle": "Jawaban cepat",
     "quickAnswerDescription": "Mulai dari jawaban langsung, lalu gunakan ranking, metodologi, dan konteks di bawah untuk memahami apa arti headline-nya sebenarnya.",
     "tableTitle": "Tabel tier list",
-    "tableDescription": "Setiap tabel tier list memuat minimal 100 spesies berperingkat, ikon hewan, label tier, dan tautan kembali ke halaman spesies.",
+    "tableDescription": "Tabel tier list ini memuat {count} spesies berperingkat, ikon hewan, label tier, dan tautan kembali ke halaman spesies.",
     "rankLabel": "Peringkat",
     "animalLabel": "Hewan",
     "tierLabel": "Tier",
@@ -325,6 +325,7 @@
     "categories": {
       "speed": "Speed",
       "strength": "Strength",
+      "size": "Size",
       "intelligence": "Intelligence",
       "danger": "Danger",
       "agility": "Agility",

@@ -9,8 +9,9 @@ import RankingMethodology from "@/app/[locale]/(composited)/rankings/_components
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import {getChallenge} from "@/data/challenges";
+import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {getExpandedRankingEntries, getRankingPage, getRankingTierListTitle, getRelatedRankings, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
-import {getSpeciesBySlug} from "@/data/species";
+import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -39,6 +40,15 @@ function getSchemaImageUrl(locale: string, imageSrc: string) {
     return imageSrc.startsWith("http://") || imageSrc.startsWith("https://")
         ? imageSrc
         : getAbsoluteUrl(locale, imageSrc);
+}
+
+async function getRankingSpeciesEntries() {
+    try {
+        return await getUnifiedSpeciesEntries();
+    } catch (error) {
+        console.error("Unable to load unified species catalog for ranking page. Falling back to static species entries.", error);
+        return speciesEntries;
+    }
 }
 
 export async function generateMetadata({params}: RankingPageProps): Promise<Metadata> {
@@ -77,8 +87,10 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         notFound();
     }
 
-    const resolvedEntries = getExpandedRankingEntries(ranking).map((entry) => {
-        const species = getSpeciesBySlug(entry.speciesSlug);
+    const rankingSpeciesEntries = ranking.statRankingKey ? await getRankingSpeciesEntries() : speciesEntries;
+    const rankingSpeciesBySlug = new Map(rankingSpeciesEntries.map((entry) => [entry.slug, entry]));
+    const resolvedEntries = getExpandedRankingEntries(ranking, undefined, rankingSpeciesEntries).map((entry) => {
+        const species = rankingSpeciesBySlug.get(entry.speciesSlug) ?? getSpeciesBySlug(entry.speciesSlug);
 
         if (!species) {
             return null;
@@ -211,20 +223,9 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 updatedValue={formatDate(locale, ranking.updatedAt || ranking.publishedAt)}
             />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("quickAnswerTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("quickAnswerDescription")}</p>
-                <p className="text-white text-lg md:text-xl leading-8">{ranking.quickAnswer}</p>
-                {ranking.introduction.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
-            </section>
-
             <RankingTable
                 title={t("tableTitle")}
-                description={t("tableDescription")}
+                description={t("tableDescription", {count: entries.length})}
                 labels={{
                     rank: t("rankLabel"),
                     animal: t("animalLabel"),
@@ -242,6 +243,17 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     shortReason: entry.shortReason
                 }))}
             />
+
+            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("quickAnswerTitle")}</h2>
+                <p className="text-ink-200 text-lg md:text-xl">{t("quickAnswerDescription")}</p>
+                <p className="text-white text-lg md:text-xl leading-8">{ranking.quickAnswer}</p>
+                {ranking.introduction.map((paragraph) => (
+                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
+                        {paragraph}
+                    </p>
+                ))}
+            </section>
 
             <RankingMethodology
                 title={t("methodologyTitle")}
