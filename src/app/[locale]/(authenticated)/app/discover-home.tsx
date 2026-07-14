@@ -4,7 +4,7 @@ import Link from "@/app/[locale]/_components/link";
 import {AppEmpty, AppPage, AppPrimaryLink, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
-import type {DiscoverFeaturedItem, DiscoverTimelineItem} from "@/data/discover-timeline";
+import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 
@@ -89,12 +89,14 @@ function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
 export default function DiscoverHome({
     locale,
     timeline,
+    timelineCursor,
     featured,
     collectors,
     initialSegment = "discover"
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
+    timelineCursor: DiscoverTimelineCursor | null;
     featured: DiscoverFeaturedItem[];
     collectors: DiscoverCollectorItem[];
     initialSegment?: DiscoverSegment;
@@ -102,8 +104,9 @@ export default function DiscoverHome({
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
     const [timelineItems, setTimelineItems] = useState(timeline);
+    const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [collectorItems, setCollectorItems] = useState(collectors);
-    const [hasMoreTimeline, setHasMoreTimeline] = useState(timeline.length >= DISCOVER_PAGE_SIZE);
+    const [hasMoreTimeline, setHasMoreTimeline] = useState(Boolean(timelineCursor));
     const [hasMoreCollectors, setHasMoreCollectors] = useState(collectors.length >= COLLECTOR_PAGE_SIZE);
     const [isLoadingTimeline, setIsLoadingTimeline] = useState(false);
     const [isLoadingCollectors, setIsLoadingCollectors] = useState(false);
@@ -117,8 +120,9 @@ export default function DiscoverHome({
 
     useEffect(() => {
         setTimelineItems(timeline);
-        setHasMoreTimeline(timeline.length >= DISCOVER_PAGE_SIZE);
-    }, [timeline]);
+        setNextTimelineCursor(timelineCursor);
+        setHasMoreTimeline(Boolean(timelineCursor));
+    }, [timeline, timelineCursor]);
 
     useEffect(() => {
         setCollectorItems(collectors);
@@ -163,9 +167,13 @@ export default function DiscoverHome({
         setIsLoadingTimeline(true);
         try {
             const params = new URLSearchParams({
-                offset: String(timelineItems.length),
                 limit: String(DISCOVER_PAGE_SIZE)
             });
+            if (nextTimelineCursor) {
+                params.set("cursorDate", nextTimelineCursor.date);
+                params.set("cursorRank", String(nextTimelineCursor.sortRank));
+                params.set("cursorId", nextTimelineCursor.id);
+            }
             const response = await fetch(`/api/app/discover?${params.toString()}`, {
                 headers: {Accept: "application/json"}
             });
@@ -173,7 +181,7 @@ export default function DiscoverHome({
                 setHasMoreTimeline(false);
                 return;
             }
-            const payload = await response.json() as {timeline?: DiscoverTimelineItem[]; hasMore?: boolean};
+            const payload = await response.json() as {timeline?: DiscoverTimelineItem[]; nextCursor?: DiscoverTimelineCursor | null; hasMore?: boolean};
             const nextItems = payload.timeline ?? [];
             setTimelineItems((current) => {
                 const seen = new Set(current.map((item) => item.id));
@@ -185,11 +193,12 @@ export default function DiscoverHome({
                 }
                 return merged;
             });
-            setHasMoreTimeline(Boolean(payload.hasMore) && nextItems.length > 0);
+            setNextTimelineCursor(payload.nextCursor ?? null);
+            setHasMoreTimeline(Boolean(payload.nextCursor) && nextItems.length > 0);
         } finally {
             setIsLoadingTimeline(false);
         }
-    }, [hasMoreTimeline, isLoadingTimeline, timelineItems.length]);
+    }, [hasMoreTimeline, isLoadingTimeline, nextTimelineCursor]);
 
     useEffect(() => {
         if (segment !== "discover" || !hasMoreTimeline) return undefined;
@@ -240,6 +249,11 @@ export default function DiscoverHome({
                     {timelineItems.length ? (
                         <section className="space-y-4">
                             {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
+                            {isLoadingTimeline ? (
+                                <div className="rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
+                                    Loading more posts
+                                </div>
+                            ) : null}
                             {hasMoreTimeline ? (
                                 <div ref={timelineSentinelRef} aria-hidden="true" className="h-8" />
                             ) : null}
@@ -256,6 +270,11 @@ export default function DiscoverHome({
             ) : collectorItems.length ? (
                 <section className="mx-auto max-w-3xl space-y-3">
                     {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {isLoadingCollectors ? (
+                        <div className="rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
+                            Loading more collectors
+                        </div>
+                    ) : null}
                     {hasMoreCollectors ? (
                         <div ref={collectorSentinelRef} aria-hidden="true" className="h-px" />
                     ) : null}

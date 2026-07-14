@@ -1,9 +1,8 @@
 import {NextRequest, NextResponse} from "next/server";
-import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
+import {getDiscoverTimelineBundle, type DiscoverTimelineCursor} from "@/data/discover-timeline";
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 24;
-const MAX_FETCH_WINDOW = 120;
 
 function normalizedPositiveInteger(value: string | null, fallback: number, max: number) {
     const parsed = Number.parseInt(value ?? "", 10);
@@ -11,17 +10,23 @@ function normalizedPositiveInteger(value: string | null, fallback: number, max: 
     return Math.min(parsed, max);
 }
 
+function readCursor(request: NextRequest): DiscoverTimelineCursor | null {
+    const date = request.nextUrl.searchParams.get("cursorDate");
+    const rank = Number.parseInt(request.nextUrl.searchParams.get("cursorRank") ?? "", 10);
+    const id = request.nextUrl.searchParams.get("cursorId");
+
+    if (!date || !id || !Number.isFinite(rank)) return null;
+    return {date, sortRank: rank, id};
+}
+
 export async function GET(request: NextRequest) {
     const limit = normalizedPositiveInteger(request.nextUrl.searchParams.get("limit"), DEFAULT_LIMIT, MAX_LIMIT);
-    const offset = normalizedPositiveInteger(request.nextUrl.searchParams.get("offset"), 0, MAX_FETCH_WINDOW);
-    const fetchLimit = Math.min(MAX_FETCH_WINDOW, offset + limit + 1);
-    const {timeline} = await getDiscoverTimelineBundle(fetchLimit);
-    const page = timeline.slice(offset, offset + limit);
+    const {timeline, nextCursor} = await getDiscoverTimelineBundle(limit, readCursor(request));
 
     return NextResponse.json({
-        timeline: page,
-        nextOffset: offset + page.length,
-        hasMore: timeline.length > offset + page.length
+        timeline,
+        nextCursor,
+        hasMore: Boolean(nextCursor)
     });
 }
 

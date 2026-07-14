@@ -52,6 +52,23 @@ type PublicProfileSummaryRow = {
     trades_made?: number | null;
     missions_completed?: number | null;
     collection_value_usd?: number | null;
+    score_includes_power_sets?: boolean;
+};
+
+type MaterializedProfileStatsRow = {
+    user_id: string;
+    overall_score: number | null;
+    observation_count: number | null;
+    unique_species_count: number | null;
+    indexed_species_count: number | null;
+    rare_observation_count: number | null;
+    wild_observation_count: number | null;
+    zoo_observation_count: number | null;
+    domestic_observation_count: number | null;
+    farm_observation_count: number | null;
+    collection_value_cents: number | null;
+    average_rarity?: number | null;
+    completed_trade_count?: number | null;
 };
 
 type BestForTagRow = {
@@ -245,7 +262,37 @@ async function fetchRows<T>(table: string, params: URLSearchParams) {
     }
 }
 
+function toPublicProfileSummaryFromMaterialized(row: MaterializedProfileStatsRow): PublicProfileSummaryRow {
+    const domesticCaptures = Number(row.domestic_observation_count ?? 0) + Number(row.farm_observation_count ?? 0);
+
+    return {
+        overall_score: row.overall_score,
+        capture_count: row.observation_count,
+        unique_species: row.unique_species_count,
+        indexed_species_count: row.indexed_species_count,
+        wild_captures: row.wild_observation_count,
+        zoo_captures: row.zoo_observation_count,
+        domestic_captures: domesticCaptures,
+        rare_finds: row.rare_observation_count,
+        average_rarity: row.average_rarity,
+        most_common_animal_name: null,
+        best_find_id: null,
+        trades_made: row.completed_trade_count,
+        missions_completed: 0,
+        collection_value_usd: row.collection_value_cents != null ? Number(row.collection_value_cents) / 100 : null,
+        score_includes_power_sets: true
+    };
+}
+
 async function fetchPublicProfileSummary(userId: string) {
+    const materializedParams = new URLSearchParams({
+        select: "user_id,overall_score,observation_count,unique_species_count,indexed_species_count,rare_observation_count,wild_observation_count,zoo_observation_count,domestic_observation_count,farm_observation_count,collection_value_cents,average_rarity,completed_trade_count",
+        user_id: `eq.${userId}`,
+        limit: "1"
+    });
+    const [materialized] = await fetchRows<MaterializedProfileStatsRow>("user_profile_stats_v1", materializedParams);
+    if (materialized) return toPublicProfileSummaryFromMaterialized(materialized);
+
     const latestParams = new URLSearchParams({
         select: "overall_score,capture_count,unique_species,indexed_species_count,wild_captures,zoo_captures,domestic_captures,rare_finds,average_rarity,most_common_animal_name,best_find_id,trades_made,missions_completed,collection_value_usd",
         user_id: `eq.${userId}`,
@@ -565,6 +612,9 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         }))
     );
     const baseCollectorScore = Number(summary?.overall_score ?? allCaptures.reduce((total, capture) => total + capture.score, 0));
+    const collectorScore = summary?.score_includes_power_sets
+        ? baseCollectorScore
+        : resolvePublicOverallScore(baseCollectorScore, powerSetRows);
 
     return {
         userId: profile.id,
@@ -580,7 +630,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         indexedSpeciesCount,
         catalogSpeciesCount: speciesEntries.length,
         unindexedCount,
-        collectorScore: resolvePublicOverallScore(baseCollectorScore, powerSetRows),
+        collectorScore,
         wildCount: settingCounts.wild,
         zooCount: settingCounts.zoo,
         domesticCount: settingCounts.domestic,

@@ -2,7 +2,6 @@ import "server-only";
 
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getSpeciesBySlug} from "@/data/species";
-import {getSpeciesImageRoute} from "@/data/species-images";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
@@ -18,6 +17,16 @@ export type DiscoverCollectorRef = {
     username: string | null;
     avatarUrl: string | null;
     href: string | null;
+};
+
+export type DiscoverMediaAsset = {
+    id: string;
+    kind: "photo" | "loop" | "video";
+    url: string;
+    posterUrl: string | null;
+    mimeType: string | null;
+    durationMs: number | null;
+    sortOrder: number;
 };
 
 export type DiscoverCaptureItem = {
@@ -48,6 +57,7 @@ export type DiscoverCaptureItem = {
     typeTags: string[];
     collector: DiscoverCollectorRef;
     imageSrc: string;
+    mediaAssets: DiscoverMediaAsset[];
     href: string;
     scientificName: string | null;
     breedGuess: string | null;
@@ -167,6 +177,12 @@ export type DiscoverFeaturedItem = {
     rarity: number;
 };
 
+export type DiscoverTimelineCursor = {
+    date: string;
+    sortRank: number;
+    id: string;
+};
+
 const PLACEHOLDER_IMAGE = "/images/placeholders/species-no-image.svg";
 const DUPLICATE_CAPTURE_WINDOW_MS = 120_000;
 
@@ -268,7 +284,6 @@ function collectorFromRow(row: QueryRow, prefix = "profile"): DiscoverCollectorR
 
 function resolveImageSrc(
     captureId: string,
-    slug: string | null,
     image?: {
         bucket?: string | null;
         path?: string | null;
@@ -276,11 +291,6 @@ function resolveImageSrc(
         mediaKind?: string | null;
     }
 ) {
-    if (slug) {
-        const species = getSpeciesBySlug(slug);
-        if (species) return getSpeciesImageRoute(species.slug, captureId);
-    }
-
     if (captureId) {
         const params = new URLSearchParams();
         if (image?.bucket) params.set("bucket", image.bucket);
@@ -292,6 +302,16 @@ function resolveImageSrc(
     }
 
     return PLACEHOLDER_IMAGE;
+}
+
+function getCaptureMediaRoute(captureId: string, asset: Pick<DiscoverMediaAsset, "kind" | "mimeType"> & {bucket?: string | null; path?: string | null}) {
+    const params = new URLSearchParams();
+    if (asset.bucket) params.set("bucket", asset.bucket);
+    if (asset.path) params.set("path", asset.path);
+    if (asset.mimeType) params.set("mime", asset.mimeType);
+    params.set("kind", asset.kind);
+    const query = params.toString();
+    return `/api/capture-media/${encodeURIComponent(captureId)}${query ? `?${query}` : ""}`;
 }
 
 function resolveHref(slug: string | null, identityKey: string | null = null) {
@@ -326,23 +346,136 @@ function mediaKind(value: unknown) {
     return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+function normalizedMediaKind(value: unknown): DiscoverMediaAsset["kind"] {
+    const kind = mediaKind(value);
+    return kind === "video" || kind === "loop" ? kind : "photo";
+}
+
 function mediaAssets(row: QueryRow) {
     return readObjectArray(row, "media_assets");
 }
 
+function mediaPriority(kind: DiscoverMediaAsset["kind"]) {
+    if (kind === "video") return 0;
+    if (kind === "loop") return 1;
+    return 2;
+}
+
+function mediaField(row: QueryRow, snakeKey: string, camelKey: string) {
+    return row[snakeKey] ?? row[camelKey];
+}
+
+function rawMediaAssetRows(row: QueryRow): QueryRow[] {
+    const assets = mediaAssets(row);
+    if (assets.length) return assets;
+
+    const bucket = readString(row, "image_bucket");
+    const path = readString(row, "image_path");
+    if (!bucket || !path) return [];
+
+    return [{
+        id: readString(row, "capture_id") ?? `${bucket}:${path}`,
+        storage_bucket: bucket,
+        storage_path: path,
+        mime_type: readString(row, "image_mime_type"),
+        media_kind: readString(row, "image_media_kind") ?? "photo",
+        duration_ms: readNullableNumber(row, "image_duration_ms"),
+        sort_order: 0,
+        created_at: readString(row, "capture_created_at")
+    }];
+}
+
+function mediaAssetKey(row: QueryRow) {
+    const id = mediaField(row, "id", "id");
+    if (typeof id === "string" && id.trim()) return id.trim();
+    const bucket = mediaField(row, "storage_bucket", "bucket");
+    const path = mediaField(row, "storage_path", "path");
+    return `${typeof bucket === "string" ? bucket : ""}:${typeof path === "string" ? path : ""}`;
+}
+
+function sortMediaAssetRows(rows: QueryRow[]) {
+    return [...rows].sort((left, right) => {
+        const leftKind = normalizedMediaKind(mediaField(left, "media_kind", "mediaKind"));
+        const rightKind = normalizedMediaKind(mediaField(right, "media_kind", "mediaKind"));
+        const priorityDelta = mediaPriority(leftKind) - mediaPriority(rightKind);
+        if (priorityDelta !== 0) return priorityDelta;
+
+        const sortDelta = Number(mediaField(left, "sort_order", "sortOrder") ?? 0) - Number(mediaField(right, "sort_order", "sortOrder") ?? 0);
+        if (sortDelta !== 0) return sortDelta;
+
+        const leftCreated = parseDate(typeof mediaField(left, "created_at", "createdAt") === "string" ? mediaField(left, "created_at", "createdAt") as string : null);
+        const rightCreated = parseDate(typeof mediaField(right, "created_at", "createdAt") === "string" ? mediaField(right, "created_at", "createdAt") as string : null);
+        if (leftCreated !== rightCreated) return leftCreated - rightCreated;
+
+        return mediaAssetKey(left).localeCompare(mediaAssetKey(right));
+    });
+}
+
+function toMediaAsset(captureId: string, row: QueryRow, analysisPhoto: QueryRow | null): DiscoverMediaAsset | null {
+    const bucket = mediaField(row, "storage_bucket", "bucket");
+    const path = mediaField(row, "storage_path", "path");
+    if (typeof bucket !== "string" || !bucket.trim() || typeof path !== "string" || !path.trim()) return null;
+
+    const kind = normalizedMediaKind(mediaField(row, "media_kind", "mediaKind"));
+    const mimeType = typeof mediaField(row, "mime_type", "mimeType") === "string"
+        ? mediaField(row, "mime_type", "mimeType") as string
+        : null;
+    const duration = Number(mediaField(row, "duration_ms", "durationMs") ?? 0);
+    const sortOrder = Number(mediaField(row, "sort_order", "sortOrder") ?? 0);
+    const posterBucket = mediaField(row, "poster_storage_bucket", "posterBucket");
+    const posterPath = mediaField(row, "poster_storage_path", "posterPath");
+    const fallbackPosterBucket = analysisPhoto ? mediaField(analysisPhoto, "storage_bucket", "bucket") : null;
+    const fallbackPosterPath = analysisPhoto ? mediaField(analysisPhoto, "storage_path", "path") : null;
+    const resolvedPosterBucket = kind === "photo" ? null : typeof posterBucket === "string" && posterBucket.trim() ? posterBucket : fallbackPosterBucket;
+    const resolvedPosterPath = kind === "photo" ? null : typeof posterPath === "string" && posterPath.trim() ? posterPath : fallbackPosterPath;
+
+    return {
+        id: mediaAssetKey(row),
+        kind,
+        url: kind === "photo"
+            ? resolveImageSrc(captureId, {bucket, path, mimeType, mediaKind: kind})
+            : getCaptureMediaRoute(captureId, {bucket, path, mimeType, kind}),
+        posterUrl: typeof resolvedPosterBucket === "string" && typeof resolvedPosterPath === "string"
+            ? resolveImageSrc(captureId, {bucket: resolvedPosterBucket, path: resolvedPosterPath, mimeType: "image/jpeg", mediaKind: "photo"})
+            : null,
+        mimeType,
+        durationMs: Number.isFinite(duration) && duration > 0 ? duration : null,
+        sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0
+    };
+}
+
+function discoverMediaAssets(row: QueryRow, captureId: string): DiscoverMediaAsset[] {
+    const rows = sortMediaAssetRows(rawMediaAssetRows(row));
+    const analysisPhoto = rows.find((asset) => {
+        const kind = normalizedMediaKind(mediaField(asset, "media_kind", "mediaKind"));
+        const sortOrder = Number(mediaField(asset, "sort_order", "sortOrder") ?? 0);
+        return kind === "photo" && sortOrder === 0;
+    }) ?? rows.find((asset) => normalizedMediaKind(mediaField(asset, "media_kind", "mediaKind")) === "photo") ?? null;
+
+    const mapped = rows
+        .map((asset) => toMediaAsset(captureId, asset, analysisPhoto))
+        .filter((asset): asset is DiscoverMediaAsset => Boolean(asset));
+
+    return mapped.length ? mapped : [{
+        id: `${captureId}:fallback`,
+        kind: "photo",
+        url: resolveImageSrc(captureId),
+        posterUrl: null,
+        mimeType: null,
+        durationMs: null,
+        sortOrder: 0
+    }];
+}
+
 function hasVideoMedia(row: QueryRow) {
-    const primaryKind = mediaKind(row.image_media_kind);
-    return primaryKind === "loop" || primaryKind === "video" || mediaAssets(row).some((asset) => {
-        const ref = asset.reference && typeof asset.reference === "object" && !Array.isArray(asset.reference)
-            ? asset.reference as QueryRow
-            : asset;
-        const kind = mediaKind(ref.media_kind ?? ref.mediaKind);
+    return rawMediaAssetRows(row).some((asset) => {
+        const kind = normalizedMediaKind(mediaField(asset, "media_kind", "mediaKind"));
         return kind === "loop" || kind === "video";
     });
 }
 
 function mediaCount(row: QueryRow) {
-    const assets = mediaAssets(row);
+    const assets = rawMediaAssetRows(row);
     return Math.max(1, assets.length);
 }
 
@@ -440,7 +573,7 @@ function mapChallengeParticipant(
         displayName,
         username,
         avatarUrl,
-        imageSrc: resolveImageSrc(captureId, null, {
+        imageSrc: resolveImageSrc(captureId, {
             bucket: readString(row, `${side}_image_bucket`),
             path: readString(row, `${side}_image_path`),
             mimeType: readString(row, `${side}_image_mime_type`),
@@ -558,6 +691,7 @@ function mapCaptureRow(
     const collector = collectorFromRow(row);
     const refreshedMedia = isMediaRefreshActivity(row);
     const learnedPrincipleName = primaryLearnedPrincipleName(row);
+    const media = discoverMediaAssets(row, captureId);
     const headline = resolveCaptureHeadlineDisplay({
         animalName: readString(row, "animal_name"),
         scientificName: readString(row, "scientific_name"),
@@ -604,7 +738,8 @@ function mapCaptureRow(
         confidence: readNullableNumber(row, "confidence"),
         typeTags: readStringArray(row, "type_tags").map((tag) => formatLabel(tag) ?? tag).slice(0, 5),
         collector,
-        imageSrc: resolveImageSrc(captureId, canonicalSlug),
+        imageSrc: media[0]?.posterUrl ?? media[0]?.url ?? resolveImageSrc(captureId),
+        mediaAssets: media,
         href: resolveHref(slug, identityKey),
         scientificName: readString(row, "scientific_name"),
         breedGuess: readString(row, "breed_guess"),
@@ -614,7 +749,7 @@ function mapCaptureRow(
         recentProgressionSource: formatLabel(readString(row, "recent_progression_source")),
         animalDexNumber: resolveAnimalDexNumber(row, slug, species, animalDexNumbers),
         mediaCount: mediaCount(row),
-        hasVideoMedia: hasVideoMedia(row),
+        hasVideoMedia: media.some((asset) => asset.kind === "loop" || asset.kind === "video"),
         isMediaRefreshActivity: refreshedMedia,
         isChallengeReady: readBoolean(row, "is_challenge_ready"),
         isChallengeAvailable: readBoolean(row, "challenge_available"),
@@ -647,7 +782,7 @@ function mapAlignmentRow(row: QueryRow): DiscoverAlignmentItem {
         rewardedCaptureId,
         rewardedAnimalName: readString(row, "rewarded_animal_name") ?? "Animal",
         collector: collectorFromRow(row),
-        imageSrc: resolveImageSrc(rewardedCaptureId, slug),
+        imageSrc: resolveImageSrc(rewardedCaptureId),
         href: resolveHref(slug, identityKey)
     };
 }
@@ -670,8 +805,8 @@ function mapFusionRow(row: QueryRow): DiscoverFusionItem {
         learnedPrinciple: readString(row, "learned_sub_principle_name"),
         learnedExpression: readString(row, "learned_sub_principle_expression"),
         collector: collectorFromRow(row),
-        receiverImageSrc: resolveImageSrc(receiverCaptureId, null),
-        donorImageSrc: donorCaptureId ? resolveImageSrc(donorCaptureId, null) : null,
+        receiverImageSrc: resolveImageSrc(receiverCaptureId),
+        donorImageSrc: donorCaptureId ? resolveImageSrc(donorCaptureId) : null,
         href: resolveHref(null)
     };
 }
@@ -743,7 +878,7 @@ function mapTradeRow(row: QueryRow): DiscoverTradeItem {
             name: readString(row, "offerer_profile_display_name") ?? (offererUsername ? `@${offererUsername}` : "Collector"),
             username: offererUsername,
             animalName: readString(row, "offerer_animal_name") ?? "Animal",
-            imageSrc: resolveImageSrc(offererCaptureId, null, {
+            imageSrc: resolveImageSrc(offererCaptureId, {
                 bucket: readString(row, "offerer_image_bucket"),
                 path: readString(row, "offerer_image_path"),
                 mimeType: readString(row, "offerer_image_mime_type"),
@@ -756,7 +891,7 @@ function mapTradeRow(row: QueryRow): DiscoverTradeItem {
             name: readString(row, "receiver_profile_display_name") ?? (receiverUsername ? `@${receiverUsername}` : "Collector"),
             username: receiverUsername,
             animalName: readString(row, "receiver_animal_name") ?? "Animal",
-            imageSrc: resolveImageSrc(receiverCaptureId, null, {
+            imageSrc: resolveImageSrc(receiverCaptureId, {
                 bucket: readString(row, "receiver_image_bucket"),
                 path: readString(row, "receiver_image_path"),
                 mimeType: readString(row, "receiver_image_mime_type"),
@@ -819,10 +954,25 @@ export function buildDiscoverTimeline(
         .sort((left, right) => {
             const leftDate = parseDate(left.date);
             const rightDate = parseDate(right.date);
-            if (leftDate === rightDate) return left.sortRank - right.sortRank;
+            if (leftDate === rightDate) {
+                if (left.sortRank !== right.sortRank) return left.sortRank - right.sortRank;
+                return left.id.localeCompare(right.id);
+            }
             return rightDate - leftDate;
         })
         .slice(0, limit);
+}
+
+function timelineCursorForItem(item: DiscoverTimelineItem): DiscoverTimelineCursor {
+    return {date: item.date, sortRank: item.sortRank, id: item.id};
+}
+
+function itemIsAfterTimelineCursor(item: DiscoverTimelineItem, cursor: DiscoverTimelineCursor) {
+    const itemDate = parseDate(item.date);
+    const cursorDate = parseDate(cursor.date);
+    if (itemDate !== cursorDate) return itemDate < cursorDate;
+    if (item.sortRank !== cursor.sortRank) return item.sortRank > cursor.sortRank;
+    return item.id.localeCompare(cursor.id) > 0;
 }
 
 export function buildDiscoverFeatured(captures: DiscoverCaptureItem[]): DiscoverFeaturedItem[] {
@@ -965,6 +1115,13 @@ const richFeedSelect = [
     "game_stats",
     "species_profile_id",
     "normalized_identity_key",
+    "refined_identity",
+    "refined_identity_kind",
+    "refined_scientific_name",
+    "identity_kind",
+    "identity_resolution_mode",
+    "identity_explanation",
+    "identity_evidence_guidance",
     "observed_market_modifiers",
     "price_estimate",
     "premium_details",
@@ -999,15 +1156,58 @@ const compatibilityFeedSelect = [
     "size_endorsements",
     "intelligence_endorsements",
     "rarity_endorsements",
+    "endorsement_count",
+    "viewer_endorsement_stat",
     "game_stats",
+    "type_tags",
+    "confidence",
+    "life_stage",
+    "gender_guess",
+    "gender_confidence",
+    "breed_confidence",
+    "premium_details",
+    "place_or_habitat_label",
+    "species_profile_id",
     "total_progression_xp",
+    "recent_progression_source",
     "media_assets"
 ].join(",");
 
-async function fetchDiscoverFeedRows(limit: number) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return [] as QueryRow[];
+async function hydrateDiscoverFeedMediaRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, rows: QueryRow[]) {
+    const captureIdsNeedingMedia = rows
+        .filter((row) => mediaAssets(row).length <= 1)
+        .map((row) => readString(row, "capture_id"))
+        .filter((id): id is string => Boolean(id));
 
+    if (!captureIdsNeedingMedia.length) return rows;
+
+    const {data, error} = await supabase
+        .from("capture_images")
+        .select("capture_id,id,storage_bucket,storage_path,mime_type,media_kind,duration_ms,sort_order,created_at,poster_storage_bucket,poster_storage_path")
+        .in("capture_id", Array.from(new Set(captureIdsNeedingMedia)));
+
+    if (error || !data?.length) return rows;
+
+    const mediaByCapture = new Map<string, QueryRow[]>();
+    for (const mediaRow of data as unknown as QueryRow[]) {
+        const captureId = readString(mediaRow, "capture_id");
+        if (!captureId) continue;
+        const list = mediaByCapture.get(captureId) ?? [];
+        list.push(mediaRow);
+        mediaByCapture.set(captureId, list);
+    }
+
+    if (!mediaByCapture.size) return rows;
+
+    return rows.map((row) => {
+        const captureId = readString(row, "capture_id");
+        const hydrated = captureId ? mediaByCapture.get(captureId) : null;
+        if (!hydrated || hydrated.length <= rawMediaAssetRows(row).length) return row;
+        return {...row, media_assets: sortMediaAssetRows(hydrated)};
+    });
+}
+
+async function fetchDiscoverFeedRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, limit: number) {
     const requestedLimit = Math.max(limit, 24);
     const richResult = await supabase
         .from("discover_feed_v1")
@@ -1016,7 +1216,7 @@ async function fetchDiscoverFeedRows(limit: number) {
         .limit(requestedLimit);
 
     if (!richResult.error) {
-        return (richResult.data ?? []) as unknown as QueryRow[];
+        return hydrateDiscoverFeedMediaRows(supabase, (richResult.data ?? []) as unknown as QueryRow[]);
     }
 
     const fallbackResult = await supabase
@@ -1025,16 +1225,17 @@ async function fetchDiscoverFeedRows(limit: number) {
         .order("feed_activity_at", {ascending: false})
         .limit(requestedLimit);
 
-    return (fallbackResult.data ?? []) as unknown as QueryRow[];
+    return hydrateDiscoverFeedMediaRows(supabase, (fallbackResult.data ?? []) as unknown as QueryRow[]);
 }
 
-export async function getDiscoverTimelineBundle(limit = 60) {
+export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTimelineCursor | null = null) {
     const supabase = createSupabaseServerClient();
     if (!supabase) {
-        return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[]};
+        return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[], nextCursor: null as DiscoverTimelineCursor | null};
     }
 
-    const activityLimit = Math.max(8, Math.min(16, Math.ceil(limit / 2)));
+    const candidateLimit = cursor ? Math.max(120, limit * 8) : Math.max(limit + 1, 24);
+    const activityLimit = Math.max(12, Math.min(48, Math.ceil(candidateLimit / 2)));
 
     const [
         feedRows,
@@ -1045,7 +1246,7 @@ export async function getDiscoverTimelineBundle(limit = 60) {
         animalDexNumbers,
         behaviorPrinciples
     ] = await Promise.all([
-        fetchDiscoverFeedRows(limit),
+        fetchDiscoverFeedRows(supabase, candidateLimit),
         supabase.from("discover_alignment_timeline_v1").select("*").order("completed_at", {ascending: false}).limit(activityLimit),
         supabase.from("discover_principle_fusion_timeline_v1").select("*").order("created_at", {ascending: false}).limit(activityLimit),
         supabase.from("discover_challenge_history_v1").select(discoverChallengeSelect).order("created_at", {ascending: false}).limit(activityLimit),
@@ -1059,10 +1260,16 @@ export async function getDiscoverTimelineBundle(limit = 60) {
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
     const challenges = ((challengeResult.data ?? []) as unknown as QueryRow[]).map(mapChallengeRow);
     const trades = ((tradeResult.data ?? []) as unknown as QueryRow[]).map(mapTradeRow);
+    const timeline = buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, candidateLimit);
+    const filteredTimeline = cursor ? timeline.filter((item) => itemIsAfterTimelineCursor(item, cursor)) : timeline;
+    const page = filteredTimeline.slice(0, limit);
 
     return {
-        timeline: buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, limit),
-        featured: buildDiscoverFeatured(captures)
+        timeline: page,
+        featured: buildDiscoverFeatured(captures),
+        nextCursor: filteredTimeline.length > limit && page.length
+            ? timelineCursorForItem(page[page.length - 1])
+            : null
     };
 }
 

@@ -9,6 +9,7 @@ import type {
   DiscoverChallengeItem,
   DiscoverCollectorRef,
   DiscoverFusionItem,
+  DiscoverMediaAsset,
   DiscoverTimelineItem,
   DiscoverTradeItem,
 } from "@/data/discover-timeline";
@@ -104,6 +105,67 @@ function InfoIcon() {
   );
 }
 
+function MediaCarousel({
+  assets,
+  animalName,
+}: {
+  assets: DiscoverMediaAsset[];
+  animalName: string;
+}) {
+  const media = assets.length ? assets : [];
+  if (!media.length) return null;
+
+  return (
+    <div className="relative bg-white/5">
+      <div className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {media.map((asset, index) => (
+          <div key={asset.id} className="relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden">
+            {asset.kind === "video" || asset.kind === "loop" ? (
+              <video
+                src={asset.url}
+                poster={asset.posterUrl ?? undefined}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                controls
+                className="h-full w-full bg-black object-cover"
+              />
+            ) : (
+              <img
+                src={asset.url}
+                alt={animalName}
+                loading={index === 0 ? "eager" : "lazy"}
+                className="h-full w-full object-cover"
+              />
+            )}
+            {(asset.kind === "video" || asset.kind === "loop") ? (
+              <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
+                Video
+              </span>
+            ) : null}
+            {media.length > 1 ? (
+              <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
+                {index + 1} / {media.length}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {media.length > 1 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+          {media.map((asset, index) => (
+            <span
+              key={`${asset.id}-dot`}
+              className={`h-1.5 rounded-full ${index === 0 ? "w-4 bg-white/80" : "w-1.5 bg-white/35"}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TimelineShell({
   badge,
   date,
@@ -172,22 +234,7 @@ function CaptureCard({
       {item.activityLine ? (
         <p className="px-4 pb-4 text-sm leading-6 text-white/55">{item.activityLine}</p>
       ) : null}
-      <Link href={item.href} className="group block">
-        <div className="relative aspect-[16/10] overflow-hidden bg-white/5">
-          <img
-            src={item.imageSrc}
-            alt={item.animalName}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
-          {item.mediaCount > 1 ? (
-            <div className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
-              1 / {item.mediaCount}
-            </div>
-          ) : null}
-        </div>
-      </Link>
+      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} />
       <div className="space-y-3 p-4">
         <h3 className="font-display text-2xl font-bold text-white">
           <Link href={item.href}>{item.animalName}</Link>
@@ -548,7 +595,7 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-[#38fa47]/10 px-2.5 py-1 text-[11px] font-black text-[#38fa47]">{item.animalDexNumber ? `#${String(item.animalDexNumber).padStart(3, "0")}` : "CAPTURE"}</span><span className="text-xs font-semibold text-white/35">{date}</span></div>
             <div className="flex items-center gap-3">{item.collector.avatarUrl ? <img src={item.collector.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover"/> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">{item.collector.name.slice(0,1)}</span>}<div><p className="text-sm font-semibold text-white">{item.collector.name}</p>{item.collector.username ? <p className="text-xs text-white/40">@{item.collector.username}</p> : null}</div></div>
-            <img src={item.imageSrc} alt={item.animalName} className="aspect-[16/10] w-full rounded-[20px] object-cover"/>
+            <div className="overflow-hidden rounded-[20px]"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} /></div>
             <div><h3 className="text-2xl font-black text-white">{item.animalName}</h3>{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
             <div className="flex flex-wrap gap-2 text-[11px] font-bold">{item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}{item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}<FeedPill tone="green">Lvl {item.level}</FeedPill><FeedPill tone="violet">Rarity {item.rarity}</FeedPill>{item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}</div>
             {item.mediaCount > 1 ? <div className="rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4"><p className="text-[11px] font-semibold text-white/40">Media</p><p className="mt-2 text-sm text-white/60">{item.mediaCount} media items attached to this capture{item.hasVideoMedia ? ", including video/loop media." : "."}</p></div> : null}

@@ -12,11 +12,11 @@ export default async function AppHomePage({
     searchParams?: {view?: string};
     params: {locale: string};
 }) {
-    const [{timeline, featured}, collectors] = await Promise.all([
+    const [{timeline, featured, nextCursor}, collectors] = await Promise.all([
         getDiscoverTimelineBundle(INITIAL_DISCOVER_TIMELINE_LIMIT),
         getDiscoverCollectors(INITIAL_COLLECTOR_LIMIT)
     ]);
     const initialSegment = searchParams?.view === "collectors" ? "collectors" : "discover";
 
-    return <DiscoverHome locale={params.locale} timeline={timeline} featured={featured} collectors={collectors} initialSegment={initialSegment}/>;
+    return <DiscoverHome locale={params.locale} timeline={timeline} timelineCursor={nextCursor} featured={featured} collectors={collectors} initialSegment={initialSegment}/>;
 }
