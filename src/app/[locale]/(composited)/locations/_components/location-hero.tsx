@@ -13,10 +13,12 @@ type LocationHeroProps = {
     };
     nameLabel: string;
     nameValue: string;
-    publishedLabel: string;
-    publishedValue: string;
     updatedLabel: string;
     updatedValue: string;
+    animalCountLabel: string;
+    animalCountValue: string;
+    placeTypeLabel: string;
+    placeTypeValue: string;
 };
 
 export default function LocationHero({
@@ -26,44 +28,58 @@ export default function LocationHero({
     featuredImage,
     nameLabel,
     nameValue,
-    publishedLabel,
-    publishedValue,
     updatedLabel,
-    updatedValue
+    updatedValue,
+    animalCountLabel,
+    animalCountValue,
+    placeTypeLabel,
+    placeTypeValue
 }: LocationHeroProps) {
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-            <div className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60">
+        <section className="grid min-w-0 gap-6 border-b border-line-300 pb-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(26rem,0.75fr)] lg:items-start">
+            <div className="min-w-0">
+                <span className="inline-flex w-fit rounded-md border border-primary-500/30 bg-primary-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">
+                    {regionTypeLabel}
+                </span>
+                <h1 className="mt-5 max-w-4xl break-words font-display text-3xl font-bold leading-[1.05] text-white md:text-5xl lg:text-6xl">
+                    {title}
+                </h1>
+                <p className="mt-5 max-w-3xl text-base leading-8 text-ink-200 md:text-lg">{description}</p>
+                <div className="mt-6 grid gap-3 text-sm text-ink-300 sm:grid-cols-2">
+                    <div className="rounded-md border border-line-400 bg-surface-900/55 p-3">
+                        <span className="block text-ink-400">{nameLabel}</span>
+                        <span className="mt-1 block font-semibold text-white">{nameValue}</span>
+                    </div>
+                    <div className="rounded-md border border-line-400 bg-surface-900/55 p-3">
+                        <span className="block text-ink-400">{placeTypeLabel}</span>
+                        <span className="mt-1 block font-semibold text-white">{placeTypeValue}</span>
+                    </div>
+                    <div className="rounded-md border border-line-400 bg-surface-900/55 p-3">
+                        <span className="block text-ink-400">{animalCountLabel}</span>
+                        <span className="mt-1 block font-semibold text-white">{animalCountValue}</span>
+                    </div>
+                    <div className="rounded-md border border-line-400 bg-surface-900/55 p-3">
+                        <span className="block text-ink-400">{updatedLabel}</span>
+                        <span className="mt-1 block font-semibold text-white">{updatedValue}</span>
+                    </div>
+                </div>
+            </div>
+            <figure className="overflow-hidden rounded-lg border border-line-300 bg-surface-900/75">
                 <Image
                     src={featuredImage.src}
                     alt={featuredImage.alt}
                     width={featuredImage.width}
                     height={featuredImage.height}
-                    sizes="(min-width: 1024px) 72rem, 100vw"
-                    className="h-auto w-full object-cover"
+                    sizes="(min-width: 1024px) 36rem, 100vw"
+                    priority
+                    className="aspect-[4/3] w-full object-cover"
                 />
-            </div>
-            <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs uppercase tracking-[0.22em] font-semibold">
-                    {regionTypeLabel}
-                </span>
-            </div>
-            <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{title}</h1>
-            <p className="text-ink-200 text-lg md:text-xl leading-8">{description}</p>
-            <div className="text-ink-300 text-sm md:text-base flex flex-wrap gap-x-6 gap-y-3">
-                <span>
-                    <span className="text-white">{nameLabel}: </span>
-                    {nameValue}
-                </span>
-                <span>
-                    <span className="text-white">{publishedLabel}: </span>
-                    {publishedValue}
-                </span>
-                <span>
-                    <span className="text-white">{updatedLabel}: </span>
-                    {updatedValue}
-                </span>
-            </div>
+                {featuredImage.caption ? (
+                    <figcaption className="border-t border-line-400 px-4 py-3 text-xs leading-5 text-ink-400">
+                        {featuredImage.caption}
+                    </figcaption>
+                ) : null}
+            </figure>
         </section>
     );
 }

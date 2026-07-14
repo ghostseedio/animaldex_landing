@@ -4,6 +4,7 @@ import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 type SpeciesArtworkImageProps = {
     slug: string;
     alt: string;
+    src?: string;
     imageFile?: string | null;
     priority?: boolean;
     className?: string;
@@ -13,6 +14,7 @@ type SpeciesArtworkImageProps = {
 export default function SpeciesArtworkImage({
     slug,
     alt,
+    src,
     imageFile,
     priority = false,
     className = "",
@@ -21,7 +23,7 @@ export default function SpeciesArtworkImage({
     return (
         <div className={`relative overflow-hidden bg-surface-800/60 ${className}`}>
             <Image
-                src={getSpeciesArtworkUrl(slug, imageFile)}
+                src={src ?? getSpeciesArtworkUrl(slug, imageFile)}
                 alt={alt}
                 fill
                 unoptimized

@@ -51,6 +51,7 @@ export async function generateMetadata({params}: AnimalSymbolismPageProps): Prom
 
 export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageProps) {
     const t = await getScopedTranslator(params.locale, "animalSymbolism");
+    const featuredSymbolismPosts = symbolismPosts.slice(0, 3);
     const schema = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
@@ -69,26 +70,67 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
     };
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([schema])}} />
-            <div className="flex flex-col gap-4 text-center items-center">
-                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("eyebrow")}</p>
-                <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{t("title")}</h1>
-                <p className="text-lg md:text-xl text-ink-200 max-w-4xl">{t("description")}</p>
-            </div>
 
-            <section className="rounded-4xl border border-primary-500/30 bg-primary-500/10 p-6 md:p-8 flex flex-col gap-6">
-                <div className="flex flex-col gap-3">
-                    <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("guidesEyebrow")}</p>
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("guidesTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("guidesDescription")}</p>
+            <header className="grid gap-8 overflow-hidden rounded-lg border border-line-300 bg-gradient-to-br from-primary-500/14 via-surface-900 to-canvas-900 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.72fr)]">
+                <div className="p-6 md:p-10 lg:p-12">
+                    <Link href="/" className="mb-6 inline-flex text-sm text-primary-200 transition-colors hover:text-primary-100" underline>
+                        {t("eyebrow")}
+                    </Link>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{t("guidesEyebrow")}</p>
+                    <h1 className="mt-4 max-w-4xl font-display text-4xl font-bold leading-[1.05] text-white md:text-6xl">{t("title")}</h1>
+                    <p className="mt-5 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("description")}</p>
+                    <div className="mt-8 grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
+                        <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
+                            <strong className="block text-2xl text-white">{symbolismPosts.length}</strong>
+                            <span>Symbol guides</span>
+                        </div>
+                        <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
+                            <strong className="block text-2xl text-white">Bio</strong>
+                            <span>Behavior context</span>
+                        </div>
+                        <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
+                            <strong className="block text-2xl text-white">SEO</strong>
+                            <span>Meaning paths</span>
+                        </div>
+                    </div>
+                </div>
+                {featuredSymbolismPosts.length > 0 ? (
+                    <div className="grid min-h-[24rem] gap-3 border-t border-line-300 bg-canvas-950/35 p-4 lg:border-l lg:border-t-0">
+                        {featuredSymbolismPosts.map((post, index) => (
+                            <Link key={post.slug} href={`/blog/${post.slug}`} className={`group relative overflow-hidden rounded-md border border-white/10 bg-surface-800 ${index === 0 ? "min-h-[13rem]" : "min-h-[9rem]"}`}>
+                                <Image
+                                    src={post.featuredImage.src}
+                                    alt={post.featuredImage.alt}
+                                    fill
+                                    sizes="(min-width: 1024px) 32rem, 100vw"
+                                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                                    priority={index === 0}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                <div className="absolute inset-x-0 bottom-0 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{post.tags[0] || t("guidesEyebrow")}</p>
+                                    <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-white md:text-xl">{post.title}</h2>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : null}
+            </header>
+
+            <section className="border-t border-line-300 pt-8">
+                <div className="mb-6 max-w-5xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{t("guidesEyebrow")}</p>
+                    <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("guidesTitle")}</h2>
+                    <p className="mt-3 text-lg leading-8 text-ink-200 md:text-xl">{t("guidesDescription")}</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {symbolismPosts.map((post) => (
                         <article
                             key={post.slug}
-                            className="overflow-hidden rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur flex flex-col"
+                            className="group flex flex-col overflow-hidden rounded-lg border border-line-300 bg-surface-900/75 transition-colors hover:border-primary-400/50"
                         >
                             <Link href={`/blog/${post.slug}`} className="block border-b border-line-300 bg-surface-800/60">
                                 <Image
@@ -97,20 +139,20 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                                     width={post.featuredImage.width}
                                     height={post.featuredImage.height}
                                     sizes="(min-width: 1024px) 30vw, 100vw"
-                                    className="aspect-[16/10] h-auto w-full object-cover"
+                                    className="aspect-[16/10] h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                                 />
                             </Link>
-                            <div className="p-5 flex flex-col gap-3 flex-1">
-                                <h3 className="font-display font-bold text-2xl text-white">{post.title}</h3>
-                                <p className="text-ink-200 text-base leading-7">{post.description}</p>
+                            <div className="flex flex-1 flex-col gap-3 p-5">
+                                <h3 className="font-display text-2xl font-bold leading-tight text-white">{post.title}</h3>
+                                <p className="text-base leading-7 text-ink-300">{post.description}</p>
                                 <div className="flex flex-wrap gap-2">
                                     {post.tags.slice(0, 3).map((tag) => (
-                                        <span key={tag} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs">
+                                        <span key={tag} className="rounded-md border border-line-300 bg-surface-800/65 px-3 py-1.5 text-xs text-ink-200">
                                             {tag}
                                         </span>
                                     ))}
                                 </div>
-                                <Link href={`/blog/${post.slug}`} underline className="text-primary-200 hover:text-primary-100 mt-auto w-fit">
+                                <Link href={`/blog/${post.slug}`} underline className="mt-auto w-fit text-primary-200 hover:text-primary-100">
                                     {t("readGuide")}
                                 </Link>
                             </div>
@@ -119,13 +161,17 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4">
-                <p className="text-primary-200 text-sm uppercase tracking-[0.14em]">{t("strategyEyebrow")}</p>
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("strategyTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl max-w-5xl">{t("strategyDescription")}</p>
-                <Link href="/powers" underline className="text-primary-200 hover:text-primary-100 w-fit">
-                    {t("strategyLink")}
-                </Link>
+            <section className="grid gap-8 border-y border-line-300 py-10 lg:grid-cols-[0.7fr_1.3fr] lg:items-center">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{t("strategyEyebrow")}</p>
+                    <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("strategyTitle")}</h2>
+                </div>
+                <div>
+                    <p className="text-lg leading-8 text-ink-200 md:text-xl">{t("strategyDescription")}</p>
+                    <Link href="/powers" underline className="mt-5 inline-flex text-primary-200 hover:text-primary-100">
+                        {t("strategyLink")}
+                    </Link>
+                </div>
             </section>
 
             <ExploreKnowledgeLinks

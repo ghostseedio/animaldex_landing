@@ -16,13 +16,12 @@ export default function HeaderLink({href, children, mobile = false, ...props}: H
     return (
         <Link
             href={href}
-            className={`overflow-y-hidden ${mobile ? "md:hidden" : "hidden md:block"}`}
+            className={`rounded-md px-2 py-2 text-ink-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100 ${mobile ? "md:hidden" : "hidden md:block"}`}
             onClick={() => setOpen(false)}
             {...props}
         >
             <span
-                className={`md:translate-y-0 ${open ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-700 
-                ease-in-out delay-700 inline-block`}
+                className={`md:translate-y-0 ${open ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-300 ease-in-out md:transition-none inline-block`}
             >
                 {children}
             </span>

@@ -24,52 +24,54 @@ export default function LocationAnimalsList({
     items
 }: LocationAnimalsListProps) {
     return (
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-                <h2 className="font-display font-bold text-4xl text-white">{title}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{description}</p>
+                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{title}</h2>
+                <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{description}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {items.map((item) => (
                     <article
                         key={item.speciesSlug}
-                        className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                        className="group flex h-full flex-col overflow-hidden rounded-lg border border-line-300 bg-surface-900/75 transition duration-200 hover:-translate-y-0.5 hover:border-primary-500/50 hover:bg-surface-800/85 motion-reduce:transform-none"
                     >
                         <Link
                             href={`/animals/${item.speciesSlug}`}
-                            className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60"
+                            className="overflow-hidden border-b border-line-400 bg-canvas-900"
                         >
                             <SpeciesImage
                                 slug={item.speciesSlug}
                                 alt={item.imageAlt}
-                                className="aspect-[4/3]"
-                                sizes="(min-width: 768px) 42vw, 100vw"
+                                className="aspect-[4/3] transition duration-300 group-hover:scale-[1.02] motion-reduce:transform-none"
+                                sizes="(min-width: 1280px) 28vw, (min-width: 768px) 44vw, 100vw"
                             />
                         </Link>
-                        <div className="flex flex-wrap gap-2">
-                            <span className="rounded-full border border-white/12 px-3 py-1 text-ink-100 text-xs uppercase tracking-[0.18em] font-semibold bg-white/[0.03]">
-                                {item.rarityStatus}
-                            </span>
-                        </div>
-                        <h3 className="font-display font-bold text-2xl text-white">
-                            <Link href={`/animals/${item.speciesSlug}`} className="hover:text-primary-100 transition-colors">
-                                {item.speciesName}
+                        <div className="flex flex-1 flex-col gap-3 p-5">
+                            <div className="flex flex-wrap gap-2">
+                                <span className="rounded-md border border-white/12 bg-white/[0.03] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-ink-100">
+                                    {item.rarityStatus}
+                                </span>
+                            </div>
+                            <h3 className="break-words font-display text-2xl font-bold leading-tight text-white">
+                                <Link href={`/animals/${item.speciesSlug}`} className="hover:text-primary-100 transition-colors">
+                                    {item.speciesName}
+                                </Link>
+                            </h3>
+                            <p className="text-sm leading-6 text-ink-200 md:text-base">{item.whyItFits}</p>
+                            {item.rarityHint ? (
+                                <p className="text-sm leading-6 text-ink-300">
+                                    <span className="font-semibold text-white">{rarityLabel}: </span>
+                                    {item.rarityHint}
+                                </p>
+                            ) : null}
+                            <Link
+                                href={`/animals/${item.speciesSlug}`}
+                                className="mt-auto w-fit text-sm font-semibold text-primary-200 hover:text-primary-100 transition-colors"
+                                underline
+                            >
+                                {readSpeciesLabel}
                             </Link>
-                        </h3>
-                        <p className="text-ink-200 text-base md:text-lg">{item.whyItFits}</p>
-                        {item.rarityHint ? (
-                            <p className="text-ink-300 text-sm md:text-base">
-                                <span className="text-white">{rarityLabel}: </span>
-                                {item.rarityHint}
-                            </p>
-                        ) : null}
-                        <Link
-                            href={`/animals/${item.speciesSlug}`}
-                            className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                            underline
-                        >
-                            {readSpeciesLabel}
-                        </Link>
+                        </div>
                     </article>
                 ))}
             </div>

@@ -2,16 +2,20 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
+import RankingBreadcrumbs from "@/app/[locale]/(composited)/rankings/_components/ranking-breadcrumbs";
 import RankingHero from "@/app/[locale]/(composited)/rankings/_components/ranking-hero";
 import RankingTable from "@/app/[locale]/(composited)/rankings/_components/ranking-table";
 import RankingEntryCard from "@/app/[locale]/(composited)/rankings/_components/ranking-entry-card";
 import RankingMethodology from "@/app/[locale]/(composited)/rankings/_components/ranking-methodology";
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
+import TierLegend from "@/app/[locale]/(composited)/rankings/_components/tier-legend";
+import TierListSummary from "@/app/[locale]/(composited)/rankings/_components/tier-list-summary";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import {getChallenge} from "@/data/challenges";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {getExpandedRankingEntries, getRankingPage, getRankingTierListTitle, getRelatedRankings, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
-import {getSpeciesBySlug, speciesEntries} from "@/data/species";
+import {getSpeciesBySlug, speciesEntries, SpeciesEntry} from "@/data/species";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -40,6 +44,39 @@ function getSchemaImageUrl(locale: string, imageSrc: string) {
     return imageSrc.startsWith("http://") || imageSrc.startsWith("https://")
         ? imageSrc
         : getAbsoluteUrl(locale, imageSrc);
+}
+
+function getMovementDomain(entry: SpeciesEntry, labels: {air: string; water: string; land: string; mixed: string}) {
+    const text = [
+        entry.name,
+        entry.analysis.category,
+        entry.analysis.summary,
+        entry.analysis.habitat,
+        entry.analysis.nativeRange,
+        ...entry.analysis.identification
+    ].join(" ").toLowerCase();
+    const air = /bird|falcon|eagle|owl|vulture|parrot|flight|flying|aerial|wing|soar|glide/.test(text);
+    const water = /aquatic|marine|ocean|sea|river|lake|wetland|coastal|coral|reef|fish|shark|whale|dolphin|tuna|sailfish|swim/.test(text);
+
+    if (air && water) {
+        return labels.mixed;
+    }
+
+    if (air) {
+        return labels.air;
+    }
+
+    if (water) {
+        return labels.water;
+    }
+
+    return labels.land;
+}
+
+function estimateReadingMinutes(entriesCount: number, paragraphs: string[]) {
+    const words = paragraphs.join(" ").split(/\s+/).filter(Boolean).length + entriesCount * 18;
+
+    return Math.max(4, Math.ceil(words / 225));
 }
 
 async function getRankingSpeciesEntries() {
@@ -107,6 +144,23 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     }
 
     const entries = resolvedEntries.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    const title = getRankingTierListTitle(ranking);
+    const domainLabels = {
+        air: t("domainAir"),
+        water: t("domainWater"),
+        land: t("domainLand"),
+        mixed: t("domainMixed")
+    };
+    const tableItems = entries.map((entry) => ({
+        rank: entry.rank,
+        tier: entry.tier,
+        speciesSlug: entry.species.slug,
+        speciesName: entry.species.name,
+        iconSrc: getSpeciesArtworkUrl(entry.species.slug),
+        primaryMetric: entry.primaryMetric,
+        shortReason: entry.shortReason,
+        domain: getMovementDomain(entry.species, domainLabels)
+    }));
     const relatedChallenges = (ranking.relatedChallengeSlugs || [])
         .map((challengeSlug) => getChallenge(challengeSlug))
         .filter((challenge): challenge is NonNullable<ReturnType<typeof getChallenge>> => Boolean(challenge))
@@ -128,7 +182,6 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
             };
         })
         .filter((entry): entry is RelatedChallengeCard => Boolean(entry));
-    const title = getRankingTierListTitle(ranking);
     const relatedRankings = getRelatedRankings(ranking.slug, 3).map((page) => ({
         slug: page.slug,
         title: getRankingTierListTitle(page),
@@ -204,23 +257,46 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     const schemas = faqSchema
         ? [articleSchema, itemListSchema, faqSchema, breadcrumbSchema]
         : [articleSchema, itemListSchema, breadcrumbSchema];
+    const readingMinutes = estimateReadingMinutes(entries.length, [
+        ranking.quickAnswer,
+        ...ranking.introduction,
+        ...ranking.methodology,
+        ...ranking.breakdown,
+        ...(ranking.faq || []).flatMap((item) => [item.question, item.answer])
+    ]);
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="mx-auto flex w-full max-w-[86rem] flex-col gap-8 overflow-hidden px-4 py-10 md:px-8 md:py-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            <Link href={RANKING_CANONICAL_BASE_PATH} className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                {t("back")}
-            </Link>
+            <RankingBreadcrumbs
+                items={[
+                    {href: RANKING_CANONICAL_BASE_PATH, label: t("breadcrumbTierLists")},
+                    {label: t(`categories.${ranking.category}`)},
+                    {label: title}
+                ]}
+            />
 
             <RankingHero
                 title={title}
                 description={ranking.description}
                 categoryLabel={t(`categories.${ranking.category}`)}
-                publishedLabel={t("published")}
-                publishedValue={formatDate(locale, ranking.publishedAt)}
                 updatedLabel={t("updated")}
                 updatedValue={formatDate(locale, ranking.updatedAt || ranking.publishedAt)}
+                rankedSpeciesLabel={t("rankedSpecies")}
+                rankedSpeciesValue={String(entries.length)}
+                readingTimeLabel={t("readingTime")}
+                readingTimeValue={t("readingTimeValue", {minutes: readingMinutes})}
+                methodologyHref="#methodology"
+                methodologyLabel={t("methodologyLink")}
+            />
+
+            <TierListSummary
+                title={t("quickAnswerTitle")}
+                answer={ranking.quickAnswer}
+                clarification={ranking.breakdown[0] ?? t("summaryClarification")}
+                readSpeciesLabel={t("readSpecies")}
+                items={tableItems.slice(0, 3)}
             />
 
             <RankingTable
@@ -232,28 +308,20 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     metric: t("metricLabel"),
                     tier: t("tierLabel"),
                     whyItRanks: t("whyItRanksLabel"),
-                    readSpecies: t("readSpecies")
+                    readSpecies: t("readSpecies"),
+                    search: t("animalSearchLabel"),
+                    searchPlaceholder: t("animalSearchPlaceholder"),
+                    tierFilter: t("tierFilterLabel"),
+                    domainFilter: t("domainFilterLabel"),
+                    all: t("filterAll"),
+                    showing: t("showing"),
+                    of: t("of"),
+                    backToTop: t("backToTop")
                 }}
-                items={entries.map((entry) => ({
-                    rank: entry.rank,
-                    tier: entry.tier,
-                    speciesSlug: entry.species.slug,
-                    speciesName: entry.species.name,
-                    primaryMetric: entry.primaryMetric,
-                    shortReason: entry.shortReason
-                }))}
+                items={tableItems}
             />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("quickAnswerTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("quickAnswerDescription")}</p>
-                <p className="text-white text-lg md:text-xl leading-8">{ranking.quickAnswer}</p>
-                {ranking.introduction.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
-            </section>
+            <TierLegend tiers={entries.map((entry) => entry.tier)} />
 
             <RankingMethodology
                 title={t("methodologyTitle")}
@@ -261,23 +329,25 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 items={ranking.methodology}
             />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("breakdownTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("breakdownDescription")}</p>
-                {ranking.breakdown.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
+            <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("breakdownTitle")}</h2>
+                <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("breakdownDescription")}</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    {ranking.breakdown.map((paragraph) => (
+                        <p key={paragraph} className="text-base leading-7 text-ink-200">
+                            {paragraph}
+                        </p>
+                    ))}
+                </div>
             </section>
 
             <section className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                    <h2 className="font-display font-bold text-4xl text-white">{t("entryCardsTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("entryCardsDescription")}</p>
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("entryCardsTitle")}</h2>
+                    <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("entryCardsDescription")}</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {entries.slice(0, 10).map((entry) => (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {entries.slice(0, 8).map((entry) => (
                         <RankingEntryCard
                             key={`${entry.rank}-${entry.species.slug}`}
                             rank={entry.rank}
@@ -292,11 +362,11 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 </div>
             </section>
 
-            <IntentCtaCard
-                title={t("ctaTitle")}
-                description={t("ctaDescription")}
-                buttonLabel={t("ctaButton")}
-                supportItems={ctaSupportItems}
+            <RelatedRankingsSection
+                title={t("relatedRankingsTitle")}
+                description={t("relatedRankingsDescription")}
+                readRankingLabel={t("readRanking")}
+                items={relatedRankings}
             />
 
             <RelatedChallengesSection
@@ -306,25 +376,31 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 items={relatedChallenges}
             />
 
-            <RelatedRankingsSection
-                title={t("relatedRankingsTitle")}
-                description={t("relatedRankingsDescription")}
-                readRankingLabel={t("readRanking")}
-                items={relatedRankings}
-            />
-
             {ranking.faq && ranking.faq.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("faqTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("faqDescription")}</p>
-                    {ranking.faq.map((item) => (
-                        <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
-                            <h3 className="text-white text-xl font-semibold">{item.question}</h3>
-                            <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
-                        </div>
-                    ))}
+                <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2>
+                    <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("faqDescription")}</p>
+                    <div className="mt-5 grid gap-3">
+                        {ranking.faq.map((item) => (
+                            <div key={item.question} className="rounded-md border border-line-400 bg-canvas-900/40 p-4">
+                                <h3 className="text-lg font-semibold text-white">{item.question}</h3>
+                                <p className="mt-2 text-base leading-7 text-ink-200">{item.answer}</p>
+                            </div>
+                        ))}
+                    </div>
                 </section>
             )}
+
+            <IntentCtaCard
+                title={t("ctaTitle")}
+                description={t("ctaDescription")}
+                buttonLabel={t("ctaButton")}
+                supportItems={ctaSupportItems}
+            />
+
+            <Link href={RANKING_CANONICAL_BASE_PATH} className="w-fit text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100" underline>
+                {t("back")}
+            </Link>
         </article>
     );
 }

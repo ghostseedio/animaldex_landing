@@ -20,25 +20,25 @@ export default function RankingEntryCard({
     readSpeciesLabel
 }: RankingEntryCardProps) {
     return (
-        <article className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-3">
+        <article className="flex flex-col gap-3 rounded-lg border border-line-300 bg-surface-900/75 p-5">
             <div className="flex flex-wrap gap-2 items-center">
-                <span className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs uppercase tracking-[0.22em] font-semibold">
+                <span className="rounded-md border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">
                     #{rank}
                 </span>
-                <span className="rounded-full border border-line-300/80 px-3 py-1 text-ink-200 text-xs">
+                <span className="rounded-md border border-line-400 px-3 py-1 text-xs text-ink-200">
                     {primaryMetric}
                 </span>
             </div>
-            <h3 className="font-display font-bold text-2xl text-white">
+            <h3 className="font-display text-2xl font-bold leading-tight text-white">
                 <Link href={`/animals/${speciesSlug}`} className="hover:text-primary-100 transition-colors">
                     {speciesName}
                 </Link>
             </h3>
-            <p className="text-ink-200 text-base leading-7">{shortReason}</p>
-            <p className="text-ink-300 text-sm md:text-base leading-7">{summary}</p>
+            <p className="text-base leading-7 text-ink-200">{shortReason}</p>
+            <p className="text-sm leading-6 text-ink-300">{summary}</p>
             <Link
                 href={`/animals/${speciesSlug}`}
-                className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                className="mt-auto w-fit text-sm font-semibold text-primary-200 hover:text-primary-100 transition-colors"
                 underline
             >
                 {readSpeciesLabel}

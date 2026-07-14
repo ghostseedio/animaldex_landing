@@ -1559,7 +1559,10 @@ function formatStatMetric(statKey: RankingStatKey, score: number) {
 }
 
 function buildStatRankingReason(entry: SpeciesEntry, statKey: RankingStatKey, score: number, tier: RankingTier) {
-    return `${entry.name} ranks in the ${tier} tier for ${statKey.replace(/_/g, " ")} with an AnimalDex ${statKey.replace(/_/g, " ")} stat of ${score}/100.`;
+    const label = statKey.replace(/_/g, " ");
+    const context = entry.analysis.summary.split(".")[0].trim();
+
+    return `${score}/100 ${label} profile. ${context || `${entry.name} is a strong fit for this category`}, which places it in ${tier} tier for this list.`;
 }
 
 function getStatRankingEntries(page: RankingPage, entries: SpeciesEntry[]): ResolvedRankingEntry[] {
@@ -1655,7 +1658,10 @@ function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry:
 }
 
 function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tier: RankingTier) {
-    return `${entry.name} lands in the ${tier} tier for ${page.category.replace(/_/g, " ")} based on AnimalDex canonical profile stats, species-guide traits, and category-specific biology signals.`;
+    const category = page.category.replace(/_/g, " ");
+    const context = entry.analysis.summary.split(".")[0].trim();
+
+    return `${context || `${entry.name} has relevant traits for this category`}. AnimalDex profile stats and species-guide signals put it in ${tier} tier for ${category}.`;
 }
 
 export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES, entries = speciesEntries): ResolvedRankingEntry[] {

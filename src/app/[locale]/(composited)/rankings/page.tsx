@@ -1,9 +1,8 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
-import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
-import {getRankingTierListTitle, rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import TierListFilters from "@/app/[locale]/(composited)/rankings/_components/tier-list-filters";
+import {getExpandedRankingEntries, getRankingTierListTitle, rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -53,6 +52,18 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
+function formatDate(locale: string, date: string) {
+    return new Intl.DateTimeFormat(locale, {month: "short", day: "numeric", year: "numeric"}).format(new Date(date));
+}
+
+function formatMethodologyLabel(categoryLabel: string, statRankingKey?: string) {
+    if (statRankingKey) {
+        return `${statRankingKey.replace(/_/g, " ")} stat`;
+    }
+
+    return `${categoryLabel} signals`;
+}
+
 export default async function RankingsIndexPage() {
     const t = await getTranslations("rankings");
     const locale = await getLocale();
@@ -76,57 +87,92 @@ export default async function RankingsIndexPage() {
             name: getRankingTierListTitle(page)
         }))
     };
+    const cards = rankingPages.map((page) => {
+        const categoryLabel = t(`categories.${page.category}`);
+
+        return {
+            slug: page.slug,
+            title: getRankingTierListTitle(page),
+            description: page.description,
+            category: page.category,
+            categoryLabel,
+            image: {
+                src: page.featuredImage.src,
+                alt: page.featuredImage.alt,
+                width: page.featuredImage.width,
+                height: page.featuredImage.height
+            },
+            rankedSpeciesCount: page.statRankingKey
+                ? page.statRankingLimit ?? getExpandedRankingEntries(page).length
+                : getExpandedRankingEntries(page).length,
+            updatedLabel: formatDate(locale, page.updatedAt || page.publishedAt),
+            methodologyLabel: formatMethodologyLabel(categoryLabel, page.statRankingKey)
+        };
+    });
+    const credibilityItems = [
+        t("credibilityEvidence"),
+        t("credibilityMethodology"),
+        t("credibilitySpecies")
+    ];
 
     return (
-        <section className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <section className="mx-auto flex w-full max-w-[86rem] flex-col gap-10 overflow-hidden px-4 py-10 md:px-8 md:py-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
 
-            <div className="flex flex-col gap-4 text-center items-center">
-                <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">{t("eyebrow")}</p>
-                <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white max-w-4xl">{t("title")}</h1>
-                <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{t("description")}</p>
-            </div>
+            <header className="w-[calc(100vw-2rem)] max-w-full border-b border-line-300 pb-8 md:w-auto md:max-w-5xl">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">{t("eyebrow")}</p>
+                <h1 className="mt-4 max-w-full break-words font-display text-3xl font-bold leading-[1.08] text-white md:max-w-4xl md:text-5xl lg:text-6xl">
+                    {t("title")}
+                </h1>
+                <p className="mt-5 max-w-full text-base leading-8 text-ink-200 md:max-w-3xl md:text-lg">
+                    {t("description")}
+                </p>
+                <ul className="mt-6 flex flex-wrap gap-3 text-sm text-ink-300">
+                    {credibilityItems.map((item) => (
+                        <li key={item} className="rounded-md border border-line-300 bg-surface-900/70 px-3 py-2">{item}</li>
+                    ))}
+                </ul>
+            </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                {rankingPages.map((page) => (
-                    <article
-                        key={page.slug}
-                        className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-6 md:p-8 flex flex-col gap-4"
-                    >
-                        <Link href={`${RANKING_CANONICAL_BASE_PATH}/${page.slug}`} className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60">
-                            <Image
-                                src={page.featuredImage.src}
-                                alt={page.featuredImage.alt}
-                                width={page.featuredImage.width}
-                                height={page.featuredImage.height}
-                                sizes="(min-width: 1024px) 42vw, 100vw"
-                                className="h-auto w-full object-cover"
-                            />
-                        </Link>
-                        <div className="flex flex-wrap gap-2">
-                            <span className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs uppercase tracking-[0.22em] font-semibold">
-                                {t(`categories.${page.category}`)}
-                            </span>
-                        </div>
-                        <h2 className="font-display font-bold text-3xl text-white">{getRankingTierListTitle(page)}</h2>
-                        <p className="text-ink-200 text-lg">{page.description}</p>
-                        <p className="text-white text-lg leading-8">{page.quickAnswer}</p>
+            <TierListFilters
+                items={cards}
+                allLabel={t("filterAll")}
+                searchLabel={t("searchLabel")}
+                searchPlaceholder={t("searchPlaceholder")}
+                resultSingularLabel={t("resultSingular")}
+                resultPluralLabel={t("resultPlural")}
+                actionLabel={t("viewRanking")}
+            />
+
+            <section className="w-[calc(100vw-2rem)] max-w-full rounded-lg border border-line-300 bg-surface-900/75 p-5 md:w-auto md:p-6">
+                <h2 className="font-display text-3xl font-bold text-white">{t("methodologyOverviewTitle")}</h2>
+                <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("methodologyOverviewDescription")}</p>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                    {[t("methodSpeed"), t("methodStrength"), t("methodSize"), t("methodBiteForce"), t("methodCognition"), t("methodRisk")].map((item) => (
+                        <p key={item} className="rounded-md border border-line-400 bg-canvas-900/40 p-4 text-sm leading-6 text-ink-200">{item}</p>
+                    ))}
+                </div>
+            </section>
+
+            <section className="w-[calc(100vw-2rem)] max-w-full border-t border-line-300 pt-8 md:w-auto">
+                <h2 className="font-display text-3xl font-bold text-white">{t("relatedNavigationTitle")}</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                        {href: "/animals", label: t("browseAnimals")},
+                        {href: "/comparisons", label: t("compareAnimals")},
+                        {href: "/locations", label: t("exploreHabitats")},
+                        {href: "/animals", label: t("speciesGuides")}
+                    ].map((item) => (
                         <Link
-                            href={`${RANKING_CANONICAL_BASE_PATH}/${page.slug}`}
-                            className="mt-auto text-primary-200 text-lg hover:text-primary-100 transition-colors"
-                            underline
+                            key={`${item.href}-${item.label}`}
+                            href={item.href}
+                            className="rounded-lg border border-line-300 bg-surface-900/70 p-4 font-semibold text-white transition-colors hover:border-primary-500/50 hover:text-primary-100 focus-visible:text-primary-100"
                         >
-                            {t("readRanking")}
+                            {item.label}
                         </Link>
-                    </article>
-                ))}
-            </div>
-
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <StoreLinks />
-            </div>
+                    ))}
+                </div>
+            </section>
         </section>
     );
 }

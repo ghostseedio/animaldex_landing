@@ -26,22 +26,21 @@ export default function HeaderMenu({children}: { children: ReactNode }) {
             open,
             setOpen
         }}>
-            <button type="button" className="md:hidden cursor-pointer" onClick={() => setOpen(true)} aria-label="Open menu">
+            <button type="button" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-line-300 bg-surface-900 md:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
                 <Image src={OpenIcon} alt="Open menu" width={32} height={32} />
             </button>
             <nav
                 aria-label="Primary navigation"
-                className={`flex md:opacity-100 items-center md:bg-transparent fixed md:static gap-8 md:text-2xl text-3xl
-                inset-0 w-screen md:w-auto h-screen md:h-auto flex-col md:flex-row justify-center bg-canvas-900 text-center z-10
-                ${open ? 'translate-y-0' : '-translate-y-full'} md:translate-y-0 transition-transform duration-700 ease-in-out`}
+                className={`fixed inset-0 z-10 flex h-screen w-screen flex-col items-center justify-center gap-7 bg-canvas-900 text-center text-3xl
+                transition-transform duration-300 ease-in-out md:static md:h-auto md:w-auto md:translate-y-0 md:flex-row md:justify-end md:gap-5 md:bg-transparent md:text-base
+                ${open ? 'translate-y-0' : '-translate-y-full'}`}
             >
-                <button type="button" className="absolute top-4 right-8 md:hidden cursor-pointer" onClick={() => setOpen(false)} aria-label="Close menu">
+                <button type="button" className="absolute right-4 top-4 flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-line-300 bg-surface-900 md:hidden" onClick={() => setOpen(false)} aria-label="Close menu">
                     <Image src={CloseIcon} alt="Close menu" width={32} height={32} />
                 </button>
                 {children}
             </nav>
-             <div className={`md:hidden ${open ? 'translate-y-full' : '-translate-y-full'} bg-surface-800 w-screen 
-             transition-all duration-700 ease-in-out h-screen inset-0 absolute`} />
+             <div className={`md:hidden ${open ? 'translate-y-full' : '-translate-y-full'} absolute inset-0 h-screen w-screen bg-surface-800 transition-all duration-300 ease-in-out`} />
         </MenuContext.Provider>
     )
 }

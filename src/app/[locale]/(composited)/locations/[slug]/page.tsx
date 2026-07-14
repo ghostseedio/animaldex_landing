@@ -2,6 +2,7 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
+import LocationBreadcrumbs from "@/app/[locale]/(composited)/locations/_components/location-breadcrumbs";
 import LocationHero from "@/app/[locale]/(composited)/locations/_components/location-hero";
 import LocationAnimalsList from "@/app/[locale]/(composited)/locations/_components/location-animals-list";
 import LocationBestFor from "@/app/[locale]/(composited)/locations/_components/location-best-for";
@@ -54,6 +55,12 @@ assertLocationAnimalsHaveSpeciesPages();
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
+}
+
+function getReadingMinutes(paragraphs: string[], animalsCount: number) {
+    const words = paragraphs.join(" ").split(/\s+/).filter(Boolean).length + animalsCount * 18;
+
+    return Math.max(3, Math.ceil(words / 225));
 }
 
 export async function generateMetadata({params}: LocationPageProps): Promise<Metadata> {
@@ -223,14 +230,27 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
     const schemas = faqSchema
         ? [articleSchema, itemListSchema, faqSchema, breadcrumbSchema]
         : [articleSchema, itemListSchema, breadcrumbSchema];
+    const readingMinutes = getReadingMinutes([
+        location.quickAnswer,
+        ...location.introduction,
+        ...location.whyItMatters,
+        ...location.bestFor,
+        ...location.spottingTips,
+        ...(location.faq || []).flatMap((item) => [item.question, item.answer])
+    ], animals.length);
+    const topAnimals = animals.slice(0, 3);
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="mx-auto flex w-full max-w-[86rem] flex-col gap-8 overflow-hidden px-4 py-10 md:px-8 md:py-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            <Link href="/locations" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                {t("back")}
-            </Link>
+            <LocationBreadcrumbs
+                items={[
+                    {href: "/locations", label: t("title")},
+                    {label: t(`types.${location.regionType}`)},
+                    {label: location.name}
+                ]}
+            />
 
             <LocationHero
                 title={location.title}
@@ -239,54 +259,78 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 featuredImage={location.featuredImage}
                 nameLabel={t("nameLabel")}
                 nameValue={location.name}
-                publishedLabel={t("published")}
-                publishedValue={formatDate(locale, location.publishedAt)}
                 updatedLabel={t("updated")}
                 updatedValue={formatDate(locale, location.updatedAt || location.publishedAt)}
+                animalCountLabel={t("animalCountLabel")}
+                animalCountValue={String(animals.length)}
+                placeTypeLabel={t("readingTime")}
+                placeTypeValue={t("readingTimeValue", {minutes: readingMinutes})}
             />
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("quickAnswerTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("quickAnswerDescription")}</p>
-                <p className="text-white text-lg md:text-xl leading-8">{location.quickAnswer}</p>
-                {location.introduction.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(24rem,0.75fr)]" aria-labelledby="location-quick-answer">
+                <div className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                    <h2 id="location-quick-answer" className="font-display text-3xl font-bold text-white">{t("quickAnswerTitle")}</h2>
+                    <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("quickAnswerDescription")}</p>
+                    <p className="mt-4 text-lg leading-8 text-white">{location.quickAnswer}</p>
+                    <div className="mt-5 grid gap-3">
+                        {location.introduction.map((paragraph) => (
+                            <p key={paragraph} className="text-base leading-7 text-ink-200">
+                                {paragraph}
+                            </p>
+                        ))}
+                    </div>
+                </div>
+                <div className="rounded-lg border border-line-300 bg-surface-900/75 p-5">
+                    <h3 className="font-display text-2xl font-bold text-white">{t("topAnimalsTitle")}</h3>
+                    <div className="mt-4 grid gap-3">
+                        {topAnimals.map((animal, index) => (
+                            <Link
+                                key={animal.species.slug}
+                                href={`/animals/${animal.species.slug}`}
+                                className="rounded-md border border-line-400 bg-canvas-900/40 p-3 transition-colors hover:border-primary-500/50 focus-visible:border-primary-500/50"
+                            >
+                                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">0{index + 1}</span>
+                                <span className="mt-1 block font-display text-xl font-bold text-white">{animal.species.name}</span>
+                                <span className="mt-1 block text-sm leading-6 text-ink-300">{animal.rarityHint || animal.whyItFits}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
             </section>
 
             {(hasZooGuide || hasReserveGuide) && (
-                <section>
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("exploreAnimalPlacesTitle", {location: placeGuideLocationName})}</h2>
-                    <p className="mt-3 max-w-3xl text-ink-200 text-lg md:text-xl">{t("exploreAnimalPlacesDescription")}</p>
+                <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("exploreAnimalPlacesTitle", {location: placeGuideLocationName})}</h2>
+                    <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("exploreAnimalPlacesDescription")}</p>
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
                         {hasZooGuide && (
-                            <Link href={`/locations/${location.slug}/zoos`} className="rounded-[1.75rem] bg-surface-900/80 p-6 transition hover:bg-surface-800">
+                            <Link href={`/locations/${location.slug}/zoos`} className="rounded-lg border border-line-400 bg-canvas-900/40 p-5 transition hover:border-primary-500/50 hover:bg-surface-800">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{t("zoosAndParks")}</p>
-                                <h3 className="mt-2 font-display text-2xl font-bold text-white">{t("zoosIn", {location: placeGuideLocationName})}</h3>
-                                <p className="mt-2 leading-7 text-ink-200">{t("zoosLinkDescription")}</p>
+                                <h3 className="mt-2 break-words font-display text-2xl font-bold text-white">{t("zoosIn", {location: placeGuideLocationName})}</h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-200 md:text-base">{t("zoosLinkDescription")}</p>
                             </Link>
                         )}
                         {hasReserveGuide && (
-                            <Link href={`/locations/${location.slug}/wildlife-reserves`} className="rounded-[1.75rem] bg-surface-900/80 p-6 transition hover:bg-surface-800">
+                            <Link href={`/locations/${location.slug}/wildlife-reserves`} className="rounded-lg border border-line-400 bg-canvas-900/40 p-5 transition hover:border-primary-500/50 hover:bg-surface-800">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{t("wildlifeReserves")}</p>
-                                <h3 className="mt-2 font-display text-2xl font-bold text-white">{t("reservesIn", {location: placeGuideLocationName})}</h3>
-                                <p className="mt-2 leading-7 text-ink-200">{t("reservesLinkDescription")}</p>
+                                <h3 className="mt-2 break-words font-display text-2xl font-bold text-white">{t("reservesIn", {location: placeGuideLocationName})}</h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-200 md:text-base">{t("reservesLinkDescription")}</p>
                             </Link>
                         )}
                     </div>
                 </section>
             )}
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("whyItMattersTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("whyItMattersDescription")}</p>
-                {location.whyItMatters.map((paragraph) => (
-                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                        {paragraph}
-                    </p>
-                ))}
+            <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("whyItMattersTitle")}</h2>
+                <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("whyItMattersDescription")}</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    {location.whyItMatters.map((paragraph) => (
+                        <p key={paragraph} className="text-base leading-7 text-ink-200">
+                            {paragraph}
+                        </p>
+                    ))}
+                </div>
             </section>
 
             <LocationAnimalsList
@@ -340,24 +384,24 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             {relatedBlogPosts.length > 0 && (
                 <section className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                        <h2 className="font-display font-bold text-4xl text-white">{t("relatedBlogTitle")}</h2>
-                        <p className="text-ink-200 text-lg md:text-xl">{t("relatedBlogDescription")}</p>
+                        <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("relatedBlogTitle")}</h2>
+                        <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("relatedBlogDescription")}</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {relatedBlogPosts.map((post) => (
                             <article
                                 key={post.slug}
-                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                                className="flex flex-col gap-3 rounded-lg border border-line-300 bg-surface-900/75 p-5"
                             >
-                                <h3 className="font-display font-bold text-2xl text-white">
+                                <h3 className="break-words font-display text-2xl font-bold leading-tight text-white">
                                     <Link href={`/blog/${post.slug}`} className="hover:text-primary-100 transition-colors">
                                         {post.title}
                                     </Link>
                                 </h3>
-                                <p className="text-ink-200 text-base">{post.description}</p>
+                                <p className="text-sm leading-6 text-ink-200">{post.description}</p>
                                 <Link
                                     href={`/blog/${post.slug}`}
-                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                                    className="mt-auto w-fit text-sm font-semibold text-primary-200 hover:text-primary-100 transition-colors"
                                     underline
                                 >
                                     {t("readBlog")}
@@ -376,17 +420,23 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             />
 
             {location.faq && location.faq.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("faqTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("faqDescription")}</p>
-                    {location.faq.map((item) => (
-                        <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
-                            <h3 className="text-white text-xl font-semibold">{item.question}</h3>
-                            <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
-                        </div>
-                    ))}
+                <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2>
+                    <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("faqDescription")}</p>
+                    <div className="mt-5 grid gap-3">
+                        {location.faq.map((item) => (
+                            <div key={item.question} className="rounded-md border border-line-400 bg-canvas-900/40 p-4">
+                                <h3 className="text-lg font-semibold text-white">{item.question}</h3>
+                                <p className="mt-2 text-base leading-7 text-ink-200">{item.answer}</p>
+                            </div>
+                        ))}
+                    </div>
                 </section>
             )}
+
+            <Link href="/locations" className="w-fit text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100" underline>
+                {t("back")}
+            </Link>
         </article>
     );
 }

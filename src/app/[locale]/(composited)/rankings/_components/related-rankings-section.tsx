@@ -25,27 +25,27 @@ export default function RelatedRankingsSection({
     return (
         <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-                <h2 className="font-display font-bold text-4xl text-white">{title}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{description}</p>
+                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{title}</h2>
+                <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{description}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {items.map((item) => (
                     <article
                         key={item.slug}
-                        className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                        className="flex flex-col gap-3 rounded-lg border border-line-300 bg-surface-900/75 p-5"
                     >
-                        <span className="rounded-full border border-primary-500/30 px-3 py-1 w-fit text-primary-200 text-xs uppercase tracking-[0.22em] font-semibold">
+                        <span className="w-fit text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">
                             {item.categoryLabel}
                         </span>
-                        <h3 className="font-display font-bold text-2xl text-white">
+                        <h3 className="font-display text-2xl font-bold leading-tight text-white">
                             <Link href={`/tier-list/${item.slug}`} className="hover:text-primary-100 transition-colors">
                                 {item.title}
                             </Link>
                         </h3>
-                        <p className="text-ink-200 text-base">{item.description}</p>
+                        <p className="text-sm leading-6 text-ink-200">{item.description}</p>
                         <Link
                             href={`/tier-list/${item.slug}`}
-                            className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
+                            className="mt-auto w-fit text-sm font-semibold text-primary-200 hover:text-primary-100 transition-colors"
                             underline
                         >
                             {readRankingLabel}
