@@ -6,13 +6,19 @@ function buildFallbackUrl(request: NextRequest) {
     return new URL(SPECIES_NO_IMAGE_SRC, request.url);
 }
 
+function redirectWithBrowserCache(url: URL | string) {
+    const response = NextResponse.redirect(url, 307);
+    response.headers.set("Cache-Control", "private, max-age=300, stale-while-revalidate=1800");
+    return response;
+}
+
 export async function GET(
     request: NextRequest,
     {params}: {params: {captureId: string}}
 ) {
     const captureId = params.captureId?.trim();
     if (!captureId) {
-        return NextResponse.redirect(buildFallbackUrl(request), 307);
+        return redirectWithBrowserCache(buildFallbackUrl(request));
     }
 
     const imageBucket = request.nextUrl.searchParams.get("bucket");
@@ -30,17 +36,17 @@ export async function GET(
         });
 
         if (!reference?.imageBucket || !reference.imagePath) {
-            return NextResponse.redirect(buildFallbackUrl(request), 307);
+            return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
         const signedUrl = await createSignedStorageUrl(reference.imageBucket, reference.imagePath);
         if (!signedUrl) {
-            return NextResponse.redirect(buildFallbackUrl(request), 307);
+            return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
-        return NextResponse.redirect(signedUrl, 307);
+        return redirectWithBrowserCache(signedUrl);
     } catch {
-        return NextResponse.redirect(buildFallbackUrl(request), 307);
+        return redirectWithBrowserCache(buildFallbackUrl(request));
     }
 }
 

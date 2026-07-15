@@ -11,7 +11,7 @@ import {useRouter} from "next/navigation";
 type DiscoverSegment = "discover" | "collectors";
 
 const WORDMARK_SRC = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-text.webp";
-const DISCOVER_PAGE_SIZE = 12;
+const DISCOVER_PAGE_SIZE = 6;
 const COLLECTOR_PAGE_SIZE = 24;
 
 function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
@@ -247,7 +247,7 @@ export default function DiscoverHome({
                 <div className="mx-auto max-w-2xl space-y-6">
                     <FeaturedStrip items={featured} />
                     {timelineItems.length ? (
-                        <section className="space-y-4">
+                        <section className="snap-y snap-proximity space-y-4">
                             {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
                             {isLoadingTimeline ? (
                                 <div className="rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">

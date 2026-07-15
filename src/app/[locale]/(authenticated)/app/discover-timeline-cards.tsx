@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import type {
@@ -59,6 +59,23 @@ function FeedPill({
   );
 }
 
+function GradeBadge({grade}: {grade: number}) {
+  return (
+    <span className="shrink-0 rounded-full bg-primary-400 px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.08em] text-black ring-1 ring-white/20">
+      Grade {grade}
+    </span>
+  );
+}
+
+function UncertainBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/85 px-2.5 py-1 text-[0.68rem] font-black text-white ring-1 ring-red-300/40">
+      <span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-white/20 text-[0.55rem]">!</span>
+      Uncertain
+    </span>
+  );
+}
+
 function CollectorHeader({ collector }: { collector: DiscoverCollectorRef }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -108,11 +125,81 @@ function InfoIcon() {
 function MediaCarousel({
   assets,
   animalName,
+  isUncertain = false,
 }: {
   assets: DiscoverMediaAsset[];
   animalName: string;
+  isUncertain?: boolean;
 }) {
-  const media = assets.length ? assets : [];
+  const media = useMemo(() => assets.length ? assets : [], [assets]);
+  const videoSourceById = useMemo(() => new Map(media.map((asset) => [asset.id, asset.url])), [media]);
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [loadedVideoIds, setLoadedVideoIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const videos = Object.entries(videoRefs.current)
+      .filter((entry): entry is [string, HTMLVideoElement] => Boolean(entry[1]));
+    if (!videos.length) return undefined;
+
+    const markLoaded = (mediaId: string) => {
+      setLoadedVideoIds((current) => {
+        if (current.has(mediaId)) return current;
+        const next = new Set(current);
+        next.add(mediaId);
+        return next;
+      });
+    };
+
+    const playVideo = (mediaId: string, video: HTMLVideoElement) => {
+      markLoaded(mediaId);
+      const source = videoSourceById.get(mediaId);
+      if (source && !video.currentSrc) {
+        video.src = source;
+        video.load();
+      }
+      window.dispatchEvent(new CustomEvent("animaldex-feed-video-active", {detail: {mediaId}}));
+      video.muted = true;
+      window.setTimeout(() => {
+        void video.play().catch(() => undefined);
+      }, 0);
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const video = entry.target as HTMLVideoElement;
+        const mediaId = video.dataset.mediaId;
+        if (!mediaId) continue;
+
+        if (entry.isIntersecting || entry.intersectionRatio >= 0.08) {
+          markLoaded(mediaId);
+        }
+        if (entry.intersectionRatio >= 0.68) {
+          playVideo(mediaId, video);
+        } else if (entry.intersectionRatio <= 0.02) {
+          video.pause();
+        }
+      }
+    }, {
+      rootMargin: "320px 0px",
+      threshold: [0, 0.02, 0.08, 0.68, 1]
+    });
+
+    const onActiveVideo = (event: Event) => {
+      const mediaId = (event as CustomEvent<{mediaId?: string}>).detail?.mediaId;
+      for (const [id, video] of videos) {
+        if (id !== mediaId) video.pause();
+      }
+    };
+
+    window.addEventListener("animaldex-feed-video-active", onActiveVideo);
+    videos.forEach(([, video]) => observer.observe(video));
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("animaldex-feed-video-active", onActiveVideo);
+    };
+  }, [media, videoSourceById]);
+
   if (!media.length) return null;
 
   return (
@@ -122,26 +209,35 @@ function MediaCarousel({
           <div key={asset.id} className="relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden">
             {asset.kind === "video" || asset.kind === "loop" ? (
               <video
-                src={asset.url}
+                src={loadedVideoIds.has(asset.id) ? asset.url : undefined}
                 poster={asset.posterUrl ?? undefined}
                 muted
                 loop
                 playsInline
-                preload="metadata"
-                controls
+                preload={loadedVideoIds.has(asset.id) ? "metadata" : "none"}
+                data-media-id={asset.id}
+                ref={(node) => {
+                  videoRefs.current[asset.id] = node;
+                }}
                 className="h-full w-full bg-black object-cover"
               />
             ) : (
               <img
                 src={asset.url}
                 alt={animalName}
-                loading={index === 0 ? "eager" : "lazy"}
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover"
               />
             )}
             {(asset.kind === "video" || asset.kind === "loop") ? (
               <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
                 Video
+              </span>
+            ) : null}
+            {isUncertain ? (
+              <span className="absolute right-3 top-3">
+                <UncertainBadge />
               </span>
             ) : null}
             {media.length > 1 ? (
@@ -181,7 +277,7 @@ function TimelineShell({
 }) {
   const formatted = formatAppShortDate(date, locale);
   return (
-    <article className="overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-white/14">
+    <article className="snap-start scroll-mt-4 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
         <ActivityBadge label={badge} />
         <div className="flex items-center gap-2.5">
@@ -216,7 +312,7 @@ function CaptureCard({
     : item.activityBadge;
 
   return (
-    <article className="overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-white/14">
+    <article className={`snap-start scroll-mt-4 overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
       <div className="flex items-start justify-between gap-3 p-4">
         <CollectorHeader collector={item.collector} />
         <div className="flex shrink-0 items-center gap-2">
@@ -234,11 +330,15 @@ function CaptureCard({
       {item.activityLine ? (
         <p className="px-4 pb-4 text-sm leading-6 text-white/55">{item.activityLine}</p>
       ) : null}
-      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} />
+      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} />
       <div className="space-y-3 p-4">
-        <h3 className="font-display text-2xl font-bold text-white">
-          <Link href={item.href}>{item.animalName}</Link>
-        </h3>
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="font-display text-2xl font-bold text-white">
+            <Link href={item.href}>{item.animalName}</Link>
+          </h3>
+          <GradeBadge grade={item.captureGrade} />
+        </div>
+        {item.isUncertain ? <UncertainBadge /> : null}
         {item.lifeStageChip ? (
           <span className="inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/65">
             {item.lifeStageChip}
@@ -595,8 +695,8 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-[#38fa47]/10 px-2.5 py-1 text-[11px] font-black text-[#38fa47]">{item.animalDexNumber ? `#${String(item.animalDexNumber).padStart(3, "0")}` : "CAPTURE"}</span><span className="text-xs font-semibold text-white/35">{date}</span></div>
             <div className="flex items-center gap-3">{item.collector.avatarUrl ? <img src={item.collector.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover"/> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">{item.collector.name.slice(0,1)}</span>}<div><p className="text-sm font-semibold text-white">{item.collector.name}</p>{item.collector.username ? <p className="text-xs text-white/40">@{item.collector.username}</p> : null}</div></div>
-            <div className="overflow-hidden rounded-[20px]"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} /></div>
-            <div><h3 className="text-2xl font-black text-white">{item.animalName}</h3>{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
+            <div className="overflow-hidden rounded-[20px]"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} /></div>
+            <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3><GradeBadge grade={item.captureGrade} /></div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
             <div className="flex flex-wrap gap-2 text-[11px] font-bold">{item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}{item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}<FeedPill tone="green">Lvl {item.level}</FeedPill><FeedPill tone="violet">Rarity {item.rarity}</FeedPill>{item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}</div>
             {item.mediaCount > 1 ? <div className="rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4"><p className="text-[11px] font-semibold text-white/40">Media</p><p className="mt-2 text-sm text-white/60">{item.mediaCount} media items attached to this capture{item.hasVideoMedia ? ", including video/loop media." : "."}</p></div> : null}
             <div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3">

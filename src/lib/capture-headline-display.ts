@@ -40,24 +40,6 @@ function clampConfidence(value: number | null | undefined) {
     return Math.min(1, Math.max(0, value));
 }
 
-function confidenceTier(confidence: number | null | undefined) {
-    const value = clampConfidence(confidence);
-    if (value >= 0.75) return "high" as const;
-    if (value >= 0.5) return "medium" as const;
-    return "low" as const;
-}
-
-function titlePrefix(confidence: number | null | undefined) {
-    switch (confidenceTier(confidence)) {
-        case "medium":
-            return "Likely";
-        case "low":
-            return "Possibly";
-        default:
-            return null;
-    }
-}
-
 function normalizedTokens(value: string) {
     return value
         .toLowerCase()
@@ -197,8 +179,8 @@ function shouldShowUncertaintyFallback(input: CaptureHeadlineInput) {
 }
 
 function withConfidencePrefix(name: string, confidence: number | null | undefined) {
-    const prefix = titlePrefix(confidence);
-    return prefix ? `${prefix} ${name}` : name;
+    void confidence;
+    return name;
 }
 
 function displayBroadAnimalName(input: CaptureHeadlineInput) {

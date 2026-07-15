@@ -6,6 +6,12 @@ function buildFallbackUrl(request: NextRequest) {
     return new URL(SPECIES_NO_IMAGE_SRC, request.url);
 }
 
+function redirectWithBrowserCache(url: URL | string) {
+    const response = NextResponse.redirect(url, 307);
+    response.headers.set("Cache-Control", "private, max-age=300, stale-while-revalidate=1800");
+    return response;
+}
+
 function isAllowedMediaKind(value: string | null) {
     const kind = value?.trim().toLowerCase();
     return kind === "video" || kind === "loop";
@@ -21,18 +27,18 @@ export async function GET(
     const kind = request.nextUrl.searchParams.get("kind");
 
     if (!captureId || !bucket || !path || !isAllowedMediaKind(kind)) {
-        return NextResponse.redirect(buildFallbackUrl(request), 307);
+        return redirectWithBrowserCache(buildFallbackUrl(request));
     }
 
     try {
         const signedUrl = await createSignedStorageUrl(bucket, path);
         if (!signedUrl) {
-            return NextResponse.redirect(buildFallbackUrl(request), 307);
+            return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
-        return NextResponse.redirect(signedUrl, 307);
+        return redirectWithBrowserCache(signedUrl);
     } catch {
-        return NextResponse.redirect(buildFallbackUrl(request), 307);
+        return redirectWithBrowserCache(buildFallbackUrl(request));
     }
 }
 

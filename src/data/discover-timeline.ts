@@ -46,6 +46,8 @@ export type DiscoverCaptureItem = {
     sameSpeciesHelper: string | null;
     speciesSlug: string | null;
     score: number;
+    captureGrade: number;
+    isUncertain: boolean;
     endorsementCount: number;
     viewerEndorsementStat: string | null;
     rarity: number;
@@ -211,6 +213,11 @@ function readStats(row: QueryRow) {
     return stats && typeof stats === "object" && !Array.isArray(stats) ? stats as Record<string, number> : {};
 }
 
+function readObject(row: QueryRow, key: string) {
+    const value = row[key];
+    return value && typeof value === "object" && !Array.isArray(value) ? value as QueryRow : {};
+}
+
 function readStringArray(row: QueryRow, key: string) {
     const value = row[key];
     if (!Array.isArray(value)) return [];
@@ -340,6 +347,156 @@ function parseDate(value: string | null) {
 
 function animalLevel(totalProgressionXP: number) {
     return Math.min(100, Math.floor(Math.sqrt(Math.max(0, totalProgressionXP))) + 1);
+}
+
+function isBroadCollectionIdentityToken(token: string) {
+    const normalized = token.toLowerCase();
+    return normalized === "animal"
+        || normalized === "unknown_animal"
+        || normalized === "unknown"
+        || normalized.endsWith("_animal");
+}
+
+function shouldShowUncertaintyFallback(row: QueryRow) {
+    const animalName = readString(row, "animal_name")?.toLowerCase();
+    if (animalName === "unknown animal") return true;
+    return Number(readNullableNumber(row, "confidence") ?? 0) < 0.4;
+}
+
+function isBroadIdentity(row: QueryRow) {
+    const kind = readString(row, "identity_kind")?.toLowerCase();
+    if (kind === "group" || kind === "broad_fallback" || kind === "generic_parent") return true;
+
+    const tokens = [readString(row, "normalized_identity_key"), readString(row, "animal_name")]
+        .map((value) => value?.trim().toLowerCase().replace(/[\s-]+/g, "_"))
+        .filter((value): value is string => Boolean(value));
+
+    return tokens.some(isBroadCollectionIdentityToken);
+}
+
+function showsBroadIdentityAtModerateConfidence(row: QueryRow) {
+    return Number(readNullableNumber(row, "confidence") ?? 0) < 0.75
+        && isBroadIdentity(row)
+        && !shouldShowUncertaintyFallback(row);
+}
+
+function imageQualityGradeScore(row: QueryRow) {
+    const raw = readObject(row, "raw_json");
+    const model = readObject(raw, "model");
+    const value = readString(row, "image_quality")
+        ?? readString(model, "image_quality")
+        ?? readNestedString(row, ["raw_json", "model", "image_quality"]);
+
+    switch (value?.toLowerCase()) {
+        case "clear":
+            return 1;
+        case "weak":
+            return 0.28;
+        case "usable":
+        default:
+            return 0.68;
+    }
+}
+
+function captureSettingTag(row: QueryRow) {
+    const setting = readString(row, "zoo_or_wild")?.toLowerCase();
+    const humanContext = readString(row, "human_context")?.toLowerCase();
+    if (setting === "wild" || humanContext === "free-ranging") return "wild";
+    if (setting === "farm" || humanContext === "livestock") return "farm";
+    if (setting === "zoo" || humanContext === "captive") return "zoo";
+    if (setting === "domestic" || humanContext === "pet") return "domestic";
+    return "unknown";
+}
+
+function hasWildHabitatSignal(row: QueryRow) {
+    const signals = readObject(row, "signals");
+    return signals.wild_habitat_likely === true || signals.wildHabitatLikely === true;
+}
+
+function habitatGradeScore(row: QueryRow) {
+    const wildHabitat = hasWildHabitatSignal(row);
+    switch (captureSettingTag(row)) {
+        case "wild":
+            return wildHabitat ? 1 : 0.88;
+        case "farm":
+            return wildHabitat ? 0.52 : 0.34;
+        case "zoo":
+            return wildHabitat ? 0.34 : 0.18;
+        case "domestic":
+            return wildHabitat ? 0.28 : 0.14;
+        default:
+            return wildHabitat ? 0.62 : 0.24;
+    }
+}
+
+function settingGradePenalty(row: QueryRow) {
+    const wildHabitat = hasWildHabitatSignal(row);
+    switch (captureSettingTag(row)) {
+        case "wild":
+            return 0;
+        case "farm":
+            return wildHabitat ? 0.06 : 0.10;
+        case "zoo":
+            return wildHabitat ? 0.12 : 0.18;
+        case "domestic":
+            return wildHabitat ? 0.14 : 0.20;
+        default:
+            return wildHabitat ? 0.04 : 0.08;
+    }
+}
+
+function accuracyGradeScore(row: QueryRow) {
+    const confidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "confidence") ?? 0)));
+    const refinedConfidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "breed_confidence") ?? confidence)));
+    if (confidence >= 0.75) return Math.max(refinedConfidence, 0.82);
+    if (confidence >= 0.5) return Math.max(refinedConfidence * 0.92, 0.58);
+    return Math.max(refinedConfidence * 0.8, 0.24);
+}
+
+function endorsementTotal(row: QueryRow) {
+    return readNumber(row, "dominance_endorsements")
+        + readNumber(row, "speed_endorsements")
+        + readNumber(row, "size_endorsements")
+        + readNumber(row, "intelligence_endorsements")
+        + readNumber(row, "rarity_endorsements");
+}
+
+function captureGrade(row: QueryRow) {
+    const confidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "confidence") ?? 0)));
+    const quality = imageQualityGradeScore(row);
+    const framing = Math.min(Math.max(
+        (quality === 1 ? 0.92 : quality >= 0.68 ? 0.62 : 0.24) + confidence * 0.06,
+        0.08
+    ), 1);
+    const condition = 0.84;
+    const bodyVisibility = 0.72;
+    const aesthetic = 0.75;
+    const endorsementRatio = Math.min(Math.max(0, endorsementTotal(row)), 15) / 15;
+    const endorsementLift = Math.sqrt(endorsementRatio) * 0.18;
+    const authenticityStatus = readNestedString(row, ["raw_json", "model", "authenticity_status"]);
+    const authenticityPenalty = authenticityStatus === "likely_non_live_source" ? 0.22 : 0;
+    const uncertaintyPenalty = shouldShowUncertaintyFallback(row) ? 0.14 : 0;
+
+    const weighted = condition * 0.24
+        + quality * 0.13
+        + framing * 0.07
+        + accuracyGradeScore(row) * 0.24
+        + habitatGradeScore(row) * 0.13
+        + bodyVisibility * 0.11
+        + aesthetic * 0.08
+        + endorsementLift;
+    const adjusted = Math.min(Math.max(weighted - authenticityPenalty - uncertaintyPenalty - settingGradePenalty(row), 0.05), 1);
+    const contrasted = adjusted >= 0.5
+        ? Math.min(1, 0.5 + Math.pow((adjusted - 0.5) / 0.5, 0.82) * 0.5)
+        : Math.max(0.05, 0.5 - Math.pow((0.5 - adjusted) / 0.5, 1.18) * 0.5);
+
+    return Math.min(10, Math.max(1, Math.round(contrasted * 9)));
+}
+
+function shouldShowUncertaintyVisualWarning(row: QueryRow) {
+    if (shouldShowUncertaintyFallback(row)) return true;
+    if (showsBroadIdentityAtModerateConfidence(row)) return true;
+    return captureGrade(row) === 1;
 }
 
 function mediaKind(value: unknown) {
@@ -710,6 +867,7 @@ function mapCaptureRow(
     const animalName = headline.animalName;
     const catalogBestFor = catalogPrinciple?.bestUseCases ?? [];
     const learnedTags = learnedBestForTags(row);
+    const grade = captureGrade(row);
 
     return {
         kind: "capture",
@@ -728,6 +886,8 @@ function mapCaptureRow(
         sameSpeciesHelper: headline.sameSpeciesHelper,
         speciesSlug: canonicalSlug,
         score: readNumber(row, "score"),
+        captureGrade: grade,
+        isUncertain: shouldShowUncertaintyVisualWarning(row),
         endorsementCount: endorsementCount(row),
         viewerEndorsementStat: formatLabel(readString(row, "viewer_endorsement_stat")),
         rarity: readNumber(stats, "rarity"),
