@@ -18,7 +18,7 @@ function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
     if (!items.length) return null;
 
     return (
-        <section className="space-y-3">
+        <section className="space-y-3 lg:hidden">
             <div className="flex items-end justify-between gap-3">
                 <div>
                     <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/45">Featured</h2>
@@ -43,6 +43,44 @@ function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
                 ))}
             </div>
         </section>
+    );
+}
+
+function FeaturedRail({items}: {items: DiscoverFeaturedItem[]}) {
+    if (!items.length) return null;
+
+    return (
+        <aside className="hidden h-[90svh] min-h-[42rem] overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:block">
+            <div className="border-b border-white/[0.06] px-4 py-3">
+                <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/45">Featured</h2>
+                <p className="mt-1 text-xs text-white/30">Select a top capture</p>
+            </div>
+            <div className="h-[calc(100%-4.65rem)] space-y-2 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {items.map((item) => (
+                    <Link
+                        key={`${item.kind}-${item.captureId}`}
+                        href={item.href}
+                        className="group grid grid-cols-[4.5rem_1fr] gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-2 transition hover:border-primary-400/25 hover:bg-white/[0.05]"
+                    >
+                        <div className="aspect-square overflow-hidden rounded-xl bg-black">
+                            <img
+                                src={item.imageSrc}
+                                alt={item.animalName}
+                                loading="lazy"
+                                decoding="async"
+                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                        </div>
+                        <div className="min-w-0 self-center">
+                            <p className="line-clamp-2 text-sm font-bold leading-5 text-white">{item.animalName}</p>
+                            <p className={`mt-1 text-[0.62rem] font-black uppercase tracking-[0.12em] ${item.kind === "endorsed" ? "text-cyan-200/80" : "text-amber-200/80"}`}>
+                                {item.kind === "endorsed" ? "Top endorsed" : "Rare capture"}
+                            </p>
+                        </div>
+                    </Link>
+                ))}
+            </div>
+        </aside>
     );
 }
 
@@ -244,28 +282,31 @@ export default function DiscoverHome({
             </header>
 
             {segment === "discover" ? (
-                <div className="mx-auto max-w-2xl space-y-4">
-                    <FeaturedStrip items={featured} />
-                    {timelineItems.length ? (
-                        <section className="h-[calc(100svh-11.5rem)] min-h-[34rem] snap-y snap-mandatory space-y-4 overflow-y-auto overscroll-contain scroll-smooth pr-1 [scrollbar-width:none] md:h-[90svh] md:min-h-[42rem] [&::-webkit-scrollbar]:hidden">
-                            {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
-                            {isLoadingTimeline ? (
-                                <div className="snap-start rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
-                                    Loading more posts
-                                </div>
-                            ) : null}
-                            {hasMoreTimeline ? (
-                                <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
-                            ) : null}
-                        </section>
-                    ) : (
-                        <AppEmpty
-                            icon="home"
-                            title="Timeline is quiet"
-                            detail="Check back soon, or make one of your animals public and comparison-ready."
-                            action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
-                        />
-                    )}
+                <div className="mx-auto grid max-w-[66rem] gap-4 lg:grid-cols-[minmax(0,42rem)_18rem] lg:items-start">
+                    <div className="space-y-4">
+                        <FeaturedStrip items={featured} />
+                        {timelineItems.length ? (
+                            <section className="h-[calc(100svh-11.5rem)] min-h-[34rem] snap-y snap-mandatory space-y-4 overflow-y-auto overscroll-contain scroll-smooth pr-1 [scrollbar-width:none] md:h-[90svh] md:min-h-[42rem] [&::-webkit-scrollbar]:hidden">
+                                {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
+                                {isLoadingTimeline ? (
+                                    <div className="snap-start rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
+                                        Loading more posts
+                                    </div>
+                                ) : null}
+                                {hasMoreTimeline ? (
+                                    <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
+                                ) : null}
+                            </section>
+                        ) : (
+                            <AppEmpty
+                                icon="home"
+                                title="Timeline is quiet"
+                                detail="Check back soon, or make one of your animals public and comparison-ready."
+                                action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
+                            />
+                        )}
+                    </div>
+                    <FeaturedRail items={featured} />
                 </div>
             ) : collectorItems.length ? (
                 <section className="mx-auto max-w-3xl space-y-3">
