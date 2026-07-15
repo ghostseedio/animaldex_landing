@@ -2,7 +2,7 @@ import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
 import {getDiscoverCollectors} from "@/data/discover-collectors";
 import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
 
-const INITIAL_DISCOVER_TIMELINE_LIMIT = 6;
+const INITIAL_DISCOVER_TIMELINE_LIMIT = 2;
 const INITIAL_COLLECTOR_LIMIT = 24;
 
 export default async function AppHomePage({

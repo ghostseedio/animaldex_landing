@@ -11,7 +11,7 @@ import {useRouter} from "next/navigation";
 type DiscoverSegment = "discover" | "collectors";
 
 const WORDMARK_SRC = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-text.webp";
-const DISCOVER_PAGE_SIZE = 6;
+const DISCOVER_PAGE_SIZE = 2;
 const COLLECTOR_PAGE_SIZE = 24;
 
 function FeaturedStrip({items}: {items: DiscoverFeaturedItem[]}) {
@@ -208,7 +208,7 @@ export default function DiscoverHome({
             if (entries.some((entry) => entry.isIntersecting)) {
                 void loadNextTimelinePage();
             }
-        }, {rootMargin: "500px 0px"});
+        }, {rootMargin: "120px 0px"});
         observer.observe(node);
         return () => observer.disconnect();
     }, [segment, hasMoreTimeline, loadNextTimelinePage]);
@@ -244,18 +244,18 @@ export default function DiscoverHome({
             </header>
 
             {segment === "discover" ? (
-                <div className="mx-auto max-w-2xl space-y-6">
+                <div className="mx-auto max-w-2xl space-y-4">
                     <FeaturedStrip items={featured} />
                     {timelineItems.length ? (
-                        <section className="snap-y snap-proximity space-y-4">
+                        <section className="h-[calc(100svh-11.5rem)] min-h-[34rem] snap-y snap-mandatory space-y-4 overflow-y-auto overscroll-contain scroll-smooth pr-1 [scrollbar-width:none] md:h-[90svh] md:min-h-[42rem] [&::-webkit-scrollbar]:hidden">
                             {timelineItems.map((item) => <DiscoverTimelineCard key={item.id} item={item} locale={locale} />)}
                             {isLoadingTimeline ? (
-                                <div className="rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
+                                <div className="snap-start rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/80 p-4 text-center text-sm font-semibold text-white/45">
                                     Loading more posts
                                 </div>
                             ) : null}
                             {hasMoreTimeline ? (
-                                <div ref={timelineSentinelRef} aria-hidden="true" className="h-8" />
+                                <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
                             ) : null}
                         </section>
                     ) : (

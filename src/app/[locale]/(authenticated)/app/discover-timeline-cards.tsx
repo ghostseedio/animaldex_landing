@@ -126,20 +126,51 @@ function MediaCarousel({
   assets,
   animalName,
   isUncertain = false,
+  layout = "standard",
 }: {
   assets: DiscoverMediaAsset[];
   animalName: string;
   isUncertain?: boolean;
+  layout?: "standard" | "feed";
 }) {
   const media = useMemo(() => assets.length ? assets : [], [assets]);
   const videoSourceById = useMemo(() => new Map(media.map((asset) => [asset.id, asset.url])), [media]);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [isMediaActive, setIsMediaActive] = useState(layout !== "feed");
   const [loadedVideoIds, setLoadedVideoIds] = useState<Set<string>>(() => new Set());
+  const shouldLoadMedia = layout !== "feed" || isMediaActive;
+
+  useEffect(() => {
+    if (layout !== "feed") {
+      setIsMediaActive(true);
+      return undefined;
+    }
+
+    const node = rootRef.current;
+    if (!node) return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      const focused = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.55);
+      setIsMediaActive(focused);
+    }, {
+      rootMargin: "0px",
+      threshold: [0, 0.35, 0.55, 0.75, 1]
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [layout]);
 
   useEffect(() => {
     const videos = Object.entries(videoRefs.current)
       .filter((entry): entry is [string, HTMLVideoElement] => Boolean(entry[1]));
     if (!videos.length) return undefined;
+
+    if (!shouldLoadMedia) {
+      videos.forEach(([, video]) => video.pause());
+      return undefined;
+    }
 
     const markLoaded = (mediaId: string) => {
       setLoadedVideoIds((current) => {
@@ -170,18 +201,18 @@ function MediaCarousel({
         const mediaId = video.dataset.mediaId;
         if (!mediaId) continue;
 
-        if (entry.isIntersecting || entry.intersectionRatio >= 0.08) {
+        if (entry.intersectionRatio >= 0.45) {
           markLoaded(mediaId);
         }
-        if (entry.intersectionRatio >= 0.68) {
+        if (entry.intersectionRatio >= 0.72) {
           playVideo(mediaId, video);
         } else if (entry.intersectionRatio <= 0.02) {
           video.pause();
         }
       }
     }, {
-      rootMargin: "320px 0px",
-      threshold: [0, 0.02, 0.08, 0.68, 1]
+      rootMargin: "0px",
+      threshold: [0, 0.02, 0.45, 0.72, 1]
     });
 
     const onActiveVideo = (event: Event) => {
@@ -198,19 +229,30 @@ function MediaCarousel({
       observer.disconnect();
       window.removeEventListener("animaldex-feed-video-active", onActiveVideo);
     };
-  }, [media, videoSourceById]);
+  }, [media, shouldLoadMedia, videoSourceById]);
 
   if (!media.length) return null;
 
+  const frameClass = layout === "feed"
+    ? "relative flex min-h-0 flex-1 bg-black"
+    : "relative bg-white/5";
+  const scrollerClass = layout === "feed"
+    ? "flex h-full min-h-0 w-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    : "flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  const itemClass = layout === "feed"
+    ? "relative h-full min-h-0 w-full shrink-0 snap-center overflow-hidden"
+    : "relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden";
+  const mediaFitClass = layout === "feed" ? "object-contain" : "object-cover";
+
   return (
-    <div className="relative bg-white/5">
-      <div className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div ref={rootRef} className={frameClass}>
+      <div className={scrollerClass}>
         {media.map((asset, index) => (
-          <div key={asset.id} className="relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden">
+          <div key={asset.id} className={itemClass}>
             {asset.kind === "video" || asset.kind === "loop" ? (
               <video
                 src={loadedVideoIds.has(asset.id) ? asset.url : undefined}
-                poster={asset.posterUrl ?? undefined}
+                poster={shouldLoadMedia || loadedVideoIds.has(asset.id) ? asset.posterUrl ?? undefined : undefined}
                 muted
                 loop
                 playsInline
@@ -219,16 +261,18 @@ function MediaCarousel({
                 ref={(node) => {
                   videoRefs.current[asset.id] = node;
                 }}
-                className="h-full w-full bg-black object-cover"
+                className={`h-full w-full bg-black ${mediaFitClass}`}
               />
-            ) : (
+            ) : shouldLoadMedia ? (
               <img
                 src={asset.url}
                 alt={animalName}
                 loading="lazy"
                 decoding="async"
-                className="h-full w-full object-cover"
+                className={`h-full w-full bg-black ${mediaFitClass}`}
               />
+            ) : (
+              <div className="h-full w-full bg-[#090909]" />
             )}
             {(asset.kind === "video" || asset.kind === "loop") ? (
               <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
@@ -277,8 +321,8 @@ function TimelineShell({
 }) {
   const formatted = formatAppShortDate(date, locale);
   return (
-    <article className="snap-start scroll-mt-4 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
-      <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+    <article className="flex min-h-full snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
         <ActivityBadge label={badge} />
         <div className="flex items-center gap-2.5">
           {formatted ? (
@@ -312,8 +356,8 @@ function CaptureCard({
     : item.activityBadge;
 
   return (
-    <article className={`snap-start scroll-mt-4 overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
-      <div className="flex items-start justify-between gap-3 p-4">
+    <article className={`flex min-h-full snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
+      <div className="flex shrink-0 items-start justify-between gap-3 p-3 sm:p-4">
         <CollectorHeader collector={item.collector} />
         <div className="flex shrink-0 items-center gap-2">
           <ActivityBadge label={badgeLabel} />
@@ -328,12 +372,12 @@ function CaptureCard({
         </div>
       </div>
       {item.activityLine ? (
-        <p className="px-4 pb-4 text-sm leading-6 text-white/55">{item.activityLine}</p>
+        <p className="line-clamp-2 shrink-0 px-3 pb-3 text-sm leading-6 text-white/55 sm:px-4 sm:pb-4">{item.activityLine}</p>
       ) : null}
-      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} />
-      <div className="space-y-3 p-4">
+      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} layout="feed" />
+      <div className="shrink-0 space-y-2 p-3 sm:space-y-3 sm:p-4">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-2xl font-bold text-white">
+          <h3 className="font-display text-xl font-bold text-white sm:text-2xl">
             <Link href={item.href}>{item.animalName}</Link>
           </h3>
           <GradeBadge grade={item.captureGrade} />
@@ -345,15 +389,15 @@ function CaptureCard({
           </span>
         ) : null}
         {item.headlineSupportingName ? (
-          <p className="text-sm text-white/55">{item.headlineSupportingName}</p>
+          <p className="line-clamp-1 text-sm text-white/55">{item.headlineSupportingName}</p>
         ) : null}
         {item.sameSpeciesHelper ? (
-          <p className="text-xs text-white/40">{item.sameSpeciesHelper}</p>
+          <p className="line-clamp-1 text-xs text-white/40">{item.sameSpeciesHelper}</p>
         ) : null}
         {item.learnedPrinciple ? (
           <p className="flex items-center gap-2 text-sm text-white/55">
             <AppIcon name="spark" className="h-3.5 w-3.5 text-primary-200" />
-            <span>{item.learnedPrinciple}</span>
+            <span className="line-clamp-1">{item.learnedPrinciple}</span>
           </p>
         ) : null}
         {item.bestForTags.length ? (
