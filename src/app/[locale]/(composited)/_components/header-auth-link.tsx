@@ -68,7 +68,7 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel}: HeaderAuth
 
     return (
         <Link
-            href="/account"
+            href="/app"
             className="hidden rounded-2xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100 md:inline-flex"
         >
             {signInLabel}

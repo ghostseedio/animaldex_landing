@@ -1,4 +1,4 @@
-export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "boltShield";
+export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "volume" | "volumeOff" | "boltShield";
 
 export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconName; className?: string}) {
     const path: Record<AppIconName, React.ReactNode> = {
@@ -29,7 +29,9 @@ export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconNam
         calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></>,
         chevron: <path d="m9 18 6-6-6-6"/>,
         menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
-        close: <path d="m6 6 12 12M18 6 6 18"/>
+        close: <path d="m6 6 12 12M18 6 6 18"/>,
+        volume: <><path d="M4 9v6h4l5 4V5L8 9Z"/><path d="M16 9.5a4 4 0 0 1 0 5M19 7a8 8 0 0 1 0 10"/></>,
+        volumeOff: <><path d="M4 9v6h4l5 4V5L8 9Z"/><path d="m16 9 5 5m0-5-5 5"/></>
     };
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{path[name]}</svg>;
 }

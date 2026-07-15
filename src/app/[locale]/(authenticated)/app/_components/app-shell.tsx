@@ -8,7 +8,8 @@ import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/
 
 type AppShellProps = {
     children: React.ReactNode;
-    profile: {displayName: string; username: string | null; avatarUrl: string | null};
+    profile: {displayName: string; username: string | null; avatarUrl: string | null} | null;
+    isAuthenticated: boolean;
     unreadCount: number;
     unreadMessageCount: number;
 };
@@ -57,15 +58,17 @@ function NavBadge({count}: {count: number}) {
     return <span className="ml-auto rounded-full bg-primary-400 px-2 py-0.5 text-[0.65rem] font-black tabular-nums text-black">{count > 99 ? "99+" : count}</span>;
 }
 
-export default function AppShell({children, profile, unreadCount, unreadMessageCount}: AppShellProps) {
+export default function AppShell({children, profile, isAuthenticated, unreadCount, unreadMessageCount}: AppShellProps) {
     const pathname = normalizedPath(usePathname() || "/app");
     const router = useRouter();
     const [menuOpen, setMenuOpen] = useState(false);
+    const accountHref = "/account";
     const isActive = (href: string) => {
         if (href === "/app") return pathname === href;
         if (href === "/app/arena") return isArenaRoute(pathname);
         return pathname.startsWith(href);
     };
+    const navHref = (href: string) => isAuthenticated || href === "/app" ? href : accountHref;
 
     useEffect(() => {
         setMenuOpen(false);
@@ -73,10 +76,10 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
 
     useEffect(() => {
         const prefix = localePrefix(pathname);
-        for (const route of PREFETCH_ROUTES) {
+        for (const route of isAuthenticated ? PREFETCH_ROUTES : ["/app", "/account"]) {
             router.prefetch(`${prefix}${route}`);
         }
-    }, [pathname, router]);
+    }, [isAuthenticated, pathname, router]);
 
     async function signOut() {
         await fetch("/api/auth/logout", {method: "POST"});
@@ -94,17 +97,17 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
     };
 
     const navLink = (item: typeof mainLinks[number], mobile = false) => (
-        <Link key={item.href} href={item.href} prefetch className={navClass(isActive(item.href), mobile)}>
+        <Link key={item.href} href={navHref(item.href)} prefetch className={navClass(isActive(item.href), mobile)}>
             <AppIcon name={item.icon} className={mobile ? "h-5 w-5" : "h-[1.15rem] w-[1.15rem]"} />
             <span>{item.label}</span>
         </Link>
     );
 
     const utilityLink = (href: string, label: string, icon: AppIconName, badge = 0) => (
-        <Link key={href} href={href} prefetch className={navClass(isActive(href))}>
+        <Link key={href} href={navHref(href)} prefetch className={navClass(isActive(href))}>
             <AppIcon name={icon} />
             {label}
-            <NavBadge count={badge} />
+            {isAuthenticated ? <NavBadge count={badge} /> : null}
         </Link>
     );
 
@@ -129,11 +132,12 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                 </nav>
 
                 <div className="mt-auto space-y-4">
-                    <CreditBalanceChip className="w-full justify-center px-4 py-2.5" />
-                    <Link href="/app/capture" className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-400 to-violet-500 px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_40px_-24px_rgba(139,92,246,0.9)] transition hover:brightness-105">
+                    {isAuthenticated ? <CreditBalanceChip className="w-full justify-center px-4 py-2.5" /> : null}
+                    <Link href={navHref("/app/capture")} className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-400 to-violet-500 px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_40px_-24px_rgba(139,92,246,0.9)] transition hover:brightness-105">
                         <AppIcon name="camera" />
                         Add capture
                     </Link>
+                    {isAuthenticated && profile ? (
                     <div className="flex items-center gap-2 border-t border-white/[0.08] px-1 pt-4">
                         <Link href="/app/profile" aria-label="Open profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
                             {profile.avatarUrl
@@ -146,6 +150,14 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                         </Link>
                         <button onClick={signOut} className="ml-auto text-xs font-bold text-white/35 transition hover:text-white">Exit</button>
                     </div>
+                    ) : (
+                    <div className="border-t border-white/[0.08] px-1 pt-4">
+                        <Link href={accountHref} className="flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white transition hover:border-primary-400/35 hover:bg-white/[0.07] hover:text-primary-100">
+                            <AppIcon name="profile" />
+                            Sign in
+                        </Link>
+                    </div>
+                    )}
                 </div>
             </aside>
 
@@ -155,14 +167,14 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                         <img src="/images/logo.webp" alt="" className="h-9 w-9 rounded-xl ring-1 ring-white/10" />
                     </Link>
                     <div className="flex items-center gap-2">
-                        <CreditBalanceChip />
-                        <Link href="/app/messages" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
+                        {isAuthenticated ? <CreditBalanceChip /> : null}
+                        <Link href={navHref("/app/messages")} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name="message" />
-                            {unreadMessageCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
+                            {isAuthenticated && unreadMessageCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
                         </Link>
-                        <Link href="/app/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
+                        <Link href={navHref("/app/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name="bell" />
-                            {unreadCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
+                            {isAuthenticated && unreadCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
                         </Link>
                         <button onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close menu" : "Open menu"} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name={menuOpen ? "close" : "menu"} />
@@ -175,6 +187,7 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                 <>
                     <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setMenuOpen(false)} />
                     <div className="fixed inset-x-4 top-[4.75rem] z-50 max-h-[70vh] overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#141414]/95 p-3 shadow-2xl backdrop-blur-xl lg:hidden">
+                        {isAuthenticated && profile ? (
                         <Link href="/app/profile" className="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 transition hover:bg-white/[0.07]">
                             {profile.avatarUrl
                                 ? <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
@@ -184,11 +197,19 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
                                 <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "View profile"}</p>
                             </div>
                         </Link>
+                        ) : (
+                        <Link href={accountHref} className="mb-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-black text-white transition hover:bg-white/[0.07] hover:text-primary-100">
+                            <AppIcon name="profile" />
+                            Sign in
+                        </Link>
+                        )}
                         <p className="px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/25">More</p>
                         {utilityLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                         {utilityLink("/app/messages", "Messages", "message", unreadMessageCount)}
                         {utilityLink("/app/notifications", "Notifications", "bell", unreadCount)}
-                        <button onClick={signOut} className="mt-2 w-full rounded-2xl border border-white/10 px-3 py-3 text-left text-sm font-bold text-white/50 transition hover:text-white">Sign out</button>
+                        {isAuthenticated ? (
+                            <button onClick={signOut} className="mt-2 w-full rounded-2xl border border-white/10 px-3 py-3 text-left text-sm font-bold text-white/50 transition hover:text-white">Sign out</button>
+                        ) : null}
                     </div>
                 </>
             ) : null}
@@ -199,7 +220,7 @@ export default function AppShell({children, profile, unreadCount, unreadMessageC
 
             <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center rounded-[1.75rem] border border-white/10 bg-[#141414]/95 p-1.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl lg:hidden">
                 {mainLinks.slice(0, 2).map((item) => navLink(item, true))}
-                <Link href="/app/capture" aria-label="Add capture" className="-mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-violet-500 text-black shadow-lg shadow-violet-500/25 ring-4 ring-black">
+                <Link href={navHref("/app/capture")} aria-label="Add capture" className="-mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-violet-500 text-black shadow-lg shadow-violet-500/25 ring-4 ring-black">
                     <AppIcon name="plus" className="h-6 w-6" />
                 </Link>
                 {mainLinks.slice(2).map((item) => navLink(item, true))}

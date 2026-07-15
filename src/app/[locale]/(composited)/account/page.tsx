@@ -7,13 +7,29 @@ type AccountPageProps = {
     params: {
         locale: string;
     };
+    searchParams?: {
+        next?: string;
+    };
 };
 
-export default async function AccountPage({params}: AccountPageProps) {
+function safeRedirectTarget(next: string | undefined, locale: string) {
+    if (!next || !next.startsWith("/") || next.startsWith("//")) {
+        return `/${locale}/app`;
+    }
+
+    if (next.includes("://")) {
+        return `/${locale}/app`;
+    }
+
+    return next;
+}
+
+export default async function AccountPage({params, searchParams}: AccountPageProps) {
     const userId = await getAuthenticatedUserId();
+    const redirectTo = safeRedirectTarget(searchParams?.next, params.locale);
 
     if (userId) {
-        redirect(`/${params.locale}/app`);
+        redirect(redirectTo);
     }
 
     const t = await getScopedTranslator(params.locale, "account");
@@ -21,7 +37,7 @@ export default async function AccountPage({params}: AccountPageProps) {
     return (
         <section className="mx-auto w-full max-w-[88rem] px-4 py-12 md:px-8 md:py-20">
             <AccountLoginForm
-                redirectTo={`/${params.locale}/app`}
+                redirectTo={redirectTo}
                 labels={{
                     eyebrow: t("loginEyebrow"),
                     title: t("loginTitle"),

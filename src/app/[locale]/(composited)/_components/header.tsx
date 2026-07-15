@@ -56,7 +56,7 @@ export default function Header({locale}: {locale?: string}) {
                     <HeaderLink href="/blog" mobile>
                         {t("blog")}
                     </HeaderLink>
-                    <HeaderLink href="/account" mobile>
+                    <HeaderLink href="/app" mobile>
                         {t("signIn")}
                     </HeaderLink>
                     <HeaderLink href="/app" mobile>

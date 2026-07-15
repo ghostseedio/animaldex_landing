@@ -15,6 +15,9 @@ import type {
 } from "@/data/discover-timeline";
 import { formatAppShortDate } from "@/lib/app-dates";
 
+const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
+let feedVideoSoundEnabled = false;
+
 function CollectorLink({ collector }: { collector: DiscoverCollectorRef }) {
   if (collector.href) {
     return (
@@ -139,6 +142,7 @@ function MediaCarousel({
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [isMediaActive, setIsMediaActive] = useState(layout !== "feed");
   const [loadedVideoIds, setLoadedVideoIds] = useState<Set<string>>(() => new Set());
+  const [isFeedSoundEnabled, setIsFeedSoundEnabled] = useState(feedVideoSoundEnabled);
   const shouldLoadMedia = layout !== "feed" || isMediaActive;
 
   useEffect(() => {
@@ -163,12 +167,30 @@ function MediaCarousel({
   }, [layout]);
 
   useEffect(() => {
+    const onFeedVideoSound = (event: Event) => {
+      const enabled = Boolean((event as CustomEvent<{enabled?: boolean}>).detail?.enabled);
+      setIsFeedSoundEnabled(enabled);
+      if (!enabled) {
+        Object.values(videoRefs.current).forEach((video) => {
+          if (video) video.muted = true;
+        });
+      }
+    };
+
+    window.addEventListener(FEED_VIDEO_SOUND_EVENT, onFeedVideoSound);
+    return () => window.removeEventListener(FEED_VIDEO_SOUND_EVENT, onFeedVideoSound);
+  }, []);
+
+  useEffect(() => {
     const videos = Object.entries(videoRefs.current)
       .filter((entry): entry is [string, HTMLVideoElement] => Boolean(entry[1]));
     if (!videos.length) return undefined;
 
     if (!shouldLoadMedia) {
-      videos.forEach(([, video]) => video.pause());
+      videos.forEach(([, video]) => {
+        video.pause();
+        video.muted = true;
+      });
       return undefined;
     }
 
@@ -189,7 +211,7 @@ function MediaCarousel({
         video.load();
       }
       window.dispatchEvent(new CustomEvent("animaldex-feed-video-active", {detail: {mediaId}}));
-      video.muted = true;
+      video.muted = !isFeedSoundEnabled;
       window.setTimeout(() => {
         void video.play().catch(() => undefined);
       }, 0);
@@ -218,7 +240,12 @@ function MediaCarousel({
     const onActiveVideo = (event: Event) => {
       const mediaId = (event as CustomEvent<{mediaId?: string}>).detail?.mediaId;
       for (const [id, video] of videos) {
-        if (id !== mediaId) video.pause();
+        if (id !== mediaId) {
+          video.pause();
+          video.muted = true;
+        } else {
+          video.muted = !isFeedSoundEnabled;
+        }
       }
     };
 
@@ -229,12 +256,39 @@ function MediaCarousel({
       observer.disconnect();
       window.removeEventListener("animaldex-feed-video-active", onActiveVideo);
     };
-  }, [media, shouldLoadMedia, videoSourceById]);
+  }, [isFeedSoundEnabled, media, shouldLoadMedia, videoSourceById]);
 
   if (!media.length) return null;
 
+  const toggleVideoSound = (asset: DiscoverMediaAsset) => {
+    const video = videoRefs.current[asset.id];
+    const nextSoundEnabled = !isFeedSoundEnabled;
+    feedVideoSoundEnabled = nextSoundEnabled;
+    setIsFeedSoundEnabled(nextSoundEnabled);
+    window.dispatchEvent(new CustomEvent(FEED_VIDEO_SOUND_EVENT, {detail: {enabled: nextSoundEnabled}}));
+
+    setLoadedVideoIds((current) => {
+      if (current.has(asset.id)) return current;
+      const next = new Set(current);
+      next.add(asset.id);
+      return next;
+    });
+
+    if (video) {
+      if (!video.currentSrc) {
+        video.src = asset.url;
+        video.load();
+      }
+      window.dispatchEvent(new CustomEvent("animaldex-feed-video-active", {detail: {mediaId: asset.id}}));
+      video.muted = !nextSoundEnabled;
+      if (nextSoundEnabled) {
+        void video.play().catch(() => undefined);
+      }
+    }
+  };
+
   const frameClass = layout === "feed"
-    ? "relative flex min-h-0 flex-1 bg-black"
+    ? "relative h-[52svh] min-h-[20rem] max-h-[36rem] shrink-0 bg-black sm:h-[54svh] md:h-[56svh]"
     : "relative bg-white/5";
   const scrollerClass = layout === "feed"
     ? "flex h-full min-h-0 w-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -242,7 +296,7 @@ function MediaCarousel({
   const itemClass = layout === "feed"
     ? "relative h-full min-h-0 w-full shrink-0 snap-center overflow-hidden"
     : "relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden";
-  const mediaFitClass = layout === "feed" ? "object-contain" : "object-cover";
+  const mediaFitClass = "object-cover object-[50%_28%]";
 
   return (
     <div ref={rootRef} className={frameClass}>
@@ -253,7 +307,7 @@ function MediaCarousel({
               <video
                 src={loadedVideoIds.has(asset.id) ? asset.url : undefined}
                 poster={shouldLoadMedia || loadedVideoIds.has(asset.id) ? asset.posterUrl ?? undefined : undefined}
-                muted
+                muted={!isFeedSoundEnabled}
                 loop
                 playsInline
                 preload={loadedVideoIds.has(asset.id) ? "metadata" : "none"}
@@ -278,6 +332,21 @@ function MediaCarousel({
               <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
                 Video
               </span>
+            ) : null}
+            {(asset.kind === "video" || asset.kind === "loop") ? (
+              <button
+                type="button"
+                aria-label={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
+                title={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  toggleVideoSound(asset);
+                }}
+                className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full bg-black/65 text-white shadow-lg ring-1 ring-white/15 transition hover:bg-black/80 hover:text-primary-100"
+              >
+                <AppIcon name={isFeedSoundEnabled ? "volume" : "volumeOff"} className="h-5 w-5" />
+              </button>
             ) : null}
             {isUncertain ? (
               <span className="absolute right-3 top-3">
@@ -321,7 +390,7 @@ function TimelineShell({
 }) {
   const formatted = formatAppShortDate(date, locale);
   return (
-    <article className="flex min-h-full snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
+    <article className="flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
         <ActivityBadge label={badge} />
         <div className="flex items-center gap-2.5">
@@ -354,9 +423,10 @@ function CaptureCard({
   const badgeLabel = item.activityBadge.toLowerCase() === "capture" && item.animalDexNumber
     ? `#${String(item.animalDexNumber).padStart(3, "0")}`
     : item.activityBadge;
+  const hasActionPills = item.endorsementCount > 0 || item.isChallengeAvailable;
 
   return (
-    <article className={`flex min-h-full snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
+    <article className={`flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
       <div className="flex shrink-0 items-start justify-between gap-3 p-3 sm:p-4">
         <CollectorHeader collector={item.collector} />
         <div className="flex shrink-0 items-center gap-2">
@@ -375,9 +445,9 @@ function CaptureCard({
         <p className="line-clamp-2 shrink-0 px-3 pb-3 text-sm leading-6 text-white/55 sm:px-4 sm:pb-4">{item.activityLine}</p>
       ) : null}
       <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} layout="feed" />
-      <div className="shrink-0 space-y-2 p-3 sm:space-y-3 sm:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-xl font-bold text-white sm:text-2xl">
+      <div className="flex min-h-0 flex-1 flex-col justify-center space-y-1.5 overflow-hidden px-3 py-3.5 sm:px-4 sm:py-4">
+        <div className="flex items-start justify-between gap-2.5">
+          <h3 className="line-clamp-1 font-display text-xl font-bold leading-tight text-white sm:text-2xl">
             <Link href={item.href}>{item.animalName}</Link>
           </h3>
           <GradeBadge grade={item.captureGrade} />
@@ -389,32 +459,34 @@ function CaptureCard({
           </span>
         ) : null}
         {item.headlineSupportingName ? (
-          <p className="line-clamp-1 text-sm text-white/55">{item.headlineSupportingName}</p>
+          <p className="line-clamp-1 text-sm leading-5 text-white/55">{item.headlineSupportingName}</p>
         ) : null}
         {item.sameSpeciesHelper ? (
-          <p className="line-clamp-1 text-xs text-white/40">{item.sameSpeciesHelper}</p>
+          <p className="line-clamp-1 text-xs leading-4 text-white/40">{item.sameSpeciesHelper}</p>
         ) : null}
         {item.learnedPrinciple ? (
-          <p className="flex items-center gap-2 text-sm text-white/55">
+          <p className="flex items-center gap-2 text-sm leading-5 text-white/55">
             <AppIcon name="spark" className="h-3.5 w-3.5 text-primary-200" />
             <span className="line-clamp-1">{item.learnedPrinciple}</span>
           </p>
         ) : null}
         {item.bestForTags.length ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex max-h-7 flex-wrap gap-1.5 overflow-hidden">
             {item.bestForTags.map((tag) => <FeedPill key={tag}>{tag}</FeedPill>)}
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          {item.endorsementCount > 0 ? (
-            <FeedPill tone="cyan">
-              {item.endorsementCount} endorsement{item.endorsementCount === 1 ? "" : "s"}
-            </FeedPill>
-          ) : null}
-          {item.isChallengeAvailable ? (
-            <FeedPill tone="cyan">Enter {item.challengeStake} credit{item.challengeStake === 1 ? "" : "s"}</FeedPill>
-          ) : null}
-        </div>
+        {hasActionPills ? (
+          <div className="flex max-h-7 flex-wrap items-center gap-1.5 overflow-hidden">
+            {item.endorsementCount > 0 ? (
+              <FeedPill tone="cyan">
+                {item.endorsementCount} endorsement{item.endorsementCount === 1 ? "" : "s"}
+              </FeedPill>
+            ) : null}
+            {item.isChallengeAvailable ? (
+              <FeedPill tone="cyan">Enter {item.challengeStake} credit{item.challengeStake === 1 ? "" : "s"}</FeedPill>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );
