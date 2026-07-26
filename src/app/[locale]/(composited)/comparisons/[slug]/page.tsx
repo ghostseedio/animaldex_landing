@@ -12,8 +12,13 @@ import ComparisonPageNavigation from "@/app/[locale]/(composited)/challenges/_co
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import {getChallenge} from "@/data/challenges";
-import {fetchSpeciesComparisonBySlug, getRelatedMergedChallenges, resolveChallengeEntry} from "@/data/species-comparisons";
-import {getSpeciesBySlug} from "@/data/species";
+import {
+    buildComparisonSpeciesFallback,
+    fetchSpeciesComparisonBySlug,
+    getRelatedMergedChallenges,
+    resolveChallengeEntry
+} from "@/data/species-comparisons";
+import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
@@ -23,8 +28,21 @@ import {getScopedTranslator} from "@/loaders/translation";
 
 type Props = {params: {locale: string; slug: string}};
 
-async function resolveComparisonSpecies(slug: string) {
-    return (await getResolvedSpeciesBySlug(slug)) ?? getSpeciesBySlug(slug) ?? null;
+type ComparisonSpecies = SpeciesEntry & {hasCatalogPage: boolean};
+
+async function resolveComparisonSpecies(
+    slug: string,
+    displayName?: string | null
+): Promise<ComparisonSpecies> {
+    const resolved = (await getResolvedSpeciesBySlug(slug)) ?? getSpeciesBySlug(slug) ?? null;
+    if (resolved) {
+        return {...resolved, hasCatalogPage: true};
+    }
+
+    return {
+        ...buildComparisonSpeciesFallback(slug, displayName),
+        hasCatalogPage: false
+    };
 }
 
 function formatDate(locale: string, date: string) {
@@ -39,19 +57,19 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
     const challenge = await resolveChallengeEntry(params.slug);
     if (!challenge) return {};
     const [animalA, animalB] = await Promise.all([
-        resolveComparisonSpecies(challenge.animalASlug),
-        resolveComparisonSpecies(challenge.animalBSlug)
+        resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
+        resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
     ]);
     return buildContentMetadata({
         locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
         title: challenge.title,
         description: challenge.description,
-        keywords: [...challenge.searchIntents, challenge.comparisonType, animalA?.name || challenge.animalASlug, animalB?.name || challenge.animalBSlug],
+        keywords: [...challenge.searchIntents, challenge.comparisonType, animalA.name, animalB.name],
         featuredImage: challenge.featuredImage,
         publishedAt: challenge.publishedAt,
         updatedAt: challenge.updatedAt,
-        tags: [challenge.comparisonType, animalA?.name || challenge.animalASlug, animalB?.name || challenge.animalBSlug]
+        tags: [challenge.comparisonType, animalA.name, animalB.name]
     });
 }
 
@@ -62,12 +80,14 @@ export default async function ComparisonDetailPage({params}: Props) {
     if (!challenge) notFound();
 
     const [animalA, animalB] = await Promise.all([
-        resolveComparisonSpecies(challenge.animalASlug),
-        resolveComparisonSpecies(challenge.animalBSlug)
+        resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
+        resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
     ]);
-    if (!animalA || !animalB) notFound();
 
-    const [animalAStatsResult, animalBStatsResult] = await Promise.all([resolveSpeciesStats(animalA.slug), resolveSpeciesStats(animalB.slug)]);
+    const [animalAStatsResult, animalBStatsResult] = await Promise.all([
+        resolveSpeciesStats(animalA.slug, animalA),
+        resolveSpeciesStats(animalB.slug, animalB)
+    ]);
     const animalABattleTier = animalAStatsResult.stats ? getBattleTier(animalAStatsResult.stats) : null;
     const animalBBattleTier = animalBStatsResult.stats ? getBattleTier(animalBStatsResult.stats) : null;
 
@@ -129,6 +149,15 @@ export default async function ComparisonDetailPage({params}: Props) {
         {species: animalB, stats: animalBStatsResult.stats, tier: animalBBattleTier}
     ];
 
+    const secondaryLinks = [
+        animalA.hasCatalogPage
+            ? {href: `/animals/${animalA.slug}`, label: t("trackSpecies", {animal: animalA.name})}
+            : null,
+        animalB.hasCatalogPage
+            ? {href: `/animals/${animalB.slug}`, label: t("trackSpecies", {animal: animalB.name})}
+            : null
+    ].filter((link): link is {href: string; label: string} => Boolean(link));
+
     return (
         <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 py-12 md:px-8 md:py-20">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
@@ -168,14 +197,38 @@ export default async function ComparisonDetailPage({params}: Props) {
 
             <section id="meet-animals" className="scroll-mt-28 space-y-6">
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("fieldProfiles")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("exploreAnimalsTitle")}</h2></div>
-                <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => <article key={species.slug} className="group overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900"><SpeciesArtworkImage slug={species.slug} alt={species.name} className="h-64 w-full transition duration-500 group-hover:scale-[1.02]" sizes="(min-width: 768px) 50vw, 100vw" /><div className="space-y-5 p-6 md:p-7"><div className="flex items-start justify-between gap-4"><div><h3 className="font-display text-3xl font-bold text-white">{species.name}</h3><p className="italic text-ink-300">{species.analysis.scientificName}</p></div>{tier ? <span className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-bold text-primary-100">{t("battleTierChip", {tier})}</span> : null}</div><p className="line-clamp-2 text-sm leading-6 text-ink-200">{species.analysis.habitat}</p><div className="grid grid-cols-3 gap-2 border-y border-line-300 py-4 text-center"><div><span className="block text-xs text-ink-300">{t("animalCategory")}</span><strong className="text-sm text-white">{species.analysis.category}</strong></div><div><span className="block text-xs text-ink-300">{t("speedStat")}</span><strong className="text-lg text-white">{stats?.speed ?? "—"}</strong></div><div><span className="block text-xs text-ink-300">{t("sizeStat")}</span><strong className="text-lg text-white">{stats?.size ?? "—"}</strong></div></div><Link href={`/animals/${species.slug}`} className="inline-flex font-bold text-primary-200 hover:text-primary-100" underline>{t("readSpecies")}</Link></div></article>)}</div>
+                <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => (
+                    <article key={species.slug} className="group overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900">
+                        <SpeciesArtworkImage slug={species.slug} alt={species.name} className="h-64 w-full transition duration-500 group-hover:scale-[1.02]" sizes="(min-width: 768px) 50vw, 100vw" />
+                        <div className="space-y-5 p-6 md:p-7">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 className="font-display text-3xl font-bold text-white">{species.name}</h3>
+                                    <p className="italic text-ink-300">{species.analysis.scientificName}</p>
+                                </div>
+                                {tier ? <span className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-bold text-primary-100">{t("battleTierChip", {tier})}</span> : null}
+                            </div>
+                            <p className="line-clamp-2 text-sm leading-6 text-ink-200">{species.analysis.habitat}</p>
+                            <div className="grid grid-cols-3 gap-2 border-y border-line-300 py-4 text-center">
+                                <div><span className="block text-xs text-ink-300">{t("animalCategory")}</span><strong className="text-sm text-white">{species.analysis.category}</strong></div>
+                                <div><span className="block text-xs text-ink-300">{t("speedStat")}</span><strong className="text-lg text-white">{stats?.speed ?? "—"}</strong></div>
+                                <div><span className="block text-xs text-ink-300">{t("sizeStat")}</span><strong className="text-lg text-white">{stats?.size ?? "—"}</strong></div>
+                            </div>
+                            {species.hasCatalogPage ? (
+                                <Link href={`/animals/${species.slug}`} className="inline-flex font-bold text-primary-200 hover:text-primary-100" underline>{t("readSpecies")}</Link>
+                            ) : (
+                                <p className="text-sm text-ink-300">Species guide coming soon.</p>
+                            )}
+                        </div>
+                    </article>
+                ))}</div>
             </section>
 
             <SystemsIntelligenceSection items={systemsItems} labels={{title: t("systemsIntelligenceTitle"), description: t("systemsIntelligenceDescription"), systemRole: t("systemRoleLabel"), specializedHardware: t("specializedHardwareLabel"), systemsScript: t("systemsScriptLabel"), strategicInsight: t("strategicInsightLabel"), readSpeciesGuide: t("readSpeciesGuide")}} />
 
             <ChallengeVerdictCard title={t("finalTakeTitle")} summary={challenge.finalTake[0]} paragraphs={challenge.finalTake.slice(1)} fullAnalysisLabel={t("fullAnalysis")} />
 
-            <IntentCtaCard title={t(challenge.comparisonType === "battle" ? "ctaBattleTitle" : challenge.comparisonType === "speed" ? "ctaSpeedTitle" : "ctaDefaultTitle")} description={t(challenge.comparisonType === "battle" ? "ctaBattleDescription" : challenge.comparisonType === "speed" ? "ctaSpeedDescription" : "ctaDefaultDescription")} buttonLabel={t(challenge.comparisonType === "battle" ? "ctaBattleButton" : challenge.comparisonType === "speed" ? "ctaSpeedButton" : "ctaDefaultButton")} supportItems={[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")]} secondaryLinks={[{href: `/animals/${animalA.slug}`, label: t("trackSpecies", {animal: animalA.name})}, {href: `/animals/${animalB.slug}`, label: t("trackSpecies", {animal: animalB.name})}]} />
+            <IntentCtaCard title={t(challenge.comparisonType === "battle" ? "ctaBattleTitle" : challenge.comparisonType === "speed" ? "ctaSpeedTitle" : "ctaDefaultTitle")} description={t(challenge.comparisonType === "battle" ? "ctaBattleDescription" : challenge.comparisonType === "speed" ? "ctaSpeedDescription" : "ctaDefaultDescription")} buttonLabel={t(challenge.comparisonType === "battle" ? "ctaBattleButton" : challenge.comparisonType === "speed" ? "ctaSpeedButton" : "ctaDefaultButton")} supportItems={[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")]} secondaryLinks={secondaryLinks} />
 
             <RelatedChallengesSection title={t("relatedTitle")} description={t("relatedDescription")} readChallengeLabel={t("readChallenge")} items={relatedChallenges} />
         </article>

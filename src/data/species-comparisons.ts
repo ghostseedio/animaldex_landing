@@ -9,6 +9,7 @@ import type {
 } from "@/data/challenges";
 import {getChallenge as getStaticChallenge, isChallengeComparisonType} from "@/data/challenges";
 import type {SystemsIntelligenceEntry} from "@/data/content-schema";
+import type {SpeciesEntry} from "@/data/species";
 import {
     getSupabaseHeaders,
     getSupabasePublicKey,
@@ -201,6 +202,8 @@ export function mapSpeciesComparisonRowToChallengeEntry(row: SpeciesComparisonRo
         slug: row.slug,
         animalASlug: row.animal_a_slug,
         animalBSlug: row.animal_b_slug,
+        animalADisplayName: row.animal_a_display_name,
+        animalBDisplayName: row.animal_b_display_name,
         comparisonType,
         title: row.title,
         description: row.description,
@@ -228,6 +231,8 @@ function mapFeedRowToChallengeEntry(row: SpeciesComparisonFeedRow): ChallengeEnt
         slug: row.slug,
         animalASlug: row.animal_a_slug,
         animalBSlug: row.animal_b_slug,
+        animalADisplayName: row.animal_a_display_name,
+        animalBDisplayName: row.animal_b_display_name,
         comparisonType,
         title: row.title,
         description: row.description,
@@ -539,4 +544,55 @@ export function animalOptionsFromChallengeEntries(entries: ChallengeEntry[]) {
             entries.flatMap((entry) => entry.speciesSlugs).map((speciesSlug) => [speciesSlug, speciesSlug])
         ).keys()
     ).sort((left, right) => left.localeCompare(right));
+}
+
+function titleCaseFromSlug(slug: string) {
+    return slug
+        .split("-")
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+}
+
+/**
+ * Minimal species card used when a generated comparison references a slug that
+ * is not yet in the website catalog (e.g. broad `spider`).
+ */
+export function buildComparisonSpeciesFallback(
+    slug: string,
+    displayName?: string | null
+): SpeciesEntry {
+    const name = displayName?.trim() || titleCaseFromSlug(slug);
+    return {
+        slug,
+        name,
+        normalizedIdentityKey: slug.replace(/-/g, "_"),
+        heroTitle: `${name} — Identification, Habitat, Rarity & Facts`,
+        publishedAt: "2026-07-26",
+        updatedAt: "2026-07-26",
+        featuredImage: {
+            src: "/images/og.png",
+            alt: `${name} on AnimalDex`,
+            width: 1200,
+            height: 630
+        },
+        searchIntents: [`${name.toLowerCase()} facts`],
+        analysis: {
+            summary: `${name} appears in this AnimalDex comparison from generated matchup data.`,
+            scientificName: "—",
+            category: "Animal",
+            identification: [`Recognized in this matchup as ${name}.`],
+            habitat: "Habitat details are not published on a dedicated AnimalDex species page yet.",
+            nativeRange: "—",
+            rarityScore: 40,
+            rarityReason: "Catalog metadata for this identity is still catching up to the comparison generator."
+        },
+        premiumDetails: {
+            behaviorTraits: [],
+            whyInteresting: [],
+            respectfulSpotting: [],
+            lookalikes: []
+        },
+        relatedSpecies: []
+    };
 }

@@ -35,6 +35,9 @@ export type ChallengeEntry = CanonicalContentMetadata & {
     slug: string;
     animalASlug: string;
     animalBSlug: string;
+    /** Present on generated/DB rows when the website catalog slug is missing or broad. */
+    animalADisplayName?: string;
+    animalBDisplayName?: string;
     comparisonType: ChallengeComparisonType;
     quickVerdict: string;
     shortAnswer: string[];
