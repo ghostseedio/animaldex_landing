@@ -19,7 +19,7 @@ type VisibleBodyFeatures = {
     full_body_visible?: boolean;
 };
 
-type AnalysisSignals = {
+export type CaptureAnalysisSignals = {
     zoo_context_likely?: boolean;
     wild_habitat_likely?: boolean;
     domestic_context_likely?: boolean;
@@ -86,7 +86,7 @@ export type CaptureGradeSource = {
     zoo_or_wild?: string | null;
     confidence?: number | null;
     breed_confidence?: number | null;
-    signals?: AnalysisSignals | null;
+    signals?: CaptureAnalysisSignals | null;
     premium_details?: PremiumDetails | null;
     observed_market_modifiers?: ObservedMarketModifiers | null;
     dominance_endorsements?: number | null;
@@ -94,6 +94,40 @@ export type CaptureGradeSource = {
     size_endorsements?: number | null;
     intelligence_endorsements?: number | null;
     rarity_endorsements?: number | null;
+};
+
+export type CaptureGradeFactor = {
+    id: string;
+    title: string;
+    score: number;
+    weight: number;
+    detail: string;
+};
+
+export type CaptureGradeAdjustment = {
+    id: string;
+    title: string;
+    value: number;
+    detail: string;
+};
+
+export type CaptureGradeChecklistItem = {
+    id: string;
+    title: string;
+    met: boolean;
+    detail: string;
+    priority: number;
+};
+
+export type CaptureGradeBreakdown = {
+    grade: number;
+    weightedScore: number;
+    adjustedScore: number;
+    contrastedScore: number;
+    factors: CaptureGradeFactor[];
+    adjustments: CaptureGradeAdjustment[];
+    checklist: CaptureGradeChecklistItem[];
+    summary: string;
 };
 
 const ENDORSEMENT_PER_STAT_CAP = 30;
@@ -109,8 +143,49 @@ const WEAK_REFINED_IDENTITY_WORDS = new Set([
     "species"
 ]);
 
+/**
+ * Terminal breed/species/variant IDs, not refinable parent buckets.
+ * Matches iOS AnalysisResult.isTerminalSpecificIdentity.
+ */
+const TERMINAL_SPECIFIC_IDENTITY_KINDS = new Set([
+    "species",
+    "subspecies",
+    "breed",
+    "variant",
+    "cross_breed",
+    "hybrid"
+]);
+
 function readTrimmedString(value: unknown) {
     return typeof value === "string" ? value.trim() : "";
+}
+
+export function isTerminalSpecificIdentityKind(raw: string | null | undefined) {
+    const kind = raw?.trim().toLowerCase();
+    return kind ? TERMINAL_SPECIFIC_IDENTITY_KINDS.has(kind) : false;
+}
+
+/**
+ * A tight head/portrait crop that still documents the animal. The full body
+ * being out of frame should not be treated as distant or unreadable.
+ */
+function hasReadableHeadPortrait(signals: CaptureAnalysisSignals | null | undefined) {
+    const features = signals?.visible_body_features;
+    return features?.head_visible === true && features?.full_body_visible !== true;
+}
+
+/**
+ * Grade 1 alone should not mark a clear, terminal pet/breed ID as Uncertain.
+ * Matches iOS AnalysisResult.shouldShowUncertaintyVisualWarning.
+ */
+export function shouldSuppressGradeOneUncertainty(input: {
+    confidence: number | null | undefined;
+    identityKind: string | null | undefined;
+    signals: CaptureAnalysisSignals | null | undefined;
+}) {
+    return confidenceTier(input.confidence) === "high"
+        && isTerminalSpecificIdentityKind(input.identityKind)
+        && input.signals?.visible_body_features?.head_visible === true;
 }
 
 function asNumber(value: unknown, fallback = 0) {
@@ -357,7 +432,7 @@ function resolveBodyVisibilityAnatomy(input: {
     return "standardVertebrate";
 }
 
-function hasBehaviorTag(signals: AnalysisSignals, tag: string) {
+function hasBehaviorTag(signals: CaptureAnalysisSignals, tag: string) {
     return (signals.behavior_tags ?? []).some((entry) => entry.trim().toLowerCase() === tag.toLowerCase());
 }
 
@@ -482,7 +557,7 @@ function scoreInferredBodyVisibility(input: {
 function bodyVisibilityGradeScore(input: {
     imageQuality: ImageQuality;
     market: ObservedMarketModifiers;
-    signals: AnalysisSignals;
+    signals: CaptureAnalysisSignals;
     typeTags: string[];
     normalizedIdentityKey: string | null;
     animalName: string;
@@ -538,7 +613,7 @@ function marketAestheticAdjustment(market: ObservedMarketModifiers) {
 function aestheticGradeScore(input: {
     imageQuality: ImageQuality;
     market: ObservedMarketModifiers;
-    signals: AnalysisSignals;
+    signals: CaptureAnalysisSignals;
 }) {
     const shotAesthetic = input.signals.shot_aesthetic
         ? parseShotAesthetic(input.signals.shot_aesthetic)
@@ -651,6 +726,29 @@ function displayPremiumReviewedIdentityGuess(input: {
     return reviewedIdentity;
 }
 
+function isScientificCatalogToken(token: string) {
+    const parts = token.toLowerCase().split("_").filter(Boolean);
+    // Binomial or trinomial scientific keys (e.g. panthera_leo, columba_livia_domestica).
+    if (parts.length !== 2 && parts.length !== 3) return false;
+    if (!parts.every((part) => part.length >= 3 && /^[a-z]+$/.test(part))) return false;
+    const nonScientificLeading = new Set([
+        "african", "american", "asian", "australian", "black", "blue", "british", "brown",
+        "calico", "common", "crested", "dark", "domestic", "eastern", "european", "giant",
+        "golden", "gray", "grey", "green", "hooded", "indian", "japanese", "juvenile",
+        "lesser", "light", "little", "long", "masked", "mottled", "northern", "orange",
+        "oriental", "pied", "pink", "purple", "red", "rough", "rusty", "short", "siamese",
+        "silver", "smooth", "southern", "spotted", "striped", "western", "white", "yellow"
+    ]);
+    const commonNameHeads = new Set([
+        "fantail", "finch", "sparrow", "swallow", "martin", "thrush", "warbler", "robin",
+        "pigeon", "dove", "crow", "raven", "magpie", "starling", "owl", "hawk", "eagle",
+        "heron", "parrot", "duck", "goose", "swan", "bird"
+    ]);
+    if (nonScientificLeading.has(parts[0])) return false;
+    if (parts.some((part) => commonNameHeads.has(part))) return false;
+    return true;
+}
+
 function displayCanonicalIdentityGuess(input: {
     normalizedIdentityKey: string | null;
     animalName: string;
@@ -658,6 +756,10 @@ function displayCanonicalIdentityGuess(input: {
     const token = sanitizedDisplayValue(input.normalizedIdentityKey)?.toLowerCase().replace(/-/g, "_");
 
     if (!token || token === "unknown" || token === "unknown_animal") {
+        return null;
+    }
+
+    if (isScientificCatalogToken(token)) {
         return null;
     }
 
@@ -702,7 +804,7 @@ function mergeCaptureGradeSource(source: CaptureGradeSource | null | undefined) 
             ? model?.type_tags.filter((tag): tag is string => typeof tag === "string") ?? []
             : [],
         normalizedIdentityKey: sanitizedDisplayValue(model?.normalized_identity_key),
-        signals: (source?.signals && typeof source.signals === "object" ? source.signals : {}) as AnalysisSignals,
+        signals: (source?.signals && typeof source.signals === "object" ? source.signals : {}) as CaptureAnalysisSignals,
         premiumDetails: (source?.premium_details && typeof source.premium_details === "object"
             ? source.premium_details
             : {}) as PremiumDetails,
@@ -718,7 +820,7 @@ function mergeCaptureGradeSource(source: CaptureGradeSource | null | undefined) 
     };
 }
 
-function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCaptureGradeSource>) {
+function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCaptureGradeSource>): CaptureGradeBreakdown {
     const confidence = merged.confidence == null ? null : clamp(merged.confidence, 0, 1);
     const breedConfidence = merged.breedConfidence == null ? null : clamp(merged.breedConfidence, 0, 1);
     const domesticBreedContext = isDomesticBreedContext({
@@ -883,9 +985,9 @@ function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCapt
         market: merged.market,
         signals: merged.signals
     });
+    const imageQualityScore = imageQualityGradeScore(merged.imageQuality);
     const dynamicGradeAdjustment = (() => {
         let adjustment = 0;
-        const imageQualityScore = imageQualityGradeScore(merged.imageQuality);
 
         if (accuracyGradeScore >= 0.92 && imageQualityScore >= 0.95 && framingGradeScore >= 0.9) {
             adjustment += 0.08;
@@ -934,40 +1036,343 @@ function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCapt
     const endorsementLift = Math.sqrt(cappedEndorsements / maximumEndorsements) * 0.18;
     const authenticityPenalty = merged.authenticityStatus === "likely_non_live_source" ? 0.22 : 0;
     const uncertaintyPenalty = shouldShowUncertaintyFallback ? 0.14 : 0;
-    const weighted = (conditionGradeScore * 0.24)
-        + (imageQualityGradeScore(merged.imageQuality) * 0.13)
-        + (framingGradeScore * 0.07)
-        + (accuracyGradeScore * 0.24)
-        + (habitatGradeScore * 0.13)
-        + (bodyVisibilityScore * 0.11)
-        + (aestheticGradeScoreValue * 0.08)
-        + endorsementLift;
+    const confidencePercent = confidence == null ? null : `${Math.round(confidence * 100)}%`;
+    const tier = confidenceTier(confidence);
+    const readablePortraitLift = tier === "high"
+        && merged.imageQuality !== "weak"
+        && hasReadableHeadPortrait(merged.signals)
+        ? 0.1
+        : 0;
+    const factors: CaptureGradeFactor[] = [
+        {
+            id: "accuracy",
+            title: "ID confidence",
+            score: accuracyGradeScore,
+            weight: 0.24,
+            detail: tier === "high"
+                ? `Identification confidence is high${confidencePercent ? ` at ${confidencePercent}` : ""}.`
+                : tier === "medium"
+                    ? `Identification confidence is moderate${confidencePercent ? ` at ${confidencePercent}` : ""}, so the grade is capped below top-tier certainty.`
+                    : `Identification confidence is low${confidencePercent ? ` at ${confidencePercent}` : ""}, which strongly limits the grade.`
+        },
+        {
+            id: "condition",
+            title: "Condition",
+            score: conditionGradeScore,
+            weight: 0.24,
+            detail: conditionGradeScore >= 0.9
+                ? "Visible condition looks strong in this capture."
+                : conditionGradeScore >= 0.62
+                    ? "Visible condition looks acceptable, with no major penalty."
+                    : "Visible condition notes or market modifiers suggest lower condition in this photo."
+        },
+        {
+            id: "clarity",
+            title: "Clarity & focus",
+            score: imageQualityScore,
+            weight: 0.13,
+            detail: merged.imageQuality === "clear"
+                ? "Overall clarity is strong."
+                : merged.imageQuality === "usable"
+                    ? "The image is usable but not fully sharp."
+                    : "The image was classified as weak, blurry, or too unclear."
+        },
+        {
+            id: "habitat",
+            title: "Habitat & setting",
+            score: habitatGradeScore,
+            weight: 0.13,
+            detail: merged.settingTag === "wild"
+                ? (Boolean(merged.signals.wild_habitat_likely)
+                    ? "Wild habitat signals support a strong environmental score."
+                    : "Wild setting is recorded, with limited habitat evidence.")
+                : merged.settingTag === "zoo"
+                    ? "Zoo context receives less capture-grade credit than a strong wild habitat capture."
+                    : merged.settingTag === "domestic"
+                        ? "Domestic context receives less capture-grade credit than a strong wild habitat capture."
+                        : merged.settingTag === "farm"
+                            ? "Farm context receives less capture-grade credit than a strong wild habitat capture."
+                            : "Unknown setting leaves less environmental evidence for the grade."
+        },
+        {
+            id: "body_visibility",
+            title: "Body detail",
+            score: bodyVisibilityScore,
+            weight: 0.11,
+            detail: bodyVisibilityDetail(merged.signals.visible_body_features, bodyVisibilityScore)
+        },
+        {
+            id: "aesthetic",
+            title: "Shot quality",
+            score: aestheticGradeScoreValue,
+            weight: 0.08,
+            detail: (() => {
+                const shotAesthetic = merged.signals.shot_aesthetic?.trim();
+
+                if (shotAesthetic) {
+                    return `Shot aesthetic was classified as ${shotAesthetic}.`;
+                }
+
+                if (aestheticGradeScoreValue >= 0.75) {
+                    return "Composition and visual appeal add a small lift.";
+                }
+
+                if (aestheticGradeScoreValue <= 0.24) {
+                    return "Composition or background clutter lowers the shot quality.";
+                }
+
+                return "Shot quality is estimated from image clarity and visual modifiers.";
+            })()
+        },
+        {
+            id: "framing",
+            title: "Centering, proximity & framing",
+            score: framingGradeScore,
+            weight: 0.07,
+            detail: showRefinedIdentityRetryHint
+                ? "The animal needs clearer breed/species-level detail for stronger framing credit."
+                : shouldShowUncertaintyFallback
+                    ? "The animal is not framed clearly enough for a reliable identification."
+                    : framingGradeScore >= 0.8
+                        ? "Framing looks strong enough for a clear identification card."
+                        : framingGradeScore >= 0.5
+                            ? "Framing is usable, with room to get closer or more centered."
+                            : "Framing is weak — get closer, center the animal, and fill more of the frame."
+        }
+    ];
+    const weighted = factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0) + endorsementLift;
+    const adjustments: CaptureGradeAdjustment[] = [];
+
+    if (endorsementLift > 0) {
+        adjustments.push({
+            id: "endorsements",
+            title: "Community endorsements",
+            value: endorsementLift,
+            detail: `${cappedEndorsements} endorsement points add a small lift.`
+        });
+    }
+
+    if (dynamicGradeAdjustment !== 0) {
+        adjustments.push({
+            id: "dynamic_quality",
+            title: dynamicGradeAdjustment > 0 ? "Quality synergy" : "Quality deductions",
+            value: dynamicGradeAdjustment,
+            detail: dynamicGradeAdjustment > 0
+                ? "Strong confidence, clarity, body visibility, or aesthetics added a small lift."
+                : "Weak clarity, low confidence, limited body visibility, condition concerns, or plain composition caused deductions."
+        });
+    }
+
+    if (readablePortraitLift > 0) {
+        adjustments.push({
+            id: "readable_portrait",
+            title: "Readable subject portrait",
+            value: readablePortraitLift,
+            detail: "A clear, high-confidence head/portrait view recovers documentation quality."
+        });
+    }
+
+    if (settingGradePenalty > 0) {
+        adjustments.push({
+            id: "setting",
+            title: "Setting penalty",
+            value: -settingGradePenalty,
+            detail: merged.settingTag === "farm"
+                ? "Farm context receives less capture-grade credit than a strong wild habitat capture."
+                : merged.settingTag === "zoo"
+                    ? "Zoo context receives less capture-grade credit than a strong wild habitat capture."
+                    : merged.settingTag === "domestic"
+                        ? "Domestic context receives less capture-grade credit than a strong wild habitat capture."
+                        : "Unknown setting leaves less environmental evidence for the grade."
+        });
+    }
+
+    if (authenticityPenalty > 0) {
+        adjustments.push({
+            id: "authenticity",
+            title: "Authenticity penalty",
+            value: -authenticityPenalty,
+            detail: "Possible poster, screen, print, artwork, or other non-live source lowers the grade."
+        });
+    }
+
+    if (uncertaintyPenalty > 0) {
+        adjustments.push({
+            id: "uncertainty",
+            title: "Uncertainty penalty",
+            value: -uncertaintyPenalty,
+            detail: "AnimalDex could not make a reliable enough identification from this image."
+        });
+    }
+
     const adjusted = clamp(
-        weighted + dynamicGradeAdjustment - authenticityPenalty - uncertaintyPenalty - settingGradePenalty,
+        weighted
+            + dynamicGradeAdjustment
+            + readablePortraitLift
+            - authenticityPenalty
+            - uncertaintyPenalty
+            - settingGradePenalty,
         0.05,
         1
     );
     const contrasted = adjusted >= 0.5
         ? Math.min(1, 0.5 + ((adjusted - 0.5) / 0.5) ** 0.82 * 0.5)
         : Math.max(0.05, 0.5 - ((0.5 - adjusted) / 0.5) ** 1.18 * 0.5);
+    const grade = Math.min(10, Math.max(1, Math.round(contrasted * 9)));
+    const features = merged.signals.visible_body_features;
+    const checklist: CaptureGradeChecklistItem[] = [
+        {
+            id: "id_confidence",
+            title: "ID confidence",
+            met: tier === "high",
+            detail: tier === "high"
+                ? "Identification confidence is strong."
+                : "Identification is not confident enough for a perfect score.",
+            priority: 1
+        },
+        {
+            id: "natural_habitat",
+            title: "Natural habitat",
+            met: merged.settingTag === "wild" || Boolean(merged.signals.wild_habitat_likely),
+            detail: merged.settingTag === "wild" || Boolean(merged.signals.wild_habitat_likely)
+                ? "The setting supports a natural-habitat capture."
+                : "Natural-habitat evidence is limited for a perfect score.",
+            priority: 2
+        },
+        {
+            id: "hd_focus",
+            title: "HD and in focus",
+            met: merged.imageQuality === "clear",
+            detail: merged.imageQuality === "clear"
+                ? "Clarity is strong enough for a top score."
+                : "The photo needs sharper focus and clearer detail for a perfect score.",
+            priority: 3
+        },
+        {
+            id: "healthy_look",
+            title: "Healthy looking",
+            met: conditionGradeScore >= 0.75,
+            detail: conditionGradeScore >= 0.75
+                ? "No major visible condition concerns were noted."
+                : "Visible condition notes or modifiers suggest room to improve.",
+            priority: 4
+        },
+        {
+            id: "centered",
+            title: "Centered and composed",
+            met: framingGradeScore >= 0.7,
+            detail: framingGradeScore >= 0.7
+                ? "Framing is centered and composed enough for a strong card."
+                : "Get the animal more centered and fill more of the frame.",
+            priority: 5
+        },
+        {
+            id: "close_up",
+            title: "Close enough for detail",
+            met: framingGradeScore >= 0.7 && imageQualityScore >= 0.72,
+            detail: framingGradeScore >= 0.7 && imageQualityScore >= 0.72
+                ? "The subject is close enough for readable detail."
+                : "Move closer so diagnostic detail fills more of the frame.",
+            priority: 6
+        },
+        {
+            id: "full_body",
+            title: "Full body visible",
+            met: features?.full_body_visible === true,
+            detail: features?.full_body_visible === true
+                ? "Most or all of the body is visible."
+                : "The body is cropped or partially hidden.",
+            priority: 7
+        },
+        {
+            id: "no_obstructions",
+            title: "No obstructions",
+            met: aestheticGradeScoreValue >= 0.5 && merged.imageQuality !== "weak",
+            detail: aestheticGradeScoreValue >= 0.5 && merged.imageQuality !== "weak"
+                ? "The view looks clear enough without major obstruction."
+                : "Foreground clutter, soft focus, or a blocked view limits the score.",
+            priority: 8
+        }
+    ].sort((left, right) => left.priority - right.priority);
+    const strongest = factors.reduce((best, factor) => (
+        factor.score * factor.weight > best.score * best.weight ? factor : best
+    ));
+    const weakest = factors.reduce((worst, factor) => (
+        factor.score < worst.score ? factor : worst
+    ));
+    const hasPenalty = adjustments.some((adjustment) => adjustment.value < 0);
+    const summary = hasPenalty
+        ? `Grade ${grade} is mainly driven by ${strongest.title.toLowerCase()}, with deductions from ${weakest.title.toLowerCase()} or capture reliability.`
+        : `Grade ${grade} is mainly driven by ${strongest.title.toLowerCase()}, with ${weakest.title.toLowerCase()} leaving the most room to improve.`;
 
-    return Math.min(10, Math.max(1, Math.round(contrasted * 9)));
+    return {
+        grade,
+        weightedScore: weighted,
+        adjustedScore: adjusted,
+        contrastedScore: contrasted,
+        factors,
+        adjustments,
+        checklist,
+        summary
+    };
 }
 
-export function computeCaptureGrade(source: CaptureGradeSource | null | undefined): number | null {
-    const directGrade = source?.image_grade?.trim();
+function bodyVisibilityDetail(features: VisibleBodyFeatures | null | undefined, score: number) {
+    if (features) {
+        const visible: string[] = [];
+        const missing: string[] = [];
 
-    if (directGrade && /^\d+$/.test(directGrade)) {
-        return Number(directGrade);
+        const track = (name: string, value: boolean | null | undefined) => {
+            if (value == null) return;
+            if (value) visible.push(name);
+            else missing.push(name);
+        };
+
+        track("head", features.head_visible);
+        track("eyes", features.eyes_visible);
+        track("limbs", features.limbs_visible);
+        track("tail", features.tail_visible);
+        track("full body", features.full_body_visible);
+
+        if (missing.length) {
+            return `Visible: ${visible.join(", ") || "none noted"}. Missing or unclear: ${missing.join(", ")}.`;
+        }
+
+        if (visible.length) {
+            return `Key visible body features are present: ${visible.join(", ")}.`;
+        }
     }
 
+    if (score >= 0.72) {
+        return "Enough body detail is visible for a stronger card.";
+    }
+
+    return "Important body detail is limited or inferred from the photo.";
+}
+
+export function computeCaptureGradeBreakdown(source: CaptureGradeSource | null | undefined): CaptureGradeBreakdown | null {
+    const directGrade = source?.image_grade?.trim();
     const merged = mergeCaptureGradeSource(source);
 
     if (!merged.animalName.trim()) {
         return null;
     }
 
-    return computeCaptureGradeFromMergedSource(merged);
+    const breakdown = computeCaptureGradeFromMergedSource(merged);
+
+    if (directGrade && /^\d+$/.test(directGrade)) {
+        return {
+            ...breakdown,
+            grade: Number(directGrade),
+            summary: `Grade ${Number(directGrade)} is the stored capture grade for this photo.`
+        };
+    }
+
+    return breakdown;
+}
+
+export function computeCaptureGrade(source: CaptureGradeSource | null | undefined): number | null {
+    return computeCaptureGradeBreakdown(source)?.grade ?? null;
 }
 
 export function resolveCaptureImageGrade(source: CaptureGradeSource | null | undefined): string | null {

@@ -1,4 +1,5 @@
 import type {SpeciesEntry} from "@/data/species";
+import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
 
 export const SPECIES_NO_IMAGE_SRC = "/images/placeholders/species-no-image.svg";
 
@@ -9,6 +10,7 @@ export type FeaturedMedia = {
     mimeType: string | null;
     mediaKind: string | null;
     imageGrade: string | null;
+    gradeBreakdown: CaptureGradeBreakdown | null;
     animalName: string | null;
     username: string | null;
     contextLabel: string | null;

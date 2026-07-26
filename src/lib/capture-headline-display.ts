@@ -4,11 +4,13 @@ import {
     resolveCanonicalIdentityKey,
     resolveCaptureVariantDisplay
 } from "@/lib/species-life-stage-policy";
+import {sanitizedIdentityDisplayLabel} from "@/lib/taxonomic-identity-labels";
 
 type CaptureHeadlineInput = {
     animalName?: string | null;
     scientificName?: string | null;
     breedGuess?: string | null;
+    refinedIdentity?: string | null;
     breedConfidence?: number | null;
     confidence?: number | null;
     normalizedIdentityKey?: string | null;
@@ -33,6 +35,11 @@ const WEAK_REFINED_WORDS = new Set([
 function clean(value: string | null | undefined) {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
+}
+
+/** Identity-bearing names additionally get taxon-prose sanitization. */
+function cleanIdentityName(value: string | null | undefined) {
+    return sanitizedIdentityDisplayLabel(value);
 }
 
 function clampConfidence(value: number | null | undefined) {
@@ -88,6 +95,21 @@ function refinedIdentityDisplayConfidence(input: CaptureHeadlineInput) {
     return clampConfidence(input.confidence);
 }
 
+const NON_SCIENTIFIC_BINOMIAL_LEADING_TOKENS = new Set([
+    "african", "american", "asian", "australian", "black", "blue", "british", "brown",
+    "calico", "common", "crested", "dark", "domestic", "eastern", "european", "giant",
+    "golden", "gray", "grey", "green", "hooded", "indian", "japanese", "juvenile",
+    "lesser", "light", "little", "long", "masked", "mottled", "northern", "orange",
+    "oriental", "pied", "pink", "purple", "red", "rough", "rusty", "short", "siamese",
+    "silver", "smooth", "southern", "spotted", "striped", "western", "white", "yellow"
+]);
+
+const SPECIES_COMMON_NAME_HEAD_TOKENS = new Set([
+    "fantail", "finch", "sparrow", "swallow", "martin", "thrush", "warbler", "robin",
+    "pigeon", "dove", "crow", "raven", "magpie", "starling", "owl", "hawk", "eagle",
+    "heron", "parrot", "duck", "goose", "swan", "bird"
+]);
+
 function displayNameFromCatalogToken(token: string) {
     return token
         .split("_")
@@ -98,8 +120,12 @@ function displayNameFromCatalogToken(token: string) {
 
 function isScientificCatalogToken(token: string) {
     const parts = token.toLowerCase().split("_").filter(Boolean);
-    if (parts.length !== 2) return false;
-    return parts.every((part) => /^[a-z]+$/.test(part));
+    // Binomial or trinomial scientific keys (e.g. panthera_leo, columba_livia_domestica).
+    if (parts.length !== 2 && parts.length !== 3) return false;
+    if (!parts.every((part) => part.length >= 3 && /^[a-z]+$/.test(part))) return false;
+    if (NON_SCIENTIFIC_BINOMIAL_LEADING_TOKENS.has(parts[0])) return false;
+    if (parts.some((part) => SPECIES_COMMON_NAME_HEAD_TOKENS.has(part))) return false;
+    return true;
 }
 
 function isBroadCollectionIdentityToken(token: string) {
@@ -146,12 +172,14 @@ function premiumReviewedIdentityGuess(input: CaptureHeadlineInput) {
 }
 
 function refinedIdentityGuess(input: CaptureHeadlineInput) {
-    const breed = clean(input.breedGuess);
+    const breed = cleanIdentityName(input.refinedIdentity) ?? cleanIdentityName(input.breedGuess);
     if (!breed) return null;
     if (isSameIdentity(breed, input.scientificName)) return null;
     if (refinedIdentityDisplayConfidence(input) < refinedIdentityDisplayThreshold(input)) return null;
 
     const animalName = clean(input.animalName) ?? "";
+    // Match iOS: same common name as animal_name is still a valid refined headline.
+    if (isSameIdentity(breed, animalName)) return breed;
     if (!isMeaningfullyMoreSpecific(breed, animalName)) return null;
     return breed;
 }
@@ -184,7 +212,7 @@ function withConfidencePrefix(name: string, confidence: number | null | undefine
 }
 
 function displayBroadAnimalName(input: CaptureHeadlineInput) {
-    const animalName = clean(input.animalName) ?? "Animal";
+    const animalName = cleanIdentityName(input.animalName) ?? "Animal";
     return withConfidencePrefix(animalName, input.confidence);
 }
 
@@ -193,7 +221,9 @@ function displayHeadlineTitle(input: CaptureHeadlineInput) {
         return "Uncertain animal";
     }
 
-    const baseName = preferredDisplayIdentityGuess(input) ?? clean(input.animalName) ?? "Animal";
+    const baseName = cleanIdentityName(preferredDisplayIdentityGuess(input))
+        ?? cleanIdentityName(input.animalName)
+        ?? "Animal";
     return withConfidencePrefix(baseName, input.confidence);
 }
 
@@ -233,7 +263,9 @@ export function resolveCaptureHeadlineDisplay(input: CaptureHeadlineInput): Capt
     }
 
     const animalName = displayHeadlineTitle(input);
-    const headlineSupportingName = preferredDisplayIdentityGuess(input)
+    const preferred = preferredDisplayIdentityGuess(input);
+    // Match iOS showsSpeciesUnderHeadline: only show broad name when preferred differs.
+    const headlineSupportingName = preferred && !isSameIdentity(preferred, input.animalName)
         ? displayBroadAnimalName(input)
         : null;
 

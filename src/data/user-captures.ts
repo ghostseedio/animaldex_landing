@@ -30,6 +30,7 @@ export type UserCaptureStats = {
     wild: number;
     zoo: number;
     domestic: number;
+    farm: number;
     sampledCount: number;
     sampleLimitReached: boolean;
 };
@@ -218,6 +219,7 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
         wild: 0,
         zoo: 0,
         domestic: 0,
+        farm: 0,
         sampledCount: 0,
         sampleLimitReached: false
     };
@@ -250,7 +252,7 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
         rows.map((row) => row.normalized_identity_key?.trim() || row.animal_name?.trim().toLowerCase() || row.capture_id?.trim())
             .filter(Boolean)
     );
-    const {wild, zoo, domestic} = countCaptureSettingLabels(rows);
+    const {wild, zoo, domestic, farm} = countCaptureSettingLabels(rows);
     const captureCount = count ?? rows.length;
 
     return {
@@ -260,13 +262,14 @@ export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptu
         wild,
         zoo,
         domestic,
+        farm,
         sampledCount: rows.length,
         sampleLimitReached: rows.length < captureCount
     };
 }
 
 export async function getUserCaptureSettingCounts() {
-    const empty = {wild: 0, zoo: 0, domestic: 0};
+    const empty = {wild: 0, zoo: 0, domestic: 0, farm: 0};
     const supabase = createSupabaseServerClient();
     if (!supabase) return empty;
 

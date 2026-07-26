@@ -18,6 +18,7 @@ type ProfileRow = {
     instagram_url?: string | null;
     is_pro?: boolean | null;
     created_at?: string | null;
+    chrome_preset?: string | null;
 };
 
 type PublicCaptureRow = {
@@ -30,6 +31,8 @@ type PublicCaptureRow = {
     human_context: string | null;
     zoo_or_wild: string | null;
     location_display_label?: string | null;
+    location_lat?: number | null;
+    location_lng?: number | null;
     type_tags?: string[] | null;
     game_stats?: Record<string, number> | null;
     dominance_boost?: number | null;
@@ -45,8 +48,13 @@ type PublicProfileSummaryRow = {
     wild_captures: number | null;
     zoo_captures: number | null;
     domestic_captures: number | null;
+    farm_captures?: number | null;
     rare_finds?: number | null;
     average_rarity?: number | null;
+    average_dominance?: number | null;
+    average_speed?: number | null;
+    average_size?: number | null;
+    average_intelligence?: number | null;
     most_common_animal_name?: string | null;
     best_find_id?: string | null;
     trades_made?: number | null;
@@ -67,6 +75,10 @@ type MaterializedProfileStatsRow = {
     domestic_observation_count: number | null;
     farm_observation_count: number | null;
     collection_value_cents: number | null;
+    average_dominance?: number | null;
+    average_speed?: number | null;
+    average_size?: number | null;
+    average_intelligence?: number | null;
     average_rarity?: number | null;
     completed_trade_count?: number | null;
 };
@@ -156,6 +168,8 @@ export type ProfileLocationVisit = {
     label: string;
     captureCount: number;
     lastSeenAt: string | null;
+    latitude: number | null;
+    longitude: number | null;
 };
 
 export type ProfileInsight = {
@@ -172,6 +186,7 @@ export type PublicProfileCard = {
     instagramUrl: string | null;
     isPro: boolean;
     joinedAt: string | null;
+    chromePreset: "spirit" | "friend" | "professional" | "business";
     captureCount: number;
     speciesCount: number;
     indexedSpeciesCount: number;
@@ -181,11 +196,19 @@ export type PublicProfileCard = {
     wildCount: number;
     zooCount: number;
     domesticCount: number;
+    farmCount: number;
     rareFinds: number;
     tradesMade: number;
     missionsCompleted: number;
     collectionValueUsd: number | null;
     averageRarity: number | null;
+    averageTraits: {
+        dominance: number;
+        speed: number;
+        size: number;
+        intelligence: number;
+        rarity: number;
+    };
     mostCommonAnimalName: string | null;
     collectionArchetype: string;
     bestForTagScores: ProfileBestForTag[];
@@ -215,6 +238,7 @@ export type ProfileSettingCounts = {
     wild: number;
     zoo: number;
     domestic: number;
+    farm: number;
 };
 
 /** Matches iOS `resolvedMemberSettingCounts`: prefer summary, but fall back when exact totals are zero. */
@@ -225,15 +249,16 @@ export function resolveProfileSettingCounts(
     const exactWild = Number(exact?.wild ?? 0);
     const exactZoo = Number(exact?.zoo ?? 0);
     const exactDomestic = Number(exact?.domestic ?? 0);
-    const exactTotal = exactWild + exactZoo + exactDomestic;
-    const fallbackTotal = fallback.wild + fallback.zoo + fallback.domestic;
+    const exactFarm = Number(exact?.farm ?? 0);
+    const exactTotal = exactWild + exactZoo + exactDomestic + exactFarm;
+    const fallbackTotal = fallback.wild + fallback.zoo + fallback.domestic + fallback.farm;
 
     if (exactTotal === 0 && fallbackTotal > 0) {
         return fallback;
     }
 
     if (exact) {
-        return {wild: exactWild, zoo: exactZoo, domestic: exactDomestic};
+        return {wild: exactWild, zoo: exactZoo, domestic: exactDomestic, farm: exactFarm};
     }
 
     return fallback;
@@ -263,8 +288,6 @@ async function fetchRows<T>(table: string, params: URLSearchParams) {
 }
 
 function toPublicProfileSummaryFromMaterialized(row: MaterializedProfileStatsRow): PublicProfileSummaryRow {
-    const domesticCaptures = Number(row.domestic_observation_count ?? 0) + Number(row.farm_observation_count ?? 0);
-
     return {
         overall_score: row.overall_score,
         capture_count: row.observation_count,
@@ -272,9 +295,14 @@ function toPublicProfileSummaryFromMaterialized(row: MaterializedProfileStatsRow
         indexed_species_count: row.indexed_species_count,
         wild_captures: row.wild_observation_count,
         zoo_captures: row.zoo_observation_count,
-        domestic_captures: domesticCaptures,
+        domestic_captures: row.domestic_observation_count,
+        farm_captures: row.farm_observation_count,
         rare_finds: row.rare_observation_count,
         average_rarity: row.average_rarity,
+        average_dominance: row.average_dominance,
+        average_speed: row.average_speed,
+        average_size: row.average_size,
+        average_intelligence: row.average_intelligence,
         most_common_animal_name: null,
         best_find_id: null,
         trades_made: row.completed_trade_count,
@@ -286,7 +314,7 @@ function toPublicProfileSummaryFromMaterialized(row: MaterializedProfileStatsRow
 
 async function fetchPublicProfileSummary(userId: string) {
     const materializedParams = new URLSearchParams({
-        select: "user_id,overall_score,observation_count,unique_species_count,indexed_species_count,rare_observation_count,wild_observation_count,zoo_observation_count,domestic_observation_count,farm_observation_count,collection_value_cents,average_rarity,completed_trade_count",
+        select: "user_id,overall_score,observation_count,unique_species_count,indexed_species_count,rare_observation_count,wild_observation_count,zoo_observation_count,domestic_observation_count,farm_observation_count,collection_value_cents,average_dominance,average_speed,average_size,average_intelligence,average_rarity,completed_trade_count",
         user_id: `eq.${userId}`,
         limit: "1"
     });
@@ -348,14 +376,21 @@ function toPublicCapture(
     };
 }
 
-function buildLocationVisits(captures: Array<PublicProfileCapture & {locationLabel?: string | null}>): ProfileLocationVisit[] {
+function buildLocationVisits(captures: Array<PublicProfileCapture & {
+    locationLabel?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+}>): ProfileLocationVisit[] {
     const grouped = new Map<string, ProfileLocationVisit>();
 
     for (const row of captures) {
         const label = row.locationLabel?.trim();
         if (!label) continue;
 
-        const key = label.toLowerCase();
+        const hasCoordinate = Number.isFinite(row.latitude) && Number.isFinite(row.longitude);
+        const key = hasCoordinate
+            ? `${Number(row.latitude).toFixed(3)},${Number(row.longitude).toFixed(3)}`
+            : label.toLowerCase();
         const existing = grouped.get(key);
 
         if (existing) {
@@ -369,7 +404,9 @@ function buildLocationVisits(captures: Array<PublicProfileCapture & {locationLab
                 id: key,
                 label,
                 captureCount: 1,
-                lastSeenAt: row.capturedAt
+                lastSeenAt: row.capturedAt,
+                latitude: hasCoordinate ? Number(Number(row.latitude).toFixed(3)) : null,
+                longitude: hasCoordinate ? Number(Number(row.longitude).toFixed(3)) : null
             });
         }
     }
@@ -487,7 +524,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     if (!handle) return null;
 
     const profileParams = new URLSearchParams({
-        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at",
+        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at,chrome_preset",
         username: `eq.${handle}`,
         limit: "1"
     });
@@ -504,6 +541,8 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         "human_context",
         "zoo_or_wild",
         "location_display_label",
+        "location_lat",
+        "location_lng",
         "type_tags",
         "game_stats",
         "dominance_boost",
@@ -589,17 +628,31 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             ? {
                 wild: Number(summary.wild_captures ?? 0),
                 zoo: Number(summary.zoo_captures ?? 0),
-                domestic: Number(summary.domestic_captures ?? 0)
+                domestic: Number(summary.domestic_captures ?? 0),
+                farm: Number(summary.farm_captures ?? 0)
             }
             : null,
-        {wild: sampledSettingCounts.wild, zoo: sampledSettingCounts.zoo, domestic: sampledSettingCounts.domestic}
+        {
+            wild: sampledSettingCounts.wild,
+            zoo: sampledSettingCounts.zoo,
+            domestic: sampledSettingCounts.domestic,
+            farm: sampledSettingCounts.farm
+        }
     );
     const indexedSpeciesCount = Number(summary?.indexed_species_count ?? summary?.unique_species ?? sampledSpeciesCount);
+    const averageOf = (key: keyof Pick<PublicProfileCapture, "dominance" | "speed" | "size" | "intelligence" | "rarity">) => {
+        if (!allCaptures.length) return 0;
+        return Math.round(allCaptures.reduce((total, capture) => total + capture[key], 0) / allCaptures.length);
+    };
 
     const locationVisits = buildLocationVisits(
         recentRows.map((row) => {
             const capture = mapCaptureRow(row);
-            return Object.assign(capture, {locationLabel: row.location_display_label});
+            return Object.assign(capture, {
+                locationLabel: row.location_display_label,
+                latitude: row.location_lat,
+                longitude: row.location_lng
+            });
         })
     );
 
@@ -625,6 +678,11 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         instagramUrl: profile.instagram_url?.trim() || null,
         isPro: Boolean(profile.is_pro),
         joinedAt: profile.created_at ?? null,
+        chromePreset: (
+            ["spirit", "friend", "professional", "business"].includes(profile.chrome_preset?.trim().toLowerCase() ?? "")
+                ? profile.chrome_preset!.trim().toLowerCase()
+                : "spirit"
+        ) as PublicProfileCard["chromePreset"],
         captureCount,
         speciesCount: Number(summary?.unique_species ?? sampledSpeciesCount),
         indexedSpeciesCount,
@@ -634,11 +692,19 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         wildCount: settingCounts.wild,
         zooCount: settingCounts.zoo,
         domesticCount: settingCounts.domestic,
+        farmCount: settingCounts.farm,
         rareFinds: Number(summary?.rare_finds ?? 0),
         tradesMade: Number(summary?.trades_made ?? 0),
         missionsCompleted: Number(summary?.missions_completed ?? 0),
         collectionValueUsd: summary?.collection_value_usd != null ? Number(summary.collection_value_usd) : null,
         averageRarity: summary?.average_rarity != null ? Number(summary.average_rarity) : null,
+        averageTraits: {
+            dominance: Number(summary?.average_dominance ?? averageOf("dominance")),
+            speed: Number(summary?.average_speed ?? averageOf("speed")),
+            size: Number(summary?.average_size ?? averageOf("size")),
+            intelligence: Number(summary?.average_intelligence ?? averageOf("intelligence")),
+            rarity: Number(summary?.average_rarity ?? averageOf("rarity"))
+        },
         mostCommonAnimalName: summary?.most_common_animal_name?.trim() || null,
         collectionArchetype,
         bestForTagScores: bestForRows.map((row) => ({

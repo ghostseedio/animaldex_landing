@@ -46,15 +46,17 @@ export function countCaptureSettingLabels(rows: CaptureSettingRow[]) {
     let wild = 0;
     let zoo = 0;
     let domestic = 0;
+    let farm = 0;
 
     for (const row of rows) {
         const label = parseCaptureSettingLabel(row);
         if (label === "Wild") wild += 1;
         else if (label === "Zoo") zoo += 1;
-        else if (isDomesticCaptureSetting(label)) domestic += 1;
+        else if (label === "Domestic") domestic += 1;
+        else if (label === "Farm") farm += 1;
     }
 
-    return {wild, zoo, domestic};
+    return {wild, zoo, domestic, farm};
 }
 
 /** Display label for capture cards (Farm stays Farm; unknown becomes null). */

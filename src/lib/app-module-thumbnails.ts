@@ -19,7 +19,6 @@ export const APP_MODULE_THUMBNAILS = {
     wildProfile: getOptimizedModuleImageUrl("lion-identity-thumbnail.webp"),
     packs: getOptimizedModuleImageUrl("create-a-pack-2-thumbnail.webp"),
     missions: getOptimizedModuleImageUrl("animaldex-missions-thumbnail.webp"),
-    sets: getOptimizedModuleImageUrl("sets-thumbnail.webp"),
     collection: getOptimizedModuleImageUrl("animaldex-catalog-thumbnail.webp"),
     matchupsHero: getOptimizedModuleImageUrl("mantis-shrimp.webp", 960, 82)
 } as const;
@@ -27,14 +26,13 @@ export const APP_MODULE_THUMBNAILS = {
 export type ArenaModuleAccent = "neon" | "violet" | "orange" | "cyan";
 
 export const ARENA_MODULE_ACCENTS: Record<
-    "dailyCompanion" | "wildProfile" | "packs" | "missions" | "sets",
+    "dailyCompanion" | "wildProfile" | "packs" | "missions",
     ArenaModuleAccent
 > = {
     dailyCompanion: "neon",
     wildProfile: "violet",
     packs: "orange",
-    missions: "neon",
-    sets: "neon"
+    missions: "neon"
 };
 
 export function arenaAccentOverlayClass(accent: ArenaModuleAccent) {

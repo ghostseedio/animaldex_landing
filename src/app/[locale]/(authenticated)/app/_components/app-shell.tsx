@@ -23,7 +23,6 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/missions", label: "Missions", icon: "mission"},
-    {href: "/app/sets", label: "Sets", icon: "sets"},
     {href: "/app/trades", label: "Trades", icon: "trade"}
 ];
 
@@ -33,7 +32,6 @@ const PREFETCH_ROUTES = [
     "/app/arena",
     "/app/profile",
     "/app/missions",
-    "/app/sets",
     "/app/trades",
     "/app/messages",
     "/app/notifications"
@@ -44,7 +42,7 @@ function localePrefix(pathname: string) {
 }
 
 function isArenaRoute(pathname: string) {
-    return ["/app/arena", "/app/train", "/app/matchups", "/app/missions", "/app/sets"].some(
+    return ["/app/arena", "/app/train", "/app/matchups", "/app/missions"].some(
         (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
 }
@@ -64,7 +62,7 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
     const [menuOpen, setMenuOpen] = useState(false);
     const accountHref = "/account";
     const isActive = (href: string) => {
-        if (href === "/app") return pathname === href;
+        if (href === "/app") return pathname === href || pathname.startsWith("/p/");
         if (href === "/app/arena") return isArenaRoute(pathname);
         return pathname.startsWith(href);
     };

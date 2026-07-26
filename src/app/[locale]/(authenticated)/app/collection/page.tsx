@@ -1,7 +1,9 @@
+import {Suspense} from "react";
 import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/collection-page-client";
 import type {CatalogSpecies} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
 import {getAppCaptures} from "@/data/authenticated-app";
+import {getCollectionBinders} from "@/data/collection-binders";
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
@@ -17,10 +19,11 @@ import {
 } from "@/lib/collection-discovery";
 
 export default async function CollectionPage() {
-    const [captures, catalogEntries, behaviorPrinciples] = await Promise.all([
+    const [captures, catalogEntries, behaviorPrinciples, binderData] = await Promise.all([
         getAppCaptures(),
         getUnifiedSpeciesEntries(),
-        getCatalogBehaviorPrincipleIndex()
+        getCatalogBehaviorPrincipleIndex(),
+        getCollectionBinders()
     ]);
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const species: CatalogSpecies[] = catalogEntries.map((entry) => {
@@ -32,7 +35,8 @@ export default async function CollectionPage() {
         const catalogPrinciple = resolveCatalogBehaviorPrinciple(
             behaviorPrinciples,
             entry.speciesProfileId,
-            entry.normalizedIdentityKey
+            entry.normalizedIdentityKey,
+            entry.analysis.scientificName
         );
         const staticPrinciple = getBehavioralPrincipleProfile(
             entry.slug,
@@ -81,16 +85,16 @@ export default async function CollectionPage() {
     return (
         <AppPage>
             <AppPageHeader
-                eyebrow="AnimalDex"
+                eyebrow="Collection"
                 title="Collection"
-                description="Browse the indexed field guide, track discoveries, and explore the powers and lessons connected to every animal."
+                description="Browse the indexed catalog and fill curated binders with the animals you've captured."
                 action={<AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>}
             />
 
             <AppSurface>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Catalog progress</p>
+                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Species collected</p>
                         <p className="mt-2 font-display text-3xl font-bold tabular-nums text-white">{discoveryStats.found}<span className="text-white/35"> / {discoveryStats.indexed}</span></p>
                         <p className="mt-1 text-sm text-white/45">{discoveryStats.remaining} indexed species left to discover</p>
                     </div>
@@ -104,10 +108,14 @@ export default async function CollectionPage() {
                 </div>
             </AppSurface>
 
-            <CollectionPageClient
-                species={species}
-                discoveryStats={discoveryStats}
-            />
+            <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/[0.04]" />}>
+                <CollectionPageClient
+                    species={species}
+                    discoveryStats={discoveryStats}
+                    binders={binderData.binders}
+                    binderSummary={binderData.summary}
+                />
+            </Suspense>
         </AppPage>
     );
 }

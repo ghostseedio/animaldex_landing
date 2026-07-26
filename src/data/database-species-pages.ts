@@ -23,6 +23,7 @@ type CatalogRow = {
     normalized_identity_key: string;
     scientific_name: string | null;
     identity_kind: string | null;
+    canonical_species_profile_id: string | null;
     canonical_game_stats: Record<string, number> | null;
     size_scale_score: number | null;
     landing_page_slug: string | null;
@@ -67,11 +68,23 @@ type FieldGuideRow = {
 
 const CATALOG_SELECT = [
     "species_profile_id", "animaldex_number", "display_name", "animal_name", "refined_identity",
-    "normalized_identity_key", "scientific_name", "identity_kind", "canonical_game_stats", "size_scale_score",
+    "normalized_identity_key", "scientific_name", "identity_kind", "canonical_species_profile_id",
+    "canonical_game_stats", "size_scale_score",
     "landing_page_slug", "catalog_status", "generation_status", "generation_metadata", "species_subtitle",
     "species_subtitle_story", "principle_name", "principle_expression", "core_lesson", "biological_basis",
     "short_motto", "best_use_cases", "application_example", "created_at", "updated_at"
 ].join(",");
+
+const SPECIFIC_IDENTITY_KINDS = new Set(["breed", "cross_breed", "subspecies"]);
+
+/** Common capture identity keys that should fall through to the domestic parent row. */
+const PRINCIPLE_IDENTITY_ALIASES: Record<string, string> = {
+    domestic_dog: "dog",
+    domestic_cat: "cat",
+    canis_lupus_familiaris: "dog",
+    felis_catus: "cat",
+    felis_silvestris_catus: "cat"
+};
 
 const GUIDE_SELECT = [
     "species_profile_id", "species_spotlight", "species_subtitle_story", "signature_traits", "interesting_facts",
@@ -87,10 +100,31 @@ export type CatalogBehaviorPrinciple = {
     bestUseCases: string[];
 };
 
-type CatalogBehaviorPrincipleIndex = {
-    byProfileId: Map<string, CatalogBehaviorPrinciple>;
-    byIdentityKey: Map<string, CatalogBehaviorPrinciple>;
+type PrincipleCatalogMeta = {
+    profileId: string;
+    identityKey: string | null;
+    scientificName: string | null;
+    identityKind: string | null;
+    canonicalSpeciesProfileId: string | null;
+    animalDexNumber: number | null;
+    principle: CatalogBehaviorPrinciple | null;
 };
+
+export type CatalogBehaviorPrincipleIndex = {
+    byProfileId: Map<string, PrincipleCatalogMeta>;
+    byIdentityKey: Map<string, PrincipleCatalogMeta>;
+    byScientificSpeciesKey: Map<string, PrincipleCatalogMeta[]>;
+};
+
+function emptyBehaviorPrincipleIndex(): CatalogBehaviorPrincipleIndex {
+    return {
+        byProfileId: new Map(),
+        byIdentityKey: new Map(),
+        byScientificSpeciesKey: new Map()
+    };
+}
+
+export {emptyBehaviorPrincipleIndex};
 
 let catalogCache: {
     expiresAt: number;
@@ -117,30 +151,89 @@ function behaviorPrincipleFromRow(row: CatalogRow): CatalogBehaviorPrinciple | n
     };
 }
 
-function buildBehaviorPrincipleIndex(catalogRows: CatalogRow[]) {
-    const byProfileId = new Map<string, CatalogBehaviorPrinciple>();
-    const byIdentityKey = new Map<string, CatalogBehaviorPrinciple>();
+function normalizeRankingTerm(raw: string | null | undefined) {
+    const folded = clean(raw)
+        ?.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/'/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    return folded || null;
+}
+
+/** Matches iOS AnimalRankingCohort.scientificSpeciesKey — binomial key for parent lookup. */
+function scientificSpeciesKey(scientificName: string | null | undefined) {
+    const normalized = normalizeRankingTerm(scientificName);
+    if (!normalized) return null;
+    const tokens = normalized.split(/\s+/).filter(Boolean);
+    if (tokens.length < 2) return null;
+    if (tokens.includes("sp") || tokens.includes("spp") || tokens.includes("unknown")) return null;
+    return `species:${tokens.slice(0, 2).join(" ")}`;
+}
+
+function parentPrincipleScore(meta: PrincipleCatalogMeta) {
+    let score = 0;
+    const identityKind = clean(meta.identityKind)?.toLowerCase() ?? null;
+
+    if (identityKind === "domestic_parent" || identityKind === "generic_parent") {
+        score += 80;
+    } else if (!identityKind || identityKind === "species") {
+        score += 50;
+    } else if (SPECIFIC_IDENTITY_KINDS.has(identityKind)) {
+        score -= 20;
+    }
+
+    if ((meta.animalDexNumber ?? 0) >= 1) score += 25;
+    if (meta.principle) score += 30;
+    return score;
+}
+
+function buildBehaviorPrincipleIndex(catalogRows: CatalogRow[]): CatalogBehaviorPrincipleIndex {
+    const byProfileId = new Map<string, PrincipleCatalogMeta>();
+    const byIdentityKey = new Map<string, PrincipleCatalogMeta>();
+    const byScientificSpeciesKey = new Map<string, PrincipleCatalogMeta[]>();
 
     for (const row of catalogRows) {
-        const principle = behaviorPrincipleFromRow(row);
-        if (!principle) continue;
+        const profileId = clean(row.species_profile_id)?.toLowerCase();
+        if (!profileId) continue;
 
-        byProfileId.set(row.species_profile_id.toLowerCase(), principle);
+        const meta: PrincipleCatalogMeta = {
+            profileId,
+            identityKey: clean(row.normalized_identity_key)?.toLowerCase() ?? null,
+            scientificName: clean(row.scientific_name),
+            identityKind: clean(row.identity_kind),
+            canonicalSpeciesProfileId: clean(row.canonical_species_profile_id)?.toLowerCase() ?? null,
+            animalDexNumber: typeof row.animaldex_number === "number" ? row.animaldex_number : null,
+            principle: behaviorPrincipleFromRow(row)
+        };
 
-        const identityKey = clean(row.normalized_identity_key)?.toLowerCase();
-        if (identityKey) {
-            byIdentityKey.set(identityKey, principle);
+        byProfileId.set(profileId, meta);
+
+        if (meta.identityKey) {
+            const existing = byIdentityKey.get(meta.identityKey);
+            // Prefer rows that carry a principle when identity keys collide.
+            if (!existing || (!existing.principle && meta.principle)) {
+                byIdentityKey.set(meta.identityKey, meta);
+            }
+        }
+
+        const speciesKey = scientificSpeciesKey(meta.scientificName);
+        if (speciesKey && meta.principle) {
+            const cohort = byScientificSpeciesKey.get(speciesKey) ?? [];
+            cohort.push(meta);
+            byScientificSpeciesKey.set(speciesKey, cohort);
         }
     }
 
-    return {byProfileId, byIdentityKey};
+    return {byProfileId, byIdentityKey, byScientificSpeciesKey};
 }
 
-export function resolveCatalogBehaviorPrinciple(
+function catalogEntryMeta(
     index: CatalogBehaviorPrincipleIndex,
     speciesProfileId: string | null | undefined,
     normalizedIdentityKey: string | null | undefined
-): CatalogBehaviorPrinciple | null {
+) {
     const profileId = clean(speciesProfileId)?.toLowerCase();
     if (profileId && index.byProfileId.has(profileId)) {
         return index.byProfileId.get(profileId) ?? null;
@@ -151,7 +244,93 @@ export function resolveCatalogBehaviorPrinciple(
         return index.byIdentityKey.get(identityKey) ?? null;
     }
 
+    if (identityKey) {
+        const alias = PRINCIPLE_IDENTITY_ALIASES[identityKey];
+        if (alias && index.byIdentityKey.has(alias)) {
+            return index.byIdentityKey.get(alias) ?? null;
+        }
+    }
+
     return null;
+}
+
+function principleFollowingCanonicalChain(
+    index: CatalogBehaviorPrincipleIndex,
+    start: PrincipleCatalogMeta
+) {
+    const visited = new Set<string>([start.profileId]);
+    let currentId = start.canonicalSpeciesProfileId;
+
+    while (currentId && !visited.has(currentId)) {
+        visited.add(currentId);
+        const entry = index.byProfileId.get(currentId);
+        if (!entry) break;
+        if (entry.principle) return entry.principle;
+        currentId = entry.canonicalSpeciesProfileId;
+    }
+
+    return null;
+}
+
+function parentPrincipleSharingScientificSpecies(
+    index: CatalogBehaviorPrincipleIndex,
+    scientificName: string | null | undefined,
+    excludingProfileId: string | null | undefined
+) {
+    const speciesKey = scientificSpeciesKey(scientificName);
+    if (!speciesKey) return null;
+
+    const cohort = index.byScientificSpeciesKey.get(speciesKey);
+    if (!cohort?.length) return null;
+
+    const excluded = clean(excludingProfileId)?.toLowerCase() ?? null;
+    let bestPrinciple: CatalogBehaviorPrinciple | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (const entry of cohort) {
+        if (excluded && entry.profileId === excluded) continue;
+        if (!entry.principle) continue;
+        const score = parentPrincipleScore(entry);
+        if (score > bestScore) {
+            bestScore = score;
+            bestPrinciple = entry.principle;
+        }
+    }
+
+    return bestPrinciple;
+}
+
+/**
+ * Matches iOS SpeciesCatalogRankingIndex.behaviorPrinciple:
+ * direct entry → canonical parent chain → scientific-species parent
+ * (e.g. French Bulldog / Domestic Dog → Companion Readiness).
+ */
+export function resolveCatalogBehaviorPrinciple(
+    index: CatalogBehaviorPrincipleIndex,
+    speciesProfileId: string | null | undefined,
+    normalizedIdentityKey: string | null | undefined,
+    scientificName?: string | null
+): CatalogBehaviorPrinciple | null {
+    const entry = catalogEntryMeta(index, speciesProfileId, normalizedIdentityKey);
+    if (entry) {
+        if (entry.principle) return entry.principle;
+
+        const viaCanonical = principleFollowingCanonicalChain(index, entry);
+        if (viaCanonical) return viaCanonical;
+
+        const viaScientific = parentPrincipleSharingScientificSpecies(
+            index,
+            entry.scientificName ?? scientificName,
+            entry.profileId
+        );
+        if (viaScientific) return viaScientific;
+    }
+
+    return parentPrincipleSharingScientificSpecies(
+        index,
+        scientificName,
+        speciesProfileId
+    );
 }
 
 function clean(value: string | null | undefined) {
@@ -401,7 +580,7 @@ export async function getCatalogBehaviorPrincipleIndex() {
     }
 
     await getDatabaseSpeciesEntries();
-    return catalogCache?.behaviorPrinciples ?? {byProfileId: new Map(), byIdentityKey: new Map()};
+    return catalogCache?.behaviorPrinciples ?? emptyBehaviorPrincipleIndex();
 }
 
 export async function getDatabaseSpeciesBySlug(slug: string) {

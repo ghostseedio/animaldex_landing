@@ -26,7 +26,8 @@ export default function TradesClient({
     userId,
     captures,
     discover,
-    locale
+    locale,
+    initialTheirCapture = ""
 }: {
     trades: AppTrade[];
     creditOffers: AppCreditOffer[];
@@ -34,16 +35,17 @@ export default function TradesClient({
     captures: AppCapture[];
     discover: AppDiscoverItem[];
     locale: string;
+    initialTheirCapture?: string;
 }) {
     const router = useRouter();
     const {balance, applyDelta} = useAppCredits();
     const [working, setWorking] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [creating, setCreating] = useState(false);
+    const [creating, setCreating] = useState(Boolean(initialTheirCapture));
     const [offerMode, setOfferMode] = useState<OfferMode>("animal");
     const [myCapture, setMyCapture] = useState("");
-    const [theirCapture, setTheirCapture] = useState("");
-    const [creditTarget, setCreditTarget] = useState("");
+    const [theirCapture, setTheirCapture] = useState(initialTheirCapture);
+    const [creditTarget, setCreditTarget] = useState(initialTheirCapture);
     const [creditAmount, setCreditAmount] = useState(String(DEFAULT_CREDIT_AMOUNT));
 
     const {mine: myCaptureOptions, public: publicCaptureOptions} = useTradeCaptureOptions(captures, discover, locale);

@@ -1,4 +1,4 @@
-import {CanonicalContentMetadata} from "@/data/content-schema";
+import {CanonicalContentMetadata, SystemsIntelligenceEntry} from "@/data/content-schema";
 
 export type ChallengeComparisonType =
     | "battle"
@@ -47,6 +47,8 @@ export type ChallengeEntry = CanonicalContentMetadata & {
     speciesSlugs: [string, string];
     systemsSpeciesSlugs?: string[];
     relatedChallengeSlugs?: string[];
+    /** Populated for AI/DB comparisons when static SI catalog has no entry. */
+    systemsIntelligenceEntries?: Array<{slug: string; entry: SystemsIntelligenceEntry}>;
 };
 
 export type ChallengeDirectoryPage = {

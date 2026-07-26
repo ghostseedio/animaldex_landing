@@ -1,10 +1,13 @@
 import {Metadata} from "next";
+import Image from "next/image";
 import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
+import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import SpeciesLessonValueSection from "@/app/[locale]/(composited)/animals/[slug]/species-lesson-value-section";
 import {SpeciesEndorsementAndSize, SpeciesLevelProgress} from "@/app/[locale]/(composited)/animals/[slug]/species-progress-interactive";
@@ -13,14 +16,16 @@ import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/specie
 import SpeciesFieldGuideAccordion from "@/app/[locale]/(composited)/animals/[slug]/species-field-guide-accordion";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
+import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
 import SpeciesLifeStagesSection from "@/app/[locale]/(composited)/animals/[slug]/species-life-stages-section";
 import SubtitleSpeaker from "@/app/[locale]/(composited)/animals/[slug]/subtitle-speaker";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
-import {getChallengesForSpecies} from "@/data/challenges";
+import {getMergedChallengesForSpecies} from "@/data/species-comparisons";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {
     getSpeciesImageAltText,
     getSpeciesImageAttribution,
@@ -366,7 +371,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 : getAutomaticRelatedSpecies(entry, unifiedSpeciesEntries, 3);
         })();
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
-    const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
+    const relatedChallenges = await getMergedChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
     const principleProfile = await resolveSpeciesBehaviorProfile(entry.slug);
@@ -415,7 +420,14 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         const normalizedGrade = grade?.trim();
         return normalizedGrade ? `Grade ${normalizedGrade}` : null;
     };
+
+    const parseCaptureGrade = (grade: string | null | undefined) => {
+        const normalizedGrade = grade?.trim();
+        if (!normalizedGrade || !/^\d+$/.test(normalizedGrade)) return null;
+        return Number(normalizedGrade);
+    };
     const isBreed = isBreedSpeciesEntry(entry);
+    const identityKind = entry.databaseSource?.identityKind ?? null;
     const displayCategory = speciesDisplayCategory(entry);
     const animalDexNumber = getAnimalDexNumberFromEntry(entry);
     const compareWithLinks = Array.from(
@@ -617,6 +629,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "introduction",
             title: t("fieldGuideIntroductionTitle", {animal: entry.name}),
+            icon: "introduction" as const,
+            tintClass: "text-primary-200 bg-primary-400/15 border-primary-300/25",
             content: (
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
                     <p>{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
@@ -644,6 +658,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "environment",
             title: t("fieldGuideEnvironmentTitle", {habitat: entry.analysis.habitat.split(",")[0] ?? entry.name}),
+            icon: "environment" as const,
+            tintClass: "text-cyan-200 bg-cyan-400/15 border-cyan-300/25",
             content: (
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
                     <p>
@@ -681,6 +697,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "diet",
             title: t("fieldGuideDietTitle"),
+            icon: "diet" as const,
+            tintClass: "text-orange-200 bg-orange-400/15 border-orange-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
                     <p>{renderTextWithSpeciesLinks(databaseFieldGuide?.dietSummary ?? dietContent.summary, entry.slug)}</p>
@@ -700,11 +718,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ...(databaseFieldGuide?.predatorsSummary ? [{
             id: "predators",
             title: "Predators, threats, and defense",
+            icon: "predators" as const,
+            tintClass: "text-violet-200 bg-violet-400/15 border-violet-300/25",
             content: <p className="text-lg leading-8 text-ink-200">{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, entry.slug)}</p>
         }] : []),
         ...(databaseFieldGuide && (databaseFieldGuide.sleepPattern || databaseFieldGuide.lifespanEstimate) ? [{
             id: "life-cycle",
             title: "Daily rhythm and lifespan",
+            icon: "lifeCycle" as const,
+            tintClass: "text-cyan-200 bg-cyan-400/15 border-cyan-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
                     {databaseFieldGuide.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, entry.slug)}</p> : null}
@@ -715,6 +737,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ...(databaseFieldGuide && (databaseFieldGuide.femaleOffspringNotes || databaseFieldGuide.sexDifferenceNotes) ? [{
             id: "reproduction",
             title: "Offspring and sex differences",
+            icon: "reproduction" as const,
+            tintClass: "text-rose-200 bg-rose-400/15 border-rose-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
                     {databaseFieldGuide.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, entry.slug)}</p> : null}
@@ -725,6 +749,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "behavior",
             title: t("fieldGuideBehaviorTitle", {animal: entry.name}),
+            icon: "behavior" as const,
+            tintClass: "text-amber-200 bg-amber-400/15 border-amber-300/25",
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.behaviorTraits.map((item) => (
@@ -736,6 +762,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ...(principleProfile ? [{
             id: "meaning",
             title: t("fieldGuideMeaningTitle", {principle: principleProfile.principle}),
+            icon: "meaning" as const,
+            tintClass: "text-primary-200 bg-primary-400/15 border-primary-300/25",
             content: (
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
                     <p>{entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.</p>
@@ -747,6 +775,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "spotting",
             title: t("fieldGuideSpottingTitle"),
+            icon: "spotting" as const,
+            tintClass: "text-sky-200 bg-sky-400/15 border-sky-300/25",
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.respectfulSpotting.map((item) => (
@@ -758,6 +788,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ...(entry.premiumDetails.lookalikes.length > 0 ? [{
             id: "lookalikes",
             title: t("fieldGuideLookalikesTitle"),
+            icon: "lookalikes" as const,
+            tintClass: "text-lime-200 bg-lime-400/15 border-lime-300/25",
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.lookalikes.map((item) => (
@@ -769,7 +801,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     ];
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-12 md:py-20 flex flex-col gap-16 md:gap-24">
+        <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-16 px-4 py-6 md:gap-24 md:px-8 md:py-10">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([
@@ -781,20 +813,29 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 ])}}
             />
 
-            <Link href="/animals" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                {t("back")}
-            </Link>
+            <div className="flex flex-col gap-4 md:gap-5">
+                <Link
+                    href="/animals"
+                    className="inline-flex w-fit items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100"
+                >
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M12.5 4.5 7 10l5.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M7.5 10H16" strokeLinecap="round" />
+                    </svg>
+                    {t("back")}
+                </Link>
 
-            <section className="relative overflow-hidden rounded-[2rem] border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
+                <section className="relative overflow-hidden rounded-[2rem] border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
                 <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div className="flex flex-wrap gap-2">
                             {animalDexNumber ? <AnimalDexNumberBadge number={animalDexNumber} /> : null}
                             {legendaryBeast ? <LegendaryEarthBeastBadge compact /> : null}
+                            <IdentityKindChip identityKind={identityKind} animalName={entry.name} />
                             <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-sm font-semibold text-amber-100">
                                 {resolvedRarityLabel}
                             </span>
-                            {isBreed ? (
+                            {isBreed && identityKind?.toLowerCase() !== "breed" && identityKind?.toLowerCase() !== "variant" ? (
                                 <span className="rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1.5 text-sm font-semibold text-violet-100">
                                     {t("breedLabel")}
                                 </span>
@@ -839,6 +880,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     src: getSpeciesImageRoute(entry.slug, item.captureId),
                                     alt: getSpeciesImageAltText(entry, "featured"),
                                     gradeLabel: formatCaptureGradeLabel(item.imageGrade),
+                                    grade: item.gradeBreakdown?.grade ?? parseCaptureGrade(item.imageGrade),
+                                    gradeBreakdown: item.gradeBreakdown,
                                     attribution: getSpeciesImageAttribution(item),
                                     username: item.username,
                                     contextLabel: item.contextLabel,
@@ -848,7 +891,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             />
                         ) : (
                             <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
-                                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-amber-200/20 bg-amber-200/[0.08] text-3xl text-amber-100">✦</div>
+                                <div className="relative mb-6 h-28 w-28 overflow-hidden rounded-[1.5rem] border border-amber-200/20 bg-amber-200/[0.06] p-3">
+                                    <Image
+                                        src={getSpeciesArtworkUrl(entry.slug)}
+                                        alt={getSpeciesImageAltText(entry, "thumbnail")}
+                                        fill
+                                        unoptimized
+                                        sizes="112px"
+                                        className={
+                                            growthContext.hasCapture
+                                                ? "object-contain p-2"
+                                                : "object-contain p-2 brightness-0 invert opacity-80"
+                                        }
+                                    />
+                                </div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
                                 <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
                                 <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
@@ -860,6 +916,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
                 </div>
             </section>
+            </div>
 
             {legendaryBeast ? (
                 <section className="rounded-[1.75rem] border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
@@ -997,7 +1054,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                         </p>
                                         <div className="mt-4 flex flex-wrap gap-2">
                                             {relatedPowerSpecies.map((item) => (
-                                                <Link key={item.slug} href={`/animals/${item.slug}`} className="text-sm text-primary-200 hover:text-primary-100">
+                                                <Link
+                                                    key={item.slug}
+                                                    href={`/animals/${item.slug}`}
+                                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 py-1.5 pl-1.5 pr-3 text-sm text-primary-200 hover:border-primary-300/40 hover:text-primary-100"
+                                                >
+                                                    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-surface-800/80">
+                                                        <SpeciesArtworkImage
+                                                            slug={item.slug}
+                                                            alt={getSpeciesImageAltText(item, "thumbnail")}
+                                                            className="h-full w-full !bg-transparent"
+                                                            sizes="32px"
+                                                            fit="contain"
+                                                        />
+                                                    </span>
                                                     {item.name}
                                                 </Link>
                                             ))}
@@ -1006,6 +1076,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 ) : null}
                             </section>
                         ) : null}
+
+                        <SpeciesRankingCarousel
+                            speciesSlug={entry.slug}
+                            speciesName={entry.name}
+                            items={rankingItems}
+                            labels={{
+                                title: t("rankingsTitle", {animal: entry.name}),
+                                description: t("rankingsDescription"),
+                                empty: t("rankingsEmpty"),
+                                rankLabel: t("rankingsRankLabel"),
+                                scoreLabel: t("rankingsScoreLabel"),
+                                byPhotographer: t("rankingsByPhotographer")
+                            }}
+                        />
 
                         <SpeciesFieldGuideAccordion
                             headerTitle={principleProfile
@@ -1070,20 +1154,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 }}
                             />
                         ) : null}
-
-                        <SpeciesRankingCarousel
-                            speciesSlug={entry.slug}
-                            speciesName={entry.name}
-                            items={rankingItems}
-                            labels={{
-                                title: t("rankingsTitle", {animal: entry.name}),
-                                description: t("rankingsDescription"),
-                                empty: t("rankingsEmpty"),
-                                rankLabel: t("rankingsRankLabel"),
-                                scoreLabel: t("rankingsScoreLabel"),
-                                byPhotographer: t("rankingsByPhotographer")
-                            }}
-                        />
 
                         {speciesCaptures.length > 0 ? (
                             <SpeciesLifeStagesSection
@@ -1171,57 +1241,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 )}
             />
 
-            <section className="flex flex-col gap-4">
-                <h2 className="font-display font-bold text-4xl text-white">{t("relatedTitle")}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {related.map((item) => (
-                        <article
-                            key={item.slug}
-                            className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
-                        >
-                            <h3 className="font-display font-bold text-2xl text-white">{item.name}</h3>
-                            <p className="text-ink-200 text-base">{renderTextWithSpeciesLinks(item.analysis.summary, entry.slug)}</p>
-                            <Link
-                                href={`/animals/${item.slug}`}
-                                className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                underline
-                            >
-                                {t("readSpecies")}
-                            </Link>
-                        </article>
-                    ))}
-                </div>
-            </section>
+            <RelatedSpeciesSection
+                title={t("relatedTitle")}
+                openLabel={t("readSpecies")}
+                items={related}
+            />
 
             {primaryQuality && relatedPowerSpecies.length > 0 ? (
-                <section className="flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-4xl text-white">
-                        {t("moreWithPrincipleTitle", {principle: primaryQuality})}
-                    </h2>
-                    <p className="text-ink-200 text-lg md:text-xl">
-                        <Link href={`/powers/${primaryQualitySlug}`} underline className="text-primary-200 hover:text-primary-100">
-                            {t("moreWithPrincipleHubLink", {principle: primaryQuality})}
-                        </Link>
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedPowerSpecies.map((item) => (
-                            <article
-                                key={`principle-${item.slug}`}
-                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
-                            >
-                                <h3 className="font-display font-bold text-2xl text-white">{item.name}</h3>
-                                <p className="text-ink-200 text-base">{renderTextWithSpeciesLinks(item.analysis.summary, entry.slug)}</p>
-                                <Link
-                                    href={`/animals/${item.slug}`}
-                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                    underline
-                                >
-                                    {t("readSpecies")}
-                                </Link>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                <RelatedSpeciesSection
+                    title={t("moreWithPrincipleTitle", {principle: primaryQuality})}
+                    hubHref={`/powers/${primaryQualitySlug}`}
+                    hubLabel={t("moreWithPrincipleHubLink", {principle: primaryQuality})}
+                    openLabel={t("readSpecies")}
+                    items={relatedPowerSpecies}
+                />
             ) : null}
 
             <IntentCtaCard

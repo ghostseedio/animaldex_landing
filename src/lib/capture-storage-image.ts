@@ -93,6 +93,7 @@ export async function resolveCaptureImageReference(input: {
         mimeType: input.imageMimeType ?? null,
         mediaKind: input.imageMediaKind ?? "photo",
         imageGrade: null,
+        gradeBreakdown: null,
         animalName: null,
         username: null,
         contextLabel: null,

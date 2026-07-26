@@ -5,13 +5,23 @@ import {AppEmpty, AppPage, AppPrimaryLink, AppSegmentedControl} from "@/app/[loc
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
-import {type TouchEvent, useCallback, useEffect, useRef, useState, type WheelEvent} from "react";
+import {discoverPostPath} from "@/lib/discover-post";
+import {getLocalePath} from "@/lib/site";
+import {type TouchEvent, useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
 
-const DISCOVER_PAGE_SIZE = 2;
+const DISCOVER_PAGE_SIZE = 4;
 const COLLECTOR_PAGE_SIZE = 24;
+const TIMELINE_PREFETCH_REMAINING = 2;
+
+function scrollScrollerToPost(scroller: HTMLElement, postId: string, behavior: ScrollBehavior = "auto") {
+    const target = scroller.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(postId)}"]`);
+    if (!target) return false;
+    scroller.scrollTo({top: target.offsetTop, behavior});
+    return true;
+}
 
 function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
     return (
@@ -60,50 +70,15 @@ function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
 
 function TimelineLoadingPreview() {
     return (
-        <article
+        <div
             aria-live="polite"
             aria-label="Loading more posts"
-            className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)]"
+            className="flex shrink-0 items-center justify-center gap-2 py-5"
         >
-            <div className="flex shrink-0 items-start justify-between gap-3 p-3 sm:p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                    <div className="h-11 w-11 shrink-0 animate-pulse rounded-2xl bg-white/10 ring-1 ring-white/10" />
-                    <div className="min-w-0 space-y-2">
-                        <div className="h-3.5 w-32 animate-pulse rounded-full bg-white/12" />
-                        <div className="h-2.5 w-20 animate-pulse rounded-full bg-white/[0.07]" />
-                    </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                    <div className="h-7 w-16 animate-pulse rounded-full bg-primary-400/15" />
-                    <div className="h-6 w-6 animate-pulse rounded-full bg-white/[0.07]" />
-                </div>
-            </div>
-            <div className="shrink-0 px-3 pb-3 sm:px-4 sm:pb-4">
-                <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/[0.07]" />
-            </div>
-            <div className="relative h-[52svh] min-h-[20rem] max-h-[36rem] shrink-0 overflow-hidden bg-black sm:h-[54svh] md:h-[56svh]">
-                <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.035),rgba(255,255,255,0.11),rgba(255,255,255,0.035))] blur-xl" />
-                <div className="absolute inset-0 animate-pulse bg-white/[0.045]" />
-                <div className="absolute left-3 top-3 h-6 w-14 animate-pulse rounded-full bg-black/60 ring-1 ring-white/10" />
-                <div className="absolute bottom-3 left-3 h-10 w-10 animate-pulse rounded-full bg-black/65 ring-1 ring-white/15" />
-                <div className="absolute bottom-3 right-3 h-6 w-11 animate-pulse rounded-full bg-black/60 ring-1 ring-white/10" />
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col justify-center space-y-1.5 overflow-hidden px-3 py-3.5 sm:px-4 sm:py-4">
-                <div className="flex items-start justify-between gap-2.5">
-                    <div className="h-7 w-44 animate-pulse rounded-full bg-white/12" />
-                    <div className="h-7 w-14 animate-pulse rounded-full bg-amber-300/15" />
-                </div>
-                <div className="h-6 w-24 animate-pulse rounded-full bg-red-500/15" />
-                <div className="h-6 w-20 animate-pulse rounded-full bg-white/[0.06]" />
-                <div className="h-4 w-3/4 animate-pulse rounded-full bg-white/[0.07]" />
-                <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-white/[0.055]" />
-                <div className="flex max-h-7 gap-1.5 overflow-hidden">
-                    <div className="h-7 w-20 animate-pulse rounded-full bg-white/[0.07]" />
-                    <div className="h-7 w-24 animate-pulse rounded-full bg-white/[0.07]" />
-                    <div className="h-7 w-16 animate-pulse rounded-full bg-white/[0.07]" />
-                </div>
-            </div>
-        </article>
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25" />
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25 [animation-delay:120ms]" />
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25 [animation-delay:240ms]" />
+        </div>
     );
 }
 
@@ -188,7 +163,10 @@ export default function DiscoverHome({
     timelineCursor,
     featured,
     collectors,
-    initialSegment = "discover"
+    initialSegment = "discover",
+    initialFocusPostId = null,
+    syncPostUrls = true,
+    viewerUserId = null
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
@@ -196,6 +174,9 @@ export default function DiscoverHome({
     featured: DiscoverFeaturedItem[];
     collectors: DiscoverCollectorItem[];
     initialSegment?: DiscoverSegment;
+    initialFocusPostId?: string | null;
+    syncPostUrls?: boolean;
+    viewerUserId?: string | null;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
@@ -211,17 +192,47 @@ export default function DiscoverHome({
     const collectorSentinelRef = useRef<HTMLDivElement | null>(null);
     const timelineSnapLockUntilRef = useRef(0);
     const timelineTouchStartYRef = useRef<number | null>(null);
+    const activePostIdRef = useRef<string | null>(initialFocusPostId ?? timeline[0]?.id ?? null);
+    const didFocusScrollRef = useRef(false);
+    const timelineRequestIdRef = useRef(0);
+    const hasPaginatedTimelineRef = useRef(false);
+    const seedTimelineKey = `${timeline.map((item) => item.id).join("|")}|${timelineCursor?.id ?? ""}`;
+    const seedTimelineKeyRef = useRef(seedTimelineKey);
 
     function handleSegmentChange(next: DiscoverSegment) {
         setSegment(next);
-        router.replace(next === "collectors" ? "/app?view=collectors" : "/app");
+        if (next === "collectors") {
+            router.replace(getLocalePath(locale, "/app?view=collectors"));
+            return;
+        }
+        const activePostId = activePostIdRef.current ?? timelineItems[0]?.id ?? null;
+        router.replace(getLocalePath(locale, activePostId ? discoverPostPath(activePostId) : "/app"));
     }
 
+    const syncUrlToPost = useCallback((postId: string) => {
+        if (!syncPostUrls) return;
+        if (activePostIdRef.current === postId) return;
+        activePostIdRef.current = postId;
+        const nextPath = getLocalePath(locale, discoverPostPath(postId));
+        if (typeof window !== "undefined" && window.location.pathname !== nextPath) {
+            window.history.replaceState(window.history.state, "", nextPath);
+        }
+    }, [locale, syncPostUrls]);
+
     useEffect(() => {
+        // Only resync from server props when the seed itself changes (new post page),
+        // never after the user has already paginated the client feed.
+        if (seedTimelineKeyRef.current === seedTimelineKey && hasPaginatedTimelineRef.current) {
+            return;
+        }
+        seedTimelineKeyRef.current = seedTimelineKey;
+        hasPaginatedTimelineRef.current = false;
+        didFocusScrollRef.current = false;
         setTimelineItems(timeline);
         setNextTimelineCursor(timelineCursor);
         setHasMoreTimeline(Boolean(timelineCursor));
-    }, [timeline, timelineCursor]);
+        activePostIdRef.current = initialFocusPostId ?? timeline[0]?.id ?? null;
+    }, [seedTimelineKey, timeline, timelineCursor, initialFocusPostId]);
 
     useEffect(() => {
         setCollectorItems(collectors);
@@ -263,25 +274,29 @@ export default function DiscoverHome({
 
     const loadNextTimelinePage = useCallback(async () => {
         if (isLoadingTimeline || !hasMoreTimeline) return;
+        const requestId = ++timelineRequestIdRef.current;
+        const cursor = nextTimelineCursor;
         setIsLoadingTimeline(true);
         try {
             const params = new URLSearchParams({
                 limit: String(DISCOVER_PAGE_SIZE)
             });
-            if (nextTimelineCursor) {
-                params.set("cursorDate", nextTimelineCursor.date);
-                params.set("cursorRank", String(nextTimelineCursor.sortRank));
-                params.set("cursorId", nextTimelineCursor.id);
+            if (cursor) {
+                params.set("cursorDate", cursor.date);
+                params.set("cursorRank", String(cursor.sortRank));
+                params.set("cursorId", cursor.id);
             }
             const response = await fetch(`/api/app/discover?${params.toString()}`, {
                 headers: {Accept: "application/json"}
             });
+            if (requestId !== timelineRequestIdRef.current) return;
             if (!response.ok) {
                 setHasMoreTimeline(false);
                 return;
             }
             const payload = await response.json() as {timeline?: DiscoverTimelineItem[]; nextCursor?: DiscoverTimelineCursor | null; hasMore?: boolean};
             const nextItems = payload.timeline ?? [];
+            hasPaginatedTimelineRef.current = true;
             setTimelineItems((current) => {
                 const seen = new Set(current.map((item) => item.id));
                 const merged = [...current];
@@ -295,7 +310,9 @@ export default function DiscoverHome({
             setNextTimelineCursor(payload.nextCursor ?? null);
             setHasMoreTimeline(Boolean(payload.nextCursor) && nextItems.length > 0);
         } finally {
-            setIsLoadingTimeline(false);
+            if (requestId === timelineRequestIdRef.current) {
+                setIsLoadingTimeline(false);
+            }
         }
     }, [hasMoreTimeline, isLoadingTimeline, nextTimelineCursor]);
 
@@ -321,9 +338,19 @@ export default function DiscoverHome({
         const nextIndex = Math.max(0, Math.min(items.length - 1, currentIndex + direction));
         if (nextIndex === currentIndex) return false;
 
-        items[nextIndex]?.scrollIntoView({block: "start", behavior: "smooth"});
+        const nextItem = items[nextIndex];
+        if (!nextItem) return false;
+
+        scroller.scrollTo({top: nextItem.offsetTop, behavior: "smooth"});
+        const postId = nextItem.getAttribute("data-post-id");
+        if (postId) syncUrlToPost(postId);
+
+        if (direction > 0 && items.length - nextIndex <= TIMELINE_PREFETCH_REMAINING) {
+            void loadNextTimelinePage();
+        }
+
         return true;
-    }, []);
+    }, [loadNextTimelinePage, syncUrlToPost]);
 
     const handleTimelineWheel = useCallback((event: WheelEvent<HTMLElement>) => {
         const verticalDelta = event.deltaY;
@@ -368,16 +395,17 @@ export default function DiscoverHome({
 
     useEffect(() => {
         if (segment !== "discover" || !hasMoreTimeline) return undefined;
+        const scroller = timelineScrollerRef.current;
         const node = timelineSentinelRef.current;
-        if (!node) return undefined;
+        if (!scroller || !node) return undefined;
         const observer = new IntersectionObserver((entries) => {
             if (entries.some((entry) => entry.isIntersecting)) {
                 void loadNextTimelinePage();
             }
-        }, {rootMargin: "120px 0px"});
+        }, {root: scroller, rootMargin: "240px 0px"});
         observer.observe(node);
         return () => observer.disconnect();
-    }, [segment, hasMoreTimeline, loadNextTimelinePage]);
+    }, [segment, hasMoreTimeline, loadNextTimelinePage, timelineItems.length]);
 
     useEffect(() => {
         if (segment !== "collectors" || !hasMoreCollectors) return undefined;
@@ -391,6 +419,58 @@ export default function DiscoverHome({
         observer.observe(node);
         return () => observer.disconnect();
     }, [segment, hasMoreCollectors, loadNextCollectorPage]);
+
+    useLayoutEffect(() => {
+        if (segment !== "discover") return;
+        const scroller = timelineScrollerRef.current;
+        if (!scroller) return;
+
+        const focusId = initialFocusPostId;
+        if (focusId && !didFocusScrollRef.current) {
+            if (scrollScrollerToPost(scroller, focusId, "auto")) {
+                didFocusScrollRef.current = true;
+                activePostIdRef.current = focusId;
+                syncUrlToPost(focusId);
+            }
+            return;
+        }
+
+        const activeId = activePostIdRef.current;
+        if (!activeId) return;
+        const target = scroller.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(activeId)}"]`);
+        if (!target) return;
+        if (Math.abs(scroller.scrollTop - target.offsetTop) > 48) {
+            scroller.scrollTo({top: target.offsetTop, behavior: "auto"});
+        }
+    }, [segment, initialFocusPostId, timelineItems, isLoadingTimeline, syncUrlToPost]);
+
+    useEffect(() => {
+        if (segment !== "discover" || !syncPostUrls) return undefined;
+        const scroller = timelineScrollerRef.current;
+        if (!scroller) return undefined;
+
+        const items = Array.from(scroller.querySelectorAll<HTMLElement>("[data-post-id]"));
+        if (!items.length) return undefined;
+
+        const observer = new IntersectionObserver((entries) => {
+            const visible = entries
+                .filter((entry) => entry.isIntersecting)
+                .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+            const postId = visible?.target.getAttribute("data-post-id");
+            if (postId) syncUrlToPost(postId);
+        }, {
+            root: scroller,
+            threshold: [0.55, 0.7, 0.85]
+        });
+
+        for (const item of items) observer.observe(item);
+        if (!activePostIdRef.current && items[0]) {
+            const firstId = items[0].getAttribute("data-post-id");
+            if (firstId) syncUrlToPost(firstId);
+        }
+
+        return () => observer.disconnect();
+    }, [segment, syncPostUrls, timelineItems, syncUrlToPost]);
 
     return (
         <AppPage>
@@ -421,15 +501,16 @@ export default function DiscoverHome({
                                     className="h-[calc(100svh-7.5rem)] min-h-[34rem] snap-y snap-mandatory space-y-4 overflow-y-auto overscroll-contain scroll-smooth pr-1 [scrollbar-width:none] md:h-[90svh] md:min-h-[42rem] [&::-webkit-scrollbar]:hidden"
                                 >
                                     {timelineItems.map((item) => (
-                                        <div key={item.id} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
-                                            <DiscoverTimelineCard item={item} locale={locale} />
+                                        <div
+                                            key={item.id}
+                                            data-timeline-snap-item
+                                            data-post-id={item.id}
+                                            className="h-full min-h-0 snap-start snap-always"
+                                        >
+                                            <DiscoverTimelineCard item={item} locale={locale} viewerUserId={viewerUserId} />
                                         </div>
                                     ))}
-                                    {isLoadingTimeline ? (
-                                        <div data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
-                                            <TimelineLoadingPreview />
-                                        </div>
-                                    ) : null}
+                                    {isLoadingTimeline ? <TimelineLoadingPreview /> : null}
                                     {hasMoreTimeline ? (
                                         <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
                                     ) : null}

@@ -19,6 +19,10 @@ export async function GET() {
             {
                 "/": "/u/*",
                 comment: "Open public AnimalDex collector cards in the app."
+            },
+            {
+                "/": "/p/*",
+                comment: "Open shared AnimalDex discover posts in the app."
             }
         ]
     }] : [];

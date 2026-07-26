@@ -3,7 +3,13 @@ import TradesClient from "@/app/[locale]/(authenticated)/app/trades/trades-clien
 import {decorateCapture, getAuthenticatedAppContext, getAppCreditOffers, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
 import {getUserCaptures} from "@/data/user-captures";
 
-export default async function TradesPage({params}: {params: {locale: string}}) {
+export default async function TradesPage({
+    params,
+    searchParams
+}: {
+    params: {locale: string};
+    searchParams?: {theirCapture?: string};
+}) {
     const [context, progression, trades, creditOffers, rawCaptures, feed] = await Promise.all([
         getAuthenticatedAppContext(),
         getAppProgression(),
@@ -18,6 +24,7 @@ export default async function TradesPage({params}: {params: {locale: string}}) {
     const completedTrades = trades.filter((trade) => trade.status === "accepted").length;
     const completedCredits = creditOffers.filter((offer) => offer.status === "accepted").length;
     const publicCaptures = feed.filter((item) => item.ownerUserId !== context!.profile.id);
+    const initialTheirCapture = searchParams?.theirCapture?.trim() || "";
 
     return (
         <AppPage>
@@ -40,6 +47,7 @@ export default async function TradesPage({params}: {params: {locale: string}}) {
                     captures={captures}
                     discover={publicCaptures}
                     locale={params.locale}
+                    initialTheirCapture={initialTheirCapture}
                 />
             ) : (
                 <AppEmpty

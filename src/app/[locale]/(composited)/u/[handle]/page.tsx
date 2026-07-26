@@ -68,22 +68,26 @@ export async function generateMetadata({params}: PublicProfilePageProps): Promis
 }
 
 export default async function PublicProfilePage({params}: PublicProfilePageProps) {
-    const requestedHandle = normalizePublicHandle(params.handle);
+    return ProfilePageBody({locale: params.locale, handle: params.handle});
+}
+
+async function ProfilePageBody({locale, handle}: {locale: string; handle: string}) {
+    const requestedHandle = normalizePublicHandle(handle);
     if (!requestedHandle) notFound();
 
     const profile = await getPublicProfileCard(requestedHandle);
     if (!profile) notFound();
 
     if (profile.username.toLowerCase() !== requestedHandle) {
-        redirect(getLocalePath(params.locale, profilePath(profile.username)));
+        redirect(getLocalePath(locale, profilePath(profile.username)));
     }
 
     const viewer = await getProfileViewerState(profile.userId);
-    const localePrefix = `/${params.locale}`;
-    const t = await getScopedTranslator(params.locale, "profile");
-    const pageUrl = getAbsoluteUrl(params.locale, profilePath(profile.username));
+    const localePrefix = `/${locale}`;
+    const t = await getScopedTranslator(locale, "profile");
+    const pageUrl = getAbsoluteUrl(locale, profilePath(profile.username));
     const joinedAtLabel = profile.joinedAt
-        ? new Date(profile.joinedAt).toLocaleDateString(params.locale, {month: "short", year: "numeric"})
+        ? new Date(profile.joinedAt).toLocaleDateString(locale, {month: "short", year: "numeric"})
         : null;
 
     let ownerExtras = null;
@@ -139,6 +143,7 @@ export default async function PublicProfilePage({params}: PublicProfilePageProps
                     instagramDisplay: getInstagramDisplayText(profile.instagramUrl),
                     isPro: profile.isPro,
                     joinedAtLabel,
+                    chromePreset: profile.chromePreset,
                     collectorScore: profile.collectorScore,
                     collectionArchetype: profile.collectionArchetype,
                     captureCount: profile.captureCount,
@@ -149,9 +154,11 @@ export default async function PublicProfilePage({params}: PublicProfilePageProps
                     wildCount: profile.wildCount,
                     zooCount: profile.zooCount,
                     domesticCount: profile.domesticCount,
+                    farmCount: profile.farmCount,
                     tradesMade: profile.tradesMade,
                     missionsCompleted: profile.missionsCompleted,
                     collectionValueUsd: profile.collectionValueUsd,
+                    averageTraits: profile.averageTraits,
                     bestForTagScores: profile.bestForTagScores,
                     powerSetCompletions: profile.powerSetCompletions,
                     wildIdentity: profile.wildIdentity,
@@ -231,13 +238,20 @@ export default async function PublicProfilePage({params}: PublicProfilePageProps
                     packBuyInApp: t("packBuyInApp"),
                     viewSignedInAs: t("viewSignedInAs")
                 }}
-                locale={params.locale}
+                locale={locale}
                 localePrefix={localePrefix}
                 viewer={viewer}
                 ownerExtras={ownerExtras}
                 memberExtras={memberExtras}
                 appStoreUrl={appStoreUrl}
-                shareButton={<ShareProfileButton url={pageUrl} title={`${profile.displayName} on AnimalDex`} />}
+                shareButton={
+                    <ShareProfileButton
+                        url={pageUrl}
+                        title={`${profile.displayName} on AnimalDex`}
+                        text={`See ${profile.displayName}'s animal collection on AnimalDex`}
+                        compact
+                    />
+                }
             />
         </article>
     );

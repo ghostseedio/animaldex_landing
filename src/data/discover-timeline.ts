@@ -5,6 +5,10 @@ import {getSpeciesBySlug} from "@/data/species";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
+import {computeCaptureGradeBreakdown, shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-post";
+import {identityKindShortLabel} from "@/lib/identity-kind";
+import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -45,8 +49,16 @@ export type DiscoverCaptureItem = {
     lifeStageChip: string | null;
     sameSpeciesHelper: string | null;
     speciesSlug: string | null;
+    speciesProfileId: string | null;
+    normalizedIdentityKey: string | null;
+    identityKind: string | null;
+    identityKindLabel: string | null;
+    identityExplanation: string | null;
+    identityEvidenceGuidance: string | null;
+    battleTier: "E" | "D" | "C" | "B" | "A" | "S";
     score: number;
     captureGrade: number;
+    gradeBreakdown: CaptureGradeBreakdown | null;
     isUncertain: boolean;
     endorsementCount: number;
     viewerEndorsementStat: string | null;
@@ -76,6 +88,7 @@ export type DiscoverCaptureItem = {
     challengeHealth: number;
     challengeStake: number;
     learnedPrinciple: string | null;
+    coreLesson: string | null;
     learnedExpression: string | null;
     bestForTags: string[];
     statBoosts: Record<string, number>;
@@ -213,11 +226,6 @@ function readStats(row: QueryRow) {
     return stats && typeof stats === "object" && !Array.isArray(stats) ? stats as Record<string, number> : {};
 }
 
-function readObject(row: QueryRow, key: string) {
-    const value = row[key];
-    return value && typeof value === "object" && !Array.isArray(value) ? value as QueryRow : {};
-}
-
 function readStringArray(row: QueryRow, key: string) {
     const value = row[key];
     if (!Array.isArray(value)) return [];
@@ -230,15 +238,6 @@ function readObjectArray(row: QueryRow, key: string) {
     const value = row[key];
     if (!Array.isArray(value)) return [] as QueryRow[];
     return value.filter((item): item is QueryRow => Boolean(item) && typeof item === "object" && !Array.isArray(item)) as QueryRow[];
-}
-
-function readNestedString(row: QueryRow, keys: string[]) {
-    let value: unknown = row;
-    for (const key of keys) {
-        if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-        value = (value as QueryRow)[key];
-    }
-    return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function formatLabel(value: string | null) {
@@ -363,9 +362,24 @@ function shouldShowUncertaintyFallback(row: QueryRow) {
     return Number(readNullableNumber(row, "confidence") ?? 0) < 0.4;
 }
 
+function scientificNameLooksBinomial(value: string | null) {
+    const parts = value?.trim().split(/\s+/) ?? [];
+    if (parts.length < 2) return false;
+    return /^[A-Z][a-z-]+$/.test(parts[0]) && /^[a-z][a-z-]+$/.test(parts[1]);
+}
+
 function isBroadIdentity(row: QueryRow) {
     const kind = readString(row, "identity_kind")?.toLowerCase();
     if (kind === "group" || kind === "broad_fallback" || kind === "generic_parent") return true;
+
+    // A proper binomial is species-level evidence, so a broad animal-name token
+    // (e.g. "Fish") must not downgrade a stored species/subspecies ID.
+    if (
+        (kind === "species" || kind === "subspecies")
+        && scientificNameLooksBinomial(readString(row, "scientific_name"))
+    ) {
+        return false;
+    }
 
     const tokens = [readString(row, "normalized_identity_key"), readString(row, "animal_name")]
         .map((value) => value?.trim().toLowerCase().replace(/[\s-]+/g, "_"))
@@ -380,123 +394,52 @@ function showsBroadIdentityAtModerateConfidence(row: QueryRow) {
         && !shouldShowUncertaintyFallback(row);
 }
 
-function imageQualityGradeScore(row: QueryRow) {
-    const raw = readObject(row, "raw_json");
-    const model = readObject(raw, "model");
-    const value = readString(row, "image_quality")
-        ?? readString(model, "image_quality")
-        ?? readNestedString(row, ["raw_json", "model", "image_quality"]);
+function captureGradeSourceFromRow(row: QueryRow): CaptureGradeSource {
+    const signals = row.signals && typeof row.signals === "object" && !Array.isArray(row.signals)
+        ? row.signals as CaptureGradeSource["signals"]
+        : null;
+    const premiumDetails = row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
+        ? row.premium_details as CaptureGradeSource["premium_details"]
+        : null;
+    const market = row.observed_market_modifiers && typeof row.observed_market_modifiers === "object" && !Array.isArray(row.observed_market_modifiers)
+        ? row.observed_market_modifiers as CaptureGradeSource["observed_market_modifiers"]
+        : null;
 
-    switch (value?.toLowerCase()) {
-        case "clear":
-            return 1;
-        case "weak":
-            return 0.28;
-        case "usable":
-        default:
-            return 0.68;
-    }
+    return {
+        image_grade: readString(row, "image_grade"),
+        raw_json: row.raw_json,
+        animal_name: readString(row, "animal_name"),
+        scientific_name: readString(row, "scientific_name"),
+        breed_guess: readString(row, "breed_guess"),
+        human_context: readString(row, "human_context"),
+        zoo_or_wild: readString(row, "zoo_or_wild"),
+        confidence: readNullableNumber(row, "confidence"),
+        breed_confidence: readNullableNumber(row, "breed_confidence"),
+        signals,
+        premium_details: premiumDetails,
+        observed_market_modifiers: market,
+        dominance_endorsements: readNumber(row, "dominance_endorsements"),
+        speed_endorsements: readNumber(row, "speed_endorsements"),
+        size_endorsements: readNumber(row, "size_endorsements"),
+        intelligence_endorsements: readNumber(row, "intelligence_endorsements"),
+        rarity_endorsements: readNumber(row, "rarity_endorsements")
+    };
 }
 
-function captureSettingTag(row: QueryRow) {
-    const setting = readString(row, "zoo_or_wild")?.toLowerCase();
-    const humanContext = readString(row, "human_context")?.toLowerCase();
-    if (setting === "wild" || humanContext === "free-ranging") return "wild";
-    if (setting === "farm" || humanContext === "livestock") return "farm";
-    if (setting === "zoo" || humanContext === "captive") return "zoo";
-    if (setting === "domestic" || humanContext === "pet") return "domestic";
-    return "unknown";
-}
-
-function hasWildHabitatSignal(row: QueryRow) {
-    const signals = readObject(row, "signals");
-    return signals.wild_habitat_likely === true || signals.wildHabitatLikely === true;
-}
-
-function habitatGradeScore(row: QueryRow) {
-    const wildHabitat = hasWildHabitatSignal(row);
-    switch (captureSettingTag(row)) {
-        case "wild":
-            return wildHabitat ? 1 : 0.88;
-        case "farm":
-            return wildHabitat ? 0.52 : 0.34;
-        case "zoo":
-            return wildHabitat ? 0.34 : 0.18;
-        case "domestic":
-            return wildHabitat ? 0.28 : 0.14;
-        default:
-            return wildHabitat ? 0.62 : 0.24;
-    }
-}
-
-function settingGradePenalty(row: QueryRow) {
-    const wildHabitat = hasWildHabitatSignal(row);
-    switch (captureSettingTag(row)) {
-        case "wild":
-            return 0;
-        case "farm":
-            return wildHabitat ? 0.06 : 0.10;
-        case "zoo":
-            return wildHabitat ? 0.12 : 0.18;
-        case "domestic":
-            return wildHabitat ? 0.14 : 0.20;
-        default:
-            return wildHabitat ? 0.04 : 0.08;
-    }
-}
-
-function accuracyGradeScore(row: QueryRow) {
-    const confidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "confidence") ?? 0)));
-    const refinedConfidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "breed_confidence") ?? confidence)));
-    if (confidence >= 0.75) return Math.max(refinedConfidence, 0.82);
-    if (confidence >= 0.5) return Math.max(refinedConfidence * 0.92, 0.58);
-    return Math.max(refinedConfidence * 0.8, 0.24);
-}
-
-function endorsementTotal(row: QueryRow) {
-    return readNumber(row, "dominance_endorsements")
-        + readNumber(row, "speed_endorsements")
-        + readNumber(row, "size_endorsements")
-        + readNumber(row, "intelligence_endorsements")
-        + readNumber(row, "rarity_endorsements");
-}
-
-function captureGrade(row: QueryRow) {
-    const confidence = Math.min(1, Math.max(0, Number(readNullableNumber(row, "confidence") ?? 0)));
-    const quality = imageQualityGradeScore(row);
-    const framing = Math.min(Math.max(
-        (quality === 1 ? 0.92 : quality >= 0.68 ? 0.62 : 0.24) + confidence * 0.06,
-        0.08
-    ), 1);
-    const condition = 0.84;
-    const bodyVisibility = 0.72;
-    const aesthetic = 0.75;
-    const endorsementRatio = Math.min(Math.max(0, endorsementTotal(row)), 15) / 15;
-    const endorsementLift = Math.sqrt(endorsementRatio) * 0.18;
-    const authenticityStatus = readNestedString(row, ["raw_json", "model", "authenticity_status"]);
-    const authenticityPenalty = authenticityStatus === "likely_non_live_source" ? 0.22 : 0;
-    const uncertaintyPenalty = shouldShowUncertaintyFallback(row) ? 0.14 : 0;
-
-    const weighted = condition * 0.24
-        + quality * 0.13
-        + framing * 0.07
-        + accuracyGradeScore(row) * 0.24
-        + habitatGradeScore(row) * 0.13
-        + bodyVisibility * 0.11
-        + aesthetic * 0.08
-        + endorsementLift;
-    const adjusted = Math.min(Math.max(weighted - authenticityPenalty - uncertaintyPenalty - settingGradePenalty(row), 0.05), 1);
-    const contrasted = adjusted >= 0.5
-        ? Math.min(1, 0.5 + Math.pow((adjusted - 0.5) / 0.5, 0.82) * 0.5)
-        : Math.max(0.05, 0.5 - Math.pow((0.5 - adjusted) / 0.5, 1.18) * 0.5);
-
-    return Math.min(10, Math.max(1, Math.round(contrasted * 9)));
+function captureGradeBreakdownForRow(row: QueryRow) {
+    return computeCaptureGradeBreakdown(captureGradeSourceFromRow(row));
 }
 
 function shouldShowUncertaintyVisualWarning(row: QueryRow) {
     if (shouldShowUncertaintyFallback(row)) return true;
     if (showsBroadIdentityAtModerateConfidence(row)) return true;
-    return captureGrade(row) === 1;
+    if (captureGradeBreakdownForRow(row)?.grade !== 1) return false;
+
+    return !shouldSuppressGradeOneUncertainty({
+        confidence: readNullableNumber(row, "confidence"),
+        identityKind: readString(row, "identity_kind") ?? readString(row, "refined_identity_kind"),
+        signals: captureGradeSourceFromRow(row).signals
+    });
 }
 
 function mediaKind(value: unknown) {
@@ -842,7 +785,8 @@ function mapCaptureRow(
     const catalogPrinciple = resolveCatalogBehaviorPrinciple(
         behaviorPrinciples,
         readString(row, "species_profile_id"),
-        identityKey
+        identityKey,
+        readString(row, "scientific_name")
     );
     const progressionXP = readNumber(row, "total_progression_xp");
     const collector = collectorFromRow(row);
@@ -853,6 +797,7 @@ function mapCaptureRow(
         animalName: readString(row, "animal_name"),
         scientificName: readString(row, "scientific_name"),
         breedGuess: readString(row, "breed_guess"),
+        refinedIdentity: readString(row, "refined_identity"),
         breedConfidence: readNullableNumber(row, "breed_confidence"),
         confidence: readNullableNumber(row, "confidence"),
         normalizedIdentityKey: identityKey,
@@ -867,7 +812,19 @@ function mapCaptureRow(
     const animalName = headline.animalName;
     const catalogBestFor = catalogPrinciple?.bestUseCases ?? [];
     const learnedTags = learnedBestForTags(row);
-    const grade = captureGrade(row);
+    const gradeBreakdown = captureGradeBreakdownForRow(row);
+    const grade = gradeBreakdown?.grade ?? 1;
+    const boosts = statBoosts(row);
+    const comparison = comparisonBoosts(row);
+    const effectiveStats = toEffectiveStats(stats, {
+        dominance: boosts.dominance + comparison.dominance,
+        speed: boosts.speed + comparison.speed,
+        size: comparison.size,
+        intelligence: boosts.intelligence + comparison.intelligence,
+        rarity: comparison.rarity
+    });
+    const identityKind = readString(row, "identity_kind") ?? readString(row, "refined_identity_kind");
+    const isUncertain = shouldShowUncertaintyVisualWarning(row);
 
     return {
         kind: "capture",
@@ -885,9 +842,17 @@ function mapCaptureRow(
         lifeStageChip: headline.lifeStageChip,
         sameSpeciesHelper: headline.sameSpeciesHelper,
         speciesSlug: canonicalSlug,
+        speciesProfileId: readString(row, "species_profile_id"),
+        normalizedIdentityKey: identityKey,
+        identityKind,
+        identityKindLabel: isUncertain ? null : identityKindShortLabel(identityKind),
+        identityExplanation: isUncertain ? null : readString(row, "identity_explanation"),
+        identityEvidenceGuidance: isUncertain ? null : readString(row, "identity_evidence_guidance"),
+        battleTier: getBattleTier(getBattlePower(effectiveStats)),
         score: readNumber(row, "score"),
         captureGrade: grade,
-        isUncertain: shouldShowUncertaintyVisualWarning(row),
+        gradeBreakdown,
+        isUncertain,
         endorsementCount: endorsementCount(row),
         viewerEndorsementStat: formatLabel(readString(row, "viewer_endorsement_stat")),
         rarity: readNumber(stats, "rarity"),
@@ -916,10 +881,11 @@ function mapCaptureRow(
         challengeHealth: readNumber(row, "challenge_health") || 3,
         challengeStake: readNumber(row, "challenge_stake") || 1,
         learnedPrinciple: catalogPrinciple?.principleName ?? learnedPrincipleName,
+        coreLesson: catalogPrinciple?.coreLesson ?? null,
         learnedExpression: null,
         bestForTags: catalogBestFor.length ? catalogBestFor.slice(0, 4) : learnedTags,
-        statBoosts: statBoosts(row),
-        comparisonBoosts: comparisonBoosts(row),
+        statBoosts: boosts,
+        comparisonBoosts: comparison,
         gameStats: stats
     };
 }
@@ -1483,3 +1449,228 @@ export async function getChallengeArenaCaptureById(captureId: string, excludeUse
     const item = mapCaptureRow(data[0] as unknown as QueryRow, animalDexNumbers, behaviorPrinciples);
     return item.isChallengeAvailable && item.challengeHealth > 0 ? item : null;
 }
+
+async function fetchDiscoverFeedRowByCaptureId(
+    supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>,
+    captureId: string
+) {
+    const richResult = await supabase
+        .from("discover_feed_v1")
+        .select(richFeedSelect)
+        .eq("capture_id", captureId)
+        .limit(1);
+
+    if (!richResult.error && richResult.data?.length) {
+        const hydrated = await hydrateDiscoverFeedMediaRows(supabase, richResult.data as unknown as QueryRow[]);
+        return hydrated[0] ?? null;
+    }
+
+    const fallbackResult = await supabase
+        .from("discover_feed_v1")
+        .select(compatibilityFeedSelect)
+        .eq("capture_id", captureId)
+        .limit(1);
+
+    if (fallbackResult.error || !fallbackResult.data?.length) return null;
+    const hydrated = await hydrateDiscoverFeedMediaRows(supabase, fallbackResult.data as unknown as QueryRow[]);
+    return hydrated[0] ?? null;
+}
+
+export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTimelineItem | null> {
+    const parsed = parseDiscoverPostId(rawPostId);
+    if (!parsed) return null;
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    if (parsed.kind === "capture") {
+        const row = await fetchDiscoverFeedRowByCaptureId(supabase, parsed.entityId);
+        if (!row) return null;
+        const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+            buildAnimalDexNumberIndex(),
+            getCatalogBehaviorPrincipleIndex()
+        ]);
+        return mapCaptureRow(row, animalDexNumbers, behaviorPrinciples);
+    }
+
+    if (parsed.kind === "alignment") {
+        const {data, error} = await supabase
+            .from("discover_alignment_timeline_v1")
+            .select("*")
+            .eq("id", parsed.entityId)
+            .limit(1);
+        if (error || !data?.length) {
+            const fallback = await supabase
+                .from("discover_alignment_timeline_v1")
+                .select("*")
+                .eq("proof_id", parsed.entityId)
+                .limit(1);
+            if (fallback.error || !fallback.data?.length) return null;
+            return mapAlignmentRow(fallback.data[0] as unknown as QueryRow);
+        }
+        return mapAlignmentRow(data[0] as unknown as QueryRow);
+    }
+
+    if (parsed.kind === "fusion") {
+        const {data, error} = await supabase
+            .from("discover_principle_fusion_timeline_v1")
+            .select("*")
+            .eq("fusion_id", parsed.entityId)
+            .limit(1);
+        if (error || !data?.length) {
+            const fallback = await supabase
+                .from("discover_principle_fusion_timeline_v1")
+                .select("*")
+                .eq("id", parsed.entityId)
+                .limit(1);
+            if (fallback.error || !fallback.data?.length) return null;
+            return mapFusionRow(fallback.data[0] as unknown as QueryRow);
+        }
+        return mapFusionRow(data[0] as unknown as QueryRow);
+    }
+
+    if (parsed.kind === "challenge") {
+        const {data, error} = await supabase
+            .from("discover_challenge_history_v1")
+            .select(discoverChallengeSelect)
+            .eq("id", parsed.entityId)
+            .limit(1);
+        if (error || !data?.length) return null;
+        return mapChallengeRow(data[0] as unknown as QueryRow);
+    }
+
+    const {data, error} = await supabase
+        .from("discover_trade_history_v1")
+        .select("id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind")
+        .eq("id", parsed.entityId)
+        .limit(1);
+    if (error || !data?.length) return null;
+    return mapTradeRow(data[0] as unknown as QueryRow);
+}
+
+export function seedTimelineWithFocusPost(
+    timeline: DiscoverTimelineItem[],
+    focusPost: DiscoverTimelineItem | null
+) {
+    if (!focusPost) return timeline;
+    if (timeline.some((item) => item.id === focusPost.id)) return timeline;
+    return [focusPost, ...timeline];
+}
+
+const RANKING_SIBLING_PAGE_SIZE = 10;
+
+export async function getDiscoverRankingSiblings(options: {
+    captureId: string;
+    speciesProfileId?: string | null;
+    normalizedIdentityKey?: string | null;
+    offset?: number;
+    limit?: number;
+}): Promise<{items: DiscoverCaptureItem[]; hasMore: boolean; nextOffset: number | null}> {
+    const supabase = createSupabaseServerClient();
+    const captureId = options.captureId.trim();
+    const speciesProfileId = options.speciesProfileId?.trim() || null;
+    const identityKey = options.normalizedIdentityKey?.trim().toLowerCase() || null;
+    const offset = Math.max(0, options.offset ?? 0);
+    const limit = Math.min(24, Math.max(1, options.limit ?? RANKING_SIBLING_PAGE_SIZE));
+
+    if (!supabase || !captureId || (!speciesProfileId && !identityKey)) {
+        return {items: [], hasMore: false, nextOffset: null};
+    }
+
+    let query = supabase
+        .from("discover_feed_v1")
+        .select(richFeedSelect)
+        .order("score", {ascending: false})
+        .order("capture_created_at", {ascending: false})
+        .range(offset, offset + limit);
+
+    if (speciesProfileId) {
+        query = query.eq("species_profile_id", speciesProfileId);
+    } else if (identityKey) {
+        query = query.eq("normalized_identity_key", identityKey);
+    }
+
+    const {data, error} = await query;
+    if (error || !data?.length) {
+        return {items: [], hasMore: false, nextOffset: null};
+    }
+
+    const hydrated = await hydrateDiscoverFeedMediaRows(supabase, data as unknown as QueryRow[]);
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+
+    const mapped = hydrated
+        .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
+        .filter((item) => Boolean(item.captureId));
+
+    // Keep cohort identity tight when filtering by profile id alone.
+    const cohort = identityKey
+        ? mapped.filter((item) => {
+            if (item.captureId === captureId) return true;
+            const key = item.normalizedIdentityKey?.toLowerCase() ?? null;
+            if (key && key === identityKey) return true;
+            if (speciesProfileId && item.speciesProfileId === speciesProfileId) return true;
+            return !speciesProfileId;
+        })
+        : mapped;
+
+    const deduped: DiscoverCaptureItem[] = [];
+    const seen = new Set<string>();
+    for (const item of cohort) {
+        if (seen.has(item.captureId)) continue;
+        seen.add(item.captureId);
+        deduped.push(item);
+    }
+
+    const hasMore = (data as unknown as QueryRow[]).length > limit;
+    const page = deduped.slice(0, limit);
+
+    // Pin the seed capture to the front on the first page so horizontal swipe starts on the focused post.
+    if (offset === 0) {
+        const seedIndex = page.findIndex((item) => item.captureId === captureId);
+        if (seedIndex > 0) {
+            const [seed] = page.splice(seedIndex, 1);
+            page.unshift(seed);
+        }
+    }
+
+    return {
+        items: page,
+        hasMore,
+        nextOffset: hasMore ? offset + limit : null
+    };
+}
+
+export type DiscoverSitemapPost = {
+    postId: string;
+    date: string;
+    animalName: string;
+    hasVideoMedia: boolean;
+    contextLabel: string | null;
+};
+
+export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<DiscoverSitemapPost[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+
+    const rows = await fetchDiscoverFeedRows(supabase, Math.max(24, Math.min(limit, 500)));
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+
+    return rows
+        .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
+        .slice(0, limit)
+        .map((item) => ({
+            postId: item.id,
+            date: item.date,
+            animalName: item.animalName,
+            hasVideoMedia: item.hasVideoMedia,
+            contextLabel: item.contextLabel
+        }));
+}
+
+export type {ParsedDiscoverPostId};

@@ -20,10 +20,9 @@ import type {
     ProfileViewerState
 } from "@/data/profile-authenticated";
 import {getCollectorScoreBand} from "@/lib/collector-score";
-import {APP_MODULE_THUMBNAILS} from "@/lib/app-module-thumbnails";
 import {formatAppInteger, formatAppUsd} from "@/lib/format-numbers";
 
-export type ProfileTab = "stats" | "history";
+export type ProfileTab = "history" | "stats" | "endorsed" | "packs" | "locations";
 
 export type ProfileContentLabels = {
     profileTitle: string;
@@ -108,6 +107,7 @@ type ProfileContentProps = {
         instagramDisplay: string | null;
         isPro: boolean;
         joinedAtLabel: string | null;
+        chromePreset: "spirit" | "friend" | "professional" | "business";
         collectorScore: number;
         collectionArchetype: string;
         captureCount: number;
@@ -118,9 +118,17 @@ type ProfileContentProps = {
         wildCount: number;
         zooCount: number;
         domesticCount: number;
+        farmCount: number;
         tradesMade: number;
         missionsCompleted: number;
         collectionValueUsd: number | null;
+        averageTraits: {
+            dominance: number;
+            speed: number;
+            size: number;
+            intelligence: number;
+            rarity: number;
+        };
         bestForTagScores: ProfileBestForTag[];
         powerSetCompletions: ProfilePowerSetCompletion[];
         wildIdentity: PublicWildIdentity | null;
@@ -162,48 +170,6 @@ function InsightCaptureIcon({capture}: {capture: PublicProfileCapture}) {
             unoptimized
             className="h-7 w-7 shrink-0 rounded-lg border border-white/10 object-cover"
         />
-    );
-}
-
-function CaptureCard({capture, scoreLabel}: {capture: PublicProfileCapture; scoreLabel: string}) {
-    return (
-        <article className="group w-[11.5rem] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/10 bg-surface-900/80">
-            <Link href={capture.href} className="relative block aspect-[3/4] overflow-hidden bg-black/30">
-                <Image
-                    src={capture.imageSrc}
-                    alt={capture.animalName}
-                    fill
-                    unoptimized
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                />
-                <span className="absolute right-2.5 top-2.5 rounded-full bg-primary-400 px-2.5 py-1 text-[0.65rem] font-black text-black">
-                    {scoreLabel.replace("{score}", String(capture.score))}
-                </span>
-            </Link>
-            <div className="p-3.5">
-                <h3 className="truncate font-display text-lg font-bold text-white">
-                    <Link href={capture.href}>{capture.animalName}</Link>
-                </h3>
-            </div>
-        </article>
-    );
-}
-
-function ProfileShortcutThumbnail({src}: {src: string}) {
-    return (
-        <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10">
-            <Image src={src} alt="" width={44} height={44} unoptimized className="h-full w-full object-cover" />
-        </span>
-    );
-}
-
-function ProfileShortcutBoltIcon() {
-    return (
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 ring-1 ring-amber-300/25 text-amber-200">
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
-                <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
-            </svg>
-        </span>
     );
 }
 
@@ -281,37 +247,42 @@ function SettingComparison({
     wild,
     zoo,
     domestic,
+    farm,
     labels
 }: {
     wild: number;
     zoo: number;
     domestic: number;
+    farm: number;
     labels: ProfileContentLabels;
 }) {
-    const total = wild + zoo + domestic;
-    const wildRatio = total > 0 ? wild / total : 1 / 3;
-    const zooRatio = total > 0 ? zoo / total : 1 / 3;
-    const domesticRatio = total > 0 ? 1 - wildRatio - zooRatio : 1 / 3;
+    const total = wild + zoo + domestic + farm;
+    const wildRatio = total > 0 ? wild / total : 1 / 4;
+    const zooRatio = total > 0 ? zoo / total : 1 / 4;
+    const domesticRatio = total > 0 ? domestic / total : 1 / 4;
+    const farmRatio = total > 0 ? farm / total : 1 / 4;
 
     return (
         <section className="rounded-[1.35rem] border border-white/10 bg-surface-900/60 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">{labels.wildVsZooVsDomestic}</p>
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Wild vs zoo vs domestic vs farm</p>
                 <p className="text-xs font-semibold text-white/45">
                     {total === 0
                         ? labels.noCapturesYet
-                        : `${wild} ${labels.settingWild.toLowerCase()} / ${zoo} ${labels.settingZoo.toLowerCase()} / ${domestic} ${labels.settingDomestic.toLowerCase()}`}
+                        : `${wild} wild / ${zoo} zoo / ${domestic} domestic / ${farm} farm`}
                 </p>
             </div>
-            <div className="mt-3 flex h-4 overflow-hidden rounded-2xl bg-white/[0.04]">
+            <div className="mt-3 flex h-[4.5rem] overflow-hidden rounded-2xl bg-white/[0.04]">
                 <div className="bg-primary-400" style={{width: `${wildRatio * 100}%`}} />
                 <div className="bg-amber-300" style={{width: `${zooRatio * 100}%`}} />
                 <div className="bg-sky-300" style={{width: `${domesticRatio * 100}%`}} />
+                <div className="bg-orange-400" style={{width: `${farmRatio * 100}%`}} />
             </div>
             <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-white/45">
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-primary-400" />{labels.settingWild}</span>
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-300" />{labels.settingZoo}</span>
                 <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-sky-300" />{labels.settingDomestic}</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-orange-400" />Farm</span>
             </div>
         </section>
     );
@@ -370,6 +341,100 @@ function BestForChart({scores, labels}: {scores: ProfileBestForTag[]; labels: Pr
     );
 }
 
+function AverageTraitsCard({
+    stats
+}: {
+    stats: {dominance: number; speed: number; size: number; intelligence: number; rarity: number};
+}) {
+    const entries = [
+        ["Dominance", stats.dominance, "#fb7185"],
+        ["Speed", stats.speed, "#22d3ee"],
+        ["Size", stats.size, "#a78bfa"],
+        ["Intelligence", stats.intelligence, "#67e8f9"],
+        ["Rarity", stats.rarity, "#fb923c"]
+    ] as const;
+    const center = 80;
+    const radius = 56;
+    const point = (index: number, value: number) => {
+        const angle = -Math.PI / 2 + index * ((Math.PI * 2) / entries.length);
+        const scaled = radius * Math.min(100, Math.max(0, value)) / 100;
+        return `${center + Math.cos(angle) * scaled},${center + Math.sin(angle) * scaled}`;
+    };
+    const framePoints = entries.map((_, index) => point(index, 100)).join(" ");
+    const valuePoints = entries.map((entry, index) => point(index, entry[1])).join(" ");
+
+    return (
+        <section className="rounded-[1.35rem] border border-white/10 bg-surface-900/60 p-4">
+            <div className="flex items-center justify-between">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Average traits</p>
+                <p className="text-xs font-semibold text-white/45">Collection profile</p>
+            </div>
+            <div className="mt-4 grid grid-cols-[10rem_1fr] items-center gap-4">
+                <svg viewBox="0 0 160 160" className="h-40 w-40" aria-label="Average collection traits radar">
+                    <polygon points={framePoints} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="1" />
+                    {[0.25, 0.5, 0.75].map((scale) => (
+                        <polygon
+                            key={scale}
+                            points={entries.map((_, index) => point(index, scale * 100)).join(" ")}
+                            fill="none"
+                            stroke="rgba(255,255,255,.07)"
+                            strokeWidth="1"
+                        />
+                    ))}
+                    <polygon points={valuePoints} fill="rgba(56,250,71,.16)" stroke="#38fa47" strokeWidth="2" />
+                </svg>
+                <div className="space-y-2">
+                    {entries.map(([label, value, color]) => (
+                        <div key={label} className="flex items-center gap-2 text-xs">
+                            <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: color}} />
+                            <span className="min-w-0 flex-1 truncate text-white/55">{label}</span>
+                            <span className="font-black text-white">{Math.round(value)}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function ProfileLocationsMap({visits}: {visits: ProfileLocationVisit[]}) {
+    const plotted = visits.filter((visit) => visit.latitude != null && visit.longitude != null);
+    if (!plotted.length) return null;
+    const latitudes = plotted.map((visit) => visit.latitude!);
+    const longitudes = plotted.map((visit) => visit.longitude!);
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    const latSpan = Math.max(maxLat - minLat, 0.01);
+    const lngSpan = Math.max(maxLng - minLng, 0.01);
+    const maxCount = Math.max(...plotted.map((visit) => visit.captureCount), 1);
+
+    return (
+        <div className="relative mt-4 h-[28rem] overflow-hidden rounded-[1.35rem] border border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.18),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px),#111714] bg-[size:auto,32px_32px,32px_32px,auto]">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(56,250,71,.04)_35%,rgba(56,250,71,.04)_37%,transparent_37%,transparent_62%,rgba(56,250,71,.035)_62%,rgba(56,250,71,.035)_64%,transparent_64%)]" />
+            {plotted.map((visit) => {
+                const left = 8 + ((visit.longitude! - minLng) / lngSpan) * 84;
+                const top = 8 + (1 - (visit.latitude! - minLat) / latSpan) * 84;
+                const size = 34 + (visit.captureCount / maxCount) * 42;
+                return (
+                    <div
+                        key={visit.id}
+                        title={`${visit.label} · ${visit.captureCount} captures`}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary-100/45 bg-primary-400/25 shadow-[0_0_30px_rgba(56,250,71,.24)] backdrop-blur-[2px]"
+                        style={{left: `${left}%`, top: `${top}%`, width: size, height: size}}
+                    >
+                        <span className="absolute inset-0 grid place-items-center text-[0.65rem] font-black text-white">{visit.captureCount}</span>
+                    </div>
+                );
+            })}
+            <p className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-[0.62rem] font-bold text-white/55 backdrop-blur">
+                Approximate locations
+            </p>
+        </div>
+    );
+}
+
 function WildIdentityCard({
     identity,
     labels
@@ -409,17 +474,6 @@ function WildIdentityCard({
     );
 }
 
-function tierTint(tier: string) {
-    switch (tier.toLowerCase()) {
-        case "gold":
-            return "border-amber-300/30 text-amber-200";
-        case "silver":
-            return "border-primary-300/30 text-primary-200";
-        default:
-            return "border-orange-300/30 text-orange-200";
-    }
-}
-
 export default function ProfileContent({
     profile,
     labels,
@@ -431,12 +485,36 @@ export default function ProfileContent({
     ownerExtras,
     memberExtras
 }: ProfileContentProps) {
-    const [activeTab, setActiveTab] = useState<ProfileTab>("stats");
+    const [activeTab, setActiveTab] = useState<ProfileTab>("history");
+    const [activeChromePreset, setActiveChromePreset] = useState(profile.chromePreset);
+    const [showProfileStyle, setShowProfileStyle] = useState(false);
+    const [isSavingProfileStyle, setIsSavingProfileStyle] = useState(false);
+    const [profileStyleError, setProfileStyleError] = useState<string | null>(null);
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
         ? formatAppUsd(profile.collectionValueUsd, locale)
         : null;
     const completedSetsCount = ownerExtras?.completedSetsCount ?? 0;
+
+    async function saveProfileStyle(preset: typeof activeChromePreset) {
+        setIsSavingProfileStyle(true);
+        setProfileStyleError(null);
+        try {
+            const response = await fetch("/api/app/profile", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({chromePreset: preset})
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error ?? "Could not update profile style.");
+            setActiveChromePreset(preset);
+            setShowProfileStyle(false);
+        } catch (error) {
+            setProfileStyleError(error instanceof Error ? error.message : "Could not update profile style.");
+        } finally {
+            setIsSavingProfileStyle(false);
+        }
+    }
 
     return (
         <div className="flex flex-col gap-6 md:gap-8">
@@ -446,129 +524,118 @@ export default function ProfileContent({
                 </p>
             ) : null}
 
-            <header className="flex flex-col items-center gap-4 text-center">
+            <header className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 {profile.avatarUrl ? (
                     <Image
                         src={profile.avatarUrl}
                         alt={`${profile.displayName}'s avatar`}
-                        width={280}
-                        height={280}
+                        width={56}
+                        height={56}
                         priority
-                        className="h-52 w-52 rounded-[2rem] border border-white/15 object-cover shadow-2xl shadow-black/30 md:h-64 md:w-64 md:rounded-[2.25rem]"
+                        className="h-14 w-14 shrink-0 rounded-2xl border border-white/15 object-cover shadow-lg shadow-black/30"
                     />
                 ) : (
-                    <div className="flex h-52 w-52 items-center justify-center rounded-[2rem] border border-primary-300/20 bg-primary-400/10 font-display text-6xl font-bold text-primary-100 md:h-64 md:w-64">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary-300/20 bg-primary-400/10 font-display text-xl font-bold text-primary-100">
                         {profile.displayName.slice(0, 1).toUpperCase()}
                     </div>
                 )}
-                <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-white/35">{labels.profileTitle}</p>
-                    <h1 className="mt-2 font-display text-4xl font-bold text-white md:text-5xl">{profile.displayName}</h1>
-                    <p className="mt-2 text-lg font-semibold text-white/55">@{profile.username}</p>
-                    {profile.isPro ? (
-                        <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-400 px-3 py-1.5 text-xs font-black text-black">
-                            {labels.proBadge}
-                        </span>
-                    ) : null}
+                <div className="min-w-0 flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                        <h1 className="truncate font-display text-xl font-bold text-white">{profile.displayName}</h1>
+                        {profile.isPro ? (
+                            <span className="shrink-0 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">Pro</span>
+                        ) : null}
+                    </div>
+                    <p className="truncate text-sm font-semibold text-white/45">@{profile.username}</p>
                 </div>
-                {profile.joinedAtLabel ? (
-                    <p className="text-sm font-semibold text-white/35">{labels.collectorSince.replace("{date}", profile.joinedAtLabel)}</p>
-                ) : null}
-                {profile.bio ? (
-                    <p className="max-w-2xl text-sm leading-relaxed text-white/55">{profile.bio}</p>
-                ) : null}
-                {profile.instagramUrl && profile.instagramDisplay ? (
-                    <a
-                        href={profile.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-surface-900/70 px-4 py-3 text-sm font-semibold text-white hover:border-white/20"
-                    >
-                        Instagram
-                        <span className="text-white/55">{profile.instagramDisplay}</span>
-                    </a>
-                ) : null}
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="flex shrink-0 items-center gap-2">
                     {viewer.isLoggedIn && !viewer.isOwner ? (
                         <Link
                             href={`${localePrefix}/app/messages/${encodeURIComponent(profile.userId)}`}
-                            className="inline-flex min-h-[3rem] items-center justify-center rounded-2xl bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-200"
+                            aria-label="Message"
+                            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:bg-white/[0.1]"
                         >
-                            Message
+                            <span aria-hidden="true">💬</span>
                         </Link>
                     ) : null}
                     {viewer.isOwner ? (
-                        <Link
-                            href={`${localePrefix}/app/profile`}
-                            className="inline-flex min-h-[3rem] items-center justify-center rounded-2xl bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-200"
+                        <button
+                            type="button"
+                            onClick={() => setShowProfileStyle(true)}
+                            aria-label={labels.editProfile}
+                            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:bg-white/[0.1]"
                         >
-                            {labels.editProfile}
-                        </Link>
+                            <span aria-hidden="true">✎</span>
+                        </button>
                     ) : null}
                     {shareButton}
-                    <a
-                        href={appStoreUrl}
-                        className="inline-flex min-h-[3rem] items-center justify-center rounded-2xl border border-white/10 bg-surface-900/70 px-5 text-sm font-black text-white transition hover:border-white/20"
-                    >
-                        {labels.openApp}
-                    </a>
                 </div>
             </header>
 
-            {viewer.isOwner && ownerExtras?.credits ? (
-                <Link
-                    href={`${localePrefix}/app/missions`}
-                    className={`flex items-center gap-4 rounded-[1.35rem] border px-4 py-4 transition hover:border-white/20 ${
-                        ownerExtras.credits.isLow ? "border-orange-300/30 bg-orange-400/[0.08]" : "border-white/10 bg-surface-900/60"
-                    }`}
-                >
-                    <ProfileShortcutBoltIcon />
-                    <div className="min-w-0 text-left">
-                        <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.creditsTitle}</p>
-                        <p className="mt-1 font-display text-xl font-bold text-white">
-                            {ownerExtras.credits.hasProAccess
-                                ? labels.creditsProActive
-                                : labels.creditsAvailable.replace("{count}", String(ownerExtras.credits.balance))}
-                        </p>
-                    </div>
-                    {ownerExtras.credits.isLow ? (
-                        <span className="ml-auto rounded-full bg-orange-400/15 px-3 py-1 text-xs font-black text-orange-200">{labels.creditsLow}</span>
-                    ) : null}
-                </Link>
+            {activeChromePreset === "spirit" ? (
+                profile.wildIdentity
+                    ? <WildIdentityCard identity={profile.wildIdentity} labels={labels} />
+                    : viewer.isOwner ? (
+                        <Link href={`${localePrefix}/app/train/wild-profile`} className="rounded-2xl border border-primary-300/20 bg-primary-400/[0.08] p-4">
+                            <p className="font-display text-lg font-bold text-white">{labels.discoverWildProfileTitle}</p>
+                            <p className="mt-1 text-sm text-white/55">{labels.discoverWildProfileDetail}</p>
+                        </Link>
+                    ) : null
             ) : null}
 
-            {viewer.isOwner ? (
-                <Link
-                    href={`${localePrefix}/app/collection`}
-                    className="flex items-center gap-4 rounded-[1.35rem] border border-white/10 bg-surface-900/60 px-4 py-4 transition hover:border-white/20"
-                >
-                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.missions} />
-                    <div className="min-w-0 text-left">
-                        <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{labels.myCollection}</p>
-                        <p className="mt-1 text-sm text-white/55">{labels.myCollectionDetail}</p>
+            {activeChromePreset === "friend" ? (
+                <section>
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-200">Pets</p>
+                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                        {profile.recentCaptures.filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm").slice(0, 8).map((capture) => (
+                            <Link key={capture.id} href={capture.href} className="w-[4.75rem] shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-center">
+                                <Image src={capture.imageSrc} alt="" width={48} height={48} unoptimized className="mx-auto h-10 w-10 rounded-lg object-cover" />
+                                <p className="mt-1 truncate text-[0.68rem] font-black text-white">{capture.animalName}</p>
+                            </Link>
+                        ))}
                     </div>
-                </Link>
+                </section>
             ) : null}
 
-            {viewer.isOwner && !profile.wildIdentity ? (
-                <Link
-                    href={`${localePrefix}/app/train/wild-profile`}
-                    className="flex items-center gap-4 rounded-[1.35rem] border border-primary-300/20 bg-primary-400/[0.08] px-4 py-4 transition hover:border-primary-300/35"
-                >
-                    <ProfileShortcutThumbnail src={APP_MODULE_THUMBNAILS.wildProfile} />
-                    <div className="min-w-0 text-left">
-                        <p className="font-display text-lg font-bold text-white">{labels.discoverWildProfileTitle}</p>
-                        <p className="mt-1 text-sm text-white/55">{labels.discoverWildProfileDetail}</p>
+            {activeChromePreset === "professional" ? (
+                <section className="space-y-2 text-sm text-white/55">
+                    {profile.bio ? <p className="leading-6">{profile.bio}</p> : null}
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {profile.joinedAtLabel ? <span>{labels.collectorSince.replace("{date}", profile.joinedAtLabel)}</span> : null}
+                        {profile.instagramUrl && profile.instagramDisplay ? (
+                            <a href={profile.instagramUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-200">
+                                Instagram · {profile.instagramDisplay}
+                            </a>
+                        ) : null}
                     </div>
-                </Link>
+                </section>
             ) : null}
 
-            {profile.wildIdentity ? <WildIdentityCard identity={profile.wildIdentity} labels={labels} /> : null}
+            {activeChromePreset === "business" ? (
+                <section className="grid grid-cols-3 gap-2">
+                    {[
+                        ["Net worth", collectionValue ?? "—"],
+                        ["Overall", formatAppInteger(profile.collectorScore, locale)],
+                        ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—"]
+                    ].map(([title, value]) => (
+                        <div key={title} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                            <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/35">{title}</p>
+                            <p className="mt-1 truncate font-display text-base font-bold text-primary-100">{value}</p>
+                        </div>
+                    ))}
+                </section>
+            ) : null}
 
-            <nav aria-label="Profile sections" className="rounded-[1.15rem] border border-white/[0.08] bg-surface-900/70 p-1.5">
-                <div className="grid grid-cols-2 gap-1.5">
-                    {(["stats", "history"] as const).map((tab) => {
+            <nav aria-label="Profile sections" className="sticky top-16 z-20 -mx-4 border-y border-white/[0.08] bg-black/95 px-4 backdrop-blur-xl md:top-0 md:-mx-8 md:px-8">
+                <div className="grid" style={{gridTemplateColumns: `repeat(${viewer.isOwner ? 4 : memberExtras ? 4 : 3}, minmax(0, 1fr))`}}>
+                    {([
+                        "history",
+                        "stats",
+                        ...(viewer.isOwner ? ["endorsed"] as const : memberExtras ? ["packs"] as const : []),
+                        "locations"
+                    ] as ProfileTab[]).map((tab) => {
                         const isActive = activeTab === tab;
+                        const tabIcon = tab === "history" ? "▦" : tab === "stats" ? "▥" : tab === "endorsed" ? "♥" : tab === "packs" ? "◆" : "⌖";
                         return (
                             <button
                                 key={tab}
@@ -576,11 +643,13 @@ export default function ProfileContent({
                                 role="tab"
                                 aria-selected={isActive}
                                 onClick={() => setActiveTab(tab)}
-                                className={`min-h-[3rem] rounded-xl px-3 py-2.5 text-sm font-black transition ${
-                                    isActive ? "bg-primary-400 text-black" : "text-white/45 hover:text-white"
+                                aria-label={tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                className={`relative min-h-[3.25rem] px-3 py-2 text-lg font-black transition ${
+                                    isActive ? "text-white" : "text-white/35 hover:text-white"
                                 }`}
                             >
-                                {tab === "stats" ? labels.tabStats : labels.tabHistory}
+                                <span aria-hidden="true">{tabIcon}</span>
+                                <span className={`absolute inset-x-2 bottom-0 h-0.5 ${isActive ? "bg-white" : "bg-transparent"}`} />
                             </button>
                         );
                     })}
@@ -596,7 +665,13 @@ export default function ProfileContent({
                         locale={locale}
                         tradeUnlock={ownerExtras?.tradeUnlock ?? null}
                     />
-                    <SettingComparison wild={profile.wildCount} zoo={profile.zooCount} domestic={profile.domesticCount} labels={labels} />
+                    <SettingComparison
+                        wild={profile.wildCount}
+                        zoo={profile.zooCount}
+                        domestic={profile.domesticCount}
+                        farm={profile.farmCount}
+                        labels={labels}
+                    />
                     <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                         <StatChip title={labels.statCaptures} value={String(profile.captureCount)} accentClass="bg-primary-400" />
                         <StatChip title={labels.statSpecies} value={String(profile.indexedSpeciesCount)} denominator={speciesDenominator} accentClass="bg-emerald-300" />
@@ -616,6 +691,7 @@ export default function ProfileContent({
                         </section>
                     ) : null}
                     <BestForChart scores={profile.bestForTagScores} labels={labels} />
+                    <AverageTraitsCard stats={profile.averageTraits} />
                     <section>
                         <SectionHeader icon={<span>✦</span>} title={labels.insightsTitle} />
                         <div className="mt-4 grid gap-2">
@@ -636,21 +712,26 @@ export default function ProfileContent({
                             ))}
                         </div>
                     </section>
-                    {profile.powerSetCompletions.length > 0 ? (
+                    {viewer.isOwner && ownerExtras && ownerExtras.completedSets.length > 0 ? (
                         <section>
-                            <SectionHeader icon={<span>⚡</span>} title={labels.powerSetTitle} trailing={String(profile.powerSetCompletions.length)} />
+                            <SectionHeader
+                                icon={<span>✓</span>}
+                                title={labels.completedSetsTitle}
+                                trailing={String(ownerExtras.completedSets.length)}
+                            />
                             <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
-                                {profile.powerSetCompletions.map((completion) => (
-                                    <div
-                                        key={`${completion.powerKey}-${completion.tier}`}
-                                        className={`w-36 shrink-0 rounded-[1.1rem] border bg-surface-900/70 p-3.5 ${tierTint(completion.tier)}`}
+                                {ownerExtras.completedSets.map((set) => (
+                                    <Link
+                                        key={set.key}
+                                        href={`${localePrefix}/app/collection?segment=binders`}
+                                        className="w-60 shrink-0 rounded-[1.2rem] border border-white/10 bg-surface-900/60 p-4"
                                     >
-                                        <p className="text-[0.6rem] font-black uppercase tracking-[0.14em]">{completion.tier}</p>
-                                        <p className="mt-2 line-clamp-2 font-display text-lg font-bold text-white">{completion.powerLabel}</p>
-                                        <p className="mt-2 text-xs text-white/45">
-                                            {labels.powerSetSpecies.replace("{count}", String(completion.speciesCount))}
-                                        </p>
-                                    </div>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-primary-200">{set.tier}</p>
+                                            <span className="text-xs font-semibold text-white/35">{set.found}/{set.total}</span>
+                                        </div>
+                                        <h3 className="mt-3 font-display text-xl font-bold text-white">{set.title}</h3>
+                                    </Link>
                                 ))}
                             </div>
                         </section>
@@ -658,7 +739,7 @@ export default function ProfileContent({
                 </div>
             ) : (
                 <div className="flex flex-col gap-6 md:gap-8">
-                    {!viewer.isOwner && memberExtras && memberExtras.listedPacks.length > 0 ? (
+                    {activeTab === "packs" && !viewer.isOwner && memberExtras && memberExtras.listedPacks.length > 0 ? (
                         <section>
                             <SectionHeader icon={<span>📦</span>} title={labels.packMarketplaceTitle} trailing={String(memberExtras.listedPacks.length)} />
                             <div className="mt-4 grid gap-3">
@@ -691,13 +772,13 @@ export default function ProfileContent({
                         </section>
                     ) : null}
 
-                    {!viewer.isOwner && memberExtras && memberExtras.listedPacks.length === 0 ? (
+                    {activeTab === "packs" && !viewer.isOwner && memberExtras && memberExtras.listedPacks.length === 0 ? (
                         <section className="rounded-[1.2rem] border border-dashed border-white/10 px-4 py-6 text-sm text-white/45">
                             {labels.packMarketplaceEmpty}
                         </section>
                     ) : null}
 
-                    <section>
+                    {activeTab === "locations" ? <section>
                         <SectionHeader
                             icon={<span>📍</span>}
                             title={labels.locationsTitle}
@@ -706,31 +787,23 @@ export default function ProfileContent({
                         {profile.locationVisits.length === 0 ? (
                             <p className="mt-4 text-sm text-white/45">{labels.locationsEmpty}</p>
                         ) : (
-                            <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
-                                {profile.locationVisits.map((visit) => (
-                                    <div key={visit.id} className="w-52 shrink-0 rounded-[1.1rem] border border-white/10 bg-surface-900/60 p-4">
-                                        <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/35">
-                                            {labels.locationCaptures.replace("{count}", String(visit.captureCount))}
-                                        </p>
-                                        <p className="mt-2 line-clamp-3 text-sm font-semibold text-white">{visit.label}</p>
-                                    </div>
-                                ))}
-                            </div>
+                            <>
+                                <ProfileLocationsMap visits={profile.locationVisits} />
+                                <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
+                                    {profile.locationVisits.map((visit) => (
+                                        <div key={visit.id} className="w-52 shrink-0 rounded-[1.1rem] border border-white/10 bg-surface-900/60 p-4">
+                                            <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/35">
+                                                {labels.locationCaptures.replace("{count}", String(visit.captureCount))}
+                                            </p>
+                                            <p className="mt-2 line-clamp-3 text-sm font-semibold text-white">{visit.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
-                    </section>
+                    </section> : null}
 
-                    {profile.topCaptures.length > 0 ? (
-                        <section>
-                            <SectionHeader icon={<span>🏆</span>} title={labels.topCapturesTitle} trailing={labels.topCapturesTrailing} />
-                            <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
-                                {profile.topCaptures.map((capture) => (
-                                    <CaptureCard key={capture.id} capture={capture} scoreLabel={labels.scoreLabel} />
-                                ))}
-                            </div>
-                        </section>
-                    ) : null}
-
-                    {viewer.isOwner && ownerExtras ? (
+                    {activeTab === "endorsed" && viewer.isOwner && ownerExtras ? (
                         <section>
                             <SectionHeader
                                 icon={<span>👍</span>}
@@ -740,49 +813,21 @@ export default function ProfileContent({
                             {ownerExtras.endorsedCaptures.length === 0 ? (
                                 <p className="mt-4 text-sm text-white/45">{labels.endorsedCapturesEmpty}</p>
                             ) : (
-                                <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
+                                <div className="-mx-4 mt-4 grid grid-cols-3 gap-0.5 md:-mx-8">
                                     {ownerExtras.endorsedCaptures.map((capture) => (
-                                        <div key={capture.id} className="w-[11.5rem] shrink-0">
-                                            <CaptureCard capture={capture} scoreLabel={labels.scoreLabel} />
-                                            <p className="mt-2 rounded-full bg-cyan-400/10 px-3 py-1 text-center text-[0.65rem] font-black uppercase tracking-[0.12em] text-cyan-200">
+                                        <Link key={capture.id} href={capture.href} className="group relative aspect-square overflow-hidden bg-white/[0.03]">
+                                            <Image src={capture.imageSrc} alt={capture.animalName} fill unoptimized className="object-cover transition duration-300 group-hover:scale-105" />
+                                            <p className="absolute inset-x-1 bottom-1 rounded-full bg-black/65 px-2 py-1 text-center text-[0.55rem] font-black uppercase tracking-[0.08em] text-cyan-100 backdrop-blur-sm">
                                                 {labels.endorsedStatLabel.replace("{stat}", capture.endorsedStat)}
                                             </p>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                         </section>
                     ) : null}
 
-                    {viewer.isOwner && ownerExtras && ownerExtras.completedSets.length > 0 ? (
-                        <section>
-                            <SectionHeader
-                                icon={<span>✓</span>}
-                                title={labels.completedSetsTitle}
-                                trailing={String(ownerExtras.completedSets.length)}
-                            />
-                            <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
-                                {ownerExtras.completedSets.map((set) => (
-                                    <div key={set.key} className="w-64 shrink-0 rounded-[1.2rem] border border-white/10 bg-surface-900/60 p-4">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-primary-200">{set.tier}</p>
-                                            <span className="text-xs font-semibold text-white/35">{set.found}/{set.total}</span>
-                                        </div>
-                                        <h3 className="mt-3 font-display text-2xl font-bold text-white">{set.title}</h3>
-                                        <p className="mt-2 text-sm text-white/45">
-                                            {labels.completedSetsSpecies.replace("{found}", String(set.found)).replace("{total}", String(set.total))}
-                                        </p>
-                                        <Link href={`${localePrefix}/app/sets`} className="mt-4 inline-flex text-sm font-bold text-primary-200 hover:text-primary-100">
-                                            View sets →
-                                        </Link>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    ) : null}
-
-                    <section>
-                        <SectionHeader icon={<span>🕒</span>} title={labels.recentSightingsTitle} />
+                    {activeTab === "history" ? <section>
                         {profile.recentCaptures.length === 0 ? (
                             <div className="mt-4 rounded-[1.35rem] border border-dashed border-white/10 px-6 py-10 text-center">
                                 <h3 className="font-display text-2xl font-bold text-white">{labels.noPublicCapturesTitle}</h3>
@@ -791,23 +836,74 @@ export default function ProfileContent({
                                 </p>
                             </div>
                         ) : (
-                            <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
+                            <div className="-mx-4 grid grid-cols-3 gap-0.5 md:-mx-8">
                                 {profile.recentCaptures.map((capture) => (
-                                    <CaptureCard key={capture.id} capture={capture} scoreLabel={labels.scoreLabel} />
+                                    <Link key={capture.id} href={capture.href} className="group relative aspect-square overflow-hidden bg-white/[0.03]">
+                                        <Image
+                                            src={capture.imageSrc}
+                                            alt={capture.animalName}
+                                            fill
+                                            unoptimized
+                                            className="object-cover transition duration-300 group-hover:scale-105"
+                                        />
+                                        <span className="sr-only">{capture.animalName}</span>
+                                    </Link>
                                 ))}
                             </div>
                         )}
-                    </section>
+                    </section> : null}
                 </div>
             )}
 
-            <section className="rounded-[1.1rem] border border-white/10 bg-surface-900/50 px-4 py-3">
+            {activeTab === "stats" ? <section className="rounded-[1.1rem] border border-white/10 bg-surface-900/50 px-4 py-3">
                 <p className="text-[0.6rem] font-black uppercase tracking-[0.16em] text-white/35">{labels.userIdLabel}</p>
                 <p className="mt-1 break-all font-mono text-xs text-white/55">{profile.userId}</p>
-            </section>
+            </section> : null}
 
-            {viewer.isOwner && ownerExtras?.signOutButton ? (
+            {activeTab === "stats" && viewer.isOwner && ownerExtras?.signOutButton ? (
                 <div className="pt-2">{ownerExtras.signOutButton}</div>
+            ) : null}
+
+            {showProfileStyle ? (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center" role="dialog" aria-modal="true" aria-label="Profile style">
+                    <div className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-[#171717] p-5 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="font-display text-2xl font-bold text-white">Profile style</h2>
+                                <p className="mt-1 text-sm text-white/45">Choose what appears beneath your profile header.</p>
+                            </div>
+                            <button type="button" onClick={() => setShowProfileStyle(false)} className="text-sm font-bold text-primary-200">Close</button>
+                        </div>
+                        <div className="mt-5 grid gap-2">
+                            {([
+                                ["spirit", "Spirit profile", "Origin, Apex, and Active animals", "✦"],
+                                ["friend", "Friend profile", "Your pets", "♥"],
+                                ["professional", "Professional profile", "Bio, joined date, and Instagram", "▣"],
+                                ["business", "Business profile", "Net worth, overall score, and catalog %", "↗"]
+                            ] as const).map(([preset, title, detail, icon]) => (
+                                <button
+                                    key={preset}
+                                    type="button"
+                                    disabled={isSavingProfileStyle}
+                                    onClick={() => saveProfileStyle(preset)}
+                                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
+                                        activeChromePreset === preset
+                                            ? "border-primary-300/40 bg-primary-400/10"
+                                            : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                                    }`}
+                                >
+                                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.06] text-primary-100">{icon}</span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block font-bold text-white">{title}</span>
+                                        <span className="mt-0.5 block text-xs text-white/45">{detail}</span>
+                                    </span>
+                                    {activeChromePreset === preset ? <span className="text-primary-200">✓</span> : null}
+                                </button>
+                            ))}
+                        </div>
+                        {profileStyleError ? <p className="mt-3 text-sm text-red-300">{profileStyleError}</p> : null}
+                    </div>
+                </div>
             ) : null}
         </div>
     );

@@ -6,6 +6,7 @@ import {collectorPages} from "@/data/collector-pages";
 import {getIndexedBlogPosts} from "@/data/blog";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
+import {listMergedChallengeEntries} from "@/data/species-comparisons";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
@@ -13,6 +14,8 @@ import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalG
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
+import {discoverPostPath} from "@/lib/discover-post";
 import {speciesEntries} from "@/data/species";
 import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 
@@ -25,10 +28,30 @@ async function getSitemapSpeciesEntries() {
     }
 }
 
+async function getSitemapDiscoverPosts() {
+    try {
+        return await getDiscoverCapturePostsForSitemap(400);
+    } catch (error) {
+        console.error("Unable to load discover posts for sitemap.", error);
+        return [];
+    }
+}
+
+async function getSitemapChallengeEntries() {
+    try {
+        return await listMergedChallengeEntries();
+    } catch (error) {
+        console.error("Unable to load generated species comparisons for sitemap. Falling back to static entries.", error);
+        return challengeEntries;
+    }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const behaviorLessons = await getBehaviorLessonIndex();
     const principleHubs = await getPrincipleHubIndex();
     const unifiedSpeciesEntries = await getSitemapSpeciesEntries();
+    const discoverPosts = await getSitemapDiscoverPosts();
+    const mergedChallengeEntries = await getSitemapChallengeEntries();
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
@@ -121,7 +144,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(entry.updatedAt)
         }));
 
-        const challengePageEntries = challengeEntries.map((entry) => ({
+        const challengePageEntries = mergedChallengeEntries.map((entry) => ({
             url: getAbsoluteUrl(locale, `/comparisons/${entry.slug}`),
             lastModified: new Date(entry.updatedAt || entry.publishedAt)
         }));
@@ -174,6 +197,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `${LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}/${entry.slug}`),
             lastModified: new Date(entry.updatedAt || entry.publishedAt)
         }));
+        const discoverPostEntries = discoverPosts.map((post) => ({
+            url: getAbsoluteUrl(locale, discoverPostPath(post.postId)),
+            lastModified: new Date(post.date),
+            changeFrequency: "daily" as const,
+            priority: post.hasVideoMedia ? 0.7 : 0.55
+        }));
 
         return [
             ...staticEntries,
@@ -193,7 +222,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...animalHybridPageEntries,
             captureAnimalsAppEntry,
             legendaryEarthBeastHubEntry,
-            ...legendaryEarthBeastPageEntries
+            ...legendaryEarthBeastPageEntries,
+            ...discoverPostEntries
         ];
     });
 

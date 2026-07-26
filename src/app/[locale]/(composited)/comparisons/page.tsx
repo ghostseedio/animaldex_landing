@@ -7,10 +7,13 @@ import {
     ChallengeEntry,
     ChallengeComparisonType,
     challengeEntries,
-    getChallengeAnimalOptions,
     getChallengeComparisonTypeOptions,
     isChallengeComparisonType
 } from "@/data/challenges";
+import {
+    animalOptionsFromChallengeEntries,
+    listMergedChallengeEntries
+} from "@/data/species-comparisons";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
@@ -125,9 +128,9 @@ function getPopularityScore(entry: ChallengeEntry) {
     return featuredScore + (entry.relatedChallengeSlugs?.length || 0) * 5 + entry.searchIntents.length;
 }
 
-function getDirectoryEntries(state: DirectoryState) {
+function getDirectoryEntries(state: DirectoryState, sourceEntries: ChallengeEntry[]) {
     const normalizedQuery = state.query.trim().toLowerCase();
-    const filtered = challengeEntries.filter((entry) => {
+    const filtered = sourceEntries.filter((entry) => {
         if (state.comparisonType !== "all" && entry.comparisonType !== state.comparisonType) return false;
         if (state.animal !== "all" && !entry.speciesSlugs.includes(state.animal)) return false;
         if (!matchesQuickCategory(entry, state.quick)) return false;
@@ -173,7 +176,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const locale = await getLocale();
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
-    const challengeKeywords = Array.from(new Set(challengeEntries.flatMap((entry) => entry.searchIntents)));
+    const mergedEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
+    const challengeKeywords = Array.from(new Set(mergedEntries.flatMap((entry) => entry.searchIntents)));
     const title = messages.comparisons?.metaTitle || "Animal Comparisons | AnimalDex";
     const description = messages.comparisons?.metaDescription || messages.meta?.description || "";
 
@@ -203,9 +207,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ComparisonsIndexPage({searchParams}: ComparisonsIndexPageProps) {
     const t = await getTranslations("comparisons");
     const locale = await getLocale();
+    const allEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
+    const animalOptions = animalOptionsFromChallengeEntries(allEntries);
     const query = getSingleParam(searchParams?.q) ?? "";
     const typeParam = getSingleParam(searchParams?.type);
-    const animalOptions = getChallengeAnimalOptions();
     const animalParam = getSingleParam(searchParams?.animal);
     const sortParam = getSingleParam(searchParams?.sort);
     const quickParam = getSingleParam(searchParams?.quick);
@@ -218,18 +223,20 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
         quick: isQuickCategory(quickParam) ? quickParam : "popular",
         page: Number.isFinite(pageParam) ? pageParam : 1
     };
-    const directory = getDirectoryEntries(state);
+    const directory = getDirectoryEntries(state, allEntries);
     state.page = directory.currentPage;
     const comparisonTypeOptions = getChallengeComparisonTypeOptions();
-    const speciesCount = new Set(challengeEntries.flatMap((entry) => entry.speciesSlugs)).size;
-    const categoryCount = new Set(challengeEntries.map((entry) => entry.comparisonType)).size;
-    const featuredCandidates = POPULAR_SLUGS.map((slug) => challengeEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
-    const featured = featuredCandidates[Math.floor(Math.random() * featuredCandidates.length)] || challengeEntries[0];
+    const speciesCount = new Set(allEntries.flatMap((entry) => entry.speciesSlugs)).size;
+    const categoryCount = new Set(allEntries.map((entry) => entry.comparisonType)).size;
+    const featuredCandidates = POPULAR_SLUGS.map((slug) => allEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
+    const featured = featuredCandidates[Math.floor(Math.random() * featuredCandidates.length)] || allEntries[0];
     const showFeatured = state.page === 1 && !state.query && state.comparisonType === "all" && state.animal === "all" && state.quick === "popular";
     const gridEntries = showFeatured ? directory.entries.filter((entry) => entry.slug !== featured.slug) : directory.entries;
     const featuredWinner = getWinner(featured);
-    const recentEntries = challengeEntries.slice(-3).reverse();
-    const mostViewed = POPULAR_SLUGS.slice(0, 3).map((slug) => challengeEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
+    const recentEntries = [...allEntries]
+        .sort((left, right) => (right.updatedAt || right.publishedAt).localeCompare(left.updatedAt || left.publishedAt))
+        .slice(0, 3);
+    const mostViewed = POPULAR_SLUGS.slice(0, 3).map((slug) => allEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
     const pageUrl = getAbsoluteUrl(locale, "/comparisons");
     const collectionSchema = {"@context": "https://schema.org", "@type": "CollectionPage", name: t("title"), description: t("description"), url: pageUrl, inLanguage: locale};
     const itemListSchema = {
@@ -252,7 +259,7 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{t("eyebrow")}</p>
                 <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.035em] text-white md:text-5xl">{t("title")}</h1>
                 <p className="mt-3 max-w-[42rem] text-base leading-7 text-ink-200 md:text-lg">{t("description")}</p>
-                <p className="mt-5 text-sm font-semibold text-white">{t("comparisonCount", {count: challengeEntries.length})}</p>
+                <p className="mt-5 text-sm font-semibold text-white">{t("comparisonCount", {count: allEntries.length})}</p>
             </header>
 
             {showFeatured ? (
@@ -393,7 +400,7 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
                 <aside className="hidden xl:block">
                     <div className="sticky top-24 space-y-7 border-l border-white/10 pl-6">
                         <div className="grid grid-cols-3 gap-2 xl:grid-cols-1">
-                            <div><strong className="block font-display text-3xl text-white">{challengeEntries.length}</strong><span className="text-sm text-ink-300">{t("sidebarComparisons")}</span></div>
+                            <div><strong className="block font-display text-3xl text-white">{allEntries.length}</strong><span className="text-sm text-ink-300">{t("sidebarComparisons")}</span></div>
                             <div><strong className="block font-display text-3xl text-white">{speciesCount}</strong><span className="text-sm text-ink-300">{t("sidebarSpecies")}</span></div>
                             <div><strong className="block font-display text-3xl text-white">{categoryCount}</strong><span className="text-sm text-ink-300">{t("sidebarCategories")}</span></div>
                         </div>

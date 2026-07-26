@@ -42,8 +42,20 @@ export default function Header({locale}: {locale?: string}) {
                     <HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} />
                     <Link href="/#download" className="hidden md:inline-flex">
                         <span
-                            className="inline-flex min-h-[42px] items-center justify-center whitespace-nowrap rounded-md bg-primary-100 px-5 text-sm font-bold text-canvas-950 transition-colors hover:bg-primary-500 hover:text-white focus-visible:bg-primary-500 focus-visible:text-white"
+                            className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-md border border-primary-100 bg-transparent px-5 text-sm font-bold text-primary-100 transition-colors hover:border-primary-500 hover:bg-primary-500 hover:text-white focus-visible:border-primary-500 focus-visible:bg-primary-500 focus-visible:text-white"
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 3v12" strokeLinecap="round" />
+                                <path d="m7.5 10.5 4.5 4.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M5 20h14" strokeLinecap="round" />
+                            </svg>
                             {t("download")}
                         </span>
                     </Link>

@@ -3,12 +3,16 @@
 import {useState} from "react";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
+import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
+import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
 
 type FeaturedSpeciesImageCarouselSlide = {
     captureId: string | null;
     src: string;
     alt: string;
     gradeLabel: string | null;
+    grade: number | null;
+    gradeBreakdown: CaptureGradeBreakdown | null;
     attribution: string | null;
     username: string | null;
     contextLabel: string | null;
@@ -51,11 +55,16 @@ export default function FeaturedSpeciesImageCarousel({
                 </div>
 
                 <div className="absolute left-4 top-4 md:left-5 md:top-5 flex max-w-[calc(100%-2rem)] md:max-w-[calc(100%-2.5rem)] flex-col items-start gap-2">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-amber-200/25 bg-amber-950/65 backdrop-blur px-3 py-1.5 text-sm font-semibold text-amber-100">
                             {rarityLabel}
                         </span>
-                        {activeSlide.gradeLabel ? (
+                        {activeSlide.grade != null ? (
+                            <CaptureGradeBadge
+                                grade={activeSlide.grade}
+                                breakdown={activeSlide.gradeBreakdown}
+                            />
+                        ) : activeSlide.gradeLabel ? (
                             <span className="rounded-full border border-white/15 bg-black/55 backdrop-blur px-3 py-1.5 text-sm font-semibold text-white">
                                 {activeSlide.gradeLabel}
                             </span>

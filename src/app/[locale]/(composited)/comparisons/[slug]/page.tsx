@@ -11,8 +11,10 @@ import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_co
 import ComparisonPageNavigation from "@/app/[locale]/(composited)/challenges/_components/comparison-page-navigation";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
-import {getChallenge, getRelatedChallenges} from "@/data/challenges";
+import {getChallenge} from "@/data/challenges";
+import {fetchSpeciesComparisonBySlug, getRelatedMergedChallenges, resolveChallengeEntry} from "@/data/species-comparisons";
 import {getSpeciesBySlug} from "@/data/species";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {buildContentMetadata} from "@/lib/content-metadata";
@@ -20,6 +22,10 @@ import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
 type Props = {params: {locale: string; slug: string}};
+
+async function resolveComparisonSpecies(slug: string) {
+    return (await getResolvedSpeciesBySlug(slug)) ?? getSpeciesBySlug(slug) ?? null;
+}
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(new Date(date));
@@ -30,10 +36,12 @@ function getReadMinutes(parts: string[]) {
 }
 
 export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const challenge = getChallenge(params.slug);
+    const challenge = await resolveChallengeEntry(params.slug);
     if (!challenge) return {};
-    const animalA = getSpeciesBySlug(challenge.animalASlug);
-    const animalB = getSpeciesBySlug(challenge.animalBSlug);
+    const [animalA, animalB] = await Promise.all([
+        resolveComparisonSpecies(challenge.animalASlug),
+        resolveComparisonSpecies(challenge.animalBSlug)
+    ]);
     return buildContentMetadata({
         locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
@@ -50,11 +58,13 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 export default async function ComparisonDetailPage({params}: Props) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "comparisons");
-    const challenge = getChallenge(slug);
+    const challenge = await resolveChallengeEntry(slug);
     if (!challenge) notFound();
 
-    const animalA = getSpeciesBySlug(challenge.animalASlug);
-    const animalB = getSpeciesBySlug(challenge.animalBSlug);
+    const [animalA, animalB] = await Promise.all([
+        resolveComparisonSpecies(challenge.animalASlug),
+        resolveComparisonSpecies(challenge.animalBSlug)
+    ]);
     if (!animalA || !animalB) notFound();
 
     const [animalAStatsResult, animalBStatsResult] = await Promise.all([resolveSpeciesStats(animalA.slug), resolveSpeciesStats(animalB.slug)]);
@@ -70,16 +80,42 @@ export default async function ComparisonDetailPage({params}: Props) {
     const confidence = winner ? Math.min(94, 66 + Math.round((Math.max(aWins, bWins) / Math.max(1, decisiveScenarios.length)) * 26)) : 55;
     const readMinutes = getReadMinutes([challenge.description, challenge.quickVerdict, ...challenge.shortAnswer, ...challenge.whyThisMatchupIsInteresting, ...challenge.statCategories.flatMap((item) => [item.animalAValue, item.animalBValue, item.takeaway]), ...challenge.scenarioBreakdown.flatMap((item) => [item.verdict, item.explanation]), ...challenge.finalTake, ...challenge.faq.flatMap((item) => [item.question, item.answer])]);
 
-    const relatedChallenges = getRelatedChallenges(challenge.slug, 4).flatMap((entry) => {
+    const relatedEntries = [];
+    for (const relatedSlug of challenge.relatedChallengeSlugs || []) {
+        const entry = getChallenge(relatedSlug) ?? (await fetchSpeciesComparisonBySlug(relatedSlug));
+        if (entry) relatedEntries.push(entry);
+    }
+    const relatedSource = relatedEntries.length > 0
+        ? relatedEntries.slice(0, 4)
+        : await getRelatedMergedChallenges(challenge.slug, 4);
+    const relatedChallenges = relatedSource.flatMap((entry) => {
         const relatedA = getSpeciesBySlug(entry.animalASlug);
         const relatedB = getSpeciesBySlug(entry.animalBSlug);
-        if (!relatedA || !relatedB) return [];
+        if (!relatedA || !relatedB) {
+            return [{
+                slug: entry.slug,
+                title: entry.title,
+                quickVerdict: entry.quickVerdict,
+                animalAName: entry.animalASlug.replace(/-/g, " "),
+                animalBName: entry.animalBSlug.replace(/-/g, " "),
+                comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`),
+                image: entry.featuredImage
+            }];
+        }
         return [{slug: entry.slug, title: entry.title, quickVerdict: entry.quickVerdict, animalAName: relatedA.name, animalBName: relatedB.name, comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`), image: entry.featuredImage}];
     });
-    const systemsItems = getSystemsIntelligenceEntriesForSpeciesSlugs(challenge.systemsSpeciesSlugs || challenge.speciesSlugs).flatMap(({slug: speciesSlug, entry}) => {
+    const staticSystemsItems = getSystemsIntelligenceEntriesForSpeciesSlugs(challenge.systemsSpeciesSlugs || challenge.speciesSlugs).flatMap(({slug: speciesSlug, entry}) => {
         const species = getSpeciesBySlug(speciesSlug);
         return species ? [{slug: speciesSlug, name: species.name, href: `/animals/${species.slug}`, entry}] : [];
     });
+    const systemsItems = staticSystemsItems.length > 0
+        ? staticSystemsItems
+        : (challenge.systemsIntelligenceEntries || []).map(({slug: speciesSlug, entry}) => ({
+            slug: speciesSlug,
+            name: speciesSlug.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()),
+            href: `/animals/${speciesSlug}`,
+            entry
+        }));
 
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
     const schemas = [

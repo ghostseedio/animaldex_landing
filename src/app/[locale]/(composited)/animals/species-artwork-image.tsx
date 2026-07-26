@@ -9,6 +9,7 @@ type SpeciesArtworkImageProps = {
     priority?: boolean;
     className?: string;
     sizes?: string;
+    fit?: "cover" | "contain";
 };
 
 export default function SpeciesArtworkImage({
@@ -18,7 +19,8 @@ export default function SpeciesArtworkImage({
     imageFile,
     priority = false,
     className = "",
-    sizes = "(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw"
+    sizes = "(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw",
+    fit = "cover"
 }: SpeciesArtworkImageProps) {
     return (
         <div className={`relative overflow-hidden bg-surface-800/60 ${className}`}>
@@ -29,7 +31,7 @@ export default function SpeciesArtworkImage({
                 unoptimized
                 priority={priority}
                 sizes={sizes}
-                className="object-cover"
+                className={fit === "contain" ? "object-contain p-2" : "object-cover"}
             />
         </div>
     );

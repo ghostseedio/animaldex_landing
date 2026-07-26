@@ -11,7 +11,7 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 
 type QueryRow = Record<string, any>;
 
-export type TrainModuleId = "dailyCompanion" | "wildProfile" | "packs" | "missions" | "sets";
+export type TrainModuleId = "dailyCompanion" | "wildProfile" | "packs" | "missions";
 
 export type TrainModuleDefinition = {
     id: TrainModuleId;
@@ -56,12 +56,6 @@ const TRAIN_MODULE_CATALOG: Array<Pick<TrainModuleDefinition, "id" | "title" | "
         title: "Missions",
         subtitle: "Progression milestones and credit rewards.",
         icon: "mission"
-    },
-    {
-        id: "sets",
-        title: "Power Sets",
-        subtitle: "Set completion across your collection.",
-        icon: "sets"
     }
 ];
 
@@ -145,8 +139,6 @@ function trainModuleHref(localePrefix: string, id: TrainModuleId) {
             return `${localePrefix}/app/train/packs`;
         case "missions":
             return `${localePrefix}/app/missions`;
-        case "sets":
-            return `${localePrefix}/app/sets`;
     }
 }
 
@@ -256,15 +248,6 @@ async function getTrainMissionIndexStatus(supabase: SupabaseClient, userId: stri
     }).length;
 }
 
-async function getTrainSetIndexStatus(supabase: SupabaseClient, userId: string) {
-    const {count} = await supabase
-        .from("profile_power_set_completions")
-        .select("power_key", {count: "exact", head: true})
-        .eq("user_id", userId);
-
-    return count ?? 0;
-}
-
 function buildTrainModules(
     localePrefix: string,
     status: Record<TrainModuleId, string | null>
@@ -284,8 +267,7 @@ function emptyTrainPageData(localePrefix: string): TrainPageData {
             dailyCompanion: null,
             wildProfile: null,
             packs: null,
-            missions: null,
-            sets: null
+            missions: null
         })
     };
 }
@@ -683,12 +665,11 @@ export async function getTrainPageData(localePrefix: string): Promise<TrainPageD
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return emptyTrainPageData(localePrefix);
 
-    const [dailyCompanion, wildProfile, packs, activeMissions, completedSets] = await Promise.all([
+    const [dailyCompanion, wildProfile, packs, activeMissions] = await Promise.all([
         getTrainDailyCompanionState(),
         getTrainWildProfileIndexStatus(supabase, user.id),
         getTrainPackIndexStatus(supabase, user.id),
-        getTrainMissionIndexStatus(supabase, user.id),
-        getTrainSetIndexStatus(supabase, user.id)
+        getTrainMissionIndexStatus(supabase, user.id)
     ]);
 
     return {
@@ -702,10 +683,7 @@ export async function getTrainPageData(localePrefix: string): Promise<TrainPageD
             packs: packs.unopenedPacks > 0
                 ? packs.unopenedPacks === 1 ? "1 ready to open" : `${packs.unopenedPacks} ready to open`
                 : packs.canList ? "Ready to list" : null,
-            missions: activeMissions > 0 ? `${activeMissions} active` : null,
-            sets: completedSets > 0
-                ? completedSets === 1 ? "1 set completed" : `${completedSets} sets completed`
-                : null
+            missions: activeMissions > 0 ? `${activeMissions} active` : null
         })
     };
 }

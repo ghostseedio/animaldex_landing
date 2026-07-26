@@ -1,6 +1,6 @@
 import "server-only";
 
-import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
+import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
 import {getAuthenticatedPublicProfileCard, resolveProfileSettingCounts, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
@@ -11,6 +11,7 @@ import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
+import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
@@ -38,6 +39,7 @@ export type AppProfileSummary = {
     wild: number;
     zoo: number;
     domestic: number;
+    farm: number;
 };
 
 export type AppMission = {
@@ -210,7 +212,8 @@ function resolveCapturePrinciple(species: SpeciesEntry | null, behaviorPrinciple
     const catalogPrinciple = resolveCatalogBehaviorPrinciple(
         behaviorPrinciples,
         species.speciesProfileId,
-        species.normalizedIdentityKey
+        species.normalizedIdentityKey,
+        species.analysis.scientificName
     );
     const staticPrinciple = getBehavioralPrincipleProfile(
         species.slug,
@@ -317,6 +320,8 @@ export type AppCaptureDetail = {
     gameStats: Record<string, number>;
     premiumDetails: Record<string, any> | null;
     imageSrc: string;
+    captureGrade: number | null;
+    gradeBreakdown: CaptureGradeBreakdown | null;
 };
 
 type QueryRow = Record<string, any>;
@@ -361,7 +366,7 @@ export function mapPublicProfileCaptureToAppCapture(capture: PublicProfileCaptur
 
 export function decorateCapture(capture: UserCaptureSummary): AppCapture {
     const species = findSpeciesForCaptureIdentity(capture.speciesSlug);
-    const principle = resolveCapturePrinciple(species, {byProfileId: new Map(), byIdentityKey: new Map()});
+    const principle = resolveCapturePrinciple(species, emptyBehaviorPrincipleIndex());
     return buildAppCapture(capture, species, principle);
 }
 
@@ -447,7 +452,8 @@ export async function getAppProfileSummary(): Promise<AppProfileSummary> {
         overallScore: 0,
         wild: 0,
         zoo: 0,
-        domestic: 0
+        domestic: 0,
+        farm: 0
     };
     const session = await getAuthenticatedSupabaseUser();
 
@@ -470,7 +476,8 @@ export async function getAppProfileSummary(): Promise<AppProfileSummary> {
             overallScore: stats.collectorScore,
             wild: stats.wild,
             zoo: stats.zoo,
-            domestic: stats.domestic
+            domestic: stats.domestic,
+            farm: stats.farm
         };
     }
 
@@ -483,7 +490,8 @@ export async function getAppProfileSummary(): Promise<AppProfileSummary> {
         overallScore: Number(row.overall_score ?? 0),
         wild: Number(row.wild_captures ?? 0),
         zoo: Number(row.zoo_captures ?? 0),
-        domestic: Number(row.domestic_captures ?? 0)
+        domestic: Number(row.domestic_captures ?? 0),
+        farm: 0
     };
 }
 
@@ -494,7 +502,7 @@ export async function getAppProfileSettingCounts() {
     ]);
 
     return resolveProfileSettingCounts(
-        {wild: summary.wild, zoo: summary.zoo, domestic: summary.domestic},
+        {wild: summary.wild, zoo: summary.zoo, domestic: summary.domestic, farm: captureSettings.farm},
         captureSettings
     );
 }
@@ -711,7 +719,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return null;
     const {data} = await supabase.from("captures")
-        .select("id,status,created_at,location_display_label,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,error_message,completed_at)")
+        .select("id,status,created_at,location_display_label,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
         .eq("id", id).eq("user_id", user.id).maybeSingle();
     if (!data) return null;
     const row = data as QueryRow;
@@ -720,6 +728,25 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     const slug = analysis.normalized_identity_key ?? null;
     const species = slug ? getSpeciesBySlug(slug) : null;
     const stats = analysis.game_stats && typeof analysis.game_stats === "object" ? analysis.game_stats : {};
+    const gradeSource: CaptureGradeSource = {
+        raw_json: analysis.raw_json ?? null,
+        animal_name: analysis.animal_name ?? null,
+        scientific_name: analysis.scientific_name ?? null,
+        breed_guess: analysis.breed_guess ?? null,
+        human_context: analysis.human_context ?? null,
+        zoo_or_wild: analysis.zoo_or_wild ?? null,
+        confidence: analysis.confidence ?? null,
+        breed_confidence: analysis.breed_confidence ?? null,
+        signals: analysis.signals ?? null,
+        premium_details: analysis.premium_details ?? null,
+        observed_market_modifiers: analysis.observed_market_modifiers ?? null,
+        dominance_endorsements: row.dominance_endorsements ?? null,
+        speed_endorsements: row.speed_endorsements ?? null,
+        size_endorsements: row.size_endorsements ?? null,
+        intelligence_endorsements: row.intelligence_endorsements ?? null,
+        rarity_endorsements: row.rarity_endorsements ?? null
+    };
+    const gradeBreakdown = computeCaptureGradeBreakdown(gradeSource);
     return {
         id: row.id,
         status: row.status,
@@ -735,7 +762,9 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         typeTags: Array.isArray(analysis.type_tags) ? analysis.type_tags : [],
         gameStats: stats,
         premiumDetails: analysis.premium_details ?? null,
-        imageSrc: species ? getSpeciesImageRoute(species.slug, id) : "/images/placeholders/species-no-image.svg"
+        imageSrc: species ? getSpeciesImageRoute(species.slug, id) : "/images/placeholders/species-no-image.svg",
+        captureGrade: gradeBreakdown?.grade ?? null,
+        gradeBreakdown
     };
 }
 

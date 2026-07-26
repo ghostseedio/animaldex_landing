@@ -25,7 +25,7 @@ export default function ChallengeVerdictCard({
 }: ChallengeVerdictCardProps) {
     return (
         <section id="winner" className="overflow-hidden rounded-[2rem] border border-primary-500/25 bg-gradient-to-br from-primary-500/12 via-surface-900 to-violet-500/10 shadow-xl">
-            <div className="grid lg:grid-cols-[19rem_1fr]">
+            <div className={winner ? "grid lg:grid-cols-[19rem_1fr]" : "grid"}>
                 {winner ? (
                     <div className="relative min-h-64 lg:min-h-full">
                         <SpeciesArtworkImage slug={winner.slug} alt={winner.name} imageFile={winner.imageFile} className="absolute inset-0 h-full w-full" sizes="(min-width: 1024px) 19rem, 100vw" />

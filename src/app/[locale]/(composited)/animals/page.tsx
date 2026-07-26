@@ -1,17 +1,54 @@
 import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesDirectoryPage, speciesEntries, SpeciesRarityStatusKey} from "@/data/species";
+import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, isSpeciesDirectorySort, isSpeciesDirectorySortOrder, isSpeciesDirectoryTierFilter, speciesEntries, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {buildSpeciesDirectoryImageState} from "@/data/species-images";
 import {isNativeRangeRegionKey} from "@/data/native-range";
 import {getLocationPage} from "@/data/locations";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {getBattleTier, type SpeciesStats} from "@/lib/battle-tier";
+import {identityKindShortLabel} from "@/lib/identity-kind";
 import {localeConfig} from "@/i18n";
 import SpeciesDirectory from "./species-directory";
 import SpeciesImage from "./species-image";
+import AnimalsSearch, {type AnimalsSearchSuggestion} from "./animals-search";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+
+const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+function getSuggestionBattleTier(entry: SpeciesEntry) {
+    if (getLegendaryEarthBeast(entry.slug)) return "S";
+
+    const rawStats = entry.databaseSource?.canonicalGameStats;
+    if (!rawStats) return null;
+
+    const stats = {} as SpeciesStats;
+    for (const key of STAT_KEYS) {
+        const value = Number(rawStats[key]);
+        if (!Number.isFinite(value)) return null;
+        stats[key] = value;
+    }
+
+    return getBattleTier(stats);
+}
+
+function toSearchSuggestion(entry: SpeciesEntry): AnimalsSearchSuggestion {
+    const identityKind = entry.databaseSource?.identityKind ?? null;
+    return {
+        name: entry.name,
+        slug: entry.slug,
+        scientificName: entry.analysis.scientificName,
+        category: entry.analysis.category,
+        animalDexNumber: getAnimalDexNumberFromEntry(entry),
+        battleTier: getSuggestionBattleTier(entry),
+        identityKind,
+        identityKindLabel: identityKindShortLabel(identityKind)
+    };
+}
 
 const featuredAnimals = [
     {slug: "barn-owl", name: "Owl", lesson: "Precision and deep listening"},
@@ -20,17 +57,121 @@ const featuredAnimals = [
     {slug: "great-white-shark", name: "Shark", lesson: "Momentum and sensory power"}
 ];
 
-const popularSearches = ["Owl", "Wolf", "Elephant", "Shark", "Cat", "Dog", "Dolphin"];
+type CatalogQuickLink = {
+    label: string;
+    href: string;
+    kind: "query" | "sort" | "tier";
+    icon: "bird" | "paw" | "bolt" | "gem" | "snail" | "mountain" | "alert" | "lizard";
+    tier?: "S" | "A" | "B";
+};
 
-const animalCategories = [
-    {label: "Mammals", query: "mammal"},
-    {label: "Birds", query: "bird"},
-    {label: "Reptiles", query: "reptile"},
-    {label: "Marine animals", query: "marine"},
-    {label: "Insects", query: "insect"},
-    {label: "Pets", query: "domestic"},
-    {label: "Endangered animals", query: "endangered"}
+const catalogQuickLinks: CatalogQuickLink[] = [
+    {label: "Birds", href: "/animals?q=bird", kind: "query", icon: "bird"},
+    {label: "Pets", href: "/animals?q=domestic", kind: "query", icon: "paw"},
+    {label: "Fastest animals", href: "/animals?sort=speed", kind: "sort", icon: "bolt"},
+    {label: "Rarest animals", href: "/animals?sort=rarity", kind: "sort", icon: "gem"},
+    {label: "Slowest animals", href: "/animals?sort=speed&order=asc", kind: "sort", icon: "snail"},
+    {label: "Biggest animals", href: "/animals?sort=size", kind: "sort", icon: "mountain"},
+    {label: "Tier S", href: "/animals?tier=S", kind: "tier", icon: "bolt", tier: "S"},
+    {label: "Tier A", href: "/animals?tier=A", kind: "tier", icon: "bolt", tier: "A"},
+    {label: "Tier B", href: "/animals?tier=B", kind: "tier", icon: "bolt", tier: "B"},
+    {label: "Endangered animals", href: "/animals?q=endangered", kind: "query", icon: "alert"},
+    {label: "Reptiles", href: "/animals?q=reptile", kind: "query", icon: "lizard"}
 ];
+
+const TIER_CHIP_STYLE = {
+    S: {
+        color: "rgba(56, 250, 71, 1)",
+        background: "rgba(56, 250, 71, 0.14)",
+        border: "rgba(56, 250, 71, 0.4)",
+        activeBackground: "rgba(56, 250, 71, 0.22)",
+        activeBorder: "rgba(56, 250, 71, 0.55)"
+    },
+    A: {
+        color: "rgba(56, 250, 71, 0.92)",
+        background: "rgba(56, 250, 71, 0.12)",
+        border: "rgba(56, 250, 71, 0.34)",
+        activeBackground: "rgba(56, 250, 71, 0.2)",
+        activeBorder: "rgba(56, 250, 71, 0.5)"
+    },
+    B: {
+        color: "rgba(34, 211, 238, 0.95)",
+        background: "rgba(34, 211, 238, 0.12)",
+        border: "rgba(34, 211, 238, 0.36)",
+        activeBackground: "rgba(34, 211, 238, 0.2)",
+        activeBorder: "rgba(34, 211, 238, 0.5)"
+    }
+} as const;
+
+function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
+    const common = "h-3.5 w-3.5 shrink-0";
+    switch (icon) {
+        case "bird":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M4 14c2-1 4-2 7-1 2 .5 3.5 1.5 5 1.5 2 0 4-1.5 4-1.5s-1 4-5 4c-2.5 0-4-1-5.5-2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 13c1-3 3.5-5.5 7-6-1.5 2-2 3.5-2 5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="18.5" cy="7.2" r="0.7" fill="currentColor" stroke="none" />
+                </svg>
+            );
+        case "paw":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="currentColor" aria-hidden="true">
+                    <ellipse cx="12" cy="16.5" rx="3.6" ry="3" />
+                    <circle cx="8.2" cy="10.8" r="1.55" />
+                    <circle cx="10.7" cy="8.8" r="1.55" />
+                    <circle cx="13.3" cy="8.8" r="1.55" />
+                    <circle cx="15.8" cy="10.8" r="1.55" />
+                </svg>
+            );
+        case "bolt":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                    <path d="M13 3 6.5 13H12l-.5 8L18.5 11H13l0-8Z" strokeLinejoin="round" />
+                </svg>
+            );
+        case "gem":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M6 8.5 9.5 4h5L18 8.5 12 20 6 8.5Z" strokeLinejoin="round" />
+                    <path d="M6 8.5h12M9.5 4 12 8.5 14.5 4" strokeLinejoin="round" />
+                </svg>
+            );
+        case "snail":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M3.5 16.5h11.5c2.5 0 4.5-1.8 4.5-4.2S18 8 15.5 8H13" strokeLinecap="round" />
+                    <circle cx="10" cy="13.5" r="3.2" />
+                    <circle cx="10" cy="13.5" r="1.3" />
+                    <path d="M15.5 8c.8-1.4 1.2-2.6 1-3.5M17.8 8c.9-1.3 1.5-2.4 1.4-3.4" strokeLinecap="round" />
+                </svg>
+            );
+        case "mountain":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="m3.5 17.5 5-8 3 4.5 2.5-3.5 6.5 7" strokeLinejoin="round" />
+                    <path d="m10.5 10 1.6-2.4L14 10" strokeLinejoin="round" />
+                </svg>
+            );
+        case "alert":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M12 4.5 20 18.5H4L12 4.5Z" strokeLinejoin="round" />
+                    <path d="M12 10v4.5M12 16.8v.2" strokeLinecap="round" />
+                </svg>
+            );
+        case "lizard":
+            return (
+                <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M4 13.5c2.5 0 4-.8 5.5-2 1.2-1 2.3-1.5 3.5-1.5 2 0 3.5 1.2 5 2.5" strokeLinecap="round" />
+                    <path d="M9.5 11.5 7 8.5M12.5 10.2 11 7M15.5 11.5l2-2.8M18 12.5c1 .8 1.8 2 2 3.5" strokeLinecap="round" />
+                    <circle cx="6.2" cy="13.2" r="0.7" fill="currentColor" stroke="none" />
+                </svg>
+            );
+        default:
+            return null;
+    }
+}
 
 type AnimalsIndexPageProps = {
     searchParams?: {
@@ -39,7 +180,9 @@ type AnimalsIndexPageProps = {
         region?: string | string[];
         location?: string | string[];
         status?: string | string[];
-        page?: string | string[];
+        sort?: string | string[];
+        order?: string | string[];
+        tier?: string | string[];
     };
 };
 
@@ -108,7 +251,14 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
     const location = locationParam && getLocationPage(locationParam) ? locationParam : "all";
     const statusParam = getSingleParam(searchParams?.status);
     const status = statusParam && isSpeciesRarityStatusKey(statusParam) ? statusParam : "all";
-    const page = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
+    const sortParam = getSingleParam(searchParams?.sort);
+    const sort = sortParam && isSpeciesDirectorySort(sortParam) ? sortParam : "number";
+    const orderParam = getSingleParam(searchParams?.order)?.toLowerCase();
+    const order = orderParam && isSpeciesDirectorySortOrder(orderParam)
+        ? orderParam
+        : getDefaultSpeciesDirectorySortOrder(sort);
+    const tierParam = getSingleParam(searchParams?.tier)?.toUpperCase();
+    const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
     const directoryPage = getSpeciesDirectoryPage({
         query,
@@ -116,7 +266,10 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
         region,
         location,
         status,
-        page: Number.isFinite(page) ? page : 1,
+        sort,
+        order,
+        tier,
+        page: 1,
         entries: unifiedSpeciesEntries
     });
     const directoryImageState = Object.fromEntries(
@@ -139,58 +292,145 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
     };
 
     return (
-        <section className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-12 md:py-20 flex flex-col gap-20 md:gap-24">
+        <section className="mx-auto flex w-full max-w-[88rem] flex-col gap-10 px-4 py-6 md:gap-14 md:px-8 md:py-8">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
-            <div className="flex flex-col gap-5 text-center items-center max-w-5xl mx-auto">
-                <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">{t("eyebrow")}</p>
-                <h1 className="max-w-[12ch] font-display text-3xl font-bold leading-tight tracking-tight text-white sm:max-w-full sm:text-6xl md:text-7xl lg:text-8xl">{t("title")}</h1>
-                <p className="text-xl md:text-2xl text-ink-100 max-w-4xl">{t("description")}</p>
-                <p className="text-base md:text-lg text-ink-300 max-w-3xl">{t("heroSupporting")}</p>
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
-                    <Link href="#all-animals" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 hover:bg-primary-300 transition-colors">
-                        {t("browseAnimals")}
-                    </Link>
-                    <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-line-200 px-7 font-bold text-white hover:border-primary-400 hover:text-primary-100 transition-colors">
-                        {t("getAnimalDex")}
-                    </Link>
+            {/* SEO copy stays in the document; UI leads with search. */}
+            <header className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+                    <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl">{t("title")}</h1>
+                    <p className="sr-only">{t("description")} {t("heroSupporting")}</p>
                 </div>
-            </div>
+                <AnimalsSearch
+                    action={`${getLocalePath(locale, "/animals")}#all-animals`}
+                    initialQuery={query}
+                    suggestions={unifiedSpeciesEntries.map(toSearchSuggestion)}
+                    searchTitle={t("searchTitle")}
+                    searchPlaceholder={t("searchPlaceholder")}
+                    searchButton={t("searchButton")}
+                    searchingLabel={t("searchingLabel")}
+                    suggestionHint={t("searchSuggestionHint")}
+                />
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {catalogQuickLinks.map((item) => {
+                        const isActive = (() => {
+                            if (item.href.includes("q=bird")) return query.toLowerCase() === "bird";
+                            if (item.href.includes("q=domestic")) return query.toLowerCase() === "domestic";
+                            if (item.href.includes("q=endangered")) return query.toLowerCase() === "endangered";
+                            if (item.href.includes("q=reptile")) return query.toLowerCase() === "reptile";
+                            if (item.href.includes("sort=speed&order=asc")) return sort === "speed" && order === "asc";
+                            if (item.href.includes("sort=speed")) return sort === "speed" && order === "desc";
+                            if (item.href.includes("sort=rarity")) return sort === "rarity" && order === "desc";
+                            if (item.href.includes("sort=size")) return sort === "size" && order === "desc";
+                            if (item.href.includes("tier=S")) return tier === "S";
+                            if (item.href.includes("tier=A")) return tier === "A";
+                            if (item.href.includes("tier=B")) return tier === "B";
+                            return false;
+                        })();
 
-            <section className="-mx-4 md:-mx-8 bg-gradient-to-r from-primary-500/15 via-primary-500/8 to-transparent px-6 py-10 md:px-12 md:py-12">
-                <div className="max-w-5xl mx-auto flex flex-col gap-5">
-                    <div className="flex flex-col gap-2 text-center">
-                        <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("searchTitle")}</h2>
-                        <p className="text-ink-200 text-lg">{t("searchDescription")}</p>
-                    </div>
-                    <form action={`${getLocalePath(locale, "/animals")}#all-animals`} method="get" className="flex flex-col sm:flex-row gap-3">
-                        <input
-                            name="q"
-                            defaultValue={query}
-                            placeholder={t("searchPlaceholder")}
-                            className="min-h-[3.75rem] flex-1 rounded-2xl border border-line-300 bg-canvas-950/80 px-5 text-base text-white placeholder:text-ink-400 outline-none transition-colors focus:border-primary-400"
-                        />
-                        <button type="submit" className="min-h-[3.75rem] rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 hover:bg-primary-300 transition-colors">
-                            {t("searchButton")}
-                        </button>
-                    </form>
-                    <div className="flex flex-wrap justify-center items-center gap-2">
-                        <span className="mr-1 text-sm text-ink-300">{t("popularSearches")}:</span>
-                        {popularSearches.map((animal) => (
-                            <Link key={animal} href={`/animals?q=${encodeURIComponent(animal)}#all-animals`} className="rounded-full bg-surface-800/70 px-3 py-1.5 text-sm text-ink-200 hover:text-primary-100 transition-colors">
-                                {animal}
+                        if (item.kind === "tier" && item.tier) {
+                            const tone = TIER_CHIP_STYLE[item.tier];
+                            return (
+                                <Link
+                                    key={item.label}
+                                    href={`${item.href}#all-animals`}
+                                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.06em] transition-colors"
+                                    style={{
+                                        color: tone.color,
+                                        backgroundColor: isActive ? tone.activeBackground : tone.background,
+                                        borderColor: isActive ? tone.activeBorder : tone.border
+                                    }}
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-1.5 w-1.5 rounded-full"
+                                        style={{backgroundColor: tone.color}}
+                                    />
+                                    {item.label}
+                                </Link>
+                            );
+                        }
+
+                        return (
+                            <Link
+                                key={item.label}
+                                href={`${item.href}#all-animals`}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                    isActive
+                                        ? "border-primary-400/50 bg-primary-400/15 text-primary-100"
+                                        : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-primary-400/40 hover:text-primary-100"
+                                }`}
+                            >
+                                <CatalogQuickLinkIcon icon={item.icon} />
+                                {item.label}
                             </Link>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
+            </header>
+
+            <section id="all-animals" className="scroll-mt-28 flex flex-col gap-5">
+                <h2 className="sr-only">{t("allGuidesTitle")}</h2>
+                <SpeciesDirectory
+                    locale={locale}
+                    speciesEntries={directoryPage.entries}
+                    directoryImageState={directoryImageState}
+                    currentPage={directoryPage.currentPage}
+                    totalPages={directoryPage.totalPages}
+                    total={directoryPage.total}
+                    currentQuery={directoryPage.query}
+                    currentLetter={directoryPage.letter}
+                    currentRegion={directoryPage.region}
+                    currentLocation={directoryPage.location}
+                    currentStatus={directoryPage.status}
+                    currentSort={directoryPage.sort}
+                    currentOrder={directoryPage.order}
+                    currentTier={directoryPage.tier}
+                    copy={{
+                        readSpecies: t("readSpecies"),
+                        filtersButton: t("filtersButton"),
+                        closeFiltersButton: t("closeFiltersButton"),
+                        locationLabel: t("locationLabel"),
+                        locationDescription: t("locationDescription"),
+                        allRegions: t("allRegions"),
+                        mapAriaLabel: t("mapAriaLabel"),
+                        mapActiveLabel: t("mapActiveLabel"),
+                        openLocationFilter: t("openLocationFilter"),
+                        closeLocationFilter: t("closeLocationFilter"),
+                        statusLabel: t("statusLabel"),
+                        alphabetLabel: t("alphabetLabel"),
+                        sortLabel: t("sortLabel"),
+                        sortAscendingLabel: t("sortAscendingLabel"),
+                        sortDescendingLabel: t("sortDescendingLabel"),
+                        filterAll: t("filterAll"),
+                        resultsSummary: t("resultsSummary", {count: "{count}", total: "{total}"}),
+                        loadingMore: t("loadingMore"),
+                        noResultsTitle: t("noResultsTitle"),
+                        noResultsDescription: t("noResultsDescription"),
+                        clearFilters: t("clearFilters"),
+                        battleTierChip: t("battleTierChip", {tier: "{tier}"}),
+                        sortOptions: {
+                            number: {title: t("sortNumberTitle"), detail: t("sortNumberDetail")},
+                            rarity: {title: t("sortRarityTitle"), detail: t("sortRarityDetail")},
+                            dominance: {title: t("sortDominanceTitle"), detail: t("sortDominanceDetail")},
+                            speed: {title: t("sortSpeedTitle"), detail: t("sortSpeedDetail")},
+                            size: {title: t("sortSizeTitle"), detail: t("sortSizeDetail")},
+                            intelligence: {title: t("sortIntelligenceTitle"), detail: t("sortIntelligenceDetail")},
+                            name: {title: t("sortNameTitle"), detail: t("sortNameDetail")}
+                        },
+                        rarityStatuses: {
+                            "very-rare": t("rarityStatuses.veryRare"),
+                            "rare": t("rarityStatuses.rare"),
+                            "uncommon": t("rarityStatuses.uncommon"),
+                            "relatively-common": t("rarityStatuses.relativelyCommon")
+                        }
+                    }}
+                />
             </section>
 
-            <section className="flex flex-col gap-9">
-                <div className="max-w-3xl flex flex-col gap-3">
-                    <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{t("featuredTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("featuredDescription")}</p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-6">
+            <section className="flex flex-col gap-5">
+                <h2 className="font-display text-2xl font-bold text-white md:text-3xl">{t("featuredTitle")}</h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-5">
                     {featuredAnimals.map((animal) => (
                         <Link key={animal.slug} href={`/animals/${animal.slug}`} className="group overflow-hidden rounded-3xl bg-surface-800/50">
                             <SpeciesImage
@@ -206,68 +446,6 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                         </Link>
                     ))}
                 </div>
-            </section>
-
-            <section className="flex flex-col gap-8">
-                <div className="max-w-3xl flex flex-col gap-3">
-                    <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{t("categoriesTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("categoriesDescription")}</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                    {animalCategories.map((category) => (
-                        <Link key={category.label} href={`/animals?q=${encodeURIComponent(category.query)}#all-animals`} className="rounded-2xl border border-line-300 bg-surface-900/50 px-5 py-3 text-lg font-semibold text-white hover:border-primary-400 hover:text-primary-100 transition-colors">
-                            {category.label}
-                        </Link>
-                    ))}
-                </div>
-            </section>
-
-            <section id="all-animals" className="scroll-mt-32 flex flex-col gap-8">
-                <div className="max-w-3xl flex flex-col gap-3">
-                    <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{t("allGuidesTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("allGuidesDescription")}</p>
-                </div>
-                <SpeciesDirectory
-                    locale={locale}
-                    speciesEntries={directoryPage.entries}
-                    directoryImageState={directoryImageState}
-                    currentPage={directoryPage.currentPage}
-                    totalPages={directoryPage.totalPages}
-                    currentQuery={directoryPage.query}
-                    currentLetter={directoryPage.letter}
-                    currentRegion={directoryPage.region}
-                    currentLocation={directoryPage.location}
-                    currentStatus={directoryPage.status}
-                    copy={{
-                        readSpecies: t("readSpecies"),
-                        filtersButton: t("filtersButton"),
-                        closeFiltersButton: t("closeFiltersButton"),
-                        locationLabel: t("locationLabel"),
-                        locationDescription: t("locationDescription"),
-                        allRegions: t("allRegions"),
-                        mapAriaLabel: t("mapAriaLabel"),
-                        mapActiveLabel: t("mapActiveLabel"),
-                        openLocationFilter: t("openLocationFilter"),
-                        closeLocationFilter: t("closeLocationFilter"),
-                        statusLabel: t("statusLabel"),
-                        alphabetLabel: t("alphabetLabel"),
-                        filterAll: t("filterAll"),
-                        resultsSummary: t("resultsSummary", {count: directoryPage.entries.length, total: directoryPage.total}),
-                        noResultsTitle: t("noResultsTitle"),
-                        noResultsDescription: t("noResultsDescription"),
-                        clearFilters: t("clearFilters"),
-                        previousPage: "Previous",
-                        nextPage: "Next",
-                        pageLabel: "Page {page} of {totalPages}",
-                        battleTierChip: t("battleTierChip", {tier: "{tier}"}),
-                        rarityStatuses: {
-                            "very-rare": t("rarityStatuses.veryRare"),
-                            "rare": t("rarityStatuses.rare"),
-                            "uncommon": t("rarityStatuses.uncommon"),
-                            "relatively-common": t("rarityStatuses.relativelyCommon")
-                        }
-                    }}
-                />
             </section>
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">

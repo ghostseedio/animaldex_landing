@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
+import DiscoverCaptureActions from "@/app/[locale]/(authenticated)/app/_components/discover-capture-actions";
+import ShareDiscoverPostButton from "@/app/[locale]/p/[postId]/share-discover-post-button";
 import type {
   DiscoverAlignmentItem,
   DiscoverCaptureItem,
@@ -13,7 +16,14 @@ import type {
   DiscoverTimelineItem,
   DiscoverTradeItem,
 } from "@/data/discover-timeline";
+import {
+  discoverPostPath,
+  discoverPostShareDescription,
+  discoverPostShareTitle,
+} from "@/lib/discover-post";
+import { getAbsoluteUrl } from "@/lib/site";
 import { formatAppShortDate } from "@/lib/app-dates";
+import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
@@ -62,14 +72,6 @@ function FeedPill({
   );
 }
 
-function GradeBadge({grade}: {grade: number}) {
-  return (
-    <span className="shrink-0 rounded-full bg-primary-400 px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.08em] text-black ring-1 ring-white/20">
-      Grade {grade}
-    </span>
-  );
-}
-
 function UncertainBadge() {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/85 px-2.5 py-1 text-[0.68rem] font-black text-white ring-1 ring-red-300/40">
@@ -102,6 +104,55 @@ function CollectorHeader({ collector }: { collector: DiscoverCollectorRef }) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+const PEER_CAPTURERS_VISIBLE_LIMIT = 3;
+
+/** Other collectors with a public capture in the same ranking cohort. */
+function DiscoverPeerCapturersAvatarStack({
+  collectors,
+}: {
+  collectors: DiscoverCollectorRef[];
+}) {
+  if (collectors.length === 0) return null;
+
+  const visible = collectors.slice(0, PEER_CAPTURERS_VISIBLE_LIMIT);
+  const overflowCount = Math.max(0, collectors.length - visible.length);
+  const label =
+    overflowCount === 0 && collectors.length === 1
+      ? `Also captured by ${collectors[0].name}`
+      : `Also captured by ${collectors.length} other collectors`;
+
+  return (
+    <span className="flex shrink-0 items-center gap-1" title={label} aria-label={label}>
+      <span className="flex items-center" aria-hidden="true">
+        {visible.map((collector, index) => (
+          <span
+            key={collector.userId ?? `${collector.name}-${index}`}
+            className="-ml-1.5 first:ml-0"
+            style={{ zIndex: visible.length - index }}
+          >
+            {collector.avatarUrl ? (
+              <img
+                src={collector.avatarUrl}
+                alt=""
+                className="h-4 w-4 rounded-full object-cover ring-1 ring-[#121212]"
+              />
+            ) : (
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-white/15 text-[0.5rem] font-bold text-white/60 ring-1 ring-[#121212]">
+                {collector.name.slice(0, 1)}
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+      {overflowCount > 0 ? (
+        <span aria-hidden="true" className="font-mono text-[0.62rem] font-bold text-white/45">
+          +{overflowCount}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -375,28 +426,113 @@ function MediaCarousel({
   );
 }
 
+function sharePropsForItem(item: DiscoverTimelineItem, locale: string) {
+  const url = getAbsoluteUrl(locale, discoverPostPath(item.id));
+
+  if (item.kind === "capture") {
+    return {
+      url,
+      title: discoverPostShareTitle({
+        kind: item.kind,
+        animalName: item.animalName,
+        collectorName: item.collector.name,
+        contextLabel: item.contextLabel,
+      }),
+      text: discoverPostShareDescription({
+        kind: item.kind,
+        animalName: item.animalName,
+        collectorName: item.collector.name,
+        collectorUsername: item.collector.username,
+        contextLabel: item.contextLabel,
+        locationLabel: item.locationLabel,
+        hasVideoMedia: item.hasVideoMedia,
+        scientificName: item.scientificName,
+      }),
+    };
+  }
+
+  if (item.kind === "alignment") {
+    return {
+      url,
+      title: discoverPostShareTitle({
+        kind: item.kind,
+        animalName: item.rewardedAnimalName,
+        collectorName: item.collector.name,
+      }),
+      text: discoverPostShareDescription({
+        kind: item.kind,
+        animalName: item.rewardedAnimalName,
+        collectorName: item.collector.name,
+        collectorUsername: item.collector.username,
+      }),
+    };
+  }
+
+  if (item.kind === "fusion") {
+    return {
+      url,
+      title: discoverPostShareTitle({ kind: item.kind, collectorName: item.collector.name }),
+      text: discoverPostShareDescription({
+        kind: item.kind,
+        animalName: item.receiverAnimalName,
+        collectorName: item.collector.name,
+        collectorUsername: item.collector.username,
+      }),
+    };
+  }
+
+  if (item.kind === "challenge") {
+    return {
+      url,
+      title: discoverPostShareTitle({
+        kind: item.kind,
+        collectorName: item.attacker.displayName,
+      }),
+      text: item.activitySummary,
+    };
+  }
+
+  return {
+    url,
+    title: discoverPostShareTitle({
+      kind: item.kind,
+      animalName: item.offerer.animalName,
+      collectorName: item.offerer.name,
+    }),
+    text: discoverPostShareDescription({
+      kind: item.kind,
+      animalName: item.offerer.animalName,
+      collectorName: item.offerer.name,
+      collectorUsername: item.offerer.username,
+    }),
+  };
+}
+
 function TimelineShell({
   badge,
   date,
   locale,
   onInfo,
+  share,
   children,
 }: {
   badge: string;
   date: string;
   locale: string;
   onInfo: () => void;
+  share: { url: string; title: string; text?: string };
   children: React.ReactNode;
 }) {
   const formatted = formatAppShortDate(date, locale);
   return (
-    <article className="flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] hover:border-white/14">
+    <article className="flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition  hover:border-white/14">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
         <ActivityBadge label={badge} />
         <div className="flex items-center gap-2.5">
           {formatted ? (
             <span className="text-xs font-bold text-white/35">{formatted}</span>
           ) : null}
+          <ShareDiscoverPostButton url={share.url} title={share.title} text={share.text} compact />
           <button
             type="button"
             onClick={onInfo}
@@ -412,28 +548,309 @@ function TimelineShell({
   );
 }
 
+function CaptureChip({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "green" | "cyan" | "amber" | "violet";
+}) {
+  const tones = {
+    neutral: "bg-white/[0.07] text-white/70 ring-white/10",
+    green: "bg-primary-400/15 text-primary-100 ring-primary-400/20",
+    cyan: "bg-cyan-400/15 text-cyan-100 ring-cyan-400/20",
+    amber: "bg-amber-400/15 text-amber-100 ring-amber-400/20",
+    violet: "bg-violet-400/15 text-violet-100 ring-violet-400/20",
+  };
+  return (
+    <span className={`inline-flex h-[26px] shrink-0 items-center rounded-full px-2.5 text-[0.68rem] font-black ring-1 ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
+  const levelLabel = item.level >= 100 ? "Lvl 100 MAX" : `Lvl ${item.level}`;
+  return (
+    <div className="-mx-0.5 flex max-h-7 flex-wrap gap-1.5 overflow-visible">
+      <CaptureChip tone="green">{levelLabel}</CaptureChip>
+      {item.identityKindLabel ? (
+        <IdentityKindChip
+          identityKind={item.identityKind}
+          label={item.identityKindLabel}
+          animalName={item.animalName}
+          explanation={item.identityExplanation}
+          retakeGuidance={item.identityEvidenceGuidance}
+          compact
+        />
+      ) : null}
+      <CaptureChip tone="cyan">Tier {item.battleTier}</CaptureChip>
+      <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} compact />
+    </div>
+  );
+}
+
+function CaptureCardBody({
+  item,
+  viewerUserId,
+  onItemPatch,
+}: {
+  item: DiscoverCaptureItem;
+  viewerUserId: string | null;
+  onItemPatch?: (patch: Partial<DiscoverCaptureItem>) => void;
+}) {
+  const isOwnPost = Boolean(viewerUserId && item.collector.userId && viewerUserId === item.collector.userId);
+  const canOffer = Boolean(viewerUserId) && !isOwnPost && !item.isUncertain;
+  const canChallenge = Boolean(viewerUserId) && !isOwnPost && item.isChallengeAvailable;
+  const hasMetricPills = item.endorsementCount > 0 || item.isChallengeAvailable;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col justify-center space-y-1.5 overflow-hidden px-3 py-3.5 sm:px-4 sm:py-4">
+      <div className="space-y-1.5">
+        <h3 className="line-clamp-1 font-display text-xl font-bold leading-tight text-white sm:text-2xl">
+          <Link href={item.href}>{item.animalName}</Link>
+        </h3>
+        <CapturePostChipRow item={item} />
+      </div>
+      {item.isUncertain ? <UncertainBadge /> : null}
+      {item.lifeStageChip ? (
+        <span className="inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/65">
+          {item.lifeStageChip}
+        </span>
+      ) : null}
+      {item.headlineSupportingName ? (
+        <p className="line-clamp-1 text-sm leading-5 text-white/55">{item.headlineSupportingName}</p>
+      ) : null}
+      {item.sameSpeciesHelper ? (
+        <p className="line-clamp-1 text-xs leading-4 text-white/40">{item.sameSpeciesHelper}</p>
+      ) : null}
+      {item.learnedPrinciple ? (
+        <p className="flex items-center gap-2 text-sm leading-5 text-white/55">
+          <AppIcon name="spark" className="h-3.5 w-3.5 text-primary-200" />
+          <span className="line-clamp-1">{item.learnedPrinciple}</span>
+        </p>
+      ) : null}
+      {item.bestForTags.length ? (
+        <div className="flex max-h-7 flex-wrap gap-1.5 overflow-hidden">
+          {item.bestForTags.map((tag) => <FeedPill key={tag}>{tag}</FeedPill>)}
+        </div>
+      ) : null}
+      {hasMetricPills ? (
+        <div className="flex max-h-7 flex-wrap items-center gap-1.5 overflow-hidden">
+          {item.endorsementCount > 0 ? (
+            <FeedPill tone="cyan">
+              {item.endorsementCount} endorsement{item.endorsementCount === 1 ? "" : "s"}
+            </FeedPill>
+          ) : null}
+          {item.isChallengeAvailable ? (
+            <FeedPill tone="cyan">Enter {item.challengeStake} credit{item.challengeStake === 1 ? "" : "s"}</FeedPill>
+          ) : null}
+        </div>
+      ) : null}
+      {viewerUserId ? (
+        <DiscoverCaptureActions
+          captureId={item.captureId}
+          isOwnPost={isOwnPost}
+          canChallenge={canChallenge}
+          canOffer={canOffer}
+          viewerEndorsementStat={item.viewerEndorsementStat}
+          onEndorsementChange={(stat, delta) => {
+            onItemPatch?.({
+              viewerEndorsementStat: stat,
+              endorsementCount: Math.max(0, item.endorsementCount + delta)
+            });
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function CaptureCard({
   item,
-  onInfo,
+  locale,
+  viewerUserId,
 }: {
   item: DiscoverCaptureItem;
   locale: string;
-  onInfo: () => void;
+  viewerUserId: string | null;
 }) {
-  const badgeLabel = item.activityBadge.toLowerCase() === "capture" && item.animalDexNumber
-    ? `#${String(item.animalDexNumber).padStart(3, "0")}`
-    : item.activityBadge;
-  const hasActionPills = item.endorsementCount > 0 || item.isChallengeAvailable;
+  const rootRef = useRef<HTMLElement | null>(null);
+  const pagerRef = useRef<HTMLDivElement | null>(null);
+  const [activeItem, setActiveItem] = useState(item);
+  const [rankedItems, setRankedItems] = useState<DiscoverCaptureItem[]>([item]);
+  const [rankedHint, setRankedHint] = useState(false);
+  const [hasMoreRanked, setHasMoreRanked] = useState(false);
+  const [nextRankedOffset, setNextRankedOffset] = useState<number | null>(null);
+  const [isLoadingRanked, setIsLoadingRanked] = useState(false);
+  const didLoadRankedRef = useRef(false);
+
+  useEffect(() => {
+    setActiveItem(item);
+    setRankedItems([item]);
+    setRankedHint(false);
+    setHasMoreRanked(false);
+    setNextRankedOffset(null);
+    didLoadRankedRef.current = false;
+  }, [item.id, item.captureId]);
+
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!node) return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.45);
+      if (!visible || didLoadRankedRef.current) return;
+      didLoadRankedRef.current = true;
+
+      const params = new URLSearchParams({
+        captureId: item.captureId,
+        limit: "10",
+        offset: "0"
+      });
+      if (item.speciesProfileId) params.set("speciesProfileId", item.speciesProfileId);
+      if (item.normalizedIdentityKey) params.set("normalizedIdentityKey", item.normalizedIdentityKey);
+
+      setIsLoadingRanked(true);
+      fetch(`/api/app/discover/ranking-siblings?${params.toString()}`, {headers: {Accept: "application/json"}})
+        .then(async (response) => {
+          if (!response.ok) return;
+          const payload = await response.json() as {
+            items?: DiscoverCaptureItem[];
+            hasMore?: boolean;
+            nextOffset?: number | null;
+          };
+          const siblings = payload.items ?? [];
+          if (siblings.length <= 1) return;
+          const seedFirst = [
+            item,
+            ...siblings.filter((sibling) => sibling.captureId !== item.captureId)
+          ];
+          setRankedItems(seedFirst);
+          setRankedHint(true);
+          setHasMoreRanked(Boolean(payload.hasMore));
+          setNextRankedOffset(payload.nextOffset ?? null);
+        })
+        .finally(() => setIsLoadingRanked(false));
+    }, {threshold: [0, 0.45, 0.75]});
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [item]);
+
+  async function loadMoreRanked() {
+    if (!hasMoreRanked || nextRankedOffset == null || isLoadingRanked) return;
+    setIsLoadingRanked(true);
+    try {
+      const params = new URLSearchParams({
+        captureId: item.captureId,
+        limit: "10",
+        offset: String(nextRankedOffset)
+      });
+      if (item.speciesProfileId) params.set("speciesProfileId", item.speciesProfileId);
+      if (item.normalizedIdentityKey) params.set("normalizedIdentityKey", item.normalizedIdentityKey);
+      const response = await fetch(`/api/app/discover/ranking-siblings?${params.toString()}`, {
+        headers: {Accept: "application/json"}
+      });
+      if (!response.ok) {
+        setHasMoreRanked(false);
+        return;
+      }
+      const payload = await response.json() as {
+        items?: DiscoverCaptureItem[];
+        hasMore?: boolean;
+        nextOffset?: number | null;
+      };
+      const nextItems = payload.items ?? [];
+      setRankedItems((current) => {
+        const seen = new Set(current.map((entry) => entry.captureId));
+        const merged = [...current];
+        for (const entry of nextItems) {
+          if (seen.has(entry.captureId)) continue;
+          seen.add(entry.captureId);
+          merged.push(entry);
+        }
+        return merged;
+      });
+      setHasMoreRanked(Boolean(payload.hasMore));
+      setNextRankedOffset(payload.nextOffset ?? null);
+    } finally {
+      setIsLoadingRanked(false);
+    }
+  }
+
+  function handlePagerScroll() {
+    const pager = pagerRef.current;
+    if (!pager || rankedItems.length <= 1) return;
+    const index = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+    const next = rankedItems[Math.min(rankedItems.length - 1, Math.max(0, index))];
+    if (next && next.captureId !== activeItem.captureId) {
+      setActiveItem(next);
+    }
+    if (rankedItems.length - index <= 2) {
+      void loadMoreRanked();
+    }
+  }
+
+  const shareForActive = {
+    url: getAbsoluteUrl(locale, discoverPostPath(activeItem.id)),
+    title: discoverPostShareTitle({
+      kind: "capture",
+      animalName: activeItem.animalName,
+      collectorName: activeItem.collector.name,
+      contextLabel: activeItem.contextLabel
+    }),
+    text: discoverPostShareDescription({
+      kind: "capture",
+      animalName: activeItem.animalName,
+      collectorName: activeItem.collector.name,
+      collectorUsername: activeItem.collector.username,
+      contextLabel: activeItem.contextLabel,
+      locationLabel: activeItem.locationLabel,
+      hasVideoMedia: activeItem.hasVideoMedia,
+      scientificName: activeItem.scientificName
+    })
+  };
+
+  const showsRankedPager = rankedItems.length > 1;
+  const [showsInfo, setShowsInfo] = useState(false);
+  const peerCollectors = useMemo(() => {
+    const seen = new Set<string>();
+    const peers: DiscoverCollectorRef[] = [];
+
+    for (const ranked of rankedItems) {
+      const peer = ranked.collector;
+      const key = peer.userId ?? peer.username ?? peer.name;
+      if (!key || key === (activeItem.collector.userId ?? activeItem.collector.username ?? activeItem.collector.name)) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      peers.push(peer);
+    }
+
+    return peers;
+  }, [rankedItems, activeItem.collector]);
 
   return (
-    <article className={`flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition [contain-intrinsic-size:760px] [content-visibility:auto] ${item.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}>
+    <>
+    <article
+      ref={rootRef}
+      className={`flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition  ${activeItem.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}
+    >
       <div className="flex shrink-0 items-start justify-between gap-3 p-3 sm:p-4">
-        <CollectorHeader collector={item.collector} />
+        <CollectorHeader collector={activeItem.collector} />
         <div className="flex shrink-0 items-center gap-2">
-          <ActivityBadge label={badgeLabel} />
+          <DiscoverPeerCapturersAvatarStack collectors={peerCollectors} />
+          <ActivityBadge
+            label={
+              activeItem.activityBadge.toLowerCase() === "capture" && activeItem.animalDexNumber
+                ? `#${String(activeItem.animalDexNumber).padStart(3, "0")}`
+                : activeItem.activityBadge
+            }
+          />
+          <ShareDiscoverPostButton url={shareForActive.url} title={shareForActive.title} text={shareForActive.text} compact />
           <button
             type="button"
-            onClick={onInfo}
+            onClick={() => setShowsInfo(true)}
             aria-label="Post information"
             className="rounded-full p-1 text-white/60 transition hover:bg-white/5 hover:text-white"
           >
@@ -441,54 +858,55 @@ function CaptureCard({
           </button>
         </div>
       </div>
-      {item.activityLine ? (
-        <p className="line-clamp-2 shrink-0 px-3 pb-3 text-sm leading-6 text-white/55 sm:px-4 sm:pb-4">{item.activityLine}</p>
+      {activeItem.activityLine ? (
+        <p className="line-clamp-2 shrink-0 px-3 pb-3 text-sm leading-6 text-white/55 sm:px-4 sm:pb-4">{activeItem.activityLine}</p>
       ) : null}
-      <MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} layout="feed" />
-      <div className="flex min-h-0 flex-1 flex-col justify-center space-y-1.5 overflow-hidden px-3 py-3.5 sm:px-4 sm:py-4">
-        <div className="flex items-start justify-between gap-2.5">
-          <h3 className="line-clamp-1 font-display text-xl font-bold leading-tight text-white sm:text-2xl">
-            <Link href={item.href}>{item.animalName}</Link>
-          </h3>
-          <GradeBadge grade={item.captureGrade} />
+
+      {showsRankedPager ? (
+        <div className="relative min-h-0 flex-1">
+          {rankedHint ? (
+            <span className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/80 ring-1 ring-white/15 backdrop-blur-sm">
+              <span aria-hidden="true">↔</span>
+              Ranked
+            </span>
+          ) : null}
+          <div
+            ref={pagerRef}
+            onScroll={handlePagerScroll}
+            className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {rankedItems.map((ranked) => (
+              <div key={ranked.captureId} className="flex h-full w-full shrink-0 snap-center flex-col">
+                <MediaCarousel assets={ranked.mediaAssets} animalName={ranked.animalName} isUncertain={ranked.isUncertain} layout="feed" />
+                <CaptureCardBody
+                  item={ranked}
+                  viewerUserId={viewerUserId}
+                  onItemPatch={(patch) => {
+                    setRankedItems((current) => current.map((entry) => (
+                      entry.captureId === ranked.captureId ? {...entry, ...patch} : entry
+                    )));
+                    setActiveItem((current) => (
+                      current.captureId === ranked.captureId ? {...current, ...patch} : current
+                    ));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-        {item.isUncertain ? <UncertainBadge /> : null}
-        {item.lifeStageChip ? (
-          <span className="inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/65">
-            {item.lifeStageChip}
-          </span>
-        ) : null}
-        {item.headlineSupportingName ? (
-          <p className="line-clamp-1 text-sm leading-5 text-white/55">{item.headlineSupportingName}</p>
-        ) : null}
-        {item.sameSpeciesHelper ? (
-          <p className="line-clamp-1 text-xs leading-4 text-white/40">{item.sameSpeciesHelper}</p>
-        ) : null}
-        {item.learnedPrinciple ? (
-          <p className="flex items-center gap-2 text-sm leading-5 text-white/55">
-            <AppIcon name="spark" className="h-3.5 w-3.5 text-primary-200" />
-            <span className="line-clamp-1">{item.learnedPrinciple}</span>
-          </p>
-        ) : null}
-        {item.bestForTags.length ? (
-          <div className="flex max-h-7 flex-wrap gap-1.5 overflow-hidden">
-            {item.bestForTags.map((tag) => <FeedPill key={tag}>{tag}</FeedPill>)}
-          </div>
-        ) : null}
-        {hasActionPills ? (
-          <div className="flex max-h-7 flex-wrap items-center gap-1.5 overflow-hidden">
-            {item.endorsementCount > 0 ? (
-              <FeedPill tone="cyan">
-                {item.endorsementCount} endorsement{item.endorsementCount === 1 ? "" : "s"}
-              </FeedPill>
-            ) : null}
-            {item.isChallengeAvailable ? (
-              <FeedPill tone="cyan">Enter {item.challengeStake} credit{item.challengeStake === 1 ? "" : "s"}</FeedPill>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      ) : (
+        <>
+          <MediaCarousel assets={activeItem.mediaAssets} animalName={activeItem.animalName} isUncertain={activeItem.isUncertain} layout="feed" />
+          <CaptureCardBody
+            item={activeItem}
+            viewerUserId={viewerUserId}
+            onItemPatch={(patch) => setActiveItem((current) => ({...current, ...patch}))}
+          />
+        </>
+      )}
     </article>
+    {showsInfo ? <PostInformation item={activeItem} locale={locale} onClose={() => setShowsInfo(false)} /> : null}
+    </>
   );
 }
 
@@ -496,13 +914,15 @@ function AlignmentCard({
   item,
   locale,
   onInfo,
+  share,
 }: {
   item: DiscoverAlignmentItem;
   locale: string;
   onInfo: () => void;
+  share: { url: string; title: string; text?: string };
 }) {
   return (
-    <TimelineShell badge="Daily alignment" date={item.date} locale={locale} onInfo={onInfo}>
+    <TimelineShell badge="Daily alignment" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="grid gap-4 p-4 md:grid-cols-[7.5rem_1fr]">
         <Link
           href={item.href}
@@ -541,13 +961,15 @@ function FusionCard({
   item,
   locale,
   onInfo,
+  share,
 }: {
   item: DiscoverFusionItem;
   locale: string;
   onInfo: () => void;
+  share: { url: string; title: string; text?: string };
 }) {
   return (
-    <TimelineShell badge="Principle fusion" date={item.date} locale={locale} onInfo={onInfo}>
+    <TimelineShell badge="Principle fusion" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="space-y-4 p-4">
         <div className="flex items-center gap-3">
           <div className="h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
@@ -668,15 +1090,17 @@ function ChallengeCard({
   item,
   locale,
   onInfo,
+  share,
 }: {
   item: DiscoverChallengeItem;
   locale: string;
   onInfo: () => void;
+  share: { url: string; title: string; text?: string };
 }) {
   const attackerWon = item.winnerCaptureId === item.attacker.captureId;
 
   return (
-    <TimelineShell badge="Scenario arena" date={item.date} locale={locale} onInfo={onInfo}>
+    <TimelineShell badge="Scenario arena" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="space-y-4 p-4">
         <p className="font-display text-xl font-bold text-white">{item.outcomeLine}</p>
         {item.winningsLine ? (
@@ -707,13 +1131,15 @@ function TradeCard({
   item,
   locale,
   onInfo,
+  share,
 }: {
   item: DiscoverTradeItem;
   locale: string;
   onInfo: () => void;
+  share: { url: string; title: string; text?: string };
 }) {
   return (
-    <TimelineShell badge="Trade" date={item.date} locale={locale} onInfo={onInfo}>
+    <TimelineShell badge="Trade" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="grid gap-3 p-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
           <div className="aspect-[4/3] overflow-hidden rounded-xl bg-white/5">
@@ -812,10 +1238,30 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
             <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-[#38fa47]/10 px-2.5 py-1 text-[11px] font-black text-[#38fa47]">{item.animalDexNumber ? `#${String(item.animalDexNumber).padStart(3, "0")}` : "CAPTURE"}</span><span className="text-xs font-semibold text-white/35">{date}</span></div>
             <div className="flex items-center gap-3">{item.collector.avatarUrl ? <img src={item.collector.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover"/> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">{item.collector.name.slice(0,1)}</span>}<div><p className="text-sm font-semibold text-white">{item.collector.name}</p>{item.collector.username ? <p className="text-xs text-white/40">@{item.collector.username}</p> : null}</div></div>
             <div className="overflow-hidden rounded-[20px]"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} /></div>
-            <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3><GradeBadge grade={item.captureGrade} /></div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
-            <div className="flex flex-wrap gap-2 text-[11px] font-bold">{item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}{item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}<FeedPill tone="green">Lvl {item.level}</FeedPill><FeedPill tone="violet">Rarity {item.rarity}</FeedPill>{item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}</div>
+            <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3><CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} /></div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
+            <div className="flex flex-wrap gap-2 text-[11px] font-bold">
+              {item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}
+              {item.identityKindLabel ? (
+                <IdentityKindChip
+                  identityKind={item.identityKind}
+                  label={item.identityKindLabel}
+                  animalName={item.animalName}
+                  explanation={item.identityExplanation}
+                  retakeGuidance={item.identityEvidenceGuidance}
+                  compact
+                />
+              ) : null}
+              {item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}
+              <FeedPill tone="green">Lvl {item.level}</FeedPill>
+              <FeedPill tone="cyan">Tier {item.battleTier}</FeedPill>
+              <FeedPill tone="violet">Rarity {item.rarity}</FeedPill>
+              {item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}
+            </div>
             {item.mediaCount > 1 ? <div className="rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4"><p className="text-[11px] font-semibold text-white/40">Media</p><p className="mt-2 text-sm text-white/60">{item.mediaCount} media items attached to this capture{item.hasVideoMedia ? ", including video/loop media." : "."}</p></div> : null}
             <div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3">
+              <DetailRow label="Principle" value={item.learnedPrinciple}/>
+              <DetailRow label="Core lesson" value={item.coreLesson}/>
+              <DetailPills label="Best for" values={item.bestForTags}/>
               <DetailRow label="Post ID" value={item.captureId}/>
               {item.mediaCount > 1 ? <DetailRow label="Media count" value={item.mediaCount}/> : null}
             </div>
@@ -837,31 +1283,34 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
 export function DiscoverTimelineCard({
   item,
   locale,
+  viewerUserId = null,
 }: {
   item: DiscoverTimelineItem;
   locale: string;
+  viewerUserId?: string | null;
 }) {
   const [showsInfo, setShowsInfo] = useState(false);
   const onInfo = () => setShowsInfo(true);
+  const share = sharePropsForItem(item, locale);
   let card: React.ReactNode;
 
   switch (item.kind) {
     case "capture":
-      card = <CaptureCard item={item} locale={locale} onInfo={onInfo} />;
+      card = <CaptureCard item={item} locale={locale} viewerUserId={viewerUserId} />;
       break;
     case "alignment":
-      card = <AlignmentCard item={item} locale={locale} onInfo={onInfo} />;
+      card = <AlignmentCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
     case "fusion":
-      card = <FusionCard item={item} locale={locale} onInfo={onInfo} />;
+      card = <FusionCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
     case "challenge":
-      card = <ChallengeCard item={item} locale={locale} onInfo={onInfo} />;
+      card = <ChallengeCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
     case "trade":
-      card = <TradeCard item={item} locale={locale} onInfo={onInfo} />;
+      card = <TradeCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
   }
 
-  return <>{card}{showsInfo ? <PostInformation item={item} locale={locale} onClose={() => setShowsInfo(false)} /> : null}</>;
+  return <>{card}{showsInfo && item.kind !== "capture" ? <PostInformation item={item} locale={locale} onClose={() => setShowsInfo(false)} /> : null}</>;
 }

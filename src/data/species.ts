@@ -18,6 +18,8 @@ import {additionalSpeciesEntriesInputSixteen} from "@/data/species-expansion-pac
 import {additionalSpeciesEntriesInputSeventeen} from "@/data/legendary-earth-beasts-species";
 import {NativeRangeRegionKey, speciesMatchesNativeRangeRegion} from "@/data/native-range";
 import {getLocationAnimalSpeciesSlugs} from "@/data/locations";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
+import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import {speciesDirectoryMatchesQuery} from "@/lib/species-life-stage-policy";
 
 export type SpeciesAnalysis = {
@@ -70,6 +72,18 @@ export type SpeciesEntry = {
 
 export type SpeciesDirectoryLetter = "all" | string;
 export type SpeciesRarityStatusKey = "very-rare" | "rare" | "uncommon" | "relatively-common";
+export type SpeciesDirectorySort =
+    | "number"
+    | "name"
+    | "rarity"
+    | "dominance"
+    | "speed"
+    | "size"
+    | "intelligence";
+
+export type SpeciesDirectorySortOrder = "asc" | "desc";
+
+export type SpeciesDirectoryTierFilter = "all" | "S" | "A" | "B" | "C" | "D" | "E";
 
 export type SpeciesDirectoryPage = {
     entries: SpeciesEntry[];
@@ -81,9 +95,47 @@ export type SpeciesDirectoryPage = {
     region: NativeRangeRegionKey | "all";
     location: string | "all";
     status: SpeciesRarityStatusKey | "all";
+    sort: SpeciesDirectorySort;
+    order: SpeciesDirectorySortOrder;
+    tier: SpeciesDirectoryTierFilter;
 };
 
 export const SPECIES_DIRECTORY_PAGE_SIZE = 48;
+export const SPECIES_DIRECTORY_SORT_OPTIONS: Array<{
+    id: SpeciesDirectorySort;
+    titleKey: string;
+    detailKey: string;
+}> = [
+    {id: "number", titleKey: "sortNumberTitle", detailKey: "sortNumberDetail"},
+    {id: "rarity", titleKey: "sortRarityTitle", detailKey: "sortRarityDetail"},
+    {id: "dominance", titleKey: "sortDominanceTitle", detailKey: "sortDominanceDetail"},
+    {id: "speed", titleKey: "sortSpeedTitle", detailKey: "sortSpeedDetail"},
+    {id: "size", titleKey: "sortSizeTitle", detailKey: "sortSizeDetail"},
+    {id: "intelligence", titleKey: "sortIntelligenceTitle", detailKey: "sortIntelligenceDetail"},
+    {id: "name", titleKey: "sortNameTitle", detailKey: "sortNameDetail"}
+];
+
+export function isSpeciesDirectorySort(value: string): value is SpeciesDirectorySort {
+    return SPECIES_DIRECTORY_SORT_OPTIONS.some((option) => option.id === value);
+}
+
+export function getDefaultSpeciesDirectorySortOrder(sort: SpeciesDirectorySort): SpeciesDirectorySortOrder {
+    switch (sort) {
+        case "number":
+        case "name":
+            return "asc";
+        default:
+            return "desc";
+    }
+}
+
+export function isSpeciesDirectorySortOrder(value: string): value is SpeciesDirectorySortOrder {
+    return value === "asc" || value === "desc";
+}
+
+export function isSpeciesDirectoryTierFilter(value: string): value is SpeciesDirectoryTierFilter {
+    return ["all", "S", "A", "B", "C", "D", "E"].includes(value);
+}
 
 type SpeciesEntryInput = Omit<SpeciesEntry, "heroTitle" | "publishedAt" | "updatedAt" | "featuredImage" | "searchIntents" | "relatedSpecies" | "premiumDetails"> & {
     heroTitle?: string;
@@ -4022,6 +4074,30 @@ export function getSpeciesBySlug(slug: string) {
     return speciesBySlug.get(slug);
 }
 
+const DIRECTORY_STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+function getDirectoryBattleTier(entry: SpeciesEntry): AnimalBattleTier | null {
+    if (getLegendaryEarthBeast(entry.slug)) {
+        return "S";
+    }
+
+    const rawStats = entry.databaseSource?.canonicalGameStats;
+    if (!rawStats) {
+        return null;
+    }
+
+    const stats = {} as SpeciesStats;
+    for (const key of DIRECTORY_STAT_KEYS) {
+        const value = Number(rawStats[key]);
+        if (!Number.isFinite(value)) {
+            return null;
+        }
+        stats[key] = value;
+    }
+
+    return getBattleTier(stats);
+}
+
 export function getSpeciesDirectoryPage({
     page = 1,
     query = "",
@@ -4029,6 +4105,9 @@ export function getSpeciesDirectoryPage({
     region = "all",
     location = "all",
     status = "all",
+    sort = "number",
+    order,
+    tier = "all",
     pageSize = SPECIES_DIRECTORY_PAGE_SIZE,
     entries = speciesEntries
 }: {
@@ -4038,6 +4117,9 @@ export function getSpeciesDirectoryPage({
     region?: NativeRangeRegionKey | "all";
     location?: string | "all";
     status?: SpeciesRarityStatusKey | "all";
+    sort?: SpeciesDirectorySort;
+    order?: SpeciesDirectorySortOrder;
+    tier?: SpeciesDirectoryTierFilter;
     pageSize?: number;
     entries?: SpeciesEntry[];
 }): SpeciesDirectoryPage {
@@ -4046,6 +4128,12 @@ export function getSpeciesDirectoryPage({
     const normalizedRegion = region === "all" ? "all" : region;
     const normalizedLocation = location === "all" ? "all" : location;
     const normalizedStatus = status === "all" ? "all" : status;
+    const normalizedSort = isSpeciesDirectorySort(sort) ? sort : "number";
+    const normalizedOrder: SpeciesDirectorySortOrder = isSpeciesDirectorySortOrder(order ?? "")
+        ? order!
+        : getDefaultSpeciesDirectorySortOrder(normalizedSort);
+    const ascending = normalizedOrder === "asc";
+    const normalizedTier = isSpeciesDirectoryTierFilter(tier) ? tier : "all";
     const allowedLocationSpeciesSlugs = normalizedLocation === "all"
         ? null
         : new Set(getLocationAnimalSpeciesSlugs(normalizedLocation));
@@ -4075,6 +4163,16 @@ export function getSpeciesDirectoryPage({
             return false;
         }
 
+        if (normalizedTier === "S") {
+            if (!getLegendaryEarthBeast(entry.slug)) {
+                return false;
+            }
+        } else if (normalizedTier !== "all") {
+            if (getDirectoryBattleTier(entry) !== normalizedTier) {
+                return false;
+            }
+        }
+
         if (!normalizedQuery) {
             return true;
         }
@@ -4082,13 +4180,75 @@ export function getSpeciesDirectoryPage({
         return speciesDirectoryMatchesQuery(entry, normalizedQuery);
     });
 
-    const total = filtered.length;
+    const directoryNumber = (entry: SpeciesEntry) => {
+        const number = entry.databaseSource?.animalDexNumber;
+        return typeof number === "number" && number >= 1 ? number : null;
+    };
+
+    const compareByNumber = (left: SpeciesEntry, right: SpeciesEntry) => {
+        const leftNumber = directoryNumber(left);
+        const rightNumber = directoryNumber(right);
+        if (leftNumber != null && rightNumber != null && leftNumber !== rightNumber) {
+            return ascending ? leftNumber - rightNumber : rightNumber - leftNumber;
+        }
+        if ((leftNumber != null) !== (rightNumber != null)) {
+            return leftNumber != null ? -1 : 1;
+        }
+        const byName = left.name.localeCompare(right.name) || left.slug.localeCompare(right.slug);
+        return ascending ? byName : -byName;
+    };
+
+    const compareByStat = (
+        left: SpeciesEntry,
+        right: SpeciesEntry,
+        key: "dominance" | "speed" | "size" | "intelligence" | "rarity"
+    ) => {
+        const leftValue = Number(left.databaseSource?.canonicalGameStats?.[key] ?? -1);
+        const rightValue = Number(right.databaseSource?.canonicalGameStats?.[key] ?? -1);
+        const hasLeft = Number.isFinite(leftValue) && leftValue >= 0;
+        const hasRight = Number.isFinite(rightValue) && rightValue >= 0;
+
+        if (hasLeft !== hasRight) {
+            return hasLeft ? -1 : 1;
+        }
+
+        if (hasLeft && hasRight && leftValue !== rightValue) {
+            return ascending ? leftValue - rightValue : rightValue - leftValue;
+        }
+
+        return compareByNumber(left, right);
+    };
+
+    const sorted = [...filtered].sort((left, right) => {
+        switch (normalizedSort) {
+            case "name": {
+                const byName = left.name.localeCompare(right.name);
+                if (byName !== 0) return ascending ? byName : -byName;
+                return compareByNumber(left, right);
+            }
+            case "rarity":
+                return compareByStat(left, right, "rarity");
+            case "dominance":
+                return compareByStat(left, right, "dominance");
+            case "speed":
+                return compareByStat(left, right, "speed");
+            case "size":
+                return compareByStat(left, right, "size");
+            case "intelligence":
+                return compareByStat(left, right, "intelligence");
+            case "number":
+            default:
+                return compareByNumber(left, right);
+        }
+    });
+
+    const total = sorted.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const currentPage = Math.min(Math.max(1, page), totalPages);
     const start = (currentPage - 1) * pageSize;
 
     return {
-        entries: filtered.slice(start, start + pageSize),
+        entries: sorted.slice(start, start + pageSize),
         total,
         totalPages,
         currentPage,
@@ -4096,7 +4256,10 @@ export function getSpeciesDirectoryPage({
         letter: normalizedLetter,
         region: normalizedRegion,
         location: normalizedLocation,
-        status: normalizedStatus
+        status: normalizedStatus,
+        sort: normalizedSort,
+        order: normalizedOrder,
+        tier: normalizedTier
     };
 }
 

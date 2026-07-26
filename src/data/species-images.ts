@@ -16,7 +16,7 @@ import {
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {resolveCaptureImageGrade, type CaptureGradeSource} from "@/lib/capture-grade";
+import {computeCaptureGradeBreakdown, resolveCaptureImageGrade, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
 
 export {
     SPECIES_NO_IMAGE_SRC,
@@ -580,6 +580,7 @@ function createSpeciesImageReference(input: {
     mimeType: string | null;
     mediaKind: string | null;
     imageGrade: string | null;
+    gradeBreakdown?: CaptureGradeBreakdown | null;
     animalName: string | null;
     username: string | null;
     contextLabel: string | null;
@@ -592,10 +593,19 @@ function createSpeciesImageReference(input: {
         mimeType: input.mimeType,
         mediaKind: input.mediaKind,
         imageGrade: input.imageGrade,
+        gradeBreakdown: input.gradeBreakdown ?? null,
         animalName: input.animalName,
         username: input.username,
         contextLabel: input.contextLabel,
         locationDisplayLabel: input.locationDisplayLabel
+    };
+}
+
+function gradeFieldsFromSource(source: CaptureGradeSource | null | undefined) {
+    const gradeBreakdown = computeCaptureGradeBreakdown(source);
+    return {
+        imageGrade: resolveCaptureImageGrade(source),
+        gradeBreakdown
     };
 }
 
@@ -649,7 +659,7 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
             imagePath: candidate.image_path,
             mimeType: candidate.image_mime_type ?? null,
             mediaKind: candidate.image_media_kind ?? null,
-            imageGrade: resolveCaptureImageGrade(candidate),
+            ...gradeFieldsFromSource(candidate),
             animalName: candidate.animal_name ?? null,
             username: candidate.profile_username?.trim() || null,
             contextLabel: getContextLabel(candidate),
@@ -681,7 +691,7 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
                 imagePath: image.storage_path,
                 mimeType: image.mime_type,
                 mediaKind: image.media_kind,
-                imageGrade: resolveCaptureImageGrade(discoverFeedMatch ?? analysisMatch),
+                ...gradeFieldsFromSource(discoverFeedMatch ?? analysisMatch),
                 animalName: discoverFeedMatch?.animal_name ?? entry.name,
                 username: discoverFeedMatch?.profile_username?.trim() || null,
                 contextLabel: discoverFeedMatch ? getContextLabel(discoverFeedMatch) : null,
@@ -710,7 +720,7 @@ export async function getPublicCaptureImageReference(captureId: string, entry?: 
             imagePath: image.storage_path,
             mimeType: image.mime_type,
             mediaKind: image.media_kind,
-            imageGrade: resolveCaptureImageGrade(discoverFeedMatch),
+            ...gradeFieldsFromSource(discoverFeedMatch),
             animalName: discoverFeedMatch?.animal_name ?? entry?.name ?? "AnimalDex capture",
             username: discoverFeedMatch?.profile_username?.trim() || null,
             contextLabel: discoverFeedMatch ? getContextLabel(discoverFeedMatch) : null,
@@ -728,7 +738,7 @@ export async function getPublicCaptureImageReference(captureId: string, entry?: 
             imagePath: candidate.image_path,
             mimeType: candidate.image_mime_type ?? null,
             mediaKind: candidate.image_media_kind ?? null,
-            imageGrade: resolveCaptureImageGrade(candidate),
+            ...gradeFieldsFromSource(candidate),
             animalName: candidate.animal_name ?? entry?.name ?? "AnimalDex capture",
             username: candidate.profile_username?.trim() || null,
             contextLabel: getContextLabel(candidate),
