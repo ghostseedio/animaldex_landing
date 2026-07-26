@@ -159,9 +159,17 @@ export default async function ComparisonDetailPage({params}: Props) {
     ].filter((link): link is {href: string; label: string} => Boolean(link));
 
     return (
-        <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 py-12 md:px-8 md:py-20">
+        <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 pb-12 pt-5 md:px-8 md:pb-20 md:pt-8">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
-            <Link href="/comparisons" className="w-fit text-sm text-primary-200 hover:text-primary-100" underline>{t("back")}</Link>
+            <Link
+                href="/comparisons"
+                className="-mb-4 inline-flex w-fit items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary-200 hover:text-primary-100"
+            >
+                <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" aria-hidden="true">
+                    <path d="M12.5 4.5 7 10l5.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {t("back")}
+            </Link>
 
             <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
 
@@ -199,7 +207,15 @@ export default async function ComparisonDetailPage({params}: Props) {
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("fieldProfiles")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("exploreAnimalsTitle")}</h2></div>
                 <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => (
                     <article key={species.slug} className="group overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900">
-                        <SpeciesArtworkImage slug={species.slug} alt={species.name} className="h-64 w-full transition duration-500 group-hover:scale-[1.02]" sizes="(min-width: 768px) 50vw, 100vw" />
+                        <div className="h-64 p-5 md:p-6">
+                            <SpeciesArtworkImage
+                                slug={species.slug}
+                                alt={species.name}
+                                fit="contain"
+                                className="h-full w-full rounded-2xl transition duration-500 group-hover:scale-[1.02]"
+                                sizes="(min-width: 768px) 50vw, 100vw"
+                            />
+                        </div>
                         <div className="space-y-5 p-6 md:p-7">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
@@ -215,7 +231,7 @@ export default async function ComparisonDetailPage({params}: Props) {
                                 <div><span className="block text-xs text-ink-300">{t("sizeStat")}</span><strong className="text-lg text-white">{stats?.size ?? "—"}</strong></div>
                             </div>
                             {species.hasCatalogPage ? (
-                                <Link href={`/animals/${species.slug}`} className="inline-flex font-bold text-primary-200 hover:text-primary-100" underline>{t("readSpecies")}</Link>
+                                <Link href={`/animals/${species.slug}`} className="inline-flex whitespace-nowrap font-bold text-primary-200 hover:text-primary-100" underline>{t("readSpecies")}</Link>
                             ) : (
                                 <p className="text-sm text-ink-300">Species guide coming soon.</p>
                             )}

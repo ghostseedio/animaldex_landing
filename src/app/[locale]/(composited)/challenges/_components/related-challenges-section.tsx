@@ -38,9 +38,8 @@ export default function RelatedChallengesSection({
                         key={item.slug}
                         className="group overflow-hidden rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur flex flex-col"
                     >
-                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-gradient-to-br from-primary-500/25 via-surface-800 to-violet-500/20">
+                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-surface-800">
                             {item.image ? <Image src={item.image.src} alt={item.image.alt} width={item.image.width} height={item.image.height} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : null}
-                            <div className="absolute inset-0 bg-gradient-to-t from-surface-950 to-transparent" />
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-5">
                         <div className="flex flex-wrap gap-2">

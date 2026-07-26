@@ -27,9 +27,23 @@ export default function Header({locale}: {locale?: string}) {
                         />
                         <span className="text-xl tracking-tight text-white md:text-2xl">{t("title")}</span>
                     </Link>
-                    <LocaleToggle currentLocale={currentLocale}/>
+                    <LocaleToggle currentLocale={resolvedLocale} />
                 </div>
-                <HeaderMenu>
+                <HeaderMenu
+                    logoLabel={t("logo")}
+                    brandTitle={t("title")}
+                    getAppLabel={t("download")}
+                    mobileLinks={(
+                        <>
+                            <HeaderLink href="/animals" mobile>{t("animals")}</HeaderLink>
+                            <HeaderLink href="/animal-wisdom" mobile>{t("animalWisdom")}</HeaderLink>
+                            <HeaderLink href="/blog" mobile>{t("blog")}</HeaderLink>
+                            <HeaderLink href="/#team" mobile>{t("team")}</HeaderLink>
+                            <HeaderLink href="/#features" mobile>{t("features")}</HeaderLink>
+                        </>
+                    )}
+                    mobileAuth={<HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} mobile />}
+                >
                     <HeaderLink href="/#team" data-cursor-text={t("team")}>
                         {t("team")}
                     </HeaderLink>
@@ -59,26 +73,8 @@ export default function Header({locale}: {locale?: string}) {
                             {t("download")}
                         </span>
                     </Link>
-                    <HeaderLink href="/animals" mobile>
-                        {t("animals")}
-                    </HeaderLink>
-                    <HeaderLink href="/animal-wisdom" mobile>
-                        {t("animalWisdom")}
-                    </HeaderLink>
-                    <HeaderLink href="/blog" mobile>
-                        {t("blog")}
-                    </HeaderLink>
-                    <HeaderLink href="/app" mobile>
-                        {t("signIn")}
-                    </HeaderLink>
-                    <HeaderLink href="/app" mobile>
-                        {t("myAnimals")}
-                    </HeaderLink>
-                    <HeaderLink href="/#download" mobile>
-                        {t("download")}
-                    </HeaderLink>
                 </HeaderMenu>
             </div>
         </header>
-    )
+    );
 }

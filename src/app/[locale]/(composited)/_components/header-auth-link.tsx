@@ -1,11 +1,13 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
+import {MenuContext} from "@/app/[locale]/(composited)/_components/header-menu";
 
 type HeaderAuthLinkProps = {
     signInLabel: string;
     myAnimalsLabel: string;
+    mobile?: boolean;
 };
 
 type SessionResponse = {
@@ -14,7 +16,8 @@ type SessionResponse = {
     displayName: string | null;
 };
 
-export default function HeaderAuthLink({signInLabel, myAnimalsLabel}: HeaderAuthLinkProps) {
+export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
+    const {setOpen} = useContext(MenuContext);
     const [session, setSession] = useState<SessionResponse | null>(null);
     const [isReady, setIsReady] = useState(false);
 
@@ -47,19 +50,26 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel}: HeaderAuth
 
     if (!isReady) {
         return (
-            <span className="hidden h-10 w-24 rounded-2xl border border-white/10 bg-white/5 md:inline-flex" aria-hidden="true" />
+            <span
+                className={mobile
+                    ? "inline-flex h-12 w-full rounded-2xl border border-white/10 bg-white/5 md:hidden"
+                    : "hidden h-10 w-24 rounded-2xl border border-white/10 bg-white/5 md:inline-flex"}
+                aria-hidden="true"
+            />
         );
     }
 
-    if (session?.user) {
-        const label = session.username
-            ? `@${session.username}`
-            : session.displayName ?? myAnimalsLabel;
+    const href = "/app";
+    const label = session?.user
+        ? (session.username ? `@${session.username}` : session.displayName ?? myAnimalsLabel)
+        : signInLabel;
 
+    if (mobile) {
         return (
             <Link
-                href="/app"
-                className="hidden rounded-2xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100 md:inline-flex"
+                href={href}
+                onClick={() => setOpen(false)}
+                className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/20 bg-white/[0.04] px-4 text-base font-semibold text-white transition hover:border-primary-400/50 hover:bg-white/[0.07] md:hidden"
             >
                 {label}
             </Link>
@@ -68,10 +78,10 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel}: HeaderAuth
 
     return (
         <Link
-            href="/app"
+            href={href}
             className="hidden rounded-2xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100 md:inline-flex"
         >
-            {signInLabel}
+            {label}
         </Link>
     );
 }

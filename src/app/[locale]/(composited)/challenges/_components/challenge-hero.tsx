@@ -36,7 +36,8 @@ export default function ChallengeHero({
                     sizes="(min-width: 1280px) 960px, (min-width: 768px) 80vw, 100vw"
                     className="h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/55 to-surface-950/20" />
+                <div className="absolute inset-0 bg-surface-950/45" />
+                <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/60 to-surface-950/25" />
                 <div className="absolute inset-0 bg-gradient-to-r from-surface-950/85 via-transparent to-transparent" />
             </div>
 
