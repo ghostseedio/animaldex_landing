@@ -85,3 +85,23 @@ export function playMatchupLoss() {
     tone(330, start, 0.14, 0.08, "triangle");
     tone(262, start + 0.1, 0.22, 0.09, "sine");
 }
+
+export function playRewardPoints() {
+    const ctx = getAudioContext();
+    if (!ctx || !isSoundEnabled()) return;
+
+    const start = ctx.currentTime;
+    [587, 740, 880].forEach((frequency, index) => {
+        tone(frequency, start + index * 0.06, 0.14, 0.08 - index * 0.01, "sine");
+    });
+}
+
+export function playRewardCredits() {
+    const ctx = getAudioContext();
+    if (!ctx || !isSoundEnabled()) return;
+
+    const start = ctx.currentTime;
+    tone(523, start, 0.1, 0.07, "triangle");
+    tone(659, start + 0.08, 0.12, 0.08, "sine");
+    tone(784, start + 0.16, 0.18, 0.07, "sine");
+}

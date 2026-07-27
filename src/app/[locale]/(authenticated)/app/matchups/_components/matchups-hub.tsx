@@ -6,9 +6,11 @@ import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-
 import {AppPage, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
 import ChallengeWizardSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-wizard-sheet";
+import ChallengeSettingsSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-settings-sheet";
 import MatchupsArenaTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-arena-tab";
 import MatchupsHistoryTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-history-tab";
 import type {MatchupHistoryItem, MatchupOpponent, MatchupResolveResult, MatchupRosterCapture} from "@/data/matchups-types";
+import type {SpeciesComparisonSummary} from "@/data/species-comparisons";
 
 type Segment = "arena" | "history";
 
@@ -18,6 +20,7 @@ export default function MatchupsHub({
     initialArena,
     initialRoster,
     initialHistory,
+    initialPopularBreakdowns,
     initialTargetId
 }: {
     locale: string;
@@ -25,6 +28,7 @@ export default function MatchupsHub({
     initialArena: MatchupOpponent[];
     initialRoster: MatchupRosterCapture[];
     initialHistory: MatchupHistoryItem[];
+    initialPopularBreakdowns: SpeciesComparisonSummary[];
     initialTargetId: string | null;
 }) {
     const router = useRouter();
@@ -33,6 +37,7 @@ export default function MatchupsHub({
     const [segment, setSegment] = useState<Segment>("arena");
     const [arena, setArena] = useState(initialArena);
     const [history, setHistory] = useState(initialHistory);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [activeOpponent, setActiveOpponent] = useState<MatchupOpponent | null>(null);
     const [targetError, setTargetError] = useState<string | null>(null);
 
@@ -117,18 +122,31 @@ export default function MatchupsHub({
         <AppPage>
             <div className="space-y-3">
                 <TrainBackLink />
-                <header className="space-y-2">
-                    <p className="text-[0.62rem] font-black uppercase tracking-[0.13em] text-primary-200/90">Scenario Arena</p>
-                    <h1 className="font-display text-[34px] font-black leading-none text-white">Matchup Arena</h1>
-                    <p className="text-base text-white/55">
-                        Challenge other animals, wager credits, and see which instincts win the scenario.
-                    </p>
+                <header className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1.5">
+                        <h1 className="font-display text-[28px] font-black leading-none text-white md:text-[34px]">
+                            Comparisons
+                        </h1>
+                        <p className="text-sm text-white/55 md:text-base">
+                            Pick an animal to compare
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        aria-label="Comparison settings"
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:border-white/20 hover:bg-white/[0.08]"
+                    >
+                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" aria-hidden="true">
+                            <path d="M3.5 6.5h13M5.5 10h9M7.5 13.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        </svg>
+                    </button>
                 </header>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
                 {[
-                    {label: "Available", value: arena.length, accent: "bg-primary-400"},
+                    {label: "Ready", value: arena.length, accent: "bg-primary-400"},
                     {label: "Wins", value: winCount, accent: "bg-violet-400"},
                     {label: "Net credits", value: netCreditsLabel, accent: "bg-amber-400"}
                 ].map((metric) => (
@@ -143,7 +161,7 @@ export default function MatchupsHub({
             <AppSegmentedControl
                 value={segment}
                 options={[
-                    {id: "arena", label: "Arena"},
+                    {id: "arena", label: "Find"},
                     {id: "history", label: "History"}
                 ]}
                 onChange={setSegment}
@@ -157,10 +175,20 @@ export default function MatchupsHub({
             ) : null}
 
             {segment === "arena" ? (
-                <MatchupsArenaTab opponents={arena} roster={roster} onChallenge={handleChallenge} />
+                <MatchupsArenaTab
+                    opponents={arena}
+                    roster={roster}
+                    popularBreakdowns={initialPopularBreakdowns}
+                    onOpenSettings={() => setSettingsOpen(true)}
+                    onChallenge={handleChallenge}
+                />
             ) : (
                 <MatchupsHistoryTab history={history} locale={locale} />
             )}
+
+            {settingsOpen ? (
+                <ChallengeSettingsSheet roster={roster} onClose={() => setSettingsOpen(false)} />
+            ) : null}
 
             {activeOpponent ? (
                 <ChallengeWizardSheet

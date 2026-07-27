@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import PickAnimalStep from "@/app/[locale]/(authenticated)/app/matchups/_components/steps/pick-animal-step";
 import PreviewMatchupStep from "@/app/[locale]/(authenticated)/app/matchups/_components/steps/preview-matchup-step";
@@ -11,6 +11,12 @@ import {friendlyChallengeError} from "@/lib/matchup-stats";
 import {unlockMatchupAudio} from "@/lib/matchup-sounds";
 
 type WizardStep = "pick" | "preview" | "resolving" | "result";
+
+const MAX_HEARTS = 3;
+
+function clampHealth(value: number) {
+    return Math.max(0, Math.min(MAX_HEARTS, value));
+}
 
 export default function ChallengeWizardSheet({
     opponent,
@@ -31,6 +37,11 @@ export default function ChallengeWizardSheet({
     const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);
     const [result, setResult] = useState<MatchupResolveResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [attackerHealth, setAttackerHealth] = useState(MAX_HEARTS);
+    const [opponentHealth, setOpponentHealth] = useState(clampHealth(opponent.challengeHealth));
+    const [baselineAttackerHealth, setBaselineAttackerHealth] = useState(MAX_HEARTS);
+    const [baselineOpponentHealth, setBaselineOpponentHealth] = useState(clampHealth(opponent.challengeHealth));
+    const [isRematching, setIsRematching] = useState(false);
 
     const attacker = roster.find((capture) => capture.captureId === selectedCaptureId) ?? null;
 
@@ -42,9 +53,32 @@ export default function ChallengeWizardSheet({
         };
     }, []);
 
-    async function runMatchup() {
+    useEffect(() => {
+        if (!attacker) return;
+        const health = clampHealth(attacker.challengeHealth);
+        setAttackerHealth(health);
+        setBaselineAttackerHealth(health);
+    // Reset only when the selected capture changes, not on unrelated roster refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attacker?.captureId]);
+
+    useEffect(() => {
+        const health = clampHealth(opponent.challengeHealth);
+        setOpponentHealth(health);
+        setBaselineOpponentHealth(health);
+    }, [opponent.captureId, opponent.challengeHealth]);
+
+    async function resolveMatchup(options?: {rematch?: boolean}) {
         if (!attacker) return;
         unlockMatchupAudio();
+        const rematch = options?.rematch === true;
+        const previousResult = result;
+        const preAttackerHealth = attackerHealth;
+        const preOpponentHealth = opponentHealth;
+
+        setIsRematching(rematch);
+        setBaselineAttackerHealth(preAttackerHealth);
+        setBaselineOpponentHealth(preOpponentHealth);
         setStep("resolving");
         setError(null);
         setResult(null);
@@ -62,10 +96,23 @@ export default function ChallengeWizardSheet({
             if (!response.ok) {
                 throw new Error(payload.error ?? "Matchup failed.");
             }
-            setResult(payload.result as MatchupResolveResult);
+            const nextResult = payload.result as MatchupResolveResult;
+            const attackerWon = nextResult.winnerCaptureId === nextResult.attackerCaptureId;
+            setAttackerHealth(attackerWon ? preAttackerHealth : clampHealth(preAttackerHealth - 1));
+            setOpponentHealth(attackerWon ? clampHealth(preOpponentHealth - 1) : preOpponentHealth);
+            setResult(nextResult);
         } catch (resolveError) {
             setError(friendlyChallengeError(resolveError instanceof Error ? resolveError.message : "Matchup failed."));
-            setStep("preview");
+            if (rematch && previousResult) {
+                setResult(previousResult);
+                setAttackerHealth(preAttackerHealth);
+                setOpponentHealth(preOpponentHealth);
+                setStep("result");
+            } else {
+                setStep("preview");
+            }
+        } finally {
+            setIsRematching(false);
         }
     }
 
@@ -74,6 +121,25 @@ export default function ChallengeWizardSheet({
         onComplete(result);
         setStep("result");
     }, [onComplete, result]);
+
+    const rematchState = useMemo(() => {
+        if (isRematching) {
+            return {enabled: false, subtitle: "Another comparison is already running."};
+        }
+        if (attackerHealth <= 0 || opponentHealth <= 0) {
+            return {enabled: false, subtitle: "One of these animals is out of hearts."};
+        }
+        if (!opponent.isChallengeAvailable || !opponent.isChallengeReady) {
+            return {enabled: false, subtitle: "The opponent is no longer available for comparisons."};
+        }
+        if (opponent.challengeStake < 1) {
+            return {enabled: false, subtitle: "This matchup no longer has a valid confidence amount."};
+        }
+        return {
+            enabled: true,
+            subtitle: `Same attacker, same defender. The server will verify both sides can still cover ${opponent.challengeStake} credit${opponent.challengeStake === 1 ? "" : "s"}.`
+        };
+    }, [attackerHealth, isRematching, opponent.challengeStake, opponent.isChallengeAvailable, opponent.isChallengeReady, opponentHealth]);
 
     const title = step === "pick"
         ? "Pick your animal"
@@ -122,17 +188,30 @@ export default function ChallengeWizardSheet({
                         />
                     ) : null}
                     {step === "result" && attacker && result ? (
-                        <ResultStep
-                            result={result}
-                            opponent={opponent}
-                            attacker={attacker}
-                            viewerUserId={viewerUserId}
-                            onFindAnother={onClose}
-                            onViewHistory={() => {
-                                onClose();
-                                onViewHistory();
-                            }}
-                        />
+                        <>
+                            <ResultStep
+                                result={result}
+                                opponent={opponent}
+                                attacker={attacker}
+                                viewerUserId={viewerUserId}
+                                attackerHealth={attackerHealth}
+                                opponentHealth={opponentHealth}
+                                baselineAttackerHealth={baselineAttackerHealth}
+                                baselineOpponentHealth={baselineOpponentHealth}
+                                rematchEnabled={rematchState.enabled}
+                                rematchSubtitle={rematchState.subtitle}
+                                isRematching={isRematching}
+                                onRematch={() => {
+                                    void resolveMatchup({rematch: true});
+                                }}
+                                onFindAnother={onClose}
+                                onViewHistory={() => {
+                                    onClose();
+                                    onViewHistory();
+                                }}
+                            />
+                            {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
+                        </>
                     ) : null}
                 </div>
 
@@ -154,7 +233,7 @@ export default function ChallengeWizardSheet({
                         <button type="button" onClick={() => setStep("pick")} className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white/70">
                             Back
                         </button>
-                        <button type="button" onClick={runMatchup} className="rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black">
+                        <button type="button" onClick={() => void resolveMatchup()} className="rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black">
                             Run matchup
                         </button>
                     </div>

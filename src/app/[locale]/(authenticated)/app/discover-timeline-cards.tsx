@@ -28,6 +28,43 @@ import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
 
+type NetworkConnection = {
+  saveData?: boolean;
+  effectiveType?: string;
+};
+
+function readLowDataMode() {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & {
+    connection?: NetworkConnection;
+    mozConnection?: NetworkConnection;
+    webkitConnection?: NetworkConnection;
+  };
+  const connection = nav.connection ?? nav.mozConnection ?? nav.webkitConnection;
+  if (!connection) return false;
+  if (connection.saveData) return true;
+  const effectiveType = connection.effectiveType;
+  return effectiveType === "2g" || effectiveType === "slow-2g";
+}
+
+type KnownEndorsementState = Pick<DiscoverCaptureItem, "viewerEndorsementStat" | "endorsementCount">;
+
+function mergeKnownEndorsementState(
+  items: DiscoverCaptureItem[],
+  knownByCaptureId: Map<string, KnownEndorsementState>
+) {
+  if (!knownByCaptureId.size) return items;
+  return items.map((entry) => {
+    const known = knownByCaptureId.get(entry.captureId);
+    if (!known) return entry;
+    return {
+      ...entry,
+      viewerEndorsementStat: known.viewerEndorsementStat,
+      endorsementCount: known.endorsementCount
+    };
+  });
+}
+
 function CollectorLink({ collector }: { collector: DiscoverCollectorRef }) {
   if (collector.href) {
     return (
@@ -190,11 +227,27 @@ function MediaCarousel({
   const media = useMemo(() => assets.length ? assets : [], [assets]);
   const videoSourceById = useMemo(() => new Map(media.map((asset) => [asset.id, asset.url])), [media]);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [isMediaActive, setIsMediaActive] = useState(layout !== "feed");
   const [loadedVideoIds, setLoadedVideoIds] = useState<Set<string>>(() => new Set());
+  const [explicitPlayIds, setExplicitPlayIds] = useState<Set<string>>(() => new Set());
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [isLowDataMode, setIsLowDataMode] = useState(false);
   const [isFeedSoundEnabled, setIsFeedSoundEnabled] = useState(feedVideoSoundEnabled);
   const shouldLoadMedia = layout !== "feed" || isMediaActive;
+
+  useEffect(() => {
+    setIsLowDataMode(readLowDataMode());
+    const nav = navigator as Navigator & {
+      connection?: NetworkConnection & {addEventListener?: (type: string, listener: () => void) => void; removeEventListener?: (type: string, listener: () => void) => void};
+    };
+    const connection = nav.connection;
+    if (!connection?.addEventListener) return undefined;
+    const onConnectionChange = () => setIsLowDataMode(readLowDataMode());
+    connection.addEventListener("change", onConnectionChange);
+    return () => connection.removeEventListener?.("change", onConnectionChange);
+  }, []);
 
   useEffect(() => {
     if (layout !== "feed") {
@@ -278,6 +331,10 @@ function MediaCarousel({
           markLoaded(mediaId);
         }
         if (entry.intersectionRatio >= 0.72) {
+          if (isLowDataMode && !explicitPlayIds.has(mediaId)) {
+            video.pause();
+            continue;
+          }
           playVideo(mediaId, video);
         } else if (entry.intersectionRatio <= 0.02) {
           video.pause();
@@ -307,9 +364,39 @@ function MediaCarousel({
       observer.disconnect();
       window.removeEventListener("animaldex-feed-video-active", onActiveVideo);
     };
-  }, [isFeedSoundEnabled, media, shouldLoadMedia, videoSourceById]);
+  }, [explicitPlayIds, isFeedSoundEnabled, isLowDataMode, media, shouldLoadMedia, videoSourceById, activeSlideIndex]);
 
   if (!media.length) return null;
+
+  const markLoadedId = (mediaId: string) => {
+    setLoadedVideoIds((current) => {
+      if (current.has(mediaId)) return current;
+      const next = new Set(current);
+      next.add(mediaId);
+      return next;
+    });
+  };
+
+  const playExplicitly = (asset: DiscoverMediaAsset) => {
+    setExplicitPlayIds((current) => {
+      if (current.has(asset.id)) return current;
+      const next = new Set(current);
+      next.add(asset.id);
+      return next;
+    });
+    markLoadedId(asset.id);
+
+    const video = videoRefs.current[asset.id];
+    if (video) {
+      if (!video.currentSrc) {
+        video.src = asset.url;
+        video.load();
+      }
+      window.dispatchEvent(new CustomEvent("animaldex-feed-video-active", {detail: {mediaId: asset.id}}));
+      video.muted = !isFeedSoundEnabled;
+      void video.play().catch(() => undefined);
+    }
+  };
 
   const toggleVideoSound = (asset: DiscoverMediaAsset) => {
     const video = videoRefs.current[asset.id];
@@ -317,13 +404,11 @@ function MediaCarousel({
     feedVideoSoundEnabled = nextSoundEnabled;
     setIsFeedSoundEnabled(nextSoundEnabled);
     window.dispatchEvent(new CustomEvent(FEED_VIDEO_SOUND_EVENT, {detail: {enabled: nextSoundEnabled}}));
+    markLoadedId(asset.id);
 
-    setLoadedVideoIds((current) => {
-      if (current.has(asset.id)) return current;
-      const next = new Set(current);
-      next.add(asset.id);
-      return next;
-    });
+    if (isLowDataMode) {
+      playExplicitly(asset);
+    }
 
     if (video) {
       if (!video.currentSrc) {
@@ -336,6 +421,13 @@ function MediaCarousel({
         void video.play().catch(() => undefined);
       }
     }
+  };
+
+  const handleScrollerScroll = () => {
+    const scroller = scrollerRef.current;
+    if (!scroller || media.length <= 1) return;
+    const index = Math.round(scroller.scrollLeft / Math.max(1, scroller.clientWidth));
+    setActiveSlideIndex(Math.min(media.length - 1, Math.max(0, index)));
   };
 
   const frameClass = layout === "feed"
@@ -351,73 +443,111 @@ function MediaCarousel({
 
   return (
     <div ref={rootRef} className={frameClass}>
-      <div className={scrollerClass}>
-        {media.map((asset, index) => (
-          <div key={asset.id} className={itemClass}>
-            {asset.kind === "video" || asset.kind === "loop" ? (
-              <video
-                src={loadedVideoIds.has(asset.id) ? asset.url : undefined}
-                poster={shouldLoadMedia || loadedVideoIds.has(asset.id) ? asset.posterUrl ?? undefined : undefined}
-                muted={!isFeedSoundEnabled}
-                loop
-                playsInline
-                preload={loadedVideoIds.has(asset.id) ? "metadata" : "none"}
-                data-media-id={asset.id}
-                ref={(node) => {
-                  videoRefs.current[asset.id] = node;
-                }}
-                className={`h-full w-full bg-black ${mediaFitClass}`}
-              />
-            ) : shouldLoadMedia ? (
-              <img
-                src={asset.url}
-                alt={animalName}
-                loading="lazy"
-                decoding="async"
-                className={`h-full w-full bg-black ${mediaFitClass}`}
-              />
-            ) : (
-              <div className="h-full w-full bg-[#090909]" />
-            )}
-            {(asset.kind === "video" || asset.kind === "loop") ? (
-              <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
-                Video
-              </span>
-            ) : null}
-            {(asset.kind === "video" || asset.kind === "loop") ? (
-              <button
-                type="button"
-                aria-label={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
-                title={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  toggleVideoSound(asset);
-                }}
-                className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full bg-black/65 text-white shadow-lg ring-1 ring-white/15 transition hover:bg-black/80 hover:text-primary-100"
-              >
-                <AppIcon name={isFeedSoundEnabled ? "volume" : "volumeOff"} className="h-5 w-5" />
-              </button>
-            ) : null}
-            {isUncertain ? (
-              <span className="absolute right-3 top-3">
-                <UncertainBadge />
-              </span>
-            ) : null}
-            {media.length > 1 ? (
-              <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
-                {index + 1} / {media.length}
-              </span>
-            ) : null}
-          </div>
-        ))}
+      <div ref={scrollerRef} onScroll={handleScrollerScroll} className={scrollerClass}>
+        {media.map((asset, index) => {
+          const isVideo = asset.kind === "video" || asset.kind === "loop";
+          const shouldMountVideo = isVideo && Math.abs(index - activeSlideIndex) <= 1;
+          const showTapToPlay = isVideo && isLowDataMode && !explicitPlayIds.has(asset.id);
+          const showPoster = shouldLoadMedia || loadedVideoIds.has(asset.id) || showTapToPlay;
+
+          return (
+            <div key={asset.id} className={itemClass}>
+              {isVideo ? (
+                shouldMountVideo ? (
+                  <video
+                    src={loadedVideoIds.has(asset.id) || explicitPlayIds.has(asset.id) ? asset.url : undefined}
+                    poster={showPoster ? asset.posterUrl ?? undefined : undefined}
+                    muted={!isFeedSoundEnabled}
+                    loop
+                    playsInline
+                    preload={loadedVideoIds.has(asset.id) || explicitPlayIds.has(asset.id) ? "metadata" : "none"}
+                    data-media-id={asset.id}
+                    ref={(node) => {
+                      videoRefs.current[asset.id] = node;
+                    }}
+                    className={`h-full w-full bg-black ${mediaFitClass}`}
+                  />
+                ) : (
+                  <div className="relative h-full w-full bg-black">
+                    {asset.posterUrl && showPoster ? (
+                      <img
+                        src={asset.posterUrl}
+                        alt=""
+                        className={`h-full w-full bg-black ${mediaFitClass}`}
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-[#090909]" />
+                    )}
+                  </div>
+                )
+              ) : shouldLoadMedia ? (
+                <img
+                  src={asset.url}
+                  alt={animalName}
+                  loading="lazy"
+                  decoding="async"
+                  className={`h-full w-full bg-black ${mediaFitClass}`}
+                />
+              ) : (
+                <div className="h-full w-full bg-[#090909]" />
+              )}
+              {isVideo ? (
+                <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
+                  Video
+                </span>
+              ) : null}
+              {showTapToPlay ? (
+                <button
+                  type="button"
+                  aria-label="Play video"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    playExplicitly(asset);
+                  }}
+                  className="absolute left-1/2 top-1/2 z-10 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition hover:bg-black/75"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
+                    <path d="M8 5.14v13.72L19 12Z" />
+                  </svg>
+                  Play
+                </button>
+              ) : null}
+              {isVideo ? (
+                <button
+                  type="button"
+                  aria-label={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
+                  title={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleVideoSound(asset);
+                  }}
+                  className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full bg-black/65 text-white shadow-lg ring-1 ring-white/15 transition hover:bg-black/80 hover:text-primary-100"
+                >
+                  <AppIcon name={isFeedSoundEnabled ? "volume" : "volumeOff"} className="h-5 w-5" />
+                </button>
+              ) : null}
+              {isUncertain ? (
+                <span className="absolute right-3 top-3">
+                  <UncertainBadge />
+                </span>
+              ) : null}
+              {media.length > 1 ? (
+                <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
+                  {index + 1} / {media.length}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       {media.length > 1 ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
           {media.map((asset, index) => (
             <span
               key={`${asset.id}-dot`}
-              className={`h-1.5 rounded-full ${index === 0 ? "w-4 bg-white/80" : "w-1.5 bg-white/35"}`}
+              className={`h-1.5 rounded-full ${index === activeSlideIndex ? "w-4 bg-white/80" : "w-1.5 bg-white/35"}`}
             />
           ))}
         </div>
@@ -684,8 +814,52 @@ function CaptureCard({
   const [nextRankedOffset, setNextRankedOffset] = useState<number | null>(null);
   const [isLoadingRanked, setIsLoadingRanked] = useState(false);
   const didLoadRankedRef = useRef(false);
+  const activeItemRef = useRef(item);
+  const knownEndorsementsRef = useRef(new Map<string, KnownEndorsementState>());
+
+  function rememberEndorsement(entry: Pick<DiscoverCaptureItem, "captureId" | "viewerEndorsementStat" | "endorsementCount">) {
+    knownEndorsementsRef.current.set(entry.captureId, {
+      viewerEndorsementStat: entry.viewerEndorsementStat,
+      endorsementCount: entry.endorsementCount
+    });
+  }
+
+  function applyItemPatch(source: DiscoverCaptureItem, patch: Partial<DiscoverCaptureItem>) {
+    const nextViewerStat = "viewerEndorsementStat" in patch
+      ? (patch.viewerEndorsementStat ?? null)
+      : source.viewerEndorsementStat;
+    const nextCount = "endorsementCount" in patch
+      ? (patch.endorsementCount ?? source.endorsementCount)
+      : source.endorsementCount;
+
+    if ("viewerEndorsementStat" in patch || "endorsementCount" in patch) {
+      rememberEndorsement({
+        captureId: source.captureId,
+        viewerEndorsementStat: nextViewerStat,
+        endorsementCount: nextCount
+      });
+    }
+
+    setRankedItems((current) => {
+      const patched = current.map((entry) => (
+        entry.captureId === source.captureId ? {...entry, ...patch} : entry
+      ));
+      // Prefer known timeline/seed endorsement state when ranking siblings omit it.
+      return mergeKnownEndorsementState(patched, knownEndorsementsRef.current);
+    });
+    setActiveItem((current) => (
+      current.captureId === source.captureId ? {...current, ...patch} : current
+    ));
+  }
 
   useEffect(() => {
+    activeItemRef.current = activeItem;
+    rememberEndorsement(activeItem);
+  }, [activeItem]);
+
+  useEffect(() => {
+    knownEndorsementsRef.current.clear();
+    rememberEndorsement(item);
     setActiveItem(item);
     setRankedItems([item]);
     setRankedHint(false);
@@ -722,11 +896,13 @@ function CaptureCard({
           };
           const siblings = payload.items ?? [];
           if (siblings.length <= 1) return;
+          const seed = activeItemRef.current;
+          rememberEndorsement(seed);
           const seedFirst = [
-            item,
-            ...siblings.filter((sibling) => sibling.captureId !== item.captureId)
+            seed,
+            ...siblings.filter((sibling) => sibling.captureId !== seed.captureId)
           ];
-          setRankedItems(seedFirst);
+          setRankedItems(mergeKnownEndorsementState(seedFirst, knownEndorsementsRef.current));
           setRankedHint(true);
           setHasMoreRanked(Boolean(payload.hasMore));
           setNextRankedOffset(payload.nextOffset ?? null);
@@ -770,7 +946,7 @@ function CaptureCard({
           seen.add(entry.captureId);
           merged.push(entry);
         }
-        return merged;
+        return mergeKnownEndorsementState(merged, knownEndorsementsRef.current);
       });
       setHasMoreRanked(Boolean(payload.hasMore));
       setNextRankedOffset(payload.nextOffset ?? null);
@@ -881,14 +1057,7 @@ function CaptureCard({
                 <CaptureCardBody
                   item={ranked}
                   viewerUserId={viewerUserId}
-                  onItemPatch={(patch) => {
-                    setRankedItems((current) => current.map((entry) => (
-                      entry.captureId === ranked.captureId ? {...entry, ...patch} : entry
-                    )));
-                    setActiveItem((current) => (
-                      current.captureId === ranked.captureId ? {...current, ...patch} : current
-                    ));
-                  }}
+                  onItemPatch={(patch) => applyItemPatch(ranked, patch)}
                 />
               </div>
             ))}
@@ -900,7 +1069,7 @@ function CaptureCard({
           <CaptureCardBody
             item={activeItem}
             viewerUserId={viewerUserId}
-            onItemPatch={(patch) => setActiveItem((current) => ({...current, ...patch}))}
+            onItemPatch={(patch) => applyItemPatch(activeItem, patch)}
           />
         </>
       )}

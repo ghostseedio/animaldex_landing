@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import MatchupsHub from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-hub";
 import {getAuthenticatedAppContext} from "@/data/authenticated-app";
 import {getMatchupArenaTarget, getMatchupHubBundle} from "@/data/matchups";
+import {fetchSpeciesComparisonSummaries} from "@/data/species-comparisons";
 import {redirect} from "next/navigation";
 
 type MatchupsPageProps = {
@@ -14,7 +15,10 @@ export default async function MatchupsPage({params, searchParams}: MatchupsPageP
     if (!context) redirect(`/${params.locale}/account`);
 
     const targetId = searchParams?.target?.trim() ?? null;
-    const bundle = await getMatchupHubBundle(context.profile.id);
+    const [bundle, popularBreakdowns] = await Promise.all([
+        getMatchupHubBundle(context.profile.id),
+        fetchSpeciesComparisonSummaries(12).catch(() => [])
+    ]);
 
     let arena = bundle.arena;
     if (targetId && !arena.some((item) => item.captureId === targetId)) {
@@ -32,6 +36,7 @@ export default async function MatchupsPage({params, searchParams}: MatchupsPageP
                 initialArena={arena}
                 initialRoster={bundle.roster}
                 initialHistory={bundle.history}
+                initialPopularBreakdowns={popularBreakdowns}
                 initialTargetId={targetId}
             />
         </Suspense>

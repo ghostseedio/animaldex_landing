@@ -19,8 +19,8 @@ export default function MatchupsHistoryTab({
         return (
             <AppEmpty
                 icon="spark"
-                title="No matchup history yet"
-                detail="Your resolved Scenario Arena battles will appear here."
+                title="No comparisons yet"
+                detail="Your past animal comparisons will show up here."
             />
         );
     }

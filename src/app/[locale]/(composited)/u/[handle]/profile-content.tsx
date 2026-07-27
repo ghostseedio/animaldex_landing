@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import type {
     ProfileBestForTag,
@@ -490,11 +490,24 @@ export default function ProfileContent({
     const [showProfileStyle, setShowProfileStyle] = useState(false);
     const [isSavingProfileStyle, setIsSavingProfileStyle] = useState(false);
     const [profileStyleError, setProfileStyleError] = useState<string | null>(null);
+    const [chromeCollapsed, setChromeCollapsed] = useState(false);
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
         ? formatAppUsd(profile.collectionValueUsd, locale)
         : null;
     const completedSetsCount = ownerExtras?.completedSetsCount ?? 0;
+    const friendPets = profile.recentCaptures
+        .filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm")
+        .slice(0, 8);
+
+    useEffect(() => {
+        const onScroll = () => {
+            setChromeCollapsed(window.scrollY > 56);
+        };
+        onScroll();
+        window.addEventListener("scroll", onScroll, {passive: true});
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
 
     async function saveProfileStyle(preset: typeof activeChromePreset) {
         setIsSavingProfileStyle(true);
@@ -524,6 +537,13 @@ export default function ProfileContent({
                 </p>
             ) : null}
 
+            <div
+                className={`overflow-hidden transition-[max-height,opacity,transform,margin] duration-300 ease-out ${
+                    chromeCollapsed
+                        ? "max-h-0 -mb-6 -translate-y-2 opacity-0 md:-mb-8"
+                        : "max-h-[28rem] mb-0 translate-y-0 opacity-100"
+                }`}
+            >
             <header className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 {profile.avatarUrl ? (
                     <Image
@@ -572,6 +592,7 @@ export default function ProfileContent({
                 </div>
             </header>
 
+            <div key={activeChromePreset} className="mt-6 motion-safe:animate-[profileChromeFade_220ms_ease-out]">
             {activeChromePreset === "spirit" ? (
                 profile.wildIdentity
                     ? <WildIdentityCard identity={profile.wildIdentity} labels={labels} />
@@ -586,14 +607,21 @@ export default function ProfileContent({
             {activeChromePreset === "friend" ? (
                 <section>
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-200">Pets</p>
-                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                        {profile.recentCaptures.filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm").slice(0, 8).map((capture) => (
-                            <Link key={capture.id} href={capture.href} className="w-[4.75rem] shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-center">
-                                <Image src={capture.imageSrc} alt="" width={48} height={48} unoptimized className="mx-auto h-10 w-10 rounded-lg object-cover" />
-                                <p className="mt-1 truncate text-[0.68rem] font-black text-white">{capture.animalName}</p>
-                            </Link>
-                        ))}
-                    </div>
+                    {friendPets.length === 0 ? (
+                        <div className="mt-2 space-y-1 py-1">
+                            <p className="text-sm font-bold text-white">No pets yet</p>
+                            <p className="text-xs font-medium text-white/45">Favorite pet captures will show up here.</p>
+                        </div>
+                    ) : (
+                        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                            {friendPets.map((capture) => (
+                                <Link key={capture.id} href={capture.href} className="w-[4.75rem] shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-center">
+                                    <Image src={capture.imageSrc} alt="" width={48} height={48} unoptimized className="mx-auto h-10 w-10 rounded-lg object-cover" />
+                                    <p className="mt-1 truncate text-[0.68rem] font-black text-white">{capture.animalName}</p>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </section>
             ) : null}
 
@@ -625,6 +653,8 @@ export default function ProfileContent({
                     ))}
                 </section>
             ) : null}
+            </div>
+            </div>
 
             <nav aria-label="Profile sections" className="sticky top-16 z-20 -mx-4 border-y border-white/[0.08] bg-black/95 px-4 backdrop-blur-xl md:top-0 md:-mx-8 md:px-8">
                 <div className="grid" style={{gridTemplateColumns: `repeat(${viewer.isOwner ? 4 : memberExtras ? 4 : 3}, minmax(0, 1fr))`}}>

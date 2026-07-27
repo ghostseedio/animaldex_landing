@@ -302,6 +302,64 @@ export async function fetchSpeciesComparisonBySlug(slug: string): Promise<Challe
 const FEED_PAGE_SIZE = 100;
 const FEED_HARD_CAP = 2000;
 
+export type SpeciesComparisonSummary = {
+    id: string;
+    slug: string;
+    animalASlug: string;
+    animalBSlug: string;
+    animalADisplayName: string;
+    animalBDisplayName: string;
+    comparisonType: ChallengeComparisonType;
+    title: string;
+    description: string;
+    quickVerdict: string;
+    winnerSide: "animalA" | "animalB";
+    winnerDisplayName: string;
+    confidencePercent: number;
+    featuredImageUrl: string | null;
+    publishedAt: string;
+};
+
+function mapFeedRowToSummary(row: SpeciesComparisonFeedRow): SpeciesComparisonSummary {
+    const comparisonType = isChallengeComparisonType(row.comparison_type) ? row.comparison_type : "battle";
+    return {
+        id: row.id,
+        slug: row.slug,
+        animalASlug: row.animal_a_slug,
+        animalBSlug: row.animal_b_slug,
+        animalADisplayName: row.animal_a_display_name,
+        animalBDisplayName: row.animal_b_display_name,
+        comparisonType,
+        title: row.title,
+        description: row.description,
+        quickVerdict: row.quick_verdict,
+        winnerSide: row.winner_side,
+        winnerDisplayName: row.winner_display_name,
+        confidencePercent: row.confidence_percent,
+        featuredImageUrl: row.featured_image_url,
+        publishedAt: row.published_at
+    };
+}
+
+export async function fetchSpeciesComparisonSummaries(limit = 12): Promise<SpeciesComparisonSummary[]> {
+    const config = getReadConfig();
+    if (!config) return [];
+
+    const capped = Math.max(1, Math.min(24, limit));
+    const url = new URL(`${config.supabaseUrl}/rest/v1/species_comparisons_feed_v1`);
+    url.searchParams.set("select", "*");
+    url.searchParams.set("order", "published_at.desc");
+    url.searchParams.set("limit", String(capped));
+
+    const response = await fetch(url, {
+        headers: getSupabaseHeaders(config.key),
+        next: {revalidate: 180}
+    });
+    if (!response.ok) return [];
+    const rows = (await response.json()) as SpeciesComparisonFeedRow[];
+    return rows.map(mapFeedRowToSummary);
+}
+
 export async function fetchRecentSpeciesComparisons(limit = 24): Promise<ChallengeEntry[]> {
     const config = getReadConfig();
     if (!config) return [];

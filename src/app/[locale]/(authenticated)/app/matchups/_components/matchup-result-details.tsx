@@ -42,6 +42,9 @@ export type MatchupResultPresentation = {
     defenderStats?: MatchupGameStats;
     attackerLabel?: string;
     defenderLabel?: string;
+    damageTaken?: number | null;
+    loserRemainingHearts?: number | null;
+    maxHearts?: number;
 };
 
 function Metric({label, value, accent}: {label: string; value: string | number; accent?: "green" | "rose" | "neutral"}) {
@@ -179,6 +182,18 @@ export default function MatchupResultDetails({
                                 value={`${result.payoutAmount} credits`}
                             />
                             <DetailRow label="Burned" value={`${result.burnAmount} credit${result.burnAmount === 1 ? "" : "s"}`} />
+                            {typeof result.damageTaken === "number" ? (
+                                <DetailRow
+                                    label="Damage"
+                                    value={`${result.damageTaken} heart${result.damageTaken === 1 ? "" : "s"}`}
+                                />
+                            ) : null}
+                            {typeof result.loserRemainingHearts === "number" ? (
+                                <DetailRow
+                                    label="Loser hearts"
+                                    value={`${result.loserRemainingHearts}/${result.maxHearts ?? 3}`}
+                                />
+                            ) : null}
                             <DetailRow label="Deciding stat" value={result.decidingEdgeLabel ?? result.chosenStat} />
                         </div>
                     ) : null}
@@ -233,6 +248,9 @@ export function toResultPresentation(input: {
     defenderStats?: MatchupGameStats;
     attackerLabel?: string;
     defenderLabel?: string;
+    damageTaken?: number | null;
+    loserRemainingHearts?: number | null;
+    maxHearts?: number;
 }): MatchupResultPresentation {
     return {
         scenarioTitle: input.scenarioTitle,
@@ -259,6 +277,9 @@ export function toResultPresentation(input: {
         attackerStats: input.attackerStats,
         defenderStats: input.defenderStats,
         attackerLabel: input.attackerLabel,
-        defenderLabel: input.defenderLabel
+        defenderLabel: input.defenderLabel,
+        damageTaken: input.damageTaken ?? null,
+        loserRemainingHearts: input.loserRemainingHearts ?? null,
+        maxHearts: input.maxHearts ?? 3
     };
 }
