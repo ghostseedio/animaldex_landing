@@ -41,6 +41,7 @@ export default function Footer() {
             title: t("footerGroups.resources"),
             links: [
                 { href: "/blog", label: t("articlesGuides") },
+                { href: "/branding", label: "Brand assets" },
                 { href: "/support", label: t("support") },
                 { href: "/contact", label: t("contact") }
             ]

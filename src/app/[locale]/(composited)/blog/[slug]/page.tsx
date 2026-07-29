@@ -7,13 +7,16 @@ import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-ca
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import {getAnswerPagesForIntents} from "@/data/answer-pages";
 import {BlogMediaBlock, ContentImage} from "@/data/content-schema";
-import {BlogLink, blogPosts, getBlogPost, getMentionedSpeciesSlugs, getRelatedBlogPosts, getRelatedChallengesForBlogPost} from "@/data/blog";
+import {BlogLink, getBlogPost, getMentionedSpeciesSlugs, getRelatedBlogPosts, getRelatedChallengesForBlogPost} from "@/data/blog";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 import BlogListenControl from "@/app/[locale]/(composited)/blog/_components/blog-listen-control";
+import {getManagedBlogPost} from "@/lib/admin-content";
+import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
+import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
 
 type BlogPostPageProps = {
     params: {
@@ -317,6 +320,30 @@ function renderSectionParagraphs(paragraphs: string[], links: BlogLink[]) {
     });
 }
 
+function renderCodeBlocks(codeBlocks: NonNullable<ReturnType<typeof getBlogPost>>["sections"][number]["codeBlocks"]) {
+    if (!codeBlocks?.length) return null;
+
+    return (
+        <div className="space-y-4">
+            {codeBlocks.map((block, index) => block.render && canRenderCodeBlock(block.language) ? (
+                <figure key={`${block.language ?? "html"}-${index}`} className="overflow-hidden rounded-2xl border border-line-300 bg-white">
+                    <RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />
+                    {block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}
+                </figure>
+            ) : (
+                <figure key={`${block.language ?? "text"}-${index}`} className="overflow-hidden rounded-2xl border border-line-300 bg-[#080d0a]">
+                    <div className="flex items-center justify-between border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">
+                        <span>{block.language || "Text"}</span>
+                        <span>Code</span>
+                    </div>
+                    <pre className="max-w-full overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>
+                    {block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}
+                </figure>
+            ))}
+        </div>
+    );
+}
+
 function renderSectionCards(cards: NonNullable<ReturnType<typeof getBlogPost>>["sections"][number]["cards"]) {
     if (!cards || cards.length === 0) {
         return null;
@@ -469,7 +496,7 @@ function renderTextWithLinks(text: string, links: BlogLink[]) {
 
 export async function generateMetadata({params}: BlogPostPageProps): Promise<Metadata> {
     const {locale, slug} = params;
-    const post = getBlogPost(slug);
+    const post = await getManagedBlogPost(slug);
 
     if (!post) {
         return {};
@@ -492,7 +519,7 @@ export async function generateMetadata({params}: BlogPostPageProps): Promise<Met
 export default async function BlogPostPage({params}: BlogPostPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "blog");
-    const post = getBlogPost(slug);
+    const post = await getManagedBlogPost(slug);
 
     if (!post) {
         notFound();
@@ -595,7 +622,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            <div className="flex flex-col gap-4 max-w-5xl">
+            {post.headerHtml ? <RenderedCodeFrame title="Article header" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml})} minHeight={240} /> : <div className="flex flex-col gap-4 max-w-5xl">
                 <Link href="/blog" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                     {t("back")}
                 </Link>
@@ -627,7 +654,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                         </span>
                     ))}
                 </div>
-            </div>
+            </div>}
 
             <BlogListenControl locale={locale} text={narrationText} />
 
@@ -639,6 +666,13 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                 <div className="min-w-0 flex flex-col gap-10">
                     <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
                         {post.sections.map((section) => {
+                            if (section.html !== undefined) {
+                                return (
+                                    <section key={section.title} className="overflow-hidden rounded-2xl border border-line-300 bg-white">
+                                        <RenderedCodeFrame title={section.title || "Custom page section"} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} />
+                                    </section>
+                                );
+                            }
                             const sectionTextLinks = [
                                 ...buildSpeciesTextLinks([
                                     ...getMentionedSpeciesSlugs(post),
@@ -657,13 +691,16 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                                             {section.kicker}
                                         </p>
                                     )}
-                                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
+                                    {(section.headingLevel ?? 2) === 3
+                                        ? <h3 className="font-display font-bold text-2xl text-white md:text-3xl">{section.title}</h3>
+                                        : <h2 className="font-display font-bold text-3xl text-white md:text-4xl">{section.title}</h2>}
                                     {section.table
                                         ? renderSectionTable(section.table)
                                         : section.cards
                                             ? renderSectionCards(section.cards)
                                             : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
                                     {section.pullQuote && renderPullQuote(section.pullQuote)}
+                                    {renderCodeBlocks(section.codeBlocks)}
                                     {section.media && renderSectionMedia(section.media)}
                                     {section.subsections && section.subsections.map((subsection) => (
                                         <section key={`${section.title}-${subsection.title}`} className="flex flex-col gap-4 rounded-3xl border border-line-300/80 bg-surface-800/50 p-5 md:p-6">

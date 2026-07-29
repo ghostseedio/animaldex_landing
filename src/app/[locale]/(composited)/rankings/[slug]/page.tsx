@@ -34,6 +34,7 @@ type RelatedChallengeCard = {
     animalAName: string;
     animalBName: string;
     comparisonTypeLabel: string;
+    image?: {src: string; alt: string; width: number; height: number};
 };
 
 function formatDate(locale: string, date: string) {
@@ -164,24 +165,24 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     const relatedChallenges = (ranking.relatedChallengeSlugs || [])
         .map((challengeSlug) => getChallenge(challengeSlug))
         .filter((challenge): challenge is NonNullable<ReturnType<typeof getChallenge>> => Boolean(challenge))
-        .map((challenge) => {
+        .flatMap((challenge): RelatedChallengeCard[] => {
             const animalA = getSpeciesBySlug(challenge.animalASlug);
             const animalB = getSpeciesBySlug(challenge.animalBSlug);
 
             if (!animalA || !animalB) {
-                return null;
+                return [];
             }
 
-            return {
+            return [{
                 slug: challenge.slug,
                 title: challenge.title,
                 quickVerdict: challenge.quickVerdict,
                 animalAName: animalA.name,
                 animalBName: animalB.name,
-                comparisonTypeLabel: t(`challengeCategories.${challenge.comparisonType}`)
-            };
-        })
-        .filter((entry): entry is RelatedChallengeCard => Boolean(entry));
+                comparisonTypeLabel: t(`challengeCategories.${challenge.comparisonType}`),
+                image: challenge.featuredImage
+            }];
+        });
     const relatedRankings = getRelatedRankings(ranking.slug, 3).map((page) => ({
         slug: page.slug,
         title: getRankingTierListTitle(page),
@@ -353,6 +354,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                             rank={entry.rank}
                             speciesSlug={entry.species.slug}
                             speciesName={entry.species.name}
+                            iconSrc={getSpeciesArtworkUrl(entry.species.slug)}
                             primaryMetric={entry.primaryMetric}
                             shortReason={entry.shortReason}
                             summary={entry.species.analysis.summary}

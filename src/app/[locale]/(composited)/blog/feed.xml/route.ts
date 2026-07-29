@@ -1,4 +1,4 @@
-import {getIndexedBlogPosts} from "@/data/blog";
+import {getManagedBlogPosts} from "@/lib/admin-content";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl} from "@/lib/site";
 
@@ -22,7 +22,7 @@ export async function GET(_: Request, {params}: RouteContext) {
     const feedUrl = getAbsoluteUrl(locale, "/blog/feed.xml");
     const blogUrl = getAbsoluteUrl(locale, "/blog");
 
-    const items = getIndexedBlogPosts()
+    const items = (await getManagedBlogPosts())
         .map((post) => {
             const postUrl = getAbsoluteUrl(locale, `/blog/${post.slug}`);
             const pubDate = new Date(post.publishedAt).toUTCString();

@@ -31,7 +31,7 @@ const onest = localFont({
 
 export const metadata: Metadata = {
     metadataBase: new URL(getSiteUrl()),
-    title: "AnimalDex Support Admin",
+    title: "AnimalDex Admin",
     robots: {
         index: false,
         follow: false

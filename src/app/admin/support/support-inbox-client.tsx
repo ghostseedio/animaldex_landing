@@ -1,13 +1,27 @@
 "use client";
 
-import {FormEvent, useEffect, useMemo, useState} from "react";
+import Link from "next/link";
+import {FormEvent, ReactNode, useEffect, useMemo, useRef, useState} from "react";
+
+type SupportAttachment = {
+    id: string;
+    filename: string;
+    contentType: string;
+    contentDisposition: string | null;
+    contentId: string | null;
+    size: number | null;
+    url: string;
+};
 
 type SupportThreadSummary = {
     id: string;
     subject: string | null;
     customerEmail: string;
     customerName: string | null;
+    customerAvatarUrl: string | null;
     status: string;
+    category: "important" | "inbox" | "spam";
+    isUnread: boolean;
     createdAt: string;
     updatedAt: string;
 };
@@ -19,6 +33,8 @@ type SafeSupportMessage = {
     toEmail: string;
     subject: string | null;
     body: string;
+    attachments: SupportAttachment[];
+    remoteImages: Array<{url: string; alt: string}>;
     createdAt: string;
 };
 
@@ -27,7 +43,10 @@ type SafeSupportThread = {
     subject: string | null;
     customerEmail: string;
     customerName: string | null;
+    customerAvatarUrl: string | null;
     status: string;
+    category: "important" | "inbox" | "spam";
+    isUnread: boolean;
     messages: SafeSupportMessage[];
 };
 
@@ -39,14 +58,25 @@ type InboxResponse = {
     error?: string;
 };
 
-const THREADS_PAGE_SIZE = 15;
+type ComposerAttachment = {
+    id: string;
+    filename: string;
+    contentType: string;
+    content: string;
+    size: number;
+    previewUrl: string | null;
+    contentId?: string;
+};
+
+const THREADS_PAGE_SIZE = 20;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 18 * 1024 * 1024;
+type InboxFilter = "all" | "important" | "inbox" | "unread" | "spam";
 
 function buildThreadsPath(options?: {threadId?: string | null; offset?: number; includeThreads?: boolean}) {
     const params = new URLSearchParams();
 
-    if (options?.threadId) {
-        params.set("threadId", options.threadId);
-    }
+    if (options?.threadId) params.set("threadId", options.threadId);
 
     if (options?.includeThreads === false) {
         params.set("includeThreads", "false");
@@ -56,24 +86,144 @@ function buildThreadsPath(options?: {threadId?: string | null; offset?: number; 
     }
 
     const query = params.toString();
-    return query ? `/api/admin/support/threads?${query}` : "/api/admin/support/threads";
+    return `/api/admin/support/threads${query ? `?${query}` : ""}`;
 }
 
-function formatDate(value: string) {
+function absoluteDate(value: string) {
     const date = new Date(value);
+    return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat("en", {dateStyle: "medium", timeStyle: "short"}).format(date);
+}
 
-    if (Number.isNaN(date.getTime())) {
-        return value;
+function relativeDate(value: string) {
+    const date = new Date(value);
+    const difference = date.getTime() - Date.now();
+
+    if (Number.isNaN(difference)) return value;
+
+    const formatter = new Intl.RelativeTimeFormat("en", {numeric: "auto"});
+    const ranges: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+        ["year", 365 * 24 * 60 * 60 * 1000],
+        ["month", 30 * 24 * 60 * 60 * 1000],
+        ["week", 7 * 24 * 60 * 60 * 1000],
+        ["day", 24 * 60 * 60 * 1000],
+        ["hour", 60 * 60 * 1000],
+        ["minute", 60 * 1000]
+    ];
+
+    for (const [unit, milliseconds] of ranges) {
+        if (Math.abs(difference) >= milliseconds) {
+            return formatter.format(Math.round(difference / milliseconds), unit);
+        }
     }
 
-    return new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeStyle: "short"
-    }).format(date);
+    return "just now";
+}
+
+function formatBytes(bytes: number | null) {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function getCustomerLabel(thread: Pick<SupportThreadSummary | SafeSupportThread, "customerEmail" | "customerName">) {
-    return thread.customerName ? `${thread.customerName} <${thread.customerEmail}>` : thread.customerEmail;
+    return thread.customerName || thread.customerEmail;
+}
+
+function initials(name: string) {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function Avatar({name, src, size = "md"}: {name: string; src?: string | null; size?: "sm" | "md" | "lg"}) {
+    const dimensions = size === "lg" ? "h-12 w-12 text-sm" : size === "sm" ? "h-8 w-8 text-[10px]" : "h-10 w-10 text-xs";
+
+    return (
+        <span className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-primary-500/15 font-bold text-primary-100 ring-1 ring-primary-400/20 ${dimensions}`}>
+            {initials(name)}
+            {src ? (
+                <img
+                    src={src}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => { event.currentTarget.style.display = "none"; }}
+                />
+            ) : null}
+        </span>
+    );
+}
+
+function linkify(text: string) {
+    const pattern = /(https?:\/\/[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+    const parts: ReactNode[] = [];
+    let cursor = 0;
+
+    for (const match of Array.from(text.matchAll(pattern))) {
+        const index = match.index ?? 0;
+        if (index > cursor) parts.push(text.slice(cursor, index));
+        const value = match[0];
+        const isEmail = !value.toLowerCase().startsWith("http");
+        const cleanValue = value.replace(/[),.;!?]+$/, "");
+        const suffix = value.slice(cleanValue.length);
+
+        parts.push(
+            <a
+                key={`${index}-${value}`}
+                href={isEmail ? `mailto:${cleanValue}` : cleanValue}
+                target={isEmail ? undefined : "_blank"}
+                rel={isEmail ? undefined : "noopener noreferrer"}
+                className="break-all text-primary-200 underline decoration-primary-400/50 underline-offset-2 hover:text-primary-100"
+            >
+                {cleanValue}
+            </a>
+        );
+        if (suffix) parts.push(suffix);
+        cursor = index + value.length;
+    }
+
+    if (cursor < text.length) parts.push(text.slice(cursor));
+    return parts;
+}
+
+function splitSignature(body: string) {
+    const markers = [/\n-- ?\n/, /\n(?:Best|Regards|Kind regards|Thanks|Thank you),?\s*\n/i, /\nAnimalDex Support\s*$/i, /\nSent from my /i];
+    let signatureIndex = -1;
+
+    for (const marker of markers) {
+        const match = marker.exec(body);
+        if (match && match.index > body.length * 0.35 && (signatureIndex < 0 || match.index < signatureIndex)) {
+            signatureIndex = match.index;
+        }
+    }
+
+    return signatureIndex >= 0
+        ? {content: body.slice(0, signatureIndex).trim(), signature: body.slice(signatureIndex).trim()}
+        : {content: body.trim(), signature: ""};
+}
+
+function MessageBody({body}: {body: string}) {
+    const {content, signature} = splitSignature(body);
+
+    return (
+        <div className="min-w-0 max-w-full overflow-hidden">
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-7 text-ink-100 [overflow-wrap:anywhere]">{linkify(content)}</p>
+            {signature ? (
+                <div className="mt-5 border-t border-line-300/70 pt-4 text-sm leading-6 text-ink-400 [overflow-wrap:anywhere]">
+                    <p className="whitespace-pre-wrap">{linkify(signature)}</p>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function fileToBase64(file: File) {
+    return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
 }
 
 export default function SupportInboxClient() {
@@ -82,18 +232,38 @@ export default function SupportInboxClient() {
     const [threads, setThreads] = useState<SupportThreadSummary[]>([]);
     const [selectedThread, setSelectedThread] = useState<SafeSupportThread | null>(null);
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+    const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+    const [inboxFilter, setInboxFilter] = useState<InboxFilter>("inbox");
     const [reply, setReply] = useState("");
+    const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingThread, setLoadingThread] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMoreThreads, setHasMoreThreads] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const messageListRef = useRef<HTMLDivElement>(null);
 
     const canSend = useMemo(
-        () => Boolean(selectedThread && reply.trim() && !submitting),
-        [reply, selectedThread, submitting]
+        () => Boolean(selectedThread && (reply.trim() || attachments.length) && !submitting),
+        [attachments.length, reply, selectedThread, submitting]
     );
+    const unreadCount = threads.filter((thread) => thread.isUnread).length;
+    const filterCounts: Record<InboxFilter, number> = {
+        all: threads.length,
+        important: threads.filter((thread) => thread.category === "important").length,
+        inbox: threads.filter((thread) => thread.category === "inbox").length,
+        unread: unreadCount,
+        spam: threads.filter((thread) => thread.category === "spam").length
+    };
+    const filteredThreads = threads.filter((thread) => {
+        if (inboxFilter === "all") return true;
+        if (inboxFilter === "unread") return thread.isUnread;
+        return thread.category === inboxFilter;
+    });
 
     async function loadInbox(threadId?: string | null) {
         setLoading(true);
@@ -107,14 +277,10 @@ export default function SupportInboxClient() {
                 setAuthorized(false);
                 setThreads([]);
                 setSelectedThread(null);
-                setHasMoreThreads(false);
                 return;
             }
 
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to load support inbox.");
-                return;
-            }
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load support inbox.");
 
             const nextThreads = body.threads ?? [];
             const nextThread = body.thread ?? null;
@@ -123,14 +289,15 @@ export default function SupportInboxClient() {
             setHasMoreThreads(Boolean(body.hasMore));
             setSelectedThread(nextThread);
             setSelectedThreadId(nextThread?.id ?? nextThreads[0]?.id ?? null);
-        } catch {
-            setError("Unable to load support inbox.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load support inbox.");
         } finally {
             setLoading(false);
         }
     }
 
     async function loadThreadDetail(threadId: string) {
+        setLoadingThread(true);
         setError(null);
 
         try {
@@ -139,54 +306,39 @@ export default function SupportInboxClient() {
 
             if (response.status === 401) {
                 setAuthorized(false);
-                setThreads([]);
-                setSelectedThread(null);
-                setHasMoreThreads(false);
                 return;
             }
 
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to load support thread.");
-                return;
-            }
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load support thread.");
 
             setSelectedThread(body.thread ?? null);
-        } catch {
-            setError("Unable to load support thread.");
+            setThreads((current) => current.map((thread) => thread.id === threadId ? {...thread, isUnread: false} : thread));
+            requestAnimationFrame(() => messageListRef.current?.scrollTo({top: messageListRef.current.scrollHeight}));
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load support thread.");
+        } finally {
+            setLoadingThread(false);
         }
     }
 
     async function loadMoreThreads() {
-        if (!hasMoreThreads || loadingMore) {
-            return;
-        }
-
+        if (!hasMoreThreads || loadingMore) return;
         setLoadingMore(true);
-        setError(null);
 
         try {
             const response = await fetch(buildThreadsPath({offset: threads.length}), {cache: "no-store"});
             const body = await response.json() as InboxResponse;
-
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to load more support threads.");
-                return;
-            }
-
-            const nextThreads = body.threads ?? [];
-            setThreads((current) => [...current, ...nextThreads]);
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load more threads.");
+            setThreads((current) => [...current, ...(body.threads ?? [])]);
             setHasMoreThreads(Boolean(body.hasMore));
-        } catch {
-            setError("Unable to load more support threads.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load more threads.");
         } finally {
             setLoadingMore(false);
         }
     }
 
-    useEffect(() => {
-        loadInbox();
-    }, []);
-
+    useEffect(() => { loadInbox(); }, []);
     async function submitLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setSubmitting(true);
@@ -199,28 +351,54 @@ export default function SupportInboxClient() {
                 body: JSON.stringify({password})
             });
             const body = await response.json() as {ok: boolean; error?: string};
-
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to sign in.");
-                return;
-            }
-
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to sign in.");
             setPassword("");
             await loadInbox();
-        } catch {
-            setError("Unable to sign in.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to sign in.");
         } finally {
             setSubmitting(false);
         }
     }
 
-    async function submitReply(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+    async function addFiles(fileList: FileList | null, inline: boolean) {
+        if (!fileList?.length) return;
+        const files = Array.from(fileList);
+        const currentBytes = attachments.reduce((sum, attachment) => sum + attachment.size, 0);
 
-        if (!selectedThread || !canSend) {
+        if (files.some((file) => file.size > MAX_FILE_BYTES)) {
+            setError("Each attachment must be 10 MB or smaller.");
+            return;
+        }
+        if (currentBytes + files.reduce((sum, file) => sum + file.size, 0) > MAX_TOTAL_BYTES) {
+            setError("Attachments must total 18 MB or less.");
             return;
         }
 
+        setError(null);
+        const additions = await Promise.all(files.map(async (file, index): Promise<ComposerAttachment> => ({
+            id: `${Date.now()}-${index}-${file.name}`,
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            content: await fileToBase64(file),
+            size: file.size,
+            previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+            ...(inline && file.type.startsWith("image/") ? {contentId: `inline-${Date.now()}-${index}`} : {})
+        })));
+        setAttachments((current) => [...current, ...additions]);
+    }
+
+    function removeAttachment(id: string) {
+        setAttachments((current) => {
+            const removed = current.find((attachment) => attachment.id === id);
+            if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+            return current.filter((attachment) => attachment.id !== id);
+        });
+    }
+
+    async function submitReply(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!selectedThread || !canSend) return;
         setSubmitting(true);
         setError(null);
 
@@ -230,20 +408,19 @@ export default function SupportInboxClient() {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
                     threadId: selectedThread.id,
-                    message: reply
+                    message: reply,
+                    attachments: attachments.map(({filename, contentType, content, contentId}) => ({filename, contentType, content, contentId}))
                 })
             });
             const body = await response.json() as {ok: boolean; error?: string};
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to send reply.");
 
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to send reply.");
-                return;
-            }
-
+            attachments.forEach((attachment) => attachment.previewUrl && URL.revokeObjectURL(attachment.previewUrl));
             setReply("");
+            setAttachments([]);
             await loadInbox(selectedThread.id);
-        } catch {
-            setError("Unable to send reply.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to send reply.");
         } finally {
             setSubmitting(false);
         }
@@ -252,25 +429,13 @@ export default function SupportInboxClient() {
     async function syncFromResend() {
         setSyncing(true);
         setError(null);
-
         try {
             const response = await fetch("/api/admin/support/sync", {method: "POST"});
-            const body = await response.json() as {
-                ok: boolean;
-                imported?: number;
-                skipped?: number;
-                scanned?: number;
-                error?: string;
-            };
-
-            if (!response.ok || !body.ok) {
-                setError(body.error || "Unable to sync received emails from Resend.");
-                return;
-            }
-
+            const body = await response.json() as {ok: boolean; error?: string};
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to sync from Resend.");
             await loadInbox(selectedThreadId);
-        } catch {
-            setError("Unable to sync received emails from Resend.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to sync from Resend.");
         } finally {
             setSyncing(false);
         }
@@ -282,37 +447,23 @@ export default function SupportInboxClient() {
         setThreads([]);
         setSelectedThread(null);
         setSelectedThreadId(null);
-        setHasMoreThreads(false);
     }
 
     if (authorized === false) {
         return (
-            <main className="min-h-screen bg-canvas-950 px-4 py-10 text-ink-100 sm:px-6">
-                <form
-                    onSubmit={submitLogin}
-                    className="mx-auto flex w-full max-w-sm flex-col gap-4 rounded-lg border border-line-300 bg-surface-900 p-6"
-                >
+            <main className="grid min-h-screen place-items-center bg-canvas-950 px-4 text-ink-100">
+                <form onSubmit={submitLogin} className="flex w-full max-w-sm flex-col gap-5 rounded-2xl border border-line-300 bg-surface-900 p-6 shadow-2xl">
                     <div>
-                        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary-200">AnimalDex</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">AnimalDex operations</p>
                         <h1 className="mt-2 font-display text-3xl text-white">Support Admin</h1>
                     </div>
                     <label className="flex flex-col gap-2 text-sm font-medium text-white">
                         Password
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                            className="rounded-md border border-line-300 bg-canvas-900 px-3 py-3 text-base text-white outline-none focus:border-primary-200"
-                            autoComplete="current-password"
-                        />
+                        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border border-line-300 bg-canvas-900 px-3 py-3 text-base text-white outline-none focus:border-primary-200" autoComplete="current-password" />
                     </label>
-                    {error && <p className="text-sm text-primary-200">{error}</p>}
-                    <button
-                        type="submit"
-                        disabled={submitting || !password}
-                        className="rounded-md bg-primary-500 px-4 py-3 text-sm font-bold text-canvas-950 transition hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-400"
-                    >
-                        {submitting ? "Signing in..." : "Sign in"}
+                    {error && <p className="text-sm text-red-300">{error}</p>}
+                    <button type="submit" disabled={submitting || !password} className="rounded-lg bg-primary-500 px-4 py-3 text-sm font-bold text-canvas-950 hover:bg-primary-200 disabled:opacity-50">
+                        {submitting ? "Signing in…" : "Sign in"}
                     </button>
                 </form>
             </main>
@@ -320,150 +471,228 @@ export default function SupportInboxClient() {
     }
 
     return (
-        <main className="min-h-screen bg-canvas-950 text-ink-100">
-            <div className="mx-auto flex h-screen w-full max-w-7xl flex-col overflow-hidden">
-                <header className="flex flex-col gap-3 border-b border-line-300 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                    <div>
-                        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary-200">AnimalDex</p>
-                        <h1 className="mt-1 font-display text-3xl text-white">Support Inbox</h1>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={syncFromResend}
-                            disabled={syncing}
-                            className="rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {syncing ? "Syncing..." : "Sync from Resend"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => loadInbox(selectedThreadId)}
-                            className="rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200"
-                        >
-                            Refresh
-                        </button>
-                        <button
-                            type="button"
-                            onClick={logout}
-                            className="rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200"
-                        >
-                            Sign out
-                        </button>
+        <main className="h-[100dvh] w-full overflow-hidden bg-canvas-950 text-ink-100">
+            <div className="flex h-full w-full flex-col">
+                <header className="shrink-0 border-b border-line-300 bg-canvas-950/95 px-4 py-3 backdrop-blur sm:px-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <Link href="/admin" aria-label="Back to admin dashboard" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-lg text-ink-300 transition hover:border-primary-300 hover:text-white">←</Link>
+                            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-500/15 text-primary-100">✦</span>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h1 className="truncate font-display text-xl text-white sm:text-3xl">Support Inbox</h1>
+                                    {unreadCount > 0 && <span className="rounded-full bg-primary-400 px-2 py-0.5 text-[11px] font-black text-canvas-950">{unreadCount}</span>}
+                                </div>
+                                <p className="text-xs text-ink-400">Customer conversations</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+                            <button type="button" onClick={syncFromResend} disabled={syncing} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 disabled:opacity-50 sm:text-sm">
+                                {syncing ? "Syncing…" : "Sync"}
+                            </button>
+                            <button type="button" onClick={() => loadInbox(selectedThreadId)} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 sm:text-sm">Refresh</button>
+                            <button type="button" onClick={logout} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:border-primary-200 hover:text-white sm:text-sm">Sign out</button>
+                        </div>
                     </div>
                 </header>
 
-                {error && (
-                    <div className="border-b border-line-300 bg-surface-900 px-4 py-3 text-sm text-primary-200 sm:px-6">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="shrink-0 border-b border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200 sm:px-6">{error}</div>}
 
-                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
-                    <aside className="min-h-0 overflow-y-auto border-b border-line-300 lg:border-b-0 lg:border-r">
-                        {loading && threads.length === 0 && (
-                            <div className="p-4 text-sm text-ink-300">Loading inbox...</div>
-                        )}
-                        {!loading && threads.length === 0 && (
-                            <div className="p-4 text-sm text-ink-300">No support emails yet.</div>
-                        )}
+                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(300px,24vw)_minmax(0,1fr)]">
+                    <aside className={`${mobileThreadOpen ? "hidden lg:block" : "block"} min-h-0 overflow-y-auto border-line-300 lg:border-r`}>
+                        <div className="sticky top-0 z-10 border-b border-line-300 bg-canvas-950/95 px-3 py-3 backdrop-blur">
+                            <p className="px-1 text-xs font-bold uppercase tracking-[0.16em] text-ink-400">Conversations</p>
+                            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filter support conversations">
+                                {(["inbox", "important", "unread", "spam", "all"] as InboxFilter[]).map((filter) => {
+                                    const active = inboxFilter === filter;
+                                    return (
+                                        <button
+                                            key={filter}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={active}
+                                            onClick={() => setInboxFilter(filter)}
+                                            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold capitalize transition ${active ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:border-line-200 hover:text-white"}`}
+                                        >
+                                            {filter}
+                                            <span className={`grid min-w-[1.25rem] place-items-center rounded-full px-1 py-0.5 text-[9px] ${active ? "bg-primary-300 text-canvas-950" : "bg-white/[0.07] text-ink-300"}`}>
+                                                {filterCounts[filter]}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {loading && !threads.length ? <div className="p-5 text-sm text-ink-300">Loading inbox…</div> : null}
+                        {!loading && !threads.length ? <div className="p-5 text-sm text-ink-300">No support emails yet.</div> : null}
+                        {!loading && threads.length > 0 && !filteredThreads.length ? <div className="p-5 text-sm text-ink-300">No {inboxFilter} conversations.</div> : null}
                         <div className="divide-y divide-line-300">
-                            {threads.map((thread) => {
+                            {filteredThreads.map((thread) => {
                                 const selected = thread.id === selectedThreadId;
-
+                                const customerLabel = getCustomerLabel(thread);
                                 return (
                                     <button
                                         key={thread.id}
                                         type="button"
                                         onClick={() => {
                                             setSelectedThreadId(thread.id);
+                                            setMobileThreadOpen(true);
                                             loadThreadDetail(thread.id);
                                         }}
-                                        className={`block w-full px-4 py-4 text-left transition ${selected ? "bg-surface-900" : "hover:bg-surface-900/60"}`}
+                                        className={`flex w-full gap-3 px-4 py-4 text-left transition ${selected ? "bg-primary-500/[0.07]" : "hover:bg-surface-900/60"}`}
                                     >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <p className="line-clamp-1 text-sm font-bold text-white">
-                                                {thread.subject || "(no subject)"}
-                                            </p>
-                                            <span className="shrink-0 rounded border border-line-300 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-ink-300">
-                                                {thread.status}
-                                            </span>
+                                        <div className="relative">
+                                            <Avatar name={customerLabel} src={thread.customerAvatarUrl} />
+                                            {thread.isUnread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-canvas-950" />}
                                         </div>
-                                        <p className="mt-2 line-clamp-1 text-sm text-ink-300">{getCustomerLabel(thread)}</p>
-                                        <p className="mt-2 text-xs text-ink-500">{formatDate(thread.updatedAt)}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className={`truncate text-sm ${thread.isUnread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{customerLabel}</p>
+                                                <time className="shrink-0 text-[11px] text-ink-500" title={absoluteDate(thread.updatedAt)}>{relativeDate(thread.updatedAt)}</time>
+                                            </div>
+                                            <p className={`mt-1 truncate text-sm ${thread.isUnread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.subject || "(no subject)"}</p>
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <span className="truncate text-xs text-ink-500">{thread.customerEmail}</span>
+                                                <span className={`ml-auto shrink-0 rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-wider ${
+                                                    thread.category === "important"
+                                                        ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
+                                                        : thread.category === "spam"
+                                                            ? "border-red-300/40 bg-red-400/10 text-red-200"
+                                                            : "border-primary-300/40 bg-primary-500/10 text-primary-100"
+                                                }`}>{thread.category}</span>
+                                            </div>
+                                        </div>
                                     </button>
                                 );
                             })}
                         </div>
                         {hasMoreThreads && (
-                            <div className="border-t border-line-300 p-4">
-                                <button
-                                    type="button"
-                                    onClick={loadMoreThreads}
-                                    disabled={loadingMore}
-                                    className="w-full rounded-md border border-line-300 px-4 py-2 text-sm font-bold text-white transition hover:border-primary-200 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {loadingMore ? "Loading..." : "Load older threads"}
+                            <div className="p-4">
+                                <button type="button" onClick={loadMoreThreads} disabled={loadingMore} className="w-full rounded-lg border border-line-300 px-4 py-2 text-sm font-bold text-white hover:border-primary-200 disabled:opacity-50">
+                                    {loadingMore ? "Loading…" : "Load older threads"}
                                 </button>
                             </div>
                         )}
                     </aside>
 
-                    <section className="flex min-h-0 flex-col overflow-hidden">
-                        {!selectedThread && (
-                            <div className="flex flex-1 items-center justify-center p-8 text-sm text-ink-300">
-                                Select a support thread.
-                            </div>
-                        )}
-
-                        {selectedThread && (
+                    <section className={`${mobileThreadOpen ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col overflow-hidden`}>
+                        {!selectedThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select a support thread.</div> : (
                             <>
-                                <div className="border-b border-line-300 px-4 py-5 sm:px-6">
-                                    <h2 className="font-display text-2xl text-white">{selectedThread.subject || "(no subject)"}</h2>
-                                    <p className="mt-2 text-sm text-ink-300">{getCustomerLabel(selectedThread)}</p>
+                                <div className="shrink-0 border-b border-line-300 bg-surface-900/45 px-4 py-4 sm:px-6">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <button type="button" onClick={() => setMobileThreadOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line-300 text-white lg:hidden" aria-label="Back to inbox">←</button>
+                                        <Avatar name={getCustomerLabel(selectedThread)} src={selectedThread.customerAvatarUrl} size="lg" />
+                                        <div className="min-w-0 flex-1">
+                                            <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedThread.subject || "(no subject)"}</h2>
+                                            <p className="mt-1 truncate text-sm text-ink-300">
+                                                {selectedThread.customerName ? `${selectedThread.customerName} · ` : ""}<a href={`mailto:${selectedThread.customerEmail}`} className="hover:text-primary-100">{selectedThread.customerEmail}</a>
+                                            </p>
+                                        </div>
+                                        <span className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider sm:inline-flex ${
+                                            selectedThread.category === "important"
+                                                ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
+                                                : selectedThread.category === "spam"
+                                                    ? "border-red-300/40 bg-red-400/10 text-red-200"
+                                                    : "border-primary-300/40 bg-primary-500/10 text-primary-100"
+                                        }`}>{selectedThread.category}</span>
+                                        {loadingThread && <span className="text-xs text-ink-400">Loading…</span>}
+                                    </div>
                                 </div>
 
-                                <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
-                                    {selectedThread.messages.map((message) => (
-                                        <article
-                                            key={message.id}
-                                            className={`rounded-lg border border-line-300 p-4 ${message.direction === "inbound" ? "bg-surface-900" : "bg-canvas-900"}`}
-                                        >
-                                            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">
-                                                        {message.direction === "inbound" ? message.fromEmail : "AnimalDex Support"}
-                                                    </p>
-                                                    <p className="text-xs text-ink-400">
-                                                        {message.direction === "inbound" ? "Inbound" : "Outbound"}
-                                                    </p>
+                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
+                                    {selectedThread.messages.map((message) => {
+                                        const inbound = message.direction === "inbound";
+                                        const imageAttachments = message.attachments.filter((attachment) => attachment.contentType.startsWith("image/"));
+                                        const fileAttachments = message.attachments.filter((attachment) => !attachment.contentType.startsWith("image/"));
+
+                                        return (
+                                            <article key={message.id} className={`min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/20 bg-primary-500/[0.055]"}`}>
+                                                <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
+                                                    <Avatar name={inbound ? message.fromEmail : "AnimalDex Support"} src={inbound ? selectedThread.customerAvatarUrl : "/images/logo.webp"} size="sm" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                            <p className="truncate text-sm font-bold text-white">{inbound ? (selectedThread.customerName || message.fromEmail) : "AnimalDex Support"}</p>
+                                                            <time className="text-xs text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
+                                                        </div>
+                                                        <p className="mt-1 truncate text-xs text-ink-400">
+                                                            {message.subject || selectedThread.subject || "(no subject)"}
+                                                        </p>
+                                                        <p className="mt-1 truncate text-[11px] text-ink-500">
+                                                            {message.fromEmail} → {message.toEmail}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-ink-500">{formatDate(message.createdAt)}</p>
-                                            </div>
-                                            <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-ink-200">{message.body}</p>
-                                        </article>
-                                    ))}
+
+                                                <div className="mt-5"><MessageBody body={message.body} /></div>
+
+                                                {imageAttachments.length > 0 && (
+                                                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                                        {imageAttachments.map((attachment) => (
+                                                            <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-canvas-900">
+                                                                <img src={attachment.url} alt={attachment.filename} loading="lazy" className="max-h-[32rem] w-full object-contain transition group-hover:scale-[1.01]" />
+                                                                <span className="block truncate border-t border-line-300 px-3 py-2 text-xs text-ink-300">{attachment.filename}</span>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {message.remoteImages.length > 0 && (
+                                                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                                        {message.remoteImages.map((image, index) => (
+                                                            <a key={`${image.url}-${index}`} href={image.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-white">
+                                                                <img src={image.url} alt={image.alt} loading="lazy" referrerPolicy="no-referrer" className="max-h-[32rem] w-full object-contain transition group-hover:scale-[1.01]" />
+                                                                <span className="block truncate border-t border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-300">{image.alt}</span>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {fileAttachments.length > 0 && (
+                                                    <div className="mt-5 flex flex-wrap gap-2">
+                                                        {fileAttachments.map((attachment) => (
+                                                            <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="flex max-w-full items-center gap-2 rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-200 hover:border-primary-300 hover:text-primary-100">
+                                                                <span aria-hidden="true">📎</span><span className="truncate">{attachment.filename}</span>{attachment.size ? <span className="shrink-0 text-ink-500">{formatBytes(attachment.size)}</span> : null}
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </article>
+                                        );
+                                    })}
                                 </div>
 
-                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-4 py-5 sm:px-6">
-                                    <label htmlFor="admin-support-reply" className="text-sm font-bold text-white">
-                                        Reply
-                                    </label>
-                                    <textarea
-                                        id="admin-support-reply"
-                                        value={reply}
-                                        onChange={(event) => setReply(event.target.value)}
-                                        rows={5}
-                                        className="mt-3 block w-full resize-y rounded-lg border border-line-300 bg-canvas-900 px-4 py-3 text-base text-white outline-none transition focus:border-primary-200"
-                                    />
-                                    <div className="mt-4 flex justify-end">
-                                        <button
-                                            type="submit"
-                                            disabled={!canSend}
-                                            className="rounded-md bg-primary-500 px-5 py-3 text-sm font-bold text-canvas-950 transition hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-400"
-                                        >
-                                            {submitting ? "Sending..." : "Send reply"}
-                                        </button>
+                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
+                                    <div className="overflow-hidden rounded-xl border border-line-300 bg-canvas-900 focus-within:border-primary-300">
+                                        <textarea
+                                            id="admin-support-reply"
+                                            value={reply}
+                                            onChange={(event) => setReply(event.target.value)}
+                                            rows={4}
+                                            placeholder={`Reply to ${selectedThread.customerName || selectedThread.customerEmail}…`}
+                                            className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
+                                        />
+                                        {attachments.length > 0 && (
+                                            <div className="grid gap-2 border-t border-line-300/70 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                {attachments.map((attachment) => (
+                                                    <div key={attachment.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-line-300 bg-surface-900 p-2">
+                                                        {attachment.previewUrl ? <img src={attachment.previewUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/5">📎</span>}
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-xs font-semibold text-white">{attachment.filename}</p>
+                                                            <p className="text-[10px] text-ink-500">{attachment.contentId ? "Inline image" : formatBytes(attachment.size)}</p>
+                                                        </div>
+                                                        <button type="button" onClick={() => removeAttachment(attachment.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded text-ink-400 hover:bg-white/5 hover:text-white" aria-label={`Remove ${attachment.filename}`}>×</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
+                                            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, false); event.target.value = ""; }} />
+                                            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, true); event.target.value = ""; }} />
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">📎 Attach files</button>
+                                            <button type="button" onClick={() => imageInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">▧ Insert images</button>
+                                            <p className="hidden text-[11px] text-ink-500 xl:block">Links become clickable · AnimalDex signature added automatically</p>
+                                            <button type="submit" disabled={!canSend} className="ml-auto rounded-lg bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-500">
+                                                {submitting ? "Sending…" : "Send reply"}
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </>

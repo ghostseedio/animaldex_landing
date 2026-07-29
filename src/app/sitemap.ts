@@ -3,7 +3,7 @@ import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import {useCases} from "@/data/use-cases";
 import {collectorPages} from "@/data/collector-pages";
-import {getIndexedBlogPosts} from "@/data/blog";
+import {getManagedBlogPosts, getManagedPages} from "@/lib/admin-content";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
 import {listMergedChallengeEntries} from "@/data/species-comparisons";
@@ -47,6 +47,8 @@ async function getSitemapChallengeEntries() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    const managedBlogPosts = await getManagedBlogPosts();
+    const managedPages = await getManagedPages();
     const behaviorLessons = await getBehaviorLessonIndex();
     const principleHubs = await getPrincipleHubIndex();
     const unifiedSpeciesEntries = await getSitemapSpeciesEntries();
@@ -92,6 +94,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 url: getAbsoluteUrl(locale, "/contact")
             },
             {
+                url: getAbsoluteUrl(locale, "/branding")
+            },
+            {
                 url: getAbsoluteUrl(locale, "/comparisons")
             },
             {
@@ -134,9 +139,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `/${entry.slug}`)
         }));
 
-        const blogEntries = getIndexedBlogPosts().map((post) => ({
+        const blogEntries = managedBlogPosts.map((post) => ({
             url: getAbsoluteUrl(locale, `/blog/${post.slug}`),
             lastModified: new Date(post.updatedAt || post.publishedAt)
+        }));
+        const managedPageEntries = managedPages.map((page) => ({
+            url: getAbsoluteUrl(locale, `/${page.slug}`),
+            lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
 
         const answerPageEntries = answerPages.map((entry) => ({
@@ -210,6 +219,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...speciesPages,
             ...collectorLandingPages,
             ...blogEntries,
+            ...managedPageEntries,
             ...answerPageEntries,
             ...challengePageEntries,
             ...rankingPageEntries,

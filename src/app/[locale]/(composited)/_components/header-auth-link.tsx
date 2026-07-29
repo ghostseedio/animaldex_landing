@@ -69,7 +69,7 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = fa
             <Link
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/20 bg-white/[0.04] px-4 text-base font-semibold text-white transition hover:border-primary-400/50 hover:bg-white/[0.07] md:hidden"
+                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/20 bg-white/[0.04] px-3 text-sm font-bold text-white transition hover:border-primary-400/50 hover:bg-white/[0.07] md:flex"
             >
                 {label}
             </Link>

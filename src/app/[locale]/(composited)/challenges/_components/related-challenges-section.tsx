@@ -38,8 +38,21 @@ export default function RelatedChallengesSection({
                         key={item.slug}
                         className="group overflow-hidden rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur flex flex-col"
                     >
-                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-surface-800">
-                            {item.image ? <Image src={item.image.src} alt={item.image.alt} width={item.image.width} height={item.image.height} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : null}
+                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(49,255,79,0.18),transparent_34%),linear-gradient(135deg,rgba(17,27,22,0.96),rgba(6,10,8,0.98))]">
+                            {item.image ? (
+                                <Image
+                                    src={item.image.src}
+                                    alt={item.image.alt}
+                                    width={item.image.width}
+                                    height={item.image.height}
+                                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="flex h-full flex-col justify-end p-5">
+                                    <span className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{item.comparisonTypeLabel}</span>
+                                    <span className="mt-2 font-display text-2xl font-bold leading-none text-white">{item.animalAName} vs {item.animalBName}</span>
+                                </div>
+                            )}
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-5">
                         <div className="flex flex-wrap gap-2">

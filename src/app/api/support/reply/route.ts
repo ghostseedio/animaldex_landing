@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {
     createSupportMessage,
+    EmailAttachment,
     getSupportSenderEmail,
     loadValidSupportThreadByToken,
     markReplyTokenUsed,
@@ -11,6 +12,7 @@ import {
 type ReplyRequestBody = {
     token?: unknown;
     message?: unknown;
+    attachments?: unknown;
 };
 
 export async function POST(request: NextRequest) {
@@ -33,6 +35,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ok: false, error: "Message is required"}, {status: 400});
     }
 
+    let attachments: EmailAttachment[] | undefined;
+
+    if (Array.isArray(body.attachments)) {
+        attachments = body.attachments.filter(
+            (a): a is EmailAttachment =>
+                typeof a === "object" &&
+                a !== null &&
+                typeof a.filename === "string" &&
+                typeof a.content === "string" &&
+                typeof a.contentType === "string"
+        );
+
+        if (attachments.length === 0) {
+            attachments = undefined;
+        }
+    }
+
     try {
         const result = await loadValidSupportThreadByToken(token);
 
@@ -43,7 +62,8 @@ export async function POST(request: NextRequest) {
         const resendEmailId = await sendSupportReply({
             thread: result.thread,
             message,
-            previousMessages: result.messages
+            previousMessages: result.messages,
+            attachments
         });
 
         await createSupportMessage({

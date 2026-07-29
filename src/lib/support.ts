@@ -1,4 +1,4 @@
-import {randomBytes} from "crypto";
+import {createHash, randomBytes} from "crypto";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {getSiteUrl} from "@/lib/site";
 
@@ -29,6 +29,7 @@ export type SupportThread = {
     resend_received_email_id: string | null;
     created_at: string;
     updated_at: string;
+    read_at?: string | null;
 };
 
 export type SupportMessage = {
@@ -65,6 +66,23 @@ type RuntimeResendClient = {
     };
 };
 
+export type EmailAttachment = {
+    filename: string;
+    content: string; // base64-encoded content
+    contentType: string;
+    contentId?: string;
+};
+
+export type SupportAttachment = {
+    id: string;
+    filename: string;
+    contentType: string;
+    contentDisposition: string | null;
+    contentId: string | null;
+    size: number | null;
+    url: string;
+};
+
 type ResendSendOptions = {
     from: string;
     to: string | string[];
@@ -74,6 +92,7 @@ type ResendSendOptions = {
     html: string;
     headers?: Record<string, string>;
     idempotencyKey?: string;
+    attachments?: EmailAttachment[];
 };
 
 export type SafeSupportMessage = {
@@ -83,6 +102,8 @@ export type SafeSupportMessage = {
     toEmail: string;
     subject: string | null;
     body: string;
+    attachments: SupportAttachment[];
+    remoteImages: Array<{url: string; alt: string}>;
     createdAt: string;
 };
 
@@ -91,9 +112,94 @@ export type SafeSupportThread = {
     subject: string | null;
     customerEmail: string;
     customerName: string | null;
+    customerAvatarUrl: string | null;
     status: string;
+    category: SupportThreadCategory;
+    isUnread: boolean;
     messages: SafeSupportMessage[];
 };
+
+export type SupportThreadCategory = "important" | "inbox" | "spam";
+
+const PERSONAL_EMAIL_DOMAINS = new Set([
+    "gmail.com",
+    "googlemail.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "msn.com",
+    "yahoo.com",
+    "ymail.com",
+    "icloud.com",
+    "me.com",
+    "mac.com",
+    "proton.me",
+    "protonmail.com",
+    "aol.com"
+]);
+
+export function getSupportThreadCategory(email: string): SupportThreadCategory {
+    const domain = email.trim().toLowerCase().split("@").pop() ?? "";
+
+    if (domain === "wise.com" || domain.endsWith(".wise.com")) {
+        return "important";
+    }
+
+    return PERSONAL_EMAIL_DOMAINS.has(domain) ? "inbox" : "spam";
+}
+
+export function cleanSupportMessageText(value: string) {
+    return value
+        // Plain-text email converters commonly replace HTML <img> elements
+        // with tokens such as "[image: Deel]". The actual received image is
+        // rendered from Resend's attachment metadata instead.
+        .replace(/\s*\[(?:image|img):[^\]\r\n]*\]\s*/gi, "\n")
+        .replace(/\s*\[cid:[^\]\r\n]*\]\s*/gi, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+export function extractSupportRemoteImages(html: string | null) {
+    if (!html) return [];
+
+    const images: Array<{url: string; alt: string}> = [];
+    const imagePattern = /<img\b[^>]*>/gi;
+    const matches = Array.from(html.matchAll(imagePattern));
+
+    for (let index = 0; index < matches.length; index += 1) {
+        if (images.length >= 12) break;
+
+        const match = matches[index];
+        const tag = match[0];
+        const src = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]
+            ?.replace(/&amp;/gi, "&")
+            .trim();
+        const width = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] ?? 0);
+        const height = Number(tag.match(/\bheight\s*=\s*["']?(\d+)/i)?.[1] ?? 0);
+
+        // Skip CID/data images (handled as Resend attachments) and obvious
+        // tracking pixels. Only browser-safe remote HTTPS images are exposed.
+        if (!src || (width > 0 && width <= 2) || (height > 0 && height <= 2)) continue;
+
+        try {
+            const url = new URL(src);
+            if (url.protocol !== "https:") continue;
+
+            const alt = tag.match(/\balt\s*=\s*["']([^"']*)["']/i)?.[1]
+                ?.replace(/&quot;/gi, "\"")
+                .replace(/&#39;/gi, "'")
+                .replace(/&amp;/gi, "&")
+                .trim();
+
+            images.push({url: url.toString(), alt: alt || `Email image ${index + 1}`});
+        } catch {
+            // Ignore malformed or non-URL image sources.
+        }
+    }
+
+    return images;
+}
 
 function getRequiredResendApiKey() {
     const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -423,7 +529,7 @@ export async function createOrUpdateSupportThread(email: InboundEmail) {
     });
 }
 
-export async function updateSupportThread(threadId: string, patch: Partial<Pick<SupportThread, "customer_name" | "resend_received_email_id" | "status">> = {}) {
+export async function updateSupportThread(threadId: string, patch: Partial<Pick<SupportThread, "customer_name" | "resend_received_email_id" | "status" | "read_at">> = {}) {
     const rows = await supabaseRequest<SupportThread[]>(
         `support_threads?id=eq.${encoded(threadId)}`,
         {
@@ -564,20 +670,42 @@ export async function markReplyTokenUsed(tokenId: string) {
     );
 }
 
-export function toSafeSupportThread(thread: SupportThread, messages: SupportMessage[]): SafeSupportThread {
+export function getSupportCustomerAvatarUrl(email: string) {
+    const hash = createHash("md5").update(email.trim().toLowerCase()).digest("hex");
+    return `https://www.gravatar.com/avatar/${hash}?d=404&s=160`;
+}
+
+export function isSupportThreadUnread(thread: SupportThread) {
+    if (!thread.read_at) {
+        return true;
+    }
+
+    return new Date(thread.updated_at).getTime() > new Date(thread.read_at).getTime();
+}
+
+export function toSafeSupportThread(
+    thread: SupportThread,
+    messages: SupportMessage[],
+    attachmentsByMessageId: Map<string, SupportAttachment[]> = new Map()
+): SafeSupportThread {
     return {
         id: thread.id,
         subject: thread.subject,
         customerEmail: thread.customer_email,
         customerName: thread.customer_name,
+        customerAvatarUrl: getSupportCustomerAvatarUrl(thread.customer_email),
         status: thread.status,
+        category: getSupportThreadCategory(thread.customer_email),
+        isUnread: isSupportThreadUnread(thread),
         messages: messages.map((message) => ({
             id: message.id,
             direction: message.direction,
             fromEmail: message.from_email,
             toEmail: message.to_email,
             subject: message.subject,
-            body: message.text_body || stripHtmlToText(message.html_body || "") || "(No message body)",
+            body: cleanSupportMessageText(message.text_body || stripHtmlToText(message.html_body || "")) || "(No message body)",
+            attachments: attachmentsByMessageId.get(message.id) ?? [],
+            remoteImages: extractSupportRemoteImages(message.html_body),
             createdAt: message.created_at
         }))
     };
@@ -594,18 +722,29 @@ export async function sendResendEmail(options: ResendSendOptions) {
         headers["Idempotency-Key"] = options.idempotencyKey;
     }
 
+    const payload: Record<string, unknown> = {
+        from: options.from,
+        to: options.to,
+        reply_to: options.replyTo,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+        headers: options.headers
+    };
+
+    if (options.attachments && options.attachments.length > 0) {
+        payload.attachments = options.attachments.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            content_type: attachment.contentType,
+            ...(attachment.contentId ? {content_id: attachment.contentId} : {})
+        }));
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers,
-        body: JSON.stringify({
-            from: options.from,
-            to: options.to,
-            reply_to: options.replyTo,
-            subject: options.subject,
-            text: options.text,
-            html: options.html,
-            headers: options.headers
-        })
+        body: JSON.stringify(payload)
     });
 
     const responseBody = await response.json().catch(() => null);
@@ -681,11 +820,12 @@ export async function sendSupportReply(input: {
     thread: SupportThread;
     message: string;
     previousMessages?: SupportMessage[];
+    attachments?: EmailAttachment[];
 }) {
     const subject = input.thread.subject?.startsWith("Re:")
         ? input.thread.subject
         : `Re: ${input.thread.subject ?? "(no subject)"}`;
-    const escapedMessage = escapeHtml(input.message).replace(/\n/g, "<br />");
+    const messageHtml = formatSupportMessageHtml(input.message);
     const history = (input.previousMessages ?? []).slice(-6);
     const historyText = history.length > 0
         ? [
@@ -709,10 +849,15 @@ export async function sendSupportReply(input: {
             })
         ].join("")
         : "";
+    const inlineImages = (input.attachments ?? [])
+        .filter((attachment) => attachment.contentId && attachment.contentType.startsWith("image/"))
+        .map((attachment) => `<figure style="margin:20px 0"><img src="cid:${escapeHtml(attachment.contentId ?? "")}" alt="${escapeHtml(attachment.filename)}" style="display:block;max-width:100%;height:auto;border-radius:12px" /></figure>`)
+        .join("");
     const html = [
-        "<div>",
-        `<p>${escapedMessage}</p>`,
-        "<p>AnimalDex Support</p>",
+        '<div style="max-width:680px;font-family:Arial,sans-serif;font-size:16px;line-height:1.65;color:#172019">',
+        messageHtml,
+        inlineImages,
+        '<div style="margin-top:24px;padding-top:16px;border-top:1px solid #dce7de;color:#516257"><strong>AnimalDex Support</strong><br /><a href="https://animaldex.app" style="color:#138c3e">animaldex.app</a></div>',
         historyHtml,
         "</div>"
     ].join("");
@@ -724,8 +869,106 @@ export async function sendSupportReply(input: {
         replyTo: getSupportFromEmail(),
         subject,
         text,
-        html
+        html,
+        attachments: input.attachments
     });
+}
+
+export function formatSupportMessageHtml(message: string) {
+    const escaped = escapeHtml(message.trim());
+    const linked = escaped
+        .replace(/\b(https?:\/\/[^\s<]+[^<\s.,;:!?")\]])/gi, '<a href="$1" style="color:#138c3e;text-decoration:underline">$1</a>')
+        .replace(/\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/gi, '<a href="mailto:$1" style="color:#138c3e;text-decoration:underline">$1</a>');
+    const paragraphs = linked
+        .split(/\n{2,}/)
+        .map((paragraph) => `<p style="margin:0 0 16px">${paragraph.replace(/\n/g, "<br />")}</p>`)
+        .join("");
+
+    return paragraphs || "<p></p>";
+}
+
+type ResendReceivedAttachment = {
+    id: string;
+    filename: string;
+    content_type?: string;
+    content_disposition?: string | null;
+    content_id?: string | null;
+    size?: number | null;
+};
+
+export async function listReceivedEmailAttachments(emailId: string): Promise<ResendReceivedAttachment[]> {
+    const response = await fetch(`https://api.resend.com/emails/receiving/${encoded(emailId)}/attachments`, {
+        headers: {
+            Authorization: `Bearer ${getRequiredResendApiKey()}`,
+            Accept: "application/json"
+        },
+        cache: "no-store"
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const payload = await response.json().catch(() => null);
+    const rows = isRecord(payload) && Array.isArray(payload.data)
+        ? payload.data
+        : Array.isArray(payload)
+            ? payload
+            : [];
+
+    return rows.filter((item): item is ResendReceivedAttachment =>
+        isRecord(item) && typeof item.id === "string" && typeof item.filename === "string"
+    ).map((item) => ({
+        id: item.id,
+        filename: item.filename,
+        content_type: typeof item.content_type === "string" ? item.content_type : "application/octet-stream",
+        content_disposition: typeof item.content_disposition === "string" ? item.content_disposition : null,
+        content_id: typeof item.content_id === "string" ? item.content_id : null,
+        size: typeof item.size === "number" ? item.size : null
+    }));
+}
+
+export async function loadSupportAttachments(messages: SupportMessage[]) {
+    const attachmentEntries = await Promise.all(messages.map(async (message): Promise<[string, SupportAttachment[]]> => {
+        if (message.direction !== "inbound" || !message.resend_email_id) {
+            return [message.id, []];
+        }
+
+        const attachments = await listReceivedEmailAttachments(message.resend_email_id);
+        return [message.id, attachments.map((attachment): SupportAttachment => ({
+            id: attachment.id,
+            filename: attachment.filename,
+            contentType: attachment.content_type ?? "application/octet-stream",
+            contentDisposition: attachment.content_disposition ?? null,
+            contentId: attachment.content_id ?? null,
+            size: attachment.size ?? null,
+            url: `/api/admin/support/attachment?emailId=${encodeURIComponent(message.resend_email_id ?? "")}&attachmentId=${encodeURIComponent(attachment.id)}`
+        }))];
+    }));
+
+    return new Map(attachmentEntries);
+}
+
+export async function getReceivedAttachmentDownloadUrl(emailId: string, attachmentId: string) {
+    const response = await fetch(
+        `https://api.resend.com/emails/receiving/${encoded(emailId)}/attachments/${encoded(attachmentId)}`,
+        {
+            headers: {
+                Authorization: `Bearer ${getRequiredResendApiKey()}`,
+                Accept: "application/json"
+            },
+            cache: "no-store"
+        }
+    );
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const payload = await response.json().catch(() => null);
+    return isRecord(payload) && typeof payload.download_url === "string"
+        ? payload.download_url
+        : null;
 }
 
 export function getSupportSenderEmail() {

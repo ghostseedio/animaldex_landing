@@ -4,17 +4,21 @@ import {notFound} from "next/navigation";
 import Image from "next/image";
 import {ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
-import Button from "@/app/[locale]/_components/button";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import {answerPages, getAnswerPage, getRelatedAnswerPages} from "@/data/answer-pages";
 import {getBlogPost} from "@/data/blog";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {getManagedPage} from "@/lib/admin-content";
+import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
+import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
 
 type AnswerPageProps = {
     slug: string;
+    cmsSource?: boolean;
 };
 
 type AnswerVisual = {
@@ -154,11 +158,15 @@ export async function generateAnswerPageMetadata(slug: string): Promise<Metadata
     if (!entry) {
         return {};
     }
+    const managed = await getManagedPage(slug);
+    const metadataTitle = managed?.title ?? entry.metaTitle;
+    const metadataDescription = managed?.description ?? entry.metaDescription;
+    const metadataImage = managed?.featuredImage;
 
     return {
-        title: entry.metaTitle,
-        description: entry.metaDescription,
-        keywords: [...baseKeywords, ...entry.searchIntents],
+        title: metadataTitle,
+        description: metadataDescription,
+        keywords: [...baseKeywords, ...(managed?.searchIntents ?? entry.searchIntents)],
         alternates: {
             canonical: getLocalePath(locale, `/${entry.slug}`),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
@@ -171,36 +179,103 @@ export async function generateAnswerPageMetadata(slug: string): Promise<Metadata
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),
-            title: `${entry.metaTitle} | AnimalDex`,
-            description: entry.metaDescription,
+            title: `${metadataTitle} | AnimalDex`,
+            description: metadataDescription,
             url: getLocalePath(locale, `/${entry.slug}`),
-            modifiedTime: entry.updatedAt,
-            tags: entry.searchIntents,
+            modifiedTime: managed?.updatedAt ?? entry.updatedAt,
+            tags: managed?.searchIntents ?? entry.searchIntents,
             images: [
                 {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${entry.metaTitle} | AnimalDex`
+                    url: metadataImage ? getAbsoluteAssetUrl(metadataImage.src) : "/images/og.png",
+                    width: metadataImage?.width ?? 1200,
+                    height: metadataImage?.height ?? 630,
+                    alt: `${metadataImage?.alt ?? metadataTitle} | AnimalDex`
                 }
             ]
         },
         twitter: {
             card: "summary_large_image",
-            title: `${entry.metaTitle} | AnimalDex`,
-            description: entry.metaDescription,
-            images: ["/images/og.png"]
+            title: `${metadataTitle} | AnimalDex`,
+            description: metadataDescription,
+            images: [metadataImage ? getAbsoluteAssetUrl(metadataImage.src) : "/images/og.png"]
         }
     };
 }
 
-export default async function AnswerPage({slug}: AnswerPageProps) {
+export function ManagedAnswerPageArticle({managed}: {managed: NonNullable<Awaited<ReturnType<typeof getManagedPage>>>}) {
+    const cmsSourceMigrated = (managed as typeof managed & {cmsSourceMigrated?: unknown}).cmsSourceMigrated;
+    const sourceMigrated = typeof cmsSourceMigrated === "string" && cmsSourceMigrated.startsWith("source-sections-");
+
+    if (sourceMigrated) {
+        return (
+            <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-10 px-4 py-12 md:px-8 md:py-20">
+                {managed.headerHtml ? (
+                    <RenderedCodeFrame
+                        title="Page header"
+                        documentHtml={getRenderedCodeDocument({language: "html+css+js", code: managed.headerHtml})}
+                        minHeight={240}
+                    />
+                ) : null}
+                {managed.sections.map((section, sectionIndex) => section.html !== undefined ? (
+                    <RenderedCodeFrame
+                        key={`${section.title}-${sectionIndex}`}
+                        title={section.title || `Page section ${sectionIndex + 1}`}
+                        documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})}
+                        minHeight={280}
+                    />
+                ) : (
+                    <section key={`${section.title}-${sectionIndex}`} className="space-y-5 border-t border-line-300 pt-8">
+                        {section.kicker ? <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">{section.kicker}</p> : null}
+                        {(section.headingLevel ?? 2) === 3
+                            ? <h3 className="font-display text-2xl text-white sm:text-3xl">{section.title}</h3>
+                            : <h2 className="font-display text-3xl text-white sm:text-4xl">{section.title}</h2>}
+                        {section.paragraphs.map((paragraph, index) => <p key={index} className="whitespace-pre-wrap text-lg leading-8 text-ink-200">{paragraph}</p>)}
+                    </section>
+                ))}
+            </article>
+        );
+    }
+
+    return (
+        <article className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12 md:px-8 md:py-20">
+            {managed.headerHtml ? <RenderedCodeFrame title="Page header" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: managed.headerHtml})} minHeight={240} /> : <header className="text-center">
+                <div className="flex flex-wrap justify-center gap-2">{managed.tags.map((tag) => <span key={tag} className="rounded-full border border-primary-400/30 bg-primary-500/10 px-3 py-1 text-xs font-bold text-primary-100">{tag}</span>)}</div>
+                <h1 className="mt-5 font-display text-4xl leading-tight text-white sm:text-6xl">{managed.title}</h1>
+                <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-ink-300">{managed.description}</p>
+            </header>}
+            <ContentImageFigure image={managed.featuredImage} priority />
+            <div className="space-y-14">
+                {managed.sections.map((section, sectionIndex) => (
+                    <section key={`${section.title}-${sectionIndex}`} className="space-y-5 border-t border-line-300 pt-8">
+                        {section.html !== undefined ? <div className="overflow-hidden rounded-2xl border border-line-300"><RenderedCodeFrame title={section.title || `Custom section ${sectionIndex + 1}`} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} /></div> : <>
+                            {section.kicker ? <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">{section.kicker}</p> : null}
+                            {(section.headingLevel ?? 2) === 3
+                                ? <h3 className="font-display text-2xl text-white sm:text-3xl">{section.title}</h3>
+                                : <h2 className="font-display text-3xl text-white sm:text-4xl">{section.title}</h2>}
+                            {section.paragraphs.map((paragraph, index) => <p key={index} className="whitespace-pre-wrap text-lg leading-8 text-ink-200">{paragraph}</p>)}
+                            {section.codeBlocks?.map((block, index) => block.render && canRenderCodeBlock(block.language)
+                                ? <figure key={index} className="overflow-hidden rounded-2xl border border-line-300 bg-white"><RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />{block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>
+                                : <figure key={index} className="overflow-hidden rounded-2xl border border-line-300 bg-[#080d0a]"><div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[.16em] text-ink-400">{block.language || "Text"}</div><pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>{block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>)}
+                        </>}
+                    </section>
+                ))}
+            </div>
+        </article>
+    );
+}
+
+export default async function AnswerPage({slug, cmsSource = false}: AnswerPageProps) {
     const t = await getTranslations("answerPages");
     const locale = await getLocale();
     const entry = getAnswerPage(slug);
 
     if (!entry) {
         notFound();
+    }
+    const managed = await getManagedPage(slug);
+
+    if (managed && !cmsSource) {
+        return <ManagedAnswerPageArticle managed={managed} />;
     }
 
     const relatedPages = getRelatedAnswerPages(entry.slug, 5);
@@ -494,20 +569,30 @@ export default async function AnswerPage({slug}: AnswerPageProps) {
                         </div>
                     </SectionShell>
 
-                    <div className="overflow-hidden rounded-lg border border-line-300 bg-surface-900/80">
-                        <div className="grid gap-0 lg:grid-cols-[1fr_18rem]">
-                            <div className="p-6 text-center md:p-10 lg:text-left">
-                                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("ctaTitle")}</h2>
-                                <p className="mt-3 text-lg leading-8 text-ink-200">{t("ctaDescription")}</p>
-                                <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-                                    <StoreLinks />
-                                    <Link href="/">
-                                        <Button as="span">{t("landingButton")}</Button>
+                    <div className="relative overflow-hidden rounded-[2rem] border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(131,255,174,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/50 to-transparent" />
+                        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                            <div className="relative z-10 p-6 text-center md:p-10 lg:p-12 lg:text-left">
+                                <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">Start collecting</p>
+                                <h2 className="mt-3 font-display text-4xl font-bold leading-[0.98] text-white md:text-5xl">{t("ctaTitle")}</h2>
+                                <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-200">{t("ctaDescription")}</p>
+                                <div className="mt-7 flex flex-col items-center gap-4 lg:items-start">
+                                    <StoreLinks
+                                        className="!mt-0 !justify-start"
+                                        buttonClassName="!h-16 !min-w-[13.5rem] !rounded-[1.25rem] !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(49,255,79,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(49,255,79,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
+                                    />
+                                    <Link
+                                        href="/"
+                                        className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-primary-200/25 bg-white/[0.045] px-5 text-sm font-black uppercase tracking-[0.12em] text-primary-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-200/60 hover:bg-primary-400 hover:text-canvas-950"
+                                    >
+                                        <span aria-hidden="true">←</span>
+                                        {t("landingButton")}
                                     </Link>
                                 </div>
                             </div>
-                            <div className="relative hidden border-l border-line-300 bg-canvas-950/35 lg:block">
-                                <Image src={visual.companionImage} alt="" fill className="object-cover opacity-80" sizes="18rem" />
+                            <div className="relative hidden min-h-[22rem] overflow-hidden border-l border-primary-200/15 bg-canvas-950/45 lg:block">
+                                <Image src={visual.companionImage} alt="" fill className="object-cover opacity-75" sizes="22rem" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-canvas-950/20 via-transparent to-canvas-950/45" />
                             </div>
                         </div>
                     </div>

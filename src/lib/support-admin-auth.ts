@@ -1,5 +1,7 @@
 import {createHmac, randomBytes, timingSafeEqual} from "crypto";
+import {createServerClient} from "@supabase/ssr";
 import {NextRequest} from "next/server";
+import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export const supportAdminCookieName = "animaldex_support_admin";
 
@@ -83,8 +85,38 @@ export function verifySupportAdminSession(session: string | undefined) {
     }
 }
 
-export function isSupportAdminRequestAuthorized(request: NextRequest) {
-    return verifySupportAdminSession(request.cookies.get(supportAdminCookieName)?.value);
+function getAdminEmails() {
+    return new Set([
+        "lennybeadle@gmail.com",
+        ...(process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "")
+            .split(",")
+            .map((email) => email.trim().toLowerCase())
+            .filter(Boolean)
+    ]);
+}
+
+export async function isSupportAdminRequestAuthorized(request: NextRequest) {
+    if (verifySupportAdminSession(request.cookies.get(supportAdminCookieName)?.value)) {
+        return true;
+    }
+
+    const url = getSupabaseUrl();
+    const key = getSupabaseAuthKey();
+    if (!url || !key) return false;
+
+    const supabase = createServerClient(url, key, {
+        cookies: {
+            getAll() {
+                return request.cookies.getAll();
+            },
+            setAll() {
+                // Authorization checks never mutate the browser session.
+            }
+        }
+    });
+    const {data: {user}} = await supabase.auth.getUser();
+    const email = user?.email?.trim().toLowerCase();
+    return Boolean(email && getAdminEmails().has(email));
 }
 
 export function getSupportAdminCookieOptions() {

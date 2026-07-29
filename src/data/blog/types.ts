@@ -40,6 +40,8 @@ export type BlogSubsection = {
 
 export type BlogSection = {
     kicker?: string;
+    headingLevel?: 2 | 3;
+    html?: string;
     title: string;
     paragraphs: string[];
     cards?: BlogSectionCard[];
@@ -48,6 +50,12 @@ export type BlogSection = {
     speciesSlugs?: string[];
     media?: BlogMediaBlock;
     pullQuote?: string;
+    codeBlocks?: Array<{
+        language?: string;
+        code: string;
+        caption?: string;
+        render?: boolean;
+    }>;
     subsections?: BlogSubsection[];
 };
 
@@ -58,6 +66,7 @@ export type BlogFAQ = {
 
 export type BlogPost = CanonicalContentMetadata & {
     slug: string;
+    headerHtml?: string;
     canonicalUrl?: string;
     originalPublicationUrl?: string;
     originalPublicationLabel?: string;

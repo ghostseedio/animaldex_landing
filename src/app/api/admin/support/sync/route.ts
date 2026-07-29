@@ -3,7 +3,7 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {syncMissingReceivedEmailsFromResend} from "@/lib/support";
 
 export async function POST(request: NextRequest) {
-    if (!isSupportAdminRequestAuthorized(request)) {
+    if (!(await isSupportAdminRequestAuthorized(request))) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 

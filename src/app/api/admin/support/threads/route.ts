@@ -2,10 +2,15 @@ import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {
     loadSupportMessagesByThreadId,
+    loadSupportAttachments,
     loadSupportThreadById,
     loadSupportThreads,
+    getSupportCustomerAvatarUrl,
+    getSupportThreadCategory,
+    isSupportThreadUnread,
     SupportThread,
-    toSafeSupportThread
+    toSafeSupportThread,
+    updateSupportThread
 } from "@/lib/support";
 
 const DEFAULT_THREAD_PAGE_SIZE = 15;
@@ -17,7 +22,10 @@ function toThreadSummary(thread: SupportThread) {
         subject: thread.subject,
         customerEmail: thread.customer_email,
         customerName: thread.customer_name,
+        customerAvatarUrl: getSupportCustomerAvatarUrl(thread.customer_email),
         status: thread.status,
+        category: getSupportThreadCategory(thread.customer_email),
+        isUnread: isSupportThreadUnread(thread),
         createdAt: thread.created_at,
         updatedAt: thread.updated_at
     };
@@ -35,7 +43,7 @@ function parseThreadPagination(searchParams: URLSearchParams) {
 }
 
 export async function GET(request: NextRequest) {
-    if (!isSupportAdminRequestAuthorized(request)) {
+    if (!(await isSupportAdminRequestAuthorized(request))) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 
@@ -56,12 +64,37 @@ export async function GET(request: NextRequest) {
         const selectedThreadId = requestedThreadId || (includeThreads && offset === 0 ? threads[0]?.id : undefined);
         const selectedThread = selectedThreadId ? await loadSupportThreadById(selectedThreadId) : null;
         const messages = selectedThread ? await loadSupportMessagesByThreadId(selectedThread.id) : [];
+        const attachments = selectedThread ? await loadSupportAttachments(messages) : new Map();
+
+        if (selectedThread && isSupportThreadUnread(selectedThread)) {
+            const readAt = new Date().toISOString();
+            try {
+                await updateSupportThread(selectedThread.id, {read_at: readAt});
+                selectedThread.read_at = readAt;
+                const summary = threads.find((thread) => thread.id === selectedThread.id);
+
+                if (summary) {
+                    summary.read_at = readAt;
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "";
+
+                // Keep the inbox usable while an older database is waiting for
+                // the support read-state migration. Other database errors still
+                // fail the request so they cannot go unnoticed.
+                if (!message.includes("PGRST204") || !message.includes("read_at")) {
+                    throw error;
+                }
+
+                console.warn("[admin-support-threads] Read state migration is not applied yet");
+            }
+        }
 
         return NextResponse.json({
             ok: true,
             threads: includeThreads ? threads.map(toThreadSummary) : undefined,
             hasMore: includeThreads ? hasMore : undefined,
-            thread: selectedThread ? toSafeSupportThread(selectedThread, messages) : null
+            thread: selectedThread ? toSafeSupportThread(selectedThread, messages, attachments) : null
         });
     } catch (error) {
         console.error("[admin-support-threads] Unable to load support inbox", {

@@ -3,7 +3,7 @@ import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {getIndexedBlogPosts} from "@/data/blog";
+import {getManagedBlogPosts, getManagedPageSummaries} from "@/lib/admin-content";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
@@ -56,7 +56,7 @@ export async function generateMetadata({searchParams}: BlogIndexPageProps): Prom
     const locale = await getLocale();
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
-    const indexedBlogPosts = getIndexedBlogPosts();
+    const indexedBlogPosts = await getManagedBlogPosts();
     const postKeywords = Array.from(new Set(indexedBlogPosts.flatMap((post) => post.searchIntents)));
     const title = messages.blog?.metaTitle || "AnimalDex Blog";
     const description = messages.blog?.metaDescription || messages.meta?.description || "";
@@ -106,7 +106,9 @@ export async function generateMetadata({searchParams}: BlogIndexPageProps): Prom
 export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) {
     const t = await getTranslations("blog");
     const locale = await getLocale();
-    const indexedBlogPosts = getIndexedBlogPosts();
+    const indexedBlogPosts = await getManagedBlogPosts();
+    const managedPageSummaries = await getManagedPageSummaries();
+    const pageSummaryBySlug = new Map(managedPageSummaries.map((page) => [page.slug, page]));
     const currentPage = getRequestedPage(searchParams?.page);
     const totalPages = Math.max(1, Math.ceil(indexedBlogPosts.length / POSTS_PER_PAGE));
 
@@ -156,7 +158,7 @@ export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) 
                     </h1>
                     <p className="max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("description")}</p>
                     <div className="flex flex-wrap gap-3">
-                        <a href="#latest-stories" className="inline-flex min-h-[46px] items-center justify-center rounded-full bg-primary-300 px-6 text-sm font-bold text-canvas-950 transition-transform hover:-translate-y-0.5 hover:bg-primary-200">
+                        <a href="#latest-stories" className="inline-flex min-h-[46px] items-center justify-center rounded-full border border-primary-200/45 bg-canvas-950/85 px-6 text-sm font-black text-primary-100 shadow-[0_14px_45px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-100 hover:bg-primary-400 hover:text-canvas-950">
                             Explore latest stories
                         </a>
                         <Link href="/blog/feed.xml" className="inline-flex min-h-[46px] items-center justify-center rounded-full border border-line-200/70 bg-white/[0.03] px-6 text-sm font-semibold text-ink-100 transition-colors hover:border-primary-300 hover:text-primary-100">
@@ -314,21 +316,70 @@ export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) 
                 </nav>
             )}
 
-            {currentPage === 1 && <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("answersHubTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("answersHubDescription")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {answerPages.map((page) => (
-                        <article key={page.slug} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-4 flex flex-col gap-2">
-                            <h3 className="text-white text-xl font-semibold">{page.shortTitle}</h3>
-                            <p className="text-ink-200 text-base">{page.metaDescription}</p>
-                            <Link href={`/${page.slug}`} className="text-primary-200 hover:text-primary-100 transition-colors" underline>
-                                {t("readAnswerPage")}
-                            </Link>
-                        </article>
-                    ))}
-                </div>
-            </section>}
+            {currentPage === 1 && (
+                <section className="overflow-hidden rounded-[2rem] border border-line-300 bg-[linear-gradient(145deg,rgba(16,29,21,0.96),rgba(9,17,12,0.98))] shadow-[0_28px_90px_-60px_rgba(61,210,119,0.38)]">
+                    <div className="flex flex-col gap-5 border-b border-line-300 px-6 py-7 md:flex-row md:items-end md:justify-between md:px-9 md:py-9">
+                        <div className="max-w-3xl">
+                            <div className="flex items-center gap-3">
+                                <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">Quick answers</p>
+                                <span className="rounded-full border border-primary-500/25 bg-primary-500/10 px-2.5 py-1 text-[11px] font-bold text-primary-100">
+                                    {answerPages.length} guides
+                                </span>
+                            </div>
+                            <h2 className="mt-3 font-display text-3xl font-bold tracking-[-0.02em] text-white md:text-4xl">{t("answersHubTitle")}</h2>
+                            <p className="mt-3 max-w-2xl text-base leading-7 text-ink-300 md:text-lg">{t("answersHubDescription")}</p>
+                        </div>
+                        <p className="hidden shrink-0 text-sm font-semibold text-ink-400 md:block">Choose a topic to get started</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-px bg-line-300/80 md:grid-cols-2">
+                        {answerPages.map((page, index) => {
+                            const pageSummary = pageSummaryBySlug.get(page.slug);
+                            const guideImage = pageSummary?.featuredImage ?? {
+                                src: "/images/og.png",
+                                alt: `${page.shortTitle} guide on AnimalDex`,
+                                width: 1200,
+                                height: 630
+                            };
+                            return (
+                            <article key={page.slug} className="group min-w-0 bg-surface-900/95">
+                                <Link
+                                    href={`/${page.slug}`}
+                                    aria-label={`${t("readAnswerPage")}: ${page.shortTitle}`}
+                                    className="grid min-h-full grid-cols-[9rem_minmax(0,1fr)] gap-4 p-4 transition-colors hover:bg-primary-500/[0.055] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primary-300 sm:grid-cols-[12rem_minmax(0,1fr)] sm:p-5 lg:grid-cols-[14rem_minmax(0,1fr)]"
+                                >
+                                    <div className="relative min-h-[8rem] overflow-hidden rounded-xl bg-surface-800 sm:min-h-[9rem] lg:min-h-[9.75rem]">
+                                        <Image
+                                            src={guideImage.src}
+                                            alt={guideImage.alt}
+                                            fill
+                                            unoptimized={guideImage.src.startsWith("http")}
+                                            sizes="(min-width: 640px) 128px, 104px"
+                                            className="object-cover transition duration-500 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-canvas-950/35 to-transparent" />
+                                        <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-canvas-950/75 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-primary-100 backdrop-blur">
+                                            {String(index + 1).padStart(2, "0")}
+                                        </span>
+                                    </div>
+                                    <div className="flex min-w-0 flex-col">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary-200">AnimalDex answer</p>
+                                        <h3 className="mt-1.5 font-display text-xl font-bold leading-tight text-white transition-colors group-hover:text-primary-100 sm:text-2xl">
+                                            {page.shortTitle}
+                                        </h3>
+                                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-300 sm:text-[15px]">{page.metaDescription}</p>
+                                        <span className="mt-auto inline-flex items-center gap-2 pt-3 text-sm font-bold text-primary-200">
+                                            {t("readAnswerPage")}
+                                            <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                                        </span>
+                                    </div>
+                                </Link>
+                            </article>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
 
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>

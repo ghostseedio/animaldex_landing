@@ -4,6 +4,6 @@ export async function generateMetadata() {
     return generateAnswerPageMetadata("ai-animal-scanner");
 }
 
-export default async function AiAnimalScannerPage() {
-    return AnswerPage({slug: "ai-animal-scanner"});
+export default async function AiAnimalScannerPage({searchParams}: {searchParams?: {cmsSource?: string}}) {
+    return AnswerPage({slug: "ai-animal-scanner", cmsSource: searchParams?.cmsSource === "1"});
 }

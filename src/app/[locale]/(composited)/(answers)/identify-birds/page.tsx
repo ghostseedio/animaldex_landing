@@ -4,6 +4,6 @@ export async function generateMetadata() {
     return generateAnswerPageMetadata("identify-birds");
 }
 
-export default async function IdentifyBirdsPage() {
-    return AnswerPage({slug: "identify-birds"});
+export default async function IdentifyBirdsPage({searchParams}: {searchParams?: {cmsSource?: string}}) {
+    return AnswerPage({slug: "identify-birds", cmsSource: searchParams?.cmsSource === "1"});
 }
