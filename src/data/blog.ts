@@ -5,6 +5,7 @@ import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
 import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-is-a-lesson";
 import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
 import {captureAnimalsAppPost} from "@/data/blog/capture-animals-app";
+import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
 import {
     BlogFAQ,
     BlogLink,
@@ -4915,6 +4916,7 @@ const blogPostsData: BlogPost[] = [
 ];
 
 export const blogPosts: BlogPost[] = [
+    petrifiedGiantsPost,
     captureAnimalsAppPost,
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,

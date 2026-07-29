@@ -13,6 +13,7 @@ import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-syste
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import BlogListenControl from "@/app/[locale]/(composited)/blog/_components/blog-listen-control";
 
 type BlogPostPageProps = {
     params: {
@@ -30,6 +31,30 @@ function formatSpeciesSlugName(slug: string) {
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
+}
+
+function buildNarrationText(post: NonNullable<ReturnType<typeof getBlogPost>>) {
+    const sectionText = post.sections.flatMap((section) => [
+        section.title,
+        ...section.paragraphs,
+        ...(section.cards || []).flatMap((card) => [card.label, card.body]),
+        ...(section.table?.rows || []).flatMap((row) => row.cells),
+        ...(section.subsections || []).flatMap((subsection) => [
+            subsection.title,
+            ...subsection.paragraphs
+        ])
+    ]);
+    const faqText = (post.faq || []).flatMap((item) => [
+        item.question,
+        item.answer
+    ]);
+
+    return [
+        post.title,
+        post.description,
+        ...sectionText,
+        ...(faqText.length > 0 ? ["Frequently asked questions", ...faqText] : [])
+    ].join(". ");
 }
 
 function renderImageGallery(images: ContentImage[]) {
@@ -564,6 +589,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
     const tableOfContentsItems = post.tableOfContents && post.tableOfContents.length > 0
         ? post.tableOfContents
         : post.sections.map((section) => section.title);
+    const narrationText = buildNarrationText(post);
 
     return (
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
@@ -602,6 +628,8 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                     ))}
                 </div>
             </div>
+
+            <BlogListenControl locale={locale} text={narrationText} />
 
             <ContentImageFigure image={post.featuredImage} priority />
 

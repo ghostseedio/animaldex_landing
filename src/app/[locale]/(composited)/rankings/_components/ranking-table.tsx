@@ -134,7 +134,7 @@ export default function RankingTable({title, description, labels, items}: Rankin
 
             <div className="hidden overflow-x-auto rounded-lg border border-line-300 bg-surface-900/75 lg:block">
                 <table className="w-full min-w-[960px] border-collapse">
-                    <thead className="sticky top-[177px] z-10 bg-surface-900">
+                    <thead className="bg-surface-900">
                         <tr className="border-b border-line-300 text-left">
                             <th className="w-24 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.rank}</th>
                             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.animal}</th>
