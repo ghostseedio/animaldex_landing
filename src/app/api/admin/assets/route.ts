@@ -1,14 +1,12 @@
 import {randomUUID} from "crypto";
-import {readdir, stat} from "fs/promises";
 import path from "path";
 import {NextRequest, NextResponse} from "next/server";
-import sharp from "sharp";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+import publicImageAssets from "@/data/public-image-assets.json";
 
 const MAX_ASSET_BYTES = 15 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"]);
-const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".avif"]);
 const WEBP_CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_OPTIMIZED_DIMENSION = 2400;
 const WEBP_QUALITY = 84;
@@ -36,6 +34,8 @@ async function optimizeUpload(file: File): Promise<OptimizedUpload> {
     }
 
     try {
+        // Lazy-load sharp so GET listing still works if the native module fails to boot on the host.
+        const sharp = (await import("sharp")).default;
         const image = sharp(input, {animated: false, failOn: "none"});
         const metadata = await image.metadata();
         const optimized = await image
@@ -69,39 +69,15 @@ async function optimizeUpload(file: File): Promise<OptimizedUpload> {
     }
 }
 
-async function listPublicImages() {
-    const publicRoot = path.join(process.cwd(), "public");
-    const imageRoot = path.join(publicRoot, "images");
-    const assets: Array<Record<string, unknown>> = [];
-
-    async function visit(directory: string) {
-        const entries = await readdir(directory, {withFileTypes: true});
-        await Promise.all(entries.map(async (entry) => {
-            const absolutePath = path.join(directory, entry.name);
-            if (entry.isDirectory()) {
-                await visit(absolutePath);
-                return;
-            }
-            if (!entry.isFile() || !IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) return;
-            const fileStat = await stat(absolutePath);
-            const relativePath = path.relative(publicRoot, absolutePath).split(path.sep).join("/");
-            assets.push({
-                path: `public/${relativePath}`,
-                url: `/${relativePath.split("/").map(encodeURIComponent).join("/")}`,
-                filename: entry.name,
-                createdAt: fileStat.mtime.toISOString(),
-                source: "Website",
-                metadata: {size: fileStat.size, mimetype: `image/${path.extname(entry.name).slice(1).toLowerCase()}`}
-            });
-        }));
-    }
-
-    try {
-        await visit(imageRoot);
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    return assets;
+function listPublicImages() {
+    return publicImageAssets as Array<{
+        path: string;
+        url: string;
+        filename: string;
+        createdAt?: string;
+        source: "Website";
+        metadata?: {size?: number; mimetype?: string};
+    }>;
 }
 
 export async function GET(request: NextRequest) {
@@ -142,7 +118,7 @@ export async function GET(request: NextRequest) {
                 source: "Uploads",
                 metadata: item.metadata
             }));
-        const publicAssets = await listPublicImages();
+        const publicAssets = listPublicImages();
         const page = Math.max(1, Number.parseInt(request.nextUrl.searchParams.get("page") || "1", 10));
         const limit = Math.min(60, Math.max(12, Number.parseInt(request.nextUrl.searchParams.get("limit") || "30", 10)));
         const query = (request.nextUrl.searchParams.get("query") || "").trim().toLowerCase();

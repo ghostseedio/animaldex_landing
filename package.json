@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/generatePublicImageAssets.js",
     "build": "next build",
+    "assets:manifest": "node scripts/generatePublicImageAssets.js",
     "start": "next start",
     "lint": "next lint",
     "test": "tsx --test src/lib/**/*.test.ts",

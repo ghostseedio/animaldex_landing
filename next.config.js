@@ -1,6 +1,10 @@
 const withNextIntl = require('next-intl/plugin')();
 
 module.exports = withNextIntl({
+    experimental: {
+        // Keep sharp as a native Node dependency so /api/admin/assets can boot on Vercel.
+        serverComponentsExternalPackages: ["sharp"]
+    },
     async redirects() {
         return [
             {

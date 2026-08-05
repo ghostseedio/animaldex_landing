@@ -34,6 +34,14 @@ export default function AdminAssetLibrary() {
     const [hasMore, setHasMore] = useState(false);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+    const readJson = useCallback(async (response: Response) => {
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+            throw new Error(response.ok ? "Asset API returned a non-JSON response" : `Asset API failed (${response.status})`);
+        }
+        return response.json();
+    }, []);
+
     const loadAssets = useCallback(async (requestedPage = 1, replace = false, search = query) => {
         if (loading && requestedPage > 1) return;
         setLoading(true);
@@ -42,7 +50,7 @@ export default function AdminAssetLibrary() {
             const params = new URLSearchParams({page: String(requestedPage), limit: "30"});
             if (search.trim()) params.set("query", search.trim());
             const response = await fetch(`/api/admin/assets?${params.toString()}`, {cache: "no-store"});
-            const body = await response.json();
+            const body = await readJson(response);
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load assets");
             setAssets((current) => replace ? (body.assets ?? []) : [...current, ...(body.assets ?? []).filter((asset: Asset) => !current.some((item) => item.path === asset.path))]);
             setPage(requestedPage);
@@ -53,7 +61,7 @@ export default function AdminAssetLibrary() {
         } finally {
             setLoading(false);
         }
-    }, [loading, query]);
+    }, [loading, query, readJson]);
 
     useEffect(() => {
         const timeout = window.setTimeout(() => loadAssets(1, true, query), 250);
@@ -84,7 +92,7 @@ export default function AdminAssetLibrary() {
                 const form = new FormData();
                 form.set("file", file);
                 const response = await fetch("/api/admin/assets", {method: "POST", body: form});
-                const body = await response.json();
+                const body = await readJson(response).catch((caught) => ({ok: false, error: caught instanceof Error ? caught.message : "Upload failed"}));
                 if (!response.ok || !body.ok) {
                     failures.push(`${file.name}: ${body.error || "Upload failed"}`);
                 }
@@ -134,7 +142,7 @@ export default function AdminAssetLibrary() {
             form.set("file", file);
             form.set("path", asset.path);
             const response = await fetch("/api/admin/assets", {method: "PUT", body: form});
-            const body = await response.json();
+            const body = await readJson(response);
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to replace image");
             await loadAssets(1, true);
         } catch (caught) {
@@ -155,7 +163,7 @@ export default function AdminAssetLibrary() {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({path: asset.path})
             });
-            const body = await response.json();
+            const body = await readJson(response);
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to delete image");
             setAssets((current) => current.filter((item) => item.path !== asset.path));
             setTotal((current) => Math.max(0, current - 1));

@@ -503,6 +503,8 @@ export default function AdminContentStudio() {
             const form = new FormData();
             form.set("file", file);
             const response = await fetch("/api/admin/assets", {method: "POST", body: form});
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) throw new Error(`Asset upload failed (${response.status})`);
             const body = await response.json();
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to upload image");
             setPost(replaceAtPath(post, slot.path, {
@@ -532,6 +534,8 @@ export default function AdminContentStudio() {
         setError(null);
         try {
             const response = await fetch("/api/admin/assets", {cache: "no-store"});
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) throw new Error(`Asset library failed (${response.status})`);
             const body = await response.json();
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load image library");
             setAssets(body.assets ?? []);
