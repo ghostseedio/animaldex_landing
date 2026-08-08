@@ -686,7 +686,7 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
 
                             return (
                                 <section key={section.title} id={toAnchorId(section.title)} className="scroll-mt-24 flex flex-col gap-4">
-                                    {section.kicker && (
+                                    {section.kicker && !section.kicker.toLowerCase().includes("answer") && (
                                         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
                                             {section.kicker}
                                         </p>
@@ -694,11 +694,32 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                                     {(section.headingLevel ?? 2) === 3
                                         ? <h3 className="font-display font-bold text-2xl text-white md:text-3xl">{section.title}</h3>
                                         : <h2 className="font-display font-bold text-3xl text-white md:text-4xl">{section.title}</h2>}
-                                    {section.table
-                                        ? renderSectionTable(section.table)
-                                        : section.cards
-                                            ? renderSectionCards(section.cards)
-                                            : renderSectionParagraphs(section.paragraphs, sectionTextLinks)}
+                                    {(() => {
+                                        const isAnswerSection = Boolean(section.kicker?.toLowerCase().includes("answer"));
+                                        const leadParagraph = isAnswerSection ? section.paragraphs[0] : undefined;
+                                        const bodyParagraphs = isAnswerSection ? section.paragraphs.slice(1) : section.paragraphs;
+
+                                        return (
+                                            <>
+                                                {leadParagraph ? (
+                                                    <div
+                                                        data-speakable="true"
+                                                        className="rounded-3xl border border-primary-500/25 bg-gradient-to-br from-primary-500/15 via-surface-800/80 to-surface-900/90 px-5 py-5 md:px-6 md:py-6"
+                                                    >
+                                                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200 mb-3">
+                                                            {section.kicker}
+                                                        </p>
+                                                        <p className="text-ink-100 text-lg md:text-xl leading-8">
+                                                            {renderTextWithLinks(leadParagraph, sectionTextLinks)}
+                                                        </p>
+                                                    </div>
+                                                ) : null}
+                                                {bodyParagraphs.length > 0 && renderSectionParagraphs(bodyParagraphs, sectionTextLinks)}
+                                            </>
+                                        );
+                                    })()}
+                                    {section.cards && renderSectionCards(section.cards)}
+                                    {section.table && renderSectionTable(section.table)}
                                     {section.pullQuote && renderPullQuote(section.pullQuote)}
                                     {renderCodeBlocks(section.codeBlocks)}
                                     {section.media && renderSectionMedia(section.media)}

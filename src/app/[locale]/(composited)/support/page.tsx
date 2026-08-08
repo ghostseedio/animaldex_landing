@@ -53,7 +53,12 @@ export default async function SupportPage() {
         mainEntity: allFAQs.map((item) => ({
             "@type": "Question",
             name: item.question,
-            acceptedAnswer: {"@type": "Answer", text: item.answer}
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: item.linkHref
+                    ? `${item.answer} ${item.linkLabel || "Learn more"}: ${getAbsoluteUrl(locale, item.linkHref)}`
+                    : item.answer
+            }
         }))
     };
 
@@ -127,7 +132,17 @@ export default async function SupportPage() {
                                         <span>{item.question}</span>
                                         <span className="text-primary-300 transition-transform group-open:rotate-45" aria-hidden="true">+</span>
                                     </summary>
-                                    <p className="pb-6 pr-8 text-ink-200 text-base md:text-lg leading-relaxed">{item.answer}</p>
+                                    <div className="pb-6 pr-8 flex flex-col gap-3">
+                                        <p className="text-ink-200 text-base md:text-lg leading-relaxed">{item.answer}</p>
+                                        {item.linkHref && item.linkLabel && (
+                                            <Link
+                                                href={item.linkHref}
+                                                className="text-primary-200 hover:text-primary-100 font-semibold underline underline-offset-4 w-fit"
+                                            >
+                                                {item.linkLabel}
+                                            </Link>
+                                        )}
+                                    </div>
                                 </details>
                             ))}
                         </div>

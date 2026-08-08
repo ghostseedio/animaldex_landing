@@ -1,6 +1,8 @@
 export type SupportFAQ = {
     question: string;
     answer: string;
+    linkHref?: string;
+    linkLabel?: string;
 };
 
 export type SupportSection = {
@@ -34,9 +36,9 @@ export type SupportContent = {
 const en: SupportContent = {
     eyebrow: "Help Center",
     title: "AnimalDex Support",
-    description: "Help with scanning animals, captures, collections, credits, accounts, privacy, and app troubleshooting.",
+    description: "Help with scanning animals, AnimalDex numbers, captures, collections, credits, accounts, privacy, and app troubleshooting.",
     metaTitle: "AnimalDex Support — Scanning, Captures, Accounts & App Help",
-    metaDescription: "Get help with AnimalDex, the animal scanner and wildlife collection app. Learn how to scan animals, manage captures, use credits, restore purchases, and fix app issues.",
+    metaDescription: "Get help with AnimalDex, the animal scanner and wildlife collection app. Learn how AnimalDex numbers work, how to scan animals, manage captures, use credits, restore purchases, and fix app issues.",
     quickHelpTitle: "Find the answer you need",
     quickHelpDescription: "Choose a topic below. Most scanning and account issues can be resolved without waiting for support.",
     sections: [
@@ -73,6 +75,43 @@ const en: SupportContent = {
                 {question: "What should I do if the identification is wrong?", answer: "Retake the photo with better lighting and more of the animal visible, or use re-analysis on the capture. If the result remains wrong, email support with the capture details so the issue can be reviewed."},
                 {question: "Can AnimalDex identify rare animals?", answer: "Yes, but rare, juvenile, hybrid, or visually similar species can be harder to identify. Treat low-confidence results as a starting point and compare them with trusted field references."},
                 {question: "Can I use AnimalDex for dangerous wildlife decisions?", answer: "No. AnimalDex is designed for learning and discovery. Results may be imperfect and must not be used for safety-critical wildlife, medical, handling, or edibility decisions. Keep a safe distance and follow local guidance."}
+            ]
+        },
+        {
+            id: "animaldex-numbers",
+            title: "AnimalDex numbers",
+            description: "How species, lookalike groups, and domestic animals get indexed.",
+            items: [
+                {
+                    question: "How does AnimalDex decide which AnimalDex number I get?",
+                    answer: "AnimalDex indexes at species by default. Distinct wild species can get their own number. Huge lookalike families may share a group card. Domestic breeds and color morphs fold into a base species such as Domestic Dog or Goldfish. The card you collect is the resolved catalog identity, not every nickname mentioned in analysis.",
+                    linkHref: "/blog/how-animaldex-indexes-animals",
+                    linkLabel: "Read the full indexing guide"
+                },
+                {
+                    question: "What is the difference between a species card and a group card?",
+                    answer: "A species card is one named animal line with its own AnimalDex number. A group card is a shared lookalike bucket used when everyday photos cannot reliably separate many near-identical animals — for example ordinary snails, many tree frogs, tilapia forms, or broad insect labels like ant or mosquito.",
+                    linkHref: "/blog/how-animaldex-indexes-animals",
+                    linkLabel: "See species vs group examples"
+                },
+                {
+                    question: "Why did my dog breed or goldfish morph not get its own number?",
+                    answer: "Breeds and morphs never mint parallel AnimalDex numbers. A German Shepherd indexes as Domestic Dog. A Fantail Goldfish indexes as Goldfish. A Lutino Cockatiel indexes as Cockatiel. Analysis may still mention the breed or morph, but the collectible card is the base animal.",
+                    linkHref: "/blog/how-animaldex-indexes-animals",
+                    linkLabel: "How breeds and morphs are indexed"
+                },
+                {
+                    question: "Why is my garden snail just “Snail”?",
+                    answer: "Ordinary garden and pond snails usually share the Snail group card because they are hard to separate from a phone photo. Giant African Land Snail is a deliberate exception and keeps its own species number.",
+                    linkHref: "/blog/how-animaldex-indexes-animals",
+                    linkLabel: "Read the snail indexing rules"
+                },
+                {
+                    question: "Can the analysis mention a more specific name than the card?",
+                    answer: "Yes. Analysis text can mention a breed, morph, or common name for learning, while the indexed AnimalDex card stays on the official catalog identity — the number, display name, and species-or-group kind you collect.",
+                    linkHref: "/blog/how-animaldex-indexes-animals",
+                    linkLabel: "How AnimalDex indexes animals"
+                }
             ]
         },
         {

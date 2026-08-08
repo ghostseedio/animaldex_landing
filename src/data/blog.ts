@@ -5,6 +5,7 @@ import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
 import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-is-a-lesson";
 import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
 import {captureAnimalsAppPost} from "@/data/blog/capture-animals-app";
+import {howAnimalDexIndexesAnimalsPost} from "@/data/blog/how-animaldex-indexes-animals";
 import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
 import {
     BlogFAQ,
@@ -4916,11 +4917,17 @@ const blogPostsData: BlogPost[] = [
 ];
 
 export const blogPosts: BlogPost[] = [
+    howAnimalDexIndexesAnimalsPost,
     petrifiedGiantsPost,
     captureAnimalsAppPost,
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
-    ...blogPostsData.filter((post) => ![whatIfEveryAnimalIsALessonPost.slug, biomimicryInAnimalsPost.slug, captureAnimalsAppPost.slug].includes(post.slug))
+    ...blogPostsData.filter((post) => ![
+        howAnimalDexIndexesAnimalsPost.slug,
+        whatIfEveryAnimalIsALessonPost.slug,
+        biomimicryInAnimalsPost.slug,
+        captureAnimalsAppPost.slug
+    ].includes(post.slug))
 ]
     .sort((a, b) =>
         b.publishedAt.localeCompare(a.publishedAt)
