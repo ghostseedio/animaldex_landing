@@ -57,7 +57,7 @@ export default function Header({locale}: {locale?: string}) {
                             <HeaderLink href="/support" mobile icon={<HelpCircleIcon size={20} />}>{t("support")}</HeaderLink>
                         </>
                     )}
-                    mobileAuth={<HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} mobile />}
+                    mobileAuth={<HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} mobile />}
                 >
                     <HeaderLink href="/#team" data-cursor-text={t("team")}>
                         {t("team")}
@@ -68,7 +68,7 @@ export default function Header({locale}: {locale?: string}) {
                     <HeaderLink href="/animals" data-cursor-text={t("animals")}>
                         {t("animals")}
                     </HeaderLink>
-                    <HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} />
+                    <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
                     <Link href="/#download" className="hidden md:inline-flex">
                         <span
                             className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-md border border-primary-100 bg-transparent px-5 text-sm font-bold text-primary-100 transition-colors hover:border-primary-500 hover:bg-primary-500 hover:text-white focus-visible:border-primary-500 focus-visible:bg-primary-500 focus-visible:text-white"

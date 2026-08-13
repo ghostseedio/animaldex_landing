@@ -10,6 +10,12 @@ import {
 
 const SIGN_TIMEOUT_MS = 12_000;
 const FETCH_TIMEOUT_MS = 15_000;
+type SignedUrlCacheEntry = {expiresAt: number; promise: Promise<string | null>};
+const signedUrlCacheHost = globalThis as typeof globalThis & {
+    __animalDexSignedUrlCache?: Map<string, SignedUrlCacheEntry>;
+};
+const signedUrlCache = signedUrlCacheHost.__animalDexSignedUrlCache
+    ?? (signedUrlCacheHost.__animalDexSignedUrlCache = new Map<string, SignedUrlCacheEntry>());
 
 export function encodeStoragePath(path: string) {
     return path
@@ -33,7 +39,8 @@ function toAbsoluteSignedUrl(supabaseUrl: string, signedUrl: string) {
 export async function createSignedStorageUrl(
     bucket: string,
     path: string,
-    expiresInSeconds = 60 * 60
+    expiresInSeconds = 60 * 60,
+    transform?: {width: number; height: number; quality: number; resize: "cover" | "contain"}
 ): Promise<string | null> {
     const supabaseUrl = getSupabaseUrl();
     const serviceRoleKey = getSupabaseServiceKey();
@@ -42,27 +49,48 @@ export async function createSignedStorageUrl(
         return null;
     }
 
+    const cacheKey = [bucket, path, expiresInSeconds, transform ? JSON.stringify(transform) : "original"].join("|");
+    const now = Date.now();
+    const cached = signedUrlCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+        return cached.promise;
+    }
+
+    if (signedUrlCache.size > 1000) {
+        for (const [key, entry] of Array.from(signedUrlCache.entries())) {
+            if (entry.expiresAt <= now) signedUrlCache.delete(key);
+        }
+        while (signedUrlCache.size > 1000) {
+            const oldestKey = signedUrlCache.keys().next().value as string | undefined;
+            if (!oldestKey) break;
+            signedUrlCache.delete(oldestKey);
+        }
+    }
+
     const signEndpoint = `${supabaseUrl}/storage/v1/object/sign/${bucket}/${encodeStoragePath(path)}`;
+    const promise = (async () => {
+        try {
+            const signResponse = await fetch(signEndpoint, {
+                method: "POST",
+                headers: getSupabaseHeaders(serviceRoleKey, {"Content-Type": "application/json"}),
+                body: JSON.stringify({expiresIn: expiresInSeconds, ...(transform ? {transform} : {})}),
+                cache: "no-store",
+                signal: AbortSignal.timeout(SIGN_TIMEOUT_MS)
+            });
 
-    try {
-        const signResponse = await fetch(signEndpoint, {
-            method: "POST",
-            headers: getSupabaseHeaders(serviceRoleKey, {"Content-Type": "application/json"}),
-            body: JSON.stringify({expiresIn: expiresInSeconds}),
-            cache: "no-store",
-            signal: AbortSignal.timeout(SIGN_TIMEOUT_MS)
-        });
-
-        if (!signResponse.ok) {
+            if (!signResponse.ok) return null;
+            const signBody = await signResponse.json() as {signedURL?: string; signedUrl?: string};
+            const signedUrl = signBody.signedURL ?? signBody.signedUrl;
+            return signedUrl ? toAbsoluteSignedUrl(supabaseUrl, signedUrl) : null;
+        } catch {
             return null;
         }
-
-        const signBody = await signResponse.json() as {signedURL?: string; signedUrl?: string};
-        const signedUrl = signBody.signedURL ?? signBody.signedUrl;
-        return signedUrl ? toAbsoluteSignedUrl(supabaseUrl, signedUrl) : null;
-    } catch {
-        return null;
-    }
+    })();
+    const safeLifetimeSeconds = Math.max(30, Math.min(expiresInSeconds - 60, 3300));
+    signedUrlCache.set(cacheKey, {expiresAt: now + safeLifetimeSeconds * 1000, promise});
+    const signedUrl = await promise;
+    if (!signedUrl) signedUrlCache.delete(cacheKey);
+    return signedUrl;
 }
 
 export async function resolveCaptureImageReference(input: {

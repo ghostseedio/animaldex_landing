@@ -707,13 +707,19 @@ export async function getSpeciesImageReferences(slug: string, limit = 8, entryOv
     return references.slice(0, limit);
 }
 
-export async function getPublicCaptureImageReference(captureId: string, entry?: SpeciesEntry | null): Promise<FeaturedMedia | null> {
+export async function getPublicCaptureImageReference(
+    captureId: string,
+    entry?: SpeciesEntry | null,
+    includeDisplayMetadata = true
+): Promise<FeaturedMedia | null> {
     const normalizedCaptureId = captureId.trim();
     if (!normalizedCaptureId) return null;
 
     const [image] = await fetchCaptureImages([normalizedCaptureId]);
     if (image) {
-        const discoverFeedMatch = await fetchDiscoverFeedCapture(normalizedCaptureId);
+        const discoverFeedMatch = includeDisplayMetadata
+            ? await fetchDiscoverFeedCapture(normalizedCaptureId)
+            : null;
         return createSpeciesImageReference({
             captureId: normalizedCaptureId,
             imageBucket: image.storage_bucket,

@@ -5,7 +5,8 @@ import Link from "@/app/[locale]/_components/link";
 import {MenuContext} from "@/app/[locale]/(composited)/_components/header-menu";
 
 type HeaderAuthLinkProps = {
-    signInLabel: string;
+    /** Shown to signed-out visitors: this is a doorway to the web app, not a login wall. */
+    webAppLabel: string;
     myAnimalsLabel: string;
     mobile?: boolean;
 };
@@ -16,7 +17,7 @@ type SessionResponse = {
     displayName: string | null;
 };
 
-export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
+export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
     const {setOpen} = useContext(MenuContext);
     const [session, setSession] = useState<SessionResponse | null>(null);
     const [isReady, setIsReady] = useState(false);
@@ -62,7 +63,7 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = fa
     const href = "/app";
     const label = session?.user
         ? (session.username ? `@${session.username}` : session.displayName ?? myAnimalsLabel)
-        : signInLabel;
+        : webAppLabel;
 
     if (mobile) {
         return (

@@ -35,7 +35,9 @@ const ROSTER_SELECT = [
     "game_stats", "challenge_health", "is_challenge_ready",
     "challenge_stake", "is_discoverable", "dominance_boost", "speed_boost", "intelligence_boost",
     "comparison_dominance_boost", "comparison_speed_boost", "comparison_size_boost",
-    "comparison_intelligence_boost", "comparison_rarity_boost", "total_progression_xp", "completed_at", "error_message"
+    "comparison_intelligence_boost", "comparison_rarity_boost",
+    "dominance_endorsements", "speed_endorsements", "size_endorsements", "intelligence_endorsements", "rarity_endorsements",
+    "total_progression_xp", "completed_at", "error_message"
 ].join(",");
 
 function readString(row: QueryRow, key: string) {
@@ -62,22 +64,16 @@ function captureImageSrc(captureId: string, speciesSlug: string | null) {
 function rosterStatsFromRow(row: QueryRow) {
     const stored = row.game_stats && typeof row.game_stats === "object" ? row.game_stats as QueryRow : {};
     return toEffectiveStats(stored as Record<string, number>, {
-        dominance: readNumber(row, "dominance_boost") + readNumber(row, "comparison_dominance_boost"),
-        speed: readNumber(row, "speed_boost") + readNumber(row, "comparison_speed_boost"),
-        size: readNumber(row, "comparison_size_boost"),
-        intelligence: readNumber(row, "intelligence_boost") + readNumber(row, "comparison_intelligence_boost"),
-        rarity: readNumber(row, "comparison_rarity_boost")
+        dominance: readNumber(row, "dominance_boost") + readNumber(row, "comparison_dominance_boost") + readNumber(row, "dominance_endorsements"),
+        speed: readNumber(row, "speed_boost") + readNumber(row, "comparison_speed_boost") + readNumber(row, "speed_endorsements"),
+        size: readNumber(row, "comparison_size_boost") + readNumber(row, "size_endorsements"),
+        intelligence: readNumber(row, "intelligence_boost") + readNumber(row, "comparison_intelligence_boost") + readNumber(row, "intelligence_endorsements"),
+        rarity: readNumber(row, "comparison_rarity_boost") + readNumber(row, "rarity_endorsements")
     });
 }
 
 function toOpponent(item: DiscoverCaptureItem): MatchupOpponent {
-    const stats = toEffectiveStats(item.gameStats, {
-        dominance: item.statBoosts.dominance + item.comparisonBoosts.dominance,
-        speed: item.statBoosts.speed + item.comparisonBoosts.speed,
-        size: item.comparisonBoosts.size,
-        intelligence: item.statBoosts.intelligence + item.comparisonBoosts.intelligence,
-        rarity: item.comparisonBoosts.rarity
-    });
+    const stats = toEffectiveStats(item.effectiveGameStats);
     const battlePower = getBattlePower(stats);
     const stake = Math.max(2, item.challengeStake || 2);
     const animalName = resolveCaptureDisplayName({

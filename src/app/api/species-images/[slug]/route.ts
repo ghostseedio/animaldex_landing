@@ -14,22 +14,35 @@ function buildFallbackUrl(request: NextRequest) {
 
 export async function GET(request: NextRequest, {params}: {params: {slug: string}}) {
     const captureId = request.nextUrl.searchParams.get("captureId");
-    const entry = getSpeciesBySlug(params.slug) ?? await getDatabaseSpeciesBySlug(params.slug);
+    // A capture ID is already the exact media identity. Resolving the species
+    // first walks the database catalog/alias chain and can add seconds to every
+    // thumbnail request without changing which image is returned.
     const reference = captureId
-        ? await getPublicCaptureImageReference(captureId, entry)
-        : await getSpeciesRepresentativeImageReference(params.slug, entry);
+        ? await getPublicCaptureImageReference(captureId, null, false)
+        : await getSpeciesRepresentativeImageReference(
+            params.slug,
+            getSpeciesBySlug(params.slug) ?? await getDatabaseSpeciesBySlug(params.slug)
+        );
 
     if (!reference?.imageBucket || !reference.imagePath) {
         return NextResponse.redirect(buildFallbackUrl(request), 307);
     }
 
     try {
-        const signedUrl = await createSignedStorageUrl(reference.imageBucket, reference.imagePath);
+        const isThumbnail = request.nextUrl.searchParams.get("thumbnail") === "1";
+        const signedUrl = await createSignedStorageUrl(
+            reference.imageBucket,
+            reference.imagePath,
+            60 * 60,
+            isThumbnail ? {width: 320, height: 320, quality: 76, resize: "cover"} : undefined
+        );
         if (!signedUrl) {
             return NextResponse.redirect(buildFallbackUrl(request), 307);
         }
 
-        return NextResponse.redirect(signedUrl, 307);
+        const response = NextResponse.redirect(signedUrl, 307);
+        response.headers.set("Cache-Control", "private, max-age=3600, stale-while-revalidate=86400");
+        return response;
     } catch {
         return NextResponse.redirect(buildFallbackUrl(request), 307);
     }

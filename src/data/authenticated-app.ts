@@ -304,11 +304,23 @@ export type AppDiscoverItem = {
     imageSrc: string;
 };
 
+export type AppCaptureGameStats = {
+    dominance: number;
+    speed: number;
+    size: number;
+    intelligence: number;
+    rarity: number;
+};
+
+export type AppCaptureTrainingBoosts = Pick<AppCaptureGameStats, "dominance" | "speed" | "intelligence">;
+
 export type AppCaptureDetail = {
     id: string;
     status: string;
     createdAt: string;
     locationLabel: string | null;
+    locationLat: number | null;
+    locationLng: number | null;
     animalName: string;
     scientificName: string | null;
     speciesSlug: string | null;
@@ -317,14 +329,163 @@ export type AppCaptureDetail = {
     conservationTier: string | null;
     confidence: number | null;
     typeTags: string[];
-    gameStats: Record<string, number>;
+    /** Compatibility alias for consumers that predate the base/effective split. */
+    gameStats: AppCaptureGameStats;
+    baseGameStats: AppCaptureGameStats;
+    effectiveGameStats: AppCaptureGameStats;
+    statDeltas: AppCaptureGameStats;
+    trainingBoosts: AppCaptureTrainingBoosts;
+    comparisonStatBoosts: AppCaptureGameStats;
+    endorsementBonuses: AppCaptureGameStats;
+    settingTag: string | null;
+    humanContext: string | null;
+    captureValidity: string | null;
+    authenticityStatus: string | null;
+    signals: Record<string, any> | null;
     premiumDetails: Record<string, any> | null;
     imageSrc: string;
     captureGrade: number | null;
     gradeBreakdown: CaptureGradeBreakdown | null;
+    totalProgressionXP: number;
+    challengeHealth: number;
+    challengeStake: number;
+    isChallengeReady: boolean;
+    isDiscoverable: boolean;
+    recentProgressionSource: string | null;
+    hasChallengeGameStats: boolean;
+    isZooComparisonBanned: boolean;
+    isChallengeAnalysisEligible: boolean;
+    isEligibleCapture: boolean;
+    hasUncertaintyFallback: boolean;
 };
 
 type QueryRow = Record<string, any>;
+
+const APP_CAPTURE_GAME_STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+function asQueryRow(value: unknown): QueryRow | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    return value as QueryRow;
+}
+
+function normalizedOptionalString(value: unknown) {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const normalized = value.trim();
+    return normalized || null;
+}
+
+function finiteInteger(value: unknown, fallback = 0) {
+    const number = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(number) ? Math.round(number) : fallback;
+}
+
+function nullableFiniteNumber(value: unknown) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function clampGameStat(value: unknown) {
+    return Math.min(100, Math.max(0, finiteInteger(value)));
+}
+
+function canonicalGameStats(value: unknown): AppCaptureGameStats {
+    const row = asQueryRow(value);
+
+    return {
+        dominance: clampGameStat(row?.dominance),
+        speed: clampGameStat(row?.speed),
+        size: clampGameStat(row?.size),
+        intelligence: clampGameStat(row?.intelligence),
+        rarity: clampGameStat(row?.rarity)
+    };
+}
+
+function hasCanonicalGameStats(value: unknown) {
+    const row = asQueryRow(value);
+    if (!row) {
+        return false;
+    }
+
+    return APP_CAPTURE_GAME_STAT_KEYS.every((key) => {
+        const number = typeof row[key] === "number" ? row[key] : Number(row[key]);
+        return row[key] !== null && row[key] !== "" && Number.isFinite(number);
+    });
+}
+
+function normalizedEligibilityToken(value: unknown) {
+    const raw = normalizedOptionalString(value);
+    if (!raw) {
+        return null;
+    }
+
+    return raw
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+}
+
+function analysisRawModel(analysis: QueryRow) {
+    const raw = asQueryRow(analysis.raw_json);
+    return {
+        root: raw,
+        model: asQueryRow(raw?.model),
+        rawOpenAI: asQueryRow(raw?.raw_openai)
+    };
+}
+
+function resolvedAnalysisToken(analysis: QueryRow, key: "capture_validity" | "authenticity_status") {
+    const raw = analysisRawModel(analysis);
+    return normalizedOptionalString(analysis[key])
+        ?? normalizedOptionalString(raw.model?.[key])
+        ?? normalizedOptionalString(raw.root?.[key])
+        ?? normalizedOptionalString(raw.rawOpenAI?.[key]);
+}
+
+function resolvedStoredGameStats(analysis: QueryRow) {
+    const raw = analysisRawModel(analysis);
+    const candidates = [
+        asQueryRow(analysis.game_stats),
+        asQueryRow(raw.model?.game_stats),
+        asQueryRow(raw.rawOpenAI?.game_stats)
+    ].filter((candidate): candidate is QueryRow => candidate !== null);
+
+    return candidates.find(hasCanonicalGameStats) ?? candidates[0] ?? null;
+}
+
+function looksLikeGarbageDescriptiveIdentity(value: string) {
+    const anatomyTokens = new Set([
+        "antenna", "antennae", "antler", "antlers", "beak", "bill", "claw", "claws",
+        "coat", "color", "colour", "eye", "eyes", "feather", "feathers", "fin", "fins",
+        "fur", "horn", "horns", "leg", "legs", "marking", "markings", "paw", "paws",
+        "plumage", "scale", "scales", "shell", "spot", "spots", "stripe", "stripes",
+        "tail", "toe", "toes", "wing", "wings"
+    ]);
+    const descriptorTokens = new Set([
+        "angle", "appearance", "count", "detail", "details", "length", "number", "numbers",
+        "pair", "pairs", "pattern", "patterns", "profile", "shape", "silhouette", "size",
+        "structure", "view"
+    ]);
+    const taxonTokens = new Set([
+        "ant", "bee", "beetle", "bird", "butterfly", "cat", "cattle", "cicada", "cockroach",
+        "crab", "dog", "dragonfly", "fish", "fly", "frog", "gecko", "grasshopper", "horse",
+        "insect", "lizard", "mantis", "moth", "passerine", "sheep", "snail", "snake",
+        "spider", "toad", "turtle", "wasp"
+    ]);
+    const tokens = value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((token) => token && token !== "of");
+
+    return tokens.length >= 2
+        && tokens.some((token) => anatomyTokens.has(token))
+        && tokens.some((token) => descriptorTokens.has(token))
+        && !tokens.some((token) => taxonTokens.has(token));
+}
 
 async function getAuthenticatedSupabaseUser() {
     const supabase = createSupabaseServerClient();
@@ -718,16 +879,101 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     if (!supabase) return null;
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return null;
-    const {data} = await supabase.from("captures")
-        .select("id,status,created_at,location_display_label,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
-        .eq("id", id).eq("user_id", user.id).maybeSingle();
+    const [captureResult, comparisonResult, progressionResult] = await Promise.all([
+        supabase.from("captures")
+            .select("id,status,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        supabase.from("capture_comparison_stat_boost_totals_v1")
+            .select("capture_id,comparison_dominance_boost,comparison_speed_boost,comparison_size_boost,comparison_intelligence_boost,comparison_rarity_boost")
+            .eq("capture_id", id)
+            .maybeSingle(),
+        supabase.from("capture_progression_totals_v1")
+            .select("capture_id,total_progression_xp,recent_progression_source")
+            .eq("capture_id", id)
+            .maybeSingle()
+    ]);
+    const data = captureResult.data;
     if (!data) return null;
     const row = data as QueryRow;
+    const comparison = (comparisonResult.data ?? {}) as QueryRow;
+    const progression = (progressionResult.data ?? {}) as QueryRow;
     const analysis = Array.isArray(row.analysis_results) ? row.analysis_results[0] : row.analysis_results;
     if (!analysis || analysis.error_message || !analysis.completed_at) return null;
     const slug = analysis.normalized_identity_key ?? null;
     const species = slug ? getSpeciesBySlug(slug) : null;
-    const stats = analysis.game_stats && typeof analysis.game_stats === "object" ? analysis.game_stats : {};
+    const storedStats = resolvedStoredGameStats(analysis);
+    const hasChallengeGameStats = hasCanonicalGameStats(storedStats);
+    const baseGameStats = canonicalGameStats(storedStats);
+    const trainingBoosts: AppCaptureTrainingBoosts = {
+        dominance: finiteInteger(row.dominance_boost),
+        speed: finiteInteger(row.speed_boost),
+        intelligence: finiteInteger(row.intelligence_boost)
+    };
+    const comparisonStatBoosts: AppCaptureGameStats = {
+        dominance: finiteInteger(comparison.comparison_dominance_boost),
+        speed: finiteInteger(comparison.comparison_speed_boost),
+        size: finiteInteger(comparison.comparison_size_boost),
+        intelligence: finiteInteger(comparison.comparison_intelligence_boost),
+        rarity: finiteInteger(comparison.comparison_rarity_boost)
+    };
+    const endorsementBonuses: AppCaptureGameStats = {
+        dominance: finiteInteger(row.dominance_endorsements),
+        speed: finiteInteger(row.speed_endorsements),
+        size: finiteInteger(row.size_endorsements),
+        intelligence: finiteInteger(row.intelligence_endorsements),
+        rarity: finiteInteger(row.rarity_endorsements)
+    };
+    const effectiveGameStats: AppCaptureGameStats = {
+        dominance: clampGameStat(baseGameStats.dominance + trainingBoosts.dominance + comparisonStatBoosts.dominance + endorsementBonuses.dominance),
+        speed: clampGameStat(baseGameStats.speed + trainingBoosts.speed + comparisonStatBoosts.speed + endorsementBonuses.speed),
+        size: clampGameStat(baseGameStats.size + comparisonStatBoosts.size + endorsementBonuses.size),
+        intelligence: clampGameStat(baseGameStats.intelligence + trainingBoosts.intelligence + comparisonStatBoosts.intelligence + endorsementBonuses.intelligence),
+        rarity: clampGameStat(baseGameStats.rarity + comparisonStatBoosts.rarity + endorsementBonuses.rarity)
+    };
+    const statDeltas: AppCaptureGameStats = {
+        dominance: effectiveGameStats.dominance - baseGameStats.dominance,
+        speed: effectiveGameStats.speed - baseGameStats.speed,
+        size: effectiveGameStats.size - baseGameStats.size,
+        intelligence: effectiveGameStats.intelligence - baseGameStats.intelligence,
+        rarity: effectiveGameStats.rarity - baseGameStats.rarity
+    };
+    const settingTag = normalizedOptionalString(analysis.zoo_or_wild);
+    const humanContext = normalizedOptionalString(analysis.human_context);
+    const rawAnimalName = normalizedOptionalString(analysis.animal_name);
+    const animalName = rawAnimalName ?? "Animal";
+    const hasKnownAnimal = rawAnimalName !== null && rawAnimalName.toLowerCase() !== "unknown animal";
+    const captureValidity = resolvedAnalysisToken(analysis, "capture_validity")
+        ?? (hasKnownAnimal ? "unclear_capture" : "no_animal_detected");
+    const authenticityStatus = resolvedAnalysisToken(analysis, "authenticity_status");
+    const signals = asQueryRow(analysis.signals);
+    const settingToken = normalizedEligibilityToken(settingTag);
+    const captureValidityToken = normalizedEligibilityToken(captureValidity);
+    const authenticityToken = normalizedEligibilityToken(authenticityStatus);
+    const isZooComparisonBanned = Boolean(
+        settingToken?.includes("zoo")
+        || signals?.zoo_context_likely === true
+        || signals?.zooContextLikely === true
+        || signals?.likely_near_zoo === true
+    );
+    const confidenceNumber = analysis.confidence == null || analysis.confidence === ""
+        ? Number.NaN
+        : Number(analysis.confidence);
+    const confidence = Number.isFinite(confidenceNumber) ? confidenceNumber : null;
+    const hasUncertaintyFallback = !hasKnownAnimal
+        || looksLikeGarbageDescriptiveIdentity(animalName)
+        || (confidence ?? 0) < 0.4;
+    const isValidLiveCapture = captureValidityToken === "valid_live_capture"
+        || captureValidityToken === "valid_live"
+        || captureValidityToken === "live_capture";
+    const isLikelyNonLiveSource = authenticityToken === "likely_non_live_source"
+        || captureValidityToken === "likely_non_live_source";
+    const isEligibleCapture = isValidLiveCapture || captureValidityToken === "unclear_capture";
+    const isChallengeAnalysisEligible = isValidLiveCapture
+        && !isLikelyNonLiveSource
+        && !hasUncertaintyFallback
+        && !isZooComparisonBanned;
     const gradeSource: CaptureGradeSource = {
         raw_json: analysis.raw_json ?? null,
         animal_name: analysis.animal_name ?? null,
@@ -752,19 +998,43 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         status: row.status,
         createdAt: row.created_at,
         locationLabel: row.location_display_label ?? null,
-        animalName: analysis.animal_name || "Animal",
+        locationLat: nullableFiniteNumber(row.location_lat),
+        locationLng: nullableFiniteNumber(row.location_lng),
+        animalName,
         scientificName: analysis.scientific_name ?? null,
         speciesSlug: slug,
         breed: analysis.breed_guess ?? null,
-        context: analysis.zoo_or_wild && analysis.zoo_or_wild !== "Unknown" ? analysis.zoo_or_wild : analysis.human_context ?? null,
+        context: settingTag && settingToken !== "unknown" ? settingTag : humanContext,
         conservationTier: analysis.conservation_tier ?? null,
-        confidence: analysis.confidence ?? null,
+        confidence,
         typeTags: Array.isArray(analysis.type_tags) ? analysis.type_tags : [],
-        gameStats: stats,
+        gameStats: baseGameStats,
+        baseGameStats,
+        effectiveGameStats,
+        statDeltas,
+        trainingBoosts,
+        comparisonStatBoosts,
+        endorsementBonuses,
+        settingTag,
+        humanContext,
+        captureValidity,
+        authenticityStatus,
+        signals,
         premiumDetails: analysis.premium_details ?? null,
         imageSrc: species ? getSpeciesImageRoute(species.slug, id) : "/images/placeholders/species-no-image.svg",
         captureGrade: gradeBreakdown?.grade ?? null,
-        gradeBreakdown
+        gradeBreakdown,
+        totalProgressionXP: Math.max(0, finiteInteger(progression.total_progression_xp)),
+        challengeHealth: Math.min(3, Math.max(0, finiteInteger(row.challenge_health, 3))),
+        challengeStake: Math.min(25, Math.max(5, finiteInteger(row.challenge_stake, 5))),
+        isChallengeReady: row.is_challenge_ready === true,
+        isDiscoverable: row.is_discoverable === true,
+        recentProgressionSource: normalizedOptionalString(progression.recent_progression_source),
+        hasChallengeGameStats,
+        isZooComparisonBanned,
+        isChallengeAnalysisEligible,
+        isEligibleCapture,
+        hasUncertaintyFallback
     };
 }
 

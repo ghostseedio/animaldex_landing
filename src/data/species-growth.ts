@@ -627,8 +627,10 @@ export async function getSpeciesGrowthContext(entry: SpeciesEntry, publicCapture
         challengeRequest: null
     };
 
-    const principle = await resolveSpeciesBehaviorProfile(entry.slug);
-    const speciesCaptures = userId ? await getUserCapturesForSpecies(entry) : [];
+    const [principle, speciesCaptures] = await Promise.all([
+        resolveSpeciesBehaviorProfile(entry.slug),
+        userId ? getUserCapturesForSpecies(entry) : Promise.resolve([])
+    ]);
 
     if (!userId) {
         const [comparison, progress] = await Promise.all([
@@ -646,11 +648,19 @@ export async function getSpeciesGrowthContext(entry: SpeciesEntry, publicCapture
         };
     }
 
-    if (speciesCaptures.length === 0) {
-        const [wildProfile, comparison, progress] = await Promise.all([
+    const requestedOwnedCapture = publicCaptureId
+        ? speciesCaptures.find((capture) => capture.captureId === publicCaptureId) ?? null
+        : null;
+
+    // A species page can display somebody else's featured card even when the
+    // viewer owns the same species. Keep all detail state scoped to the card
+    // being viewed; never silently substitute the viewer's newest capture.
+    if (speciesCaptures.length === 0 || (publicCaptureId && !requestedOwnedCapture)) {
+        const [wildProfile, comparison, progress, creditBalance] = await Promise.all([
             fetchWildProfileApexProgress(userId),
             fetchPublicComparisonState(publicCaptureId, userId),
-            fetchPublicProgressState(publicCaptureId, userId)
+            fetchPublicProgressState(publicCaptureId, userId),
+            fetchCreditBalance(userId)
         ]);
 
         return {
@@ -661,13 +671,13 @@ export async function getSpeciesGrowthContext(entry: SpeciesEntry, publicCapture
             match: principle
                 ? evaluateApexGrowth(wildProfile, buildPublicGrowthCandidate(entry, principle))
                 : null,
-            creditBalance: await fetchCreditBalance(userId),
+            creditBalance,
             comparison,
             progress
         };
     }
 
-    const primaryCapture = speciesCaptures[0];
+    const primaryCapture = requestedOwnedCapture ?? speciesCaptures[0];
     const [wildProfile, growthDetails, allCaptures, creditBalance] = await Promise.all([
         fetchWildProfileApexProgress(userId),
         fetchCaptureGrowthDetails(primaryCapture.captureId, userId),

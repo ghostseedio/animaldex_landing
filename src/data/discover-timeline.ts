@@ -38,6 +38,7 @@ export type DiscoverCaptureItem = {
     id: string;
     captureId: string;
     date: string;
+    capturedAt: string;
     sortRank: 2;
     activityBadge: string;
     activityLine: string | null;
@@ -56,6 +57,11 @@ export type DiscoverCaptureItem = {
     identityExplanation: string | null;
     identityEvidenceGuidance: string | null;
     battleTier: "E" | "D" | "C" | "B" | "A" | "S";
+    isEligibleCapture: boolean;
+    hasUncertaintyFallback: boolean;
+    isZooComparisonBanned: boolean;
+    isChallengeAnalysisEligible: boolean;
+    hasChallengeGameStats: boolean;
     score: number;
     captureGrade: number;
     gradeBreakdown: CaptureGradeBreakdown | null;
@@ -64,7 +70,11 @@ export type DiscoverCaptureItem = {
     viewerEndorsementStat: string | null;
     rarity: number;
     contextLabel: string | null;
+    settingTag: string | null;
+    humanContext: string | null;
     locationLabel: string | null;
+    locationLat: number | null;
+    locationLng: number | null;
     lifeStage: string | null;
     genderGuess: string | null;
     confidence: number | null;
@@ -93,7 +103,10 @@ export type DiscoverCaptureItem = {
     bestForTags: string[];
     statBoosts: Record<string, number>;
     comparisonBoosts: Record<string, number>;
+    endorsementBonuses: Record<string, number>;
     gameStats: Record<string, number>;
+    effectiveGameStats: Record<string, number>;
+    statDeltas: Record<string, number>;
 };
 
 export type DiscoverAlignmentItem = {
@@ -238,6 +251,34 @@ function readObjectArray(row: QueryRow, key: string) {
     const value = row[key];
     if (!Array.isArray(value)) return [] as QueryRow[];
     return value.filter((item): item is QueryRow => Boolean(item) && typeof item === "object" && !Array.isArray(item)) as QueryRow[];
+}
+
+function asQueryRow(value: unknown): QueryRow | null {
+    return value && typeof value === "object" && !Array.isArray(value) ? value as QueryRow : null;
+}
+
+function normalizedToken(value: unknown) {
+    if (typeof value !== "string" || !value.trim()) return null;
+    return value.trim()
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+}
+
+function analysisToken(row: QueryRow, snakeKey: "capture_validity" | "authenticity_status", camelKey: "captureValidity" | "authenticityStatus") {
+    const raw = asQueryRow(row.raw_json);
+    const model = asQueryRow(raw?.model);
+    const legacy = asQueryRow(raw?.raw_openai);
+    return normalizedToken(row[snakeKey] ?? row[camelKey]
+        ?? model?.[snakeKey] ?? model?.[camelKey]
+        ?? raw?.[snakeKey] ?? raw?.[camelKey]
+        ?? legacy?.[snakeKey] ?? legacy?.[camelKey]);
+}
+
+function hasStoredGameStats(stats: QueryRow) {
+    return ["dominance", "speed", "size", "intelligence", "rarity"]
+        .every((key) => stats[key] !== null && stats[key] !== "" && Number.isFinite(Number(stats[key])));
 }
 
 function formatLabel(value: string | null) {
@@ -724,6 +765,16 @@ function comparisonBoosts(row: QueryRow) {
     };
 }
 
+function endorsementBonuses(row: QueryRow) {
+    return {
+        dominance: readNumber(row, "dominance_endorsements"),
+        speed: readNumber(row, "speed_endorsements"),
+        size: readNumber(row, "size_endorsements"),
+        intelligence: readNumber(row, "intelligence_endorsements"),
+        rarity: readNumber(row, "rarity_endorsements")
+    };
+}
+
 async function buildAnimalDexNumberIndex() {
     const entries = await getUnifiedSpeciesEntries();
     const index = new Map<string, number>();
@@ -816,21 +867,45 @@ function mapCaptureRow(
     const grade = gradeBreakdown?.grade ?? 1;
     const boosts = statBoosts(row);
     const comparison = comparisonBoosts(row);
+    const endorsements = endorsementBonuses(row);
     const effectiveStats = toEffectiveStats(stats, {
-        dominance: boosts.dominance + comparison.dominance,
-        speed: boosts.speed + comparison.speed,
-        size: comparison.size,
-        intelligence: boosts.intelligence + comparison.intelligence,
-        rarity: comparison.rarity
+        dominance: boosts.dominance + comparison.dominance + endorsements.dominance,
+        speed: boosts.speed + comparison.speed + endorsements.speed,
+        size: comparison.size + endorsements.size,
+        intelligence: boosts.intelligence + comparison.intelligence + endorsements.intelligence,
+        rarity: comparison.rarity + endorsements.rarity
     });
+    const statDeltas = Object.fromEntries(
+        ["dominance", "speed", "size", "intelligence", "rarity"].map((key) => [
+            key,
+            Math.max(0, Number(effectiveStats[key as keyof typeof effectiveStats] ?? 0) - Number(stats[key] ?? 0))
+        ])
+    );
     const identityKind = readString(row, "identity_kind") ?? readString(row, "refined_identity_kind");
     const isUncertain = shouldShowUncertaintyVisualWarning(row);
+    const hasUncertaintyFallback = shouldShowUncertaintyFallback(row);
+    const captureValidity = analysisToken(row, "capture_validity", "captureValidity")
+        ?? (readString(row, "animal_name")?.toLowerCase() === "unknown animal" ? "no_animal_detected" : "unclear_capture");
+    const authenticityStatus = analysisToken(row, "authenticity_status", "authenticityStatus");
+    const signals = asQueryRow(row.signals);
+    const isZooComparisonBanned = readString(row, "zoo_or_wild")?.toLowerCase() === "zoo"
+        || signals?.zoo_context_likely === true
+        || signals?.zooContextLikely === true
+        || signals?.likely_near_zoo === true;
+    const isValidLiveCapture = captureValidity === "valid_live_capture" || captureValidity === "valid_live" || captureValidity === "live_capture";
+    const isEligibleCapture = isValidLiveCapture || captureValidity === "unclear_capture";
+    const hasChallengeGameStats = hasStoredGameStats(stats);
+    const isChallengeAnalysisEligible = isValidLiveCapture
+        && authenticityStatus !== "likely_non_live_source"
+        && !hasUncertaintyFallback
+        && !isZooComparisonBanned;
 
     return {
         kind: "capture",
         id: `capture-${captureId}`,
         captureId,
         date: readString(row, "feed_activity_at") ?? readString(row, "capture_created_at") ?? new Date(0).toISOString(),
+        capturedAt: readString(row, "capture_created_at") ?? new Date(0).toISOString(),
         sortRank: 2,
         activityBadge: timelineActivityBadge(row),
         activityLine: refreshedMedia ? `${collector.name} added ${hasVideoMedia(row) ? "media" : "photos"} to ${animalName}` : null,
@@ -849,6 +924,11 @@ function mapCaptureRow(
         identityExplanation: isUncertain ? null : readString(row, "identity_explanation"),
         identityEvidenceGuidance: isUncertain ? null : readString(row, "identity_evidence_guidance"),
         battleTier: getBattleTier(getBattlePower(effectiveStats)),
+        isEligibleCapture,
+        hasUncertaintyFallback,
+        isZooComparisonBanned,
+        isChallengeAnalysisEligible,
+        hasChallengeGameStats,
         score: readNumber(row, "score"),
         captureGrade: grade,
         gradeBreakdown,
@@ -857,7 +937,11 @@ function mapCaptureRow(
         viewerEndorsementStat: formatLabel(readString(row, "viewer_endorsement_stat")),
         rarity: readNumber(stats, "rarity"),
         contextLabel: getContextLabel(row),
+        settingTag: readString(row, "zoo_or_wild"),
+        humanContext: readString(row, "human_context"),
         locationLabel: readString(row, "location_display_label"),
+        locationLat: readNullableNumber(row, "location_lat"),
+        locationLng: readNullableNumber(row, "location_lng"),
         lifeStage: formatLabel(readString(row, "life_stage")),
         genderGuess: formatLabel(readString(row, "gender_guess")),
         confidence: readNullableNumber(row, "confidence"),
@@ -871,7 +955,7 @@ function mapCaptureRow(
         conservationTier: readString(row, "conservation_tier"),
         totalProgressionXP: progressionXP,
         level: animalLevel(progressionXP),
-        recentProgressionSource: formatLabel(readString(row, "recent_progression_source")),
+        recentProgressionSource: readString(row, "recent_progression_source"),
         animalDexNumber: resolveAnimalDexNumber(row, slug, species, animalDexNumbers),
         mediaCount: mediaCount(row),
         hasVideoMedia: media.some((asset) => asset.kind === "loop" || asset.kind === "video"),
@@ -886,7 +970,10 @@ function mapCaptureRow(
         bestForTags: catalogBestFor.length ? catalogBestFor.slice(0, 4) : learnedTags,
         statBoosts: boosts,
         comparisonBoosts: comparison,
-        gameStats: stats
+        endorsementBonuses: endorsements,
+        gameStats: stats,
+        effectiveGameStats: effectiveStats,
+        statDeltas
     };
 }
 
@@ -1476,6 +1563,24 @@ async function fetchDiscoverFeedRowByCaptureId(
     return hydrated[0] ?? null;
 }
 
+export async function getDiscoverCaptureById(captureId: string): Promise<DiscoverCaptureItem | null> {
+    const normalizedCaptureId = captureId.trim();
+    if (!normalizedCaptureId) return null;
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const row = await fetchDiscoverFeedRowByCaptureId(supabase, normalizedCaptureId);
+    if (!row) return null;
+
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        buildAnimalDexNumberIndex(),
+        getCatalogBehaviorPrincipleIndex()
+    ]);
+
+    return mapCaptureRow(row, animalDexNumbers, behaviorPrinciples);
+}
+
 export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTimelineItem | null> {
     const parsed = parseDiscoverPostId(rawPostId);
     if (!parsed) return null;
@@ -1484,13 +1589,7 @@ export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTi
     if (!supabase) return null;
 
     if (parsed.kind === "capture") {
-        const row = await fetchDiscoverFeedRowByCaptureId(supabase, parsed.entityId);
-        if (!row) return null;
-        const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-            buildAnimalDexNumberIndex(),
-            getCatalogBehaviorPrincipleIndex()
-        ]);
-        return mapCaptureRow(row, animalDexNumbers, behaviorPrinciples);
+        return getDiscoverCaptureById(parsed.entityId);
     }
 
     if (parsed.kind === "alignment") {

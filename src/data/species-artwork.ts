@@ -19,3 +19,15 @@ export function getSpeciesArtworkUrl(slug: string, imageFile?: string | null) {
 
     return `${getPublicStorageBaseUrl()}/storage/v1/object/public/${SPECIES_ARTWORK_BUCKET}/${artworkPath}`;
 }
+
+export function getSpeciesArtworkThumbnailUrl(slug: string, imageFile?: string | null, size = 240) {
+    const artworkPath = encodeStoragePath(imageFile?.trim() || `${slug}.webp`);
+    const params = new URLSearchParams({
+        width: String(size),
+        height: String(size),
+        quality: "72",
+        resize: "contain"
+    });
+
+    return `${getPublicStorageBaseUrl()}/storage/v1/render/image/public/${SPECIES_ARTWORK_BUCKET}/${artworkPath}?${params.toString()}`;
+}

@@ -357,6 +357,47 @@ function shouldTreatAsDomesticated(entry: SpeciesEntry, descriptor: NativeRangeD
     return descriptor === null && entry.analysis.category.toLowerCase().includes("domestic");
 }
 
+/**
+ * Field guides written by the catalog pipeline prefix `typical_habitat` with an
+ * explicit `Native range keys: a, b.` line. Those keys are already canonical
+ * region keys, so they are authoritative and beat prose keyword matching —
+ * which otherwise misses any species whose habitat text names no geography
+ * (e.g. Northern Pig-tailed Macaque, keyed southeast_asia but described only as
+ * "tropical and subtropical forests, forest edges, bamboo areas").
+ */
+function readDeclaredRangeKeys(text: string): NativeRangeRegionKey[] {
+    const match = /native range keys:\s*([^.]+)\./i.exec(text);
+    if (!match) return [];
+
+    const keys: NativeRangeRegionKey[] = [];
+    for (const raw of match[1].split(",")) {
+        const key = raw.trim().toLowerCase();
+        if (key && isAnyNativeRangeRegionKey(key) && !keys.includes(key)) {
+            keys.push(key);
+        }
+    }
+
+    return keys;
+}
+
+function mappingFromDeclaredKeys(keys: NativeRangeRegionKey[]): NativeRangeMapping | null {
+    if (!keys.length) return null;
+
+    const specific = keys.filter((key) => REGION_TIERS[key] === "specific_land");
+    const marine = keys.filter((key) => REGION_TIERS[key] === "marine");
+    const broad = keys.filter((key) => REGION_TIERS[key] === "broad_land");
+
+    if (!specific.length && !marine.length && !broad.length) return null;
+
+    return nativeRangeMapping({
+        specific,
+        marine,
+        broad,
+        // Both halves present means the animal genuinely spans land and water.
+        combineLandAndMarine: marine.length > 0 && (broad.length > 0 || specific.length > 0)
+    });
+}
+
 function buildDescriptor(entry: SpeciesEntry, habitatText: string | null): NativeRangeDescriptor | null {
     const tokens = getCandidateTokens(entry);
     const habitatTokens = [
@@ -375,6 +416,12 @@ function buildDescriptor(entry: SpeciesEntry, habitatText: string | null): Nativ
         `outside ${fragment}`
     ].some((pattern) => habitatTokens.includes(pattern));
     const habitatMatches = (fragments: string[]) => fragments.some((fragment) => containsFragment(fragment) && !isNegatedFragment(fragment));
+
+    // Explicit keys from the catalog pipeline win over prose inference.
+    const declaredMapping = mappingFromDeclaredKeys(readDeclaredRangeKeys(habitatTokens));
+    if (declaredMapping) {
+        return descriptorFromMapping(declaredMapping, habitatText);
+    }
 
     const combinedIdentityMappings: Array<[string[], NativeRangeMapping]> = [
         [
@@ -673,6 +720,10 @@ export function getNativeRangeRegionTier(region: NativeRangeRegionKey) {
 
 export function getDirectoryNativeRangeRegions() {
     return DIRECTORY_NATIVE_RANGE_REGION_KEYS;
+}
+
+function isAnyNativeRangeRegionKey(value: string): value is NativeRangeRegionKey {
+    return Object.prototype.hasOwnProperty.call(REGION_TIERS, value);
 }
 
 export function isNativeRangeRegionKey(value: string): value is NativeRangeRegionKey {

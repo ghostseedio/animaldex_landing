@@ -1,7 +1,18 @@
 import {NextResponse} from "next/server";
+import {getAppCaptureDetail} from "@/data/authenticated-app";
+import {getBattleTier, type AnimalBattleTier} from "@/lib/battle-tier";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+
+const TIER_STAKE: Record<AnimalBattleTier, number> = {
+    E: 5,
+    D: 10,
+    C: 15,
+    B: 20,
+    A: 25,
+    S: 25
+};
 
 export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
@@ -37,7 +48,13 @@ export async function POST(request: Request) {
     }
 
     if (action === "update") {
-        const challengeStake = Math.min(100, Math.max(2, Number(body.challengeStake ?? 2)));
+        const capture = await getAppCaptureDetail(captureId);
+
+        if (!capture) {
+            return NextResponse.json({error: "Capture not found."}, {status: 404});
+        }
+
+        const challengeStake = TIER_STAKE[getBattleTier(capture.effectiveGameStats)];
         const {data, error} = await supabase.rpc("update_capture_challenge_settings", {
             p_capture_id: captureId,
             p_is_challenge_ready: body.isChallengeReady === true,

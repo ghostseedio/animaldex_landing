@@ -16,77 +16,130 @@ type SpeciesRankingCarouselProps = {
         scoreLabel: string;
         byPhotographer: string;
     };
+    currentCaptureId?: string | null;
+    currentCaptureGrade?: number | null;
+    layout?: "compact" | "wide";
 };
+
+function getGradeTint(grade: number) {
+    if (grade >= 9) return "rgb(249 115 22)";
+    if (grade >= 7) return "rgb(34 211 238)";
+    if (grade >= 5) return "rgb(56 250 71)";
+    if (grade >= 3) return "rgb(255 255 255)";
+    return "rgb(248 113 113)";
+}
+
+function GradeBadge({grade}: {grade: number}) {
+    const tint = getGradeTint(grade);
+
+    return (
+        <span
+            className="inline-flex h-[31px] w-fit shrink-0 items-center gap-1.5 rounded-full bg-black/35 px-2.5"
+            style={{
+                border: `1px solid color-mix(in srgb, ${tint} 38%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${tint} 18%, rgb(0 0 0 / 0.36))`
+            }}
+            aria-label={`Grade ${grade}`}
+        >
+            <span
+                className="text-[9px] font-black leading-none"
+                style={{color: `color-mix(in srgb, ${tint} 72%, transparent)`}}
+            >
+                GRADE
+            </span>
+            <span className="font-display text-[13px] font-black leading-none text-white">
+                {grade}
+            </span>
+        </span>
+    );
+}
 
 export default function SpeciesRankingCarousel({
     speciesSlug,
-    speciesName,
     items,
-    labels
+    currentCaptureId = null,
+    currentCaptureGrade = null,
+    layout = "compact"
 }: SpeciesRankingCarouselProps) {
-    if (items.length === 0) {
-        return (
-            <section className="rounded-[1.75rem] border border-white/10 bg-surface-900/55 px-5 py-8 md:px-8">
-                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{labels.title}</h2>
-                <p className="mt-3 text-lg text-ink-200">{labels.empty}</p>
-            </section>
-        );
-    }
+    const wide = layout === "wide";
+    const currentItem = currentCaptureId
+        ? items.find((item) => item.captureId === currentCaptureId)
+        : null;
+    const summary = currentItem
+        ? `You’re #${currentItem.rank} of ${items.length}`
+        : items.length > 0
+            ? `${items.length} ranked ${items.length === 1 ? "capture" : "captures"} in this group.`
+            : "No captures yet";
 
     return (
-        <section className="flex flex-col gap-5">
-            <div>
-                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{labels.title}</h2>
-                <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">
-                    {labels.description.replace("{count}", String(items.length)).replace("{animal}", speciesName)}
-                </p>
-            </div>
+        <section className={`-mx-5 border-y border-white/10 bg-[#121212]/95 py-[18px] ${
+            wide ? "lg:mx-0 lg:rounded-[22px] lg:border lg:px-1 lg:py-6" : ""
+        }`}>
+            <h2 className={`px-5 text-[17px] font-semibold leading-[1.25] text-white ${wide ? "lg:px-6 lg:text-xl" : ""}`}>
+                {summary}
+            </h2>
 
-            <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
-                {items.map((item) => (
-                    <article
-                        key={item.captureId}
-                        className="w-[15.5rem] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/10 bg-[linear-gradient(145deg,rgba(40,70,49,0.18),rgba(255,255,255,0.03))] shadow-lg shadow-black/20"
-                    >
-                        <div className="relative aspect-[4/5] overflow-hidden bg-black/30">
-                            <img
-                                src={getSpeciesImageRoute(speciesSlug, item.captureId)}
-                                alt={`${item.animalName} capture by ${item.username ?? "collector"}`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                            />
-                            <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/80 to-transparent p-3">
-                                <span className="rounded-full bg-amber-200/15 px-2.5 py-1 text-xs font-bold text-amber-100">
-                                    {labels.rankLabel.replace("{rank}", String(item.rank))}
-                                </span>
-                                {item.battleTier ? (
-                                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white">
-                                        {item.battleTier}
+            {items.length > 0 ? (
+                <div className={`mt-3.5 flex gap-3 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+                    wide ? "lg:mt-5 lg:gap-4 lg:px-6" : ""
+                }`}>
+                    {items.map((item) => {
+                        const isCurrentCapture = item.captureId === currentCaptureId;
+                        const captureGrade = isCurrentCapture && currentCaptureGrade != null
+                            ? currentCaptureGrade
+                            : item.captureGrade;
+                        const handle = item.username?.trim() || "collector";
+
+                        return (
+                            <article
+                                key={item.captureId}
+                                className={`w-[136px] shrink-0 overflow-hidden rounded-2xl border bg-[#171a18] shadow-[0_8px_22px_rgba(0,0,0,0.28)] ${
+                                    wide ? "lg:w-[164px]" : ""
+                                } ${
+                                    isCurrentCapture
+                                        ? "border-[#38fa47]/80 ring-1 ring-[#38fa47]/80"
+                                        : "border-white/10"
+                                }`}
+                            >
+                                <div className={`relative h-[148px] w-[136px] overflow-hidden bg-black/30 ${wide ? "lg:h-[178px] lg:w-[164px]" : ""}`}>
+                                    <img
+                                        src={`${getSpeciesImageRoute(speciesSlug, item.captureId)}&thumbnail=1`}
+                                        alt={`${item.animalName} capture by ${handle}`}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                    />
+                                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
+                                    <span
+                                        className={`absolute left-2 top-2 rounded-full px-2 py-[5px] text-[10px] font-bold leading-none text-black/90 ${
+                                            isCurrentCapture ? "bg-[#38fa47]" : "bg-[#d5ddd6]"
+                                        }`}
+                                    >
+                                        #{item.rank}
                                     </span>
-                                ) : null}
-                            </div>
-                        </div>
-                        <div className="space-y-2 p-4">
-                            <p className="text-sm font-semibold text-white">
-                                {item.displayName ?? item.username ?? labels.byPhotographer}
-                            </p>
-                            {item.username ? (
-                                <Link href={`/u/${encodeURIComponent(item.username)}`} className="block w-fit text-xs font-semibold text-primary-200 hover:text-primary-100">
-                                    @{item.username}
-                                </Link>
-                            ) : null}
-                            {item.contextLabel || item.locationDisplayLabel ? (
-                                <p className="text-xs leading-5 text-ink-300">
-                                    {[item.contextLabel, item.locationDisplayLabel].filter(Boolean).join(" · ")}
-                                </p>
-                            ) : null}
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-100">
-                                {labels.scoreLabel.replace("{score}", String(item.score))}
-                            </p>
-                        </div>
-                    </article>
-                ))}
-            </div>
+                                </div>
+
+                                <div className="min-h-[66px] space-y-1.5 border-t border-white/[0.08] bg-[linear-gradient(145deg,#202421,#151716)] px-2 py-[9px]">
+                                    {item.username ? (
+                                        <Link
+                                            href={`/u/${encodeURIComponent(item.username)}`}
+                                            className="block truncate text-[11px] font-medium leading-[13px] text-white hover:text-[#38fa47]"
+                                        >
+                                            @{handle}
+                                        </Link>
+                                    ) : (
+                                        <p className="truncate text-[11px] font-medium leading-[13px] text-white">
+                                            @{handle}
+                                        </p>
+                                    )}
+                                    {captureGrade != null ? <GradeBadge grade={captureGrade} /> : null}
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="h-24" aria-hidden="true" />
+            )}
         </section>
     );
 }

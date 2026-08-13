@@ -28,8 +28,14 @@ module.exports = {
         fontFamily: {
             sans: ["var(--font-sans)", ...fontFamily.sans],
             display: ["var(--font-display)", ...fontFamily.sans],
+            // Declaring fontFamily at the theme root replaces the defaults, which dropped
+            // font-mono even though the codebase uses it.
+            mono: [...fontFamily.mono],
         },
         extend: {
+            // Tailwind only emits a utility when the exact token exists. Shades and opacity
+            // steps used in the codebase but missing here compiled to nothing, so the
+            // elements using them rendered unstyled. Each value below fills such a gap.
             colors: {
                 canvas: {
                     950: "#040705",
@@ -37,6 +43,7 @@ module.exports = {
                     850: "#101612",
                 },
                 surface: {
+                    950: "#0b100d",
                     900: "#111714",
                     800: "#151d19",
                     700: "#1b241f",
@@ -46,8 +53,12 @@ module.exports = {
                     200: "#d1ddd3",
                     300: "#9fb0a2",
                     400: "#748376",
+                    500: "#566159",
+                    600: "#3f4842",
                 },
                 line: {
+                    100: "#4d6154",
+                    200: "#3f5145",
                     300: "#314036",
                     400: "#243028",
                 },
@@ -55,11 +66,36 @@ module.exports = {
                     50: "#effff2",
                     100: "#cffff0",
                     200: "#83ffae",
+                    300: "#5aec8a",
                     400: "#32db65",
                     500: "#1bc451",
                     600: "#13953e",
+                    900: "#0a3d1c",
+                    950: "#04220e",
                 }
             },
+            // Opacity modifiers outside the default scale (e.g. bg-white/15) emit no CSS.
+            opacity: {
+                4: "0.04",
+                8: "0.08",
+                12: "0.12",
+                14: "0.14",
+                15: "0.15",
+                16: "0.16",
+                18: "0.18",
+                35: "0.35",
+                45: "0.45",
+                55: "0.55",
+                58: "0.58",
+                65: "0.65",
+                78: "0.78",
+                85: "0.85",
+                92: "0.92",
+            },
+            // Numeric min-w/min-h/max-w utilities only gained a spacing scale in Tailwind 3.4.
+            minWidth: ({theme}) => ({...theme("spacing")}),
+            minHeight: ({theme}) => ({...theme("spacing")}),
+            maxWidth: ({theme}) => ({...theme("spacing")}),
             borderRadius: {
                 '4xl': '2rem',
                 '5xl': '2.5rem',
@@ -75,6 +111,20 @@ module.exports = {
     },
     plugins: [
         require('@tailwindcss/typography'),
+        // line-clamp only ships with Tailwind from 3.3; this project is on 3.2.
+        plugin(function({ addUtilities }) {
+            const clamp = {};
+            for (const lines of [1, 2, 3, 4, 5, 6]) {
+                clamp[`.line-clamp-${lines}`] = {
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    '-webkit-box-orient': 'vertical',
+                    '-webkit-line-clamp': `${lines}`,
+                };
+            }
+            clamp['.line-clamp-none'] = { '-webkit-line-clamp': 'unset' };
+            addUtilities(clamp);
+        }),
         require('tailwindcss-interaction-media'),
         plugin(function({ matchUtilities, theme }) {
             matchUtilities(

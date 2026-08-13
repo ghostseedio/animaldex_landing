@@ -47,6 +47,13 @@ type SpeciesGrowthInteractiveProps = {
     qualitySlug: string | null;
     qualityName: string | null;
     growth: SpeciesGrowthContext;
+    compareOnly?: boolean;
+    layout?: "compact" | "wide";
+    comparisonTier?: string | null;
+    settingTag?: string | null;
+    isZooComparisonBanned?: boolean;
+    isChallengeAnalysisEligible?: boolean;
+    hasChallengeGameStats?: boolean;
     labels: GrowthLabels;
 };
 
@@ -65,6 +72,41 @@ function challengeStatusLabel(status: string) {
         default:
             return "Challenge ended";
     }
+}
+
+type ComparisonTier = "E" | "D" | "C" | "B" | "A" | "S";
+
+const COMPARISON_STAKE_BY_TIER: Record<ComparisonTier, number> = {
+    E: 5,
+    D: 10,
+    C: 15,
+    B: 20,
+    A: 25,
+    S: 25
+};
+
+function normalizedComparisonTier(value: string | null | undefined): ComparisonTier | null {
+    const normalized = value?.trim().toUpperCase().replace(/^TIER\s+/, "");
+    return normalized === "E" || normalized === "D" || normalized === "C"
+        || normalized === "B" || normalized === "A" || normalized === "S"
+        ? normalized
+        : null;
+}
+
+function inferredComparisonTier(stake: number): ComparisonTier | "A/S" {
+    if (stake <= 5) return "E";
+    if (stake <= 10) return "D";
+    if (stake <= 15) return "C";
+    if (stake <= 20) return "B";
+    return "A/S";
+}
+
+function inferredTierStake(stake: number) {
+    if (stake <= 5) return 5;
+    if (stake <= 10) return 10;
+    if (stake <= 15) return 15;
+    if (stake <= 20) return 20;
+    return 25;
 }
 
 function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: GrowthLabels}) {
@@ -372,6 +414,13 @@ function PrincipleFusionModal({
 export default function SpeciesGrowthInteractive({
     speciesName,
     growth,
+    compareOnly = false,
+    layout = "compact",
+    comparisonTier,
+    settingTag,
+    isZooComparisonBanned = false,
+    isChallengeAnalysisEligible = true,
+    hasChallengeGameStats = true,
     labels
 }: SpeciesGrowthInteractiveProps) {
     const router = useRouter();
@@ -386,6 +435,8 @@ export default function SpeciesGrowthInteractive({
     const canFuse = Boolean(growth.primaryCaptureId && growth.principle && growth.fusionDonors.length > 0);
     const canChallenge = Boolean(growth.challengeRequest);
 
+    const wide = layout === "wide";
+    const compareCardClass = `rounded-[18px] border p-3.5 ${wide ? "lg:h-full lg:rounded-[22px] lg:p-6" : ""}`;
     const refresh = () => router.refresh();
 
     const startChallenge = () => {
@@ -447,7 +498,61 @@ export default function SpeciesGrowthInteractive({
     const capsuleButtonClass = "flex w-full items-center justify-center rounded-full bg-[#38fa47] px-4 py-3 text-[15px] font-medium text-black disabled:opacity-50";
     const targetQuality = growth.match?.matchedQualities[0]?.label ?? growth.challenge?.targetQualityTag.replace(/-/g, " ");
     const comparison = growth.comparison;
+    const normalizedSetting = settingTag?.trim().toLowerCase();
+    const fusionTint = normalizedSetting === "wild"
+        ? "56,250,71"
+        : normalizedSetting === "zoo"
+            ? "250,219,71"
+            : normalizedSetting === "domestic"
+                ? "140,199,255"
+                : normalizedSetting === "farm"
+                    ? "209,166,89"
+                    : "255,255,255";
+    const fusionTintIsKnown = Boolean(normalizedSetting && normalizedSetting !== "unknown");
     const comparisonEnabled = Boolean(comparison?.isDiscoverable && comparison.challengeHealth > 0);
+    const resolvedComparisonTier = normalizedComparisonTier(comparisonTier);
+    const automaticComparisonStake = resolvedComparisonTier
+        ? COMPARISON_STAKE_BY_TIER[resolvedComparisonTier]
+        : inferredTierStake(comparison?.challengeStake ?? 5);
+    const displayedComparisonTier = resolvedComparisonTier ?? inferredComparisonTier(automaticComparisonStake);
+    const exactComparisonAvailabilityEnabled = Boolean(
+        comparison?.isDiscoverable
+        && comparison.challengeHealth > 0
+        && !isZooComparisonBanned
+        && isChallengeAnalysisEligible
+        && hasChallengeGameStats
+    );
+    const challengeAvailabilitySubtitle = !comparison
+        ? ""
+        : isZooComparisonBanned
+            ? "This is a zoo or captive-enclosure sighting. Zoo animals can't be enabled for scenario comparisons."
+            : !comparison.isDiscoverable
+                ? "This capture must stay public in Discover before it can enter scenario comparisons."
+                : !isChallengeAnalysisEligible
+                    ? "Only verified live captures can enter scenario comparisons."
+                    : !hasChallengeGameStats
+                        ? "This capture needs refreshed comparison stats before it can enter scenario comparisons."
+                        : comparison.challengeHealth <= 0
+                            ? "This capture is out of hearts. Restore it before changing its comparison settings again."
+                            : comparison.isChallengeReady && growth.creditBalance != null && growth.creditBalance < automaticComparisonStake
+                                ? "Currently hidden from comparison matchmaking because your balance is below this capture's confidence amount."
+                                : comparison.isChallengeReady
+                                    ? `Other players can compare against this Tier ${displayedComparisonTier} animal for ${automaticComparisonStake} credits.`
+                                    : "Hidden from comparisons until you turn it on. Confidence is set automatically from battle tier.";
+    const publicChallengeSubtitle = isZooComparisonBanned
+        ? "Zoo animal · comparisons disabled"
+        : !hasChallengeGameStats
+            ? "Comparison stats unavailable"
+            : !comparison?.isDiscoverable || !comparison.isChallengeReady || comparison.challengeHealth <= 0 || !isChallengeAnalysisEligible
+                ? "Unavailable"
+                : growth.creditBalance != null && growth.creditBalance < automaticComparisonStake
+                    ? `Need ${automaticComparisonStake} credits`
+                    : `${automaticComparisonStake} credits`;
+    const canOpenPublicComparison = Boolean(
+        comparison
+        && !comparison.isOwnedByCurrentUser
+        && publicChallengeSubtitle === `${automaticComparisonStake} credits`
+    );
 
     const updateComparison = (action: "restore" | "update", values: {isChallengeReady?: boolean; challengeStake?: number} = {}) => {
         if (!comparison?.isOwnedByCurrentUser) {
@@ -480,14 +585,14 @@ export default function SpeciesGrowthInteractive({
     };
 
     return (
-        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 font-sans">
-            {growth.match && (!growth.hasCapture || (presentation !== "profileRequired" && presentation !== "pathUnavailable")) ? (
+        <div className={`mx-auto flex w-full max-w-[720px] flex-col gap-3 font-sans ${wide ? "lg:max-w-none lg:gap-5" : ""}`}>
+            {!compareOnly && growth.match && (!growth.hasCapture || (presentation !== "profileRequired" && presentation !== "pathUnavailable")) ? (
                 <ApexMatchCard growth={growth} labels={labels} />
             ) : null}
 
             {growth.isAuthenticated && growth.hasCapture ? (
                 <>
-                    {presentation === "profileRequired" ? (
+                    {!compareOnly && presentation === "profileRequired" ? (
                         <section className={`${cardClass} border-[#38fa47]/20`}>
                             <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Find your Apex Animal</h3>
@@ -498,7 +603,7 @@ export default function SpeciesGrowthInteractive({
                         </section>
                     ) : null}
 
-                    {presentation === "pathUnavailable" ? (
+                    {!compareOnly && presentation === "pathUnavailable" ? (
                         <section className={`${cardClass} border-[#38fa47]/20`}>
                             <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Refresh your Apex Path</h3>
@@ -509,7 +614,7 @@ export default function SpeciesGrowthInteractive({
                         </section>
                     ) : null}
 
-                    {presentation === "offPath" && growth.match ? (
+                    {!compareOnly && presentation === "offPath" && growth.match ? (
                         <section className={`${cardClass} border-orange-400/20`}>
                             <p className={`${microClass} uppercase`}>◉ &nbsp; Find the right power</p>
                             <p className="mt-3 text-xs font-medium leading-5 text-white/60">This animal teaches useful lessons, but your Apex path needs different powers right now.</p>
@@ -527,7 +632,7 @@ export default function SpeciesGrowthInteractive({
                         </section>
                     ) : null}
 
-                    {canChallenge && !growth.challenge ? (
+                    {!compareOnly && canChallenge && !growth.challenge ? (
                         <section className={`${cardClass} border-[#38fa47]/20`}>
                             <p className={`${microClass} uppercase`}>⚡ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Use This Power</h3>
@@ -548,7 +653,7 @@ export default function SpeciesGrowthInteractive({
                         </section>
                     ) : null}
 
-                    {growth.challenge ? (
+                    {!compareOnly && growth.challenge ? (
                         <section className={`${cardClass} ${growth.challenge.status === "approved" ? "border-[#38fa47]/20" : "border-cyan-300/20"}`}>
                             <div className="flex items-center justify-between gap-3">
                                 <p className={`${microClass} uppercase`}>⌾ &nbsp; Today&apos;s training</p>
@@ -611,7 +716,13 @@ export default function SpeciesGrowthInteractive({
                     ) : null}
 
                     {growth.principle ? (
-                        <section className={`${cardClass} border-[#38fa47]/20 bg-[linear-gradient(145deg,rgba(56,250,71,0.18),rgba(56,250,71,0.10),#1f1f1f)]`}>
+                        <section
+                            className="rounded-[20px] border p-4 font-sans"
+                            style={{
+                                background: `linear-gradient(145deg,rgba(${fusionTint},${fusionTintIsKnown ? ".18" : ".08"}),rgba(${fusionTint},${fusionTintIsKnown ? ".10" : ".04"}),#1f1f1f)`,
+                                borderColor: fusionTintIsKnown ? `rgba(${fusionTint},.24)` : "rgba(255,255,255,.10)"
+                            }}
+                        >
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className={microClass}>△ &nbsp; Power Fusion</p>
@@ -664,7 +775,118 @@ export default function SpeciesGrowthInteractive({
                 </>
             ) : null}
 
-            {comparison ? (
+            {comparison ? compareOnly ? (
+                <section className={`${growth.isAuthenticated && growth.hasCapture && growth.principle ? "mt-2" : "mt-0"} -mx-5 space-y-4 font-sans ${
+                    wide ? "lg:mx-0 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0" : ""
+                }`}>
+                    {isZooComparisonBanned ? (
+                        <div className={`${compareCardClass} border-orange-400/20 bg-orange-400/[0.08]`}>
+                            <div className="flex items-start gap-3">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[24px] w-[24px] shrink-0 text-orange-300" fill="currentColor">
+                                    <path d="M3 9h18v2H3V9Zm2 3h3v7H5v-7Zm5 0h4v7h-4v-7Zm6 0h3v7h-3v-7ZM2 20h20v2H2v-2ZM12 2l10 5v1H2V7l10-5Z" />
+                                </svg>
+                                <div className="min-w-0">
+                                    <h3 className="text-xs font-medium text-white">Zoo animal · comparisons disabled</h3>
+                                    <p className="mt-1 text-[11px] font-semibold leading-4 text-white/60">Zoo animals stay in your collection, but they can&apos;t enter scenario comparisons or the Arena.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : comparison.isOwnedByCurrentUser ? (
+                        <div className={`${compareCardClass} border-white/[0.07] bg-white/[0.03]`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`flex shrink-0 items-center rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#38fa47]/20 bg-[#38fa47]/10 text-[#38fa47]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
+                                    <span className="flex gap-1">
+                                        {[0, 1, 2].map((index) => (
+                                            <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                                                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+                                            </svg>
+                                        ))}
+                                    </span>
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-xs font-medium text-white">{comparison.challengeHealth > 0 ? "Comparison hearts ready" : "Comparison hearts empty"}</h3>
+                                    <p className="mt-1 text-[11px] font-semibold leading-4 text-white/60">
+                                        {comparison.challengeHealth > 0
+                                            ? `${comparison.challengeHealth} of 3 hearts remaining. Each loss removes 1 heart.`
+                                            : "This animal has no hearts left. Restore it to refill all 3 hearts."}
+                                    </p>
+                                </div>
+                            </div>
+                            {comparison.challengeHealth === 0 && comparison.isOwnedByCurrentUser ? (
+                                <button type="button" onClick={() => updateComparison("restore")} disabled={isComparisonPending} className={`${capsuleButtonClass} mt-3 rounded-[18px] py-[13px] text-xs font-bold`}>
+                                    {isComparisonPending ? (
+                                        "Restoring..."
+                                    ) : (
+                                        <>
+                                            <svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 h-4 w-4" fill="currentColor">
+                                                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm5.1 9.6L12 17l-5.1-5.4a3.5 3.5 0 0 1 5.1-4.8 3.5 3.5 0 0 1 5.1 4.8Z" />
+                                            </svg>
+                                            Restore · 2 credits
+                                        </>
+                                    )}
+                                </button>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    {!comparison.isOwnedByCurrentUser ? (
+                        <div className={`${compareCardClass} border-white/[0.07] bg-white/[0.03]`}>
+                            <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#38fa47]">✦</span> Available actions</h3>
+                            <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
+                            {canOpenPublicComparison ? (
+                                <Link href={growth.isAuthenticated ? `/app/matchups?target=${encodeURIComponent(comparison.captureId)}` : "/account"} className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-[rgba(0,255,255,.90)] px-3.5 py-3 text-black">
+                                    <span aria-hidden="true" className="w-[18px] text-center text-sm">⚡</span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-xs font-medium">Compare</span>
+                                        <span className="mt-0.5 block text-[11px] font-semibold text-black/70">{publicChallengeSubtitle}</span>
+                                    </span>
+                                </Link>
+                            ) : (
+                                <div aria-disabled="true" className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.12] bg-white/[0.06] px-3.5 py-3">
+                                    <span aria-hidden="true" className="w-[18px] text-center text-sm text-white/80">⚡</span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-xs font-medium text-white">Compare</span>
+                                        <span className="mt-0.5 block text-[11px] font-semibold text-white/60">{publicChallengeSubtitle}</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className={`${compareCardClass} border-white/[0.07] bg-white/[0.03]`}>
+                            <button
+                                type="button"
+                                disabled={!exactComparisonAvailabilityEnabled || isComparisonPending}
+                                onClick={() => updateComparison("update", {
+                                    isChallengeReady: !comparison.isChallengeReady,
+                                    challengeStake: automaticComparisonStake
+                                })}
+                                className="flex w-full items-center gap-3 text-left disabled:opacity-70"
+                            >
+                                <span aria-hidden="true" className={`w-5 text-center text-sm ${comparison.isChallengeReady ? "text-[#38fa47]" : "text-white/40"}`}>⚡</span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-xs font-medium text-white">Available for comparisons</span>
+                                    <span className="mt-1 block text-[11px] font-semibold leading-4 text-white/60">{challengeAvailabilitySubtitle}</span>
+                                </span>
+                                <span className={`rounded-full border px-2.5 py-[7px] text-[11px] font-semibold ${comparison.isChallengeReady ? "border-[#38fa47]/25 bg-[#38fa47]/10 text-[#38fa47]" : "border-white/10 bg-white/5 text-white/40"}`}>
+                                    {isComparisonPending ? "…" : comparison.isChallengeReady ? "ON" : "OFF"}
+                                </span>
+                            </button>
+
+                            {comparison.isChallengeReady ? (
+                                <div className="mt-3 space-y-2 border-t border-white/[0.07] pt-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-medium text-white">Confidence</span>
+                                        <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-white">Tier {displayedComparisonTier}</span>
+                                        <span className="text-[11px] font-semibold text-[#38fa47]">{automaticComparisonStake} credits</span>
+                                    </div>
+                                    <p className="text-[11px] font-semibold leading-4 text-white/60">Set automatically from this animal&apos;s battle tier.</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
+                    {comparisonError ? <p className={`text-xs font-medium text-orange-300 ${wide ? "lg:col-span-2" : ""}`}>{comparisonError}</p> : null}
+                </section>
+            ) : (
                 <section className="mt-1 space-y-4 font-sans">
                     <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
                         <div className="flex items-center gap-3">

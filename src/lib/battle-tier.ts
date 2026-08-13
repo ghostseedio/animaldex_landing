@@ -4,13 +4,22 @@ export type SpeciesStats = Record<(typeof SPECIES_STATS_KEYS)[number], number>;
 export type AnimalBattleTier = "E" | "D" | "C" | "B" | "A" | "S";
 
 export function getBattlePower(stats: SpeciesStats) {
-    return Math.round(
-        stats.dominance * 0.30
-        + stats.speed * 0.15
-        + stats.size * 0.15
-        + stats.intelligence * 0.15
-        + stats.rarity * 0.25
+    const biologicalPeak = Math.max(
+        stats.dominance,
+        stats.speed,
+        stats.size,
+        stats.intelligence
     );
+    const specialistBonus = Math.max(0, biologicalPeak - 80) * 0.12;
+
+    return Math.min(100, Math.round(
+        stats.dominance * 0.27
+        + stats.speed * 0.18
+        + stats.size * 0.17
+        + stats.intelligence * 0.18
+        + stats.rarity * 0.20
+        + specialistBonus
+    ));
 }
 
 export function getBattleTier(stats: SpeciesStats): AnimalBattleTier {
@@ -24,15 +33,15 @@ export function getBattleTier(stats: SpeciesStats): AnimalBattleTier {
         return "D";
     }
 
-    if (battlePower < 55) {
+    if (battlePower < 52) {
         return "C";
     }
 
-    if (battlePower < 70) {
+    if (battlePower < 60) {
         return "B";
     }
 
-    if (battlePower < 85) {
+    if (battlePower < 78) {
         return "A";
     }
 

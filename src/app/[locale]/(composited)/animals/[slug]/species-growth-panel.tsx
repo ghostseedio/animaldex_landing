@@ -8,6 +8,13 @@ type SpeciesGrowthPanelProps = {
     qualitySlug: string | null;
     qualityName: string | null;
     growth: SpeciesGrowthContext;
+    compareOnly?: boolean;
+    layout?: "compact" | "wide";
+    comparisonTier?: string | null;
+    settingTag?: string | null;
+    isZooComparisonBanned?: boolean;
+    isChallengeAnalysisEligible?: boolean;
+    hasChallengeGameStats?: boolean;
     labels: {
         apexPathEyebrow: string;
         apexInsightTitle: string;
@@ -49,16 +56,30 @@ export default function SpeciesGrowthPanel({
     qualitySlug,
     qualityName,
     growth,
+    compareOnly = false,
+    layout = "compact",
+    comparisonTier = null,
+    settingTag,
+    isZooComparisonBanned,
+    isChallengeAnalysisEligible,
+    hasChallengeGameStats,
     labels
 }: SpeciesGrowthPanelProps) {
     return (
         <SpeciesGrowthInteractive
+            layout={layout}
             speciesSlug={speciesSlug}
             speciesName={speciesName}
             lessonSlug={lessonSlug}
             qualitySlug={qualitySlug}
             qualityName={qualityName}
             growth={growth}
+            compareOnly={compareOnly}
+            comparisonTier={comparisonTier}
+            settingTag={settingTag}
+            isZooComparisonBanned={isZooComparisonBanned}
+            isChallengeAnalysisEligible={isChallengeAnalysisEligible}
+            hasChallengeGameStats={hasChallengeGameStats}
             labels={labels}
         />
     );

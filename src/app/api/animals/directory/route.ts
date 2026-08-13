@@ -11,6 +11,9 @@ import {
     isSpeciesDirectoryTierFilter,
     type SpeciesRarityStatusKey
 } from "@/data/species";
+import {getAppCaptures} from "@/data/authenticated-app";
+import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 
 export const runtime = "nodejs";
 
@@ -55,13 +58,36 @@ export async function GET(request: Request) {
         page: Number.isFinite(page) ? page : 1,
         entries: unifiedSpeciesEntries
     });
-    const directoryImageState = Object.fromEntries(
-        (await buildSpeciesDirectoryImageState(directoryPage.entries)).entries()
-    );
+    const [captures, directoryImageState] = await Promise.all([
+        getAppCaptures(),
+        buildSpeciesDirectoryImageState(directoryPage.entries)
+    ]);
+    const discoveryIndex = buildCollectionDiscoveryIndex(captures);
+    const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
+        entry.slug,
+        isCatalogEntryDiscovered({
+            speciesProfileId: entry.speciesProfileId,
+            normalizedIdentityKey: entry.normalizedIdentityKey
+        }, discoveryIndex)
+    ]));
+    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => {
+        const capture = latestCaptureForCatalogEntry({
+            speciesProfileId: entry.speciesProfileId,
+            normalizedIdentityKey: entry.normalizedIdentityKey
+        }, discoveryIndex);
+        const publicCaptureId = directoryImageState.get(entry.slug)?.captureId ?? null;
+        return [entry.slug, getSpeciesImageRoute(entry.slug, capture?.captureId ?? publicCaptureId)];
+    }));
+    const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
+        entry.slug,
+        directoryImageState.get(entry.slug)?.hasPublicCapture ?? false
+    ]));
 
     return NextResponse.json({
         entries: directoryPage.entries,
-        directoryImageState,
+        capturedSpecies,
+        speciesImages,
+        publicCaptureSpecies,
         currentPage: directoryPage.currentPage,
         totalPages: directoryPage.totalPages,
         total: directoryPage.total,

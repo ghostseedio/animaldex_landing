@@ -20,6 +20,9 @@ import UniversalSearchField from "@/app/[locale]/(composited)/animals/_component
 import {fetchTrendingSearches} from "@/data/universal-search";
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import {getAppCaptures} from "@/data/authenticated-app";
+import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
@@ -277,9 +280,30 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
         page: 1,
         entries: unifiedSpeciesEntries
     });
-    const directoryImageState = Object.fromEntries(
-        (await buildSpeciesDirectoryImageState(directoryPage.entries)).entries()
-    );
+    const [captures, directoryImageState] = await Promise.all([
+        getAppCaptures(),
+        buildSpeciesDirectoryImageState(directoryPage.entries)
+    ]);
+    const discoveryIndex = buildCollectionDiscoveryIndex(captures);
+    const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
+        entry.slug,
+        isCatalogEntryDiscovered({
+            speciesProfileId: entry.speciesProfileId,
+            normalizedIdentityKey: entry.normalizedIdentityKey
+        }, discoveryIndex)
+    ]));
+    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => {
+        const capture = latestCaptureForCatalogEntry({
+            speciesProfileId: entry.speciesProfileId,
+            normalizedIdentityKey: entry.normalizedIdentityKey
+        }, discoveryIndex);
+        const publicCaptureId = directoryImageState.get(entry.slug)?.captureId ?? null;
+        return [entry.slug, getSpeciesImageRoute(entry.slug, capture?.captureId ?? publicCaptureId)];
+    }));
+    const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
+        entry.slug,
+        directoryImageState.get(entry.slug)?.hasPublicCapture ?? false
+    ]));
 
     const schema = {
         "@context": "https://schema.org",
@@ -396,7 +420,9 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                 <SpeciesDirectory
                     locale={locale}
                     speciesEntries={directoryPage.entries}
-                    directoryImageState={directoryImageState}
+                    capturedSpecies={capturedSpecies}
+                    speciesImages={speciesImages}
+                    publicCaptureSpecies={publicCaptureSpecies}
                     currentPage={directoryPage.currentPage}
                     totalPages={directoryPage.totalPages}
                     total={directoryPage.total}

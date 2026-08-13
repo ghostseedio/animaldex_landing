@@ -23,21 +23,30 @@ export function toEffectiveStats(
 }
 
 export function getBattlePower(stats: MatchupGameStats) {
-    return Math.round(
-        stats.dominance * 0.22
-        + stats.speed * 0.14
-        + stats.size * 0.10
-        + stats.intelligence * 0.14
-        + stats.rarity * 0.40
+    const biologicalPeak = Math.max(
+        stats.dominance,
+        stats.speed,
+        stats.size,
+        stats.intelligence
     );
+    const specialistBonus = Math.max(0, biologicalPeak - 80) * 0.12;
+
+    return Math.min(100, Math.round(
+        stats.dominance * 0.27
+        + stats.speed * 0.18
+        + stats.size * 0.17
+        + stats.intelligence * 0.18
+        + stats.rarity * 0.20
+        + specialistBonus
+    ));
 }
 
 export function getBattleTier(power: number): AnimalBattleTier {
     if (power < 25) return "E";
     if (power < 40) return "D";
     if (power < 52) return "C";
-    if (power < 62) return "B";
-    if (power < 80) return "A";
+    if (power < 60) return "B";
+    if (power < 78) return "A";
     return "S";
 }
 

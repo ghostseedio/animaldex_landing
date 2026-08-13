@@ -4,6 +4,7 @@ import {
     buildSpeciesCaptureMatchCandidates,
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
+import {computeCaptureGrade, type CaptureGradeSource} from "@/lib/capture-grade";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export type SpeciesRankingItem = {
@@ -19,9 +20,10 @@ export type SpeciesRankingItem = {
     imagePath: string | null;
     battleTier: string | null;
     endorsementCount: number;
+    captureGrade: number | null;
 };
 
-type DiscoverFeedRankingRow = {
+type DiscoverFeedRankingRow = CaptureGradeSource & {
     capture_id?: string;
     animal_name?: string | null;
     breed_guess?: string | null;
@@ -38,10 +40,16 @@ type DiscoverFeedRankingRow = {
     image_media_kind?: string | null;
     score?: number | null;
     endorsement_count?: number | null;
-    raw_json?: {
-        battle_tier?: string | null;
-    } | null;
 };
+
+function getBattleTier(rawJson: unknown) {
+    if (!rawJson || typeof rawJson !== "object" || Array.isArray(rawJson)) {
+        return null;
+    }
+
+    const value = (rawJson as Record<string, unknown>).battle_tier;
+    return typeof value === "string" ? value.trim() || null : null;
+}
 
 function getSupabaseConfig() {
     const supabaseUrl = getSupabaseUrl();
@@ -175,8 +183,9 @@ function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
         locationDisplayLabel: row.location_display_label?.trim() ?? null,
         imageBucket: row.image_bucket ?? null,
         imagePath: row.image_path ?? null,
-        battleTier: row.raw_json?.battle_tier?.trim() ?? null,
-        endorsementCount: row.endorsement_count ?? 0
+        battleTier: getBattleTier(row.raw_json),
+        endorsementCount: row.endorsement_count ?? 0,
+        captureGrade: computeCaptureGrade(row)
     })).filter((item) => item.captureId);
 }
 
@@ -189,7 +198,7 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
 
     searchParams.set(
         "select",
-        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,raw_json"
+        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json"
     );
     searchParams.set("order", "score.desc,capture_created_at.desc");
 

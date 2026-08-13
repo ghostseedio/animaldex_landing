@@ -13,6 +13,7 @@
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",
+    "seo:audit:species-pages": "tsx scripts/auditIndexedSpeciesPages.ts",
     "seo:audit:catalog-parity": "node scripts/generateCatalogWebsiteParityReport.js",
     "support:setup-webhook": "node scripts/setupResendSupportWebhook.js",
     "symbolism:generate": "node scripts/generateSymbolismPostFiles.cjs",

@@ -1,8 +1,9 @@
 "use client";
 
 import {type ReactNode, useState} from "react";
+import AnimalDetailTabBar, {type AnimalDetailTab} from "@/components/animal-detail/animal-detail-tab-bar";
 
-export type SpeciesDetailTab = "story" | "progress" | "growth";
+export type SpeciesDetailTab = AnimalDetailTab;
 
 type SpeciesDetailTabsProps = {
     labels: {
@@ -10,90 +11,55 @@ type SpeciesDetailTabsProps = {
         progress: string;
         growth: string;
     };
+    eyebrow?: string;
+    title?: string;
     defaultTab?: SpeciesDetailTab;
-    story: ReactNode;
-    progress: ReactNode;
-    growth: ReactNode;
+    learn: ReactNode;
+    stats: ReactNode;
+    compare: ReactNode;
 };
-
-const tabs: Array<{id: SpeciesDetailTab; icon: string}> = [
-    {id: "story", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
-    {id: "progress", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
-    {id: "growth", icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"}
-];
-
-function TabIcon({path}: {path: string}) {
-    return (
-        <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path d={path} strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-}
 
 export default function SpeciesDetailTabs({
     labels,
-    defaultTab = "story",
-    story,
-    progress,
-    growth
+    eyebrow,
+    title,
+    defaultTab = "learn",
+    learn,
+    stats,
+    compare
 }: SpeciesDetailTabsProps) {
     const [activeTab, setActiveTab] = useState<SpeciesDetailTab>(defaultTab);
-
-    const labelMap: Record<SpeciesDetailTab, string> = {
-        story: labels.story,
-        progress: labels.progress,
-        growth: labels.growth
-    };
-
-    const panelMap: Record<SpeciesDetailTab, ReactNode> = {
-        story,
-        progress,
-        growth
-    };
+    const panels: Record<SpeciesDetailTab, ReactNode> = {learn, stats, compare};
 
     return (
-        <div className="flex flex-col gap-10 md:gap-14">
-            <nav
-                aria-label="Animal profile sections"
-                className="sticky top-20 z-20 -mx-4 border-y border-white/[0.08] bg-canvas-950/90 px-4 py-4 backdrop-blur-xl md:top-24 md:mx-0 md:rounded-2xl md:border md:px-3 md:py-3"
-            >
-                <div className="grid grid-cols-3 gap-1 rounded-[18px] border border-white/10 bg-[#1f1f1f]/95 p-1 md:gap-1.5 md:p-1.5">
-                    {tabs.map((tab) => {
-                        const isActive = activeTab === tab.id;
+        <div className="flex w-full flex-col gap-5 bg-black px-5 py-5 font-sans sm:rounded-[24px] sm:border sm:border-white/[0.08] lg:gap-8 lg:rounded-[32px] lg:px-10 lg:py-9">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+                {eyebrow || title ? (
+                    <div className="hidden min-w-0 flex-col gap-1 lg:flex">
+                        {eyebrow ? (
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#38fa47]">{eyebrow}</p>
+                        ) : null}
+                        {title ? (
+                            <h2 className="truncate font-display text-2xl font-bold text-white xl:text-3xl">{title}</h2>
+                        ) : null}
+                    </div>
+                ) : null}
+                <AnimalDetailTabBar
+                    value={activeTab}
+                    onChange={setActiveTab}
+                    layout="wide"
+                    labels={{learn: labels.story, stats: labels.progress, compare: labels.growth}}
+                />
+            </div>
 
-                        return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                id={`species-tab-${tab.id}`}
-                                aria-selected={isActive}
-                                aria-controls={`species-tabpanel-${tab.id}`}
-                                role="tab"
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex min-h-[3rem] items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-sm font-semibold transition-colors md:min-h-[3.25rem] md:px-3 ${
-                                    isActive
-                                        ? "border border-[#38fa47]/30 bg-[linear-gradient(135deg,rgba(56,250,71,0.17),rgba(255,255,255,0.055))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                                        : "border border-transparent text-white/40 hover:text-white/60"
-                                }`}
-                            >
-                                <TabIcon path={tab.icon} />
-                                <span className="truncate">{labelMap[tab.id]}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </nav>
-
-            {(Object.keys(panelMap) as SpeciesDetailTab[]).map((tabId) => (
+            {(Object.keys(panels) as SpeciesDetailTab[]).map((tab) => (
                 <div
-                    key={tabId}
-                    id={`species-tabpanel-${tabId}`}
+                    key={tab}
                     role="tabpanel"
-                    aria-labelledby={`species-tab-${tabId}`}
-                    hidden={activeTab !== tabId}
-                    className={activeTab === tabId ? "flex flex-col gap-10 md:gap-14" : "hidden"}
+                    hidden={activeTab !== tab}
+                    className={activeTab === tab ? "min-w-0" : "hidden"}
                 >
-                    {panelMap[tabId]}
+                    {panels[tab]}
                 </div>
             ))}
         </div>

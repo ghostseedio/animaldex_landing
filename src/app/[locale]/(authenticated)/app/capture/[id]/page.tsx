@@ -1,101 +1,152 @@
 import {notFound} from "next/navigation";
-import Link from "@/app/[locale]/_components/link";
-import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
-import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
-import {AppMetric, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import CaptureDetailClient from "@/app/[locale]/(authenticated)/app/capture/[id]/capture-detail-client";
+import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
+import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
+import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import {getAppCaptureDetail} from "@/data/authenticated-app";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {getSpeciesGrowthContext} from "@/data/species-growth";
+import {getSpeciesRankings} from "@/data/species-rankings";
+import {getSpeciesSubtitle} from "@/data/species-subtitles";
+import {getBattleTier} from "@/lib/battle-tier";
+import {getScopedTranslator} from "@/loaders/translation";
 
-function readable(value: string) {
-    return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+function toQualitySlug(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-export default async function CaptureResultPage({params}: {params: {id: string}}) {
+export default async function CaptureResultPage({params}: {params: {locale: string; id: string}}) {
     const capture = await getAppCaptureDetail(params.id);
-    if (!capture) notFound();
-    const stats = Object.entries(capture.gameStats).filter(([, value]) => typeof value === "number").slice(0, 6);
-    const confidence = capture.confidence == null
-        ? "—"
-        : `${Math.round(capture.confidence <= 1 ? capture.confidence * 100 : capture.confidence)}%`;
-    const details = capture.premiumDetails ?? {};
+
+    if (!capture) {
+        notFound();
+    }
+
+    const requestedSpeciesSlug = capture.speciesSlug?.trim().replace(/_/g, "-") ?? null;
+    const entry = requestedSpeciesSlug ? await getResolvedSpeciesBySlug(requestedSpeciesSlug) : null;
+
+    if (!entry) {
+        return (
+            <CaptureDetailClient
+                capture={capture}
+                speciesSlug={requestedSpeciesSlug}
+                speciesName={capture.animalName}
+            />
+        );
+    }
+
+    const [t, subtitle, principle, rankingItems, growth] = await Promise.all([
+        getScopedTranslator(params.locale, "animals"),
+        getSpeciesSubtitle(entry.slug, params.locale),
+        resolveSpeciesBehaviorProfile(entry.slug),
+        getSpeciesRankings(entry),
+        getSpeciesGrowthContext(entry, capture.id)
+    ]);
+    const primaryQuality = principle?.bestFor[0] ?? null;
+    const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
+    const comparisonTier = getBattleTier(capture.effectiveGameStats);
+
+    const rankings = (
+        <SpeciesRankingCarousel
+            speciesSlug={entry.slug}
+            speciesName={entry.name}
+            items={rankingItems}
+            currentCaptureId={capture.id}
+            currentCaptureGrade={capture.captureGrade}
+            labels={{
+                title: t("rankingsTitle", {animal: entry.name}),
+                description: t("rankingsDescription"),
+                empty: t("rankingsEmpty"),
+                rankLabel: t("rankingsRankLabel"),
+                scoreLabel: t("rankingsScoreLabel"),
+                byPhotographer: t("rankingsByPhotographer")
+            }}
+        />
+    );
+
+    const nativeRange = (
+        <NativeRangeMapCard
+            entry={entry}
+            variant="animal-card"
+            settingTag={capture.settingTag}
+            humanContext={capture.humanContext}
+            labels={{
+                title: t("nativeRangeCardTitle"),
+                description: t("nativeRangeCardDescription"),
+                missingAssets: t("nativeRangeMissingAssets")
+            }}
+        />
+    );
+
+    const compare = (
+        <SpeciesGrowthPanel
+            speciesSlug={entry.slug}
+            speciesName={entry.name}
+            lessonSlug={principle?.hasLessonPage ? entry.slug : null}
+            qualitySlug={primaryQualitySlug}
+            qualityName={primaryQuality}
+            growth={growth}
+            compareOnly
+            comparisonTier={comparisonTier}
+            settingTag={capture.settingTag}
+            isZooComparisonBanned={capture.isZooComparisonBanned}
+            isChallengeAnalysisEligible={capture.isChallengeAnalysisEligible}
+            hasChallengeGameStats={capture.hasChallengeGameStats}
+            labels={{
+                apexPathEyebrow: t("growthApexPathEyebrow"),
+                apexInsightTitle: t("growthApexInsightTitle"),
+                apexInsightDescription: t("growthApexInsightDescription"),
+                useThisPower: t("growthUseThisPower"),
+                acceptChallenge: t("growthAcceptChallenge"),
+                challengeInProgress: t("growthChallengeInProgress"),
+                challengeCompleted: t("growthChallengeCompleted"),
+                challengeProofApp: t("growthChallengeProofApp"),
+                challengeWaiting: t("growthChallengeWaiting"),
+                wildProfileCta: t("growthWildProfileCta"),
+                refreshWildProfileCta: t("growthRefreshWildProfileCta"),
+                powerFusionTitle: t("growthPowerFusionTitle"),
+                powerFusionDescription: t("growthPowerFusionDescription"),
+                fusePowers: t("growthFusePowers"),
+                fusionCostLabel: t("growthFusionCostLabel"),
+                fusionLearnedCount: t("growthFusionLearnedCount"),
+                fusionNoDonors: t("growthFusionNoDonors"),
+                fusionSelectDonor: t("growthFusionSelectDonor"),
+                fusionSearchPlaceholder: t("growthFusionSearchPlaceholder"),
+                fusionSubmit: t("growthFusionSubmit"),
+                fusionSuccess: t("growthFusionSuccess"),
+                bestFor: t("growthBestFor"),
+                collectedAnimalsTitle: t("growthYourCapturesTitle", {animal: entry.name}),
+                signInPrompt: t("growthSignInPrompt"),
+                signInButton: t("growthSignInButton"),
+                emptyCapturesTitle: t("growthEmptyCapturesTitle"),
+                emptyCapturesDescription: t("growthEmptyCapturesDescription"),
+                scoreLabel: t("growthScoreLabel"),
+                openLesson: t("growthOpenLesson", {animal: entry.name}),
+                openPower: t("growthOpenPower", {power: "{power}"})
+            }}
+        />
+    );
 
     return (
-        <div className="space-y-8">
-            <div>
-                <Link href="/app/collection" className="mb-5 inline-flex items-center gap-1 text-sm font-bold text-primary-200">
-                    <AppIcon name="back"/>
-                    Collection
-                </Link>
-                <AppPageHeader
-                    eyebrow="Capture complete"
-                    title={capture.animalName}
-                    description={capture.scientificName ?? "AnimalDex analysis result"}
-                />
-            </div>
-            <section className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-                <div className="relative min-h-[34rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#111]">
-                    <img src={capture.imageSrc} alt={capture.animalName} className="absolute inset-0 h-full w-full object-cover"/>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20"/>
-                    <div className="absolute inset-x-0 bottom-0 p-6">
-                        <div className="flex flex-wrap gap-2">
-                            {capture.captureGrade != null ? (
-                                <CaptureGradeBadge grade={capture.captureGrade} breakdown={capture.gradeBreakdown}/>
-                            ) : null}
-                            {capture.context ? (
-                                <span className="rounded-full bg-primary-400 px-3 py-1.5 text-xs font-black text-black">
-                                    {capture.context}
-                                </span>
-                            ) : null}
-                            {capture.conservationTier ? (
-                                <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs font-black">
-                                    {readable(capture.conservationTier)}
-                                </span>
-                            ) : null}
-                            {capture.breed ? (
-                                <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs font-black">
-                                    {capture.breed}
-                                </span>
-                            ) : null}
-                        </div>
-                    </div>
-                </div>
-                <div className="space-y-5">
-                    <div className="grid grid-cols-2 gap-3">
-                        <AppMetric label="Confidence" value={confidence}/>
-                        <AppMetric label="Context" value={capture.context ?? "Unknown"} accent="blue"/>
-                    </div>
-                    {stats.length ? (
-                        <div className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5">
-                            <h2 className="font-display text-2xl font-bold">Animal stats</h2>
-                            <div className="mt-5 space-y-4">
-                                {stats.map(([name, value]) => (
-                                    <div key={name}>
-                                        <div className="mb-2 flex justify-between text-sm">
-                                            <span className="text-white/45">{readable(name)}</span>
-                                            <span className="font-black">{value}</span>
-                                        </div>
-                                        <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
-                                            <div className="h-full rounded-full bg-primary-400" style={{width: `${Math.min(100, Number(value))}%`}}/>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : null}
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5">
-                        <h2 className="font-display text-2xl font-bold">Field notes</h2>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            {capture.typeTags.map((tag) => (
-                                <span key={tag} className="rounded-full bg-white/5 px-3 py-1.5 text-xs font-bold text-white/55">
-                                    {readable(tag)}
-                                </span>
-                            ))}
-                        </div>
-                        {typeof details.summary === "string" ? (
-                            <p className="mt-5 text-sm leading-7 text-white/55">{details.summary}</p>
-                        ) : null}
-                    </div>
-                </div>
-            </section>
-        </div>
+        <CaptureDetailClient
+            capture={capture}
+            speciesSlug={entry.slug}
+            speciesName={entry.name}
+            descriptor={subtitle.descriptor}
+            story={subtitle.subtitleStory ?? entry.analysis.summary}
+            principle={principle ? {
+                name: principle.principle,
+                motto: principle.motto,
+                expression: principle.principleExpression,
+                coreLesson: principle.coreLesson,
+                biologicalBasis: principle.biologicalBasis,
+                applicationExample: principle.applicationExample,
+                bestUseCases: principle.bestFor
+            } : null}
+            rankings={rankings}
+            nativeRange={nativeRange}
+            compare={compare}
+        />
     );
 }
