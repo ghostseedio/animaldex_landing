@@ -6,10 +6,12 @@ import LocationsHubClient, {
     LocationHubRegion,
     LocationHubType
 } from "@/app/[locale]/(composited)/locations/locations-hub-client";
+import NearbyWildlifeExplorer from "@/app/[locale]/(composited)/locations/_components/nearby-wildlife-explorer";
 import {locationPages} from "@/data/locations";
 import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/location-places";
 import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
@@ -77,6 +79,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function LocationsIndexPage() {
     const t = await getTranslations("locations");
     const locale = await getLocale();
+    const tn = await getScopedTranslator(locale, "nearbyWildlife");
+    const explorerAnimalNames = speciesEntries.map((entry) => entry.name).sort((left, right) => left.localeCompare(right));
     const pageUrl = getAbsoluteUrl(locale, "/locations");
     const safeText = (key: string, fallback: string, values?: Record<string, string | number>) => {
         try {
@@ -176,6 +180,60 @@ export default async function LocationsIndexPage() {
     return (
         <main className="w-full max-w-[88rem] mx-auto px-4 py-10 md:px-8 md:py-16">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
+
+            <header className="mb-8 max-w-[46rem]">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{tn("eyebrow")}</p>
+                <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.035em] text-white md:text-5xl">{tn("title")}</h1>
+                <p className="mt-3 text-base leading-7 text-ink-200 md:text-lg">{tn("description")}</p>
+            </header>
+
+            <NearbyWildlifeExplorer
+                locale={locale}
+                animalNames={explorerAnimalNames}
+                copy={{
+                    locationLabel: tn("locationLabel"),
+                    locationPlaceholder: tn("locationPlaceholder"),
+                    useMyLocation: tn("useMyLocation"),
+                    locating: tn("locating"),
+                    locationDenied: tn("locationDenied"),
+                    noPlacesFound: tn("noPlacesFound"),
+                    animalLabel: tn("animalLabel"),
+                    animalPlaceholder: tn("animalPlaceholder"),
+                    findButton: tn("findButton"),
+                    findingButton: tn("findingButton"),
+                    setLocationFirst: tn("setLocationFirst"),
+                    guideLoading: tn("guideLoading"),
+                    guideTitle: tn("guideTitle"),
+                    bandsTitle: tn("bandsTitle"),
+                    venuesTitle: tn("venuesTitle"),
+                    openNow: tn("openNow"),
+                    resultTitle: tn("resultTitle"),
+                    likelihoodLabel: tn("likelihoodLabel"),
+                    distanceLabel: tn("distanceLabel"),
+                    directionsButton: tn("directionsButton"),
+                    tipsTitle: tn("tipsTitle"),
+                    safetyTitle: tn("safetyTitle"),
+                    errorMessage: tn("errorMessage"),
+                    rateLimited: tn("rateLimited"),
+                    changeLocation: tn("changeLocation"),
+                    mapEmptyTitle: tn("mapEmptyTitle"),
+                    mapEmptyBody: tn("mapEmptyBody"),
+                    scopeLabels: {
+                        title: tn("scopeTitle"),
+                        hyperlocal: tn("scopeHyperlocal"),
+                        local: tn("scopeLocal"),
+                        regional: tn("scopeRegional"),
+                        native_range: tn("scopeNativeRange"),
+                        verified_venue: tn("scopeVerifiedVenue")
+                    }
+                }}
+            />
+
+            <div className="mt-16 border-t border-white/10 pt-12">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{tn("browseEyebrow")}</p>
+                <h2 className="mt-1 font-display text-3xl font-bold text-white md:text-4xl">{tn("browseTitle")}</h2>
+            </div>
+
             <LocationsHubClient
                 items={items}
                 placeGuideLinks={placeGuideLinks}

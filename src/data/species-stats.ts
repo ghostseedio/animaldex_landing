@@ -9,12 +9,12 @@ export {getBattlePower, getBattleTier};
 import {
     getSupabaseHeaders,
     getSupabaseServerReadKey,
-    getSupabaseServiceKey,
     getSupabaseUrl
 } from "@/lib/supabase-http";
 
 const SPECIES_STATS_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 const PLACEHOLDER_SCIENTIFIC_NAME = "Scientific classification under review";
+const SPECIES_STATS_REVALIDATE_SECONDS = 3600;
 
 type SpeciesStatsKey = (typeof SPECIES_STATS_KEYS)[number];
 
@@ -50,7 +50,6 @@ type AnalysisResultCandidate = {
     normalized_identity_key?: string | null;
     scientific_name?: string | null;
     confidence?: number | null;
-    base_game_stats?: unknown;
     game_stats?: unknown;
     raw_json?: unknown;
     error_message?: string | null;
@@ -86,17 +85,6 @@ function getReadSupabaseConfig() {
     }
 
     return {supabaseUrl, key: anonKey};
-}
-
-function getWriteSupabaseConfig() {
-    const supabaseUrl = getSupabaseUrl();
-    const serviceRoleKey = getSupabaseServiceKey();
-
-    if (!supabaseUrl || !serviceRoleKey) {
-        return null;
-    }
-
-    return {supabaseUrl, key: serviceRoleKey};
 }
 
 function clampStatValue(value: number) {
@@ -352,7 +340,7 @@ async function fetchSpeciesProfile(entry: SpeciesEntry) {
         try {
             const response = await fetch(`${config.supabaseUrl}/rest/v1/species_profiles?${searchParams.toString()}`, {
                 headers: getSupabaseHeaders(config.key),
-                cache: "no-store"
+                next: {revalidate: SPECIES_STATS_REVALIDATE_SECONDS}
             });
 
             if (!response.ok) {
@@ -375,13 +363,6 @@ async function fetchSpeciesProfile(entry: SpeciesEntry) {
 function resolveAnalysisStats(rows: AnalysisResultCandidate[]): AnalysisStatsResolution | null {
     const filteredRows = rows.filter((row) => normalizeAnalysisError(row.error_message).length === 0);
     const sortedRows = filteredRows.sort((left, right) => {
-        const leftBase = parseSpeciesStats(left.base_game_stats) ? 1 : 0;
-        const rightBase = parseSpeciesStats(right.base_game_stats) ? 1 : 0;
-
-        if (leftBase !== rightBase) {
-            return rightBase - leftBase;
-        }
-
         const leftEffective = parseSpeciesStats(left.game_stats) ? 1 : 0;
         const rightEffective = parseSpeciesStats(right.game_stats) ? 1 : 0;
 
@@ -400,17 +381,6 @@ function resolveAnalysisStats(rows: AnalysisResultCandidate[]): AnalysisStatsRes
     });
 
     for (const row of sortedRows) {
-        const baseStats = parseSpeciesStats(row.base_game_stats);
-
-        if (baseStats) {
-            return {
-                row,
-                stats: baseStats,
-                source: "analysis_base",
-                rows: sortedRows
-            };
-        }
-
         const effectiveStats = parseSpeciesStats(row.game_stats);
 
         if (effectiveStats) {
@@ -446,7 +416,7 @@ async function fetchAnalysisStats(entry: SpeciesEntry) {
 
     for (const candidate of buildSpeciesKeyCandidates(entry)) {
         const searchParams = new URLSearchParams({
-            select: "id,capture_id,animal_name,species_profile_id,normalized_identity_key,scientific_name,confidence,base_game_stats,game_stats,raw_json,error_message,captures!inner(created_at)",
+            select: "id,capture_id,animal_name,species_profile_id,normalized_identity_key,scientific_name,confidence,game_stats,raw_json,error_message,captures!inner(created_at)",
             completed_at: "not.is.null",
             "captures.is_discoverable": "eq.true",
             "captures.status": "eq.ready",
@@ -459,7 +429,7 @@ async function fetchAnalysisStats(entry: SpeciesEntry) {
         try {
             const response = await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
                 headers: getSupabaseHeaders(config.key),
-                cache: "no-store"
+                next: {revalidate: SPECIES_STATS_REVALIDATE_SECONDS}
             });
 
             if (!response.ok) {
@@ -478,180 +448,6 @@ async function fetchAnalysisStats(entry: SpeciesEntry) {
     }
 
     return null;
-}
-
-async function patchSpeciesProfileCanonical(
-    identity: SpeciesStatsIdentity,
-    speciesProfile: SpeciesProfileRow | null,
-    canonicalStats: SpeciesStats
-) {
-    const config = getWriteSupabaseConfig();
-
-    if (!config) {
-        return null;
-    }
-
-    const body: Record<string, unknown> = {
-        canonical_game_stats: canonicalStats
-    };
-
-    if (identity.normalized_identity_key) {
-        body.normalized_identity_key = identity.normalized_identity_key;
-    }
-
-    if (identity.scientific_name) {
-        body.scientific_name = identity.scientific_name;
-    }
-
-    try {
-        if (speciesProfile?.id ?? identity.species_profile_id) {
-            const profileId = speciesProfile?.id ?? identity.species_profile_id;
-            const searchParams = new URLSearchParams({
-                id: `eq.${profileId}`,
-                select: "id,normalized_identity_key,scientific_name,canonical_game_stats"
-            });
-            const response = await fetch(`${config.supabaseUrl}/rest/v1/species_profiles?${searchParams.toString()}`, {
-                method: "PATCH",
-                headers: {
-                    ...getSupabaseHeaders(config.key),
-                    "Content-Type": "application/json",
-                    Prefer: "return=representation"
-                },
-                body: JSON.stringify(body),
-                cache: "no-store"
-            });
-
-            if (response.ok) {
-                const rows = await response.json() as SpeciesProfileRow[];
-                return rows[0] ?? null;
-            }
-        }
-
-        if (!identity.normalized_identity_key && !identity.scientific_name) {
-            return null;
-        }
-
-        if (identity.species_profile_id) {
-            body.id = identity.species_profile_id;
-        }
-
-        const searchParams = identity.normalized_identity_key
-            ? new URLSearchParams({
-                on_conflict: "normalized_identity_key",
-                select: "id,normalized_identity_key,scientific_name,canonical_game_stats"
-            })
-            : new URLSearchParams({
-                select: "id,normalized_identity_key,scientific_name,canonical_game_stats"
-            });
-        const response = await fetch(`${config.supabaseUrl}/rest/v1/species_profiles?${searchParams.toString()}`, {
-            method: "POST",
-            headers: {
-                ...getSupabaseHeaders(config.key),
-                "Content-Type": "application/json",
-                Prefer: identity.normalized_identity_key
-                    ? "resolution=merge-duplicates,return=representation"
-                    : "return=representation"
-            },
-            body: JSON.stringify(body),
-            cache: "no-store"
-        });
-
-        if (!response.ok) {
-            return null;
-        }
-
-        const rows = await response.json() as SpeciesProfileRow[];
-
-        return rows[0] ?? null;
-    } catch {
-        return null;
-    }
-}
-
-async function backfillAnalysisResults(
-    rows: AnalysisResultCandidate[],
-    identity: SpeciesStatsIdentity,
-    canonicalStats: SpeciesStats
-) {
-    const config = getWriteSupabaseConfig();
-
-    if (!config) {
-        return;
-    }
-
-    await Promise.all(rows.slice(0, 8).map(async (row) => {
-        const patch: Record<string, unknown> = {};
-
-        if (!row.species_profile_id && identity.species_profile_id) {
-            patch.species_profile_id = identity.species_profile_id;
-        }
-
-        if (!row.normalized_identity_key && identity.normalized_identity_key) {
-            patch.normalized_identity_key = identity.normalized_identity_key;
-        }
-
-        if (!parseSpeciesStats(row.base_game_stats)) {
-            patch.base_game_stats = canonicalStats;
-        }
-
-        if (Object.keys(patch).length === 0) {
-            return;
-        }
-
-        const searchParams = new URLSearchParams({
-            id: `eq.${row.id}`,
-            select: "id"
-        });
-
-        try {
-            await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
-                method: "PATCH",
-                headers: {
-                    ...getSupabaseHeaders(config.key),
-                    "Content-Type": "application/json",
-                    Prefer: "return=minimal"
-                },
-                body: JSON.stringify(patch),
-                cache: "no-store"
-            });
-        } catch {
-            return;
-        }
-    }));
-}
-
-async function persistCanonicalFromAnalysis(
-    entry: SpeciesEntry,
-    speciesProfile: SpeciesProfileRow | null,
-    analysisResolution: AnalysisStatsResolution
-) {
-    const identity = getResolvedIdentity(entry, speciesProfile, analysisResolution.row);
-    const nextProfile = await patchSpeciesProfileCanonical(identity, speciesProfile, analysisResolution.stats);
-    const resolvedIdentity = getResolvedIdentity(entry, nextProfile ?? speciesProfile, analysisResolution.row);
-
-    await backfillAnalysisResults(analysisResolution.rows, resolvedIdentity, analysisResolution.stats);
-
-    return resolvedIdentity;
-}
-
-async function generateAndPersistCanonicalStats(
-    entry: SpeciesEntry,
-    speciesProfile: SpeciesProfileRow | null,
-    analysisResolution?: AnalysisStatsResolution | null
-) {
-    const generatedStats = buildDeterministicCanonicalStats(entry);
-    const identity = getResolvedIdentity(entry, speciesProfile, analysisResolution?.row);
-    const nextProfile = await patchSpeciesProfileCanonical(identity, speciesProfile, generatedStats);
-    const resolvedIdentity = getResolvedIdentity(entry, nextProfile ?? speciesProfile, analysisResolution?.row);
-
-    if (analysisResolution) {
-        await backfillAnalysisResults(analysisResolution.rows, resolvedIdentity, generatedStats);
-    }
-
-    return {
-        stats: generatedStats,
-        identity: resolvedIdentity
-    };
 }
 
 function getCatalogCanonicalStats(entry: SpeciesEntry) {
@@ -694,41 +490,18 @@ export async function resolveSpeciesStats(slug: string, entryOverride?: SpeciesE
 
     const analysisResolution = await fetchAnalysisStats(entry);
 
-    if (analysisResolution?.source === "analysis_base") {
-        const resolvedIdentity = await persistCanonicalFromAnalysis(entry, speciesProfile, analysisResolution);
-
+    if (analysisResolution) {
         return {
             stats: analysisResolution.stats,
-            statsSource: "analysis_base",
-            ...resolvedIdentity
-        };
-    }
-
-    if (analysisResolution?.source === "analysis_effective") {
-        await generateAndPersistCanonicalStats(entry, speciesProfile, analysisResolution);
-
-        return {
-            stats: analysisResolution.stats,
-            statsSource: "analysis_effective",
+            statsSource: analysisResolution.source,
             ...getResolvedIdentity(entry, speciesProfile, analysisResolution.row)
         };
     }
 
-    if (analysisResolution?.source === "raw_json") {
-        await generateAndPersistCanonicalStats(entry, speciesProfile, analysisResolution);
-
-        return {
-            stats: analysisResolution.stats,
-            statsSource: "raw_json",
-            ...getResolvedIdentity(entry, speciesProfile, analysisResolution.row)
-        };
-    }
-
-    const generated = await generateAndPersistCanonicalStats(entry, speciesProfile);
-
+    // Read-only fallback: never upsert species_profiles / analysis_results from page render.
     return {
-        stats: generated.stats,
+        stats: buildDeterministicCanonicalStats(entry),
         statsSource: "generated",
-        ...generated.identity
+        ...getResolvedIdentity(entry, speciesProfile)
     };
 }

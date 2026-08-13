@@ -12,11 +12,18 @@ import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_co
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import {getBlogPost} from "@/data/blog";
 import {getChallenge} from "@/data/challenges";
-import {getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
+import {DATABASE_BACKED_LOCATION_SPECIES, getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
+import {getLocationMap, getLocationMapSpeciesSlugs} from "@/data/location-maps";
+import {getLocationCoordinate, getPlaceCoordinate} from "@/data/location-coordinates";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {getSpeciesTier} from "@/lib/species-tier";
+import LocationHabitatMap, {type HabitatMapSpecies} from "@/app/[locale]/(composited)/locations/_components/location-habitat-map";
+import LocationWildlifeMap, {type WildlifeMapPlace} from "@/app/[locale]/(composited)/locations/_components/location-wildlife-map";
 import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/location-places";
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
+import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -40,7 +47,10 @@ type RelatedChallengeCard = {
 function assertLocationAnimalsHaveSpeciesPages() {
     const missingReferences = locationPages.flatMap((page) =>
         page.animalsToSpot
-            .filter((animal) => !getSpeciesBySlug(animal.speciesSlug))
+            .filter((animal) => (
+                !getSpeciesBySlug(animal.speciesSlug)
+                && !DATABASE_BACKED_LOCATION_SPECIES.has(animal.speciesSlug)
+            ))
             .map((animal) => `${page.slug}:${animal.speciesSlug}`)
     );
 
@@ -104,8 +114,10 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
     const hasReserveGuide = isPlaceCollectionIndexable(location.wildlifeReserves);
     const placeGuideLocationName = getPlaceGuideLocationName(location.slug, location.name);
 
-    const resolvedAnimals = location.animalsToSpot.map((animal) => {
-        const species = getSpeciesBySlug(animal.speciesSlug);
+    // Location rosters mix the local species file with the indexed catalog, so each
+    // animal is resolved the same way the species page resolves it.
+    const resolvedAnimals = await Promise.all(location.animalsToSpot.map(async (animal) => {
+        const species = await getResolvedSpeciesBySlug(animal.speciesSlug) ?? getSpeciesBySlug(animal.speciesSlug);
 
         if (!species) {
             return null;
@@ -115,13 +127,49 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             ...animal,
             species
         };
-    });
+    }));
 
     if (resolvedAnimals.some((entry) => !entry)) {
         notFound();
     }
 
     const animals = resolvedAnimals.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+    const habitatMap = getLocationMap(location.slug);
+    const locationCoordinate = getLocationCoordinate(location.slug);
+    // Real pins only: a curated place appears when it has a resolved coordinate.
+    const mapPlaces: WildlifeMapPlace[] = [
+        ...(location.zoosAndParks ?? []),
+        ...(location.wildlifeReserves ?? [])
+    ].flatMap((place) => {
+        const coordinate = place.coordinates ?? getPlaceCoordinate(location.slug, place.name);
+        if (!coordinate) return [];
+        return [{
+            name: place.name,
+            kind: place.type,
+            lat: coordinate.lat,
+            lng: coordinate.lng,
+            animals: place.animalsToSpot.slice(0, 6)
+        }];
+    });
+    const habitatMapSpecies = new Map<string, HabitatMapSpecies>();
+
+    if (habitatMap) {
+        const animalsBySlug = new Map(animals.map((animal) => [animal.species.slug, animal.species]));
+
+        for (const speciesSlug of getLocationMapSpeciesSlugs(habitatMap)) {
+            const entry = animalsBySlug.get(speciesSlug) ?? await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug);
+
+            if (entry) {
+                habitatMapSpecies.set(speciesSlug, {
+                    slug: entry.slug,
+                    name: entry.name,
+                    tier: getSpeciesTier(entry),
+                    artworkSrc: getSpeciesArtworkUrl(entry.slug)
+                });
+            }
+        }
+    }
     const relatedChallenges = (location.challengeSlugs || [])
         .map((challengeSlug) => getChallenge(challengeSlug))
         .filter((challenge): challenge is NonNullable<ReturnType<typeof getChallenge>> => Boolean(challenge))
@@ -333,6 +381,34 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 </div>
             </section>
 
+            {habitatMap ? (
+                <LocationHabitatMap
+                    map={habitatMap}
+                    species={habitatMapSpecies}
+                    zoneLabel={t("habitatZoneLabel")}
+                    speciesCountLabel={(count) => t("habitatZoneSpeciesCount", {count: String(count)})}
+                />
+            ) : locationCoordinate ? (
+                <section className="space-y-4">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("mapEyebrow")}</p>
+                        <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
+                            {t("mapTitle", {location: location.name})}
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-base leading-7 text-ink-200">
+                            {mapPlaces.length ? t("mapDescription") : t("mapDescriptionRegion")}
+                        </p>
+                    </div>
+                    <LocationWildlifeMap
+                        center={{lat: locationCoordinate.lat, lng: locationCoordinate.lng}}
+                        zoom={locationCoordinate.zoom}
+                        locationName={location.name}
+                        places={mapPlaces}
+                    />
+                    <p className="text-xs text-ink-500">{t("mapFootnote")}</p>
+                </section>
+            ) : null}
+
             <LocationAnimalsList
                 title={t("animalsToSpotTitle")}
                 description={t("animalsToSpotDescription")}
@@ -344,7 +420,8 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     imageAlt: getSpeciesImageAltText(animal.species, "thumbnail"),
                     rarityStatus: animalsT(`rarityStatuses.${getSpeciesRarityStatusKey(animal.species.analysis.rarityScore).replace(/-([a-z])/g, (_, char) => char.toUpperCase())}`),
                     whyItFits: animal.whyItFits,
-                    rarityHint: animal.rarityHint
+                    rarityHint: animal.rarityHint,
+                    tier: getSpeciesTier(animal.species)
                 }))}
             />
 

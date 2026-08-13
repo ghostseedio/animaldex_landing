@@ -309,9 +309,6 @@ export default async function Home() {
                     className="w-full max-w-[20rem] md:max-w-[26rem] lg:max-w-[32rem] h-auto"
                 />
                 <p className="text-xl md:text-2xl text-ink-200 w-full md:w-[34rem] text-center">{t("description")}</p>
-                <p className="text-base md:text-lg text-ink-300 w-full max-w-3xl text-center">
-                    {t("supporting")}
-                </p>
                 <div className="mt-3 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center">
                     {downloadStoreLinks.map(({name, href}) => (
                         <a

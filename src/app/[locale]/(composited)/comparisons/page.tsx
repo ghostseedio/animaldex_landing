@@ -10,10 +10,13 @@ import {
     getChallengeComparisonTypeOptions,
     isChallengeComparisonType
 } from "@/data/challenges";
+import ComparisonBuilder from "@/app/[locale]/(composited)/comparisons/_components/comparison-builder";
 import {
+    SPECIES_COMPARISON_TYPES,
     animalOptionsFromChallengeEntries,
     listMergedChallengeEntries
 } from "@/data/species-comparisons";
+import {countComparableAnimals, findComparableAnimal, getStarterComparableAnimals} from "@/data/comparison-animals";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
@@ -51,6 +54,8 @@ const POPULAR_SLUGS = [
     "crocodile-vs-shark",
     "gorilla-vs-tiger"
 ];
+const FAQ_KEYS = ["anyPair", "howItWorks", "accuracy", "missing"] as const;
+const HOW_IT_WORKS_KEYS = ["pick", "generate", "read"] as const;
 const QUICK_CATEGORIES: Array<{key: QuickCategory; icon: string}> = [
     {key: "popular", icon: "🔥"},
     {key: "predators", icon: "🦁"},
@@ -178,7 +183,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const mergedEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
     const challengeKeywords = Array.from(new Set(mergedEntries.flatMap((entry) => entry.searchIntents)));
-    const title = messages.comparisons?.metaTitle || "Animal Comparisons | AnimalDex";
+    const title = messages.comparisons?.metaTitle || "Compare Any Two Animals | AnimalDex";
     const description = messages.comparisons?.metaDescription || messages.meta?.description || "";
 
     return {
@@ -226,6 +231,14 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
     const directory = getDirectoryEntries(state, allEntries);
     state.page = directory.currentPage;
     const comparisonTypeOptions = getChallengeComparisonTypeOptions();
+    const [starterAnimals, comparableAnimalCount] = await Promise.all([
+        getStarterComparableAnimals(16).catch(() => []),
+        countComparableAnimals().catch(() => 0)
+    ]);
+    const [defaultAnimalA, defaultAnimalB] = await Promise.all([
+        findComparableAnimal("lion").catch(() => null),
+        findComparableAnimal("tiger").catch(() => null)
+    ]);
     const speciesCount = new Set(allEntries.flatMap((entry) => entry.speciesSlugs)).size;
     const categoryCount = new Set(allEntries.map((entry) => entry.comparisonType)).size;
     const featuredCandidates = POPULAR_SLUGS.map((slug) => allEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
@@ -250,17 +263,115 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
             name: entry.title
         }))
     };
+    const faqEntries = FAQ_KEYS.map((key) => ({
+        question: t(`faqEntries.${key}.question`, {count: comparableAnimalCount}),
+        answer: t(`faqEntries.${key}.answer`, {count: comparableAnimalCount})
+    }));
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqEntries.map((entry) => ({
+            "@type": "Question",
+            name: entry.question,
+            acceptedAnswer: {"@type": "Answer", text: entry.answer}
+        }))
+    };
+    const popularPairs = POPULAR_SLUGS
+        .map((slug) => allEntries.find((entry) => entry.slug === slug))
+        .filter((entry): entry is ChallengeEntry => Boolean(entry))
+        .slice(0, 6);
 
     return (
         <main className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
-            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema, faqSchema])}} />
 
-            <header className="max-w-[46rem]">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{t("eyebrow")}</p>
-                <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.035em] text-white md:text-5xl">{t("title")}</h1>
-                <p className="mt-3 max-w-[42rem] text-base leading-7 text-ink-200 md:text-lg">{t("description")}</p>
-                <p className="mt-5 text-sm font-semibold text-white">{t("comparisonCount", {count: allEntries.length})}</p>
-            </header>
+            <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-12">
+                <header className="max-w-[42rem]">
+                    <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{t("eyebrow")}</p>
+                    <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.035em] text-white md:text-5xl">{t("title")}</h1>
+                    <p className="mt-3 text-base leading-7 text-ink-200 md:text-lg">{t("description")}</p>
+                    <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+                        <div>
+                            <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statAnimals")}</dt>
+                            <dd className="font-display text-2xl font-bold text-white">{comparableAnimalCount.toLocaleString(locale)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statComparisons")}</dt>
+                            <dd className="font-display text-2xl font-bold text-white">{allEntries.length.toLocaleString(locale)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statTypes")}</dt>
+                            <dd className="font-display text-2xl font-bold text-white">{SPECIES_COMPARISON_TYPES.length}</dd>
+                        </div>
+                    </dl>
+                </header>
+
+                <div>
+                    <ComparisonBuilder
+                        basePath={getLocalePath(locale, "/comparisons")}
+                        starterAnimals={starterAnimals}
+                        defaultAnimalA={defaultAnimalA ?? starterAnimals[0] ?? null}
+                        defaultAnimalB={defaultAnimalB ?? starterAnimals[1] ?? null}
+                        animalCount={comparableAnimalCount}
+                        copy={{
+                            animalALabel: t("builder.animalA"),
+                            animalBLabel: t("builder.animalB"),
+                            choosePlaceholder: t("builder.choose"),
+                            searchPlaceholder: t("builder.searchPlaceholder"),
+                            searchingLabel: t("builder.searching"),
+                            noMatchesLabel: t("builder.noMatches"),
+                            swapLabel: t("builder.swap"),
+                            randomLabel: t("builder.random"),
+                            typeLabel: t("comparisonTypeLabel"),
+                            compareLabel: t("builder.compare"),
+                            compareBusyLabel: t("builder.comparing"),
+                            sameAnimalError: t("builder.sameAnimal"),
+                            searchAllLabel: t("builder.searchAll", {count: "{count}"}),
+                            popularLabel: t("builder.popular"),
+                            resultsLabel: t("builder.results", {count: "{count}"}),
+                            changeLabel: t("builder.change"),
+                            doneLabel: t("builder.done"),
+                            typeOptions: SPECIES_COMPARISON_TYPES.map((option) => ({
+                                value: option,
+                                label: t(`comparisonTypes.${option}`)
+                            }))
+                        }}
+                    />
+
+                    {popularPairs.length ? (
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-[0.16em] text-ink-400">{t("popularPairsLabel")}</span>
+                            {popularPairs.map((entry) => (
+                                <Link
+                                    key={entry.slug}
+                                    href={`/comparisons/${entry.slug}`}
+                                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-ink-200 transition hover:border-primary-400/50 hover:text-white"
+                                >
+                                    {entry.animalADisplayName || entry.animalASlug.replace(/-/g, " ")} vs {entry.animalBDisplayName || entry.animalBSlug.replace(/-/g, " ")}
+                                </Link>
+                            ))}
+                        </div>
+                    ) : null}
+
+                    <ol className="mt-6 grid gap-3 sm:grid-cols-3">
+                        {HOW_IT_WORKS_KEYS.map((key, index) => (
+                            <li key={key} className="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
+                                <span className="font-display text-sm font-black text-primary-300">0{index + 1}</span>
+                                <p className="mt-1.5 text-sm font-bold text-white">{t(`howItWorks.${key}.title`)}</p>
+                                <p className="mt-1 text-xs leading-5 text-ink-300">{t(`howItWorks.${key}.detail`)}</p>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            </section>
+
+            <div className="mt-14 flex items-end justify-between gap-4 border-t border-white/10 pt-10">
+                <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("browseEyebrow")}</p>
+                    <h2 className="mt-1 font-display text-3xl font-bold text-white md:text-4xl">{t("browseTitle")}</h2>
+                    <p className="mt-2 max-w-[42rem] text-sm leading-6 text-ink-300">{t("browseDescription", {count: allEntries.length})}</p>
+                </div>
+            </div>
 
             {showFeatured ? (
                 <section className="relative mt-9 overflow-hidden rounded-[2rem] border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
@@ -419,6 +530,24 @@ export default async function ComparisonsIndexPage({searchParams}: ComparisonsIn
                     </div>
                 </aside>
             </div>
+
+            <section className="mt-16 grid gap-6 lg:grid-cols-[0.65fr_1.35fr]">
+                <div>
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("indexFaqTitle")}</h2>
+                    <p className="mt-3 text-ink-200">{t("indexFaqDescription")}</p>
+                </div>
+                <div className="divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[0.03] px-5 md:px-7">
+                    {faqEntries.map((entry) => (
+                        <details key={entry.question} className="group py-5">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">
+                                {entry.question}
+                                <span className="text-primary-300 transition group-open:rotate-45" aria-hidden="true">+</span>
+                            </summary>
+                            <p className="mt-3 max-w-3xl text-base leading-7 text-ink-200">{entry.answer}</p>
+                        </details>
+                    ))}
+                </div>
+            </section>
 
             <section className="mt-16 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] px-6 py-9 text-center md:px-10">
                 <h2 className="font-display text-3xl font-bold text-white">{t("ctaTitle")}</h2>

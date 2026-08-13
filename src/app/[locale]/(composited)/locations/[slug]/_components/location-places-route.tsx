@@ -2,10 +2,13 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {localeConfig} from "@/i18n";
 import {getLocationPage} from "@/data/locations";
-import {getPlaceGuideLocationName, isPlaceCollectionIndexable, WildlifePlace} from "@/data/location-places";
+import {getPlaceGuideLocationName, getUniquePlaceSpeciesSlugs, isPlaceCollectionIndexable, WildlifePlace} from "@/data/location-places";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getScopedTranslator} from "@/loaders/translation";
 import LocationPlacesPage, {LocationPlacesKind, LocationPlacesLabels} from "./location-places-page";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {getSpeciesBySlug} from "@/data/species";
+import {getSpeciesTier} from "@/lib/species-tier";
 
 export type LocationPlacesRouteProps = {params: {locale: string; slug: string}};
 
@@ -52,6 +55,16 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
     const location = getLocationPage(params.slug);
     if (!location) notFound();
     const places = getPlaces(params.slug, kind);
+    // Place rosters mix the local species file with the indexed catalog, so tiers are
+    // resolved the same way the species pages resolve them.
+    const species = (await Promise.all(
+        getUniquePlaceSpeciesSlugs(places).map(async (speciesSlug) => {
+            const entry = await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug);
+            return entry
+                ? {slug: entry.slug, name: entry.name, scientificName: entry.analysis.scientificName, tier: getSpeciesTier(entry)}
+                : null;
+        })
+    )).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
     const t = await getScopedTranslator(params.locale, "locationPlaces");
     const isZooPage = kind === "zoos";
     const values = {location: getPlaceGuideLocationName(location.slug, location.name)};
@@ -82,6 +95,7 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
         backToLocation: t("backToLocation", values), browseLocations: t("browseLocations"), browseAnimals: t("browseAnimals"),
         emptyTitle: t("emptyTitle"), emptyDescription: t(isZooPage ? "emptyZoosDescription" : "emptyReservesDescription", values),
         ctaTitle: t("ctaTitle"), ctaDescription: t("ctaDescription"), getAnimalDex: t("getAnimalDex"),
+        captiveNote: t("captiveNote"),
         typeLabels: {
             zoo: t("types.zoo"), aquarium: t("types.aquarium"), safari_park: t("types.safariPark"), wildlife_park: t("types.wildlifePark"),
             animal_sanctuary: t("types.animalSanctuary"), wildlife_reserve: t("types.wildlifeReserve"), national_park: t("types.nationalPark"),
@@ -89,5 +103,5 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
         }
     };
 
-    return <LocationPlacesPage locale={params.locale} location={location} places={places} kind={kind} labels={labels} />;
+    return <LocationPlacesPage locale={params.locale} location={location} places={places} kind={kind} labels={labels} species={species} />;
 }

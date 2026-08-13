@@ -1,5 +1,5 @@
 import {Metadata} from "next";
-import {notFound} from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import ChallengeHero from "@/app/[locale]/(composited)/challenges/_components/challenge-hero";
@@ -11,20 +11,34 @@ import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_co
 import ComparisonPageNavigation from "@/app/[locale]/(composited)/challenges/_components/comparison-page-navigation";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
+import ComparisonGenerating from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-generating";
+import ComparisonVotePanel from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-vote-panel";
+import ComparisonComments from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-comments";
 import {getChallenge} from "@/data/challenges";
+import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-animals";
+import {
+    COMMENT_MAX_LENGTH,
+    fetchComparisonComments,
+    fetchViewerVote,
+    fetchVoteTally
+} from "@/data/comparison-engagement";
 import {
     buildComparisonSpeciesFallback,
     fetchSpeciesComparisonBySlug,
     getRelatedMergedChallenges,
-    resolveChallengeEntry
+    parseComparisonSlug,
+    resolveReadyChallengeEntry
 } from "@/data/species-comparisons";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {buildContentMetadata} from "@/lib/content-metadata";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import {readGuestKey} from "@/lib/guest-identity";
+import {getViewerUserId} from "@/lib/viewer";
 
 type Props = {params: {locale: string; slug: string}};
 
@@ -53,9 +67,51 @@ function getReadMinutes(parts: string[]) {
     return Math.max(4, Math.ceil(parts.join(" ").trim().split(/\s+/).length / 210));
 }
 
+/**
+ * A slug that is not published yet but names two catalog species — the page is
+ * generated on demand from the client instead of blocking the render.
+ */
+async function resolvePendingPair(slug: string): Promise<{
+    animalA: ComparableAnimal;
+    animalB: ComparableAnimal;
+    comparisonType: string;
+} | null> {
+    const parsed = parseComparisonSlug(slug);
+    if (!parsed) return null;
+
+    const [animalA, animalB] = await Promise.all([
+        findComparableAnimal(parsed.animalASlug),
+        findComparableAnimal(parsed.animalBSlug)
+    ]);
+
+    if (!animalA || !animalB || animalA.slug === animalB.slug) return null;
+    return {animalA, animalB, comparisonType: parsed.comparisonType};
+}
+
+/**
+ * A pair has one canonical row upstream, so `b-vs-a` may already be published as
+ * `a-vs-b`. Send crawlers and readers straight there instead of loading a
+ * generator that would only redirect them anyway.
+ */
+function reversedComparisonSlug(slug: string) {
+    const parsed = parseComparisonSlug(slug);
+    if (!parsed) return null;
+    const base = `${parsed.animalBSlug}-vs-${parsed.animalASlug}`;
+    return parsed.comparisonType === "battle" ? base : `${base}-${parsed.comparisonType}`;
+}
+
 export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const challenge = await resolveChallengeEntry(params.slug);
-    if (!challenge) return {};
+    const challenge = await resolveReadyChallengeEntry(params.slug);
+
+    if (!challenge) {
+        const pending = await resolvePendingPair(params.slug);
+        if (!pending) return {};
+        // Keep the loading state out of the index; the finished page is indexable.
+        return {
+            title: `${pending.animalA.name} vs ${pending.animalB.name}`,
+            robots: {index: false, follow: true}
+        };
+    }
     const [animalA, animalB] = await Promise.all([
         resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
         resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
@@ -76,8 +132,46 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 export default async function ComparisonDetailPage({params}: Props) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "comparisons");
-    const challenge = await resolveChallengeEntry(slug);
-    if (!challenge) notFound();
+    const challenge = await resolveReadyChallengeEntry(slug);
+
+    if (!challenge) {
+        const pending = await resolvePendingPair(slug);
+        if (!pending) notFound();
+
+        const reversedSlug = reversedComparisonSlug(slug);
+        if (reversedSlug && await resolveReadyChallengeEntry(reversedSlug)) {
+            redirect(getLocalePath(locale, `/comparisons/${reversedSlug}`));
+        }
+
+        return (
+            <ComparisonGenerating
+                basePath={getLocalePath(locale, "/comparisons")}
+                slug={slug}
+                animalAName={pending.animalA.name}
+                animalBName={pending.animalB.name}
+                animalAArtwork={pending.animalA.artworkUrl}
+                animalBArtwork={pending.animalB.artworkUrl}
+                copy={{
+                    eyebrow: t("generating.eyebrow"),
+                    title: t("generating.title", {animalA: pending.animalA.name, animalB: pending.animalB.name}),
+                    description: t("generating.description"),
+                    steps: [
+                        t("generating.stepOne"),
+                        t("generating.stepTwo"),
+                        t("generating.stepThree"),
+                        t("generating.stepFour")
+                    ],
+                    elapsedLabel: t("generating.elapsed", {seconds: "{seconds}"}),
+                    errorTitle: t("generating.errorTitle"),
+                    errorDescription: t("generating.errorDescription"),
+                    rateLimitTitle: t("generating.rateLimitTitle"),
+                    rateLimitDescription: t("generating.rateLimitDescription"),
+                    retryLabel: t("generating.retry"),
+                    browseLabel: t("generating.browse")
+                }}
+            />
+        );
+    }
 
     const [animalA, animalB] = await Promise.all([
         resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
@@ -137,9 +231,40 @@ export default async function ComparisonDetailPage({params}: Props) {
             entry
         }));
 
+    const viewerUserId = await getViewerUserId();
+    const guestKey = viewerUserId ? null : readGuestKey();
+    const [voteTally, viewerVote, comments] = await Promise.all([
+        fetchVoteTally(challenge.slug).catch(() => ({animalAVotes: 0, animalBVotes: 0, totalVotes: 0})),
+        fetchViewerVote(challenge.slug, {userId: viewerUserId, guestKey}).catch(() => null),
+        fetchComparisonComments(challenge.slug, viewerUserId).catch(() => [])
+    ]);
+
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
     const schemas = [
-        {"@context": "https://schema.org", "@type": "Article", headline: challenge.title, description: challenge.description, datePublished: challenge.publishedAt, dateModified: challenge.updatedAt, inLanguage: locale, url: pageUrl, image: getAbsoluteUrl(locale, challenge.featuredImage.src), author: {"@type": "Organization", name: "AnimalDex"}, publisher: {"@type": "Organization", name: "AnimalDex"}},
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: challenge.title,
+            description: challenge.description,
+            datePublished: challenge.publishedAt,
+            dateModified: challenge.updatedAt,
+            inLanguage: locale,
+            url: pageUrl,
+            image: getAbsoluteUrl(locale, challenge.featuredImage.src),
+            author: {"@type": "Organization", name: "AnimalDex"},
+            publisher: {"@type": "Organization", name: "AnimalDex"},
+            commentCount: comments.length,
+            ...(comments.length
+                ? {
+                    comment: comments.map((item) => ({
+                        "@type": "Comment",
+                        text: item.body,
+                        dateCreated: item.createdAt,
+                        author: {"@type": "Person", name: item.authorName}
+                    }))
+                }
+                : {})
+        },
         {"@context": "https://schema.org", "@type": "FAQPage", mainEntity: challenge.faq.map((item) => ({"@type": "Question", name: item.question, acceptedAnswer: {"@type": "Answer", text: item.answer}}))},
         {"@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(locale)}, {"@type": "ListItem", position: 2, name: t("title"), item: getAbsoluteUrl(locale, "/comparisons")}, {"@type": "ListItem", position: 3, name: challenge.title, item: pageUrl}]}
     ];
@@ -176,6 +301,29 @@ export default async function ComparisonDetailPage({params}: Props) {
             <ComparisonPageNavigation title={challenge.title} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
 
             <ChallengeVerdictCard title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} winner={winner ? {slug: winner.slug, name: winner.name} : undefined} winnerLabel={t("winnerBadge")} confidence={confidence} confidenceLabel={t("confidence")} fullAnalysisLabel={t("fullAnalysis")} />
+
+
+            <ComparisonVotePanel
+                slug={challenge.slug}
+                animalAName={animalA.name}
+                animalBName={animalB.name}
+                animalAArtwork={getSpeciesArtworkUrl(animalA.slug)}
+                animalBArtwork={getSpeciesArtworkUrl(animalB.slug)}
+                initialTally={voteTally}
+                initialVote={viewerVote}
+                copy={{
+                    eyebrow: t("vote.eyebrow"),
+                    title: t("vote.title"),
+                    description: t("vote.description"),
+                    votedLabel: t("vote.voted"),
+                    changeHint: t("vote.changeHint"),
+                    totalVotes: t("vote.totalVotes", {count: "{count}"}),
+                    noVotesYet: t("vote.noVotesYet"),
+                    errorMessage: t("vote.error"),
+                    rateLimitMessage: t("vote.rateLimited"),
+                    votePrompt: t("vote.prompt")
+                }}
+            />
 
             <section className="grid gap-6 border-y border-line-300 py-9 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">{t("editorialNote")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("whyDisagreeTitle")}</h2><p className="mt-4 text-base leading-7 text-ink-200">{challenge.whyThisMatchupIsInteresting[0]}</p></div>
@@ -245,6 +393,34 @@ export default async function ComparisonDetailPage({params}: Props) {
             <ChallengeVerdictCard title={t("finalTakeTitle")} summary={challenge.finalTake[0]} paragraphs={challenge.finalTake.slice(1)} fullAnalysisLabel={t("fullAnalysis")} />
 
             <IntentCtaCard title={t(challenge.comparisonType === "battle" ? "ctaBattleTitle" : challenge.comparisonType === "speed" ? "ctaSpeedTitle" : "ctaDefaultTitle")} description={t(challenge.comparisonType === "battle" ? "ctaBattleDescription" : challenge.comparisonType === "speed" ? "ctaSpeedDescription" : "ctaDefaultDescription")} buttonLabel={t(challenge.comparisonType === "battle" ? "ctaBattleButton" : challenge.comparisonType === "speed" ? "ctaSpeedButton" : "ctaDefaultButton")} supportItems={[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")]} secondaryLinks={secondaryLinks} />
+
+
+            <ComparisonComments
+                slug={challenge.slug}
+                signInHref={`/account?next=${encodeURIComponent(`/comparisons/${challenge.slug}#comments`)}`}
+                isSignedIn={Boolean(viewerUserId)}
+                initialComments={comments}
+                maxLength={COMMENT_MAX_LENGTH}
+                copy={{
+                    eyebrow: t("comments.eyebrow"),
+                    title: t("comments.title"),
+                    description: t("comments.description"),
+                    placeholder: t("comments.placeholder"),
+                    submit: t("comments.submit"),
+                    submitting: t("comments.submitting"),
+                    signedOutPrompt: t("comments.signedOutPrompt"),
+                    signIn: t("comments.signIn"),
+                    empty: t("comments.empty"),
+                    delete: t("comments.delete"),
+                    report: t("comments.report"),
+                    reported: t("comments.reported"),
+                    errorMessage: t("comments.error"),
+                    rateLimitMessage: t("comments.rateLimited"),
+                    tooShort: t("comments.tooShort"),
+                    remaining: t("comments.remaining", {count: "{count}"}),
+                    linksStrippedHint: t("comments.linksStripped")
+                }}
+            />
 
             <RelatedChallengesSection title={t("relatedTitle")} description={t("relatedDescription")} readChallengeLabel={t("readChallenge")} items={relatedChallenges} />
         </article>

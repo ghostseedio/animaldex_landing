@@ -5,7 +5,7 @@ import {LocationPage} from "@/data/locations";
 import {getUniquePlaceSpeciesSlugs, WildlifePlace} from "@/data/location-places";
 import {getSpeciesBySlug} from "@/data/species";
 import {getAbsoluteUrl} from "@/lib/site";
-import AnimalsToSpot from "./animals-to-spot";
+import AnimalsToSpot, {type PlaceSpecies} from "./animals-to-spot";
 import PlacesSearchFilter from "./places-search-filter";
 import {PlaceCardLabels} from "./place-card";
 
@@ -47,17 +47,19 @@ export type LocationPlacesLabels = PlaceCardLabels & {
     ctaTitle: string;
     ctaDescription: string;
     getAnimalDex: string;
+    captiveNote: string;
 };
 
-export default function LocationPlacesPage({locale, location, places, kind, labels}: {
+export default function LocationPlacesPage({locale, location, places, kind, labels, species}: {
     locale: string;
     location: LocationPage;
     places: WildlifePlace[];
     kind: LocationPlacesKind;
     labels: LocationPlacesLabels;
+    species: PlaceSpecies[];
 }) {
     const speciesSlugs = getUniquePlaceSpeciesSlugs(places);
-    const relatedSpecies = speciesSlugs.map((slug) => getSpeciesBySlug(slug)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    const relatedSpecies = species;
     const pathname = `/locations/${location.slug}/${kind}`;
     const itemListSchema = places.length ? {
         "@context": "https://schema.org",
@@ -131,7 +133,7 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
                             <PlacesSearchFilter places={places} fallbackImage={location.featuredImage} labels={labels} />
                         </section>
 
-                        <AnimalsToSpot speciesSlugs={speciesSlugs} title={labels.animalsTitle} description={labels.animalsDescription} readSpecies={labels.readSpecies} />
+                        <AnimalsToSpot species={species} title={labels.animalsTitle} description={labels.animalsDescription} readSpecies={labels.readSpecies} captiveNote={kind === "zoos" ? labels.captiveNote : undefined} />
 
                         <section>
                             <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{labels.relatedSpeciesTitle}</h2>

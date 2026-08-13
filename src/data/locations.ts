@@ -47,47 +47,634 @@ type LocationPageInput = Omit<LocationPage, "publishedAt" | "updatedAt" | "featu
 
 const LOCATION_MIN_ANIMAL_SPOTS = 10;
 
+/**
+ * Location animals served by the indexed species catalog rather than the local species file.
+ * These resolve through getResolvedSpeciesBySlug at request time and have working
+ * /animals/<slug> pages, so the build-time species assertion allows them through.
+ */
+export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
+    "oriental-pied-hornbill",
+    "crested-serpent-eagle",
+    "water-monitor",
+    "wild-boar",
+    "black-giant-squirrel",
+    "asian-palm-civet",
+    "javan-pond-heron",
+    "spinner-dolphin",
+    "white-bellied-sea-eagle",
+    "little-egret",
+    "hermit-crab",
+    "long-tailed-macaque",
+    "cattle-egret",
+    "great-egret",
+    "javan-myna",
+    "zebra-dove",
+    "spotted-dove",
+    "house-sparrow",
+    "large-flying-fox",
+    "tokay-gecko",
+    "common-house-gecko",
+    "asian-common-toad",
+    "mosquito",
+    "house-fly",
+    "giant-african-land-snail",
+    "millipede",
+    "centipede",
+    "pygmy-seahorse",
+    "moray-eel",
+    "warty-frogfish",
+    "pufferfish",
+    "giant-trevally",
+    "blacktip-reef-shark",
+    "reef-manta-ray",
+    "ocean-sunfish",
+    "hawksbill-sea-turtle",
+    "olive-ridley-sea-turtle",
+    "flying-fox",
+    "addax",
+    "african-bullfrog",
+    "african-bush-elephant",
+    "african-civet",
+    "african-fish-eagle",
+    "african-grey-hornbill",
+    "african-harrier-hawk",
+    "african-rock-python",
+    "alpine-ibex",
+    "amazon-milk-frog",
+    "american-bison",
+    "american-cockroach",
+    "american-crocodile",
+    "american-marten",
+    "american-robin",
+    "american-toad",
+    "andean-condor",
+    "arabian-oryx",
+    "arabian-sand-boa",
+    "arctic-fox",
+    "arctic-tern",
+    "armadillidium-vulgare",
+    "asian-glossy-starling",
+    "asian-honey-bee",
+    "asian-weaver-ant",
+    "asiatic-black-bear",
+    "australian-green-tree-frog",
+    "aye-aye",
+    "banded-mongoose",
+    "bat-eared-fox",
+    "beluga-whale",
+    "bharal",
+    "black-caiman",
+    "black-crowned-night-heron",
+    "black-headed-ibis",
+    "blue-crowned-motmot",
+    "blue-tit",
+    "boa-constrictor",
+    "bobcat",
+    "boobook-owl",
+    "bornean-orangutan",
+    "brazilian-wandering-spider",
+    "bronze-ground-beetle",
+    "brown-anole",
+    "brown-bear",
+    "brown-marmorated-stink-bug",
+    "brown-pelican",
+    "brown-recluse",
+    "brush-tailed-mulgara",
+    "budgerigar",
+    "bumblebee",
+    "bushbuck",
+    "canada-goose",
+    "cape-ground-squirrel",
+    "capuchin-monkey",
+    "caracal",
+    "central-american-agouti",
+    "chinese-cobra",
+    "chinese-crocodile-lizard",
+    "chinese-hwamei",
+    "chinese-mantis",
+    "chinese-pond-heron",
+    "chinese-softshell-turtle",
+    "chinese-water-dragon",
+    "clouded-leopard",
+    "coati",
+    "common-basilisk",
+    "common-blackbird",
+    "common-buzzard",
+    "common-eastern-bumble-bee",
+    "common-frog",
+    "common-genet",
+    "common-house-spider",
+    "common-loon",
+    "common-marmoset",
+    "common-minke-whale",
+    "common-murre",
+    "common-myna",
+    "common-nighthawk",
+    "common-raven",
+    "common-sun-skink",
+    "common-swift",
+    "common-wall-lizard",
+    "cougar",
+    "crane-fly",
+    "crested-caracara",
+    "damselfly",
+    "desert-hedgehog",
+    "desert-horned-viper",
+    "desert-locust",
+    "didelphis-marsupialis",
+    "diving-bell-spider",
+    "earwig",
+    "eastern-cottontail",
+    "eastern-gray-squirrel",
+    "eastern-phoebe",
+    "eastern-screech-owl",
+    "egyptian-mongoose",
+    "emerald-toucanet",
+    "emerald-tree-boa",
+    "emperor-scorpion",
+    "emu",
+    "eurasian-collared-dove",
+    "eurasian-eagle-owl",
+    "eurasian-jay",
+    "eurasian-lynx",
+    "eurasian-magpie",
+    "eurasian-tree-sparrow",
+    "european-badger",
+    "european-bee-eater",
+    "european-goldfinch",
+    "european-hedgehog",
+    "european-hornet",
+    "european-nightjar",
+    "european-rabbit",
+    "european-robin",
+    "european-roller",
+    "european-starling",
+    "eyelash-viper",
+    "field-cricket",
+    "fork-tailed-drongo",
+    "fossa",
+    "galapagos-tortoise",
+    "gerenuk",
+    "gharial",
+    "giant-african-millipede",
+    "giant-anteater",
+    "giant-malabar-squirrel",
+    "giant-pacific-octopus",
+    "giant-water-bug",
+    "golden-eagle",
+    "golden-jackal",
+    "golden-pheasant",
+    "golden-silk-orb-weaver",
+    "great-curassow",
+    "great-hornbill",
+    "great-horned-owl",
+    "great-kiskadee",
+    "great-tailed-grackle",
+    "great-tit",
+    "green-anole",
+    "green-basilisk",
+    "green-iguana",
+    "green-lacewing",
+    "green-mamba",
+    "harbor-seal",
+    "harlequin-duck",
+    "harpy-eagle",
+    "helmeted-guineafowl",
+    "helmeted-hornbill",
+    "hippopotamus",
+    "hoatzin",
+    "honey-badger",
+    "house-centipede",
+    "house-crow",
+    "house-mouse",
+    "humpback-whale",
+    "iberian-lynx",
+    "impala",
+    "indian-rock-python",
+    "indian-star-tortoise",
+    "indri",
+    "jaguarundi",
+    "japanese-bush-warbler",
+    "japanese-macaque",
+    "japanese-marten",
+    "japanese-serow",
+    "javan-rhinoceros",
+    "javan-slow-loris",
+    "keel-billed-toucan",
+    "kinkajou",
+    "leopard-tortoise",
+    "lesser-mouse-deer",
+    "lilac-breasted-roller",
+    "little-owl",
+    "loggerhead-sea-turtle",
+    "lycaenid-butterfly",
+    "madagascar-day-gecko",
+    "madagascar-ground-boa",
+    "madagascar-hissing-cockroach",
+    "madagascar-pochard",
+    "manatee",
+    "mandarin-duck",
+    "maned-wolf",
+    "mangrove-monitor",
+    "mangrove-snake",
+    "mantled-howler-monkey",
+    "marabou-stork",
+    "marco-polo-sheep",
+    "mexican-beaded-lizard",
+    "mohol-bushbaby",
+    "moose",
+    "mountain-hare",
+    "multicolored-asian-lady-beetle",
+    "musk-deer",
+    "musk-ox",
+    "mute-swan",
+    "night-parrot",
+    "nile-monitor",
+    "north-american-beaver",
+    "north-american-raccoon",
+    "north-american-river-otter",
+    "northern-cardinal",
+    "northern-flicker",
+    "northern-fulmar",
+    "northern-hawk-owl",
+    "northern-walkingstick",
+    "ocelot",
+    "orb-weaver-spider",
+    "orca",
+    "oriental-magpie-robin",
+    "ostrich",
+    "otter",
+    "pallass-cat",
+    "paper-wasp",
+    "pecari-tajacu",
+    "perentie",
+    "pied-crow",
+    "pied-fantail",
+    "pileated-woodpecker",
+    "pine-marten",
+    "platypus",
+    "ploughshare-tortoise",
+    "red-crowned-crane",
+    "red-deer",
+    "red-slender-loris",
+    "red-squirrel",
+    "red-tailed-hawk",
+    "reindeer",
+    "resplendent-quetzal",
+    "rock-hyrax",
+    "rock-pigeon",
+    "roe-deer",
+    "russian-tortoise",
+    "saltwater-crocodile",
+    "satanic-leaf-tailed-gecko",
+    "secretarybird",
+    "serval",
+    "seven-spotted-ladybird",
+    "siamang",
+    "siberian-musk-deer",
+    "sika-deer",
+    "silverfish",
+    "sloth-bear",
+    "small-bicolored-house-ant",
+    "smooth-coated-otter",
+    "snail",
+    "snow-bunting",
+    "snowy-owl",
+    "southern-lapwing",
+    "southern-tamandua",
+    "spectacled-bear",
+    "spectacled-owl",
+    "spider-monkey",
+    "spinifex-hopping-mouse",
+    "springbok",
+    "squirrel-monkey",
+    "sri-lanka-frogmouth",
+    "steppe-eagle",
+    "striped-blister-beetle",
+    "striped-hyena",
+    "sulphur-crested-cockatoo",
+    "sunda-clouded-leopard",
+    "tarantula-hawk-wasp",
+    "tasmanian-devil",
+    "tayra",
+    "tomato-frog",
+    "tree-frog",
+    "turquoise-browed-motmot",
+    "vervet-monkey",
+    "vespula-vulgaris",
+    "walrus",
+    "water-deer",
+    "water-scorpion",
+    "wedge-tailed-eagle",
+    "western-honey-bee",
+    "white-faced-capuchin",
+    "white-nosed-coati",
+    "white-stork",
+    "white-tailed-deer",
+    "whooper-swan",
+    "whooping-crane",
+    "wombat",
+    "wood-frog",
+    "yellow-mongoose",
+    "zebra-finch",
+]);
+
 const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
-    "indonesia": ["proboscis-monkey", "reticulated-python", "clownfish", "atlas-moth"],
-    "bali": ["honey-bee", "manta-ray", "dolphin", "reticulated-python"],
-    "jakarta": ["tiger", "giraffe", "crocodile", "green-sea-turtle"],
-    "west-java": ["reticulated-python", "crocodile", "monarch-butterfly", "clownfish"],
-    "komodo-national-park": ["crocodile", "dolphin", "whale-shark", "hawksbill-sea-turtle"],
-    "ujung-kulon": ["reticulated-python", "dolphin", "manta-ray", "monarch-butterfly"],
-    "borneo": ["malayan-tapir", "sunda-pangolin", "king-cobra", "atlas-moth"],
-    "singapore-zoo": ["tiger", "gorilla", "otter", "plains-zebra"],
-    "london-zoo": ["lion", "elephant", "plains-zebra", "red-panda"],
-    "african-safari": ["white-rhinoceros", "hippopotamus"],
-    "china": ["red-crowned-crane", "golden-pheasant", "red-panda", "chinese-giant-salamander", "mandarin-duck", "chinese-crocodile-lizard"],
-    "germany": ["european-hedgehog", "european-robin", "red-deer", "white-stork", "european-badger", "common-raven"],
-    "india": ["sloth-bear", "leopard", "gharial", "indian-star-tortoise", "common-kingfisher", "atlas-moth"],
-    "japan": ["mandarin-duck", "red-crowned-crane", "sika-deer", "giant-pacific-octopus", "pufferfish", "great-egret"],
-    "australia": ["red-kangaroo", "platypus", "wombat", "tasmanian-devil", "laughing-kookaburra", "frilled-lizard"],
-    "brazil": ["giant-anteater", "green-anaconda", "mantled-howler-monkey", "toco-toucan", "poison-dart-frog", "atlas-moth"],
-    "canada": ["moose", "canada-goose", "common-loon", "harbor-seal", "beluga-whale", "north-american-beaver"],
-    "united-states": ["american-bison", "north-american-raccoon", "great-blue-heron", "north-american-beaver", "cougar", "whooping-crane"],
-    "thailand": ["elephant", "rhinoceros-hornbill", "reticulated-python", "green-sea-turtle", "atlas-moth", "siamang"],
-    "mexico": ["resplendent-quetzal", "mantled-howler-monkey", "boa-constrictor", "green-sea-turtle", "coati", "ocelot"],
-    "peru": ["andean-condor", "squirrel-monkey", "poison-dart-frog", "giant-anteater", "green-anaconda", "hoatzin"],
-    "kenya": ["elephant", "plains-zebra", "spotted-hyena", "white-headed-vulture", "hippopotamus", "gerenuk"],
-    "madagascar": ["aye-aye", "fossa", "satanic-leaf-tailed-gecko", "madagascar-day-gecko", "tomato-frog", "humpback-whale"],
-    "sri-lanka": ["elephant", "leopard", "sloth-bear", "hawksbill-sea-turtle", "reticulated-python", "atlas-moth"],
-    "ecuador": ["andean-condor", "marine-iguana", "galapagos-tortoise", "humpback-whale", "poison-dart-frog", "atlas-moth"],
-    "costa-rica": ["resplendent-quetzal", "red-eyed-tree-frog", "mantled-howler-monkey", "white-faced-capuchin", "eyelash-viper", "poison-dart-frog"],
-    "norway": ["reindeer", "harbor-seal", "orca", "common-murre", "arctic-tern", "musk-ox"],
-    "south-africa": ["elephant", "giraffe", "white-rhinoceros", "secretary-bird", "springbok", "ostrich"],
-    "singapore": ["otter", "clownfish", "dolphin", "cicada", "seahorse", "reticulated-python"],
-    "tanzania": ["spotted-hyena", "cheetah", "secretary-bird", "white-headed-vulture", "hippopotamus", "gerenuk"],
-    "united-kingdom": ["european-badger", "european-robin", "red-deer", "atlantic-puffin", "common-raven", "harbor-seal"],
-    "spain": ["red-deer", "greater-flamingo", "barn-owl", "loggerhead-sea-turtle", "european-goldfinch", "octopus"],
-    "jamaica": ["brown-pelican", "manatee", "crocodile", "octopus", "hawksbill-sea-turtle", "cicada"],
-    "afghanistan": ["bharal", "musk-deer", "red-fox", "alpine-ibex", "peregrine-falcon", "leopard"],
-    "israel": ["great-egret", "little-egret", "loggerhead-sea-turtle", "octopus", "european-roller", "barn-owl"],
-    "colombia": ["toco-toucan", "glass-frog", "three-toed-sloth", "harpy-eagle", "giant-anteater", "kinkajou"],
-    "iceland": ["common-murre", "northern-fulmar", "orca", "walrus", "snowy-owl", "reindeer"],
-    "dubai": ["addax", "caracal", "hawksbill-sea-turtle", "seahorse", "great-egret", "clownfish"],
-    "russia": ["wolverine", "polar-bear", "beluga-whale", "walrus", "moose", "arctic-tern"],
-    "pakistan": ["bharal", "musk-deer", "golden-eagle", "common-kingfisher", "leopard", "indian-star-tortoise"]
+    "indonesia": [
+        "proboscis-monkey", "reticulated-python", "clownfish", "atlas-moth",
+        "zebra-dove", "long-tailed-macaque", "bornean-orangutan", "common-sun-skink",
+        "common-house-gecko", "tree-frog", "water-monitor", "mosquito",
+        "asian-weaver-ant", "javan-myna", "asian-palm-civet", "sunda-pangolin",
+        "sun-bear", "lesser-mouse-deer", "sunda-clouded-leopard", "house-fly",
+        "helmeted-hornbill", "common-house-spider"
+    ],
+    "jakarta": [
+        "tiger", "giraffe", "crocodile", "green-sea-turtle",
+        "zebra-dove", "white-bellied-sea-eagle", "asian-common-toad", "common-sun-skink",
+        "common-house-gecko", "water-monitor", "javan-myna", "common-myna",
+        "reticulated-python", "asian-palm-civet", "sunda-pangolin", "house-fly"
+    ],
+    "west-java": [
+        "reticulated-python", "crocodile", "monarch-butterfly", "clownfish",
+        "white-bellied-sea-eagle", "common-sun-skink", "common-house-gecko", "tree-frog",
+        "water-monitor", "javan-myna", "common-myna", "asian-palm-civet",
+        "flying-fox", "sunda-pangolin", "javan-slow-loris", "house-sparrow",
+        "house-fly", "house-centipede"
+    ],
+    "komodo-national-park": [
+        "crocodile", "dolphin", "whale-shark", "hawksbill-sea-turtle",
+        "white-bellied-sea-eagle", "common-sun-skink", "common-house-gecko", "water-monitor",
+        "mosquito", "boobook-owl", "mangrove-monitor", "saltwater-crocodile",
+        "sulphur-crested-cockatoo", "house-fly", "house-centipede"
+    ],
+    "ujung-kulon": [
+        "reticulated-python", "dolphin", "manta-ray", "monarch-butterfly",
+        "white-bellied-sea-eagle", "long-tailed-macaque", "common-sun-skink", "common-house-gecko",
+        "tree-frog", "water-monitor", "asian-weaver-ant", "javan-myna",
+        "asian-palm-civet", "large-flying-fox", "sunda-pangolin", "sun-bear",
+        "javan-rhinoceros", "house-centipede"
+    ],
+    "borneo": [
+        "malayan-tapir", "sunda-pangolin", "king-cobra", "atlas-moth",
+        "asian-glossy-starling", "common-myna", "oriental-pied-hornbill", "white-bellied-sea-eagle",
+        "long-tailed-macaque", "water-monitor", "asian-weaver-ant", "tree-frog",
+        "common-house-gecko", "common-sun-skink", "asian-palm-civet", "lesser-mouse-deer",
+        "helmeted-hornbill", "clouded-leopard"
+    ],
+    "singapore-zoo": [
+        "tiger", "gorilla", "otter", "plains-zebra",
+        "javan-myna", "common-myna", "oriental-pied-hornbill", "water-monitor",
+        "long-tailed-macaque", "common-sun-skink", "asian-weaver-ant", "common-house-gecko",
+        "tree-frog", "asian-palm-civet", "house-fly", "multicolored-asian-lady-beetle"
+    ],
+    "london-zoo": [
+        "lion", "elephant", "plains-zebra", "red-panda",
+        "common-blackbird", "european-robin", "eurasian-magpie", "lycaenid-butterfly",
+        "great-tit", "house-sparrow", "mute-swan", "common-buzzard",
+        "eurasian-jay", "eastern-gray-squirrel", "european-hedgehog", "common-kingfisher",
+        "red-fox", "bumblebee", "common-frog", "asian-common-toad",
+        "western-honey-bee", "snail", "earwig", "house-mouse",
+        "common-house-spider"
+    ],
+    "african-safari": [
+        "white-rhinoceros", "hippopotamus", "lilac-breasted-roller", "helmeted-guineafowl",
+        "marabou-stork", "african-fish-eagle", "african-grey-hornbill", "secretarybird",
+        "african-bush-elephant", "impala", "vervet-monkey", "banded-mongoose",
+        "nile-monitor", "common-house-gecko", "serval", "bat-eared-fox",
+        "african-wild-dog", "african-rock-python", "african-civet", "house-fly",
+        "honey-badger"
+    ],
+    "china": [
+        "red-crowned-crane", "golden-pheasant", "red-panda", "chinese-giant-salamander",
+        "mandarin-duck", "chinese-crocodile-lizard", "eurasian-tree-sparrow", "oriental-magpie-robin",
+        "chinese-pond-heron", "asian-common-toad", "eurasian-magpie", "common-myna",
+        "brown-marmorated-stink-bug", "chinese-mantis", "chinese-hwamei", "chinese-softshell-turtle",
+        "chinese-cobra", "common-house-gecko", "red-fox", "water-deer",
+        "asiatic-black-bear", "tree-frog", "chinese-water-dragon"
+    ],
+    "germany": [
+        "european-hedgehog", "european-robin", "red-deer", "white-stork",
+        "european-badger", "common-raven", "common-blackbird", "great-tit",
+        "common-buzzard", "eurasian-jay", "european-goldfinch", "western-honey-bee",
+        "asian-common-toad", "vespula-vulgaris", "common-frog", "snail",
+        "paper-wasp", "tree-frog", "earwig", "european-nightjar",
+        "common-house-spider"
+    ],
+    "india": [
+        "sloth-bear", "leopard", "gharial", "indian-star-tortoise",
+        "common-kingfisher", "atlas-moth", "common-myna", "house-crow",
+        "fork-tailed-drongo", "oriental-magpie-robin", "great-hornbill", "giant-malabar-squirrel",
+        "tree-frog", "common-house-gecko", "indian-rock-python", "asian-palm-civet",
+        "red-slender-loris"
+    ],
+    "japan": [
+        "mandarin-duck", "red-crowned-crane", "sika-deer", "giant-pacific-octopus",
+        "pufferfish", "great-egret", "eurasian-tree-sparrow", "japanese-bush-warbler",
+        "japanese-serow", "japanese-macaque", "japanese-marten", "paper-wasp",
+        "common-house-gecko", "mosquito", "chinese-pond-heron", "diving-bell-spider"
+    ],
+    "australia": [
+        "red-kangaroo", "platypus", "wombat", "tasmanian-devil",
+        "laughing-kookaburra", "frilled-lizard", "wedge-tailed-eagle", "zebra-finch",
+        "emu", "budgerigar", "spinifex-hopping-mouse", "common-house-gecko",
+        "perentie", "brush-tailed-mulgara", "night-parrot"
+    ],
+    "brazil": [
+        "giant-anteater", "green-anaconda", "mantled-howler-monkey", "toco-toucan",
+        "poison-dart-frog", "atlas-moth", "great-kiskadee", "southern-lapwing",
+        "crested-caracara", "common-house-gecko", "green-anole", "great-horned-owl",
+        "green-iguana", "common-marmoset", "spectacled-owl", "southern-tamandua",
+        "capuchin-monkey", "maned-wolf", "brazilian-wandering-spider", "leafcutter-ant",
+        "black-caiman", "house-fly", "jaguarundi", "golden-silk-orb-weaver",
+        "amazon-milk-frog"
+    ],
+    "canada": [
+        "moose", "canada-goose", "common-loon", "harbor-seal",
+        "beluga-whale", "north-american-beaver", "american-robin", "northern-flicker",
+        "common-raven", "great-blue-heron", "pileated-woodpecker", "bronze-ground-beetle",
+        "common-nighthawk", "red-squirrel", "common-eastern-bumble-bee", "eastern-gray-squirrel",
+        "white-tailed-deer", "wood-frog", "asiatic-black-bear", "american-marten",
+        "northern-walkingstick", "wolverine", "common-house-spider", "house-fly"
+    ],
+    "united-states": [
+        "american-bison", "north-american-raccoon", "great-blue-heron", "north-american-beaver",
+        "cougar", "whooping-crane", "northern-cardinal", "american-robin",
+        "northern-flicker", "red-tailed-hawk", "eastern-phoebe", "pileated-woodpecker",
+        "mosquito", "great-horned-owl", "eastern-screech-owl", "jumping-spider",
+        "white-tailed-deer", "eastern-gray-squirrel", "american-toad", "eastern-cottontail",
+        "american-bullfrog", "bobcat", "brown-recluse", "common-house-spider",
+        "field-cricket", "damselfly"
+    ],
+    "thailand": [
+        "elephant", "rhinoceros-hornbill", "reticulated-python", "green-sea-turtle",
+        "atlas-moth", "siamang", "common-myna", "oriental-magpie-robin",
+        "black-crowned-night-heron", "water-monitor", "mosquito", "asian-common-toad",
+        "black-headed-ibis", "asian-weaver-ant", "common-house-gecko", "asian-honey-bee",
+        "tree-frog", "common-sun-skink", "asian-palm-civet", "sunda-pangolin",
+        "mangrove-snake", "smooth-coated-otter", "striped-blister-beetle", "house-centipede"
+    ],
+    "mexico": [
+        "resplendent-quetzal", "mantled-howler-monkey", "boa-constrictor", "green-sea-turtle",
+        "coati", "ocelot", "great-tailed-grackle", "red-tailed-hawk",
+        "black-crowned-night-heron", "great-horned-owl", "green-iguana", "white-nosed-coati",
+        "leafcutter-ant", "common-house-gecko", "cicada", "tarantula-hawk-wasp",
+        "mexican-beaded-lizard", "american-bullfrog", "jaguarundi", "house-fly",
+        "three-toed-sloth"
+    ],
+    "peru": [
+        "andean-condor", "squirrel-monkey", "poison-dart-frog", "giant-anteater",
+        "green-anaconda", "hoatzin", "blue-crowned-motmot", "harpy-eagle",
+        "mantled-howler-monkey", "green-iguana", "common-house-gecko", "north-american-river-otter",
+        "didelphis-marsupialis", "house-fly", "amazon-milk-frog", "jaguarundi",
+        "toco-toucan"
+    ],
+    "kenya": [
+        "elephant", "plains-zebra", "spotted-hyena", "white-headed-vulture",
+        "hippopotamus", "gerenuk", "lilac-breasted-roller", "african-fish-eagle",
+        "house-crow", "african-grey-hornbill", "african-harrier-hawk", "bushbuck",
+        "vervet-monkey", "rock-hyrax", "african-civet", "common-genet",
+        "african-wild-dog", "honey-badger", "egyptian-mongoose", "african-rock-python",
+        "green-mamba", "african-bullfrog", "american-cockroach", "house-fly",
+        "giant-african-millipede", "common-house-gecko", "house-centipede", "emperor-scorpion"
+    ],
+    "madagascar": [
+        "aye-aye", "fossa", "satanic-leaf-tailed-gecko", "madagascar-day-gecko",
+        "tomato-frog", "humpback-whale", "indri", "common-house-gecko",
+        "madagascar-ground-boa", "madagascar-pochard", "ploughshare-tortoise", "madagascar-hissing-cockroach",
+        "giant-african-millipede"
+    ],
+    "sri-lanka": [
+        "elephant", "leopard", "sloth-bear", "hawksbill-sea-turtle",
+        "reticulated-python", "atlas-moth", "common-myna", "house-crow",
+        "oriental-magpie-robin", "sri-lanka-frogmouth", "asian-common-toad", "common-house-gecko",
+        "tree-frog", "red-slender-loris", "asian-palm-civet"
+    ],
+    "ecuador": [
+        "andean-condor", "marine-iguana", "galapagos-tortoise", "humpback-whale",
+        "poison-dart-frog", "atlas-moth", "great-kiskadee", "tree-frog",
+        "green-iguana", "mantled-howler-monkey", "ocelot", "common-house-gecko",
+        "white-faced-capuchin", "house-fly", "emerald-toucanet", "emerald-tree-boa",
+        "amazon-milk-frog", "common-basilisk"
+    ],
+    "costa-rica": [
+        "resplendent-quetzal", "red-eyed-tree-frog", "mantled-howler-monkey", "white-faced-capuchin",
+        "eyelash-viper", "poison-dart-frog", "great-kiskadee", "keel-billed-toucan",
+        "emerald-toucanet", "great-curassow", "central-american-agouti", "spectacled-owl",
+        "white-nosed-coati", "green-iguana", "three-toed-sloth", "green-basilisk",
+        "pecari-tajacu", "spider-monkey", "leafcutter-ant", "common-house-gecko",
+        "ocelot", "tarantula-hawk-wasp", "turquoise-browed-motmot", "jaguarundi",
+        "house-fly", "brown-anole"
+    ],
+    "norway": [
+        "reindeer", "harbor-seal", "orca", "common-murre",
+        "arctic-tern", "musk-ox", "blue-tit", "common-blackbird",
+        "eurasian-magpie", "european-robin", "common-raven", "european-goldfinch",
+        "eurasian-jay", "common-buzzard", "red-squirrel", "red-fox",
+        "common-frog", "european-badger", "european-hedgehog", "pine-marten",
+        "western-honey-bee", "crane-fly", "mosquito", "common-house-spider",
+        "paper-wasp"
+    ],
+    "south-africa": [
+        "elephant", "giraffe", "white-rhinoceros", "secretary-bird",
+        "springbok", "ostrich", "helmeted-guineafowl", "african-harrier-hawk",
+        "leopard-tortoise", "common-house-gecko", "yellow-mongoose", "cape-ground-squirrel",
+        "african-bullfrog", "house-fly", "african-rock-python", "giant-african-millipede"
+    ],
+    "singapore": [
+        "otter", "clownfish", "dolphin", "cicada",
+        "seahorse", "reticulated-python", "javan-myna", "asian-glossy-starling",
+        "house-crow", "pied-fantail", "common-myna", "oriental-pied-hornbill",
+        "water-monitor", "long-tailed-macaque", "common-sun-skink", "asian-weaver-ant",
+        "smooth-coated-otter", "asian-common-toad", "common-house-gecko", "asian-palm-civet",
+        "american-cockroach", "small-bicolored-house-ant", "house-fly", "mosquito"
+    ],
+    "tanzania": [
+        "spotted-hyena", "cheetah", "secretary-bird", "white-headed-vulture",
+        "hippopotamus", "gerenuk", "lilac-breasted-roller", "helmeted-guineafowl",
+        "pied-crow", "african-fish-eagle", "secretarybird", "house-crow",
+        "vervet-monkey", "water-monitor", "leopard-tortoise", "african-rock-python",
+        "african-civet", "mohol-bushbaby", "house-fly", "honey-badger",
+        "common-house-gecko"
+    ],
+    "united-kingdom": [
+        "european-badger", "european-robin", "red-deer", "atlantic-puffin",
+        "common-raven", "harbor-seal", "common-blackbird", "eurasian-magpie",
+        "lycaenid-butterfly", "great-tit", "house-sparrow", "common-buzzard",
+        "eurasian-jay", "eastern-gray-squirrel", "damselfly", "seven-spotted-ladybird",
+        "common-frog", "asian-common-toad", "western-honey-bee", "common-house-spider"
+    ],
+    "spain": [
+        "red-deer", "greater-flamingo", "barn-owl", "loggerhead-sea-turtle",
+        "european-goldfinch", "octopus", "barn-swallow", "eurasian-magpie",
+        "red-fox", "common-buzzard", "common-swift", "european-bee-eater",
+        "eurasian-jay", "european-rabbit", "common-wall-lizard", "european-hedgehog",
+        "western-honey-bee", "asian-common-toad", "paper-wasp", "common-house-gecko",
+        "european-hornet", "iberian-lynx", "common-house-spider"
+    ],
+    "jamaica": [
+        "brown-pelican", "manatee", "crocodile", "octopus",
+        "hawksbill-sea-turtle", "cicada", "common-house-gecko", "american-crocodile",
+        "giant-water-bug", "tree-frog", "water-scorpion", "house-fly"
+    ],
+    "afghanistan": [
+        "bharal", "musk-deer", "red-fox", "alpine-ibex",
+        "peregrine-falcon", "leopard", "barn-swallow", "eurasian-magpie",
+        "house-mouse", "hoopoe", "common-swift", "russian-tortoise",
+        "european-nightjar", "steppe-eagle", "golden-jackal", "eurasian-eagle-owl",
+        "common-buzzard", "marco-polo-sheep", "pallass-cat", "striped-hyena",
+        "house-fly", "eurasian-lynx"
+    ],
+    "israel": [
+        "great-egret", "little-egret", "loggerhead-sea-turtle", "octopus",
+        "european-roller", "barn-owl", "house-sparrow", "golden-jackal",
+        "common-buzzard", "european-goldfinch", "common-swift", "european-robin",
+        "european-bee-eater", "little-owl", "egyptian-mongoose", "striped-hyena",
+        "european-badger", "common-house-gecko", "house-mouse", "australian-green-tree-frog",
+        "house-centipede", "house-fly", "desert-locust", "armadillidium-vulgare",
+        "european-hedgehog", "silverfish", "european-hornet"
+    ],
+    "colombia": [
+        "toco-toucan", "glass-frog", "three-toed-sloth", "harpy-eagle",
+        "giant-anteater", "kinkajou", "great-kiskadee", "central-american-agouti",
+        "didelphis-marsupialis", "spectacled-bear", "ocelot", "tayra",
+        "spectacled-owl", "common-basilisk", "common-house-gecko", "boa-constrictor",
+        "house-fly", "white-faced-capuchin", "emerald-toucanet", "green-anole",
+        "tree-frog"
+    ],
+    "iceland": [
+        "common-murre", "northern-fulmar", "orca", "walrus",
+        "snowy-owl", "reindeer", "whooper-swan", "common-raven",
+        "european-starling", "snow-bunting", "harlequin-duck", "european-robin",
+        "arctic-fox", "bumblebee", "house-sparrow", "house-mouse",
+        "field-cricket", "western-honey-bee", "common-minke-whale", "common-house-spider",
+        "green-lacewing", "jumping-spider", "house-fly", "snail",
+        "red-fox", "mountain-hare"
+    ],
+    "dubai": [
+        "addax", "caracal", "hawksbill-sea-turtle", "seahorse",
+        "great-egret", "clownfish", "house-sparrow", "eurasian-collared-dove",
+        "common-myna", "house-crow", "greater-flamingo", "arabian-oryx",
+        "desert-horned-viper", "arabian-sand-boa", "red-fox", "damselfly",
+        "common-house-gecko", "desert-hedgehog", "desert-locust", "american-cockroach",
+        "house-fly", "silverfish"
+    ],
+    "russia": [
+        "wolverine", "polar-bear", "beluga-whale", "walrus",
+        "moose", "arctic-tern", "european-starling", "european-goldfinch",
+        "european-robin", "common-blackbird", "eurasian-jay", "common-buzzard",
+        "red-squirrel", "common-frog", "western-honey-bee", "damselfly",
+        "brown-bear", "northern-hawk-owl", "roe-deer", "european-badger",
+        "mosquito", "pine-marten", "paper-wasp", "european-hedgehog",
+        "eurasian-lynx", "field-cricket", "tree-frog", "crane-fly",
+        "siberian-musk-deer", "common-house-spider"
+    ],
+    "pakistan": [
+        "bharal", "musk-deer", "golden-eagle", "common-kingfisher",
+        "leopard", "indian-star-tortoise", "common-myna", "house-crow",
+        "rock-pigeon", "oriental-magpie-robin", "eurasian-tree-sparrow", "common-house-gecko",
+        "house-fly", "asian-common-toad", "smooth-coated-otter"
+    ],
+    "bali": ["common-sun-skink", "tree-frog", "orb-weaver-spider", "asian-weaver-ant", "common-myna", "house-crow"],
 };
 
 function formatLocationAnimalName(speciesSlug: string) {
@@ -278,34 +865,304 @@ const locationPagesData: LocationPage[] = [
         ],
         animalsToSpot: [
             {
+                speciesSlug: "bali-myna",
+                whyItFits: "Bali's only endemic bird and the island's conservation emblem, brought back from a handful of wild birds in West Bali National Park.",
+                rarityHint: "Genuinely rare in the wild — realistic in the park's release areas, near-certain at Bali Bird Park."
+            },
+            {
+                speciesSlug: "oriental-pied-hornbill",
+                whyItFits: "A heavy-billed fig specialist that gives away its position with wingbeats you can hear before you see the bird.",
+                rarityHint: "Uncommon and patchy in the western forest."
+            },
+            {
+                speciesSlug: "crested-serpent-eagle",
+                whyItFits: "Soars over the western forest edge with a whistling call that carries for a kilometre.",
+                rarityHint: "Regular overhead in West Bali National Park."
+            },
+            {
+                speciesSlug: "reticulated-python",
+                whyItFits: "The island's largest snake, most often found near water and village edges rather than deep forest.",
+                rarityHint: "Rare to see and best left entirely alone."
+            },
+            {
+                speciesSlug: "water-monitor",
+                whyItFits: "A big, confident lizard that patrols mangrove edges, river mouths and rubbish-bin fringes.",
+                rarityHint: "Reliable around West Bali waterways and mangroves."
+            },
+            {
+                speciesSlug: "wild-boar",
+                whyItFits: "Rootles through the dry western forest and leaves obvious churned ground on trail edges.",
+                rarityHint: "Common but shy — signs are easier to find than the animal."
+            },
+            {
+                speciesSlug: "black-giant-squirrel",
+                whyItFits: "A huge, dark canopy squirrel that crashes between branches high above the trail.",
+                rarityHint: "Uncommon and canopy-bound; listen before you look."
+            },
+            {
+                speciesSlug: "asian-palm-civet",
+                whyItFits: "The nocturnal fruit-eater behind kopi luwak, most often seen crossing a road at night.",
+                rarityHint: "Nocturnal; realistic on evening drives, common in cages you should avoid."
+            },
+            {
+                speciesSlug: "javan-pond-heron",
+                whyItFits: "Stands motionless at the edge of paddies and brackish pools, then transforms in flight.",
+                rarityHint: "Common in wet habitat across the island."
+            },
+            {
+                speciesSlug: "atlas-moth",
+                whyItFits: "One of the largest moths on earth, drawn to lights near forest edges after dark.",
+                rarityHint: "Seasonal and always memorable."
+            },
+            {
+                speciesSlug: "spinner-dolphin",
+                whyItFits: "The species behind Lovina's dawn boat trips, named for the corkscrew leaps it makes clear of the water.",
+                rarityHint: "Frequent at dawn off the north coast."
+            },
+            {
+                speciesSlug: "white-bellied-sea-eagle",
+                whyItFits: "Hunts the shoreline on stiff, upswept wings and takes fish straight off the surface.",
+                rarityHint: "Regular along the north and west coasts."
+            },
+            {
                 speciesSlug: "barn-swallow",
-                whyItFits: "One of the simplest practical additions around open areas, roadsides, and everyday human-edge movement.",
+                whyItFits: "Hawks insects low over roads, paddies and open ground all day, everywhere on the island.",
                 rarityHint: "Very accessible confidence-builder."
             },
             {
+                speciesSlug: "little-egret",
+                whyItFits: "A small white heron working shallow water with quick, deliberate steps.",
+                rarityHint: "Common on coasts and in paddies."
+            },
+            {
+                speciesSlug: "jellyfish",
+                whyItFits: "Seasonal swarms drift along the north coast and are easiest to see from a boat.",
+                rarityHint: "Seasonal and weather-driven."
+            },
+            {
+                speciesSlug: "hermit-crab",
+                whyItFits: "Scours the strandline after dark, dragging a borrowed shell across the sand.",
+                rarityHint: "Very common on quiet beaches at night."
+            },
+            {
+                speciesSlug: "long-tailed-macaque",
+                whyItFits: "Bali's most-encountered mammal by far, resident at Ubud's Monkey Forest, Uluwatu and Sangeh.",
+                rarityHint: "Guaranteed at temple sites — secure your sunglasses, phone and food."
+            },
+            {
                 speciesSlug: "common-kingfisher",
-                whyItFits: "A strong target near waterways, rice-field edges, and calmer wet habitat where patient scanning pays off.",
+                whyItFits: "A blue spark over irrigation channels and rice-field edges, best worked at first light.",
                 rarityHint: "Realistic with early-morning patience."
             },
             {
+                speciesSlug: "cattle-egret",
+                whyItFits: "Follows livestock and ploughs through the paddies, picking off what the hooves disturb.",
+                rarityHint: "Abundant across farmland."
+            },
+            {
+                speciesSlug: "great-egret",
+                whyItFits: "The tallest of Bali's white herons, hunting the deeper paddy channels alone.",
+                rarityHint: "Common in wet habitat."
+            },
+            {
+                speciesSlug: "javan-myna",
+                whyItFits: "The loud, sociable myna that owns Bali's car parks, wires and warung roofs.",
+                rarityHint: "Abundant anywhere people are."
+            },
+            {
+                speciesSlug: "zebra-dove",
+                whyItFits: "Kept in hanging cages across Bali for its song, and just as common wild on the ground.",
+                rarityHint: "Abundant and approachable."
+            },
+            {
+                speciesSlug: "spotted-dove",
+                whyItFits: "Feeds along quiet lanes and garden edges, flushing with a clatter of wings.",
+                rarityHint: "Abundant island-wide."
+            },
+            {
+                speciesSlug: "house-sparrow",
+                whyItFits: "The default small brown bird of markets, warungs and hotel courtyards.",
+                rarityHint: "Everywhere people eat."
+            },
+            {
+                speciesSlug: "barn-owl",
+                whyItFits: "Hunts rodents over the paddies at night and roosts in temple and barn roofs by day.",
+                rarityHint: "Nocturnal; watch open fields at dusk."
+            },
+            {
+                speciesSlug: "large-flying-fox",
+                whyItFits: "A metre-wide fruit bat that streams out at dusk in long, unhurried lines.",
+                rarityHint: "Spectacular at dusk near roost trees."
+            },
+            {
+                speciesSlug: "tokay-gecko",
+                whyItFits: "Announces itself with a barking 'to-kay' from walls and roofs after dark.",
+                rarityHint: "Heard far more often than seen."
+            },
+            {
+                speciesSlug: "common-house-gecko",
+                whyItFits: "The small pale gecko that patrols every villa ceiling and lamp for insects.",
+                rarityHint: "Guaranteed in any room with a light on."
+            },
+            {
+                speciesSlug: "asian-common-toad",
+                whyItFits: "An introduced toad that gathers under lights and around drains after rain.",
+                rarityHint: "Very common after dark, especially in the wet season."
+            },
+            {
+                speciesSlug: "dragonfly",
+                whyItFits: "Hunts in fast circuits over flooded paddies and irrigation channels through the heat of the day.",
+                rarityHint: "Abundant around water."
+            },
+            {
+                speciesSlug: "firefly",
+                whyItFits: "Still flickers along unlit paddy edges and river valleys where the light pollution stops.",
+                rarityHint: "Seasonal and needs genuine darkness."
+            },
+            {
                 speciesSlug: "cicada",
-                whyItFits: "Useful for travelers who want to notice Bali's smaller sound-rich life instead of focusing only on large visible animals.",
-                rarityHint: "Often heard before clearly seen."
+                whyItFits: "Fills the forest with a wall of sound at dusk that you feel as much as hear.",
+                rarityHint: "Heard constantly; found by tracing the sound to a trunk."
+            },
+            {
+                speciesSlug: "honey-bee",
+                whyItFits: "Works temple offerings, flowering trees and hive boxes throughout the highlands.",
+                rarityHint: "Very accessible near flowering plants."
+            },
+            {
+                speciesSlug: "mosquito",
+                whyItFits: "Bali's most unavoidable animal, and a genuine dengue vector worth taking seriously.",
+                rarityHint: "Guaranteed — dawn and dusk near standing water."
+            },
+            {
+                speciesSlug: "house-fly",
+                whyItFits: "The other guaranteed capture: warungs, markets and anywhere food is prepared.",
+                rarityHint: "Guaranteed, and a reminder that tier E still counts."
+            },
+            {
+                speciesSlug: "termite",
+                whyItFits: "Builds covered mud galleries up trees and posts, visible long after the colony moves on.",
+                rarityHint: "Common; the workings are easier to photograph than the insects."
+            },
+            {
+                speciesSlug: "praying-mantis",
+                whyItFits: "Waits motionless on garden foliage, betrayed only by the slow swivel of its head.",
+                rarityHint: "Uncommon and rewards slow searching."
+            },
+            {
+                speciesSlug: "rhinoceros-beetle",
+                whyItFits: "A horned, armoured beetle that turns up at lights and on palm trunks.",
+                rarityHint: "Seasonal and often found at night lights."
+            },
+            {
+                speciesSlug: "giant-african-land-snail",
+                whyItFits: "An introduced snail the size of a fist, out in numbers after every downpour.",
+                rarityHint: "Very common after rain."
+            },
+            {
+                speciesSlug: "millipede",
+                whyItFits: "Curls into a tight spiral when disturbed on damp forest paths.",
+                rarityHint: "Common in leaf litter after rain."
+            },
+            {
+                speciesSlug: "centipede",
+                whyItFits: "A fast, venomous hunter under logs and stones — photograph it, do not handle it.",
+                rarityHint: "Uncommon and best treated with respect."
             },
             {
                 speciesSlug: "clownfish",
-                whyItFits: "A practical marine species for snorkeling and shallow reef tourism, especially when the trip already includes water time.",
-                rarityHint: "Good marine win in the right reef setting."
+                whyItFits: "Guards its anemone on almost every shallow reef on the east coast.",
+                rarityHint: "Near-guaranteed on any reef snorkel."
+            },
+            {
+                speciesSlug: "octopus",
+                whyItFits: "Changes colour and texture in seconds over the rubble slopes off Tulamben.",
+                rarityHint: "Uncommon and a genuine highlight when it happens."
+            },
+            {
+                speciesSlug: "cuttlefish",
+                whyItFits: "Hovers over sand flats, hunting with a hypnotic strobe of colour down its body.",
+                rarityHint: "Realistic on east-coast dives."
+            },
+            {
+                speciesSlug: "lionfish",
+                whyItFits: "Drifts over the wreck with fins spread — beautiful, venomous, and no reason to get closer.",
+                rarityHint: "Common on the Tulamben wreck."
+            },
+            {
+                speciesSlug: "mantis-shrimp",
+                whyItFits: "Punches prey apart from a burrow with one of the fastest strikes in the animal kingdom.",
+                rarityHint: "Uncommon; watch sandy burrows on muck dives."
+            },
+            {
+                speciesSlug: "pygmy-seahorse",
+                whyItFits: "Smaller than a fingernail and camouflaged to match the sea fan it lives on.",
+                rarityHint: "A specialist find — usually needs a guide who knows the fan."
+            },
+            {
+                speciesSlug: "moray-eel",
+                whyItFits: "Holds station in a crevice with its mouth working water over its gills.",
+                rarityHint: "Common on the east-coast reefs."
+            },
+            {
+                speciesSlug: "warty-frogfish",
+                whyItFits: "Sits perfectly still on the black sand, indistinguishable from a sponge until it moves.",
+                rarityHint: "Tulamben muck diving at its best; hard to spot unaided."
+            },
+            {
+                speciesSlug: "pufferfish",
+                whyItFits: "Hangs over the reef unbothered, relying on toxin rather than speed.",
+                rarityHint: "Common and easy to approach — which is the point of its defence."
+            },
+            {
+                speciesSlug: "giant-trevally",
+                whyItFits: "Hunts the drop-off in fast silver packs that scatter reef fish ahead of them.",
+                rarityHint: "Regular on current-swept sites."
+            },
+            {
+                speciesSlug: "blacktip-reef-shark",
+                whyItFits: "Patrols the shallow reef flat with its dorsal fin often clear of the water.",
+                rarityHint: "Realistic on quiet reefs, harmless to swimmers."
+            },
+            {
+                speciesSlug: "manta-ray",
+                whyItFits: "Bali's headline marine encounter, and the reason most divers cross to Nusa Penida.",
+                rarityHint: "Seasonal but dependable at known cleaning stations."
+            },
+            {
+                speciesSlug: "ocean-sunfish",
+                whyItFits: "The mola that rises from deep, cold water off Nusa Penida between July and October.",
+                rarityHint: "Strictly seasonal, cold water, and worth planning a trip around."
             },
             {
                 speciesSlug: "green-sea-turtle",
-                whyItFits: "A stronger excitement species for coastal and marine days when you want a real wildlife highlight without forcing a long expedition.",
-                rarityHint: "Better with guided reef or coastal sessions."
+                whyItFits: "Grazes seagrass in the shallows and surfaces to breathe within sight of the boat.",
+                rarityHint: "Common around Nusa Penida and Lembongan."
             },
             {
-                speciesSlug: "bali-myna",
-                whyItFits: "The island's most emotionally resonant bird target, best treated as a meaningful specialist sighting rather than an automatic checkmark.",
-                rarityHint: "High-value conservation-linked target."
+                speciesSlug: "hawksbill-sea-turtle",
+                whyItFits: "Works the reef itself, using its narrow beak to pull sponges out of crevices.",
+                rarityHint: "Less common than the green turtle but regularly seen."
+            },
+            {
+                speciesSlug: "olive-ridley-sea-turtle",
+                whyItFits: "Nests on Bali's south and west beaches, where hatchery releases run through the season.",
+                rarityHint: "Seasonal; hatchling releases are the realistic encounter."
+            },
+            {
+                speciesSlug: "sea-cucumber",
+                whyItFits: "Processes sand on the seabed and is a quiet indicator of a reef being left alone.",
+                rarityHint: "Common on undisturbed sand flats."
+            },
+            {
+                speciesSlug: "jumping-spider",
+                whyItFits: "Turns to track you as you approach, which makes it the most engaging spider to photograph.",
+                rarityHint: "Common on walls and foliage."
+            },
+            {
+                speciesSlug: "orchid-mantis",
+                whyItFits: "A pink-and-white ambush predator shaped like the flower it hunts on.",
+                rarityHint: "Rare and a genuine prize find."
             }
         ],
         bestFor: [

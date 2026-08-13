@@ -103,10 +103,13 @@ type PowerSetRow = {
 type IdentityRow = {
     user_id: string;
     origin_display_name: string | null;
+    origin_species_profile_id?: string | null;
     origin_normalized_identity_key?: string | null;
     apex_display_name: string | null;
+    apex_species_profile_id?: string | null;
     apex_normalized_identity_key?: string | null;
     active_display_name: string | null;
+    active_species_profile_id?: string | null;
     active_normalized_identity_key?: string | null;
     public_summary?: {headline?: string | null; summary?: string | null} | null;
     show_origin_publicly?: boolean | null;
@@ -446,10 +449,18 @@ function toIdentityRole(
     label: string,
     name: string | null | undefined,
     identityKey: string | null | undefined,
+    speciesProfileId: string | null | undefined,
     hidden: boolean,
-    speciesByIdentity: Map<string, string>
+    speciesByIdentity: Map<string, string>,
+    speciesByProfileId: Map<string, string>
 ): PublicIdentityRole {
-    const slug = identityKey ? speciesByIdentity.get(toSpeciesSlug(identityKey) ?? "") ?? null : null;
+    const fromProfileId = speciesProfileId?.trim()
+        ? speciesByProfileId.get(speciesProfileId.trim()) ?? null
+        : null;
+    const fromIdentityKey = identityKey
+        ? speciesByIdentity.get(toSpeciesSlug(identityKey) ?? "") ?? null
+        : null;
+    const slug = fromProfileId ?? fromIdentityKey;
 
     return {
         label,
@@ -459,7 +470,11 @@ function toIdentityRole(
     };
 }
 
-function toWildIdentity(row: IdentityRow | undefined, speciesByIdentity: Map<string, string>): PublicWildIdentity | null {
+function toWildIdentity(
+    row: IdentityRow | undefined,
+    speciesByIdentity: Map<string, string>,
+    speciesByProfileId: Map<string, string>
+): PublicWildIdentity | null {
     if (!row) return null;
 
     return {
@@ -469,22 +484,28 @@ function toWildIdentity(row: IdentityRow | undefined, speciesByIdentity: Map<str
             "Origin",
             row.origin_display_name,
             row.origin_normalized_identity_key,
+            row.origin_species_profile_id,
             row.show_origin_publicly === false,
-            speciesByIdentity
+            speciesByIdentity,
+            speciesByProfileId
         ),
         apex: toIdentityRole(
             "Apex",
             row.apex_display_name,
             row.apex_normalized_identity_key,
+            row.apex_species_profile_id,
             row.show_apex_publicly === false,
-            speciesByIdentity
+            speciesByIdentity,
+            speciesByProfileId
         ),
         active: toIdentityRole(
             "Active",
             row.active_display_name,
             row.active_normalized_identity_key,
+            row.active_species_profile_id,
             row.show_active_publicly === false,
-            speciesByIdentity
+            speciesByIdentity,
+            speciesByProfileId
         )
     };
 }
@@ -575,7 +596,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         limit: "16"
     });
     const identityParams = new URLSearchParams({
-        select: "user_id,origin_display_name,origin_normalized_identity_key,apex_display_name,apex_normalized_identity_key,active_display_name,active_normalized_identity_key,public_summary,show_origin_publicly,show_apex_publicly,show_active_publicly",
+        select: "user_id,origin_display_name,origin_species_profile_id,apex_display_name,apex_species_profile_id,active_display_name,active_species_profile_id,public_summary,show_origin_publicly,show_apex_publicly,show_active_publicly",
         user_id: `eq.${profile.id}`,
         limit: "1"
     });
@@ -599,10 +620,14 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     ]);
 
     const speciesByIdentity = new Map<string, string>();
+    const speciesByProfileId = new Map<string, string>();
     for (const entry of speciesEntries) {
         speciesByIdentity.set(entry.slug, entry.slug);
         if (entry.normalizedIdentityKey) {
             speciesByIdentity.set(toSpeciesSlug(entry.normalizedIdentityKey) ?? entry.slug, entry.slug);
+        }
+        if (entry.speciesProfileId) {
+            speciesByProfileId.set(entry.speciesProfileId, entry.slug);
         }
     }
 
@@ -722,7 +747,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             rewardPoints: Number(row.reward_points ?? 0),
             completedAt: row.completed_at
         })),
-        wildIdentity: toWildIdentity(identityRows[0], speciesByIdentity),
+        wildIdentity: toWildIdentity(identityRows[0], speciesByIdentity, speciesByProfileId),
         insights: buildInsights(allCaptures, summary?.best_find_id?.trim() ?? null),
         locationVisits,
         topCaptures,

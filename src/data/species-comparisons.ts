@@ -18,7 +18,8 @@ import {
 } from "@/lib/supabase-http";
 
 const CHALLENGE_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
-const COMPARISON_TYPES: ChallengeComparisonType[] = [
+/** Every mode the generator accepts — the static library only covers a subset. */
+export const SPECIES_COMPARISON_TYPES: ChallengeComparisonType[] = [
     "battle",
     "speed",
     "strength",
@@ -263,7 +264,7 @@ export function parseComparisonSlug(slug: string): {
     const normalized = slug.trim().toLowerCase();
     if (!normalized.includes("-vs-")) return null;
 
-    for (const type of COMPARISON_TYPES) {
+    for (const type of SPECIES_COMPARISON_TYPES) {
         if (type === "battle") continue;
         const suffix = `-${type}`;
         if (normalized.endsWith(suffix)) {
@@ -279,6 +280,12 @@ export function parseComparisonSlug(slug: string): {
     return {animalASlug, animalBSlug, comparisonType: "battle"};
 }
 
+export const SPECIES_COMPARISON_CACHE_TAG = "species-comparisons";
+
+export function speciesComparisonSlugCacheTag(slug: string) {
+    return `species-comparison:${slug.trim().toLowerCase()}`;
+}
+
 export async function fetchSpeciesComparisonBySlug(slug: string): Promise<ChallengeEntry | null> {
     const config = getReadConfig();
     if (!config) return null;
@@ -291,7 +298,7 @@ export async function fetchSpeciesComparisonBySlug(slug: string): Promise<Challe
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 300}
+        next: {revalidate: 300, tags: [SPECIES_COMPARISON_CACHE_TAG, speciesComparisonSlugCacheTag(slug)]}
     });
     if (!response.ok) return null;
     const rows = (await response.json()) as SpeciesComparisonRow[];
@@ -353,7 +360,7 @@ export async function fetchSpeciesComparisonSummaries(limit = 12): Promise<Speci
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180}
+        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -372,7 +379,7 @@ export async function fetchRecentSpeciesComparisons(limit = 24): Promise<Challen
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180}
+        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -399,7 +406,7 @@ export async function fetchAllSpeciesComparisons(): Promise<ChallengeEntry[]> {
 
         const response = await fetch(url, {
             headers: getSupabaseHeaders(config.key),
-            next: {revalidate: 180}
+            next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
         });
         if (!response.ok) break;
 
@@ -434,7 +441,7 @@ export async function fetchSpeciesComparisonsForAnimal(
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180}
+        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -476,6 +483,20 @@ export async function getOrGenerateSpeciesComparison(params: {
     if (!response.ok) return null;
     const payload = (await response.json()) as {comparison?: SpeciesComparisonRow};
     return payload.comparison ? mapSpeciesComparisonRowToChallengeEntry(payload.comparison) : null;
+}
+
+export function isGeneratedComparisonHeroImage(src: string | null | undefined) {
+    return isGeneratedVsFeaturedImage(src);
+}
+
+/**
+ * Render-path resolution: static editorial first, then a ready DB row. Never
+ * triggers AI generation, so the page responds fast and Googlebot is never held
+ * open for a 60s+ OpenAI round trip. Generation is driven from the client via
+ * `/api/comparisons/generate` instead.
+ */
+export async function resolveReadyChallengeEntry(slug: string): Promise<ChallengeEntry | null> {
+    return getStaticChallenge(slug) ?? (await fetchSpeciesComparisonBySlug(slug));
 }
 
 /**

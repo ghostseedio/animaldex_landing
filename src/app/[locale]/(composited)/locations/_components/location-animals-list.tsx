@@ -1,5 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
+import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
+import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 
 type LocationAnimalsListProps = {
     title: string;
@@ -13,6 +15,7 @@ type LocationAnimalsListProps = {
         rarityStatus: string;
         whyItFits: string;
         rarityHint?: string;
+        tier?: string;
     }>;
 };
 
@@ -52,10 +55,20 @@ export default function LocationAnimalsList({
                                     {item.rarityStatus}
                                 </span>
                             </div>
-                            <h3 className="break-words font-display text-2xl font-bold leading-tight text-white">
+                            <h3 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 break-words font-display text-2xl font-bold leading-tight text-white">
+                                <img
+                                    src={getSpeciesArtworkUrl(item.speciesSlug)}
+                                    alt=""
+                                    width={28}
+                                    height={28}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-8 w-8 shrink-0 rounded-full bg-surface-800 object-contain ring-1 ring-white/15"
+                                />
                                 <Link href={`/animals/${item.speciesSlug}`} className="hover:text-primary-100 transition-colors">
                                     {item.speciesName}
                                 </Link>
+                                {item.tier ? <TierBadge tier={item.tier} size="sm" /> : null}
                             </h3>
                             <p className="text-sm leading-6 text-ink-200 md:text-base">{item.whyItFits}</p>
                             {item.rarityHint ? (

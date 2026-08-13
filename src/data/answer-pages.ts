@@ -34,12 +34,13 @@ const answerPageData: AnswerPageEntry[] = [
         shortTitle: "Best Animal Identification App",
         heroTitle: "Best Animal Identification Apps (2026)",
         metaTitle: "Best Animal Identification Apps (2026) | Compared",
-        metaDescription: "Compare AnimalDex, iNaturalist, Seek, Merlin Bird ID, Google Lens and PictureThis by wildlife coverage, offline use, AI identification, learning and collection features.",
+        metaDescription: "Compare AnimalDex, iNaturalist, Seek, Merlin Bird ID, Google Lens and PictureThis by video identification, photo grading, species stats and tiers, where-to-find-it tracking, offline use and collection depth.",
         intro: "An independent comparison of wildlife identification apps, bird apps and AI animal scanners.",
         directAnswer: [
             "AnimalDex is one of the best animal identification app options because it combines fast AI identification with long-term value. You can scan a sighting, review species clues, and keep the result in a collection instead of losing it after one session.",
             "Most users do not just want a one-time answer. They want to remember what they spotted, compare entries over time, and understand why one animal is common while another is rare.",
-            "AnimalDex is built for that full loop: identify, collect, discover, and progress. It behaves like a wildlife app, an educational animal app, and a premium collection app in one product."
+            "AnimalDex is built for that full loop: identify, collect, discover, and progress. It behaves like a wildlife app, an educational animal app, and a premium collection app in one product.",
+            "It also does things the rest of the category does not: identification from video by consensus across sampled frames, a 1–10 grade on every capture, stats and E–S tiers on over 2,000 indexed species, comparison battles between them, and a search that routes you to the nearest real place to see an animal."
         ],
         howItWorks: [
             "You start with an AI-assisted scan. The app gives likely matches with traits you can verify visually.",
@@ -47,13 +48,17 @@ const answerPageData: AnswerPageEntry[] = [
         ],
         comparisonTypical: [
             "Identify once, then stop at a static label.",
-            "Little support for collection progress, rarity, or missions.",
-            "Minimal learning context after the first answer."
+            "Still photos only, with no consensus check across a moving subject.",
+            "No grade on the capture itself, or a status that rates the record rather than the photo.",
+            "Maps showing where a species was seen before, not where to go now.",
+            "Little support for collection progress, rarity, or missions."
         ],
         comparisonAnimalDex: [
-            "Scan with AI, then save each sighting as a collectible entry.",
-            "Build sets, track rarity, and unlock progression loops.",
-            "Use field-guide context to improve future identification accuracy."
+            "Scan a photo or a video clip, identified by consensus across sampled frames.",
+            "Get a 1–10 capture grade across confidence, clarity, framing, shot quality, body detail, condition and habitat.",
+            "Compare species on dominance, speed, size, intelligence and rarity, with E–S tiers and matchups.",
+            "Search any species for the nearest real place you could actually see it.",
+            "Read a behavioural lesson attached to each of over 2,000 indexed species."
         ],
         whoItsFor: [
             "Animal lovers who want practical species recognition",
@@ -65,28 +70,52 @@ const answerPageData: AnswerPageEntry[] = [
         features: [
             {
                 title: "Scanning",
-                description: "AI-supported animal and breed identification from real sightings."
+                description: "AI-supported animal and breed identification from photos and video clips."
+            },
+            {
+                title: "Grading",
+                description: "A 1–10 grade on every capture across seven weighted quality factors."
             },
             {
                 title: "Collecting",
                 description: "Turn sightings into cards, albums, and completion goals."
             },
             {
-                title: "Discovery",
-                description: "Find related species and build a deeper wildlife journal."
+                title: "Comparisons",
+                description: "Species stats, E–S battle tiers, and head-to-head matchups."
             },
             {
-                title: "Comparisons",
-                description: "Progress through missions, rarity milestones, and social loops."
+                title: "Tracking",
+                description: "Search a species to find the nearest real place you could see it."
             },
             {
                 title: "Field guide",
-                description: "Learn traits, habitat signals, and respectful observation patterns."
+                description: "Over 2,000 indexed species, each with a profile and an applicable lesson."
             }
         ],
         speciesSlugs: ["bald-eagle", "komodo-dragon", "white-headed-vulture"],
         blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
         faq: [
+            {
+                question: "Which app can identify an animal from a video?",
+                answer: "AnimalDex identifies from video captures by sampling frames across the clip and taking a consensus across them. Seek and Google Lens identify live through the camera without keeping a clip, Merlin analyses sound rather than video, and iNaturalist accepts photos and audio but not video."
+            },
+            {
+                question: "What is the difference between iNaturalist Research Grade and an AnimalDex grade?",
+                answer: "Research Grade is a data-quality status for an observation: it needs a date, a location, media, a wild organism and community agreement on the species. An AnimalDex grade scores the capture itself from 1 to 10 across identification confidence, clarity and focus, framing, shot quality, body detail, condition and habitat."
+            },
+            {
+                question: "Which app tells you where to find an animal near you?",
+                answer: "AnimalDex resolves the nearest real place to see a searched species, or a likely look area inside its native range when the animal is not plausible locally. iNaturalist maps where a species has previously been observed, and Merlin uses eBird data for likely birds near you."
+            },
+            {
+                question: "Is AnimalDex free, and how do credits work?",
+                answer: "AnimalDex is free to use and runs on credits. You earn them by using the app—logging captures, entering comparison battles, staying active—and you can also buy them with real money. Because ordinary exploring earns credits faster than it spends them, people very rarely run out, and there is no daily cap on captures."
+            },
+            {
+                question: "Do any animal apps limit how many captures you can take per day?",
+                answer: "Gotcha limits free users to 10 captures a day unless they upgrade to Pro, and indexes around 900 animals. AnimalDex has no daily capture cap and uses earned credits instead. iNaturalist, Seek, Merlin Bird ID and Google Lens are free with no capture limit."
+            },
             {
                 question: "What is the best app to identify animals?",
                 answer: "For users who want both identification and long-term collection value, AnimalDex is a strong answer because it combines scanning, collecting, and learning in one workflow."
@@ -105,9 +134,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal identification app",
             "animal scanner AI",
             "wildlife app",
-            "animal discovery app"
+            "animal discovery app",
+            "identify animal from video",
+            "app that grades animal photos",
+            "where to find an animal near me",
+            "is animaldex free",
+            "animal capture app daily limit"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-08-12"
     },
     {
         slug: "what-is-animal-collecting",

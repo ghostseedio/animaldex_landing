@@ -16,6 +16,9 @@ import {localeConfig} from "@/i18n";
 import SpeciesDirectory from "./species-directory";
 import SpeciesImage from "./species-image";
 import AnimalsSearch, {type AnimalsSearchSuggestion} from "./animals-search";
+import UniversalSearchField from "@/app/[locale]/(composited)/animals/_components/universal-search-field";
+import {fetchTrendingSearches} from "@/data/universal-search";
+import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
@@ -260,6 +263,8 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
     const tierParam = getSingleParam(searchParams?.tier)?.toUpperCase();
     const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
+    const ts = await getScopedTranslator(locale, "animalSearch");
+    const trendingSearches = await fetchTrendingSearches(8).catch(() => []);
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
@@ -301,15 +306,32 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                     <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl">{t("title")}</h1>
                     <p className="sr-only">{t("description")} {t("heroSupporting")}</p>
                 </div>
-                <AnimalsSearch
-                    action={`${getLocalePath(locale, "/animals")}#all-animals`}
+                <UniversalSearchField
+                    basePath={getLocalePath(locale, "/animals")}
+                    locale={locale}
                     initialQuery={query}
-                    suggestions={unifiedSpeciesEntries.map(toSearchSuggestion)}
-                    searchTitle={t("searchTitle")}
-                    searchPlaceholder={t("searchPlaceholder")}
-                    searchButton={t("searchButton")}
-                    searchingLabel={t("searchingLabel")}
-                    suggestionHint={t("searchSuggestionHint")}
+                    directoryFilterPath={getLocalePath(locale, "/animals")}
+                    catalogEntries={unifiedSpeciesEntries.slice(0, 400).map((entry) => ({
+                        slug: entry.slug,
+                        name: entry.name,
+                        animalDexNumber: getAnimalDexNumberFromEntry(entry)
+                    }))}
+                    trending={trendingSearches.map((item) => ({query: item.query, isPopular: item.isPopular}))}
+                    copy={{
+                        placeholder: ts("placeholder"),
+                        searchLabel: ts("searchLabel"),
+                        clearLabel: ts("clearLabel"),
+                        voiceLabel: ts("voiceLabel"),
+                        voiceListening: ts("voiceListening"),
+                        recentTitle: ts("recentTitle"),
+                        clearAll: ts("clearAll"),
+                        seeMore: ts("seeMore"),
+                        trendingTitle: ts("trendingTitle"),
+                        popularBadge: ts("popularBadge"),
+                        suggestionsTitle: ts("suggestionsTitle"),
+                        submit: ts("submit"),
+                        filterDirectory: ts("filterDirectory")
+                    }}
                 />
                 <div className="flex flex-wrap items-center gap-1.5">
                     {catalogQuickLinks.map((item) => {
