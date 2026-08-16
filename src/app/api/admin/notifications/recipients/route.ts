@@ -4,6 +4,8 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 type Row = Record<string, unknown>;
 
+const USER_PAGE_SIZE = 100;
+
 function config() {
     const url = getSupabaseUrl();
     const key = getSupabaseServiceKey();
@@ -28,12 +30,16 @@ async function rows(table: string, query: string): Promise<Row[]> {
 }
 
 /**
- * Who a push would actually reach.
+ * Who a message reaches.
  *
- * Reach is device tokens, not accounts: a user with notifications switched off
- * has no row in user_push_tokens and cannot be messaged at all. Showing account
- * totals here would overstate the audience, so both numbers are returned and
- * the UI leads with devices.
+ * Delivery is the in-app notification row, which every recipient gets, so the
+ * picker lists every account. A device token only buys a push banner on top of
+ * that: a user with notifications switched off has no row in user_push_tokens
+ * and can still be messaged, they just will not see a banner. Device count
+ * therefore rides along as a per-user attribute, and zero is a normal state.
+ *
+ * Both totals are returned because they answer different questions: how many
+ * people will find this in their list, and how many will be interrupted by it.
  */
 export async function GET(request: NextRequest) {
     if (!await isSupportAdminRequestAuthorized(request)) {
@@ -56,26 +62,21 @@ export async function GET(request: NextRequest) {
             devicesByUser.set(id, (devicesByUser.get(id) ?? 0) + 1);
         });
 
-        const nameById = new Map<string, {username: string | null; displayName: string | null}>();
-        profiles.forEach((profile) => {
-            nameById.set(String(profile.id ?? ""), {
-                username: (profile.username as string | null) ?? null,
-                displayName: (profile.display_name as string | null) ?? null
-            });
-        });
-
-        const reachable = Array.from(devicesByUser.entries())
-            .map(([id, devices]) => ({
-                id,
-                devices,
-                username: nameById.get(id)?.username ?? null,
-                displayName: nameById.get(id)?.displayName ?? null
-            }))
+        const matched = profiles
+            .map((profile) => {
+                const id = String(profile.id ?? "");
+                return {
+                    id,
+                    devices: devicesByUser.get(id) ?? 0,
+                    username: (profile.username as string | null) ?? null,
+                    displayName: (profile.display_name as string | null) ?? null
+                };
+            })
+            .filter((user) => Boolean(user.id))
             .filter((user) => !search
                 || [user.id, user.username, user.displayName]
                     .some((value) => String(value ?? "").toLowerCase().includes(search)))
-            .sort((a, b) => (a.displayName ?? a.username ?? a.id).localeCompare(b.displayName ?? b.username ?? b.id))
-            .slice(0, 100);
+            .sort((a, b) => (a.displayName ?? a.username ?? a.id).localeCompare(b.displayName ?? b.username ?? b.id));
 
         return NextResponse.json({
             ok: true,
@@ -86,7 +87,11 @@ export async function GET(request: NextRequest) {
                 sandboxDevices: tokens.filter((token) => token.environment === "sandbox").length,
                 productionDevices: tokens.filter((token) => token.environment === "production").length
             },
-            users: reachable,
+            // The page is a picker, not a directory: it returns the first slice and
+            // reports the full match count so the operator knows to narrow the search
+            // rather than scroll for someone who was never sent.
+            users: matched.slice(0, USER_PAGE_SIZE),
+            matches: matched.length,
             history: recent.slice(0, 25)
         }, {headers: {"Cache-Control": "private, no-store"}});
     } catch (caught) {

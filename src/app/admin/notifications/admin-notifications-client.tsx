@@ -14,6 +14,8 @@ type Data = {
         sandboxDevices: number; productionDevices: number;
     };
     users: Recipient[];
+    /** Accounts matching the search, of which `users` is the first slice. */
+    matches?: number;
     history: HistoryRow[];
 };
 
@@ -217,8 +219,8 @@ export default function AdminNotificationsClient() {
                     <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Messaging</p>
                     <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Notifications</h1>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">
-                        Push a message to one person or to everyone with notifications switched on.
-                        Delivered as a system banner, so it reaches the app already on the App Store.
+                        Message one person or everyone. Every recipient gets the message in their in-app
+                        notifications list; accounts with a registered device also get a push banner on top.
                     </p>
                 </div>
                 <button onClick={() => void load()} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
@@ -266,16 +268,24 @@ export default function AdminNotificationsClient() {
                                 <button onClick={() => void load()} className="rounded-xl border border-line-300 px-4 text-sm font-bold text-white">Search</button>
                             </div>
                             <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-line-300">
-                                {data.users.length === 0 && <p className="p-3 text-sm text-ink-400">No reachable users match.</p>}
+                                {data.users.length === 0 && <p className="p-3 text-sm text-ink-400">No accounts match.</p>}
                                 {data.users.map((user) => <button key={user.id} onClick={() => setRecipient(user)}
                                     className={`flex w-full items-center justify-between gap-3 border-b border-line-300 px-3 py-2 text-left last:border-b-0 ${recipient?.id === user.id ? "bg-primary-500/15" : ""}`}>
                                     <span className="min-w-0">
                                         <span className="block truncate text-sm font-bold text-white">{user.displayName || user.username || "Unnamed"}</span>
                                         <span className="block truncate text-xs text-ink-400">{user.username ? `@${user.username} · ` : ""}{user.id}</span>
                                     </span>
-                                    <span className="shrink-0 text-xs text-ink-400">{user.devices} device{user.devices === 1 ? "" : "s"}</span>
+                                    {/* No device is not a blocker, so it reads as what it is
+                                        rather than as a zero to be fixed. */}
+                                    <span className="shrink-0 text-xs text-ink-400">
+                                        {user.devices === 0 ? "in-app only" : `${user.devices} device${user.devices === 1 ? "" : "s"}`}
+                                    </span>
                                 </button>)}
                             </div>
+                            {typeof data.matches === "number" && data.matches > data.users.length
+                                && <p className="mt-2 text-xs text-ink-400">
+                                    Showing {data.users.length} of {data.matches.toLocaleString()} matching accounts — search to narrow it down.
+                                </p>}
                         </div>}
 
                         <div className="mt-5">
@@ -307,8 +317,12 @@ export default function AdminNotificationsClient() {
                         </div>
 
                         {mode === "broadcast" && <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4">
+                            {/* The device figure is the one the server guards against
+                                expectedRecipients, so it is the only number quoted here.
+                                The in-app audience is every account and is not guarded. */}
                             <p className="text-sm font-bold text-amber-200">
-                                This sends to all {data.summary.totalDevices} registered device(s) immediately and cannot be recalled.
+                                This saves the message to every account&apos;s notifications list and pushes to
+                                all {data.summary.totalDevices} registered device(s), immediately and without recall.
                             </p>
                             <input value={confirmText} onChange={(event) => setConfirmText(event.target.value)}
                                    placeholder='Type SEND TO ALL to confirm'
@@ -344,10 +358,14 @@ export default function AdminNotificationsClient() {
                                 {data.history.map((row) => <li key={row.id} className="border-b border-line-300 pb-3 last:border-b-0 last:pb-0">
                                     <p className="text-sm font-bold text-white">{row.title}</p>
                                     <p className="text-xs text-ink-400">
-                                        {row.mode === "broadcast" ? "Everyone" : "One person"} · {row.devices_delivered}/{row.devices_targeted} delivered · {new Date(row.created_at).toLocaleString()}
+                                        {row.mode === "broadcast" ? "Everyone" : "One person"} · {row.devices_delivered}/{row.devices_targeted} pushed · {new Date(row.created_at).toLocaleString()}
                                     </p>
                                 </li>)}
                             </ul>
+                            {data.history.length > 0 && <p className="mt-3 text-xs text-ink-500">
+                                The log records push counts only, so a send with no devices reads as 0 here
+                                even though it reached every recipient&apos;s notifications list.
+                            </p>}
                         </section>
                     </aside>
                 </div>
