@@ -397,13 +397,15 @@ export default function AdminMaintenanceClient() {
                     animalName={indexingPosts[0]?.animalName ?? null}
                     mergeAfter={mergeAfterIndex}
                     warning={(() => {
-                        // One capture per species per owner: a second one from the
-                        // same person is refused, and merging is the right fix.
+                        // Several captures from one owner landing on one entry is
+                        // fine — it is the state a merge needs. What matters is
+                        // whether a merge is going to follow.
                         const owners = indexingPosts.map((post) => post.user.id);
                         const duplicated = owners.length - new Set(owners).size;
-                        return duplicated > 0
-                            ? `${duplicated} of these belong to an owner who already has another capture in this selection. Only one capture per person can hold a given index, so merge each person's duplicates first — the rest will be refused.`
-                            : null;
+                        if (!duplicated) return null;
+                        return mergeAfterIndex
+                            ? `${duplicated} of these share an owner with another in the selection — they will move onto the entry and then fold into that owner's oldest capture.`
+                            : `${duplicated} of these share an owner with another in the selection, so that person will end up holding more than one capture on this entry. Merge them afterwards for their collection to show a single card.`;
                     })()}
                     currentNumber={indexingPosts[0]?.animalDexNumber ?? null}
                     onClose={() => { setIndexingPosts(null); setMergeAfterIndex(false); }}
