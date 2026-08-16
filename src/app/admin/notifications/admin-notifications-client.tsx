@@ -181,8 +181,10 @@ export default function AdminNotificationsClient() {
             // saved to every recipient's notifications list whether or not they
             // can receive a push, so "0 devices" is not a failed send.
             const saved = result.in_app_written ?? 0;
+            const muted = result.muted_devices ?? 0;
             setNotice(`Saved to ${saved} notification list${saved === 1 ? "" : "s"}`
                 + ` · pushed to ${result.delivered} of ${result.devices} device${result.devices === 1 ? "" : "s"}`
+                + (muted ? ` · ${muted} muted this category` : "")
                 + (result.failed ? ` · ${result.failed} push${result.failed === 1 ? "" : "es"} failed` : ""));
             setConfirmText("");
             await load();
