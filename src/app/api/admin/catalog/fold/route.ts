@@ -86,8 +86,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 
-    const body = await request.json().catch(() => ({})) as {speciesProfileId?: string; confirm?: boolean};
+    const body = await request.json().catch(() => ({})) as {
+        speciesProfileId?: string;
+        /** Fold into this entry when no mapping already points at one. */
+        parentSpeciesProfileId?: string;
+        confirm?: boolean;
+    };
     const speciesProfileId = body.speciesProfileId?.trim() ?? "";
+    const chosenParentId = body.parentSpeciesProfileId?.trim() ?? "";
 
     if (!UUID.test(speciesProfileId)) {
         return NextResponse.json({ok: false, error: "A catalog entry is required"}, {status: 400});
@@ -105,16 +111,53 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ok: false, error: "This entry already has no number of its own."}, {status: 409});
         }
 
-        const parentId = await rpc("find_indexed_domestic_parent_profile_id", {
+        const identityKey = String(profile.normalized_identity_key ?? "");
+
+        // The database finds a parent two ways, and so does this. The hardcoded
+        // scientific-name map covers whole domestic species at once; the alias
+        // table covers one entry at a time and is writable from here, which is
+        // why an unmapped breed does not need a schema change to fold.
+        let parentId = await rpc("find_indexed_domestic_parent_profile_id", {
             p_scientific_name: profile.scientific_name,
-            p_identity_key: profile.normalized_identity_key
+            p_identity_key: identityKey
         }) as string | null;
+        let via: "domestic_parent_map" | "identity_alias" | "new_alias" = "domestic_parent_map";
+
+        if (!parentId) {
+            const resolved = await rpc("resolve_species_identity_alias", {p_identity_key: identityKey}) as string | null;
+            if (resolved && resolved !== identityKey) {
+                parentId = await rpc("find_indexed_species_profile_for_identity_key", {p_identity_key: resolved}) as string | null;
+                if (parentId) via = "identity_alias";
+            }
+        }
+
+        if (!parentId && UUID.test(chosenParentId)) {
+            const [chosen] = await rows(`species_profiles?${new URLSearchParams({
+                select: "id,animaldex_number,normalized_identity_key,display_name",
+                id: `eq.${chosenParentId}`,
+                limit: "1"
+            })}`);
+
+            if (!chosen) {
+                return NextResponse.json({ok: false, error: "That parent entry does not exist."}, {status: 404});
+            }
+            if (chosen.animaldex_number == null) {
+                return NextResponse.json({
+                    ok: false,
+                    error: `${chosen.display_name} holds no AnimalDex number, so folding into it would leave these captures unindexed. Index the parent first.`
+                }, {status: 409});
+            }
+
+            parentId = String(chosen.id);
+            via = "new_alias";
+        }
 
         if (!parentId) {
             return NextResponse.json({
                 ok: false,
-                error: `No indexed parent resolves for "${profile.scientific_name ?? profile.display_name}". Releasing #${profile.animaldex_number} would leave its captures unindexed, so the parent has to exist and be mapped first.`,
+                error: `Nothing maps "${profile.scientific_name ?? profile.display_name}" to a parent. Choose the entry it should count as, and folding will point its identity key there.`,
                 needsParent: true,
+                identityKey,
                 scientificName: profile.scientific_name ?? null
             }, {status: 409});
         }
@@ -145,6 +188,7 @@ export async function POST(request: NextRequest) {
                 number: parent?.animaldex_number ?? null,
                 displayName: parent?.display_name ?? null
             },
+            via,
             captures: child.captureIds.length,
             members: child.userIds.size,
             membersLosingAnEntry: losing.length
@@ -152,6 +196,25 @@ export async function POST(request: NextRequest) {
 
         if (!body.confirm) {
             return NextResponse.json({ok: false, needsConfirmation: true, preview}, {status: 409});
+        }
+
+        // Written before the number goes, so the identity key never spends a
+        // moment resolving to nothing.
+        if (via === "new_alias") {
+            const parentKey = String(parent?.normalized_identity_key ?? "");
+            if (!parentKey || parentKey === identityKey) {
+                return NextResponse.json({ok: false, error: "That parent has no usable identity key."}, {status: 409});
+            }
+            await rows("species_identity_aliases", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal"},
+                body: JSON.stringify({
+                    alias_identity_key: identityKey,
+                    canonical_identity_key: parentKey,
+                    source: "manual:admin_panel",
+                    notes: `Folded into ${parent?.display_name ?? parentKey} from the catalog panel`
+                })
+            });
         }
 
         await rows(`species_profiles?id=eq.${speciesProfileId}`, {
