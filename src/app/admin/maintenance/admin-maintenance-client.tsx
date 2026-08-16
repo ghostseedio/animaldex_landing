@@ -41,6 +41,9 @@ function isScreenCapture(post: {authenticityStatus: string | null; captureValidi
         || post.captureValidity === "likely_non_live_source";
 }
 
+/** Rows fetched per request; the API caps it at 100. */
+const PAGE_SIZE = 100;
+
 /** A capture is this old before an upload still in flight counts as abandoned. */
 const ABANDONED_UPLOAD_MINUTES = 30;
 
@@ -115,7 +118,7 @@ export default function AdminMaintenanceClient() {
         setError(null);
         try {
             const response = await fetch(
-                `/api/admin/maintenance/posts?limit=100&offset=${offset}&status=${encodeURIComponent(nextStatus)}`,
+                `/api/admin/maintenance/posts?limit=${PAGE_SIZE}&offset=${offset}&status=${encodeURIComponent(nextStatus)}`,
                 {cache: "no-store"}
             );
             if (response.status === 401) { setAuthorized(false); return; }
@@ -135,6 +138,57 @@ export default function AdminMaintenanceClient() {
         } finally {
             setLoading(false);
             setLoadingMore(false);
+        }
+    }
+
+    /**
+     * Refetch what is already on screen, rather than the first page.
+     *
+     * After an action that changes rows — a merge, a reindex — the list has to
+     * come back from the server, but reloading page one threw away every "Load
+     * older captures" press and dropped the operator back at the top. This asks
+     * for as many pages as were loaded and holds the scroll position across the
+     * swap, so a merge deep in the list leaves you where you were.
+     */
+    async function reloadLoadedPages(nextStatus = status) {
+        const pages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+        const scrollY = typeof window === "undefined" ? 0 : window.scrollY;
+        setLoading(true);
+        setError(null);
+
+        try {
+            const collected: Post[] = [];
+            const seen = new Set<string>();
+            let more = false;
+
+            for (let page = 0; page < pages; page += 1) {
+                const response = await fetch(
+                    `/api/admin/maintenance/posts?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}&status=${encodeURIComponent(nextStatus)}`,
+                    {cache: "no-store"}
+                );
+                if (response.status === 401) { setAuthorized(false); return; }
+                const body = await response.json();
+                if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load posts");
+
+                for (const post of body.posts as Post[]) {
+                    if (seen.has(post.id)) continue;
+                    seen.add(post.id);
+                    collected.push(post);
+                }
+                more = Boolean(body.hasMore);
+                if (!body.hasMore) break;
+            }
+
+            setPosts(collected);
+            setHasMore(more);
+            setAuthorized(true);
+            // After the rows are painted, not before: restoring first would land
+            // against the old, shorter document.
+            requestAnimationFrame(() => window.scrollTo({top: scrollY}));
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load posts");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -221,7 +275,7 @@ export default function AdminMaintenanceClient() {
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to close those captures");
             setNotice(`Closed ${body.closed} capture(s) as failed${body.skipped ? `, skipped ${body.skipped} whose photo has since arrived` : ""}.`);
             setBroken(null);
-            await loadPosts(status);
+            await reloadLoadedPages(status);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to close those captures");
         } finally {
@@ -274,10 +328,12 @@ export default function AdminMaintenanceClient() {
             // person whose collection just changed, told once.
             setNotifyRequest({
                 templateId: "merged",
-                userId: parent.user.id,
-                recipientLabel: parent.user.username ? `@${parent.user.username}` : parent.user.displayName || "this member",
+                recipients: [{
+                    userId: parent.user.id,
+                    label: parent.user.username ? `@${parent.user.username}` : parent.user.displayName || "this member",
+                    captureId: parent.id
+                }],
                 animalName: parent.animalName,
-                captureId: parent.id,
                 count: merged.length + 1
             });
         }
@@ -287,7 +343,7 @@ export default function AdminMaintenanceClient() {
         // look like a no-op, with the rows unchanged and the checkboxes reset.
         if (merged.length) {
             setSelected(new Set());
-            await loadPosts(status);
+            await reloadLoadedPages(status);
         }
 
         setMerging(false);
@@ -298,7 +354,7 @@ export default function AdminMaintenanceClient() {
         setNotice(null);
         for (const post of targets) await refreshPost(post);
         setSelected(new Set());
-        await loadPosts(status);
+        await reloadLoadedPages(status);
         setNotice(`Finished ${targets.length} selected refresh${targets.length === 1 ? "" : "es"}.`);
     }
 
@@ -524,7 +580,7 @@ export default function AdminMaintenanceClient() {
                         }
 
                         setSelected(new Set());
-                        void loadPosts(status);
+                        void reloadLoadedPages(status);
                     }}
                 />
             )}
@@ -539,12 +595,14 @@ export default function AdminMaintenanceClient() {
                         setNotice(`${gradingPost.animalName || "Capture"}: grade saved as ${grade}.`);
                         setNotifyRequest({
                             templateId: "regraded",
-                            userId: gradingPost.user.id,
-                            recipientLabel: gradingPost.user.username
-                                ? `@${gradingPost.user.username}`
-                                : gradingPost.user.displayName || "this member",
+                            recipients: [{
+                                userId: gradingPost.user.id,
+                                label: gradingPost.user.username
+                                    ? `@${gradingPost.user.username}`
+                                    : gradingPost.user.displayName || "this member",
+                                captureId: gradingPost.id
+                            }],
                             animalName: gradingPost.animalName,
-                            captureId: gradingPost.id,
                             grade
                         });
                     }}

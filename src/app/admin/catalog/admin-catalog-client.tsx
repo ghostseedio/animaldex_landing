@@ -4,6 +4,8 @@ import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";
 import BattleTierChip from "@/app/[locale]/(composited)/animals/battle-tier-chip";
 import CatalogPanel from "@/app/admin/maintenance/catalog-panel";
+import NotifyOwnerDialog, {type NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
+import IndexNewAnimal from "@/app/admin/catalog/index-new-animal";
 import type {AnimalBattleTier} from "@/lib/battle-tier";
 
 /**
@@ -164,6 +166,9 @@ export default function AdminCatalogClient() {
     const [duplicates, setDuplicates] = useState<{duplicates: DuplicateGroup[]; related: DuplicateGroup[]; scanned: number} | null>(null);
     const [scanning, setScanning] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
+    const [indexingNew, setIndexingNew] = useState(false);
+    const [notifyRequest, setNotifyRequest] = useState<NotifyRequest | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -256,9 +261,15 @@ export default function AdminCatalogClient() {
                             Every AnimalDex entry, what captures resolve through, and what each one is still missing.
                         </p>
                     </div>
-                    <Link href="/admin/maintenance" className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white hover:border-primary-300">
-                        Post maintenance →
-                    </Link>
+                    <div className="flex w-fit flex-wrap gap-2">
+                        <button type="button" onClick={() => setIndexingNew(true)}
+                                className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">
+                            Index a new animal
+                        </button>
+                        <Link href="/admin/maintenance" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white hover:border-primary-300">
+                            Post maintenance →
+                        </Link>
+                    </div>
                 </header>
 
                 {summary && (
@@ -340,6 +351,7 @@ export default function AdminCatalogClient() {
                 </section>
 
                 {error && <p className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+                {notice && <p className="mt-4 rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
 
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-ink-400">
@@ -440,6 +452,24 @@ export default function AdminCatalogClient() {
                 </section>
             </div>
 
+            {indexingNew && (
+                <IndexNewAnimal
+                    onClose={() => { setIndexingNew(false); void load(); }}
+                    onIndexed={(message) => setNotice(message)}
+                    onNotify={(request) => setNotifyRequest(request)}
+                    onEditExisting={(speciesProfileId) => {
+                        setIndexingNew(false);
+                        setEditing({speciesProfileId} as Entry);
+                    }}
+                />
+            )}
+            {notifyRequest && (
+                <NotifyOwnerDialog
+                    request={notifyRequest}
+                    onClose={() => setNotifyRequest(null)}
+                    onSent={(message) => setNotice(message)}
+                />
+            )}
             {editing && (
                 <CatalogPanel
                     initialSpeciesProfileId={editing.speciesProfileId}
