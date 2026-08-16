@@ -30,6 +30,8 @@ type Post = {
     analysisError: string | null;
     modelVersion: string | null;
     imageUrl: string;
+    /** Present when the capture stored a clip, not just the still frame from it. */
+    video: {url: string; mimeType: string | null; durationMs: number | null} | null;
     /** Set when this capture was merged into another; its photos live there now. */
     mergedIntoCaptureId: string | null;
     user: {id: string; displayName: string | null; username: string | null; avatarUrl: string | null};
@@ -519,6 +521,9 @@ export default function AdminMaintenanceClient() {
                                     <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
                                     {isScreenCapture(post) && <span title="The model judged this a photo of a screen or a print rather than a live animal, so it is excluded from collections and stats" className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">screen capture</span>}
                                     {isDeadUpload(post) && <span title="The photo never reached storage, so there is nothing to analyse and a retry cannot help. No credit was charged." className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">no photo</span>}
+                                    {post.captureMode === "video" && (post.video
+                                        ? <span className="rounded-full bg-white/5 px-2 py-1 text-ink-300">{post.video.durationMs ? `${Math.round(post.video.durationMs / 1000)}s clip` : "clip"}</span>
+                                        : <span title="Filed as a video but only the still frame reached storage, so there is nothing to play" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">frame only</span>)}
                                     {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
                                 </div>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>
@@ -623,7 +628,20 @@ export default function AdminMaintenanceClient() {
                             <button type="button" onClick={() => setViewingPost(null)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300" aria-label="Close full-size image">×</button>
                         </div>
                         <div className="min-h-0 flex-1 overflow-auto bg-black">
-                            <img src={viewingPost.imageUrl} alt={viewingPost.animalName ? `Full-size ${viewingPost.animalName} user capture` : "Full-size user capture"} className="mx-auto h-auto max-h-[calc(100dvh-9rem)] max-w-full object-contain" />
+                            {viewingPost.video ? (
+                                <video
+                                    src={viewingPost.video.url}
+                                    poster={viewingPost.imageUrl}
+                                    controls
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                    className="mx-auto h-auto max-h-[calc(100dvh-9rem)] max-w-full object-contain"
+                                />
+                            ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={viewingPost.imageUrl} alt={viewingPost.animalName ? `Full-size ${viewingPost.animalName} user capture` : "Full-size user capture"} className="mx-auto h-auto max-h-[calc(100dvh-9rem)] max-w-full object-contain" />
+                            )}
                         </div>
                     </div>
                 </div>

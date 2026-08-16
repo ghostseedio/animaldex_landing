@@ -1,5 +1,5 @@
 import {NextRequest, NextResponse} from "next/server";
-import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import {getCaptureImageRoute, getCaptureMediaRoute} from "@/lib/capture-storage-image";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         const captureIds = captures.map((row) => String(row.id));
         const userIds = Array.from(new Set(captures.map((row) => String(row.user_id))));
 
-        const [analyses, profiles] = await Promise.all([
+        const [analyses, profiles, media] = await Promise.all([
             captureIds.length ? rows("analysis_results", new URLSearchParams({
                 // authenticity and validity live in the model payload rather than in columns,
                 // and a photo of a screen is otherwise indistinguishable from a failed
@@ -56,8 +56,23 @@ export async function GET(request: NextRequest) {
             userIds.length ? rows("profiles", new URLSearchParams({
                 select: "id,display_name,username,avatar_url",
                 id: `in.(${userIds.join(",")})`
+            })) : [],
+            // A video capture stores both the clip and a still frame. The panel
+            // showed the frame and nothing else, so a video looked like a photo
+            // that would not play.
+            captureIds.length ? rows("capture_images", new URLSearchParams({
+                select: "capture_id,storage_bucket,storage_path,media_kind,mime_type,duration_ms",
+                capture_id: `in.(${captureIds.join(",")})`,
+                media_kind: "in.(video,loop)",
+                order: "sort_order.asc"
             })) : []
         ]);
+
+        const videoByCapture = new Map<string, Row>();
+        for (const asset of media) {
+            const key = String(asset.capture_id);
+            if (!videoByCapture.has(key)) videoByCapture.set(key, asset);
+        }
 
         /**
          * Resolve the AnimalDex number the way the app does, not just by profile id.
@@ -129,6 +144,7 @@ export async function GET(request: NextRequest) {
         const search = (request.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
         const posts = captures.map((capture) => {
             const id = String(capture.id);
+            const video = videoByCapture.get(id) ?? null;
             const analysis = analysisByCapture.get(id) ?? {};
             const profile = profileByUser.get(String(capture.user_id)) ?? {};
             return {
@@ -172,7 +188,17 @@ export async function GET(request: NextRequest) {
                 mergedIntoCaptureId: capture.merged_into_capture_id ?? null,
                 imageUrl: capture.merged_into_capture_id
                     ? getCaptureImageRoute(String(capture.merged_into_capture_id))
-                    : getCaptureImageRoute(id)
+                    : getCaptureImageRoute(id),
+                video: video ? {
+                    url: getCaptureMediaRoute(id, {
+                        kind: String(video.media_kind),
+                        mimeType: video.mime_type ? String(video.mime_type) : null,
+                        bucket: video.storage_bucket ? String(video.storage_bucket) : null,
+                        path: video.storage_path ? String(video.storage_path) : null
+                    }),
+                    mimeType: video.mime_type ? String(video.mime_type) : null,
+                    durationMs: typeof video.duration_ms === "number" ? video.duration_ms : null
+                } : null
             };
         }).filter((post) => !search || [
             post.id, post.title, post.animalName, post.scientificName,

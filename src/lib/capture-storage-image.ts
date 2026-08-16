@@ -151,4 +151,24 @@ export function getCaptureImageRoute(captureId: string) {
     return `/api/capture-images/${encodeURIComponent(captureId)}`;
 }
 
+/**
+ * Playable URL for a capture's video.
+ *
+ * Unlike the image route this one cannot look the object up from the capture id
+ * alone — a capture carries both a video and a still frame, and only the caller
+ * knows which row it means — so the bucket and path travel in the query.
+ */
+export function getCaptureMediaRoute(
+    captureId: string,
+    asset: {kind: string; mimeType?: string | null; bucket?: string | null; path?: string | null}
+) {
+    const params = new URLSearchParams();
+    if (asset.bucket) params.set("bucket", asset.bucket);
+    if (asset.path) params.set("path", asset.path);
+    if (asset.mimeType) params.set("mime", asset.mimeType);
+    params.set("kind", asset.kind);
+
+    return `/api/capture-media/${encodeURIComponent(captureId)}?${params.toString()}`;
+}
+
 export {FETCH_TIMEOUT_MS};
