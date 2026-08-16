@@ -1,5 +1,5 @@
 import {NextRequest, NextResponse} from "next/server";
-import {getSupabaseUrl} from "@/lib/supabase-http";
+import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 /**
@@ -29,7 +29,11 @@ export async function POST(request: NextRequest) {
 
     const url = getSupabaseUrl();
     const token = process.env.ADMIN_NOTIFICATION_TOKEN?.trim();
-    if (!url || !token) {
+    // The function authorises the operator by shared secret, but the platform
+    // gateway in front of it still wants a project key: without one the request
+    // is rejected as UNAUTHORIZED_NO_AUTH_HEADER and the function never runs.
+    const projectKey = getSupabaseServerReadKey();
+    if (!url || !token || !projectKey) {
         return NextResponse.json({
             ok: false,
             error: "ADMIN_NOTIFICATION_TOKEN is not configured for this environment"
@@ -50,7 +54,10 @@ export async function POST(request: NextRequest) {
     try {
         const response = await fetch(`${url}/functions/v1/send-admin-notification`, {
             method: "POST",
-            headers: {"Content-Type": "application/json", "x-admin-token": token},
+            headers: getSupabaseHeaders(projectKey, {
+                "Content-Type": "application/json",
+                "x-admin-token": token
+            }),
             cache: "no-store",
             body: JSON.stringify({
                 mode: payload.mode ?? "user",
