@@ -22,6 +22,8 @@ type Post = {
     /** Set when the number was reached through an identity key rather than a link. */
     indexVia: string | null;
     identityResolutionMode: string | null;
+    authenticityStatus: string | null;
+    captureValidity: string | null;
     identityKey: string | null;
     analysisCompletedAt: string | null;
     analysisError: string | null;
@@ -31,6 +33,12 @@ type Post = {
     mergedIntoCaptureId: string | null;
     user: {id: string; displayName: string | null; username: string | null; avatarUrl: string | null};
 };
+
+/** The model's verdict that a photo is of a screen or a print, not a live animal. */
+function isScreenCapture(post: {authenticityStatus: string | null; captureValidity: string | null}) {
+    return post.authenticityStatus === "likely_non_live_source"
+        || post.captureValidity === "likely_non_live_source";
+}
 
 function relativeDate(value: string | null) {
     if (!value) return "Never";
@@ -60,6 +68,9 @@ export default function AdminMaintenanceClient() {
     const [query, setQuery] = useState("");
     const [status, setStatus] = useState("all");
     const [mode, setMode] = useState("all");
+    const [hideMerged, setHideMerged] = useState(false);
+    const [hideCreditFailures, setHideCreditFailures] = useState(false);
+    const [hideScreenCaptures, setHideScreenCaptures] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
@@ -267,10 +278,18 @@ export default function AdminMaintenanceClient() {
 
     const filtered = useMemo(() => posts.filter((post) => {
         if (mode !== "all" && post.captureMode !== mode) return false;
+        // A merged capture is somebody else's photo now; it is in the list for
+        // traceability, not because anything is left to do with it.
+        if (hideMerged && post.mergedIntoCaptureId) return false;
+        // Ran out of credits is a billing state, not a capture to fix.
+        if (hideCreditFailures && String(post.analysisError ?? "").includes("insufficient_credits")) return false;
+        if (hideScreenCaptures && isScreenCapture(post)) return false;
         const needle = query.trim().toLowerCase();
         return !needle || [post.id, post.title, post.animalName, post.scientificName, post.user.displayName, post.user.username]
             .some((value) => String(value ?? "").toLowerCase().includes(needle));
-    }), [posts, query, mode]);
+    }), [posts, query, mode, hideMerged, hideCreditFailures, hideScreenCaptures]);
+
+    const hiddenCount = posts.length - filtered.length;
 
     if (authorized === false) {
         return <main className="grid min-h-screen place-items-center px-4"><form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p><h1 className="mt-2 font-display text-3xl text-white">Maintenance</h1><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" /><button className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950">Sign in</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</form></main>;
@@ -310,7 +329,10 @@ export default function AdminMaintenanceClient() {
                     </div>
                 </header>
 
-                <section className="mt-6 grid gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+                {/* Sticky: the actions act on a selection made further down the
+                    list, and scrolling back up to reach them lost your place. */}
+                <div className="sticky top-0 z-40 -mx-4 mt-6 border-b border-line-300 bg-canvas-950/95 px-4 pb-3 pt-3 backdrop-blur sm:-mx-7 sm:px-7">
+                <section className="grid gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                     <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search animal, owner, or capture ID…" className="min-w-0 rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-300" />
                     <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
                     <select value={mode} onChange={(event) => setMode(event.target.value)} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
@@ -338,7 +360,21 @@ export default function AdminMaintenanceClient() {
 
                 {(error || notice) && <div className={`mt-4 rounded-xl border p-3 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || notice}</div>}
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {[
+                        {id: "merged", label: "Hide merged", on: hideMerged, toggle: () => setHideMerged((value) => !value)},
+                        {id: "credits", label: "Hide credit failures", on: hideCreditFailures, toggle: () => setHideCreditFailures((value) => !value)},
+                        {id: "screens", label: "Hide screen captures", on: hideScreenCaptures, toggle: () => setHideScreenCaptures((value) => !value)}
+                    ].map((option) => (
+                        <button key={option.id} onClick={option.toggle} aria-pressed={option.on}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${option.on ? "border-primary-400 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}>
+                            {option.on ? "✓ " : ""}{option.label}
+                        </button>
+                    ))}
+                    {hiddenCount > 0 && <span className="text-xs text-ink-500">{hiddenCount} hidden</span>}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-ink-400">
                         {filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected
                         {mergeBlockedReason && selected.size > 0 && <span className="block text-xs text-amber-200">{mergeBlockedReason}</span>}
@@ -353,7 +389,9 @@ export default function AdminMaintenanceClient() {
                     </div>
                 </div>
 
-                <section className="mt-3 overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
+                </div>
+
+                <section className="mt-4 overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
                     {loading && !posts.length ? <div className="py-24 text-center text-ink-400">Loading user posts…</div> : !filtered.length ? <div className="py-24 text-center text-ink-400">No posts match these filters.</div> : filtered.map((post) => {
                         const isRunning = running.has(post.id);
                         const canRefresh = post.captureMode === "photo";
@@ -372,6 +410,7 @@ export default function AdminMaintenanceClient() {
                                         ? <span title="Stopped at a parent identity and is waiting on a breed before it links to the catalog" className="rounded-full bg-white/5 px-2 py-1 text-ink-400">refinable</span>
                                         : <span title="The analysis holds no species profile, so this capture is missing from the owner's collection index" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">not linked</span>)}
                                     <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
+                                    {isScreenCapture(post) && <span title="The model judged this a photo of a screen or a print rather than a live animal, so it is excluded from collections and stats" className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">screen capture</span>}
                                     {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
                                 </div>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>

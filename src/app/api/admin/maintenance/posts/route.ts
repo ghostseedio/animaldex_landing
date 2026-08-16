@@ -43,7 +43,10 @@ export async function GET(request: NextRequest) {
 
         const [analyses, profiles] = await Promise.all([
             captureIds.length ? rows("analysis_results", new URLSearchParams({
-                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version,capture_grade,species_profile_id,normalized_identity_key,identity_resolution_mode",
+                // authenticity and validity live in the model payload rather than in columns,
+                // and a photo of a screen is otherwise indistinguishable from a failed
+                // identification: both surface as "Unidentified animal".
+                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version,capture_grade,species_profile_id,normalized_identity_key,identity_resolution_mode,authenticity_status:raw_json->model->>authenticity_status,capture_validity:raw_json->model->>capture_validity",
                 capture_id: `in.(${captureIds.join(",")})`
             })) : [],
             userIds.length ? rows("profiles", new URLSearchParams({
@@ -143,6 +146,8 @@ export async function GET(request: NextRequest) {
                 // like domestic_cat and wants a breed before it links; that is a
                 // different state from a terminal identity that simply never linked.
                 identityResolutionMode: analysis.identity_resolution_mode ?? null,
+                authenticityStatus: analysis.authenticity_status ?? null,
+                captureValidity: analysis.capture_validity ?? null,
                 identityKey: analysis.normalized_identity_key ?? null,
                 scientificName: analysis.scientific_name,
                 confidence: analysis.confidence,
