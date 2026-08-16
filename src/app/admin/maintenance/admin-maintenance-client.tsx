@@ -266,8 +266,30 @@ export default function AdminMaintenanceClient() {
         return <main className="grid min-h-screen place-items-center px-4"><form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p><h1 className="mt-2 font-display text-3xl text-white">Maintenance</h1><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" /><button className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950">Sign in</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</form></main>;
     }
 
+    const toast = error ? {kind: "error" as const, text: error} : notice ? {kind: "notice" as const, text: notice} : null;
+
     return (
         <main className="min-h-screen p-4 sm:p-7">
+            {/* Actions here are bulk and destructive, and their result used to sit
+                in a strip above the fold where an operator working through rows
+                never saw it. This follows the viewport instead. */}
+            {toast && (
+                <div role={toast.kind === "error" ? "alert" : "status"} aria-live={toast.kind === "error" ? "assertive" : "polite"}
+                     className="fixed inset-x-3 bottom-4 z-[60] mx-auto max-w-2xl sm:inset-x-auto sm:right-6 sm:left-auto">
+                    <div className={`flex items-start gap-3 rounded-2xl border p-4 shadow-2xl backdrop-blur ${toast.kind === "error" ? "border-red-400/40 bg-red-950/95 text-red-100" : "border-primary-400/40 bg-emerald-950/95 text-primary-100"}`}>
+                        <span aria-hidden="true" className="text-lg leading-none">{toast.kind === "error" ? "⚠" : "✓"}</span>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black uppercase tracking-[.14em] opacity-70">
+                                {toast.kind === "error" ? "Action failed" : "Done"}
+                            </p>
+                            <p className="mt-1 text-sm leading-6">{toast.text}</p>
+                        </div>
+                        <button type="button" onClick={() => { setError(null); setNotice(null); }}
+                                aria-label="Dismiss message"
+                                className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-xs font-bold">Close</button>
+                    </div>
+                </div>
+            )}
             <div className="mx-auto max-w-[100rem]">
                 <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
                     <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
