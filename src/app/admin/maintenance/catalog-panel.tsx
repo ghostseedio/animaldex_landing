@@ -20,6 +20,9 @@ type Match = {
 type Entry = Match & {
     landing_page_slug: string | null;
     identity_kind: string | null;
+    identity_resolution_mode: string | null;
+    identity_explanation: string | null;
+    identity_evidence_guidance: string | null;
     catalog_status: string | null;
     canonical_game_stats: Record<string, number> | null;
     species_subtitle_story: string | null;
@@ -28,10 +31,41 @@ type Entry = Match & {
     short_motto: string | null;
     public_capture_count: number | null;
     aliases: Array<{alias_identity_key: string; notes: string | null; source: string | null}>;
-    artwork: {slug: string | null; present: boolean};
+    artwork: {
+        slug: string | null;
+        present: boolean;
+        file: string | null;
+        expectedPath: string | null;
+        matchedVia: "exact" | "relative" | null;
+        url: string | null;
+    };
 };
 
 const STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+/**
+ * What each identity level claims, in the terms the decision is actually made
+ * in. The app tints and labels only these; anything else shows no chip at all.
+ */
+const IDENTITY_KINDS: Array<{id: string; label: string; hint: string}> = [
+    {id: "species", label: "Species", hint: "A single species, named and certain."},
+    {id: "subspecies", label: "Subspecies", hint: "A named subspecies of an indexed species."},
+    {id: "genus", label: "Genus", hint: "The genus is certain, the species is not."},
+    {id: "family", label: "Family", hint: "Identified no further than the family."},
+    {id: "group", label: "Group", hint: "A group of species people name as one animal — \"black ant\", \"seagull\"."},
+    {id: "breed", label: "Breed", hint: "A breed of a domestic animal, e.g. Pekin Duck."},
+    {id: "variant", label: "Variant", hint: "A colour or coat form rather than a breed."},
+    {id: "cross_breed", label: "Cross breed", hint: "A deliberate cross, e.g. Flowerhorn Cichlid."},
+    {id: "hybrid", label: "Hybrid", hint: "A hybrid of two species."},
+    {id: "domestic_parent", label: "Domestic parent", hint: "The domestic species every breed of it folds into — Domestic Cat, Cow."},
+    {id: "generic_parent", label: "Generic parent", hint: "A catch-all entry that specific species will later be split out of."},
+    {id: "broad_fallback", label: "Broad fallback", hint: "Identified only in the broadest terms; the last resort."}
+];
+
+const RESOLUTION_MODES: Array<{id: string; label: string; hint: string}> = [
+    {id: "terminal", label: "Terminal", hint: "As specific as this animal gets. No retake will sharpen it."},
+    {id: "refinable", label: "Refinable", hint: "A closer capture could resolve it further; the app says so."}
+];
 
 type PanelProps = {
     onClose: () => void;
@@ -84,9 +118,36 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
             principleName: loaded.principle_name ?? "",
             coreLesson: loaded.core_lesson ?? "",
             principleExpression: loaded.principle_expression ?? "",
-            shortMotto: loaded.short_motto ?? ""
+            shortMotto: loaded.short_motto ?? "",
+            identityKind: loaded.identity_kind ?? "",
+            identityResolutionMode: loaded.identity_resolution_mode ?? "",
+            identityExplanation: loaded.identity_explanation ?? "",
+            identityEvidenceGuidance: loaded.identity_evidence_guidance ?? "",
+            landingPageSlug: loaded.landing_page_slug ?? ""
         });
         setStats(Object.fromEntries(STATS.map((key) => [key, Number(loaded.canonical_game_stats?.[key] ?? 0)])));
+    }
+
+    /**
+     * Identity fields are sent only when they changed. Entries carry kinds the
+     * app no longer renders, and echoing one back on an unrelated subtitle edit
+     * would fail validation for a value the operator never touched.
+     */
+    function changedIdentityFields(loaded: Entry) {
+        const changes: Record<string, string | null> = {};
+        const pairs: Array<[string, string, string | null]> = [
+            ["identityKind", "identityKind", loaded.identity_kind],
+            ["identityResolutionMode", "identityResolutionMode", loaded.identity_resolution_mode],
+            ["identityExplanation", "identityExplanation", loaded.identity_explanation],
+            ["identityEvidenceGuidance", "identityEvidenceGuidance", loaded.identity_evidence_guidance]
+        ];
+
+        for (const [draftKey, bodyKey, current] of pairs) {
+            const next = (draft[draftKey] ?? "").trim();
+            if (next !== (current ?? "").trim()) changes[bodyKey] = next || null;
+        }
+
+        return changes;
     }
 
     async function open(speciesProfileId: string) {
@@ -134,6 +195,7 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                     principleExpression: draft.principleExpression,
                     shortMotto: draft.shortMotto,
                     stats,
+                    ...changedIdentityFields(entry),
                     ...extra
                 })
             });
@@ -249,6 +311,104 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                         </button>
                                     )}
                                 </div>
+                            </div>
+
+                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Identity level</p>
+                                <p className="mt-1 text-xs leading-5 text-ink-500">
+                                    The chip on the capture card, and the sentence behind its ⓘ. Leave the explanation
+                                    empty and the app writes its own; fill it in and it uses yours instead, which is
+                                    where an entry says why it stops at group level.
+                                </p>
+
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                    <label className="block">
+                                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Kind</span>
+                                        <select value={draft.identityKind ?? ""}
+                                                onChange={(event) => setDraft((current) => ({...current, identityKind: event.target.value}))}
+                                                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white">
+                                            <option value="">No chip shown</option>
+                                            {IDENTITY_KINDS.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
+                                            {/* An older kind the app no longer renders still needs to round-trip. */}
+                                            {entry.identity_kind && !IDENTITY_KINDS.some((kind) => kind.id === entry.identity_kind) && (
+                                                <option value={entry.identity_kind}>{entry.identity_kind} (unrendered)</option>
+                                            )}
+                                        </select>
+                                        <span className="mt-1 block text-xs leading-5 text-ink-500">
+                                            {IDENTITY_KINDS.find((kind) => kind.id === draft.identityKind)?.hint
+                                                ?? "No identity chip appears on captures of this animal."}
+                                        </span>
+                                    </label>
+
+                                    <label className="block">
+                                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Resolution</span>
+                                        <select value={draft.identityResolutionMode ?? ""}
+                                                onChange={(event) => setDraft((current) => ({...current, identityResolutionMode: event.target.value}))}
+                                                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white">
+                                            <option value="">Unset — inferred from the kind</option>
+                                            {RESOLUTION_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+                                        </select>
+                                        <span className="mt-1 block text-xs leading-5 text-ink-500">
+                                            {RESOLUTION_MODES.find((mode) => mode.id === draft.identityResolutionMode)?.hint
+                                                ?? "Group and genus default to refinable; everything else to terminal."}
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div className="mt-3 space-y-3">
+                                    {field("identityExplanation", "Chip explanation", 3)}
+                                    {field("identityEvidenceGuidance", "Capture guidance", 2)}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Landing page</p>
+                                <p className="mt-1 text-xs leading-5 text-ink-500">
+                                    The slug this entry publishes at. Entries whose identity key is an alias of another
+                                    animal fold into that animal&apos;s page instead; giving this one its own slug splits them.
+                                </p>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <span className="font-mono text-sm text-ink-500">/animals/</span>
+                                    <input value={draft.landingPageSlug ?? ""}
+                                           onChange={(event) => setDraft((current) => ({...current, landingPageSlug: event.target.value}))}
+                                           placeholder={entry.normalized_identity_key?.replace(/_/g, "-") ?? "slug"}
+                                           className="min-w-0 flex-1 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 font-mono text-sm text-white outline-none focus:border-primary-300" />
+                                    <button type="button" onClick={() => void save({landingPageSlug: draft.landingPageSlug || null})}
+                                            disabled={busy || (draft.landingPageSlug ?? "") === (entry.landing_page_slug ?? "")}
+                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">
+                                        Save slug
+                                    </button>
+                                    {entry.landing_page_slug && (
+                                        <a href={`/animals/${entry.landing_page_slug}`} target="_blank" rel="noreferrer"
+                                           className="rounded-xl border border-primary-400/40 px-3 py-2 text-sm font-bold text-primary-100">View page ↗</a>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Artwork</p>
+                                {entry.artwork.matchedVia === "exact" && (
+                                    <p className="mt-2 text-sm text-primary-100">
+                                        Own illustration at <span className="font-mono text-xs">{entry.artwork.expectedPath}</span>
+                                    </p>
+                                )}
+                                {entry.artwork.matchedVia === "relative" && (
+                                    <p className="mt-2 text-sm text-amber-200">
+                                        Borrowing <span className="font-mono text-xs">{entry.artwork.file}</span> — nothing exists at{" "}
+                                        <span className="font-mono text-xs">{entry.artwork.expectedPath}</span>, so a relative&apos;s
+                                        picture is standing in.
+                                    </p>
+                                )}
+                                {!entry.artwork.present && (
+                                    <p className="mt-2 text-sm text-red-200">
+                                        Nothing in the bucket. Upload a .webp to{" "}
+                                        <span className="font-mono text-xs">{entry.artwork.expectedPath ?? "an artwork slug"}</span>.
+                                    </p>
+                                )}
+                                {entry.artwork.url && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={entry.artwork.url} alt="" className="mt-3 h-24 w-24 rounded-xl bg-canvas-900 object-contain" />
+                                )}
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">

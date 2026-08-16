@@ -338,7 +338,7 @@ function clean(value: string | null | undefined) {
     return trimmed || null;
 }
 
-function stripCatalogNumberSuffix(slug: string, animalDexNumber?: number) {
+function stripCatalogNumberSuffix(slug: string, animalDexNumber?: number | null) {
     if (!animalDexNumber) {
         return slug;
     }
@@ -348,7 +348,12 @@ function stripCatalogNumberSuffix(slug: string, animalDexNumber?: number) {
     return slug.endsWith(suffix) ? slug.slice(0, -suffix.length) : slug;
 }
 
-export function databaseSpeciesCanonicalSlug(row: Pick<CatalogRow, "landing_page_slug" | "normalized_identity_key" | "animaldex_number">) {
+/** Nullable throughout: callers outside the loader read rows that may be missing any of the three. */
+export function databaseSpeciesCanonicalSlug(row: {
+    landing_page_slug: string | null;
+    normalized_identity_key: string | null;
+    animaldex_number: number | null;
+}) {
     const landingSlug = clean(row.landing_page_slug);
     const identitySlug = clean(row.normalized_identity_key)?.replace(/_/g, "-") ?? "";
     const normalizedLanding = landingSlug

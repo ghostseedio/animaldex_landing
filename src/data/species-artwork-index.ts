@@ -171,6 +171,36 @@ export async function resolveSpeciesArtworkFile(slug: string): Promise<string | 
     return best;
 }
 
+export type SpeciesArtworkResolution = {
+    /** Object the bucket holds for this slug, exact or borrowed. */
+    file: string | null;
+    /** Object path the slug is looked up under first. */
+    expectedPath: string;
+    /** Bucket the lookup runs against. */
+    bucket: string;
+    matchedVia: "exact" | "relative" | null;
+};
+
+/**
+ * How a slug's artwork resolved, rather than merely whether it did.
+ *
+ * A missing icon is fixed by uploading a file, so the path being looked for is
+ * the part worth saying out loud; and a slug wearing a relative's illustration
+ * looks present on every surface while still being the wrong picture.
+ */
+export async function describeSpeciesArtwork(slug: string): Promise<SpeciesArtworkResolution> {
+    const normalized = slug.trim().toLowerCase();
+    const expectedFile = `${normalized}.webp`;
+    const file = await resolveSpeciesArtworkFile(normalized);
+
+    return {
+        file,
+        expectedPath: `${SPECIES_ARTWORK_BUCKET}/${expectedFile}`,
+        bucket: SPECIES_ARTWORK_BUCKET,
+        matchedVia: !file ? null : file === expectedFile ? "exact" : "relative"
+    };
+}
+
 /** Batch form of {@link resolveSpeciesArtworkFile} for list surfaces. */
 export async function resolveSpeciesArtworkFiles(slugs: string[]): Promise<Map<string, string | null>> {
     await getIndex();

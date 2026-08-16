@@ -1,5 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
+import {invalidateDatabaseSpeciesCache} from "@/data/database-species-pages";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {describeSpeciesArtwork} from "@/data/species-artwork-index";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
@@ -46,26 +48,36 @@ async function rows<T>(path: string) {
     return (await (await query(path)).json()) as T[];
 }
 
-/** A slug with no object in the artwork bucket shows as a blank card in the app. */
-async function hasArtwork(slug: string | null) {
-    if (!slug) return false;
-
-    try {
-        const response = await fetch(getSpeciesArtworkUrl(slug), {method: "HEAD", cache: "no-store"});
-        return response.ok;
-    } catch {
-        return false;
+/**
+ * A slug with no object in the artwork bucket shows as a blank card in the app,
+ * so the panel reports the path being looked for and whether what came back is
+ * this animal's own illustration or a relative's standing in for it.
+ */
+async function describeArtwork(slug: string | null) {
+    if (!slug) {
+        return {slug: null, present: false, file: null, expectedPath: null, matchedVia: null, url: null};
     }
+
+    const resolution = await describeSpeciesArtwork(slug);
+
+    return {
+        slug,
+        present: Boolean(resolution.file),
+        file: resolution.file,
+        expectedPath: resolution.expectedPath,
+        matchedVia: resolution.matchedVia,
+        url: resolution.file ? getSpeciesArtworkUrl(slug, resolution.file) : null
+    };
 }
 
 type CatalogEntry = Record<string, unknown> & {
     aliases: Array<{alias_identity_key: string; notes: string | null; source: string | null}>;
-    artwork: {slug: string | null; present: boolean};
+    artwork: Awaited<ReturnType<typeof describeArtwork>>;
 };
 
 async function loadEntry(speciesProfileId: string): Promise<CatalogEntry | null> {
     const [profile] = await rows<Record<string, unknown>>(`species_catalog_v1?${new URLSearchParams({
-        select: "species_profile_id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,catalog_status,canonical_game_stats,size_scale_score,species_subtitle,species_subtitle_story,principle_name,principle_expression,core_lesson,biological_basis,short_motto,application_example,public_capture_count",
+        select: "species_profile_id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,canonical_game_stats,size_scale_score,species_subtitle,species_subtitle_story,principle_name,principle_expression,core_lesson,biological_basis,short_motto,application_example,public_capture_count",
         species_profile_id: `eq.${speciesProfileId}`,
         limit: "1"
     })}`);
@@ -85,10 +97,10 @@ async function loadEntry(speciesProfileId: string): Promise<CatalogEntry | null>
     return {
         ...profile,
         aliases,
-        artwork: {
-            slug: (profile.landing_page_slug as string | null) ?? null,
-            present: await hasArtwork((profile.landing_page_slug as string | null) ?? null)
-        }
+        artwork: await describeArtwork(
+            (profile.landing_page_slug as string | null)
+            ?? (identityKey ? identityKey.replace(/_/g, "-") : null)
+        )
     };
 }
 
@@ -147,7 +159,28 @@ type PatchBody = {
     stats?: Partial<Record<typeof STAT_KEYS[number], number>>;
     addAlias?: string | null;
     removeAlias?: string | null;
+    /** Identity level the chip shows, e.g. species or group. */
+    identityKind?: string | null;
+    /** Whether the app offers a sharper retake: terminal or refinable. */
+    identityResolutionMode?: string | null;
+    /** Chip tooltip copy. Null restores the app's generated sentence. */
+    identityExplanation?: string | null;
+    identityEvidenceGuidance?: string | null;
+    /** Slug the landing page publishes at. */
+    landingPageSlug?: string | null;
 };
+
+/** Kinds the app knows how to label and tint; anything else shows no chip at all. */
+const IDENTITY_KINDS = [
+    "species", "subspecies", "genus", "family", "group", "breed", "variant",
+    "cross_breed", "hybrid", "domestic_parent", "generic_parent", "broad_fallback"
+];
+
+const RESOLUTION_MODES = ["terminal", "refinable"];
+
+function slugify(value: string) {
+    return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
 
 export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {
@@ -269,6 +302,83 @@ export async function POST(request: NextRequest) {
                 })
             });
             applied.push("lesson");
+        }
+
+        // The identity chip and its tooltip. The app prefers this copy over the
+        // sentence it would otherwise generate, so an entry that needs to explain
+        // why it sits at group level can say so in its own words. Clearing a
+        // field hands that sentence back rather than leaving the chip blank.
+        const identityPatch: Record<string, string | null> = {};
+
+        if (body.identityKind !== undefined) {
+            const kind = body.identityKind?.trim().toLowerCase() || null;
+            if (kind && !IDENTITY_KINDS.includes(kind)) {
+                return NextResponse.json({
+                    ok: false,
+                    error: `"${kind}" is not an identity kind the app renders. Use one of: ${IDENTITY_KINDS.join(", ")}.`
+                }, {status: 400});
+            }
+            identityPatch.identity_kind = kind;
+        }
+
+        if (body.identityResolutionMode !== undefined) {
+            const mode = body.identityResolutionMode?.trim().toLowerCase() || null;
+            if (mode && !RESOLUTION_MODES.includes(mode)) {
+                return NextResponse.json({
+                    ok: false,
+                    error: `"${mode}" is not a resolution mode. Use terminal or refinable.`
+                }, {status: 400});
+            }
+            identityPatch.identity_resolution_mode = mode;
+        }
+
+        if (body.identityExplanation !== undefined) {
+            identityPatch.identity_explanation = body.identityExplanation?.trim() || null;
+        }
+
+        if (body.identityEvidenceGuidance !== undefined) {
+            identityPatch.identity_evidence_guidance = body.identityEvidenceGuidance?.trim() || null;
+        }
+
+        if (Object.keys(identityPatch).length) {
+            await query(`species_profiles?id=eq.${speciesProfileId}`, {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json", Prefer: "return=minimal"},
+                body: JSON.stringify(identityPatch)
+            });
+            applied.push("identity");
+        }
+
+        if (body.landingPageSlug !== undefined) {
+            const slug = body.landingPageSlug === null
+                ? null
+                : slugify(body.landingPageSlug) || slugify(identityKey.replace(/_/g, "-"));
+
+            if (slug) {
+                const [holder] = await rows<{display_name: string; animaldex_number: number | null; species_profile_id: string}>(
+                    `species_catalog_v1?${new URLSearchParams({
+                        select: "species_profile_id,display_name,animaldex_number",
+                        landing_page_slug: `eq.${slug}`,
+                        limit: "1"
+                    })}`);
+
+                if (holder && holder.species_profile_id !== speciesProfileId) {
+                    return NextResponse.json({
+                        ok: false,
+                        error: `/animals/${slug} is already held by ${holder.display_name}${holder.animaldex_number ? ` (#${holder.animaldex_number})` : ""}. Pick another slug.`
+                    }, {status: 409});
+                }
+            }
+
+            await query(`species_profiles?id=eq.${speciesProfileId}`, {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json", Prefer: "return=minimal"},
+                body: JSON.stringify({landing_page_slug: slug})
+            });
+            // The published page list is cached for an hour, so a new slug would
+            // otherwise take that long to appear.
+            invalidateDatabaseSpeciesCache();
+            applied.push(slug ? `landing page /animals/${slug}` : "landing slug cleared");
         }
 
         if (body.stats) {
