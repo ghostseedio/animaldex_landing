@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
         const [analyses, profiles] = await Promise.all([
             captureIds.length ? rows("analysis_results", new URLSearchParams({
-                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version",
+                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version,capture_grade,species_profile_id,normalized_identity_key",
                 capture_id: `in.(${captureIds.join(",")})`
             })) : [],
             userIds.length ? rows("profiles", new URLSearchParams({
@@ -51,6 +51,18 @@ export async function GET(request: NextRequest) {
                 id: `in.(${userIds.join(",")})`
             })) : []
         ]);
+
+        // The AnimalDex number lives on the species profile, and operators work in
+        // numbers rather than profile ids, so it is resolved here rather than left
+        // for the panel to look up per row.
+        const speciesIds = Array.from(new Set(analyses
+            .map((row) => String(row.species_profile_id ?? ""))
+            .filter(Boolean)));
+        const species = speciesIds.length ? await rows("species_profiles", new URLSearchParams({
+            select: "id,animaldex_number,display_name",
+            id: `in.(${speciesIds.join(",")})`
+        })) : [];
+        const speciesById = new Map(species.map((row) => [String(row.id), row]));
 
         const analysisByCapture = new Map(analyses.map((row) => [String(row.capture_id), row]));
         const profileByUser = new Map(profiles.map((row) => [String(row.id), row]));
@@ -68,6 +80,9 @@ export async function GET(request: NextRequest) {
                 createdAt: capture.created_at,
                 updatedAt: capture.updated_at,
                 animalName: analysis.animal_name,
+                captureGrade: analysis.capture_grade ?? null,
+                animalDexNumber: speciesById.get(String(analysis.species_profile_id ?? ""))?.animaldex_number ?? null,
+                identityKey: analysis.normalized_identity_key ?? null,
                 scientificName: analysis.scientific_name,
                 confidence: analysis.confidence,
                 analysisCompletedAt: analysis.completed_at,

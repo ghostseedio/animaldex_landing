@@ -3,6 +3,8 @@
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
 import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
+import CaptureIndexPanel from "@/app/admin/maintenance/capture-index-panel";
+import CatalogPanel from "@/app/admin/maintenance/catalog-panel";
 
 type Post = {
     id: string;
@@ -14,6 +16,9 @@ type Post = {
     animalName: string | null;
     scientificName: string | null;
     confidence: number | null;
+    captureGrade: number | null;
+    animalDexNumber: number | null;
+    identityKey: string | null;
     analysisCompletedAt: string | null;
     analysisError: string | null;
     modelVersion: string | null;
@@ -37,6 +42,12 @@ function relativeDate(value: string | null) {
     return new Intl.DateTimeFormat("en", {dateStyle: "medium"}).format(new Date(value));
 }
 
+/** Relative reads well in a list; exact is what an operator needs when two captures are seconds apart. */
+function exactDate(value: string | null) {
+    if (!value) return "—";
+    return new Intl.DateTimeFormat("en", {dateStyle: "medium", timeStyle: "medium"}).format(new Date(value));
+}
+
 export default function AdminMaintenanceClient() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -49,6 +60,9 @@ export default function AdminMaintenanceClient() {
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [gradingPost, setGradingPost] = useState<Post | null>(null);
+    const [indexingPost, setIndexingPost] = useState<Post | null>(null);
+    const [merging, setMerging] = useState(false);
+    const [catalogOpen, setCatalogOpen] = useState(false);
     const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -111,6 +125,43 @@ export default function AdminMaintenanceClient() {
         }
     }
 
+    /**
+     * Merge is deliberately two hand-picked captures rather than the bulk
+     * selection: it is not reversible from here, and which one survives matters.
+     */
+    async function mergeSelected() {
+        const targets = filtered.filter((post) => selected.has(post.id));
+        if (targets.length !== 2) return;
+        // The older capture is the parent: it holds the collection history the
+        // newer duplicate should fold into.
+        const ordered = [...targets].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+        const [parent, child] = ordered;
+
+        if (!window.confirm(`Merge "${child.animalName || child.id}" (${exactDate(child.createdAt)}) into "${parent.animalName || parent.id}" (${exactDate(parent.createdAt)})?\n\nThe newer capture's photos move onto the older one. This cannot be undone from here.`)) {
+            return;
+        }
+
+        setMerging(true);
+        setError(null);
+        setNotice(null);
+        try {
+            const response = await fetch("/api/admin/maintenance/merge", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({childCaptureId: child.id, parentCaptureId: parent.id})
+            });
+            const body = await response.json();
+            if (!response.ok || !body.ok) throw new Error(body.error || "Merge failed");
+            setNotice(`Merged ${child.animalName || child.id} into ${parent.animalName || parent.id}.`);
+            setSelected(new Set());
+            await loadPosts(status);
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Merge failed");
+        } finally {
+            setMerging(false);
+        }
+    }
+
     async function refreshSelected() {
         const targets = filtered.filter((post) => selected.has(post.id) && post.captureMode === "photo").slice(0, 10);
         setNotice(null);
@@ -136,7 +187,10 @@ export default function AdminMaintenanceClient() {
             <div className="mx-auto max-w-[100rem]">
                 <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
                     <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
-                    <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setCatalogOpen(true)} className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</button>
+                        <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
+                    </div>
                 </header>
 
                 <section className="mt-6 grid gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto]">
@@ -149,7 +203,10 @@ export default function AdminMaintenanceClient() {
 
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-ink-400">{filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected</p>
-                    <button onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-40">Refresh selected ({Math.min(selected.size, 10)})</button>
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={() => void mergeSelected()} disabled={selected.size !== 2 || merging} title="Select exactly two captures from the same owner" className="rounded-xl border border-violet-400/40 px-4 py-2.5 text-sm font-black text-violet-200 disabled:border-line-300 disabled:text-ink-500">{merging ? "Merging…" : "Merge 2 selected"}</button>
+                        <button onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-40">Refresh selected ({Math.min(selected.size, 10)})</button>
+                    </div>
                 </div>
 
                 <section className="mt-3 overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
@@ -164,15 +221,21 @@ export default function AdminMaintenanceClient() {
                             </button>
                             <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${post.status === "ready" ? "bg-primary-500/15 text-primary-100" : post.status === "failed" ? "bg-red-500/15 text-red-200" : "bg-amber-500/15 text-amber-200"}`}>{post.status}</span><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{post.captureMode}</span>{post.mergedIntoCaptureId && <span className="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black uppercase text-violet-200">merged</span>}</div>
-                                <p className="mt-1 truncate text-sm text-ink-400">{post.scientificName || "No scientific name"} · {post.user.displayName || post.user.username || "Unknown user"}</p>
+                                <p className="mt-1 truncate text-sm text-ink-400">{post.scientificName || "No scientific name"} · {post.user.displayName || post.user.username || "Unknown user"}{post.user.username ? ` (@${post.user.username})` : ""}</p>
+                                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                                    <span className={`rounded-full px-2 py-1 ${post.animalDexNumber != null ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-500"}`}>{post.animalDexNumber != null ? `#${post.animalDexNumber}` : "unindexed"}</span>
+                                    <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
+                                    {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
+                                </div>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>
-                                <p className="mt-1 text-xs text-ink-500">Posted {relativeDate(post.createdAt)} · Analysis {relativeDate(post.analysisCompletedAt)}{post.modelVersion ? ` · ${post.modelVersion}` : ""}</p>
+                                <p className="mt-1 text-xs text-ink-500" title={`Posted ${exactDate(post.createdAt)}`}>Posted {exactDate(post.createdAt)} ({relativeDate(post.createdAt)}) · Analysis {relativeDate(post.analysisCompletedAt)}{post.modelVersion ? ` · ${post.modelVersion}` : ""}</p>
                                 {post.mergedIntoCaptureId && <p className="mt-2 text-xs text-violet-200">
                                     Merged into <span className="font-mono">{post.mergedIntoCaptureId}</span> — its photos moved there, so the thumbnail above is the merged card&apos;s.
                                 </p>}
                                 {post.analysisError && <p className="mt-2 line-clamp-2 text-xs text-red-300">{post.analysisError}</p>}
                             </div>
                             <div className="col-span-3 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
+                            <button onClick={() => setIndexingPost(post)} title="Move this capture onto a chosen AnimalDex number" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">Set index</button>
                             <button onClick={() => setGradingPost(post)} title="Adjust the analysis this capture is graded from" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">{gradeById[post.id] != null ? `Grade ${gradeById[post.id]}` : "Fix grade"}</button>
                             <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
                             </div>
@@ -181,6 +244,19 @@ export default function AdminMaintenanceClient() {
                 </section>
                 <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             </div>
+            {catalogOpen && <CatalogPanel onClose={() => setCatalogOpen(false)} />}
+            {indexingPost && (
+                <CaptureIndexPanel
+                    captureId={indexingPost.id}
+                    animalName={indexingPost.animalName}
+                    currentNumber={indexingPost.animalDexNumber}
+                    onClose={() => setIndexingPost(null)}
+                    onApplied={(summary) => {
+                        setNotice(`${indexingPost.animalName || "Capture"} moved to #${summary.animalDexNumber ?? "—"} ${summary.displayName ?? ""}.`);
+                        void loadPosts(status);
+                    }}
+                />
+            )}
             {gradingPost && (
                 <CaptureGradePanel
                     captureId={gradingPost.id}
