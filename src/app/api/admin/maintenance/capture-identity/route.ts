@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ok: false, error: "That capture no longer exists"}, {status: 404});
         }
 
+        let siblingCaptureId: string | null = null;
         const siblingResponse = await query(`analysis_results?${new URLSearchParams({
             select: "capture_id",
             species_profile_id: `eq.${targetProfileId}`,
@@ -149,12 +150,11 @@ export async function POST(request: NextRequest) {
             })}`);
             const [owned] = await ownedResponse.json() as Array<{id: string}>;
 
+            // Not refused: putting two of an owner's captures on one entry is the
+            // step before merging them, and the merge routine requires it. The
+            // conflicting capture is reported so the operator can follow through.
             if (owned) {
-                return NextResponse.json({
-                    ok: false,
-                    error: `This owner already has a capture of that species (${owned.id}). Merge this capture into it instead of moving it.`,
-                    conflictCaptureId: owned.id
-                }, {status: 409});
+                siblingCaptureId = owned.id;
             }
         }
 
@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
             captureId,
             animalDexNumber: profile.animaldex_number ?? null,
             displayName: profile.display_name ?? null,
+            siblingCaptureId,
             statsRecomputed: recompute.ok,
             statsError: recompute.ok ? null : (recomputeResult?.message ?? `Stats recompute failed (${recompute.status})`)
         });

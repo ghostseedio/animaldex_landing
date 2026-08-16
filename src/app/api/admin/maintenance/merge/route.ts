@@ -21,7 +21,14 @@ const FRIENDLY_ERRORS: Record<string, string> = {
     invalid_request: "Pick two different captures.",
     capture_not_found: "One of those captures no longer exists.",
     capture_user_mismatch: "Those captures belong to different people, so they cannot be merged.",
-    forbidden: "The database refused this merge."
+    forbidden: "The database refused this merge.",
+    child_analysis_not_found: "The capture being merged has no completed analysis.",
+    parent_analysis_not_found: "The capture being merged into has no completed analysis.",
+    // The routine only folds captures that already resolve to the same AnimalDex
+    // number, so an unidentified capture cannot be merged into an identified one
+    // until it has been moved there.
+    duplicate_identity_mismatch: "Those captures do not resolve to the same AnimalDex number, so the merge routine will not fold them. Use Set index to put both on the same entry first, then merge.",
+    species_profile_mismatch: "Those captures are on different catalog entries (or one has none). Use Set index to put both on the same entry first, then merge."
 };
 
 export async function POST(request: NextRequest) {

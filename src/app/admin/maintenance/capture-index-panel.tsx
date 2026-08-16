@@ -76,6 +76,7 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
         // burst of the same animal the interesting outcome is which ones moved.
         const moved: string[] = [];
         const refused: string[] = [];
+        const siblings: string[] = [];
         let summary: {animalDexNumber: number | null; displayName: string | null} | null = null;
 
         for (const captureId of captureIds) {
@@ -93,6 +94,7 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
                 }
 
                 moved.push(captureId);
+                if (payload.siblingCaptureId) siblings.push(payload.siblingCaptureId);
                 summary = {animalDexNumber: payload.animalDexNumber, displayName: payload.displayName};
             } catch (caught) {
                 refused.push(`${captureId.slice(0, 8)}: ${caught instanceof Error ? caught.message : "failed"}`);
@@ -102,6 +104,10 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
         if (moved.length) {
             setNotice(`Moved ${moved.length} of ${captureIds.length} to #${summary?.animalDexNumber ?? "—"} ${summary?.displayName ?? ""}.`);
             onApplied({...(summary ?? {animalDexNumber: null, displayName: null}), applied: moved.length});
+        }
+
+        if (siblings.length) {
+            setNotice((current) => `${current ?? ""} This owner now holds more than one capture on that entry — merge them so the collection shows one card.`.trim());
         }
 
         if (refused.length) {
