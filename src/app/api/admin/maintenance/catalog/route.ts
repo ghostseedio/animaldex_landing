@@ -207,6 +207,9 @@ type PatchBody = {
     landingPageSlug?: string | null;
     /** Whether the entry is published at all: active, seeded or hidden. */
     catalogStatus?: string | null;
+    /** What the animal is called and what it is, on an entry that already exists. */
+    displayName?: string;
+    scientificName?: string;
     /** Mint a profile that does not exist yet, then apply everything else to it. */
     create?: boolean;
     newIdentityKey?: string;
@@ -483,6 +486,21 @@ export async function POST(request: NextRequest) {
 
         if (body.identityEvidenceGuidance !== undefined) {
             identityPatch.identity_evidence_guidance = body.identityEvidenceGuidance?.trim() || null;
+        }
+
+        // The scientific name is not cosmetic: the domestic-parent lookup keys
+        // off it, so an entry carrying the wrong one is awarded the wrong index.
+        if (body.displayName !== undefined) {
+            const name = body.displayName?.trim();
+            if (!name) {
+                return NextResponse.json({ok: false, error: "An entry needs a name"}, {status: 400});
+            }
+            identityPatch.display_name = name;
+            identityPatch.animal_name = name;
+        }
+
+        if (body.scientificName !== undefined) {
+            identityPatch.scientific_name = body.scientificName?.trim() || null;
         }
 
         if (body.catalogStatus !== undefined) {
