@@ -27,11 +27,13 @@ type Props = {
     currentNumber: number | null;
     /** Shown before applying, when the selection itself is the problem. */
     warning?: string | null;
+    /** The caller will merge these captures once they are all on one entry. */
+    mergeAfter?: boolean;
     onClose: () => void;
     onApplied: (summary: {animalDexNumber: number | null; displayName: string | null; applied: number}) => void;
 };
 
-export default function CaptureIndexPanel({captureIds, animalName, currentNumber, warning, onClose, onApplied}: Props) {
+export default function CaptureIndexPanel({captureIds, animalName, currentNumber, warning, mergeAfter, onClose, onApplied}: Props) {
     const [query, setQuery] = useState("");
     const [matches, setMatches] = useState<CatalogMatch[]>([]);
     const [chosen, setChosen] = useState<CatalogMatch | null>(null);
@@ -124,13 +126,17 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
             <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
                 <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
                     <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">Set AnimalDex index</p>
+                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">
+                            {mergeAfter ? "Set index, then merge" : "Set AnimalDex index"}
+                        </p>
                         <h2 className="truncate font-display text-2xl text-white">
                             {captureIds.length > 1 ? `${captureIds.length} captures` : animalName || "Unidentified capture"}
                         </h2>
                         <p className="truncate font-mono text-[11px] text-ink-500">
                             {captureIds.length > 1
-                                ? "All of them move to the entry you pick"
+                                ? (mergeAfter
+                                    ? "All of them move to the entry you pick, then fold into the oldest one"
+                                    : "All of them move to the entry you pick")
                                 : `${captureIds[0]}${currentNumber != null ? ` · currently #${currentNumber}` : " · currently unindexed"}`}
                         </p>
                     </div>
@@ -182,11 +188,13 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
                             {applying
                                 ? "Moving…"
                                 : chosen
-                                    ? `Move ${captureIds.length > 1 ? `${captureIds.length} captures` : "capture"} to ${chosen.animaldex_number != null ? `#${chosen.animaldex_number}` : chosen.display_name}`
+                                    ? `${mergeAfter ? "Move and merge" : "Move"} ${captureIds.length > 1 ? `${captureIds.length} captures` : "capture"} to ${chosen.animaldex_number != null ? `#${chosen.animaldex_number}` : chosen.display_name}`
                                     : "Pick an entry"}
                         </button>
                         <p className="text-xs text-ink-500">
-                            Rewrites this capture&apos;s identity and recomputes its game stats and the owner&apos;s totals.
+                            {mergeAfter
+                                ? "Rewrites each capture's identity, recomputes stats, then folds them into the oldest capture. The merge cannot be undone from here."
+                                : "Rewrites this capture's identity and recomputes its game stats and the owner's totals."}
                         </p>
                     </div>
                 </div>

@@ -68,6 +68,8 @@ export default function AdminMaintenanceClient() {
     const [merging, setMerging] = useState(false);
     const [broken, setBroken] = useState<Array<{id: string; userId: string; status: string; createdAt: string; reason: string}> | null>(null);
     const [checkingBroken, setCheckingBroken] = useState(false);
+    /** Set when the index picker was opened by "Set index & merge". */
+    const [mergeAfterIndex, setMergeAfterIndex] = useState(false);
     const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -181,14 +183,18 @@ export default function AdminMaintenanceClient() {
     }
 
     async function mergeSelected() {
-        const targets = selectedPosts;
-        if (targets.length < 2 || selectedOwners.size > 1) return;
+        await mergeCaptures(selectedPosts);
+    }
+
+    async function mergeCaptures(targets: Post[], options: {skipConfirm?: boolean} = {}) {
+        if (targets.length < 2) return;
+        if (new Set(targets.map((post) => post.user.id)).size > 1) return;
         // The older capture is the parent: it holds the collection history the
         // newer duplicate should fold into.
         const ordered = [...targets].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
         const [parent, ...children] = ordered;
 
-        if (!window.confirm(`Merge ${children.length} capture(s) into "${parent.animalName || parent.id}" (${exactDate(parent.createdAt)})?\n\nTheir photos move onto the oldest capture, which keeps its identity — merging does not re-identify anything. This cannot be undone from here.`)) {
+        if (!options.skipConfirm && !window.confirm(`Merge ${children.length} capture(s) into "${parent.animalName || parent.id}" (${exactDate(parent.createdAt)})?\n\nTheir photos move onto the oldest capture, which keeps its identity — merging does not re-identify anything. This cannot be undone from here.`)) {
             return;
         }
 
@@ -245,6 +251,10 @@ export default function AdminMaintenanceClient() {
     // failing per capture after the operator has committed to the action.
     const unnumbered = selectedPosts.filter((post) => post.animalDexNumber == null);
     const distinctNumbers = new Set(selectedPosts.map((post) => post.animalDexNumber));
+    // Not a dead end: an operator who picks the entry can have both steps run.
+    const needsIndexBeforeMerge = selectedPosts.length >= 2
+        && selectedOwners.size === 1
+        && (unnumbered.length > 0 || distinctNumbers.size > 1);
     const mergeBlockedReason = selectedPosts.length < 2
         ? "Select at least two captures to merge"
         : selectedOwners.size > 1
@@ -335,6 +345,9 @@ export default function AdminMaintenanceClient() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                         <button onClick={() => setIndexingPosts(selectedPosts)} disabled={!selectedPosts.length} title="Move every selected capture onto one catalog entry" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">Set index for {selectedPosts.length || ""} selected</button>
+                        {needsIndexBeforeMerge && (
+                            <button onClick={() => { setMergeAfterIndex(true); setIndexingPosts(selectedPosts); }} disabled={merging || selectedPosts.length < 2 || selectedOwners.size > 1} title="Pick the entry these all belong to, then fold them into one card" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">Set index &amp; merge {selectedPosts.length || ""}</button>
+                        )}
                         <button onClick={() => void mergeSelected()} disabled={Boolean(mergeBlockedReason) || merging} title={mergeBlockedReason ?? "Fold the newer captures into the oldest one"} className="rounded-xl border border-violet-400/40 px-4 py-2.5 text-sm font-black text-violet-200 disabled:border-line-300 disabled:text-ink-500">{merging ? "Merging…" : `Merge ${selectedPosts.length > 1 ? selectedPosts.length : ""} selected`}</button>
                         <button onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-40">Refresh selected ({Math.min(selected.size, 10)})</button>
                     </div>
@@ -382,6 +395,7 @@ export default function AdminMaintenanceClient() {
                 <CaptureIndexPanel
                     captureIds={indexingPosts.map((post) => post.id)}
                     animalName={indexingPosts[0]?.animalName ?? null}
+                    mergeAfter={mergeAfterIndex}
                     warning={(() => {
                         // One capture per species per owner: a second one from the
                         // same person is refused, and merging is the right fix.
@@ -392,9 +406,19 @@ export default function AdminMaintenanceClient() {
                             : null;
                     })()}
                     currentNumber={indexingPosts[0]?.animalDexNumber ?? null}
-                    onClose={() => setIndexingPosts(null)}
-                    onApplied={(summary) => {
+                    onClose={() => { setIndexingPosts(null); setMergeAfterIndex(false); }}
+                    onApplied={async (summary) => {
                         setNotice(`${summary.applied} capture(s) moved to #${summary.animalDexNumber ?? "—"} ${summary.displayName ?? ""}.`);
+
+                        if (mergeAfterIndex && indexingPosts.length > 1) {
+                            // Both steps were agreed to when the entry was chosen,
+                            // so the merge follows without asking a second time.
+                            await mergeCaptures(indexingPosts, {skipConfirm: true});
+                            setMergeAfterIndex(false);
+                            setIndexingPosts(null);
+                            return;
+                        }
+
                         setSelected(new Set());
                         void loadPosts(status);
                     }}
