@@ -64,7 +64,7 @@ export default function AdminMaintenanceClient() {
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [gradingPost, setGradingPost] = useState<Post | null>(null);
-    const [indexingPost, setIndexingPost] = useState<Post | null>(null);
+    const [indexingPosts, setIndexingPosts] = useState<Post[] | null>(null);
     const [merging, setMerging] = useState(false);
     const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
@@ -133,36 +133,45 @@ export default function AdminMaintenanceClient() {
      * selection: it is not reversible from here, and which one survives matters.
      */
     async function mergeSelected() {
-        const targets = filtered.filter((post) => selected.has(post.id));
-        if (targets.length !== 2) return;
+        const targets = selectedPosts;
+        if (targets.length < 2 || selectedOwners.size > 1) return;
         // The older capture is the parent: it holds the collection history the
         // newer duplicate should fold into.
         const ordered = [...targets].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
-        const [parent, child] = ordered;
+        const [parent, ...children] = ordered;
 
-        if (!window.confirm(`Merge "${child.animalName || child.id}" (${exactDate(child.createdAt)}) into "${parent.animalName || parent.id}" (${exactDate(parent.createdAt)})?\n\nThe newer capture's photos move onto the older one. This cannot be undone from here.`)) {
+        if (!window.confirm(`Merge ${children.length} capture(s) into "${parent.animalName || parent.id}" (${exactDate(parent.createdAt)})?\n\nTheir photos move onto the oldest capture, which keeps its identity — merging does not re-identify anything. This cannot be undone from here.`)) {
             return;
         }
 
         setMerging(true);
         setError(null);
         setNotice(null);
-        try {
-            const response = await fetch("/api/admin/maintenance/merge", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({childCaptureId: child.id, parentCaptureId: parent.id})
-            });
-            const body = await response.json();
-            if (!response.ok || !body.ok) throw new Error(body.error || "Merge failed");
-            setNotice(`Merged ${child.animalName || child.id} into ${parent.animalName || parent.id}.`);
-            setSelected(new Set());
-            await loadPosts(status);
-        } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Merge failed");
-        } finally {
-            setMerging(false);
+
+        const merged: string[] = [];
+        const failed: string[] = [];
+
+        for (const child of children) {
+            try {
+                const response = await fetch("/api/admin/maintenance/merge", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({childCaptureId: child.id, parentCaptureId: parent.id})
+                });
+                const body = await response.json();
+                if (!response.ok || !body.ok) throw new Error(body.error || "Merge failed");
+                merged.push(child.id);
+            } catch (caught) {
+                failed.push(`${child.id.slice(0, 8)}: ${caught instanceof Error ? caught.message : "failed"}`);
+            }
         }
+
+        if (merged.length) setNotice(`Merged ${merged.length} capture(s) into ${parent.animalName || parent.id}. Identity unchanged — use Set index to move them onto the right entry.`);
+        if (failed.length) setError(`${failed.length} could not merge — ${failed.join(" · ")}`);
+
+        setSelected(new Set());
+        await loadPosts(status);
+        setMerging(false);
     }
 
     async function refreshSelected() {
@@ -173,6 +182,16 @@ export default function AdminMaintenanceClient() {
         await loadPosts(status);
         setNotice(`Finished ${targets.length} selected refresh${targets.length === 1 ? "" : "es"}.`);
     }
+
+    const selectedPosts = useMemo(() => posts.filter((post) => selected.has(post.id)), [posts, selected]);
+    // Merge is per owner: the database refuses to fold one person's capture into
+    // another's, and it should — each of them owns their own photo.
+    const selectedOwners = useMemo(() => new Set(selectedPosts.map((post) => post.user.id)), [selectedPosts]);
+    const mergeBlockedReason = selectedPosts.length < 2
+        ? "Select at least two captures to merge"
+        : selectedOwners.size > 1
+            ? `Those captures span ${selectedOwners.size} owners — merge only works within one person's collection`
+            : null;
 
     const filtered = useMemo(() => posts.filter((post) => {
         if (mode !== "all" && post.captureMode !== mode) return false;
@@ -205,9 +224,13 @@ export default function AdminMaintenanceClient() {
                 {(error || notice) && <div className={`mt-4 rounded-xl border p-3 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || notice}</div>}
 
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-ink-400">{filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected</p>
+                    <p className="text-sm text-ink-400">
+                        {filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected
+                        {mergeBlockedReason && selected.size > 0 && <span className="block text-xs text-amber-200">{mergeBlockedReason}</span>}
+                    </p>
                     <div className="flex flex-wrap gap-2">
-                        <button onClick={() => void mergeSelected()} disabled={selected.size !== 2 || merging} title="Select exactly two captures from the same owner" className="rounded-xl border border-violet-400/40 px-4 py-2.5 text-sm font-black text-violet-200 disabled:border-line-300 disabled:text-ink-500">{merging ? "Merging…" : "Merge 2 selected"}</button>
+                        <button onClick={() => setIndexingPosts(selectedPosts)} disabled={!selectedPosts.length} title="Move every selected capture onto one catalog entry" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">Set index for {selectedPosts.length || ""} selected</button>
+                        <button onClick={() => void mergeSelected()} disabled={Boolean(mergeBlockedReason) || merging} title={mergeBlockedReason ?? "Fold the newer captures into the oldest one"} className="rounded-xl border border-violet-400/40 px-4 py-2.5 text-sm font-black text-violet-200 disabled:border-line-300 disabled:text-ink-500">{merging ? "Merging…" : `Merge ${selectedPosts.length > 1 ? selectedPosts.length : ""} selected`}</button>
                         <button onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-40">Refresh selected ({Math.min(selected.size, 10)})</button>
                     </div>
                 </div>
@@ -241,7 +264,7 @@ export default function AdminMaintenanceClient() {
                                 {post.analysisError && <p className="mt-2 line-clamp-2 text-xs text-red-300">{post.analysisError}</p>}
                             </div>
                             <div className="col-span-3 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
-                            <button onClick={() => setIndexingPost(post)} title="Move this capture onto a chosen AnimalDex number" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">Set index</button>
+                            <button onClick={() => setIndexingPosts([post])} title="Move this capture onto a chosen AnimalDex number" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">Set index</button>
                             <button onClick={() => setGradingPost(post)} title="Adjust the analysis this capture is graded from" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">{gradeById[post.id] != null ? `Grade ${gradeById[post.id]}` : "Fix grade"}</button>
                             <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
                             </div>
@@ -250,14 +273,24 @@ export default function AdminMaintenanceClient() {
                 </section>
                 <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             </div>
-            {indexingPost && (
+            {indexingPosts && (
                 <CaptureIndexPanel
-                    captureId={indexingPost.id}
-                    animalName={indexingPost.animalName}
-                    currentNumber={indexingPost.animalDexNumber}
-                    onClose={() => setIndexingPost(null)}
+                    captureIds={indexingPosts.map((post) => post.id)}
+                    animalName={indexingPosts[0]?.animalName ?? null}
+                    warning={(() => {
+                        // One capture per species per owner: a second one from the
+                        // same person is refused, and merging is the right fix.
+                        const owners = indexingPosts.map((post) => post.user.id);
+                        const duplicated = owners.length - new Set(owners).size;
+                        return duplicated > 0
+                            ? `${duplicated} of these belong to an owner who already has another capture in this selection. Only one capture per person can hold a given index, so merge each person's duplicates first — the rest will be refused.`
+                            : null;
+                    })()}
+                    currentNumber={indexingPosts[0]?.animalDexNumber ?? null}
+                    onClose={() => setIndexingPosts(null)}
                     onApplied={(summary) => {
-                        setNotice(`${indexingPost.animalName || "Capture"} moved to #${summary.animalDexNumber ?? "—"} ${summary.displayName ?? ""}.`);
+                        setNotice(`${summary.applied} capture(s) moved to #${summary.animalDexNumber ?? "—"} ${summary.displayName ?? ""}.`);
+                        setSelected(new Set());
                         void loadPosts(status);
                     }}
                 />

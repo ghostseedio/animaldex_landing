@@ -21,14 +21,17 @@ type CatalogMatch = {
 };
 
 type Props = {
-    captureId: string;
+    /** One or many: the same move applied to a whole selection. */
+    captureIds: string[];
     animalName: string | null;
     currentNumber: number | null;
+    /** Shown before applying, when the selection itself is the problem. */
+    warning?: string | null;
     onClose: () => void;
-    onApplied: (summary: {animalDexNumber: number | null; displayName: string | null}) => void;
+    onApplied: (summary: {animalDexNumber: number | null; displayName: string | null; applied: number}) => void;
 };
 
-export default function CaptureIndexPanel({captureId, animalName, currentNumber, onClose, onApplied}: Props) {
+export default function CaptureIndexPanel({captureIds, animalName, currentNumber, warning, onClose, onApplied}: Props) {
     const [query, setQuery] = useState("");
     const [matches, setMatches] = useState<CatalogMatch[]>([]);
     const [chosen, setChosen] = useState<CatalogMatch | null>(null);
@@ -69,37 +72,60 @@ export default function CaptureIndexPanel({captureId, animalName, currentNumber,
         setError(null);
         setNotice(null);
 
-        try {
-            const response = await fetch("/api/admin/maintenance/capture-identity", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({captureId, speciesProfileId: chosen.species_profile_id})
-            });
-            const payload = await response.json();
-            if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to move this capture");
+        // Sequential, and one capture's refusal does not abandon the rest: with a
+        // burst of the same animal the interesting outcome is which ones moved.
+        const moved: string[] = [];
+        const refused: string[] = [];
+        let summary: {animalDexNumber: number | null; displayName: string | null} | null = null;
 
-            setNotice(payload.statsRecomputed
-                ? `Moved to #${payload.animalDexNumber ?? "—"} ${payload.displayName ?? ""} and stats recomputed.`
-                : `Moved to #${payload.animalDexNumber ?? "—"}, but the stats recompute failed: ${payload.statsError}`);
-            onApplied({animalDexNumber: payload.animalDexNumber, displayName: payload.displayName});
-        } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Unable to move this capture");
-        } finally {
-            setApplying(false);
+        for (const captureId of captureIds) {
+            try {
+                const response = await fetch("/api/admin/maintenance/capture-identity", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({captureId, speciesProfileId: chosen.species_profile_id})
+                });
+                const payload = await response.json();
+
+                if (!response.ok || !payload.ok) {
+                    refused.push(`${captureId.slice(0, 8)}: ${payload.error ?? "failed"}`);
+                    continue;
+                }
+
+                moved.push(captureId);
+                summary = {animalDexNumber: payload.animalDexNumber, displayName: payload.displayName};
+            } catch (caught) {
+                refused.push(`${captureId.slice(0, 8)}: ${caught instanceof Error ? caught.message : "failed"}`);
+            }
         }
+
+        if (moved.length) {
+            setNotice(`Moved ${moved.length} of ${captureIds.length} to #${summary?.animalDexNumber ?? "—"} ${summary?.displayName ?? ""}.`);
+            onApplied({...(summary ?? {animalDexNumber: null, displayName: null}), applied: moved.length});
+        }
+
+        if (refused.length) {
+            setError(`${refused.length} could not move — ${refused.join(" · ")}`);
+        }
+
+        setApplying(false);
     }
 
     return (
-        <div role="dialog" aria-modal="true" aria-label={`Set index for ${animalName || captureId}`}
+        <div role="dialog" aria-modal="true" aria-label={`Set index for ${captureIds.length > 1 ? `${captureIds.length} captures` : animalName || captureIds[0]}`}
              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-sm sm:p-8"
              onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
             <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
                 <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
                     <div className="min-w-0">
                         <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">Set AnimalDex index</p>
-                        <h2 className="truncate font-display text-2xl text-white">{animalName || "Unidentified capture"}</h2>
+                        <h2 className="truncate font-display text-2xl text-white">
+                            {captureIds.length > 1 ? `${captureIds.length} captures` : animalName || "Unidentified capture"}
+                        </h2>
                         <p className="truncate font-mono text-[11px] text-ink-500">
-                            {captureId}{currentNumber != null ? ` · currently #${currentNumber}` : " · currently unindexed"}
+                            {captureIds.length > 1
+                                ? "All of them move to the entry you pick"
+                                : `${captureIds[0]}${currentNumber != null ? ` · currently #${currentNumber}` : " · currently unindexed"}`}
                         </p>
                     </div>
                     <button type="button" onClick={onClose} aria-label="Close index picker"
@@ -107,6 +133,7 @@ export default function CaptureIndexPanel({captureId, animalName, currentNumber,
                 </div>
 
                 <div className="space-y-4 p-5">
+                    {warning && <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm leading-5 text-amber-200">{warning}</p>}
                     {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
                     {notice && <p className="rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
 
@@ -146,7 +173,11 @@ export default function CaptureIndexPanel({captureId, animalName, currentNumber,
                     <div className="flex flex-wrap items-center gap-3">
                         <button type="button" onClick={() => void apply()} disabled={!chosen || applying}
                                 className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
-                            {applying ? "Moving…" : chosen ? `Move to ${chosen.animaldex_number != null ? `#${chosen.animaldex_number}` : chosen.display_name}` : "Pick an entry"}
+                            {applying
+                                ? "Moving…"
+                                : chosen
+                                    ? `Move ${captureIds.length > 1 ? `${captureIds.length} captures` : "capture"} to ${chosen.animaldex_number != null ? `#${chosen.animaldex_number}` : chosen.display_name}`
+                                    : "Pick an entry"}
                         </button>
                         <p className="text-xs text-ink-500">
                             Rewrites this capture&apos;s identity and recomputes its game stats and the owner&apos;s totals.
