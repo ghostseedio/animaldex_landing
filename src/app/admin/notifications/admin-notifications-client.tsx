@@ -81,6 +81,7 @@ export default function AdminNotificationsClient() {
     const [title, setTitle] = useState(templates[0].title);
     const [body, setBody] = useState(templates[0].body);
     const [confirmText, setConfirmText] = useState("");
+    const [captureId, setCaptureId] = useState("");
     const [sending, setSending] = useState(false);
 
     async function load() {
@@ -143,6 +144,12 @@ export default function AdminNotificationsClient() {
         ? data?.summary.totalProfiles ?? 0
         : (recipient ? 1 : 0);
 
+    // Checked here rather than trusted to the edge function: a malformed id
+    // would be rejected by Postgres as a bad uuid and surface as a generic
+    // failure, after the message had already been composed.
+    const captureIdValid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        .test(captureId.trim());
+
     // A broadcast is irreversible and instant, so it needs a deliberate act
     // rather than one click next to a populated form.
     const broadcastReady = mode !== "broadcast" || confirmText.trim().toUpperCase() === "SEND TO ALL";
@@ -152,6 +159,8 @@ export default function AdminNotificationsClient() {
         // the in-app notification, and blocking that would make the feature
         // unusable until push tokens exist.
         && targetPeople > 0
+        // Empty is fine - linking a capture is optional. Half-pasted is not.
+        && (!captureId.trim() || captureIdValid)
         && !sending;
 
     async function send() {
@@ -167,6 +176,8 @@ export default function AdminNotificationsClient() {
                     userId: recipient?.id,
                     title: preview.title,
                     body: preview.body,
+                    // Only meaningful for a single recipient; see the field.
+                    captureId: mode === "user" && captureIdValid ? captureId.trim() : undefined,
                     // Guard only matters for broadcast; the edge function ignores
                     // it for a single recipient.
                     expectedRecipients: mode === "broadcast" ? targetDevices : undefined
@@ -174,9 +185,17 @@ export default function AdminNotificationsClient() {
             });
             const payload = await response.json();
             if (!response.ok || !payload.ok) {
-                throw new Error(payload.detail?.error === "recipient_count_changed"
-                    ? `Audience changed while you were composing (was ${payload.detail.expected}, now ${payload.detail.actual}). Refresh and check before sending.`
-                    : payload.error || "Send failed");
+                // Spelled out rather than passed through: these arrive as bare
+                // slugs and each one has a specific fix the operator can act on.
+                const detail = payload.detail?.error;
+                const explained: Record<string, string> = {
+                    recipient_count_changed: `Audience changed while you were composing (was ${payload.detail?.expected}, now ${payload.detail?.actual}). Refresh and check before sending.`,
+                    capture_not_found: "No capture with that id. Check you copied the whole thing.",
+                    capture_belongs_to_another_user: "That capture belongs to someone else. The app opens a linked capture from the recipient's own library, so this one would open nothing for them.",
+                    capture_id_not_allowed_for_broadcast: "A capture cannot be linked on a broadcast — it belongs to one person.",
+                    valid_capture_id_required: "That capture id is not a valid UUID."
+                };
+                throw new Error((detail && explained[detail]) || payload.error || "Send failed");
             }
             const result = payload.result;
             // Lead with the in-app count, not the push count. The message is
@@ -189,6 +208,7 @@ export default function AdminNotificationsClient() {
                 + (muted ? ` · ${muted} muted this category` : "")
                 + (result.failed ? ` · ${result.failed} push${result.failed === 1 ? "" : "es"} failed` : ""));
             setConfirmText("");
+            setCaptureId("");
             await load();
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Send failed");
@@ -303,6 +323,24 @@ export default function AdminNotificationsClient() {
                             <input value={animal} onChange={(event) => setAnimal(event.target.value)}
                                    placeholder="Rainbow Crab"
                                    className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
+                        </div>}
+
+                        {/*
+                          * Only for a single recipient. A broadcast would attach
+                          * the same capture to everyone, and it belongs to one
+                          * person - so most of them would tap through to
+                          * something that is not theirs and open nothing.
+                          */}
+                        {mode === "user" && <div className="mt-4">
+                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">
+                                Linked capture <span className="text-ink-500">· optional</span>
+                            </label>
+                            <input value={captureId} onChange={(event) => setCaptureId(event.target.value)}
+                                   placeholder="Capture UUID — tapping the notification opens this capture"
+                                   className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 font-mono text-sm text-white outline-none focus:border-primary-300" />
+                            {captureId.trim() && !captureIdValid && <p className="mt-1.5 text-xs text-amber-300">
+                                That is not a UUID. Copy the capture id from the support panel.
+                            </p>}
                         </div>}
 
                         <div className="mt-4">
