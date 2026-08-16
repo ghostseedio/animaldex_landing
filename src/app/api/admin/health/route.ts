@@ -66,11 +66,16 @@ export async function GET(request: NextRequest) {
         const since = new Date(Date.now() - WINDOW_HOURS * 3600_000).toISOString();
         const stuckBefore = new Date(Date.now() - STUCK_MINUTES * 60_000).toISOString();
 
-        const [recent, latestSuccess, stuck, unanalysed] = await Promise.all([
+        const [recent, latestSuccess, stuck, unanalysed, unlinked] = await Promise.all([
             rows("analysis_results", `select=capture_id,error_message,completed_at,created_at&created_at=gte.${since}&limit=2000`),
             rows("analysis_results", "select=completed_at&completed_at=not.is.null&order=completed_at.desc&limit=1"),
             count("captures", `select=id&status=in.(pending,uploading,ready_for_analysis,analyzing)&created_at=lt.${stuckBefore}`),
-            count("captures", `select=id&status=eq.failed&created_at=gte.${since}`)
+            count("captures", `select=id&status=eq.failed&created_at=gte.${since}`),
+            // An analysis with no species_profile_id still reaches its number
+            // through the identity key, so nothing looks wrong — but duplicate
+            // merging refuses to touch the capture, and two photos of one pet
+            // sit side by side forever. /api/admin/catalog/relink repairs them.
+            count("analysis_results", `select=capture_id&species_profile_id=is.null&identity_kind=eq.domestic_parent&created_at=gte.${since}`)
         ]);
 
         const failures = recent.filter((row) => String(row.error_message ?? "").trim().length > 0);
@@ -90,6 +95,8 @@ export async function GET(request: NextRequest) {
 
         // Nothing succeeding for hours is the strongest signal that the function
         // itself is down, rather than individual captures being bad.
+        // Unlinked analyses are a data gap, not an outage: they do not change
+        // the pipeline's status, only what is worth going and fixing.
         const status = (minutesSinceSuccess != null && minutesSinceSuccess > 240) || failureRate > 0.5
             ? "down"
             : failureRate > DEGRADED_FAILURE_RATE || stuck > 0
@@ -111,6 +118,7 @@ export async function GET(request: NextRequest) {
                 .map(([kind, total]) => ({kind, total})),
             capturesFailed: unanalysed,
             stuckCaptures: stuck,
+            unlinkedDomesticAnalyses: unlinked,
             lastSuccessAt,
             minutesSinceSuccess,
             generatedAt: new Date().toISOString()
