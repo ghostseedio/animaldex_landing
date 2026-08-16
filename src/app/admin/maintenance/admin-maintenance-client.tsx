@@ -215,10 +215,15 @@ export default function AdminMaintenanceClient() {
         }
 
         if (merged.length) setNotice(`Merged ${merged.length} capture(s) into ${parent.animalName || parent.id}. Identity unchanged — use Set index to move them onto the right entry.`);
-        if (failed.length) setError(`${failed.length} could not merge — ${failed.join(" · ")}`);
+        if (failed.length) setError(`${failed.length} of ${children.length} could not merge — ${failed.join(" · ")}`);
 
-        setSelected(new Set());
-        await loadPosts(status);
+        // Keeping the selection when nothing moved: clearing it made a refusal
+        // look like a no-op, with the rows unchanged and the checkboxes reset.
+        if (merged.length) {
+            setSelected(new Set());
+            await loadPosts(status);
+        }
+
         setMerging(false);
     }
 
@@ -235,11 +240,20 @@ export default function AdminMaintenanceClient() {
     // Merge is per owner: the database refuses to fold one person's capture into
     // another's, and it should — each of them owns their own photo.
     const selectedOwners = useMemo(() => new Set(selectedPosts.map((post) => post.user.id)), [selectedPosts]);
+    // The merge routine folds captures that resolve to the same AnimalDex number,
+    // so a selection that cannot possibly satisfy it is caught here rather than
+    // failing per capture after the operator has committed to the action.
+    const unnumbered = selectedPosts.filter((post) => post.animalDexNumber == null);
+    const distinctNumbers = new Set(selectedPosts.map((post) => post.animalDexNumber));
     const mergeBlockedReason = selectedPosts.length < 2
         ? "Select at least two captures to merge"
         : selectedOwners.size > 1
             ? `Those captures span ${selectedOwners.size} owners — merge only works within one person's collection`
-            : null;
+            : unnumbered.length
+                ? `${unnumbered.length} of these has no AnimalDex number yet — use Set index on them first, then merge`
+                : distinctNumbers.size > 1
+                    ? "Those captures sit on different AnimalDex numbers — put them on the same one with Set index first"
+                    : null;
 
     const filtered = useMemo(() => posts.filter((post) => {
         if (mode !== "all" && post.captureMode !== mode) return false;
