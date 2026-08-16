@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
 import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
+import NotifyOwnerDialog, {type NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
 import CaptureIndexPanel from "@/app/admin/maintenance/capture-index-panel";
 
 type Post = {
@@ -97,6 +98,7 @@ export default function AdminMaintenanceClient() {
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [gradingPost, setGradingPost] = useState<Post | null>(null);
+    const [notifyRequest, setNotifyRequest] = useState<NotifyRequest | null>(null);
     const [indexingPosts, setIndexingPosts] = useState<Post[] | null>(null);
     const [merging, setMerging] = useState(false);
     const [broken, setBroken] = useState<Array<{id: string; userId: string; status: string; createdAt: string; reason: string}> | null>(null);
@@ -265,7 +267,20 @@ export default function AdminMaintenanceClient() {
             }
         }
 
-        if (merged.length) setNotice(`Merged ${merged.length} capture(s) into ${parent.animalName || parent.id}. Identity unchanged — use Set index to move them onto the right entry.`);
+        if (merged.length) {
+            setNotice(`Merged ${merged.length} capture(s) into ${parent.animalName || parent.id}. Identity unchanged — use Set index to move them onto the right entry.`);
+            // One message for the whole merge rather than one per capture: a
+            // merge is already restricted to a single owner, so this is the
+            // person whose collection just changed, told once.
+            setNotifyRequest({
+                templateId: "merged",
+                userId: parent.user.id,
+                recipientLabel: parent.user.username ? `@${parent.user.username}` : parent.user.displayName || "this member",
+                animalName: parent.animalName,
+                captureId: parent.id,
+                count: merged.length + 1
+            });
+        }
         if (failed.length) setError(`${failed.length} of ${children.length} could not merge — ${failed.join(" · ")}`);
 
         // Keeping the selection when nothing moved: clearing it made a refusal
@@ -522,7 +537,24 @@ export default function AdminMaintenanceClient() {
                     onSaved={(grade) => {
                         setGradeById((current) => ({...current, [gradingPost.id]: grade}));
                         setNotice(`${gradingPost.animalName || "Capture"}: grade saved as ${grade}.`);
+                        setNotifyRequest({
+                            templateId: "regraded",
+                            userId: gradingPost.user.id,
+                            recipientLabel: gradingPost.user.username
+                                ? `@${gradingPost.user.username}`
+                                : gradingPost.user.displayName || "this member",
+                            animalName: gradingPost.animalName,
+                            captureId: gradingPost.id,
+                            grade
+                        });
                     }}
+                />
+            )}
+            {notifyRequest && (
+                <NotifyOwnerDialog
+                    request={notifyRequest}
+                    onClose={() => setNotifyRequest(null)}
+                    onSent={(message) => setNotice(message)}
                 />
             )}
             {viewingPost && (

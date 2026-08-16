@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
+import {fillTemplate, notificationTemplates as templates} from "@/lib/notification-templates";
 
 type Recipient = {id: string; devices: number; username: string | null; displayName: string | null};
 type HistoryRow = {
@@ -24,60 +25,7 @@ type Data = {
  * the operator is usually acting on a capture they already have open and the
  * name they would type is the one the user sees on the card.
  */
-const templates = [
-    {
-        id: "indexed",
-        label: "We just indexed…",
-        scope: "both" as const,
-        title: "{animal} is now in AnimalDex",
-        body: "We just indexed {animal}. Open the app to see its card, stats and field guide."
-    },
-    {
-        id: "merged",
-        label: "We merged your captures…",
-        scope: "user" as const,
-        title: "We tidied up your {animal} captures",
-        body: "Several photos of the same {animal} are now grouped into one card, so your collection reads cleanly."
-    },
-    {
-        id: "reidentified",
-        label: "We updated the ID on your…",
-        scope: "user" as const,
-        title: "We updated the ID on your {animal}",
-        body: "A closer look says this one is {animal}. Your card and its stats have been corrected."
-    },
-    {
-        id: "screen",
-        label: "We believe your capture is from a screen…",
-        scope: "user" as const,
-        title: "About your recent capture",
-        body: "This one looks like a photo of a screen or a printed image rather than a live animal, so it has not been added to your collection."
-    },
-    {
-        id: "credits",
-        label: "We added credits…",
-        scope: "user" as const,
-        title: "Credits added to your account",
-        body: "We have added credits to your AnimalDex account. Open the app and your next scan is ready to go."
-    },
-    {
-        id: "upload-failed",
-        label: "A capture did not upload…",
-        scope: "user" as const,
-        title: "One of your captures did not upload",
-        body: "The photo never finished uploading, so we could not analyse it and it has not been added to your collection. No credits were charged. Please take the photo again."
-    },
-    {
-        id: "blank",
-        label: "Blank message",
-        scope: "both" as const,
-        title: "",
-        body: ""
-    }
-];
-
-const fill = (text: string, animal: string) =>
-    text.replaceAll("{animal}", animal.trim() || "your animal");
+const fill = (text: string, animal: string) => fillTemplate(text, {animal});
 
 export default function AdminNotificationsClient() {
     const [data, setData] = useState<Data | null>(null);
