@@ -158,7 +158,11 @@ export async function getCatalogLandingPageIndex(): Promise<CatalogLandingPageIn
                         ? "Hidden entries are left out of the published catalog."
                         : !slug
                             ? "No landing slug, and no identity key to derive one from."
-                            : "Folded into another entry sharing its canonical identity.",
+                            // Indexed, visible, and nothing else holds the slug:
+                            // the page list simply has not caught up. Saying
+                            // "folded into another entry" here would send an
+                            // operator looking for a conflict that isn't there.
+                            : "Not in the published list yet — it is cached, so a newly indexed entry can take up to an hour to appear.",
                 hostedBy: null
             };
         }

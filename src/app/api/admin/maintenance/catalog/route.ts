@@ -75,12 +75,49 @@ type CatalogEntry = Record<string, unknown> & {
     artwork: Awaited<ReturnType<typeof describeArtwork>>;
 };
 
-async function loadEntry(speciesProfileId: string): Promise<CatalogEntry | null> {
-    const [profile] = await rows<Record<string, unknown>>(`species_catalog_v1?${new URLSearchParams({
+/**
+ * species_catalog_v1 excludes hidden entries, which is right for every surface
+ * that publishes the catalog and wrong for the one that repairs it: a profile is
+ * usually hidden *because* something is wrong with it, and captures can still be
+ * sitting on it. Falling back to the underlying table keeps those reachable.
+ */
+async function loadProfile(speciesProfileId: string) {
+    const [published] = await rows<Record<string, unknown>>(`species_catalog_v1?${new URLSearchParams({
         select: "species_profile_id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,canonical_game_stats,size_scale_score,species_subtitle,species_subtitle_story,principle_name,principle_expression,core_lesson,biological_basis,short_motto,application_example,public_capture_count",
         species_profile_id: `eq.${speciesProfileId}`,
         limit: "1"
     })}`);
+
+    if (published) return published;
+
+    const [hidden] = await rows<Record<string, unknown>>(`species_profiles?${new URLSearchParams({
+        select: "id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,canonical_game_stats,size_scale_score",
+        id: `eq.${speciesProfileId}`,
+        limit: "1"
+    })}`);
+
+    if (!hidden) return null;
+
+    // Shaped like the view so every caller below reads one row type. The
+    // subtitle and lesson joins have no rows for an unpublished profile.
+    return {
+        ...hidden,
+        species_profile_id: hidden.id,
+        species_subtitle: null,
+        species_subtitle_story: null,
+        principle_name: null,
+        principle_expression: null,
+        core_lesson: null,
+        biological_basis: null,
+        short_motto: null,
+        application_example: null,
+        public_capture_count: 0,
+        unpublished: true
+    };
+}
+
+async function loadEntry(speciesProfileId: string): Promise<CatalogEntry | null> {
+    const profile = await loadProfile(speciesProfileId);
 
     if (!profile) return null;
 
@@ -168,7 +205,22 @@ type PatchBody = {
     identityEvidenceGuidance?: string | null;
     /** Slug the landing page publishes at. */
     landingPageSlug?: string | null;
+    /** Whether the entry is published at all: active, seeded or hidden. */
+    catalogStatus?: string | null;
+    /** Mint a profile that does not exist yet, then apply everything else to it. */
+    create?: boolean;
+    newIdentityKey?: string;
+    newDisplayName?: string;
+    newScientificName?: string;
 };
+
+/**
+ * hidden keeps an entry out of species_catalog_v1 and so out of every published
+ * surface. It is how a recognition bucket that should never be collectable is
+ * parked — but a hidden entry that captures still resolve to is a dead end,
+ * because those captures can never take an AnimalDex number.
+ */
+const CATALOG_STATUSES = ["active", "seeded", "hidden"];
 
 /** Kinds the app knows how to label and tint; anything else shows no chip at all. */
 const IDENTITY_KINDS = [
@@ -182,13 +234,94 @@ function slugify(value: string) {
     return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 
+/**
+ * Mint a profile for an animal the catalog has never seen.
+ *
+ * Every entry so far arrived one of two ways: a capture the model named, or a
+ * hand-written migration. An animal nobody has photographed yet has neither, so
+ * there was no way to index it ahead of time without writing SQL. The shape
+ * mirrors what those migrations insert, minus the number — the caller sets that
+ * through the same path as any other entry, so the broad-group guard and the
+ * uniqueness check still apply.
+ */
+async function createEntry(body: PatchBody) {
+    const identityKey = body.newIdentityKey?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") ?? "";
+    const displayName = body.newDisplayName?.trim() ?? "";
+
+    if (!identityKey || !displayName) {
+        return {error: "A name and an identity key are both required", status: 400};
+    }
+
+    const [existing] = await rows<{id: string; display_name: string; animaldex_number: number | null}>(
+        `species_profiles?${new URLSearchParams({
+            select: "id,display_name,animaldex_number",
+            normalized_identity_key: `eq.${identityKey}`,
+            limit: "1"
+        })}`);
+
+    if (existing) {
+        return {
+            error: `${existing.display_name} already holds the identity key "${identityKey}"${existing.animaldex_number ? ` at #${existing.animaldex_number}` : " (unindexed)"}. Edit that entry instead.`,
+            status: 409,
+            speciesProfileId: existing.id
+        };
+    }
+
+    const kind = body.identityKind?.trim().toLowerCase() || "species";
+    if (!IDENTITY_KINDS.includes(kind)) {
+        return {error: `"${kind}" is not an identity kind the app renders.`, status: 400};
+    }
+
+    const response = await query("species_profiles", {
+        method: "POST",
+        headers: {"Content-Type": "application/json", Prefer: "return=representation"},
+        body: JSON.stringify({
+            normalized_identity_key: identityKey,
+            display_name: displayName,
+            animal_name: displayName,
+            scientific_name: body.newScientificName?.trim() || null,
+            refined_identity: displayName,
+            identity_source: body.newScientificName?.trim() ? "scientific_name" : "animal_name",
+            identity_confidence: 0.9,
+            identity_kind: kind,
+            identity_resolution_mode: body.identityResolutionMode?.trim() || "terminal",
+            catalog_source: "manual",
+            catalog_status: "active",
+            generation_status: "ready",
+            generation_model_version: "manual:admin_panel",
+            generation_metadata: {generation_mode: "manual", source: "admin_panel"},
+            landing_page_slug: slugify(displayName),
+            canonical_game_stats: body.stats ?? null
+        })
+    });
+
+    const [row] = await response.json() as Array<{id: string}>;
+    return {speciesProfileId: row.id};
+}
+
 export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 
     const body = await request.json().catch(() => ({})) as PatchBody;
-    const speciesProfileId = body.speciesProfileId?.trim() ?? "";
+    let speciesProfileId = body.speciesProfileId?.trim() ?? "";
+
+    if (body.create) {
+        try {
+            const result = await createEntry(body);
+            if (result.error) {
+                return NextResponse.json({ok: false, error: result.error, speciesProfileId: result.speciesProfileId}, {status: result.status});
+            }
+            speciesProfileId = result.speciesProfileId!;
+        } catch (error) {
+            console.error("[admin-catalog-create]", error);
+            return NextResponse.json({
+                ok: false,
+                error: error instanceof Error ? error.message : "Unable to create that entry"
+            }, {status: 500});
+        }
+    }
 
     if (!UUID.test(speciesProfileId)) {
         return NextResponse.json({ok: false, error: "A catalog entry is required"}, {status: 400});
@@ -264,6 +397,15 @@ export async function POST(request: NextRequest) {
         }
 
         if (body.subtitle !== undefined || body.subtitleStory !== undefined) {
+            const subtitle = body.subtitle ?? (entry.species_subtitle as string | null) ?? null;
+            // species_subtitles.descriptor is NOT NULL and holds the naming half
+            // of the subtitle — "The Desert Spear Walker" out of "The Desert
+            // Spear Walker. Protection can support grace." Deriving it keeps the
+            // two in step; without it the insert fails outright.
+            const descriptor = subtitle?.split(/\.\s/)[0]?.trim().replace(/\.$/, "")
+                || (entry.display_name as string | null)
+                || identityKey;
+
             await query("species_subtitles", {
                 method: "POST",
                 headers: {
@@ -274,9 +416,12 @@ export async function POST(request: NextRequest) {
                     species_profile_id: speciesProfileId,
                     locale: "en",
                     slug: entry.landing_page_slug ?? identityKey,
-                    subtitle: body.subtitle ?? entry.species_subtitle ?? null,
+                    descriptor,
+                    subtitle,
                     subtitle_story: body.subtitleStory ?? entry.species_subtitle_story ?? null,
-                    source: "admin_panel",
+                    // species_subtitles_source_check allows only landing_repo,
+                    // manual, capture_analysis and comparison_subtitle_generation.
+                    source: "manual",
                     updated_at: new Date().toISOString()
                 })
             });
@@ -297,7 +442,7 @@ export async function POST(request: NextRequest) {
                     principle_expression: body.principleExpression ?? entry.principle_expression ?? null,
                     core_lesson: body.coreLesson ?? entry.core_lesson ?? null,
                     short_motto: body.shortMotto ?? entry.short_motto ?? null,
-                    source: "admin_panel",
+                    source: "manual:admin_panel",
                     updated_at: new Date().toISOString()
                 })
             });
@@ -338,6 +483,17 @@ export async function POST(request: NextRequest) {
 
         if (body.identityEvidenceGuidance !== undefined) {
             identityPatch.identity_evidence_guidance = body.identityEvidenceGuidance?.trim() || null;
+        }
+
+        if (body.catalogStatus !== undefined) {
+            const status = body.catalogStatus?.trim().toLowerCase() || null;
+            if (status && !CATALOG_STATUSES.includes(status)) {
+                return NextResponse.json({
+                    ok: false,
+                    error: `"${status}" is not a catalog status. Use one of: ${CATALOG_STATUSES.join(", ")}.`
+                }, {status: 400});
+            }
+            identityPatch.catalog_status = status;
         }
 
         if (Object.keys(identityPatch).length) {
@@ -418,7 +574,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     alias_identity_key: alias,
                     canonical_identity_key: identityKey,
-                    source: "admin_panel",
+                    source: "manual:admin_panel",
                     notes: "Added from the maintenance panel"
                 })
             });
