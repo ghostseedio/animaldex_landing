@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
+import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
 
 type Post = {
     id: string;
@@ -47,6 +48,8 @@ export default function AdminMaintenanceClient() {
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
+    const [gradingPost, setGradingPost] = useState<Post | null>(null);
+    const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -169,12 +172,27 @@ export default function AdminMaintenanceClient() {
                                 </p>}
                                 {post.analysisError && <p className="mt-2 line-clamp-2 text-xs text-red-300">{post.analysisError}</p>}
                             </div>
-                            <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="col-span-3 w-full rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500 sm:col-span-1 sm:w-auto">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
+                            <div className="col-span-3 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
+                            <button onClick={() => setGradingPost(post)} title="Adjust the analysis this capture is graded from" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">{gradeById[post.id] != null ? `Grade ${gradeById[post.id]}` : "Fix grade"}</button>
+                            <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
+                            </div>
                         </article>;
                     })}
                 </section>
                 <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             </div>
+            {gradingPost && (
+                <CaptureGradePanel
+                    captureId={gradingPost.id}
+                    animalName={gradingPost.animalName}
+                    imageUrl={gradingPost.imageUrl}
+                    onClose={() => setGradingPost(null)}
+                    onSaved={(grade) => {
+                        setGradeById((current) => ({...current, [gradingPost.id]: grade}));
+                        setNotice(`${gradingPost.animalName || "Capture"}: grade saved as ${grade}.`);
+                    }}
+                />
+            )}
             {viewingPost && (
                 <div role="dialog" aria-modal="true" aria-label={`${viewingPost.animalName || "Capture"} full-size image`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-8" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewingPost(null); }}>
                     <div className="flex max-h-full w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
