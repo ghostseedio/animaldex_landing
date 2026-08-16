@@ -29,10 +29,14 @@ export async function GET(request: NextRequest) {
 
     try {
         const limit = Math.min(100, Math.max(10, Number(request.nextUrl.searchParams.get("limit")) || 50));
+        // Paged rather than "the most recent N": an operator following up on a
+        // report from yesterday could not reach it otherwise.
+        const offset = Math.min(20000, Math.max(0, Number(request.nextUrl.searchParams.get("offset")) || 0));
         const captureParams = new URLSearchParams({
             select: "id,user_id,status,capture_mode,title,notes,created_at,updated_at,merged_into_capture_id",
             order: "created_at.desc",
-            limit: String(limit)
+            limit: String(limit),
+            offset: String(offset)
         });
         const requestedStatus = request.nextUrl.searchParams.get("status");
         if (requestedStatus && requestedStatus !== "all") captureParams.set("status", `eq.${requestedStatus}`);
@@ -175,7 +179,15 @@ export async function GET(request: NextRequest) {
             post.user.displayName, post.user.username
         ].some((value) => String(value ?? "").toLowerCase().includes(search)));
 
-        return NextResponse.json({ok: true, posts, generatedAt: new Date().toISOString()});
+        return NextResponse.json({
+            ok: true,
+            posts,
+            offset,
+            limit,
+            // A full page back means there is very likely another behind it.
+            hasMore: captures.length === limit,
+            generatedAt: new Date().toISOString()
+        });
     } catch (error) {
         console.error("[admin-maintenance-posts]", error);
         return NextResponse.json({ok: false, error: error instanceof Error ? error.message : "Unable to load posts"}, {status: 500});

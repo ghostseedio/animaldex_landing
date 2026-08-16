@@ -71,6 +71,8 @@ export default function AdminMaintenanceClient() {
     const [hideMerged, setHideMerged] = useState(false);
     const [hideCreditFailures, setHideCreditFailures] = useState(false);
     const [hideScreenCaptures, setHideScreenCaptures] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [running, setRunning] = useState<Set<string>>(new Set());
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
@@ -85,20 +87,32 @@ export default function AdminMaintenanceClient() {
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    async function loadPosts(nextStatus = status) {
-        setLoading(true);
+    async function loadPosts(nextStatus = status, options: {append?: boolean} = {}) {
+        const offset = options.append ? posts.length : 0;
+        if (options.append) setLoadingMore(true); else setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/admin/maintenance/posts?limit=100&status=${encodeURIComponent(nextStatus)}`, {cache: "no-store"});
+            const response = await fetch(
+                `/api/admin/maintenance/posts?limit=100&offset=${offset}&status=${encodeURIComponent(nextStatus)}`,
+                {cache: "no-store"}
+            );
             if (response.status === 401) { setAuthorized(false); return; }
             const body = await response.json();
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load posts");
-            setPosts(body.posts);
+            // Appending by id rather than by index: a merge between pages can
+            // shift rows, and a duplicate row would break selection.
+            setPosts((current) => {
+                if (!options.append) return body.posts;
+                const seen = new Set(current.map((post: Post) => post.id));
+                return [...current, ...body.posts.filter((post: Post) => !seen.has(post.id))];
+            });
+            setHasMore(Boolean(body.hasMore));
             setAuthorized(true);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to load posts");
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     }
 
@@ -331,11 +345,11 @@ export default function AdminMaintenanceClient() {
 
                 {/* Sticky: the actions act on a selection made further down the
                     list, and scrolling back up to reach them lost your place. */}
-                <div className="sticky top-0 z-40 -mx-4 mt-6 border-b border-line-300 bg-canvas-950/95 px-4 pb-3 pt-3 backdrop-blur sm:-mx-7 sm:px-7">
-                <section className="grid gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search animal, owner, or capture ID…" className="min-w-0 rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-300" />
-                    <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
-                    <select value={mode} onChange={(event) => setMode(event.target.value)} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
+                <div className="sticky top-0 z-40 -mx-4 mt-6 border-b border-line-300 bg-canvas-950/95 px-4 py-2 backdrop-blur sm:-mx-7 sm:px-7">
+                <section className="flex flex-wrap items-center gap-2">
+                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search animal, owner, or capture ID…" className="h-9 min-w-[12rem] flex-1 rounded-lg border border-line-300 bg-canvas-900 px-3 text-sm text-white outline-none focus:border-primary-300" />
+                    <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} className="h-9 rounded-lg border border-line-300 bg-canvas-900 px-2 text-sm text-white"><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
+                    <select value={mode} onChange={(event) => setMode(event.target.value)} className="h-9 rounded-lg border border-line-300 bg-canvas-900 px-2 text-sm text-white"><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
                 </section>
 
                 {broken && broken.length > 0 && (
@@ -360,21 +374,21 @@ export default function AdminMaintenanceClient() {
 
                 {(error || notice) && <div className={`mt-4 rounded-xl border p-3 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || notice}</div>}
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                     {[
                         {id: "merged", label: "Hide merged", on: hideMerged, toggle: () => setHideMerged((value) => !value)},
                         {id: "credits", label: "Hide credit failures", on: hideCreditFailures, toggle: () => setHideCreditFailures((value) => !value)},
                         {id: "screens", label: "Hide screen captures", on: hideScreenCaptures, toggle: () => setHideScreenCaptures((value) => !value)}
                     ].map((option) => (
                         <button key={option.id} onClick={option.toggle} aria-pressed={option.on}
-                                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${option.on ? "border-primary-400 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}>
+                                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${option.on ? "border-primary-400 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}>
                             {option.on ? "✓ " : ""}{option.label}
                         </button>
                     ))}
                     {hiddenCount > 0 && <span className="text-xs text-ink-500">{hiddenCount} hidden</span>}
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm text-ink-400">
                         {filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected
                         {mergeBlockedReason && selected.size > 0 && <span className="block text-xs text-amber-200">{mergeBlockedReason}</span>}
@@ -428,6 +442,17 @@ export default function AdminMaintenanceClient() {
                         </article>;
                     })}
                 </section>
+                <div className="mt-4 flex items-center justify-center">
+                    {hasMore ? (
+                        <button onClick={() => void loadPosts(status, {append: true})} disabled={loadingMore}
+                                className="rounded-xl border border-line-300 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
+                            {loadingMore ? "Loading…" : "Load older captures"}
+                        </button>
+                    ) : (
+                        <p className="text-xs text-ink-500">{posts.length} loaded — that is every capture in this status.</p>
+                    )}
+                </div>
+
                 <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             </div>
             {indexingPosts && (
