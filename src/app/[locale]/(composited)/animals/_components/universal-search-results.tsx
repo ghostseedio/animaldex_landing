@@ -2,9 +2,12 @@
 
 import {useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import type {
+    UniversalSearchIntent,
     UniversalSearchResponse,
-    UniversalSearchSpeciesHit
+    UniversalSearchSpeciesHit,
+    UniversalSearchStatPreset
 } from "@/data/universal-search";
 
 export type UniversalSearchResultsCopy = {
@@ -37,7 +40,7 @@ type UniversalSearchResultsProps = {
 };
 
 /** Mirrors `databaseSpeciesCanonicalSlug`: catalog slugs carry a dex-number suffix. */
-function resolveSpeciesHref(hit: UniversalSearchSpeciesHit) {
+function resolveSpeciesSlug(hit: UniversalSearchSpeciesHit) {
     const raw = hit.landing_page_slug?.trim()
         || hit.normalized_identity_key?.trim().replace(/_/g, "-")
         || "";
@@ -45,7 +48,112 @@ function resolveSpeciesHref(hit: UniversalSearchSpeciesHit) {
 
     const suffix = hit.animaldex_number ? `-${hit.animaldex_number}` : "";
     const slug = suffix && raw.endsWith(suffix) ? raw.slice(0, -suffix.length) : raw;
+    return slug || null;
+}
+
+function resolveSpeciesHref(hit: UniversalSearchSpeciesHit) {
+    const slug = resolveSpeciesSlug(hit);
     return slug ? `/animals/${slug}` : null;
+}
+
+/**
+ * Mirrors `AnimalDexSortOption.catalogListStatChip` on iOS: a stat-preset search
+ * ("fastest animals") labels every hit with the stat that ranked it, value included.
+ */
+const STAT_PRESET_CHIPS: Record<UniversalSearchStatPreset, {
+    label: string;
+    key: keyof UniversalSearchSpeciesHit;
+    tint: string;
+    suffix?: string;
+}> = {
+    fastest: {label: "Speed", key: "speed", tint: "#38fa47"},
+    slowest: {label: "Speed", key: "speed", tint: "#38fa47"},
+    rarest: {label: "Rarity", key: "rarity", tint: "rgba(251, 146, 60, 0.92)", suffix: "%"},
+    strongest: {label: "Dominance", key: "dominance", tint: "rgba(239, 68, 68, 0.92)"},
+    smartest: {label: "Intelligence", key: "intelligence", tint: "rgba(34, 211, 238, 0.92)"},
+    biggest: {label: "Size", key: "size", tint: "#a78bfa"},
+    smallest: {label: "Size", key: "size", tint: "#a78bfa"},
+    longestLived: {label: "Lifespan", key: "lifespan_estimate", tint: "#94a3b8"},
+    shortestLived: {label: "Lifespan", key: "lifespan_estimate", tint: "#94a3b8"},
+    mostCaptures: {label: "Captures", key: "public_capture_count", tint: "#38fa47"}
+};
+
+/** The edge function reports which field matched; these are its internal labels. */
+const MATCH_REASON_LABELS: Record<string, string> = {
+    principle: "Principle match",
+    lesson: "Lesson match",
+    expression: "Expression match",
+    biology: "Biology match",
+    motto: "Motto match",
+    application: "Application match",
+    subtitle: "Story match",
+    "best for": "Best for match",
+    name: "Name match"
+};
+
+function resolveStatPresets(intent: UniversalSearchIntent | null): UniversalSearchStatPreset[] {
+    if (!intent) return [];
+    const presets = intent.stat_presets?.length
+        ? intent.stat_presets
+        : intent.stat_preset ? [intent.stat_preset] : [];
+    return presets.filter((preset) => preset in STAT_PRESET_CHIPS).slice(0, 3);
+}
+
+function getStatChips(hit: UniversalSearchSpeciesHit, presets: UniversalSearchStatPreset[]) {
+    return presets.flatMap((preset) => {
+        const meta = STAT_PRESET_CHIPS[preset];
+        const raw = hit[meta.key];
+        if (raw == null || raw === "") return [];
+
+        const value = typeof raw === "number"
+            ? `${Number.isInteger(raw) ? raw : raw.toFixed(1)}${meta.suffix ?? ""}`
+            : String(raw);
+
+        return [{key: `${preset}-${meta.label}`, label: meta.label, value, tint: meta.tint}];
+    });
+}
+
+function StatChip({label, value, tint}: {label: string; value: string; tint: string}) {
+    return (
+        <span
+            className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.04em]"
+            style={{
+                color: tint,
+                backgroundColor: `color-mix(in srgb, ${tint} 14%, transparent)`,
+                borderColor: `color-mix(in srgb, ${tint} 40%, transparent)`
+            }}
+        >
+            {label}
+            <span className="font-bold normal-case tracking-normal text-white/95">{value}</span>
+        </span>
+    );
+}
+
+function SpeciesHitThumbnail({slug, name}: {slug: string | null; name: string}) {
+    const [failed, setFailed] = useState(false);
+
+    return (
+        <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+            {slug && !failed ? (
+                <img
+                    src={getSpeciesArtworkRoute(slug, 160)}
+                    alt={`${name} thumbnail`}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setFailed(true)}
+                    className="h-full w-full object-contain p-1.5"
+                />
+            ) : (
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current text-ink-500" aria-hidden="true">
+                    <ellipse cx="12" cy="17.5" rx="5.2" ry="4.4" />
+                    <circle cx="7.1" cy="10.2" r="2.35" />
+                    <circle cx="10.4" cy="7.6" r="2.35" />
+                    <circle cx="13.6" cy="7.6" r="2.35" />
+                    <circle cx="16.9" cy="10.2" r="2.35" />
+                </svg>
+            )}
+        </span>
+    );
 }
 
 function SectionHeading({children}: {children: React.ReactNode}) {
@@ -128,10 +236,13 @@ export default function UniversalSearchResults({
                                 <Link
                                     key={item.slug}
                                     href={`/animals/${item.slug}`}
-                                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-primary-400/40"
+                                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-primary-400/40"
                                 >
-                                    <p className="font-display text-lg font-bold text-white">{item.name}</p>
-                                    <p className="mt-1 text-xs italic text-ink-400">{item.scientificName}</p>
+                                    <SpeciesHitThumbnail slug={item.slug} name={item.name} />
+                                    <span className="min-w-0">
+                                        <span className="block truncate font-display text-lg font-bold text-white">{item.name}</span>
+                                        <span className="mt-1 block truncate text-xs italic text-ink-400">{item.scientificName}</span>
+                                    </span>
                                 </Link>
                             ))}
                         </div>
@@ -162,6 +273,8 @@ export default function UniversalSearchResults({
     }
 
     if (!data) return null;
+
+    const statPresets = resolveStatPresets(data.intent);
 
     const hasAnything = Boolean(
         data.brief
@@ -207,27 +320,47 @@ export default function UniversalSearchResults({
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {data.species.map((hit) => {
                             const href = resolveSpeciesHref(hit);
+                            const slug = resolveSpeciesSlug(hit);
+                            const statChips = getStatChips(hit, statPresets);
+                            // The stat chips already carry the ranked stat, so the raw
+                            // field-match label for it would only repeat the same word.
+                            const reasons = (hit.match_reasons ?? [])
+                                .filter((reason) => !statChips.some(
+                                    (chip) => chip.label.toLowerCase() === reason.trim().toLowerCase()
+                                ))
+                                .map((reason) => MATCH_REASON_LABELS[reason.trim().toLowerCase()] ?? reason)
+                                .slice(0, 2);
                             const body = (
                                 <>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <p className="font-display text-lg font-bold text-white">{hit.display_name}</p>
+                                    <div className="flex items-start gap-3">
+                                        <SpeciesHitThumbnail slug={slug} name={hit.display_name} />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <p className="min-w-0 font-display text-lg font-bold text-white">{hit.display_name}</p>
+                                                {hit.animaldex_number ? (
+                                                    <span className="shrink-0 text-xs font-black text-ink-500">#{hit.animaldex_number}</span>
+                                                ) : null}
+                                            </div>
                                             {hit.scientific_name ? (
                                                 <p className="mt-0.5 truncate text-xs italic text-ink-400">{hit.scientific_name}</p>
                                             ) : null}
+                                            {statChips.length ? (
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    {statChips.map((chip) => (
+                                                        <StatChip key={chip.key} label={chip.label} value={chip.value} tint={chip.tint} />
+                                                    ))}
+                                                </div>
+                                            ) : null}
                                         </div>
-                                        {hit.animaldex_number ? (
-                                            <span className="shrink-0 text-xs font-black text-ink-500">#{hit.animaldex_number}</span>
-                                        ) : null}
                                     </div>
                                     {hit.species_subtitle || hit.core_lesson ? (
                                         <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-200">
                                             {hit.species_subtitle || hit.core_lesson}
                                         </p>
                                     ) : null}
-                                    {hit.match_reasons?.length ? (
+                                    {reasons.length ? (
                                         <p className="mt-3 text-xs font-semibold uppercase tracking-[0.1em] text-primary-300">
-                                            {hit.match_reasons.slice(0, 2).join(" · ")}
+                                            {reasons.join(" · ")}
                                         </p>
                                     ) : null}
                                 </>

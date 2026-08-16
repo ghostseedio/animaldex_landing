@@ -3,14 +3,14 @@
 import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesArtworkThumbnailUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesImageAltText} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {speciesDirectorySearchMatch} from "@/lib/species-life-stage-policy";
 import {getSpeciesRarityStatusKey, SPECIES_DIRECTORY_SORT_OPTIONS, getDefaultSpeciesDirectorySortOrder, SpeciesEntry, SpeciesDirectorySort, SpeciesDirectorySortOrder, SpeciesDirectoryTierFilter, SpeciesRarityStatusKey} from "@/data/species";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
-import {identityKindShortLabel} from "@/lib/identity-kind";
+import BattleTierChip from "./battle-tier-chip";
 import SpeciesRegionMap from "./species-region-map";
 import {getNativeRangeRegionLabel, NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
 import {getLocationPage} from "@/data/locations";
@@ -186,23 +186,37 @@ function SortStatChip({sort, value}: {sort: SortStatKey; value: number}) {
 
     return (
         <span
-            className="inline-flex h-[22px] items-center gap-1 rounded-full border px-2 text-[10px] font-black uppercase tracking-[0.04em]"
+            className="inline-flex max-w-full items-center gap-0.5 rounded-full border bg-black/80 px-1.5 py-1 text-[9px] font-black uppercase leading-none tracking-[0.02em]"
             style={{
                 color: meta.tint,
-                backgroundColor: `color-mix(in srgb, ${meta.tint} 14%, transparent)`,
-                borderColor: `color-mix(in srgb, ${meta.tint} 40%, transparent)`
+                borderColor: `color-mix(in srgb, ${meta.tint} 45%, transparent)`
             }}
             title={`${meta.badge} ${displayValue}${suffix}`}
         >
-            <span aria-hidden="true" className="[&>svg]:h-3 [&>svg]:w-3">
+            <span aria-hidden="true" className="[&>svg]:h-2.5 [&>svg]:w-2.5">
                 {meta.icon}
             </span>
-            <span>{meta.badge}</span>
-            <span className="font-bold normal-case tracking-normal text-white/95">
+            <span className="hidden sm:inline">{meta.badge}</span>
+            <span className="font-black tabular-nums normal-case tracking-normal text-white/95">
                 {displayValue}{suffix}
             </span>
         </span>
     );
+}
+
+/**
+ * Mirrors the iOS catalog card: the active sort (or the rarity band filter)
+ * decides which canonical stat rides alongside the AnimalDex number.
+ */
+function resolveThumbnailStatKey(
+    sort: SpeciesDirectorySort,
+    status: SpeciesRarityStatusKey | "all"
+): SortStatKey | null {
+    if (isSortStatKey(sort)) {
+        return sort;
+    }
+
+    return status !== "all" ? "rarity" : null;
 }
 
 function getBattleTierFromEntry(entry: SpeciesEntry): AnimalBattleTier | null {
@@ -279,7 +293,9 @@ function CatalogGlyphThumbnail({
     captured,
     imageSrc,
     hasPublicCapture,
-    priority
+    priority,
+    statKey,
+    showBattleTier
 }: {
     entry: SpeciesEntry;
     animalDexNumber: number | null;
@@ -287,11 +303,15 @@ function CatalogGlyphThumbnail({
     imageSrc: string;
     hasPublicCapture: boolean;
     priority: boolean;
+    statKey: SortStatKey | null;
+    showBattleTier: boolean;
 }) {
     const imageAlt = getSpeciesImageAltText(entry, "thumbnail");
     const [showPlaceholder, setShowPlaceholder] = useState(false);
+    const statValue = statKey ? getCanonicalSortStatValue(entry, statKey) : null;
+    const battleTier = showBattleTier ? getBattleTierFromEntry(entry) : null;
     const resolvedImageSrc = !captured && !hasPublicCapture
-        ? getSpeciesArtworkThumbnailUrl(entry.slug)
+        ? getSpeciesArtworkRoute(entry.slug, 240)
         : `${imageSrc}${imageSrc.includes("?") ? "&" : "?"}thumbnail=1`;
 
     return (
@@ -314,10 +334,20 @@ function CatalogGlyphThumbnail({
                     </svg>
                 </span>
             ) : null}
-            {animalDexNumber && animalDexNumber > 0 ? (
-                <span className="absolute right-1.5 top-1.5 rounded-full bg-black/80 px-1.5 py-1 text-[9px] font-black tabular-nums text-primary-200">
-                    #{String(animalDexNumber).padStart(3, "0")}
-                </span>
+            <div className="pointer-events-none absolute inset-x-1.5 top-1.5 flex items-start justify-end gap-1">
+                {statKey && statValue != null ? (
+                    <SortStatChip sort={statKey} value={statValue} />
+                ) : null}
+                {animalDexNumber && animalDexNumber > 0 ? (
+                    <span className="ml-auto shrink-0 rounded-full bg-black/80 px-1.5 py-1 text-[9px] font-black leading-none tabular-nums text-primary-200">
+                        #{String(animalDexNumber).padStart(3, "0")}
+                    </span>
+                ) : null}
+            </div>
+            {battleTier ? (
+                <div className="pointer-events-none absolute bottom-1.5 left-1.5">
+                    <BattleTierChip tier={battleTier} compact />
+                </div>
             ) : null}
         </div>
     );
@@ -534,6 +564,8 @@ export default function SpeciesDirectory({
             || currentOrder !== getDefaultSpeciesDirectorySortOrder(currentSort)
             || currentTier !== "all"
     );
+
+    const thumbnailStatKey = resolveThumbnailStatKey(currentSort, currentStatus);
 
     const resultsSummary = copy.resultsSummary
         .replace("{count}", String(entries.length))
@@ -858,6 +890,8 @@ export default function SpeciesDirectory({
                                 imageSrc={speciesImageState[entry.slug]}
                                 hasPublicCapture={publicCaptureState[entry.slug] ?? false}
                                 priority={index < 12}
+                                statKey={thumbnailStatKey}
+                                showBattleTier={currentTier !== "all"}
                             />
                         </Link>
                     ))}
