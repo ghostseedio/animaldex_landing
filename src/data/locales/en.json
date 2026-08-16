@@ -132,7 +132,7 @@
       "stats": {
         "captures": "{count} Captures",
         "users": "{count} Users",
-        "lessons": "{count} Lessons"
+        "indexes": "{count} Indexes"
       },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
       "blogLink": "Read the Blog",

@@ -132,7 +132,7 @@
       "stats": {
         "captures": "{count} Capture",
         "users": "{count} Pengguna",
-        "lessons": "{count} Pelajaran Perilaku Hewan"
+        "indexes": "{count} Indeks"
       },
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, spotting saat travel, dan panduan ramah satwa liar.",
       "blogLink": "Baca Blog",

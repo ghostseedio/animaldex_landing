@@ -42,7 +42,7 @@ const statRevalidateSeconds = 60 * 30;
 type DownloadStatCounts = {
     captures: number | null;
     users: number | null;
-    lessons: number | null;
+    indexes: number | null;
 };
 
 function parseContentRangeCount(contentRange: string | null) {
@@ -60,7 +60,7 @@ function parseContentRangeCount(contentRange: string | null) {
     return Number.isFinite(count) ? count : null;
 }
 
-async function fetchTableCount(table: string, selectColumn: string) {
+async function fetchTableCount(table: string, selectColumn: string, filters?: Record<string, string>) {
     const supabaseUrl = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
 
@@ -68,7 +68,7 @@ async function fetchTableCount(table: string, selectColumn: string) {
         return null;
     }
 
-    const searchParams = new URLSearchParams({select: selectColumn});
+    const searchParams = new URLSearchParams({select: selectColumn, ...filters});
 
     try {
         const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${searchParams.toString()}`, {
@@ -91,13 +91,16 @@ async function fetchTableCount(table: string, selectColumn: string) {
 }
 
 async function getDownloadStatCounts(): Promise<DownloadStatCounts> {
-    const [captures, users, lessons] = await Promise.all([
-        fetchTableCount("captures", "id"),
+    const [captures, users, indexes] = await Promise.all([
+        // Animals captured, not photos taken: one photo can hold several animals, and each
+        // gets its own observation. Indexed or not, they all count; invalidated ones do not.
+        fetchTableCount("animal_observations", "id", {status: "eq.active"}),
         fetchTableCount("profiles", "id"),
-        fetchTableCount("species_behavior_principles", "species_profile_id")
+        // Animals that hold an AnimalDex number, which is what "indexed" means.
+        fetchTableCount("species_profiles", "id", {animaldex_number: "gte.1"})
     ]);
 
-    return {captures, users, lessons};
+    return {captures, users, indexes};
 }
 
 export default async function Home() {
@@ -121,9 +124,9 @@ export default async function Home() {
         downloadStatCounts.users === null
             ? t("download.trust.collect")
             : t("download.stats.users", {count: downloadStatCounts.users.toLocaleString(locale)}),
-        downloadStatCounts.lessons === null
+        downloadStatCounts.indexes === null
             ? t("download.trust.learn")
-            : t("download.stats.lessons", {count: downloadStatCounts.lessons.toLocaleString(locale)})
+            : t("download.stats.indexes", {count: downloadStatCounts.indexes.toLocaleString(locale)})
     ];
     const downloadStoreLinks = downloads.filter(({name}) => name === "App Store" || name === "Google Play");
     const keepExploringCards = [
