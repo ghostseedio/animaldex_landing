@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
         const [analyses, profiles] = await Promise.all([
             captureIds.length ? rows("analysis_results", new URLSearchParams({
-                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version,capture_grade,species_profile_id,normalized_identity_key",
+                select: "capture_id,animal_name,scientific_name,confidence,completed_at,error_message,model_version,capture_grade,species_profile_id,normalized_identity_key,identity_resolution_mode",
                 capture_id: `in.(${captureIds.join(",")})`
             })) : [],
             userIds.length ? rows("profiles", new URLSearchParams({
@@ -52,17 +52,70 @@ export async function GET(request: NextRequest) {
             })) : []
         ]);
 
-        // The AnimalDex number lives on the species profile, and operators work in
-        // numbers rather than profile ids, so it is resolved here rather than left
-        // for the panel to look up per row.
-        const speciesIds = Array.from(new Set(analyses
+        /**
+         * Resolve the AnimalDex number the way the app does, not just by profile id.
+         *
+         * An analysis can carry an identity key with no species_profile_id at all,
+         * and the profile a key names is often a hidden stand-in whose number lives
+         * on its canonical parent — "domestic_cat" is hidden and points at "cat"
+         * #1008. Reading only the profile id reports those captures as unindexed
+         * when the animal is in the catalog, which is the opposite of the truth.
+         */
+        const speciesIds = new Set(analyses
             .map((row) => String(row.species_profile_id ?? ""))
+            .filter(Boolean));
+        const identityKeys = Array.from(new Set(analyses
+            .filter((row) => !row.species_profile_id)
+            .map((row) => String(row.normalized_identity_key ?? ""))
             .filter(Boolean)));
-        const species = speciesIds.length ? await rows("species_profiles", new URLSearchParams({
-            select: "id,animaldex_number,display_name",
-            id: `in.(${speciesIds.join(",")})`
+
+        const byKey = identityKeys.length ? await rows("species_profiles", new URLSearchParams({
+            select: "id,animaldex_number,display_name,normalized_identity_key,canonical_species_profile_id",
+            normalized_identity_key: `in.(${identityKeys.join(",")})`
         })) : [];
-        const speciesById = new Map(species.map((row) => [String(row.id), row]));
+        byKey.forEach((row) => speciesIds.add(String(row.id)));
+
+        const direct = speciesIds.size ? await rows("species_profiles", new URLSearchParams({
+            select: "id,animaldex_number,display_name,normalized_identity_key,canonical_species_profile_id",
+            id: `in.(${Array.from(speciesIds).join(",")})`
+        })) : [];
+
+        // One more hop for the profiles whose number sits on a canonical parent.
+        const canonicalIds = Array.from(new Set(direct
+            .filter((row) => row.animaldex_number == null && row.canonical_species_profile_id)
+            .map((row) => String(row.canonical_species_profile_id))
+            .filter((id) => !speciesIds.has(id))));
+        const canonical = canonicalIds.length ? await rows("species_profiles", new URLSearchParams({
+            select: "id,animaldex_number,display_name,normalized_identity_key,canonical_species_profile_id",
+            id: `in.(${canonicalIds.join(",")})`
+        })) : [];
+
+        const profileById = new Map([...direct, ...canonical].map((row) => [String(row.id), row]));
+        const profileByKey = new Map(byKey.map((row) => [String(row.normalized_identity_key), row]));
+
+        const resolveIndex = (analysis: Row) => {
+            const startId = String(analysis.species_profile_id ?? "");
+            const start = startId
+                ? profileById.get(startId)
+                : profileByKey.get(String(analysis.normalized_identity_key ?? ""));
+
+            if (!start) return {number: null, via: null as string | null};
+
+            if (start.animaldex_number != null) {
+                return {
+                    number: Number(start.animaldex_number),
+                    via: startId ? null : String(start.normalized_identity_key ?? "")
+                };
+            }
+
+            const parent = start.canonical_species_profile_id
+                ? profileById.get(String(start.canonical_species_profile_id))
+                : null;
+
+            return parent?.animaldex_number != null
+                ? {number: Number(parent.animaldex_number), via: String(start.normalized_identity_key ?? "")}
+                : {number: null, via: null};
+        };
 
         const analysisByCapture = new Map(analyses.map((row) => [String(row.capture_id), row]));
         const profileByUser = new Map(profiles.map((row) => [String(row.id), row]));
@@ -81,7 +134,15 @@ export async function GET(request: NextRequest) {
                 updatedAt: capture.updated_at,
                 animalName: analysis.animal_name,
                 captureGrade: analysis.capture_grade ?? null,
-                animalDexNumber: speciesById.get(String(analysis.species_profile_id ?? ""))?.animaldex_number ?? null,
+                animalDexNumber: resolveIndex(analysis).number,
+                // Null profile id means the capture is not linked to the catalog at
+                // all, which is what keeps it out of the owner's collection index.
+                indexLinked: Boolean(analysis.species_profile_id),
+                indexVia: resolveIndex(analysis).via,
+                // "refinable" is the pipeline saying it stopped at a parent identity
+                // like domestic_cat and wants a breed before it links; that is a
+                // different state from a terminal identity that simply never linked.
+                identityResolutionMode: analysis.identity_resolution_mode ?? null,
                 identityKey: analysis.normalized_identity_key ?? null,
                 scientificName: analysis.scientific_name,
                 confidence: analysis.confidence,

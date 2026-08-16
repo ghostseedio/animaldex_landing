@@ -18,6 +18,11 @@ type Post = {
     confidence: number | null;
     captureGrade: number | null;
     animalDexNumber: number | null;
+    /** False when the analysis holds no species_profile_id, indexed or not. */
+    indexLinked: boolean;
+    /** Set when the number was reached through an identity key rather than a link. */
+    indexVia: string | null;
+    identityResolutionMode: string | null;
     identityKey: string | null;
     analysisCompletedAt: string | null;
     analysisError: string | null;
@@ -223,7 +228,10 @@ export default function AdminMaintenanceClient() {
                                 <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${post.status === "ready" ? "bg-primary-500/15 text-primary-100" : post.status === "failed" ? "bg-red-500/15 text-red-200" : "bg-amber-500/15 text-amber-200"}`}>{post.status}</span><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{post.captureMode}</span>{post.mergedIntoCaptureId && <span className="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black uppercase text-violet-200">merged</span>}</div>
                                 <p className="mt-1 truncate text-sm text-ink-400">{post.scientificName || "No scientific name"} · {post.user.displayName || post.user.username || "Unknown user"}{post.user.username ? ` (@${post.user.username})` : ""}</p>
                                 <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold">
-                                    <span className={`rounded-full px-2 py-1 ${post.animalDexNumber != null ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-500"}`}>{post.animalDexNumber != null ? `#${post.animalDexNumber}` : "unindexed"}</span>
+                                    <span title={post.animalDexNumber != null && post.indexVia ? `Resolved through ${post.indexVia}` : undefined} className={`rounded-full px-2 py-1 ${post.animalDexNumber != null ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-500"}`}>{post.animalDexNumber != null ? `#${post.animalDexNumber}${post.indexVia ? "*" : ""}` : "unindexed"}</span>
+                                    {!post.indexLinked && (post.identityResolutionMode === "refinable"
+                                        ? <span title="Stopped at a parent identity and is waiting on a breed before it links to the catalog" className="rounded-full bg-white/5 px-2 py-1 text-ink-400">refinable</span>
+                                        : <span title="The analysis holds no species profile, so this capture is missing from the owner's collection index" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">not linked</span>)}
                                     <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
                                     {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
                                 </div>
