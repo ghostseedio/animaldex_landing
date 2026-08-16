@@ -40,6 +40,25 @@ function isScreenCapture(post: {authenticityStatus: string | null; captureValidi
         || post.captureValidity === "likely_non_live_source";
 }
 
+/** A capture is this old before an upload still in flight counts as abandoned. */
+const ABANDONED_UPLOAD_MINUTES = 30;
+
+/**
+ * The photo never reached storage, so there is nothing to analyse and never will
+ * be. Two shapes of the same thing: the analysis ran and could not find the
+ * object, or the upload stopped before the analysis was ever triggered and the
+ * capture has sat unfinished since. Neither is recoverable and neither was
+ * charged for, so they are noise in a list of things to act on.
+ */
+function isDeadUpload(post: {analysisError: string | null; status: string; createdAt: string; analysisCompletedAt: string | null}) {
+    const error = String(post.analysisError ?? "");
+    if (error.includes("storage_download_failed") || error.includes("upload_incomplete")) return true;
+
+    const unfinished = ["pending", "uploading", "ready_for_analysis"].includes(post.status);
+    const age = (Date.now() - new Date(post.createdAt).getTime()) / 60_000;
+    return unfinished && !post.analysisCompletedAt && age > ABANDONED_UPLOAD_MINUTES;
+}
+
 function relativeDate(value: string | null) {
     if (!value) return "Never";
     const seconds = Math.round((new Date(value).getTime() - Date.now()) / 1000);
@@ -71,6 +90,7 @@ export default function AdminMaintenanceClient() {
     const [hideMerged, setHideMerged] = useState(false);
     const [hideCreditFailures, setHideCreditFailures] = useState(false);
     const [hideScreenCaptures, setHideScreenCaptures] = useState(false);
+    const [hideDeadUploads, setHideDeadUploads] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -298,10 +318,11 @@ export default function AdminMaintenanceClient() {
         // Ran out of credits is a billing state, not a capture to fix.
         if (hideCreditFailures && String(post.analysisError ?? "").includes("insufficient_credits")) return false;
         if (hideScreenCaptures && isScreenCapture(post)) return false;
+        if (hideDeadUploads && isDeadUpload(post)) return false;
         const needle = query.trim().toLowerCase();
         return !needle || [post.id, post.title, post.animalName, post.scientificName, post.user.displayName, post.user.username]
             .some((value) => String(value ?? "").toLowerCase().includes(needle));
-    }), [posts, query, mode, hideMerged, hideCreditFailures, hideScreenCaptures]);
+    }), [posts, query, mode, hideMerged, hideCreditFailures, hideScreenCaptures, hideDeadUploads]);
 
     const hiddenCount = posts.length - filtered.length;
 
@@ -378,7 +399,8 @@ export default function AdminMaintenanceClient() {
                     {[
                         {id: "merged", label: "Hide merged", on: hideMerged, toggle: () => setHideMerged((value) => !value)},
                         {id: "credits", label: "Hide credit failures", on: hideCreditFailures, toggle: () => setHideCreditFailures((value) => !value)},
-                        {id: "screens", label: "Hide screen captures", on: hideScreenCaptures, toggle: () => setHideScreenCaptures((value) => !value)}
+                        {id: "screens", label: "Hide screen captures", on: hideScreenCaptures, toggle: () => setHideScreenCaptures((value) => !value)},
+                        {id: "uploads", label: "Hide dead uploads", on: hideDeadUploads, toggle: () => setHideDeadUploads((value) => !value)}
                     ].map((option) => (
                         <button key={option.id} onClick={option.toggle} aria-pressed={option.on}
                                 className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${option.on ? "border-primary-400 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}>
@@ -425,6 +447,7 @@ export default function AdminMaintenanceClient() {
                                         : <span title="The analysis holds no species profile, so this capture is missing from the owner's collection index" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">not linked</span>)}
                                     <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
                                     {isScreenCapture(post) && <span title="The model judged this a photo of a screen or a print rather than a live animal, so it is excluded from collections and stats" className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">screen capture</span>}
+                                    {isDeadUpload(post) && <span title="The photo never reached storage, so there is nothing to analyse and a retry cannot help. No credit was charged." className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">no photo</span>}
                                     {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
                                 </div>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>
