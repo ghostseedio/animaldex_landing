@@ -21,6 +21,9 @@ type Row = Record<string, unknown>;
 
 const PAGE = 1000;
 
+/** Keys that mean "we could not tell", which can never be evidence of a match. */
+const UNIDENTIFIED_KEYS = new Set(["unknown_animal", "unknown", "unidentified_animal", "unidentified_capture", "unrecognized_animal"]);
+
 function config() {
     const url = getSupabaseUrl();
     const key = getSupabaseServiceKey();
@@ -63,9 +66,11 @@ type Pair = {
     parentCaptureId: string;
     children: string[];
     animalName: string | null;
+    /** Entry the parent resolved through; burst children are pointed at it first. */
+    parentSpeciesProfileId?: string | null;
 };
 
-async function findDuplicates(sinceDays: number) {
+async function collectCaptures(sinceDays: number) {
     const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
     const captures: Row[] = [];
 
@@ -84,7 +89,14 @@ async function findDuplicates(sinceDays: number) {
         if (batch.length < PAGE) break;
     }
 
-    if (!captures.length) return {scanned: 0, pairs: [] as Pair[]};
+    if (!captures.length) {
+        return {
+            captures,
+            analyses: new Map<string, Row>(),
+            groups: new Map<string, {userId: string; number: number; entries: Array<{id: string; at: string; name: string | null}>}>(),
+            numbers: new Map<string, number | null>()
+        };
+    }
 
     const analyses = new Map<string, Row>();
     const ids = captures.map((capture) => String(capture.id));
@@ -122,8 +134,9 @@ async function findDuplicates(sinceDays: number) {
             })));
         }
 
-        if (!eligibility.get(eligibilityKey)) continue;
-
+        // Resolved for every capture, not just eligible ones: the burst pass
+        // needs to know an ineligible capture's index too, or it would read a
+        // capture that has one as though it had none.
         const numberKey = [analysis.species_profile_id, analysis.normalized_identity_key, analysis.scientific_name].join("|");
         if (!numbers.has(numberKey)) {
             const value = await rpc("capture_effective_animaldex_number", {
@@ -135,7 +148,7 @@ async function findDuplicates(sinceDays: number) {
         }
 
         const number = numbers.get(numberKey);
-        if (number == null) continue;
+        if (!eligibility.get(eligibilityKey) || number == null) continue;
 
         const groupKey = `${capture.user_id}|${number}`;
         const group = groups.get(groupKey) ?? {userId: String(capture.user_id), number, entries: []};
@@ -147,6 +160,129 @@ async function findDuplicates(sinceDays: number) {
         groups.set(groupKey, group);
     }
 
+    return {captures, analyses, groups, numbers};
+}
+
+/**
+ * A burst is one animal.
+ *
+ * Several photos taken seconds apart come back with the same animal named at
+ * different depths — "Asota plana" on one and "Tiger Moth" on the next, with no
+ * scientific name at all. Only the specific one earns a number, so the coarse
+ * ones resolve to nothing, are ineligible for merging, and stay beside it
+ * forever. No index-based rule can catch that, because the whole problem is that
+ * they have no index.
+ *
+ * The window is necessary but nowhere near sufficient. Run on time alone it
+ * proposed folding a capture named "Anura" — a frog — into a House Fly, and
+ * eight "Unidentified animal" captures into a goat, because all of them happened
+ * within a couple of minutes. A burst is one animal often enough to be a useful
+ * hint and not nearly often enough to be a rule.
+ *
+ * So the name has to agree as well: a child joins only if it was given the same
+ * animal name as the capture that resolved. That is what actually made the tiger
+ * moths mergeable — both were called "Tiger Moth", one reaching Asota plana and
+ * one stopping short — and it is what a frog beside a fly fails. Unidentified
+ * captures never qualify: not knowing what something is, is not evidence that it
+ * is the thing next to it.
+ *
+ * And the shared name has to mean something. A Canada Goose and a gull, thirty
+ * seconds apart, were both shown as "Bird" — agreeing on a word that broad is no
+ * agreement at all, so a name the catalog already treats as too coarse to index
+ * disqualifies the burst outright.
+ */
+function slugifyName(name: string) {
+    return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
+function findBursts(
+    captures: Row[],
+    analyses: Map<string, Row>,
+    resolvedNumbers: Map<string, number | null>,
+    windowSeconds: number,
+    broadNames: Set<string>
+) {
+    const byUser = new Map<string, Row[]>();
+
+    for (const capture of captures) {
+        const userId = String(capture.user_id);
+        byUser.set(userId, [...(byUser.get(userId) ?? []), capture]);
+    }
+
+    const bursts: Array<Pair & {unindexed: string[]}> = [];
+
+    for (const [userId, owned] of Array.from(byUser)) {
+        const ordered = owned
+            .map((capture) => ({
+                capture,
+                at: new Date(String(capture.captured_at ?? capture.created_at)).getTime()
+            }))
+            .sort((left, right) => left.at - right.at);
+
+        let run: typeof ordered = [];
+
+        const flush = () => {
+            if (run.length < 2) return;
+
+            const withIndex: Array<{id: string; at: number; number: number; name: string | null; speciesProfileId: string | null}> = [];
+            const candidates: Array<{id: string; name: string}> = [];
+
+            for (const entry of run) {
+                const analysis = analyses.get(String(entry.capture.id));
+                if (!analysis || !analysis.completed_at || text(analysis.error_message)) continue;
+
+                const numberKey = [analysis.species_profile_id, analysis.normalized_identity_key, analysis.scientific_name].join("|");
+                const number = resolvedNumbers.get(numberKey) ?? null;
+                const name = text(analysis.animal_name);
+                const identityKey = text(analysis.normalized_identity_key)?.toLowerCase() ?? "";
+
+                if (number != null) {
+                    withIndex.push({
+                        id: String(entry.capture.id), at: entry.at, number, name,
+                        speciesProfileId: text(analysis.species_profile_id)
+                    });
+                    continue;
+                }
+
+                if (!name || UNIDENTIFIED_KEYS.has(identityKey)) continue;
+                candidates.push({id: String(entry.capture.id), name: name.toLowerCase()});
+            }
+
+            // Exactly one index in the run: with two the burst is ambiguous and
+            // the unindexed captures could belong to either.
+            const distinct = new Set(withIndex.map((entry) => entry.number));
+            if (distinct.size !== 1) return;
+
+            const parent = withIndex.sort((left, right) => left.at - right.at)[0];
+            const parentName = parent.name?.toLowerCase() ?? "";
+            if (!parentName || broadNames.has(slugifyName(parentName))) return;
+
+            const without = candidates.filter((candidate) => candidate.name === parentName).map((candidate) => candidate.id);
+            if (!without.length) return;
+
+            bursts.push({
+                userId,
+                number: parent.number,
+                parentCaptureId: parent.id,
+                children: [...without, ...withIndex.slice(1).map((entry) => entry.id)],
+                animalName: parent.name,
+                parentSpeciesProfileId: parent.speciesProfileId,
+                unindexed: without
+            });
+        };
+
+        for (const entry of ordered) {
+            if (!run.length || entry.at - run[run.length - 1].at <= windowSeconds * 1000) run.push(entry);
+            else { flush(); run = [entry]; }
+        }
+        flush();
+    }
+
+    return bursts.sort((left, right) => right.children.length - left.children.length);
+}
+
+async function findDuplicates(sinceDays: number) {
+    const {captures, analyses, groups} = await collectCaptures(sinceDays);
     const pairs: Pair[] = [];
 
     for (const group of Array.from(groups.values())) {
@@ -169,14 +305,51 @@ async function findDuplicates(sinceDays: number) {
     };
 }
 
+async function findBurstDuplicates(sinceDays: number, windowSeconds: number) {
+    const {captures, analyses, numbers} = await collectCaptures(sinceDays);
+
+    // Asked of the database rather than restated here, so "too coarse to index"
+    // means exactly one thing across the whole system.
+    const names = Array.from(new Set(
+        Array.from(analyses.values())
+            .map((analysis) => text(analysis.animal_name))
+            .filter(Boolean)
+            .map((name) => slugifyName(name as string))
+    ));
+    const broadNames = new Set<string>();
+
+    for (const name of names) {
+        if (await rpc("species_profile_identity_key_is_broad", {p_key: name})) broadNames.add(name);
+    }
+
+    return {scanned: captures.length, bursts: findBursts(captures, analyses, numbers, windowSeconds, broadNames)};
+}
+
 export async function GET(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 
     const days = Math.min(365, Math.max(1, Number(request.nextUrl.searchParams.get("days")) || 30));
+    const windowSeconds = Math.min(600, Math.max(5, Number(request.nextUrl.searchParams.get("window")) || 120));
 
     try {
+        if (request.nextUrl.searchParams.get("mode") === "burst") {
+            const {scanned, bursts} = await findBurstDuplicates(days, windowSeconds);
+            return NextResponse.json({
+                ok: true,
+                mode: "burst",
+                days,
+                windowSeconds,
+                scanned,
+                groups: bursts.length,
+                captures: bursts.reduce((total, burst) => total + burst.children.length, 0),
+                unindexed: bursts.reduce((total, burst) => total + burst.unindexed.length, 0),
+                members: new Set(bursts.map((burst) => burst.userId)).size,
+                bursts: bursts.slice(0, 100)
+            });
+        }
+
         const {scanned, pairs} = await findDuplicates(days);
         return NextResponse.json({
             ok: true,
@@ -201,7 +374,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
     }
 
-    const body = await request.json().catch(() => ({})) as {confirm?: boolean; days?: number; userId?: string};
+    const body = await request.json().catch(() => ({})) as {
+        confirm?: boolean; days?: number; userId?: string; mode?: string; windowSeconds?: number;
+    };
     if (!body.confirm) {
         return NextResponse.json({ok: false, error: "Confirm the sweep before it runs"}, {status: 400});
     }
@@ -209,7 +384,12 @@ export async function POST(request: NextRequest) {
     const days = Math.min(365, Math.max(1, Number(body.days) || 30));
 
     try {
-        const {pairs} = await findDuplicates(days);
+        const pairs = body.mode === "burst"
+            // Burst merges also need the coarse captures pointed at the entry
+            // the specific one resolved to, or they would fold in still
+            // holding no index of their own.
+            ? (await findBurstDuplicates(days, Math.min(600, Math.max(5, Number(body.windowSeconds) || 120)))).bursts
+            : (await findDuplicates(days)).pairs;
         const targets = body.userId ? pairs.filter((pair) => pair.userId === body.userId) : pairs;
         const merged: string[] = [];
         const failed: Array<{captureId: string; error: string}> = [];
@@ -217,6 +397,18 @@ export async function POST(request: NextRequest) {
         for (const pair of targets) {
             for (const child of pair.children) {
                 try {
+                    // complete_duplicate_capture_merge folds only captures that
+                    // resolve to the same number, and a burst child resolves to
+                    // none — so it is pointed at the parent's entry first. This
+                    // is the Set index step, done for it.
+                    if (pair.parentSpeciesProfileId) {
+                        await rows(`analysis_results?capture_id=eq.${child}&species_profile_id=is.null`, {
+                            method: "PATCH",
+                            headers: {"Content-Type": "application/json", Prefer: "return=minimal"},
+                            body: JSON.stringify({species_profile_id: pair.parentSpeciesProfileId})
+                        });
+                    }
+
                     await rpc("complete_duplicate_capture_merge", {
                         p_child_capture_id: child,
                         p_parent_capture_id: pair.parentCaptureId

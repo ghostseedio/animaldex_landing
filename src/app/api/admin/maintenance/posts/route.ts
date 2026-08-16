@@ -187,8 +187,8 @@ export async function GET(request: NextRequest) {
                 // nothing failed at all.
                 mergedIntoCaptureId: capture.merged_into_capture_id ?? null,
                 imageUrl: capture.merged_into_capture_id
-                    ? getCaptureImageRoute(String(capture.merged_into_capture_id))
-                    : getCaptureImageRoute(id),
+                    ? getCaptureImageRoute(String(capture.merged_into_capture_id), {proxy: true})
+                    : getCaptureImageRoute(id, {proxy: true}),
                 video: video ? {
                     url: getCaptureMediaRoute(id, {
                         kind: String(video.media_kind),

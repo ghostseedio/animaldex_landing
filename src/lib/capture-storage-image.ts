@@ -147,8 +147,10 @@ export async function resolveCaptureImageReference(input: {
     };
 }
 
-export function getCaptureImageRoute(captureId: string) {
-    return `/api/capture-images/${encodeURIComponent(captureId)}`;
+export function getCaptureImageRoute(captureId: string, options: {proxy?: boolean} = {}) {
+    const base = `/api/capture-images/${encodeURIComponent(captureId)}`;
+    // Operator surfaces ask for the bytes directly; see proxyImage.
+    return options.proxy ? `${base}?proxy=1` : base;
 }
 
 /**

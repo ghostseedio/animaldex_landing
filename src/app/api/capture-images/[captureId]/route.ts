@@ -12,6 +12,40 @@ function redirectWithBrowserCache(url: URL | string) {
     return response;
 }
 
+/**
+ * Serve the bytes ourselves instead of redirecting to storage.
+ *
+ * The redirect is right for public pages: it costs no bandwidth and the CDN
+ * does the work. It is wrong for the admin panel, where every failure so far
+ * has lived in the hop — a cached redirect outliving its signed token, and
+ * whatever it is in a given browser that quietly declines a cross-origin
+ * image redirect. Proxying keeps the request on this origin from start to
+ * finish, so an <img> either gets the picture or an error we can see.
+ *
+ * Deliberately not the default: the traffic that would move onto this app is
+ * only worth spending where reliability matters more than cost.
+ */
+async function proxyImage(signedUrl: string) {
+    const upstream = await fetch(signedUrl, {cache: "no-store"});
+
+    if (!upstream.ok || !upstream.body) {
+        return NextResponse.json({error: `Storage returned ${upstream.status}`}, {status: 502});
+    }
+
+    return new NextResponse(upstream.body, {
+        status: 200,
+        headers: {
+            "Content-Type": upstream.headers.get("content-type") ?? "image/jpeg",
+            ...(upstream.headers.get("content-length")
+                ? {"Content-Length": upstream.headers.get("content-length")!}
+                : {}),
+            // Safe to hold: the URL is keyed on the capture id, and a capture's
+            // primary image does not change underneath it.
+            "Cache-Control": "private, max-age=3600"
+        }
+    });
+}
+
 export async function GET(
     request: NextRequest,
     {params}: {params: {captureId: string}}
@@ -44,7 +78,9 @@ export async function GET(
             return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
-        return redirectWithBrowserCache(signedUrl);
+        return request.nextUrl.searchParams.get("proxy") === "1"
+            ? await proxyImage(signedUrl)
+            : redirectWithBrowserCache(signedUrl);
     } catch {
         return redirectWithBrowserCache(buildFallbackUrl(request));
     }
