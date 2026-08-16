@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {withAdminGate} from "@/app/admin/_components/admin-auth-gate";
+import PipelineHealth from "@/app/admin/_components/pipeline-health";
 
 const tools = [
     {
@@ -101,8 +102,7 @@ export default async function AdminDashboardPage() {
                         {navigation.map((item, index) => <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${index === 0 ? "bg-primary-500/15 text-primary-100" : "text-ink-400 hover:bg-white/[.04] hover:text-white"}`}><span className="grid h-7 w-7 place-items-center text-base">{item.icon}</span>{item.label}</Link>)}
                     </nav>
                     <div className="mt-auto rounded-2xl border border-primary-400/20 bg-primary-500/[.06] p-4">
-                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[.14em] text-primary-100"><span className="h-2 w-2 rounded-full bg-primary-300 shadow-[0_0_12px_rgba(89,241,118,.8)]" />System online</div>
-                        <p className="mt-2 text-xs leading-5 text-ink-400">Production operations and content tools are available.</p>
+                        <PipelineHealth />
                     </div>
                 </aside>
 
@@ -120,7 +120,7 @@ export default async function AdminDashboardPage() {
                     <div className="px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
                         <section className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
                             <div>
-                                <div className="flex items-center gap-2 text-xs font-bold text-primary-100"><span className="h-2 w-2 rounded-full bg-primary-300" />All systems operational</div>
+                                <PipelineHealth compact />
                                 <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.02] text-white sm:text-6xl">Everything you need to run AnimalDex.</h1>
                                 <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-300 sm:text-base">Monitor growth, help customers, publish content, and keep user captures healthy from one workspace.</p>
                             </div>

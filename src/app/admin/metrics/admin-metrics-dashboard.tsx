@@ -13,6 +13,12 @@ type Metrics = {
     totals: {users: number | null; captures: number | null; activePro: number | null; productionPurchases: number | null};
     kpis: Record<"users" | "captures" | "subscriptions" | "credits", {value: number; change: number}>;
     purchaseBreakdown: {production: number; sandbox: number};
+    signIn: {
+        total: number;
+        providers: Record<string, number>;
+        appleDeviceSignals: number;
+        note: string;
+    } | null;
     postActivity: {
         total: number;
         types: Record<PostType, {value: number; change: number}>;
@@ -179,6 +185,39 @@ export default function AdminMetricsDashboard() {
                         </section>
                         <section className="mt-5 rounded-2xl border border-line-300 bg-surface-900 p-4 sm:p-6"><div className="flex items-center justify-between"><div><h2 className="font-display text-2xl text-white">{metricMeta[metric].label}</h2><p className="text-xs text-ink-500">{rangeLabel}</p></div><span className="h-3 w-3 rounded-full" style={{background: metricMeta[metric].color}} /></div><div className="mt-4"><TrendChart rows={data.series} metric={metric} period={period} /></div></section>
                         <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.totals).map(([key, value]) => <div key={key} className="rounded-2xl border border-line-300 bg-canvas-900 p-4"><p className="text-xs capitalize text-ink-500">{key.replace(/([A-Z])/g, " $1")}</p><p className="mt-2 font-display text-2xl text-white">{format(value)}</p></div>)}</section>
+                        {data.signIn && (
+                            <section className="mt-8 border-t border-line-300 pt-7">
+                                <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Accounts</p>
+                                <h2 className="mt-2 font-display text-3xl text-white">How people sign in</h2>
+                                <p className="mt-2 max-w-3xl text-sm text-ink-400">
+                                    {format(data.signIn.total)} accounts. A provider is not a platform — Google sign-in is
+                                    the default on both phones — so device evidence is counted separately.
+                                </p>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    {Object.entries(data.signIn.providers)
+                                        .sort((left, right) => right[1] - left[1])
+                                        .map(([provider, count]) => {
+                                            const share = data.signIn!.total ? Math.round(count / data.signIn!.total * 100) : 0;
+                                            return (
+                                                <div key={provider} className="rounded-2xl border border-line-300 bg-canvas-900 p-4">
+                                                    <p className="text-xs capitalize text-ink-500">{provider}</p>
+                                                    <p className="mt-2 font-display text-2xl text-white">{format(count)}</p>
+                                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                                                        <div className="h-full rounded-full bg-primary-400" style={{width: `${share}%`}} />
+                                                    </div>
+                                                    <p className="mt-1 text-[11px] text-ink-500">{share}% of accounts</p>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                                <div className="mt-3 rounded-2xl border border-line-300 bg-canvas-900 p-4">
+                                    <p className="text-xs text-ink-500">Confirmed Apple devices</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{format(data.signIn.appleDeviceSignals)}</p>
+                                    <p className="mt-2 text-[11px] leading-4 text-ink-500">{data.signIn.note}</p>
+                                </div>
+                            </section>
+                        )}
+
                         <section className="mt-8 border-t border-line-300 pt-7">
                             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                                 <div><p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Discover activity</p><h2 className="mt-2 font-display text-3xl text-white">Post types</h2><p className="mt-2 text-sm text-ink-400">What users are sharing across the community timeline · {format(data.postActivity.total)} total in this period</p></div>

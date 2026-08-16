@@ -67,6 +67,50 @@ async function fetchPostRows(table: string, dateColumn: string, since: string): 
     return result.map((row) => ({date: row[dateColumn]}));
 }
 
+/**
+ * How people sign in, and what that does and does not say about their device.
+ *
+ * There is no platform column anywhere: no Play Store table, and push tokens are
+ * APNs only. So the honest split is by auth provider, read from the auth admin
+ * API, with the Apple-only signals reported separately as evidence of an Apple
+ * device rather than dressed up as an Android/iOS split.
+ */
+async function fetchSignInBreakdown() {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServiceKey();
+    if (!url || !key) return null;
+
+    const providers: Record<string, number> = {};
+    let total = 0;
+
+    for (let page = 1; page <= 30; page += 1) {
+        const response = await fetch(`${url}/auth/v1/admin/users?page=${page}&per_page=200`, {
+            headers: getSupabaseHeaders(key, {Accept: "application/json"}),
+            cache: "no-store"
+        });
+
+        if (!response.ok) break;
+
+        const body = await response.json() as {users?: Array<{app_metadata?: {provider?: string; providers?: string[]}}>};
+        const users = body.users ?? [];
+        if (!users.length) break;
+
+        for (const user of users) {
+            total += 1;
+            const list = user.app_metadata?.providers?.length
+                ? user.app_metadata.providers
+                : [user.app_metadata?.provider ?? "unknown"];
+            for (const provider of list) {
+                providers[provider] = (providers[provider] ?? 0) + 1;
+            }
+        }
+
+        if (users.length < 200) break;
+    }
+
+    return {total, providers};
+}
+
 export async function GET(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {
         return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
@@ -100,6 +144,19 @@ export async function GET(request: NextRequest) {
                 countRows("app_store_purchases", "select=transaction_id&environment=eq.Production")
             ])
         ]);
+
+        const [signIn, pushTokens, appleBuyers] = await Promise.all([
+            fetchSignInBreakdown(),
+            fetchRows<MetricRow>("user_push_tokens", "select=user_id"),
+            fetchRows<MetricRow>("app_store_purchases", "select=user_id")
+        ]);
+        // An APNs token or an App Store purchase can only come from an Apple
+        // device. Nothing equivalent exists on the other side, so the remainder
+        // is "no signal" rather than "Android".
+        const appleDeviceUsers = new Set([
+            ...pushTokens.map((row) => String((row as unknown as {user_id?: string}).user_id ?? "")),
+            ...appleBuyers.map((row) => String((row as unknown as {user_id?: string}).user_id ?? ""))
+        ].filter(Boolean));
 
         const isCurrent = (row: MetricRow) => new Date(row.created_at ?? 0) >= start;
         const isPrevious = (row: MetricRow) => new Date(row.created_at ?? 0) >= previousStart && new Date(row.created_at ?? 0) < start;
@@ -162,6 +219,12 @@ export async function GET(request: NextRequest) {
                 subscriptions: {value: currentSubscriptions, change: percentChange(currentSubscriptions, previousSubscriptions)},
                 credits: {value: currentCredits, change: percentChange(currentCredits, previousCredits)}
             },
+            signIn: signIn ? {
+                total: signIn.total,
+                providers: signIn.providers,
+                appleDeviceSignals: appleDeviceUsers.size,
+                note: "Providers come from auth. Apple device signals count members holding an APNs push token or an App Store purchase — the only device-specific records stored. There is no Android equivalent, so everyone else is simply unknown, not Android."
+            } : null,
             purchaseBreakdown: {
                 production: purchases.filter((row) => isCurrent(row) && isProduction(row)).length,
                 sandbox: purchases.filter((row) => isCurrent(row) && !isProduction(row)).length
