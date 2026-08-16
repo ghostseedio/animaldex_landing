@@ -15,6 +15,8 @@ export type ProfileViewerState = {
     isLoggedIn: boolean;
     isOwner: boolean;
     viewerUsername: string | null;
+    viewerDisplayName: string | null;
+    viewerAvatarUrl: string | null;
 };
 
 export type ProfileCreditsSummary = {
@@ -89,7 +91,8 @@ function toCaptureFromFeedRow(
         size: Number(stats.size ?? 0),
         intelligence: Number(stats.intelligence ?? 0) + Number(row.intelligence_boost ?? 0),
         rarity: Number(stats.rarity ?? 0),
-        isIndexed: Boolean(row.species_profile_id?.trim())
+        isIndexed: Boolean(row.species_profile_id?.trim()),
+        identityKind: row.identity_kind?.trim() || null
     };
 }
 
@@ -99,7 +102,9 @@ export async function getProfileViewerState(profileUserId: string): Promise<Prof
     return {
         isLoggedIn: Boolean(viewer),
         isOwner: viewer?.id === profileUserId,
-        viewerUsername: viewer?.username ?? null
+        viewerUsername: viewer?.username ?? null,
+        viewerDisplayName: viewer?.displayName ?? null,
+        viewerAvatarUrl: viewer?.avatarUrl ?? null
     };
 }
 
@@ -235,7 +240,7 @@ export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndor
 
     const {data: feedRows} = await supabase
         .from("discover_feed_v1")
-        .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,game_stats,dominance_boost,speed_boost,intelligence_boost")
+        .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,game_stats,dominance_boost,speed_boost,intelligence_boost,identity_kind")
         .in("capture_id", captureIds);
 
     const speciesEntries = await getUnifiedSpeciesEntries();

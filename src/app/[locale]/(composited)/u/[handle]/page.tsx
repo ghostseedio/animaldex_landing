@@ -7,12 +7,12 @@ import {getInstagramDisplayText, getPublicProfileCard, normalizePublicHandle} fr
 import {
     buildOwnerCompletedSets,
     getMemberListedPacks,
-    getOwnerEndorsedCaptures,
     getOwnerTradeUnlockSummary,
     getProfileCreditsSummary,
     getProfileViewerState
 } from "@/data/profile-authenticated";
 import {getScopedTranslator} from "@/loaders/translation";
+import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {appStoreUrl} from "@/lib/store-links";
 
@@ -91,30 +91,29 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
         : null;
 
     let ownerExtras = null;
-    let memberExtras = null;
 
     if (viewer.isOwner) {
         const completedSets = buildOwnerCompletedSets(profile.powerSetCompletions);
-        const [credits, tradeUnlock, endorsedCaptures] = await Promise.all([
+        const [credits, tradeUnlock] = await Promise.all([
             getProfileCreditsSummary(),
-            getOwnerTradeUnlockSummary(profile.collectorScore),
-            getOwnerEndorsedCaptures()
+            getOwnerTradeUnlockSummary(profile.collectorScore)
         ]);
 
         ownerExtras = {
             credits,
             tradeUnlock,
-            endorsedCaptures,
             completedSets,
             completedSetsCount: completedSets.length,
             signOutButton: (
                 <ProfileSignOutButton label={t("signOut")} loadingLabel={t("signingOut")} />
             )
         };
-    } else if (viewer.isLoggedIn) {
-        const listedPacks = await getMemberListedPacks(profile.userId);
-        memberExtras = {listedPacks};
     }
+
+    const listedPacks = await getMemberListedPacks(profile.userId);
+    // iOS gates location surfaces on `canViewLocations`; the web can settle the
+    // owner and "everyone" cases without a follow graph, and stays private otherwise.
+    const canViewLocations = viewer.isOwner || profile.locationVisibility === "everyone";
 
     const schema = {
         "@context": "https://schema.org",
@@ -157,15 +156,23 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                     farmCount: profile.farmCount,
                     tradesMade: profile.tradesMade,
                     missionsCompleted: profile.missionsCompleted,
+                    challengeWins: profile.challengeWins,
+                    challengeLosses: profile.challengeLosses,
+                    discoveryDistanceLabel: canViewLocations && profile.discoveryDistanceMeters != null
+                        ? formatDiscoveryDistance(profile.discoveryDistanceMeters)
+                        : null,
                     collectionValueUsd: profile.collectionValueUsd,
                     averageTraits: profile.averageTraits,
+                    battleTierCounts: profile.battleTierCounts,
                     bestForTagScores: profile.bestForTagScores,
                     powerSetCompletions: profile.powerSetCompletions,
                     wildIdentity: profile.wildIdentity,
                     insights: profile.insights,
+                    wildInsights: profile.wildInsights,
                     locationVisits: profile.locationVisits,
                     topCaptures: profile.topCaptures,
-                    recentCaptures: profile.recentCaptures
+                    recentCaptures: profile.recentCaptures,
+                    canViewLocations
                 }}
                 labels={{
                     profileTitle: t("title"),
@@ -176,29 +183,8 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                     proBadge: t("proBadge"),
                     tabStats: t("tabStats"),
                     tabHistory: t("tabHistory"),
-                    overallScore: t("overallScore"),
-                    scoreFootnote: t("scoreFootnote"),
-                    wildVsZooVsDomestic: t("wildVsZooVsDomestic"),
-                    noCapturesYet: t("noCapturesYet"),
-                    settingWild: t("settingWild"),
-                    settingZoo: t("settingZoo"),
-                    settingDomestic: t("settingDomestic"),
-                    statCaptures: t("statCaptures"),
-                    statSpecies: t("statSpecies"),
-                    statUnindexed: t("statUnindexed"),
-                    statIndexed: t("statIndexed"),
-                    statSetsComplete: t("statSetsComplete"),
-                    statTradesMade: t("statTradesMade"),
-                    statMissionsComplete: t("statMissionsComplete"),
-                    netWorth: t("netWorth"),
                     netWorthFootnote: t("netWorthFootnote"),
-                    qualitiesTitle: t("qualitiesTitle"),
-                    qualitiesEmpty: t("qualitiesEmpty"),
-                    qualitiesTop: t("qualitiesTop"),
-                    insightsTitle: t("insightsTitle"),
                     keepScanning: t("keepScanning"),
-                    powerSetTitle: t("powerSetTitle"),
-                    powerSetSpecies: t("powerSetSpecies"),
                     wildProfileTitle: t("wildProfileTitle"),
                     wildProfilePublic: t("wildProfilePublic"),
                     originLabel: t("originLabel"),
@@ -207,32 +193,13 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                     locationsTitle: t("locationsTitle"),
                     locationsEmpty: t("locationsEmpty"),
                     locationCaptures: t("locationCaptures"),
-                    topCapturesTitle: t("topCapturesTitle"),
-                    topCapturesTrailing: t("topCapturesTrailing"),
-                    recentSightingsTitle: t("recentSightingsTitle"),
-                    recentSightingsEmpty: t("recentSightingsEmpty"),
                     userIdLabel: t("userIdLabel"),
                     noPublicCapturesTitle: t("noPublicCapturesTitle"),
                     noPublicCapturesDescription: t("noPublicCapturesDescription"),
-                    scoreLabel: t("scoreLabel"),
-                    creditsTitle: t("creditsTitle"),
-                    creditsProActive: t("creditsProActive"),
-                    creditsAvailable: t("creditsAvailable"),
-                    creditsLow: t("creditsLow"),
-                    myCollection: t("myCollection"),
-                    myCollectionDetail: t("myCollectionDetail"),
                     signOut: t("signOut"),
                     signingOut: t("signingOut"),
                     discoverWildProfileTitle: t("discoverWildProfileTitle"),
                     discoverWildProfileDetail: t("discoverWildProfileDetail"),
-                    tradeUnlockTitle: t("tradeUnlockTitle"),
-                    tradeUnlockProgress: t("tradeUnlockProgress"),
-                    endorsedCapturesTitle: t("endorsedCapturesTitle"),
-                    endorsedCapturesEmpty: t("endorsedCapturesEmpty"),
-                    endorsedStatLabel: t("endorsedStatLabel"),
-                    completedSetsTitle: t("completedSetsTitle"),
-                    completedSetsSpecies: t("completedSetsSpecies"),
-                    packMarketplaceTitle: t("packMarketplaceTitle"),
                     packMarketplaceEmpty: t("packMarketplaceEmpty"),
                     packListedBy: t("packListedBy"),
                     packBuyInApp: t("packBuyInApp"),
@@ -241,8 +208,9 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                 locale={locale}
                 localePrefix={localePrefix}
                 viewer={viewer}
+                viewerAvatarUrl={viewer.viewerAvatarUrl}
                 ownerExtras={ownerExtras}
-                memberExtras={memberExtras}
+                listedPacks={listedPacks}
                 appStoreUrl={appStoreUrl}
                 shareButton={
                     <ShareProfileButton

@@ -15,7 +15,7 @@ import {getChallenge} from "@/data/challenges";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {getExpandedRankingEntries, getRankingPage, getRankingTierListTitle, getRelatedRankings, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {getSpeciesBySlug, speciesEntries, SpeciesEntry} from "@/data/species";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -152,12 +152,13 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         land: t("domainLand"),
         mixed: t("domainMixed")
     };
+    const artworkFiles = await resolveSpeciesArtworkFiles(entries.map((entry) => entry.species.slug));
     const tableItems = entries.map((entry) => ({
         rank: entry.rank,
         tier: entry.tier,
         speciesSlug: entry.species.slug,
         speciesName: entry.species.name,
-        iconSrc: getSpeciesArtworkUrl(entry.species.slug),
+        iconSrc: buildSpeciesArtworkSrc(entry.species.slug, artworkFiles.get(entry.species.slug)),
         primaryMetric: entry.primaryMetric,
         shortReason: entry.shortReason,
         domain: getMovementDomain(entry.species, domainLabels)
@@ -354,7 +355,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                             rank={entry.rank}
                             speciesSlug={entry.species.slug}
                             speciesName={entry.species.name}
-                            iconSrc={getSpeciesArtworkUrl(entry.species.slug)}
+                            iconSrc={buildSpeciesArtworkSrc(entry.species.slug, artworkFiles.get(entry.species.slug))}
                             primaryMetric={entry.primaryMetric}
                             shortReason={entry.shortReason}
                             summary={entry.species.analysis.summary}

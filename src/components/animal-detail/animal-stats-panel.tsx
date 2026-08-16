@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import SpeciesRadarStats from "@/app/[locale]/(composited)/animals/[slug]/species-radar-stats";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 
@@ -174,8 +174,8 @@ function Artwork({slug, label, size}: {slug: string; label: string; size: number
             style={{
                 width: size,
                 height: size,
-                maskImage: `url(${getSpeciesArtworkUrl(slug)})`,
-                WebkitMaskImage: `url(${getSpeciesArtworkUrl(slug)})`,
+                maskImage: `url(${getSpeciesArtworkRoute(slug)})`,
+                WebkitMaskImage: `url(${getSpeciesArtworkRoute(slug)})`,
                 maskPosition: "center",
                 WebkitMaskPosition: "center",
                 maskRepeat: "no-repeat",

@@ -7,6 +7,7 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getScopedTranslator} from "@/loaders/translation";
 import LocationPlacesPage, {LocationPlacesKind, LocationPlacesLabels} from "./location-places-page";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesTier} from "@/lib/species-tier";
 
@@ -57,14 +58,20 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
     const places = getPlaces(params.slug, kind);
     // Place rosters mix the local species file with the indexed catalog, so tiers are
     // resolved the same way the species pages resolve them.
-    const species = (await Promise.all(
-        getUniquePlaceSpeciesSlugs(places).map(async (speciesSlug) => {
-            const entry = await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug);
-            return entry
-                ? {slug: entry.slug, name: entry.name, scientificName: entry.analysis.scientificName, tier: getSpeciesTier(entry)}
-                : null;
-        })
+    const placeSpecies = (await Promise.all(
+        getUniquePlaceSpeciesSlugs(places).map(async (speciesSlug) => (
+            await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug)
+        ))
     )).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    const artworkFiles = await resolveSpeciesArtworkFiles(placeSpecies.map((entry) => entry.slug));
+    const species = placeSpecies
+        .map((entry) => ({
+            slug: entry.slug,
+            name: entry.name,
+            scientificName: entry.analysis.scientificName,
+            tier: getSpeciesTier(entry),
+            artworkSrc: buildSpeciesArtworkSrc(entry.slug, artworkFiles.get(entry.slug))
+        }));
     const t = await getScopedTranslator(params.locale, "locationPlaces");
     const isZooPage = kind === "zoos";
     const values = {location: getPlaceGuideLocationName(location.slug, location.name)};

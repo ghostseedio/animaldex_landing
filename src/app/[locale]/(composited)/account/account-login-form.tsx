@@ -4,7 +4,7 @@ import {FormEvent, useState} from "react";
 import Image from "next/image";
 import {useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 
 type AccountLoginFormProps = {
     labels: {
@@ -147,7 +147,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                                     >
                                         <div className="relative aspect-[4/5]">
                                             <Image
-                                                src={getSpeciesArtworkUrl(card.slug)}
+                                                src={getSpeciesArtworkRoute(card.slug)}
                                                 alt={card.name}
                                                 fill
                                                 unoptimized

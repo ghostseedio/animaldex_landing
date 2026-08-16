@@ -498,8 +498,10 @@ export default function DiscoverHome({
                                     onWheel={handleTimelineWheel}
                                     onTouchStart={handleTimelineTouchStart}
                                     onTouchEnd={handleTimelineTouchEnd}
-                                    className="h-[calc(100svh-7.5rem)] min-h-[34rem] snap-y snap-mandatory space-y-4 overflow-y-auto overscroll-contain scroll-smooth pr-1 [scrollbar-width:none] md:h-[90svh] md:min-h-[42rem] [&::-webkit-scrollbar]:hidden"
+                                    className="-mx-4 h-[calc(100svh-7.5rem)] min-h-[34rem] snap-y snap-mandatory overflow-y-auto overscroll-contain scroll-smooth [scrollbar-width:none] sm:mx-0 md:h-[90svh] md:min-h-[42rem] md:rounded-[1.35rem] md:border md:border-white/[0.08] [&::-webkit-scrollbar]:hidden"
                                 >
+                                    {/* Flush stacking: iOS uses VStack(spacing: 0) so one
+                                        swipe always lands on exactly one post. */}
                                     {timelineItems.map((item) => (
                                         <div
                                             key={item.id}

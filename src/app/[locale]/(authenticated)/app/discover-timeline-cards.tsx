@@ -28,6 +28,30 @@ import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
 
+/**
+ * iOS keeps the feed's mute state on the playback coordinator and surfaces the
+ * toggle in the post's top-right chrome, not on the media itself. The chrome and
+ * the carousel therefore have to share one source of truth.
+ */
+function setFeedVideoSoundEnabled(enabled: boolean) {
+  feedVideoSoundEnabled = enabled;
+  window.dispatchEvent(new CustomEvent(FEED_VIDEO_SOUND_EVENT, {detail: {enabled}}));
+}
+
+function useFeedVideoSoundEnabled() {
+  const [enabled, setEnabled] = useState(feedVideoSoundEnabled);
+
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      setEnabled(Boolean((event as CustomEvent<{enabled?: boolean}>).detail?.enabled));
+    };
+    window.addEventListener(FEED_VIDEO_SOUND_EVENT, onChange);
+    return () => window.removeEventListener(FEED_VIDEO_SOUND_EVENT, onChange);
+  }, []);
+
+  return enabled;
+}
+
 type NetworkConnection = {
   saveData?: boolean;
   effectiveType?: string;
@@ -118,32 +142,6 @@ function UncertainBadge() {
   );
 }
 
-function CollectorHeader({ collector }: { collector: DiscoverCollectorRef }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      {collector.avatarUrl ? (
-        <img
-          src={collector.avatarUrl}
-          alt=""
-          className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
-        />
-      ) : (
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">
-          {collector.name.slice(0, 1)}
-        </span>
-      )}
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-white/80">
-          <CollectorLink collector={collector} />
-        </p>
-        {collector.username ? (
-          <p className="truncate text-xs text-white/35">@{collector.username}</p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 const PEER_CAPTURERS_VISIBLE_LIMIT = 3;
 
 /** Other collectors with a public capture in the same ranking cohort. */
@@ -218,11 +216,13 @@ function MediaCarousel({
   animalName,
   isUncertain = false,
   layout = "standard",
+  onActiveAssetChange,
 }: {
   assets: DiscoverMediaAsset[];
   animalName: string;
   isUncertain?: boolean;
   layout?: "standard" | "feed";
+  onActiveAssetChange?: (asset: DiscoverMediaAsset | null) => void;
 }) {
   const media = useMemo(() => assets.length ? assets : [], [assets]);
   const videoSourceById = useMemo(() => new Map(media.map((asset) => [asset.id, asset.url])), [media]);
@@ -236,6 +236,10 @@ function MediaCarousel({
   const [isLowDataMode, setIsLowDataMode] = useState(false);
   const [isFeedSoundEnabled, setIsFeedSoundEnabled] = useState(feedVideoSoundEnabled);
   const shouldLoadMedia = layout !== "feed" || isMediaActive;
+
+  useEffect(() => {
+    onActiveAssetChange?.(media[activeSlideIndex] ?? media[0] ?? null);
+  }, [activeSlideIndex, media, onActiveAssetChange]);
 
   useEffect(() => {
     setIsLowDataMode(readLowDataMode());
@@ -401,9 +405,8 @@ function MediaCarousel({
   const toggleVideoSound = (asset: DiscoverMediaAsset) => {
     const video = videoRefs.current[asset.id];
     const nextSoundEnabled = !isFeedSoundEnabled;
-    feedVideoSoundEnabled = nextSoundEnabled;
     setIsFeedSoundEnabled(nextSoundEnabled);
-    window.dispatchEvent(new CustomEvent(FEED_VIDEO_SOUND_EVENT, {detail: {enabled: nextSoundEnabled}}));
+    setFeedVideoSoundEnabled(nextSoundEnabled);
     markLoadedId(asset.id);
 
     if (isLowDataMode) {
@@ -430,8 +433,9 @@ function MediaCarousel({
     setActiveSlideIndex(Math.min(media.length - 1, Math.max(0, index)));
   };
 
-  const frameClass = layout === "feed"
-    ? "relative h-[52svh] min-h-[20rem] max-h-[36rem] shrink-0 bg-black sm:h-[54svh] md:h-[56svh]"
+  const isFeedLayout = layout === "feed";
+  const frameClass = isFeedLayout
+    ? "relative h-full w-full bg-black"
     : "relative bg-white/5";
   const scrollerClass = layout === "feed"
     ? "flex h-full min-h-0 w-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -439,7 +443,9 @@ function MediaCarousel({
   const itemClass = layout === "feed"
     ? "relative h-full min-h-0 w-full shrink-0 snap-center overflow-hidden"
     : "relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden";
-  const mediaFitClass = "object-cover object-[50%_28%]";
+  const mediaFitClass = isFeedLayout
+    ? "object-cover object-center"
+    : "object-cover object-[50%_28%]";
 
   return (
     <div ref={rootRef} className={frameClass}>
@@ -491,7 +497,9 @@ function MediaCarousel({
               ) : (
                 <div className="h-full w-full bg-[#090909]" />
               )}
-              {isVideo ? (
+              {/* In the feed the media owns the whole slot and every affordance
+                  lives in the post chrome, exactly as iOS lays it out. */}
+              {isVideo && !isFeedLayout ? (
                 <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/85 ring-1 ring-white/10">
                   Video
                 </span>
@@ -505,7 +513,11 @@ function MediaCarousel({
                     event.stopPropagation();
                     playExplicitly(asset);
                   }}
-                  className="absolute left-1/2 top-1/2 z-10 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition hover:bg-black/75"
+                  className={`z-10 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition hover:bg-black/75 ${
+                    isFeedLayout
+                      ? "absolute bottom-3 right-3"
+                      : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                  }`}
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
                     <path d="M8 5.14v13.72L19 12Z" />
@@ -513,7 +525,7 @@ function MediaCarousel({
                   Play
                 </button>
               ) : null}
-              {isVideo ? (
+              {isVideo && !isFeedLayout ? (
                 <button
                   type="button"
                   aria-label={isFeedSoundEnabled ? "Turn feed sound off" : "Turn feed sound on"}
@@ -528,12 +540,12 @@ function MediaCarousel({
                   <AppIcon name={isFeedSoundEnabled ? "volume" : "volumeOff"} className="h-5 w-5" />
                 </button>
               ) : null}
-              {isUncertain ? (
+              {isUncertain && !isFeedLayout ? (
                 <span className="absolute right-3 top-3">
                   <UncertainBadge />
                 </span>
               ) : null}
-              {media.length > 1 ? (
+              {media.length > 1 && !isFeedLayout ? (
                 <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
                   {index + 1} / {media.length}
                 </span>
@@ -542,7 +554,7 @@ function MediaCarousel({
           );
         })}
       </div>
-      {media.length > 1 ? (
+      {media.length > 1 && !isFeedLayout ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
           {media.map((asset, index) => (
             <span
@@ -720,77 +732,161 @@ function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
   );
 }
 
-function CaptureCardBody({
-  item,
-  viewerUserId,
-  onItemPatch,
+
+/* ------------------------------------------------------------------ *
+ * Feed overlay chrome — iOS `DiscoverCaptureTimelineCardView.overlayChrome`
+ * ------------------------------------------------------------------ */
+
+/** iOS `overlayActionButton`: 44pt hit area, 20pt bold glyph, no chrome behind it. */
+function FeedRailButton({
+  label,
+  href,
+  onClick,
+  disabled = false,
+  tone = "white",
+  children,
 }: {
-  item: DiscoverCaptureItem;
-  viewerUserId: string | null;
-  onItemPatch?: (patch: Partial<DiscoverCaptureItem>) => void;
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  tone?: "white" | "cyan" | "dim";
+  children: React.ReactNode;
 }) {
-  const isOwnPost = Boolean(viewerUserId && item.collector.userId && viewerUserId === item.collector.userId);
-  const canOffer = Boolean(viewerUserId) && !isOwnPost && !item.isUncertain;
-  const canChallenge = Boolean(viewerUserId) && !isOwnPost && item.isChallengeAvailable;
-  const hasMetricPills = item.endorsementCount > 0 || item.isChallengeAvailable;
+  const toneClass = tone === "cyan"
+    ? "text-cyan-300"
+    : tone === "dim"
+      ? "text-white/[0.34]"
+      : "text-white";
+  const className = `pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] ${toneClass}`;
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} aria-label={label} title={label} className={className}>
+        {children}
+      </Link>
+    );
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col justify-center space-y-1.5 overflow-hidden px-3 py-3.5 sm:px-4 sm:py-4">
-      <div className="space-y-1.5">
-        <h3 className="line-clamp-1 font-display text-xl font-bold leading-tight text-white sm:text-2xl">
-          <Link href={item.href}>{item.animalName}</Link>
-        </h3>
-        <CapturePostChipRow item={item} />
+    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={className}>
+      {children}
+    </button>
+  );
+}
+
+function OfferIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 7H3m0 0 3-3M3 7l3 3" />
+      <path d="M16 17h5m0 0-3-3m3 3-3 3" />
+    </svg>
+  );
+}
+
+function CompareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <path d="M12 2.2 4.4 5v6.4c0 4.6 3.2 8.9 7.6 10.4 4.4-1.5 7.6-5.8 7.6-10.4V5z" fillOpacity="0.92" />
+      <path d="M12.9 6.6 8.4 13.1h2.9l-.8 4.9 4.6-6.8h-3z" fill="#000" fillOpacity="0.7" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3.2v12" />
+      <path d="m7.6 7.6 4.4-4.4 4.4 4.4" />
+      <path d="M5 13.6v5.6a1.6 1.6 0 0 0 1.6 1.6h10.8a1.6 1.6 0 0 0 1.6-1.6v-5.6" />
+    </svg>
+  );
+}
+
+function SoundToggle() {
+  const enabled = useFeedVideoSoundEnabled();
+
+  return (
+    <button
+      type="button"
+      onClick={() => setFeedVideoSoundEnabled(!enabled)}
+      aria-label={enabled ? "Mute video" : "Unmute video"}
+      className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-black/[0.46] px-2.5 py-[7px] text-white/90 ring-1 ring-white/[0.08]"
+    >
+      <AppIcon name={enabled ? "volume" : "volumeOff"} className="h-3 w-3" />
+      <span className="text-[11px] font-semibold">{enabled ? "Sound on" : "Tap for sound"}</span>
+    </button>
+  );
+}
+
+/** iOS `topOverlay`. */
+function FeedTopOverlay({
+  collector,
+  activityLabel,
+  peerCollectors,
+  showsSoundToggle,
+}: {
+  collector: DiscoverCollectorRef;
+  activityLabel: string;
+  peerCollectors: DiscoverCollectorRef[];
+  showsSoundToggle: boolean;
+}) {
+  const avatar = collector.avatarUrl ? (
+    <img
+      src={collector.avatarUrl}
+      alt=""
+      className="h-10 w-10 shrink-0 rounded-full object-cover ring-[1.5px] ring-white/80"
+    />
+  ) : (
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-xs font-bold text-white ring-[1.5px] ring-white/80">
+      {collector.name.slice(0, 1)}
+    </span>
+  );
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="pointer-events-auto flex max-w-[190px] min-w-0 items-center gap-2.5 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
+        {collector.href ? <Link href={collector.href} className="shrink-0">{avatar}</Link> : avatar}
+        <div className="min-w-0">
+          <p className="truncate text-xs font-bold text-white">
+            {collector.href ? <Link href={collector.href}>{collector.name}</Link> : collector.name}
+          </p>
+          {collector.username ? (
+            <p className="truncate text-[11px] font-semibold text-white/[0.78]">@{collector.username}</p>
+          ) : null}
+        </div>
       </div>
-      {item.isUncertain ? <UncertainBadge /> : null}
-      {item.lifeStageChip ? (
-        <span className="inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-bold text-white/65">
-          {item.lifeStageChip}
+
+      <div className="ml-auto flex max-w-[124px] flex-col items-end gap-1.5">
+        <span className="rounded-full bg-black/[0.42] px-[9px] py-1.5 text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">
+          {activityLabel}
         </span>
-      ) : null}
-      {item.headlineSupportingName ? (
-        <p className="line-clamp-1 text-sm leading-5 text-white/55">{item.headlineSupportingName}</p>
-      ) : null}
-      {item.sameSpeciesHelper ? (
-        <p className="line-clamp-1 text-xs leading-4 text-white/40">{item.sameSpeciesHelper}</p>
-      ) : null}
+        <DiscoverPeerCapturersAvatarStack collectors={peerCollectors} />
+        {showsSoundToggle ? <SoundToggle /> : null}
+      </div>
+    </div>
+  );
+}
+
+/** iOS `bottomOverlay`. */
+function FeedBottomOverlay({item}: {item: DiscoverCaptureItem}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-2 [filter:drop-shadow(0_1px_4px_rgba(0,0,0,0.65))]">
+      {item.isUncertain ? <span className="pointer-events-auto self-start"><UncertainBadge /></span> : null}
+      <Link href={item.href} className="pointer-events-auto flex flex-col gap-1.5">
+        <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
+        <CapturePostChipRow item={item} />
+      </Link>
       {item.learnedPrinciple ? (
-        <p className="flex items-center gap-2 text-sm leading-5 text-white/55">
-          <AppIcon name="spark" className="h-3.5 w-3.5 text-primary-200" />
+        <p className="flex items-center gap-1.5 text-xs font-medium text-white/90">
+          <AppIcon name="spark" className="h-3.5 w-3.5" />
           <span className="line-clamp-1">{item.learnedPrinciple}</span>
         </p>
       ) : null}
       {item.bestForTags.length ? (
-        <div className="flex max-h-7 flex-wrap gap-1.5 overflow-hidden">
-          {item.bestForTags.map((tag) => <FeedPill key={tag}>{tag}</FeedPill>)}
-        </div>
-      ) : null}
-      {hasMetricPills ? (
-        <div className="flex max-h-7 flex-wrap items-center gap-1.5 overflow-hidden">
-          {item.endorsementCount > 0 ? (
-            <FeedPill tone="cyan">
-              {item.endorsementCount} endorsement{item.endorsementCount === 1 ? "" : "s"}
-            </FeedPill>
-          ) : null}
-          {item.isChallengeAvailable ? (
-            <FeedPill tone="cyan">Enter {item.challengeStake} credit{item.challengeStake === 1 ? "" : "s"}</FeedPill>
-          ) : null}
-        </div>
-      ) : null}
-      {viewerUserId ? (
-        <DiscoverCaptureActions
-          captureId={item.captureId}
-          isOwnPost={isOwnPost}
-          canChallenge={canChallenge}
-          canOffer={canOffer}
-          viewerEndorsementStat={item.viewerEndorsementStat}
-          onEndorsementChange={(stat, delta) => {
-            onItemPatch?.({
-              viewerEndorsementStat: stat,
-              endorsementCount: Math.max(0, item.endorsementCount + delta)
-            });
-          }}
-        />
+        <p className="line-clamp-1 text-[11px] font-semibold text-white/[0.78]">
+          {item.bestForTags.slice(0, 3).map((tag) => `#${tag.replace(/\s+/g, "")}`).join("  ")}
+        </p>
       ) : null}
     </div>
   );
@@ -990,6 +1086,7 @@ function CaptureCard({
 
   const showsRankedPager = rankedItems.length > 1;
   const [showsInfo, setShowsInfo] = useState(false);
+  const [activeAsset, setActiveAsset] = useState<DiscoverMediaAsset | null>(null);
   const peerCollectors = useMemo(() => {
     const seen = new Set<string>();
     const peers: DiscoverCollectorRef[] = [];
@@ -1006,73 +1103,117 @@ function CaptureCard({
     return peers;
   }, [rankedItems, activeItem.collector]);
 
+  const isOwnPost = Boolean(viewerUserId && activeItem.collector.userId && viewerUserId === activeItem.collector.userId);
+  const canOffer = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain;
+  const canChallenge = Boolean(viewerUserId) && !isOwnPost && activeItem.isChallengeAvailable;
+  const activityLabel = activeItem.activityBadge.toLowerCase() === "capture" && activeItem.animalDexNumber
+    ? `#${String(activeItem.animalDexNumber).padStart(3, "0")}`
+    : activeItem.activityBadge;
+  const activeAssetIsVideo = activeAsset?.kind === "video" || activeAsset?.kind === "loop";
+
   return (
     <>
     <article
       ref={rootRef}
-      className={`flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col overflow-hidden rounded-[1.35rem] border bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition  ${activeItem.isUncertain ? "border-red-500/45 hover:border-red-400/60" : "border-white/[0.08] hover:border-white/14"}`}
+      className="relative h-full min-h-0 w-full snap-start snap-always overflow-hidden bg-black"
     >
-      <div className="flex shrink-0 items-start justify-between gap-3 p-3 sm:p-4">
-        <CollectorHeader collector={activeItem.collector} />
-        <div className="flex shrink-0 items-center gap-2">
-          <DiscoverPeerCapturersAvatarStack collectors={peerCollectors} />
-          <ActivityBadge
-            label={
-              activeItem.activityBadge.toLowerCase() === "capture" && activeItem.animalDexNumber
-                ? `#${String(activeItem.animalDexNumber).padStart(3, "0")}`
-                : activeItem.activityBadge
-            }
-          />
-          <ShareDiscoverPostButton url={shareForActive.url} title={shareForActive.title} text={shareForActive.text} compact />
-          <button
-            type="button"
-            onClick={() => setShowsInfo(true)}
-            aria-label="Post information"
-            className="rounded-full p-1 text-white/60 transition hover:bg-white/5 hover:text-white"
-          >
-            <InfoIcon />
-          </button>
-        </div>
-      </div>
-      {activeItem.activityLine ? (
-        <p className="line-clamp-2 shrink-0 px-3 pb-3 text-sm leading-6 text-white/55 sm:px-4 sm:pb-4">{activeItem.activityLine}</p>
-      ) : null}
-
+      {/* Media owns the whole snap slot; every control is layered over it. */}
       {showsRankedPager ? (
-        <div className="relative min-h-0 flex-1">
-          {rankedHint ? (
-            <span className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/80 ring-1 ring-white/15 backdrop-blur-sm">
-              <span aria-hidden="true">↔</span>
-              Ranked
-            </span>
-          ) : null}
-          <div
-            ref={pagerRef}
-            onScroll={handlePagerScroll}
-            className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {rankedItems.map((ranked) => (
-              <div key={ranked.captureId} className="flex h-full w-full shrink-0 snap-center flex-col">
-                <MediaCarousel assets={ranked.mediaAssets} animalName={ranked.animalName} isUncertain={ranked.isUncertain} layout="feed" />
-                <CaptureCardBody
-                  item={ranked}
-                  viewerUserId={viewerUserId}
-                  onItemPatch={(patch) => applyItemPatch(ranked, patch)}
-                />
-              </div>
-            ))}
-          </div>
+        <div
+          ref={pagerRef}
+          onScroll={handlePagerScroll}
+          className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {rankedItems.map((ranked) => (
+            <div key={ranked.captureId} className="h-full w-full shrink-0 snap-center">
+              <MediaCarousel
+                assets={ranked.mediaAssets}
+                animalName={ranked.animalName}
+                isUncertain={ranked.isUncertain}
+                layout="feed"
+                onActiveAssetChange={ranked.captureId === activeItem.captureId ? setActiveAsset : undefined}
+              />
+            </div>
+          ))}
         </div>
       ) : (
-        <>
-          <MediaCarousel assets={activeItem.mediaAssets} animalName={activeItem.animalName} isUncertain={activeItem.isUncertain} layout="feed" />
-          <CaptureCardBody
-            item={activeItem}
-            viewerUserId={viewerUserId}
-            onItemPatch={(patch) => applyItemPatch(activeItem, patch)}
-          />
-        </>
+        <MediaCarousel
+          assets={activeItem.mediaAssets}
+          animalName={activeItem.animalName}
+          isUncertain={activeItem.isUncertain}
+          layout="feed"
+          onActiveAssetChange={setActiveAsset}
+        />
       )}
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.54),rgba(0,0,0,0)_30%,rgba(0,0,0,0)_62%,rgba(0,0,0,0.88))]"
+      />
+
+      {rankedHint ? (
+        <span className="pointer-events-none absolute left-1/2 top-1/2 z-10 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/80 ring-1 ring-white/15 backdrop-blur-sm">
+          <span aria-hidden="true">↔</span>
+          Ranked
+        </span>
+      ) : null}
+
+      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-3.5">
+        <FeedTopOverlay
+          collector={activeItem.collector}
+          activityLabel={activityLabel}
+          peerCollectors={peerCollectors}
+          showsSoundToggle={Boolean(activeAssetIsVideo)}
+        />
+
+        <div className="min-h-5 flex-1" />
+
+        <div className="flex items-end gap-3.5">
+          <FeedBottomOverlay item={activeItem} />
+          <div className="flex w-[46px] shrink-0 flex-col items-center gap-1">
+            {canOffer ? (
+              <FeedRailButton label="Offer" href={`/app/trades?theirCapture=${encodeURIComponent(activeItem.captureId)}`}>
+                <OfferIcon />
+              </FeedRailButton>
+            ) : null}
+            <FeedRailButton
+              label="Compare"
+              href={`/app/matchups?target=${encodeURIComponent(activeItem.captureId)}`}
+              tone={canChallenge ? "cyan" : "dim"}
+              disabled={!canChallenge}
+            >
+              <CompareIcon />
+            </FeedRailButton>
+            <span className="pointer-events-auto grid h-11 w-11 place-items-center text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))]">
+              <ShareDiscoverPostButton
+                url={shareForActive.url}
+                title={shareForActive.title}
+                text={shareForActive.text}
+                compact
+              />
+            </span>
+            <FeedRailButton label="Post information" onClick={() => setShowsInfo(true)}>
+              <InfoIcon />
+            </FeedRailButton>
+            {viewerUserId ? (
+              <DiscoverCaptureActions
+                variant="rail"
+                captureId={activeItem.captureId}
+                isOwnPost={isOwnPost}
+                canChallenge={canChallenge}
+                canOffer={canOffer}
+                viewerEndorsementStat={activeItem.viewerEndorsementStat}
+                onEndorsementChange={(stat, delta) => {
+                  applyItemPatch(activeItem, {
+                    viewerEndorsementStat: stat,
+                    endorsementCount: Math.max(0, activeItem.endorsementCount + delta)
+                  });
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+      </div>
     </article>
     {showsInfo ? <PostInformation item={activeItem} locale={locale} onClose={() => setShowsInfo(false)} /> : null}
     </>

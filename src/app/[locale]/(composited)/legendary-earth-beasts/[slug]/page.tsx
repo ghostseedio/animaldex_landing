@@ -10,8 +10,7 @@ import {
     getLegendaryEarthBeast,
     getRelatedLegendaryEarthBeasts,
     LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH,
-    LEGENDARY_EARTH_BEASTS_PILLAR_PATH,
-    legendaryEarthBeastEntries
+    LEGENDARY_EARTH_BEASTS_PILLAR_PATH
 } from "@/data/legendary-earth-beasts";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {buildContentMetadata} from "@/lib/content-metadata";
@@ -29,9 +28,10 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-export function generateStaticParams() {
-    return legendaryEarthBeastEntries.map((entry) => ({slug: entry.slug}));
-}
+// Rendered on demand and cached, like /animals/[slug]. next-intl's server APIs
+// cannot run during static generation, so a `generateStaticParams` here produced
+// zero usable paths and left every request served by the build's static 500.
+export const revalidate = 3600;
 
 export async function generateMetadata({params}: LegendaryEarthBeastPageProps): Promise<Metadata> {
     const {locale, slug} = params;

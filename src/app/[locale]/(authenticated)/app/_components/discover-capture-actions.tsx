@@ -50,13 +50,24 @@ function ActionButton({
     );
 }
 
+/** iOS renders feed actions as a vertical icon rail over the media. */
+function ThumbsUpIcon({filled}: {filled: boolean}) {
+    return (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 10.4 11.1 3a2 2 0 0 1 2.9 2.3l-.9 4h5.1a2 2 0 0 1 2 2.5l-1.7 6.6A2.6 2.6 0 0 1 16 20H7z" />
+            <path d="M7 10.4V20H4.6A1.6 1.6 0 0 1 3 18.4v-6.4a1.6 1.6 0 0 1 1.6-1.6z" />
+        </svg>
+    );
+}
+
 export default function DiscoverCaptureActions({
     captureId,
     isOwnPost,
     canChallenge,
     canOffer,
     viewerEndorsementStat,
-    onEndorsementChange
+    onEndorsementChange,
+    variant = "pills"
 }: {
     captureId: string;
     isOwnPost: boolean;
@@ -64,6 +75,8 @@ export default function DiscoverCaptureActions({
     canOffer: boolean;
     viewerEndorsementStat: string | null;
     onEndorsementChange?: (stat: string | null, endorsementCountDelta: number) => void;
+    /** "rail" renders only the endorse control, as an icon, for the feed overlay. */
+    variant?: "pills" | "rail";
 }) {
     const [open, setOpen] = useState(false);
     const [pending, setPending] = useState(false);
@@ -104,6 +117,86 @@ export default function DiscoverCaptureActions({
         }
     }
 
+    const endorsementModal = open ? (
+        <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Endorse this animal"
+        >
+            <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 shadow-2xl">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 className="text-lg font-semibold text-white">Endorse this animal</h3>
+                        <p className="mt-2 text-xs font-medium leading-5 text-white/60">
+                            Choose one trait carefully. Each endorsement adds one point to that stat until you withdraw it.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="text-sm font-semibold text-primary-200"
+                    >
+                        Cancel
+                    </button>
+                </div>
+
+                {localStat ? (
+                    <p className="mt-3 text-xs leading-5 text-white/45">
+                        You already endorsed this animal in {localStat.toLowerCase()}. Withdraw it first if you want to free up your one endorsement on this capture.
+                    </p>
+                ) : null}
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    {ENDORSEMENT_STATS.map((stat) => (
+                        <button
+                            key={stat}
+                            type="button"
+                            disabled={pending || Boolean(localStat)}
+                            onClick={() => submitEndorsement(stat)}
+                            className="rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-semibold capitalize text-white disabled:opacity-40"
+                        >
+                            Endorse {statTitle(stat)}
+                        </button>
+                    ))}
+                </div>
+
+                {localStat ? (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => submitEndorsement(null)}
+                        className="mt-3 w-full rounded-full border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-200"
+                    >
+                        Withdraw {localStat} endorsement
+                    </button>
+                ) : null}
+
+                {error ? <p className="mt-3 text-xs font-medium text-red-300">{error}</p> : null}
+            </div>
+        </div>
+    ) : null;
+
+    if (variant === "rail") {
+        return (
+            <>
+                <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => setOpen(true)}
+                    aria-label={endorseLabel}
+                    title={endorseLabel}
+                    className={`pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] ${
+                        localStat ? "text-primary-300" : "text-white"
+                    }`}
+                >
+                    <ThumbsUpIcon filled={Boolean(localStat)} />
+                </button>
+                {endorsementModal}
+            </>
+        );
+    }
+
     return (
         <>
             <div className="-mx-1 flex max-h-10 gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -123,65 +216,7 @@ export default function DiscoverCaptureActions({
                 ) : null}
             </div>
 
-            {open ? (
-                <div
-                    className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Endorse this animal"
-                >
-                    <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 shadow-2xl">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h3 className="text-lg font-semibold text-white">Endorse this animal</h3>
-                                <p className="mt-2 text-xs font-medium leading-5 text-white/60">
-                                    Choose one trait carefully. Each endorsement adds one point to that stat until you withdraw it.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setOpen(false)}
-                                className="text-sm font-semibold text-primary-200"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-
-                        {localStat ? (
-                            <p className="mt-3 text-xs leading-5 text-white/45">
-                                You already endorsed this animal in {localStat.toLowerCase()}. Withdraw it first if you want to free up your one endorsement on this capture.
-                            </p>
-                        ) : null}
-
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                            {ENDORSEMENT_STATS.map((stat) => (
-                                <button
-                                    key={stat}
-                                    type="button"
-                                    disabled={pending || Boolean(localStat)}
-                                    onClick={() => submitEndorsement(stat)}
-                                    className="rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-semibold capitalize text-white disabled:opacity-40"
-                                >
-                                    Endorse {statTitle(stat)}
-                                </button>
-                            ))}
-                        </div>
-
-                        {localStat ? (
-                            <button
-                                type="button"
-                                disabled={pending}
-                                onClick={() => submitEndorsement(null)}
-                                className="mt-3 w-full rounded-full border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-200"
-                            >
-                                Withdraw {localStat} endorsement
-                            </button>
-                        ) : null}
-
-                        {error ? <p className="mt-3 text-xs font-medium text-red-300">{error}</p> : null}
-                    </div>
-                </div>
-            ) : null}
+            {endorsementModal}
         </>
     );
 }

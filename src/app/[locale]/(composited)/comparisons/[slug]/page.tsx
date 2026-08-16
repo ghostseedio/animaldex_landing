@@ -29,7 +29,7 @@ import {
     parseComparisonSlug,
     resolveReadyChallengeEntry
 } from "@/data/species-comparisons";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
@@ -233,10 +233,11 @@ export default async function ComparisonDetailPage({params}: Props) {
 
     const viewerUserId = await getViewerUserId();
     const guestKey = viewerUserId ? null : readGuestKey();
-    const [voteTally, viewerVote, comments] = await Promise.all([
+    const [voteTally, viewerVote, comments, artworkFiles] = await Promise.all([
         fetchVoteTally(challenge.slug).catch(() => ({animalAVotes: 0, animalBVotes: 0, totalVotes: 0})),
         fetchViewerVote(challenge.slug, {userId: viewerUserId, guestKey}).catch(() => null),
-        fetchComparisonComments(challenge.slug, viewerUserId).catch(() => [])
+        fetchComparisonComments(challenge.slug, viewerUserId).catch(() => []),
+        resolveSpeciesArtworkFiles([animalA.slug, animalB.slug]).catch(() => new Map<string, string | null>())
     ]);
 
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
@@ -307,8 +308,8 @@ export default async function ComparisonDetailPage({params}: Props) {
                 slug={challenge.slug}
                 animalAName={animalA.name}
                 animalBName={animalB.name}
-                animalAArtwork={getSpeciesArtworkUrl(animalA.slug)}
-                animalBArtwork={getSpeciesArtworkUrl(animalB.slug)}
+                animalAArtwork={buildSpeciesArtworkSrc(animalA.slug, artworkFiles.get(animalA.slug))}
+                animalBArtwork={buildSpeciesArtworkSrc(animalB.slug, artworkFiles.get(animalB.slug))}
                 initialTally={voteTally}
                 initialVote={viewerVote}
                 copy={{

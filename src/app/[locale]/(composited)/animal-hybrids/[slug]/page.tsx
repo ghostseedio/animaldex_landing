@@ -4,7 +4,6 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {
     ANIMAL_HYBRID_CANONICAL_BASE_PATH,
-    animalHybridEntries,
     getAnimalHybrid,
     getRelatedAnimalHybrids
 } from "@/data/animal-hybrids";
@@ -18,9 +17,10 @@ type AnimalHybridDetailPageProps = {
     };
 };
 
-export function generateStaticParams() {
-    return animalHybridEntries.map((entry) => ({slug: entry.slug}));
-}
+// Rendered on demand and cached, like /animals/[slug]. next-intl's server APIs
+// cannot run during static generation, so a `generateStaticParams` here produced
+// zero usable paths and left every request served by the build's static 500.
+export const revalidate = 3600;
 
 export async function generateMetadata({params}: AnimalHybridDetailPageProps): Promise<Metadata> {
     const {locale, slug} = params;

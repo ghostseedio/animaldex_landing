@@ -1,7 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
 import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 
 type LocationAnimalsListProps = {
     title: string;
@@ -16,6 +16,8 @@ type LocationAnimalsListProps = {
         whyItFits: string;
         rarityHint?: string;
         tier?: string;
+        /** Resolved by the page so a species without its own icon can borrow a relative's. */
+        artworkSrc?: string;
     }>;
 };
 
@@ -57,7 +59,7 @@ export default function LocationAnimalsList({
                             </div>
                             <h3 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 break-words font-display text-2xl font-bold leading-tight text-white">
                                 <img
-                                    src={getSpeciesArtworkUrl(item.speciesSlug)}
+                                    src={item.artworkSrc ?? getSpeciesArtworkUrl(item.speciesSlug)}
                                     alt=""
                                     width={28}
                                     height={28}

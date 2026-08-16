@@ -1,5 +1,5 @@
 import Image from "next/image";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute, getSpeciesArtworkUrl} from "@/data/species-artwork";
 
 type SpeciesArtworkImageProps = {
     slug: string;
@@ -25,7 +25,9 @@ export default function SpeciesArtworkImage({
     return (
         <div className={`relative overflow-hidden bg-surface-800/60 ${className}`}>
             <Image
-                src={src ?? getSpeciesArtworkUrl(slug, imageFile)}
+                // Without a known file the slug may have no artwork of its own,
+                // so go through the route that falls back to a close relative.
+                src={src ?? (imageFile ? getSpeciesArtworkUrl(slug, imageFile) : getSpeciesArtworkRoute(slug))}
                 alt={alt}
                 fill
                 unoptimized

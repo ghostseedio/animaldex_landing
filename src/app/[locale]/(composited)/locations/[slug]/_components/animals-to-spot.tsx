@@ -1,12 +1,14 @@
 import Link from "@/app/[locale]/_components/link";
 import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 
 export type PlaceSpecies = {
     slug: string;
     name: string;
     scientificName: string;
     tier: string;
+    /** Resolved by the route so a species without its own icon can borrow a relative's. */
+    artworkSrc?: string;
 };
 
 export default function AnimalsToSpot({species, title, description, readSpecies, captiveNote}: {
@@ -33,7 +35,7 @@ export default function AnimalsToSpot({species, title, description, readSpecies,
                     <Link key={entry.slug} href={`/animals/${entry.slug}`} className="group rounded-2xl bg-white/[0.055] p-4 hover:bg-white/[0.09]">
                         <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-display text-xl font-bold text-white group-hover:text-primary-100">
                             <img
-                                src={getSpeciesArtworkUrl(entry.slug)}
+                                src={entry.artworkSrc ?? getSpeciesArtworkUrl(entry.slug)}
                                 alt=""
                                 width={26}
                                 height={26}

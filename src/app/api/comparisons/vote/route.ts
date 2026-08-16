@@ -79,31 +79,56 @@ export async function POST(request: Request) {
         guestCookie = identity.cookie;
     }
 
-    // voter_key is generated from user_id/guest_key and carries the only unique
-    // index PostgREST can target here.
-    const conflictTarget = "comparison_slug,voter_key";
-    const row = {
-        comparison_slug: slug,
-        side,
-        user_id: userId,
-        guest_key: userId ? null : guestKey,
-        updated_at: new Date().toISOString()
+    // One vote per viewer per comparison is enforced by partial unique indexes
+    // (user votes and guest votes are indexed separately). PostgREST cannot name
+    // a partial index in on_conflict, so update-then-insert stands in for upsert.
+    const identity = new URLSearchParams({comparison_slug: `eq.${slug}`});
+    if (userId) {
+        identity.set("user_id", `eq.${userId}`);
+    } else {
+        identity.set("guest_key", `eq.${guestKey}`);
+        identity.set("user_id", "is.null");
+    }
+
+    const updateExisting = async () => {
+        const response = await fetch(`${supabaseUrl}/rest/v1/comparison_votes?${identity}`, {
+            method: "PATCH",
+            headers: getSupabaseHeaders(serviceKey, {
+                "Content-Type": "application/json",
+                Prefer: "return=representation"
+            }),
+            body: JSON.stringify({side, updated_at: new Date().toISOString()}),
+            cache: "no-store"
+        });
+
+        if (!response.ok) return null;
+        const rows = (await response.json().catch(() => [])) as unknown[];
+        return Array.isArray(rows) && rows.length > 0;
     };
 
-    const upsert = await fetch(
-        `${supabaseUrl}/rest/v1/comparison_votes?on_conflict=${encodeURIComponent(conflictTarget)}`,
-        {
+    let stored = await updateExisting();
+
+    if (stored === false) {
+        const insert = await fetch(`${supabaseUrl}/rest/v1/comparison_votes`, {
             method: "POST",
             headers: getSupabaseHeaders(serviceKey, {
                 "Content-Type": "application/json",
-                Prefer: "resolution=merge-duplicates,return=representation"
+                Prefer: "return=minimal"
             }),
-            body: JSON.stringify(row),
+            body: JSON.stringify({
+                comparison_slug: slug,
+                side,
+                user_id: userId,
+                guest_key: userId ? null : guestKey
+            }),
             cache: "no-store"
-        }
-    );
+        });
 
-    if (!upsert.ok) {
+        // A concurrent vote from the same viewer wins the insert race; update it.
+        stored = insert.status === 409 ? await updateExisting() : insert.ok;
+    }
+
+    if (!stored) {
         return NextResponse.json({error: "vote_failed"}, {status: 502});
     }
 

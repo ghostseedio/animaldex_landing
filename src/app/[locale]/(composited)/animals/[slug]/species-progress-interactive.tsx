@@ -5,7 +5,7 @@ import {useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import type {CaptureProgressState} from "@/data/species-growth-types";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
 
 const ENDORSEMENT_STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
@@ -42,7 +42,7 @@ function SizeScaleArtworkIcon({
     return (
         <div className="relative shrink-0 overflow-hidden" style={{width: size, height: size}}>
             <Image
-                src={getSpeciesArtworkUrl(slug)}
+                src={getSpeciesArtworkRoute(slug)}
                 alt={alt}
                 fill
                 unoptimized

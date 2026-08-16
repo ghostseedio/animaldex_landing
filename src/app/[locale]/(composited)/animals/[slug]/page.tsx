@@ -21,7 +21,7 @@ import {getMergedChallengesForSpecies} from "@/data/species-comparisons";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {
     getSpeciesImageAltText,
     getSpeciesImageAttribution,
@@ -901,7 +901,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
                                 <div className="relative mb-6 h-28 w-28 overflow-hidden rounded-[1.5rem] border border-amber-200/20 bg-amber-200/[0.06] p-3">
                                     <Image
-                                        src={getSpeciesArtworkUrl(entry.slug)}
+                                        src={getSpeciesArtworkRoute(entry.slug)}
                                         alt={getSpeciesImageAltText(entry, "thumbnail")}
                                         fill
                                         unoptimized

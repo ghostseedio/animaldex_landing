@@ -6,9 +6,7 @@ import {
     POKEMON_ANIMAL_CANONICAL_BASE_PATH,
     getPokemonAnimalEntriesByGeneration,
     getPokemonAnimalEntry,
-    getPokemonAnimalGeneration,
-    pokemonAnimalEntries,
-    pokemonAnimalGenerations
+    getPokemonAnimalGeneration
 } from "@/data/pokemon-animal-counterparts";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
@@ -19,12 +17,10 @@ type PokemonAnimalDetailPageProps = {
     };
 };
 
-export function generateStaticParams() {
-    return [
-        ...pokemonAnimalGenerations.map((generation) => ({slug: generation.slug})),
-        ...pokemonAnimalEntries.map((entry) => ({slug: entry.slug}))
-    ];
-}
+// Rendered on demand and cached, like /animals/[slug]. next-intl's server APIs
+// cannot run during static generation, so a `generateStaticParams` here produced
+// zero usable paths and left every request served by the build's static 500.
+export const revalidate = 3600;
 
 export async function generateMetadata({params}: PokemonAnimalDetailPageProps): Promise<Metadata> {
     const {locale, slug} = params;

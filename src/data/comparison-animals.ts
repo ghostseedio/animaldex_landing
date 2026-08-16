@@ -1,7 +1,7 @@
 import "server-only";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 
 /** Lightweight species shape used by the public comparison builder. */
@@ -52,24 +52,26 @@ const STARTER_SLUGS = [
 
 let indexCache: ComparisonAnimalIndex | null = null;
 
-function toComparableAnimal(entry: Awaited<ReturnType<typeof getUnifiedSpeciesEntries>>[number]): ComparableAnimal {
+function toComparableAnimal(
+    entry: Awaited<ReturnType<typeof getUnifiedSpeciesEntries>>[number],
+    artworkFile: string | null
+): ComparableAnimal {
     return {
         slug: entry.slug,
         name: entry.name,
         category: entry.analysis.category,
         scientificName: entry.analysis.scientificName,
         animalDexNumber: getAnimalDexNumberFromEntry(entry),
-        artworkUrl: getSpeciesArtworkUrl(entry.slug)
+        artworkUrl: buildSpeciesArtworkSrc(entry.slug, artworkFile)
     };
 }
 
 async function getIndex(): Promise<ComparisonAnimalIndex> {
     if (indexCache && indexCache.expiresAt > Date.now()) return indexCache;
 
-    const entries = await getUnifiedSpeciesEntries();
-    const animals = entries
-        .filter((entry) => Boolean(entry.slug && entry.name))
-        .map(toComparableAnimal);
+    const entries = (await getUnifiedSpeciesEntries()).filter((entry) => Boolean(entry.slug && entry.name));
+    const artworkFiles = await resolveSpeciesArtworkFiles(entries.map((entry) => entry.slug));
+    const animals = entries.map((entry) => toComparableAnimal(entry, artworkFiles.get(entry.slug) ?? null));
 
     indexCache = {
         animals,
