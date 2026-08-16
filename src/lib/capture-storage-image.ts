@@ -36,10 +36,28 @@ function toAbsoluteSignedUrl(supabaseUrl: string, signedUrl: string) {
     return `${supabaseUrl}/storage/v1/${signedUrl.replace(/^storage\/v1\//, "")}`;
 }
 
+/**
+ * How long a signed storage URL stays valid.
+ *
+ * These URLs are handed out inside a cacheable redirect, and cached twice on the
+ * way: once here, for up to 55 minutes, and again by the browser, which holds
+ * the redirect for its max-age and may serve it stale for the whole
+ * stale-while-revalidate window on top. Those windows stack, so a token only has
+ * to be shorter than their sum for a cached redirect to end up pointing at an
+ * expired one — and then every image on a page someone left open breaks at once,
+ * with nothing wrong on the server.
+ *
+ * At an hour that sum was already exceeded: 3300s of server cache plus 300s of
+ * browser freshness plus 1800s stale reached 90 minutes against a 60 minute
+ * token, and /api/species-images was worse still at a day of browser cache. A
+ * day of validity clears every window with room to spare.
+ */
+export const SIGNED_URL_LIFETIME_SECONDS = 24 * 60 * 60;
+
 export async function createSignedStorageUrl(
     bucket: string,
     path: string,
-    expiresInSeconds = 60 * 60,
+    expiresInSeconds = SIGNED_URL_LIFETIME_SECONDS,
     transform?: {width: number; height: number; quality: number; resize: "cover" | "contain"}
 ): Promise<string | null> {
     const supabaseUrl = getSupabaseUrl();

@@ -4,7 +4,7 @@ import {
     getSpeciesRepresentativeImageReference,
     SPECIES_NO_IMAGE_SRC
 } from "@/data/species-images";
-import {createSignedStorageUrl} from "@/lib/capture-storage-image";
+import {SIGNED_URL_LIFETIME_SECONDS, createSignedStorageUrl} from "@/lib/capture-storage-image";
 import {getSpeciesBySlug} from "@/data/species";
 import {getDatabaseSpeciesBySlug} from "@/data/database-species-pages";
 
@@ -33,7 +33,9 @@ export async function GET(request: NextRequest, {params}: {params: {slug: string
         const signedUrl = await createSignedStorageUrl(
             reference.imageBucket,
             reference.imagePath,
-            60 * 60,
+            // This route caches the redirect in the browser for an hour and
+            // serves it stale for a day, so the token has to outlast both.
+            SIGNED_URL_LIFETIME_SECONDS,
             isThumbnail ? {width: 320, height: 320, quality: 76, resize: "cover"} : undefined
         );
         if (!signedUrl) {
