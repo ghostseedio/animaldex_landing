@@ -1,4 +1,5 @@
 import Link from "next/link";
+import {withAdminGate} from "@/app/admin/_components/admin-auth-gate";
 
 const tools = [
     {
@@ -77,8 +78,8 @@ const navigation = [
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"}
 ];
 
-export default function AdminDashboardPage() {
-    return (
+export default async function AdminDashboardPage() {
+    return withAdminGate(
         <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(27,196,81,.12),transparent_28%)] text-ink-100">
             <div className="mx-auto flex min-h-screen w-full max-w-[110rem]">
                 <aside className="hidden w-64 shrink-0 border-r border-line-300 bg-canvas-950/70 px-4 py-6 lg:flex lg:flex-col">
@@ -146,3 +147,5 @@ export default function AdminDashboardPage() {
         </main>
     );
 }
+
+export const dynamic = "force-dynamic";

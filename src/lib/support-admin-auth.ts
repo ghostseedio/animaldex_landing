@@ -95,8 +95,21 @@ function getAdminEmails() {
     ]);
 }
 
+/**
+ * The cookies an authorization check needs, in the shape both a route handler's
+ * NextRequest and a server component's `cookies()` already provide.
+ */
+type AdminCookieReader = {
+    get(name: string): {value: string} | undefined;
+    getAll(): Array<{name: string; value: string}>;
+};
+
 export async function isSupportAdminRequestAuthorized(request: NextRequest) {
-    if (verifySupportAdminSession(request.cookies.get(supportAdminCookieName)?.value)) {
+    return isSupportAdminCookieAuthorized(request.cookies);
+}
+
+export async function isSupportAdminCookieAuthorized(cookieStore: AdminCookieReader) {
+    if (verifySupportAdminSession(cookieStore.get(supportAdminCookieName)?.value)) {
         return true;
     }
 
@@ -107,7 +120,7 @@ export async function isSupportAdminRequestAuthorized(request: NextRequest) {
     const supabase = createServerClient(url, key, {
         cookies: {
             getAll() {
-                return request.cookies.getAll();
+                return cookieStore.getAll();
             },
             setAll() {
                 // Authorization checks never mutate the browser session.
