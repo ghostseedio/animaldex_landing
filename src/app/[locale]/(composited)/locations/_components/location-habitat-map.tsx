@@ -23,6 +23,11 @@ const VIEW_WIDTH = 1000;
 const VIEW_HEIGHT = 620;
 const PADDING = 46;
 const PIN_RADIUS = 13;
+const LABEL_FONT_SIZE = 17;
+/** Display font runs narrow; enough to size the chip without measuring text. */
+const LABEL_CHAR_WIDTH = LABEL_FONT_SIZE * 0.53;
+const LABEL_PADDING_X = 12;
+const LABEL_HEIGHT = 28;
 
 const ZONE_TONES = [
     {fill: "#1bc451", text: "text-primary-200", dot: "bg-primary-400"},
@@ -108,6 +113,41 @@ function toBlobPath(points: GeoPoint[], project: (point: GeoPoint) => {x: number
     return `${path} Z`;
 }
 
+/**
+ * Nudges label chips apart vertically so two zones whose centres sit close together stay
+ * readable. Chips only ever move within the frame, and the order top-to-bottom is kept.
+ */
+function separateLabels(labels: Array<{x: number; y: number; width: number}>) {
+    const gap = LABEL_HEIGHT + 4;
+    const order = labels
+        .map((label, index) => ({index, ...label}))
+        .sort((a, b) => a.y - b.y);
+
+    for (let i = 1; i < order.length; i += 1) {
+        const previous = order[i - 1];
+        const current = order[i];
+        const overlapsX = Math.abs(current.x - previous.x) < (current.width + previous.width) / 2;
+
+        if (overlapsX && current.y - previous.y < gap) {
+            current.y = previous.y + gap;
+        }
+    }
+
+    const maxY = VIEW_HEIGHT - LABEL_HEIGHT / 2 - 4;
+    const overflow = Math.max(0, (order[order.length - 1]?.y ?? 0) - maxY);
+    const resolved = labels.map((label) => ({...label}));
+
+    for (const entry of order) {
+        resolved[entry.index] = {
+            x: entry.x,
+            y: Math.max(LABEL_HEIGHT / 2 + 4, entry.y - overflow),
+            width: entry.width
+        };
+    }
+
+    return resolved;
+}
+
 export default function LocationHabitatMap({map, species, zoneLabel, speciesCountLabel}: LocationHabitatMapProps) {
     const project = buildProjection(map);
     const zones = map.zones.map((zone, index) => ({
@@ -119,6 +159,14 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                 return entry ? {...pin, entry} : null;
             })
             .filter((pin): pin is NonNullable<typeof pin> => Boolean(pin))
+    }));
+    const zoneLabels = separateLabels(zones.map((zone) => {
+        const point = project(zone.label);
+        return {
+            x: point.x,
+            y: point.y,
+            width: zone.name.length * LABEL_CHAR_WIDTH + LABEL_PADDING_X * 2
+        };
     }));
 
     return (
@@ -197,8 +245,6 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                         ))}
 
                         {zones.map((zone) => {
-                            const labelPoint = project(zone.label);
-
                             return (
                                 <g key={zone.id} className="habitat-zone">
                                     <path
@@ -211,35 +257,6 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                                         strokeWidth="2"
                                         strokeDasharray="9 6"
                                     />
-                                    <text
-                                        x={labelPoint.x}
-                                        y={labelPoint.y}
-                                        textAnchor="middle"
-                                        className="font-display"
-                                        fill="#05100a"
-                                        stroke="#05100a"
-                                        strokeWidth="6"
-                                        strokeLinejoin="round"
-                                        paintOrder="stroke"
-                                        fontSize="18"
-                                        fontWeight="700"
-                                        letterSpacing="0.5"
-                                        opacity="0.85"
-                                    >
-                                        {zone.name}
-                                    </text>
-                                    <text
-                                        x={labelPoint.x}
-                                        y={labelPoint.y}
-                                        textAnchor="middle"
-                                        className="font-display"
-                                        fill={zone.tone.fill}
-                                        fontSize="18"
-                                        fontWeight="700"
-                                        letterSpacing="0.5"
-                                    >
-                                        {zone.name}
-                                    </text>
 
                                     {zone.resolvedPins.map((pin) => {
                                         const point = project(pin.at);
@@ -271,6 +288,42 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                                             </g>
                                         );
                                     })}
+                                </g>
+                            );
+                        })}
+
+                        {/* Labels are drawn last, on a solid chip: with this many pins a
+                            plain text label disappears into the artwork behind it. */}
+                        {zones.map((zone, index) => {
+                            const labelPoint = zoneLabels[index];
+                            const width = labelPoint.width;
+
+                            return (
+                                <g key={`${zone.id}-label`} pointerEvents="none">
+                                    <rect
+                                        x={labelPoint.x - width / 2}
+                                        y={labelPoint.y - LABEL_HEIGHT / 2}
+                                        width={width}
+                                        height={LABEL_HEIGHT}
+                                        rx={LABEL_HEIGHT / 2}
+                                        fill="#05100a"
+                                        fillOpacity="0.92"
+                                        stroke={zone.tone.fill}
+                                        strokeOpacity="0.5"
+                                    />
+                                    <text
+                                        x={labelPoint.x}
+                                        y={labelPoint.y}
+                                        textAnchor="middle"
+                                        dominantBaseline="central"
+                                        className="font-display"
+                                        fill={zone.tone.fill}
+                                        fontSize={LABEL_FONT_SIZE}
+                                        fontWeight="700"
+                                        letterSpacing="0.3"
+                                    >
+                                        {zone.name}
+                                    </text>
                                 </g>
                             );
                         })}

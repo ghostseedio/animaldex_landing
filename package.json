@@ -7,6 +7,7 @@
     "prebuild": "node scripts/generatePublicImageAssets.js",
     "build": "next build",
     "assets:manifest": "node scripts/generatePublicImageAssets.js",
+    "maps:locations": "tsx scripts/generateLocationHabitatMaps.ts",
     "start": "next start",
     "lint": "next lint",
     "test": "tsx --test src/lib/**/*.test.ts",

@@ -6,6 +6,8 @@
  * navigation. Zone and pin coordinates are real, so pins land in the right part of the map.
  */
 
+import {generatedLocationMaps} from "@/data/location-maps.generated";
+
 export type GeoPoint = {lat: number; lng: number};
 
 export type LocationMapZone = {
@@ -251,7 +253,13 @@ const baliMap: LocationMap = {
     footnote: "Zones are habitat guidance, not guarantees. Pin positions mark the part of the island each animal is realistically worked for; the coastline is simplified for legibility."
 };
 
+/**
+ * Bali is hand-drawn. Every other location comes from
+ * `npx tsx scripts/generateLocationHabitatMaps.ts`, which builds outlines from Natural
+ * Earth and sorts each page's animals into hand-authored habitat zones.
+ */
 const locationMaps: Record<string, LocationMap> = {
+    ...generatedLocationMaps,
     bali: baliMap
 };
 

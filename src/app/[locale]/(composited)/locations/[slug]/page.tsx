@@ -23,7 +23,7 @@ import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/loca
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {buildSpeciesArtworkSrc, getResolvedSpeciesArtworkUrl, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -152,6 +152,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             animals: place.animalsToSpot.slice(0, 6)
         }];
     });
+    const listArtworkFiles = await resolveSpeciesArtworkFiles(animals.map((animal) => animal.species.slug));
     const habitatMapSpecies = new Map<string, HabitatMapSpecies>();
 
     if (habitatMap) {
@@ -165,7 +166,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     slug: entry.slug,
                     name: entry.name,
                     tier: getSpeciesTier(entry),
-                    artworkSrc: getSpeciesArtworkUrl(entry.slug)
+                    artworkSrc: await getResolvedSpeciesArtworkUrl(entry.slug)
                 });
             }
         }
@@ -388,7 +389,11 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     zoneLabel={t("habitatZoneLabel")}
                     speciesCountLabel={(count) => t("habitatZoneSpeciesCount", {count: String(count)})}
                 />
-            ) : locationCoordinate ? (
+            ) : null}
+
+            {/* The habitat map answers "which part of the region"; this one pins the real
+                places you can book, so both sections earn their space. */}
+            {locationCoordinate ? (
                 <section className="space-y-4">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("mapEyebrow")}</p>
@@ -421,7 +426,8 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     rarityStatus: animalsT(`rarityStatuses.${getSpeciesRarityStatusKey(animal.species.analysis.rarityScore).replace(/-([a-z])/g, (_, char) => char.toUpperCase())}`),
                     whyItFits: animal.whyItFits,
                     rarityHint: animal.rarityHint,
-                    tier: getSpeciesTier(animal.species)
+                    tier: getSpeciesTier(animal.species),
+                    artworkSrc: buildSpeciesArtworkSrc(animal.species.slug, listArtworkFiles.get(animal.species.slug))
                 }))}
             />
 
