@@ -134,6 +134,10 @@ export async function GET(request: NextRequest) {
 
 type PatchBody = {
     speciesProfileId?: string;
+    /** A number to hold, null to release it, or "next" for the lowest free one. */
+    setNumber?: number | null | "next";
+    /** Releasing a number that captures resolve through needs a second look. */
+    confirmNumberChange?: boolean;
     subtitle?: string | null;
     subtitleStory?: string | null;
     principleName?: string | null;
@@ -163,6 +167,68 @@ export async function POST(request: NextRequest) {
 
         const identityKey = String(entry.normalized_identity_key ?? "");
         const applied: string[] = [];
+
+        if (body.setNumber !== undefined) {
+            const {url, key} = config();
+
+            // How much is standing on this number right now. Freeing one that
+            // captures resolve through takes their index away, so the count is
+            // returned and a second confirmation is required before it happens.
+            const holders = await rows<{capture_id: string}>(`analysis_results?${new URLSearchParams({
+                select: "capture_id",
+                species_profile_id: `eq.${speciesProfileId}`,
+                limit: "500"
+            })}`);
+
+            if (body.setNumber === null && holders.length && !body.confirmNumberChange) {
+                return NextResponse.json({
+                    ok: false,
+                    needsConfirmation: true,
+                    error: `${holders.length} capture(s) resolve through this entry. Releasing #${entry.animaldex_number} removes their index. Confirm to proceed.`,
+                    captureCount: holders.length
+                }, {status: 409});
+            }
+
+            let nextNumber: number | null = null;
+
+            if (body.setNumber === "next") {
+                const response = await fetch(`${url}/rest/v1/rpc/next_available_animaldex_number`, {
+                    method: "POST",
+                    headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+                    cache: "no-store",
+                    body: "{}"
+                });
+                if (!response.ok) throw new Error(`Could not read the next free number (${response.status})`);
+                nextNumber = Number(await response.json());
+            } else if (typeof body.setNumber === "number") {
+                nextNumber = Math.max(1, Math.round(body.setNumber));
+            }
+
+            const patch = await fetch(`${url}/rest/v1/species_profiles?id=eq.${speciesProfileId}`, {
+                method: "PATCH",
+                headers: getSupabaseHeaders(key, {"Content-Type": "application/json", Prefer: "return=minimal"}),
+                cache: "no-store",
+                body: JSON.stringify({animaldex_number: nextNumber})
+            });
+
+            if (!patch.ok) {
+                const detail = await patch.text();
+                if (detail.includes("23505")) {
+                    const [holder] = await rows<{display_name: string}>(`species_catalog_v1?${new URLSearchParams({
+                        select: "display_name",
+                        animaldex_number: `eq.${nextNumber}`,
+                        limit: "1"
+                    })}`);
+                    return NextResponse.json({
+                        ok: false,
+                        error: `#${nextNumber} is already held by ${holder?.display_name ?? "another entry"}. Release it there first.`
+                    }, {status: 409});
+                }
+                throw new Error(`Setting the number failed (${patch.status}): ${detail}`);
+            }
+
+            applied.push(nextNumber == null ? `released #${entry.animaldex_number}` : `number #${nextNumber}`);
+        }
 
         if (body.subtitle !== undefined || body.subtitleStory !== undefined) {
             await query("species_subtitles", {

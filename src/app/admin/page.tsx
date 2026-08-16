@@ -57,6 +57,15 @@ const tools = [
         status: "Reaches the shipped app"
     },
     {
+        href: "/admin/catalog",
+        icon: "№",
+        eyebrow: "Catalog",
+        title: "Index management",
+        description: "Every AnimalDex number with its identity key, public captures, and whether it still needs a subtitle, lesson or artwork.",
+        accent: "from-indigo-400/20 to-transparent",
+        status: "Catalog ready"
+    },
+    {
         href: "/admin/maintenance",
         icon: "↻",
         eyebrow: "Post operations",
@@ -75,6 +84,7 @@ const navigation = [
     {href: "/admin/seo", label: "Content", icon: "✎"},
     {href: "/admin/assets", label: "Assets", icon: "▧"},
     {href: "/admin/notifications", label: "Notifications", icon: "◈"},
+    {href: "/admin/catalog", label: "Index", icon: "№"},
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"}
 ];
 

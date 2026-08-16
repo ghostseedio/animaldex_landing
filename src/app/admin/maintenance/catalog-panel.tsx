@@ -33,16 +33,30 @@ type Entry = Match & {
 
 const STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
-export default function CatalogPanel({onClose}: {onClose: () => void}) {
+type PanelProps = {
+    onClose: () => void;
+    /** Opens straight into an entry, for the catalog list's Edit button. */
+    initialSpeciesProfileId?: string;
+};
+
+export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelProps) {
     const [query, setQuery] = useState("");
     const [matches, setMatches] = useState<Match[]>([]);
     const [entry, setEntry] = useState<Entry | null>(null);
     const [draft, setDraft] = useState<Record<string, string>>({});
     const [stats, setStats] = useState<Record<string, number>>({});
     const [alias, setAlias] = useState("");
+    const [numberDraft, setNumberDraft] = useState("");
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (initialSpeciesProfileId) void open(initialSpeciesProfileId);
+        // Opening the given entry is a mount-time action; `open` is stable enough
+        // for that and re-running on its identity would refetch on every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialSpeciesProfileId]);
 
     useEffect(() => {
         const term = query.trim();
@@ -91,7 +105,18 @@ export default function CatalogPanel({onClose}: {onClose: () => void}) {
         }
     }
 
-    async function save(extra: Record<string, unknown> = {}) {
+    /** Two-step because it can strand captures; the API refuses the first attempt. */
+    async function releaseNumber() {
+        if (!entry) return;
+        const first = await save({setNumber: null}, true);
+
+        if (first?.needsConfirmation) {
+            if (!window.confirm(`${first.error}\n\nRelease it anyway?`)) return;
+            await save({setNumber: null, confirmNumberChange: true});
+        }
+    }
+
+    async function save(extra: Record<string, unknown> = {}, quiet = false) {
         if (!entry) return;
         setBusy(true);
         setError(null);
@@ -113,12 +138,21 @@ export default function CatalogPanel({onClose}: {onClose: () => void}) {
                 })
             });
             const payload = await response.json();
-            if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to save");
+
+            if (!response.ok || !payload.ok) {
+                // A refusal the caller expects to handle, rather than an error.
+                if (quiet && payload.needsConfirmation) return payload;
+                throw new Error(payload.error || "Unable to save");
+            }
+
             hydrate(payload.entry);
             setAlias("");
+            setNumberDraft("");
             setNotice(`Saved: ${payload.applied.join(", ") || "no changes"}.`);
+            return payload;
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to save");
+            return null;
         } finally {
             setBusy(false);
         }
@@ -189,7 +223,32 @@ export default function CatalogPanel({onClose}: {onClose: () => void}) {
                                     {entry.artwork.present ? "artwork ✓" : "artwork missing"}
                                 </span>
                                 <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{entry.catalog_status}</span>
-                                <button type="button" onClick={() => setEntry(null)} className="ml-auto text-xs font-bold text-ink-400 hover:text-white">← back to search</button>
+                                {!initialSpeciesProfileId && <button type="button" onClick={() => setEntry(null)} className="ml-auto text-xs font-bold text-ink-400 hover:text-white">← back to search</button>}
+                            </div>
+
+                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">AnimalDex number</p>
+                                <p className="mt-1 text-xs leading-5 text-ink-500">
+                                    Releasing a number frees it for the next animal indexed. Captures pointing here lose
+                                    their index until they are moved, so the panel asks again when any exist.
+                                </p>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <input type="number" min={1} value={numberDraft}
+                                           onChange={(event) => setNumberDraft(event.target.value)}
+                                           placeholder="e.g. 1008"
+                                           className="w-32 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white" />
+                                    <button type="button" onClick={() => void save({setNumber: Number(numberDraft)})}
+                                            disabled={busy || !numberDraft.trim()}
+                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">Set number</button>
+                                    <button type="button" onClick={() => void save({setNumber: "next"})} disabled={busy}
+                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">Use next free</button>
+                                    {entry.animaldex_number != null && (
+                                        <button type="button" onClick={() => void releaseNumber()} disabled={busy}
+                                                className="rounded-xl border border-red-400/40 px-3 py-2 text-sm font-black text-red-200 disabled:opacity-40">
+                                            Release #{entry.animaldex_number}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">

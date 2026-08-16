@@ -4,7 +4,6 @@ import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
 import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
 import CaptureIndexPanel from "@/app/admin/maintenance/capture-index-panel";
-import CatalogPanel from "@/app/admin/maintenance/catalog-panel";
 
 type Post = {
     id: string;
@@ -67,7 +66,6 @@ export default function AdminMaintenanceClient() {
     const [gradingPost, setGradingPost] = useState<Post | null>(null);
     const [indexingPost, setIndexingPost] = useState<Post | null>(null);
     const [merging, setMerging] = useState(false);
-    const [catalogOpen, setCatalogOpen] = useState(false);
     const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -193,7 +191,7 @@ export default function AdminMaintenanceClient() {
                 <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
                     <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
                     <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setCatalogOpen(true)} className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</button>
+                        <Link href="/admin/catalog" className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</Link>
                         <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
                     </div>
                 </header>
@@ -252,7 +250,6 @@ export default function AdminMaintenanceClient() {
                 </section>
                 <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             </div>
-            {catalogOpen && <CatalogPanel onClose={() => setCatalogOpen(false)} />}
             {indexingPost && (
                 <CaptureIndexPanel
                     captureId={indexingPost.id}
