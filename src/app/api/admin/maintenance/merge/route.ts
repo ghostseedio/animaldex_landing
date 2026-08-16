@@ -54,6 +54,45 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        // Checked here as well as in the database, so a cross-owner merge is
+        // refused by name before anything is attempted. Folding one person's
+        // capture into another's would take a card off someone's collection.
+        const ownerResponse = await fetch(`${url}/rest/v1/captures?${new URLSearchParams({
+            select: "id,user_id",
+            id: `in.(${child},${parent})`
+        })}`, {headers: getSupabaseHeaders(key, {Accept: "application/json"}), cache: "no-store"});
+
+        if (!ownerResponse.ok) {
+            throw new Error(`Could not read those captures (${ownerResponse.status})`);
+        }
+
+        const captures = await ownerResponse.json() as Array<{id: string; user_id: string}>;
+
+        if (captures.length < 2) {
+            return NextResponse.json({ok: false, error: "One of those captures no longer exists."}, {status: 404});
+        }
+
+        const owners = Array.from(new Set(captures.map((row) => row.user_id)));
+
+        if (owners.length > 1) {
+            const profiles = await fetch(`${url}/rest/v1/profiles?${new URLSearchParams({
+                select: "id,username,display_name",
+                id: `in.(${owners.join(",")})`
+            })}`, {headers: getSupabaseHeaders(key, {Accept: "application/json"}), cache: "no-store"});
+            const named = profiles.ok
+                ? (await profiles.json() as Array<{username: string | null; display_name: string | null}>)
+                    .map((row) => row.username ? `@${row.username}` : row.display_name ?? "someone")
+                : [];
+
+            return NextResponse.json({
+                ok: false,
+                error: named.length
+                    ? `Those captures belong to different people (${named.join(" and ")}), so they cannot be merged.`
+                    : "Those captures belong to different people, so they cannot be merged.",
+                owners: owners.length
+            }, {status: 409});
+        }
+
         const response = await fetch(`${url}/rest/v1/rpc/complete_duplicate_capture_merge`, {
             method: "POST",
             headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
