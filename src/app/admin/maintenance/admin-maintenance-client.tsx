@@ -66,6 +66,8 @@ export default function AdminMaintenanceClient() {
     const [gradingPost, setGradingPost] = useState<Post | null>(null);
     const [indexingPosts, setIndexingPosts] = useState<Post[] | null>(null);
     const [merging, setMerging] = useState(false);
+    const [broken, setBroken] = useState<Array<{id: string; userId: string; status: string; createdAt: string; reason: string}> | null>(null);
+    const [checkingBroken, setCheckingBroken] = useState(false);
     const [gradeById, setGradeById] = useState<Record<string, number>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -132,6 +134,52 @@ export default function AdminMaintenanceClient() {
      * Merge is deliberately two hand-picked captures rather than the bulk
      * selection: it is not reversible from here, and which one survives matters.
      */
+    /**
+     * A capture whose photo never reached storage can never be analysed: the
+     * analysis downloads once and throws, so the member is left watching a
+     * spinner. This finds them by asking storage, and closes them out.
+     */
+    async function findBrokenCaptures() {
+        setCheckingBroken(true);
+        setError(null);
+        setNotice(null);
+        try {
+            const response = await fetch("/api/admin/maintenance/broken-captures?limit=200", {cache: "no-store"});
+            const body = await response.json();
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to check captures");
+            setBroken(body.captures);
+            if (!body.captures.length) setNotice("No stuck captures — every one still in progress has its photo in storage.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to check captures");
+        } finally {
+            setCheckingBroken(false);
+        }
+    }
+
+    async function closeBrokenCaptures() {
+        if (!broken?.length) return;
+        if (!window.confirm(`Close ${broken.length} capture(s) as failed?\n\nTheir photos are not in storage, so they can never be analysed. The owners keep their credits — these were never charged.`)) return;
+
+        setCheckingBroken(true);
+        setError(null);
+        try {
+            const response = await fetch("/api/admin/maintenance/broken-captures", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({captureIds: broken.map((row) => row.id)})
+            });
+            const body = await response.json();
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to close those captures");
+            setNotice(`Closed ${body.closed} capture(s) as failed${body.skipped ? `, skipped ${body.skipped} whose photo has since arrived` : ""}.`);
+            setBroken(null);
+            await loadPosts(status);
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to close those captures");
+        } finally {
+            setCheckingBroken(false);
+        }
+    }
+
     async function mergeSelected() {
         const targets = selectedPosts;
         if (targets.length < 2 || selectedOwners.size > 1) return;
@@ -210,6 +258,7 @@ export default function AdminMaintenanceClient() {
                 <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
                     <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
                     <div className="flex flex-wrap gap-2">
+                        <button onClick={() => void findBrokenCaptures()} disabled={checkingBroken} className="w-fit rounded-xl border border-amber-400/40 px-4 py-2.5 text-sm font-black text-amber-200 disabled:opacity-40">{checkingBroken ? "Checking…" : "Find stuck captures"}</button>
                         <Link href="/admin/catalog" className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</Link>
                         <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
                     </div>
@@ -220,6 +269,26 @@ export default function AdminMaintenanceClient() {
                     <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
                     <select value={mode} onChange={(event) => setMode(event.target.value)} className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white"><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
                 </section>
+
+                {broken && broken.length > 0 && (
+                    <section className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
+                        <p className="font-bold text-amber-100">{broken.length} capture(s) can never finish</p>
+                        <p className="mt-1 text-sm leading-6 text-amber-200/90">
+                            Their photos are not in storage, so the analysis has nothing to download and the owners are
+                            watching a spinner that cannot resolve. Closing them marks the capture failed and records why.
+                        </p>
+                        <ul className="mt-3 space-y-1 text-xs text-amber-100/80">
+                            {broken.slice(0, 8).map((row) => (
+                                <li key={row.id}><span className="font-mono">{row.id.slice(0, 8)}</span> · {row.status} · {exactDate(row.createdAt)} · {row.reason}</li>
+                            ))}
+                            {broken.length > 8 && <li>…and {broken.length - 8} more</li>}
+                        </ul>
+                        <div className="mt-3 flex gap-2">
+                            <button onClick={() => void closeBrokenCaptures()} disabled={checkingBroken} className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Close {broken.length} as failed</button>
+                            <button onClick={() => setBroken(null)} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white">Dismiss</button>
+                        </div>
+                    </section>
+                )}
 
                 {(error || notice) && <div className={`mt-4 rounded-xl border p-3 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || notice}</div>}
 

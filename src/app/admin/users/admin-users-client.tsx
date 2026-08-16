@@ -46,6 +46,39 @@ export default function AdminUsersClient() {
     const [filter, setFilter] = useState<Filter>("all");
     const [sort, setSort] = useState<Sort>("ltv");
     const [expanded, setExpanded] = useState<string | null>(null);
+    const [grantAmount, setGrantAmount] = useState<Record<string, string>>({});
+    const [grantNote, setGrantNote] = useState<Record<string, string>>({});
+    const [granting, setGranting] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
+
+    async function grantCredits(user: UserRow) {
+        const amount = Number(grantAmount[user.id]);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+
+        const name = user.displayName || user.username || user.email || user.id;
+        if (!window.confirm(`Grant ${amount} credit(s) to ${name}? Their balance is ${user.creditBalance}.`)) return;
+
+        setGranting(user.id);
+        setError(null);
+        setNotice(null);
+        try {
+            const response = await fetch("/api/admin/users/credits", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({userId: user.id, amount, note: grantNote[user.id] ?? ""})
+            });
+            const body = await response.json();
+            if (!response.ok || !body.ok) throw new Error(body.error || "Grant failed");
+            setNotice(`Granted ${body.granted} credit(s) to ${name}. Balance is now ${body.balance ?? "—"}.`);
+            setGrantAmount((current) => ({...current, [user.id]: ""}));
+            setGrantNote((current) => ({...current, [user.id]: ""}));
+            await load();
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Grant failed");
+        } finally {
+            setGranting(null);
+        }
+    }
 
     async function load() {
         setLoading(true);
@@ -94,6 +127,7 @@ export default function AdminUsersClient() {
                 <div className="flex gap-2"><Link href="/admin/metrics" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Aggregate metrics</Link><button onClick={() => void load()} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button></div>
             </header>
             {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+            {notice && <div className="mt-5 rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</div>}
             {data && <><section className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-5">{[
                 ["Users", data.summary.totalUsers.toLocaleString()],
                 ["Paying users", data.summary.productionBuyers.toLocaleString()],
@@ -123,6 +157,26 @@ export default function AdminUsersClient() {
                         ["Challenges", user.challenges], ["Trades", user.trades], ["Prod. purchases", user.productionPurchaseCount], ["Sandbox", user.sandboxPurchaseCount]
                     ].map(([label, value]) => <div key={label} className="rounded-xl border border-line-300 bg-surface-900 p-3"><p className="text-[10px] text-ink-500">{label}</p><p className="mt-1 font-bold text-white">{Number(value).toLocaleString()}</p></div>)}</div>
                     <div className="mt-4 flex flex-wrap gap-2">{Object.entries(user.products).map(([product, count]) => <span key={product} className="rounded-full border border-line-300 px-3 py-1.5 text-xs text-ink-300">{product.replace(/_/g, " ")} × {count}</span>)}{!Object.keys(user.products).length && <span className="text-xs text-ink-500">No StoreKit purchases</span>}</div>
+                    <div className="mt-4 rounded-xl border border-line-300 bg-surface-900 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Grant credits</p>
+                        <p className="mt-1 text-xs text-ink-500">Goes through the same ledger as missions and referrals, so the balance and the history stay in step.</p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <input type="number" min={1} max={500} value={grantAmount[user.id] ?? ""}
+                                   onChange={(event) => setGrantAmount((current) => ({...current, [user.id]: event.target.value}))}
+                                   placeholder="Credits" className="w-28 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white" />
+                            <input value={grantNote[user.id] ?? ""}
+                                   onChange={(event) => setGrantNote((current) => ({...current, [user.id]: event.target.value}))}
+                                   placeholder="Reason, kept on the ledger entry" className="min-w-0 flex-1 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white" />
+                            <button onClick={() => void grantCredits(user)} disabled={granting === user.id || !grantAmount[user.id]}
+                                    className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                {granting === user.id ? "Granting…" : "Grant"}
+                            </button>
+                            {[5, 10, 25].map((amount) => (
+                                <button key={amount} onClick={() => setGrantAmount((current) => ({...current, [user.id]: String(amount)}))}
+                                        className="rounded-xl border border-line-300 px-3 py-2 text-xs font-bold text-ink-300">+{amount}</button>
+                            ))}
+                        </div>
+                    </div>
                     <p className="mt-4 break-all font-mono text-[10px] text-ink-600">{user.id}</p></div>}
                 </article>)}
                 {!loading && !users.length && <div className="py-20 text-center text-sm text-ink-400">No users match these filters.</div>}

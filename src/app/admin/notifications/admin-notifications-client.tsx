@@ -54,6 +54,20 @@ const templates = [
         body: "This one looks like a photo of a screen or a printed image rather than a live animal, so it has not been added to your collection."
     },
     {
+        id: "credits",
+        label: "We added credits…",
+        scope: "user" as const,
+        title: "Credits added to your account",
+        body: "We have added credits to your AnimalDex account. Open the app and your next scan is ready to go."
+    },
+    {
+        id: "upload-failed",
+        label: "A capture did not upload…",
+        scope: "user" as const,
+        title: "One of your captures did not upload",
+        body: "The photo never finished uploading, so we could not analyse it and it has not been added to your collection. No credits were charged. Please take the photo again."
+    },
+    {
         id: "blank",
         label: "Blank message",
         scope: "both" as const,
