@@ -169,6 +169,7 @@ export default function AdminCatalogClient() {
     const [indexingNew, setIndexingNew] = useState(false);
     const [notifyRequest, setNotifyRequest] = useState<NotifyRequest | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+    const [folding, setFolding] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -214,6 +215,57 @@ export default function AdminCatalogClient() {
         }
     }, []);
 
+    /**
+     * Hand a breed's number back to the animal it is a breed of. The preview
+     * comes from the server rather than being guessed here, because the cost
+     * that matters — members who hold both and so lose a dex entry — is only
+     * knowable by looking.
+     */
+    async function fold(speciesProfileId: string) {
+        setFolding(speciesProfileId);
+        setError(null);
+        setNotice(null);
+        try {
+            const preview = await fetch("/api/admin/catalog/fold", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({speciesProfileId})
+            });
+            const previewBody = await preview.json();
+
+            if (!previewBody.needsConfirmation) {
+                throw new Error(previewBody.error || "Unable to fold this entry");
+            }
+
+            const {entry, parent, captures, members, membersLosingAnEntry} = previewBody.preview;
+            const warning = membersLosingAnEntry
+                ? `\n\n${membersLosingAnEntry} member(s) hold both and will end up with one entry where they had two.`
+                : "";
+
+            if (!window.confirm(
+                `Give #${entry.number} back and count ${entry.displayName} as ${parent.displayName} #${parent.number}?\n\n`
+                + `${captures} capture(s) across ${members} member(s) keep their identification and start counting as #${parent.number}.`
+                + `${warning}\n\nThe entry itself stays; only its number is released.`
+            )) return;
+
+            const applied = await fetch("/api/admin/catalog/fold", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({speciesProfileId, confirm: true})
+            });
+            const appliedBody = await applied.json();
+            if (!applied.ok || !appliedBody.ok) throw new Error(appliedBody.error || "Unable to fold this entry");
+
+            setNotice(`#${appliedBody.released} released — ${entry.displayName} now counts as ${parent.displayName} #${parent.number}. ${appliedBody.recomputed} capture(s) recomputed.`);
+            await load();
+            await scan();
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to fold this entry");
+        } finally {
+            setFolding(null);
+        }
+    }
+
     const pageCount = total != null ? Math.max(1, Math.ceil(total / 50)) : 1;
 
     const groupCard = (group: DuplicateGroup) => (
@@ -238,6 +290,14 @@ export default function AdminCatalogClient() {
                             {member.slug && (
                                 <a href={`/animals/${member.slug}`} target="_blank" rel="noreferrer"
                                    className="text-xs font-bold text-ink-400 hover:text-white">page ↗</a>
+                            )}
+                            {member.number != null && ["breed", "variant", "subspecies"].includes(member.identityKind ?? "") && (
+                                <button type="button" onClick={() => void fold(member.speciesProfileId)}
+                                        disabled={folding !== null}
+                                        title="Release this number and count these captures as the parent animal"
+                                        className="rounded-lg border border-amber-400/40 px-2.5 py-1.5 text-xs font-black text-amber-200 disabled:opacity-40">
+                                    {folding === member.speciesProfileId ? "Folding…" : "Fold into parent"}
+                                </button>
                             )}
                             <button type="button"
                                     onClick={() => setEditing({speciesProfileId: member.speciesProfileId} as Entry)}
