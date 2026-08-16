@@ -47,6 +47,15 @@ const tools = [
         status: "Public media"
     },
     {
+        href: "/admin/notifications",
+        icon: "◈",
+        eyebrow: "Messaging",
+        title: "Notifications",
+        description: "Push a message to one person or everyone, with templates for indexing, merges and ID corrections.",
+        accent: "from-rose-400/20 to-transparent",
+        status: "Reaches the shipped app"
+    },
+    {
         href: "/admin/maintenance",
         icon: "↻",
         eyebrow: "Post operations",
@@ -64,6 +73,7 @@ const navigation = [
     {href: "/admin/support", label: "Support", icon: "✦"},
     {href: "/admin/seo", label: "Content", icon: "✎"},
     {href: "/admin/assets", label: "Assets", icon: "▧"},
+    {href: "/admin/notifications", label: "Notifications", icon: "◈"},
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"}
 ];
 
