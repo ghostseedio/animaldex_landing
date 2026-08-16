@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     try {
         const limit = Math.min(100, Math.max(10, Number(request.nextUrl.searchParams.get("limit")) || 50));
         const captureParams = new URLSearchParams({
-            select: "id,user_id,status,capture_mode,title,notes,created_at,updated_at",
+            select: "id,user_id,status,capture_mode,title,notes,created_at,updated_at,merged_into_capture_id",
             order: "created_at.desc",
             limit: String(limit)
         });
@@ -79,7 +79,15 @@ export async function GET(request: NextRequest) {
                     username: profile.username,
                     avatarUrl: profile.avatar_url
                 },
-                imageUrl: getCaptureImageRoute(id)
+                // Merging moves a capture's photos onto the target rather than
+                // copying them, so a merged-away source genuinely owns no image
+                // and its image route 404s. Without this the panel rendered it
+                // as a broken thumbnail, which reads as a failed capture when
+                // nothing failed at all.
+                mergedIntoCaptureId: capture.merged_into_capture_id ?? null,
+                imageUrl: capture.merged_into_capture_id
+                    ? getCaptureImageRoute(String(capture.merged_into_capture_id))
+                    : getCaptureImageRoute(id)
             };
         }).filter((post) => !search || [
             post.id, post.title, post.animalName, post.scientificName,

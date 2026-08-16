@@ -17,6 +17,8 @@ type Post = {
     analysisError: string | null;
     modelVersion: string | null;
     imageUrl: string;
+    /** Set when this capture was merged into another; its photos live there now. */
+    mergedIntoCaptureId: string | null;
     user: {id: string; displayName: string | null; username: string | null; avatarUrl: string | null};
 };
 
@@ -158,10 +160,13 @@ export default function AdminMaintenanceClient() {
                                 <span className="absolute inset-x-0 bottom-0 bg-black/70 py-1 text-center text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">Expand</span>
                             </button>
                             <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${post.status === "ready" ? "bg-primary-500/15 text-primary-100" : post.status === "failed" ? "bg-red-500/15 text-red-200" : "bg-amber-500/15 text-amber-200"}`}>{post.status}</span><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{post.captureMode}</span></div>
+                                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${post.status === "ready" ? "bg-primary-500/15 text-primary-100" : post.status === "failed" ? "bg-red-500/15 text-red-200" : "bg-amber-500/15 text-amber-200"}`}>{post.status}</span><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{post.captureMode}</span>{post.mergedIntoCaptureId && <span className="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black uppercase text-violet-200">merged</span>}</div>
                                 <p className="mt-1 truncate text-sm text-ink-400">{post.scientificName || "No scientific name"} · {post.user.displayName || post.user.username || "Unknown user"}</p>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>
                                 <p className="mt-1 text-xs text-ink-500">Posted {relativeDate(post.createdAt)} · Analysis {relativeDate(post.analysisCompletedAt)}{post.modelVersion ? ` · ${post.modelVersion}` : ""}</p>
+                                {post.mergedIntoCaptureId && <p className="mt-2 text-xs text-violet-200">
+                                    Merged into <span className="font-mono">{post.mergedIntoCaptureId}</span> — its photos moved there, so the thumbnail above is the merged card&apos;s.
+                                </p>}
                                 {post.analysisError && <p className="mt-2 line-clamp-2 text-xs text-red-300">{post.analysisError}</p>}
                             </div>
                             <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="col-span-3 w-full rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500 sm:col-span-1 sm:w-auto">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
