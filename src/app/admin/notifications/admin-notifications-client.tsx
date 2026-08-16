@@ -134,12 +134,22 @@ export default function AdminNotificationsClient() {
         ? data?.summary.totalDevices ?? 0
         : recipient?.devices ?? 0;
 
+    // Who ends up with the message in their notifications list. Everyone gets a
+    // row; only some of them also get a push. These two numbers diverge sharply
+    // while most accounts still have no registered device.
+    const targetPeople = mode === "broadcast"
+        ? data?.summary.totalProfiles ?? 0
+        : (recipient ? 1 : 0);
+
     // A broadcast is irreversible and instant, so it needs a deliberate act
     // rather than one click next to a populated form.
     const broadcastReady = mode !== "broadcast" || confirmText.trim().toUpperCase() === "SEND TO ALL";
     const canSend = Boolean(preview.title && preview.body)
         && (mode === "broadcast" ? broadcastReady : Boolean(recipient))
-        && targetDevices > 0
+        // Gated on people, not devices: a recipient with no device still gets
+        // the in-app notification, and blocking that would make the feature
+        // unusable until push tokens exist.
+        && targetPeople > 0
         && !sending;
 
     async function send() {
@@ -167,8 +177,13 @@ export default function AdminNotificationsClient() {
                     : payload.error || "Send failed");
             }
             const result = payload.result;
-            setNotice(`Delivered to ${result.delivered} of ${result.devices} device${result.devices === 1 ? "" : "s"}`
-                + (result.failed ? ` · ${result.failed} failed` : ""));
+            // Lead with the in-app count, not the push count. The message is
+            // saved to every recipient's notifications list whether or not they
+            // can receive a push, so "0 devices" is not a failed send.
+            const saved = result.in_app_written ?? 0;
+            setNotice(`Saved to ${saved} notification list${saved === 1 ? "" : "s"}`
+                + ` · pushed to ${result.delivered} of ${result.devices} device${result.devices === 1 ? "" : "s"}`
+                + (result.failed ? ` · ${result.failed} push${result.failed === 1 ? "" : "es"} failed` : ""));
             setConfirmText("");
             await load();
         } catch (caught) {
@@ -225,7 +240,8 @@ export default function AdminNotificationsClient() {
                     </div>)}
                 </section>
                 <p className="mt-2 text-xs text-ink-400">
-                    Only devices with notifications enabled can be reached — {data.summary.totalProfiles - data.summary.reachableUsers} account(s) have no registered device.
+                    Everyone you send to gets the message in their in-app notifications list.
+                    A push banner on top of that needs a registered device, which {data.summary.totalProfiles - data.summary.reachableUsers} account(s) do not have.
                 </p>
 
                 <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -299,7 +315,10 @@ export default function AdminNotificationsClient() {
 
                         <button onClick={() => void send()} disabled={!canSend}
                                 className="mt-5 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950 disabled:opacity-40">
-                            {sending ? "Sending…" : `Send to ${targetDevices} device${targetDevices === 1 ? "" : "s"}`}
+                            {sending
+                                ? "Sending…"
+                                : `Send to ${targetPeople} ${targetPeople === 1 ? "person" : "people"}`
+                                    + ` · ${targetDevices} push${targetDevices === 1 ? "" : "es"}`}
                         </button>
                     </section>
 
