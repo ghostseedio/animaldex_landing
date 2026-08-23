@@ -76,6 +76,15 @@ const tools = [
         status: "Admin tools ready"
     },
     {
+        href: "/admin/creator-rewards",
+        icon: "¤",
+        eyebrow: "Creator economy",
+        title: "Creator Rewards",
+        description: "Inspect and operate company-funded Creator Rewards periods. Disabled by default. No payouts.",
+        accent: "from-emerald-400/20 to-transparent",
+        status: "Accounting ops"
+    },
+    {
         href: "/admin/sponsored-challenges",
         icon: "★",
         eyebrow: "Time-limited events",
@@ -96,6 +105,7 @@ const navigation = [
     {href: "/admin/notifications", label: "Notifications", icon: "◈"},
     {href: "/admin/catalog", label: "Index", icon: "№"},
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"},
+    {href: "/admin/creator-rewards", label: "Creator Rewards", icon: "¤"},
     {href: "/admin/sponsored-challenges", label: "Sponsored Challenges", icon: "★"}
 ];
 

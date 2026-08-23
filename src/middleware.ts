@@ -17,6 +17,7 @@ const protectedAppPrefixes = [
     "/app/missions",
     "/app/notifications",
     "/app/profile",
+    "/app/earnings",
     "/app/sets",
     "/app/trades",
     "/app/train"

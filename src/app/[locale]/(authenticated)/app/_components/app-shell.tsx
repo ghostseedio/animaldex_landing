@@ -23,7 +23,8 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/missions", label: "Missions", icon: "mission"},
-    {href: "/app/trades", label: "Trades", icon: "trade"}
+    {href: "/app/trades", label: "Trades", icon: "trade"},
+    {href: "/app/earnings", label: "Earnings", icon: "mission"}
 ];
 
 const PREFETCH_ROUTES = [
