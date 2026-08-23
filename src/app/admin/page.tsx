@@ -74,6 +74,15 @@ const tools = [
         description: "Inspect user captures and safely refresh production analysis jobs.",
         accent: "from-primary-400/20 to-transparent",
         status: "Admin tools ready"
+    },
+    {
+        href: "/admin/sponsored-challenges",
+        icon: "★",
+        eyebrow: "Time-limited events",
+        title: "Sponsored Challenges",
+        description: "Create and review AnimalDex-authored or sponsored Challenges. Internal operators only. No consumer app UI and no /business portal.",
+        accent: "from-lime-400/20 to-transparent",
+        status: "Admin foundation"
     }
 ];
 
@@ -86,7 +95,8 @@ const navigation = [
     {href: "/admin/assets", label: "Assets", icon: "▧"},
     {href: "/admin/notifications", label: "Notifications", icon: "◈"},
     {href: "/admin/catalog", label: "Index", icon: "№"},
-    {href: "/admin/maintenance", label: "Maintenance", icon: "↻"}
+    {href: "/admin/maintenance", label: "Maintenance", icon: "↻"},
+    {href: "/admin/sponsored-challenges", label: "Sponsored Challenges", icon: "★"}
 ];
 
 export default async function AdminDashboardPage() {
