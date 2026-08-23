@@ -2,15 +2,32 @@ import {Metadata} from "next";
 import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {BugIcon, ChecklistIcon, DocumentIcon, HelpCircleIcon, MailIcon, ShieldUserIcon, SparklesIcon} from "@/app/[locale]/_components/icons";
+import {getCurrentUserId} from "@/data/direct-messages";
+import {getSystemSupportProfile} from "@/lib/in-app-support";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 const contactPath = "/contact";
 const supportEmail = "support@animaldex.app";
 
-function mailto(subject: string) {
-    const body = "Hi AnimalDex Support,\n\nI need help with:\n\n\nAnimalDex username:\nDevice and OS:\nApp version:\n";
-    return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+function contactDraft(kind: "support" | "bug" | "feature") {
+    if (kind === "bug") {
+        return "Hi AnimalDex Support,\n\nI found a bug:\n\nWhat happened:\n\nWhat I expected:\n\nSteps to reproduce:\n1.\n2.\n3.\n\nAnimalDex username:\nDevice and OS:\nApp version:\n";
+    }
+    if (kind === "feature") {
+        return "Hi AnimalDex Support,\n\nI would like to request a feature:\n\nFeature idea:\n\nWhy it would help:\n\nAnimalDex username:\n";
+    }
+    return "Hi AnimalDex Support,\n\nI need help with:\n\n\nAnimalDex username:\nDevice and OS:\nApp version:\n";
+}
+
+function mailto(subject: string, kind: "support" | "bug" | "feature") {
+    return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(contactDraft(kind))}`;
+}
+
+function messageHref(supportUserId: string | null, signedIn: boolean, kind: "support" | "bug" | "feature") {
+    if (!supportUserId) return "/account";
+    const thread = `/app/messages/${encodeURIComponent(supportUserId)}?draft=${encodeURIComponent(contactDraft(kind))}`;
+    return signedIn ? thread : `/account?next=${encodeURIComponent(thread)}`;
 }
 
 function getCopy(locale: string) {
@@ -22,7 +39,10 @@ function getCopy(locale: string) {
             metaTitle: "Hubungi Dukungan AnimalDex",
             metaDescription: "Hubungi Dukungan AnimalDex untuk bantuan akun, scan dan capture, pembelian, privasi, laporan bug, atau permintaan fitur.",
             responseTitle: "Cara tercepat mendapatkan bantuan",
-            responseDescription: "Email kami langsung. Jangan sertakan password, kode verifikasi, atau informasi pembayaran lengkap.",
+            responseDescription: "Email kami atau kirim pesan langsung di aplikasi. Jangan sertakan password, kode verifikasi, atau informasi pembayaran lengkap.",
+            emailAction: "Email",
+            messageAction: "Kirim pesan",
+            signInToMessage: "Masuk untuk pesan di aplikasi",
             includeTitle: "Sertakan detail berikut",
             includeItems: ["Username AnimalDex dan email akun jika relevan", "Perangkat, versi OS, dan versi aplikasi", "Langkah yang dilakukan sebelum masalah terjadi", "Waktu capture atau pembelian jika relevan", "Screenshot yang tidak menampilkan data sensitif"],
             helpCenter: "Periksa Pusat Bantuan",
@@ -37,8 +57,11 @@ function getCopy(locale: string) {
         description: "Need help with the app, want to report a bug, or have an idea? Send the right details so we can help efficiently.",
         metaTitle: "Contact AnimalDex Support",
         metaDescription: "Contact AnimalDex Support for help with accounts, scans and captures, purchases, privacy, bug reports, or feature requests.",
-        responseTitle: "The fastest way to get help",
-        responseDescription: "Email us directly. Do not include passwords, verification codes, or complete payment information.",
+            responseTitle: "The fastest way to get help",
+            responseDescription: "Email us or message AnimalDex in the app. Do not include passwords, verification codes, or complete payment information.",
+            emailAction: "Email",
+            messageAction: "Message us",
+            signInToMessage: "Sign in to message us",
         includeTitle: "Include these details",
         includeItems: ["Your AnimalDex username and account email when relevant", "Device model, operating-system version, and app version", "The steps you took before the issue occurred", "Capture or purchase time when relevant", "A screenshot that does not expose sensitive information"],
         helpCenter: "Check the Help Center",
@@ -76,10 +99,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ContactPage() {
     const locale = await getLocale();
     const copy = getCopy(locale);
+    const [currentUserId, supportProfile] = await Promise.all([
+        getCurrentUserId(),
+        getSystemSupportProfile()
+    ]);
+    const signedIn = Boolean(currentUserId);
+    const supportUserId = supportProfile?.id ?? null;
     const contactOptions = [
-        {title: locale === "id" ? "Bantuan aplikasi" : "App support", description: locale === "id" ? "Masalah akun, scan, capture, koleksi, kredit, atau pembelian." : "Account, scan, capture, collection, credit, or purchase issues.", subject: "AnimalDex Support Request", icon: MailIcon},
-        {title: locale === "id" ? "Laporkan bug" : "Report a bug", description: locale === "id" ? "Beri tahu apa yang terjadi dan cara mengulanginya." : "Tell us what happened and how to reproduce it.", subject: "AnimalDex Bug Report", icon: BugIcon},
-        {title: locale === "id" ? "Minta fitur" : "Request a feature", description: locale === "id" ? "Jelaskan idemu dan masalah yang ingin diselesaikan." : "Describe your idea and the problem it would solve.", subject: "AnimalDex Feature Request", icon: SparklesIcon}
+        {title: locale === "id" ? "Bantuan aplikasi" : "App support", description: locale === "id" ? "Masalah akun, scan, capture, koleksi, kredit, atau pembelian." : "Account, scan, capture, collection, credit, or purchase issues.", subject: "AnimalDex Support Request", kind: "support" as const, icon: MailIcon},
+        {title: locale === "id" ? "Laporkan bug" : "Report a bug", description: locale === "id" ? "Beri tahu apa yang terjadi dan cara mengulanginya." : "Tell us what happened and how to reproduce it.", subject: "AnimalDex Bug Report", kind: "bug" as const, icon: BugIcon},
+        {title: locale === "id" ? "Minta fitur" : "Request a feature", description: locale === "id" ? "Jelaskan idemu dan masalah yang ingin diselesaikan." : "Describe your idea and the problem it would solve.", subject: "AnimalDex Feature Request", kind: "feature" as const, icon: SparklesIcon}
     ];
     const schema = {
         "@context": "https://schema.org",
@@ -115,10 +144,15 @@ export default async function ContactPage() {
                         </div>
                         <h2 className="font-display font-bold text-2xl text-white">{option.title}</h2>
                         <p className="text-ink-200 text-lg flex-1">{option.description}</p>
-                        <Link href={mailto(option.subject)} className="inline-flex items-center gap-2 text-primary-200 text-lg hover:text-primary-100 transition-colors" underline>
-                            <MailIcon size={18} />
-                            {supportEmail}
-                        </Link>
+                        <div className="flex flex-col gap-2">
+                            <Link href={mailto(option.subject, option.kind)} className="inline-flex items-center gap-2 text-primary-200 text-lg hover:text-primary-100 transition-colors" underline>
+                                <MailIcon size={18} />
+                                {copy.emailAction} · {supportEmail}
+                            </Link>
+                            <Link href={messageHref(supportUserId, signedIn, option.kind)} className="inline-flex items-center gap-2 text-primary-200 text-lg hover:text-primary-100 transition-colors" underline>
+                                {signedIn ? copy.messageAction : copy.signInToMessage}
+                            </Link>
+                        </div>
                     </article>;
                 })}
             </section>
@@ -132,7 +166,7 @@ export default async function ContactPage() {
                     <p className="text-ink-100 text-lg">{copy.responseDescription}</p>
                     <div className="rounded-2xl border border-primary-500/30 bg-canvas-950/40 p-5">
                         <p className="text-xs uppercase tracking-[0.18em] text-ink-400">{copy.emailLabel}</p>
-                        <Link href={mailto("AnimalDex Support Request")} className="mt-2 block text-xl md:text-2xl font-bold text-primary-200 break-all hover:text-primary-100 transition-colors">
+                        <Link href={mailto("AnimalDex Support Request", "support")} className="mt-2 block text-xl md:text-2xl font-bold text-primary-200 break-all hover:text-primary-100 transition-colors">
                             {supportEmail}
                         </Link>
                     </div>

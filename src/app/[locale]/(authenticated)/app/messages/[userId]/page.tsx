@@ -2,7 +2,13 @@ import {notFound} from "next/navigation";
 import ConversationClient from "@/app/[locale]/(authenticated)/app/messages/[userId]/conversation-client";
 import {getCurrentUserId, getDirectMessageConversation, getDirectMessagePartner} from "@/data/direct-messages";
 
-export default async function MessageThreadPage({params}: {params: {userId: string; locale: string}}) {
+export default async function MessageThreadPage({
+    params,
+    searchParams
+}: {
+    params: {userId: string; locale: string};
+    searchParams?: {draft?: string};
+}) {
     const currentUserId = await getCurrentUserId();
     if (!currentUserId) notFound();
 
@@ -16,5 +22,13 @@ export default async function MessageThreadPage({params}: {params: {userId: stri
 
     if (!partner) notFound();
 
-    return <ConversationClient partner={partner} currentUserId={currentUserId} initialMessages={messages} locale={params.locale}/>;
+    return (
+        <ConversationClient
+            partner={partner}
+            currentUserId={currentUserId}
+            initialMessages={messages}
+            initialDraft={typeof searchParams?.draft === "string" ? searchParams.draft.slice(0, 1000) : ""}
+            locale={params.locale}
+        />
+    );
 }

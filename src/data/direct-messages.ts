@@ -10,6 +10,7 @@ export type DirectMessageProfile = {
     username: string | null;
     avatarUrl: string | null;
     href: string | null;
+    isSystem?: boolean;
 };
 
 export type DirectMessage = {
@@ -36,8 +37,8 @@ const MESSAGE_SELECT = [
     "body",
     "created_at",
     "read_at",
-    "sender:profiles!direct_messages_sender_id_fkey(id,display_name,username,avatar_url)",
-    "recipient:profiles!direct_messages_recipient_id_fkey(id,display_name,username,avatar_url)"
+    "sender:profiles!direct_messages_sender_id_fkey(id,display_name,username,avatar_url,is_system)",
+    "recipient:profiles!direct_messages_recipient_id_fkey(id,display_name,username,avatar_url,is_system)"
 ].join(",");
 
 function readString(row: QueryRow | null | undefined, key: string) {
@@ -52,12 +53,15 @@ function mapProfile(row: QueryRow | null | undefined): DirectMessageProfile | nu
     const username = readString(row, "username");
     const displayName = readString(row, "display_name");
 
+    const isSystem = row?.is_system === true;
+
     return {
         userId,
         displayName: displayName || (username ? `@${username}` : "Collector"),
         username,
         avatarUrl: readString(row, "avatar_url"),
-        href: username ? `/u/${encodeURIComponent(username)}` : null
+        href: isSystem ? null : (username ? `/u/${encodeURIComponent(username)}` : null),
+        isSystem
     };
 }
 
@@ -107,7 +111,7 @@ export async function getDirectMessagePartner(userId: string): Promise<DirectMes
 
     const {data} = await supabase
         .from("profiles")
-        .select("id,display_name,username,avatar_url")
+        .select("id,display_name,username,avatar_url,is_system")
         .eq("id", userId)
         .maybeSingle();
 
@@ -155,6 +159,7 @@ export async function getDirectMessageInbox(limit = 40): Promise<DirectMessageCo
     return orderedPartnerIds
         .map((partnerId) => summaries.get(partnerId))
         .filter((item): item is DirectMessageConversationSummary => Boolean(item))
+        .sort((left, right) => Number(Boolean(right.otherUser.isSystem)) - Number(Boolean(left.otherUser.isSystem)))
         .slice(0, limit);
 }
 

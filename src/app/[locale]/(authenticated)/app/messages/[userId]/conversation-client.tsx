@@ -15,15 +15,17 @@ export default function ConversationClient({
     partner,
     currentUserId,
     initialMessages,
+    initialDraft = "",
     locale
 }: {
     partner: DirectMessageProfile;
     currentUserId: string;
     initialMessages: DirectMessage[];
+    initialDraft?: string;
     locale: string;
 }) {
     const [messages, setMessages] = useState(initialMessages);
-    const [draft, setDraft] = useState("");
+    const [draft, setDraft] = useState(initialDraft);
     const [error, setError] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
     const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +80,9 @@ export default function ConversationClient({
                     {partner.href
                         ? <Link href={partner.href} className="block truncate font-display text-2xl font-bold text-white hover:text-primary-100">{partner.displayName}</Link>
                         : <h1 className="truncate font-display text-2xl font-bold text-white">{partner.displayName}</h1>}
-                    {partner.username ? <p className="truncate text-sm text-white/40">@{partner.username}</p> : null}
+                    <p className="truncate text-sm text-white/40">
+                        {partner.isSystem ? "Official AnimalDex support" : (partner.username ? `@${partner.username}` : null)}
+                    </p>
                 </div>
                 <AppAvatar src={partner.avatarUrl} name={partner.displayName} />
             </div>

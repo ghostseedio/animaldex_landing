@@ -72,6 +72,33 @@ const THREADS_PAGE_SIZE = 20;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 18 * 1024 * 1024;
 type InboxFilter = "all" | "important" | "inbox" | "unread" | "spam";
+type SupportChannel = "email" | "in-app";
+
+type InAppMessage = {
+    id: string;
+    body: string;
+    createdAt: string;
+    direction: "inbound" | "outbound";
+};
+
+type InAppThread = {
+    id: string;
+    displayName: string;
+    username: string | null;
+    avatarUrl: string | null;
+    lastBody: string;
+    lastCreatedAt: string;
+    unreadCount: number;
+    messages: InAppMessage[];
+};
+
+type InAppInboxResponse = {
+    ok: boolean;
+    threads?: Array<Omit<InAppThread, "messages">>;
+    hasMore?: boolean;
+    thread?: InAppThread | null;
+    error?: string;
+};
 
 function buildThreadsPath(options?: {threadId?: string | null; offset?: number; includeThreads?: boolean}) {
     const params = new URLSearchParams();
@@ -87,6 +114,22 @@ function buildThreadsPath(options?: {threadId?: string | null; offset?: number; 
 
     const query = params.toString();
     return `/api/admin/support/threads${query ? `?${query}` : ""}`;
+}
+
+function buildInAppPath(options?: {userId?: string | null; offset?: number; includeThreads?: boolean}) {
+    const params = new URLSearchParams();
+
+    if (options?.userId) params.set("userId", options.userId);
+
+    if (options?.includeThreads === false) {
+        params.set("includeThreads", "false");
+    } else {
+        params.set("limit", String(THREADS_PAGE_SIZE));
+        params.set("offset", String(options?.offset ?? 0));
+    }
+
+    const query = params.toString();
+    return `/api/admin/support/in-app${query ? `?${query}` : ""}`;
 }
 
 function absoluteDate(value: string) {
@@ -233,6 +276,9 @@ export default function SupportInboxClient() {
     const [selectedThread, setSelectedThread] = useState<SafeSupportThread | null>(null);
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
     const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+    const [channel, setChannel] = useState<SupportChannel>("email");
+    const [inAppThreads, setInAppThreads] = useState<Array<Omit<InAppThread, "messages">>>([]);
+    const [selectedInAppThread, setSelectedInAppThread] = useState<InAppThread | null>(null);
     const [inboxFilter, setInboxFilter] = useState<InboxFilter>("inbox");
     const [reply, setReply] = useState("");
     const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -247,11 +293,14 @@ export default function SupportInboxClient() {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const messageListRef = useRef<HTMLDivElement>(null);
 
-    const canSend = useMemo(
-        () => Boolean(selectedThread && (reply.trim() || attachments.length) && !submitting),
-        [attachments.length, reply, selectedThread, submitting]
-    );
-    const unreadCount = threads.filter((thread) => thread.isUnread).length;
+    const canSend = useMemo(() => {
+        if (submitting) return false;
+        if (channel === "in-app") return Boolean(selectedInAppThread && reply.trim());
+        return Boolean(selectedThread && (reply.trim() || attachments.length));
+    }, [attachments.length, channel, reply, selectedInAppThread, selectedThread, submitting]);
+    const unreadCount = channel === "in-app"
+        ? inAppThreads.reduce((sum, thread) => sum + thread.unreadCount, 0)
+        : threads.filter((thread) => thread.isUnread).length;
     const filterCounts: Record<InboxFilter, number> = {
         all: threads.length,
         important: threads.filter((thread) => thread.category === "important").length,
@@ -265,7 +314,43 @@ export default function SupportInboxClient() {
         return thread.category === inboxFilter;
     });
 
+    async function loadInAppInbox(userId?: string | null) {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(buildInAppPath({userId, offset: 0}), {cache: "no-store"});
+            const body = await response.json() as InAppInboxResponse;
+
+            if (response.status === 401) {
+                setAuthorized(false);
+                setInAppThreads([]);
+                setSelectedInAppThread(null);
+                return;
+            }
+
+            if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load in-app inbox.");
+
+            const nextThreads = body.threads ?? [];
+            const nextThread = body.thread ?? null;
+            setAuthorized(true);
+            setInAppThreads(nextThreads);
+            setHasMoreThreads(Boolean(body.hasMore));
+            setSelectedInAppThread(nextThread);
+            setSelectedThreadId(nextThread?.id ?? nextThreads[0]?.id ?? null);
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load in-app inbox.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     async function loadInbox(threadId?: string | null) {
+        if (channel === "in-app") {
+            await loadInAppInbox(threadId);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -301,6 +386,20 @@ export default function SupportInboxClient() {
         setError(null);
 
         try {
+            if (channel === "in-app") {
+                const response = await fetch(buildInAppPath({userId: threadId, includeThreads: false}), {cache: "no-store"});
+                const body = await response.json() as InAppInboxResponse;
+                if (response.status === 401) {
+                    setAuthorized(false);
+                    return;
+                }
+                if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load conversation.");
+                setSelectedInAppThread(body.thread ?? null);
+                setInAppThreads((current) => current.map((thread) => thread.id === threadId ? {...thread, unreadCount: 0} : thread));
+                requestAnimationFrame(() => messageListRef.current?.scrollTo({top: messageListRef.current.scrollHeight}));
+                return;
+            }
+
             const response = await fetch(buildThreadsPath({threadId, includeThreads: false}), {cache: "no-store"});
             const body = await response.json() as InboxResponse;
 
@@ -326,6 +425,15 @@ export default function SupportInboxClient() {
         setLoadingMore(true);
 
         try {
+            if (channel === "in-app") {
+                const response = await fetch(buildInAppPath({offset: inAppThreads.length}), {cache: "no-store"});
+                const body = await response.json() as InAppInboxResponse;
+                if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load more conversations.");
+                setInAppThreads((current) => [...current, ...(body.threads ?? [])]);
+                setHasMoreThreads(Boolean(body.hasMore));
+                return;
+            }
+
             const response = await fetch(buildThreadsPath({offset: threads.length}), {cache: "no-store"});
             const body = await response.json() as InboxResponse;
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load more threads.");
@@ -338,7 +446,14 @@ export default function SupportInboxClient() {
         }
     }
 
-    useEffect(() => { loadInbox(); }, []);
+    useEffect(() => {
+        setSelectedThreadId(null);
+        setSelectedThread(null);
+        setSelectedInAppThread(null);
+        setReply("");
+        setAttachments([]);
+        void loadInbox();
+    }, [channel]);
     async function submitLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setSubmitting(true);
@@ -398,19 +513,21 @@ export default function SupportInboxClient() {
 
     async function submitReply(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!selectedThread || !canSend) return;
+        if (channel === "in-app" ? !selectedInAppThread || !canSend : !selectedThread || !canSend) return;
         setSubmitting(true);
         setError(null);
 
         try {
-            const response = await fetch("/api/admin/support/reply", {
+            const response = await fetch(channel === "in-app" ? "/api/admin/support/in-app-reply" : "/api/admin/support/reply", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    threadId: selectedThread.id,
-                    message: reply,
-                    attachments: attachments.map(({filename, contentType, content, contentId}) => ({filename, contentType, content, contentId}))
-                })
+                body: JSON.stringify(channel === "in-app"
+                    ? {userId: selectedInAppThread?.id, message: reply}
+                    : {
+                        threadId: selectedThread.id,
+                        message: reply,
+                        attachments: attachments.map(({filename, contentType, content, contentId}) => ({filename, contentType, content, contentId}))
+                    })
             });
             const body = await response.json() as {ok: boolean; error?: string};
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to send reply.");
@@ -418,7 +535,7 @@ export default function SupportInboxClient() {
             attachments.forEach((attachment) => attachment.previewUrl && URL.revokeObjectURL(attachment.previewUrl));
             setReply("");
             setAttachments([]);
-            await loadInbox(selectedThread.id);
+            await loadInbox(channel === "in-app" ? selectedInAppThread?.id : selectedThread.id);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to send reply.");
         } finally {
@@ -483,13 +600,15 @@ export default function SupportInboxClient() {
                                     <h1 className="truncate font-display text-xl text-white sm:text-3xl">Support Inbox</h1>
                                     {unreadCount > 0 && <span className="rounded-full bg-primary-400 px-2 py-0.5 text-[11px] font-black text-canvas-950">{unreadCount}</span>}
                                 </div>
-                                <p className="text-xs text-ink-400">Customer conversations</p>
+                                <p className="text-xs text-ink-400">{channel === "in-app" ? "In-app Messages with AnimalDex" : "Customer email conversations"}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+                            {channel === "email" ? (
                             <button type="button" onClick={syncFromResend} disabled={syncing} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 disabled:opacity-50 sm:text-sm">
                                 {syncing ? "Syncing…" : "Sync"}
                             </button>
+                            ) : null}
                             <button type="button" onClick={() => loadInbox(selectedThreadId)} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 sm:text-sm">Refresh</button>
                             <button type="button" onClick={logout} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:border-primary-200 hover:text-white sm:text-sm">Sign out</button>
                         </div>
@@ -502,6 +621,21 @@ export default function SupportInboxClient() {
                     <aside className={`${mobileThreadOpen ? "hidden lg:block" : "block"} min-h-0 overflow-y-auto border-line-300 lg:border-r`}>
                         <div className="sticky top-0 z-10 border-b border-line-300 bg-canvas-950/95 px-3 py-3 backdrop-blur">
                             <p className="px-1 text-xs font-bold uppercase tracking-[0.16em] text-ink-400">Conversations</p>
+                            <div className="mt-3 flex gap-1" role="tablist" aria-label="Support channel">
+                                {(["email", "in-app"] as SupportChannel[]).map((item) => (
+                                    <button
+                                        key={item}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={channel === item}
+                                        onClick={() => setChannel(item)}
+                                        className={`rounded-full border px-3 py-1.5 text-[11px] font-bold capitalize ${channel === item ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}
+                                    >
+                                        {item === "in-app" ? "In-app" : "Email"}
+                                    </button>
+                                ))}
+                            </div>
+                            {channel === "email" ? (
                             <div className="mt-3 flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filter support conversations">
                                 {(["inbox", "important", "unread", "spam", "all"] as InboxFilter[]).map((filter) => {
                                     const active = inboxFilter === filter;
@@ -522,7 +656,46 @@ export default function SupportInboxClient() {
                                     );
                                 })}
                             </div>
+                            ) : null}
                         </div>
+                        {channel === "in-app" ? (
+                            <>
+                                {loading && !inAppThreads.length ? <div className="p-5 text-sm text-ink-300">Loading inbox…</div> : null}
+                                {!loading && !inAppThreads.length ? <div className="p-5 text-sm text-ink-300">No in-app messages yet.</div> : null}
+                                <div className="divide-y divide-line-300">
+                                    {inAppThreads.map((thread) => {
+                                        const selected = thread.id === selectedThreadId;
+                                        const unread = thread.unreadCount > 0;
+                                        return (
+                                            <button
+                                                key={thread.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedThreadId(thread.id);
+                                                    setMobileThreadOpen(true);
+                                                    loadThreadDetail(thread.id);
+                                                }}
+                                                className={`flex w-full gap-3 px-4 py-4 text-left transition ${selected ? "bg-primary-500/[0.07]" : "hover:bg-surface-900/60"}`}
+                                            >
+                                                <div className="relative">
+                                                    <Avatar name={thread.displayName} src={thread.avatarUrl} />
+                                                    {unread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-canvas-950" />}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <p className={`truncate text-sm ${unread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{thread.displayName}</p>
+                                                        <time className="shrink-0 text-[11px] text-ink-500" title={absoluteDate(thread.lastCreatedAt)}>{relativeDate(thread.lastCreatedAt)}</time>
+                                                    </div>
+                                                    <p className={`mt-1 truncate text-sm ${unread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.lastBody}</p>
+                                                    <p className="mt-2 truncate text-xs text-ink-500">{thread.username ? `@${thread.username}` : thread.id}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : (
+                        <>
                         {loading && !threads.length ? <div className="p-5 text-sm text-ink-300">Loading inbox…</div> : null}
                         {!loading && !threads.length ? <div className="p-5 text-sm text-ink-300">No support emails yet.</div> : null}
                         {!loading && threads.length > 0 && !filteredThreads.length ? <div className="p-5 text-sm text-ink-300">No {inboxFilter} conversations.</div> : null}
@@ -566,6 +739,8 @@ export default function SupportInboxClient() {
                                 );
                             })}
                         </div>
+                        </>
+                        )}
                         {hasMoreThreads && (
                             <div className="p-4">
                                 <button type="button" onClick={loadMoreThreads} disabled={loadingMore} className="w-full rounded-lg border border-line-300 px-4 py-2 text-sm font-bold text-white hover:border-primary-200 disabled:opacity-50">
@@ -576,7 +751,67 @@ export default function SupportInboxClient() {
                     </aside>
 
                     <section className={`${mobileThreadOpen ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col overflow-hidden`}>
-                        {!selectedThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select a support thread.</div> : (
+                        {channel === "in-app" ? (
+                            !selectedInAppThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select an in-app conversation.</div> : (
+                            <>
+                                <div className="shrink-0 border-b border-line-300 bg-surface-900/45 px-4 py-4 sm:px-6">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <button type="button" onClick={() => setMobileThreadOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line-300 text-white lg:hidden" aria-label="Back to inbox">←</button>
+                                        <Avatar name={selectedInAppThread.displayName} src={selectedInAppThread.avatarUrl} size="lg" />
+                                        <div className="min-w-0 flex-1">
+                                            <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedInAppThread.displayName}</h2>
+                                            <p className="mt-1 truncate text-sm text-ink-300">
+                                                {selectedInAppThread.username ? `@${selectedInAppThread.username}` : "In-app collector"}
+                                                {" · "}
+                                                <Link href={`/admin/users?userId=${encodeURIComponent(selectedInAppThread.id)}`} className="hover:text-primary-100">Open user</Link>
+                                            </p>
+                                        </div>
+                                        <span className="hidden shrink-0 rounded-full border border-primary-300/40 bg-primary-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary-100 sm:inline-flex">In-app</span>
+                                        {loadingThread && <span className="text-xs text-ink-400">Loading…</span>}
+                                    </div>
+                                </div>
+
+                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
+                                    {selectedInAppThread.messages.map((message) => {
+                                        const inbound = message.direction === "inbound";
+                                        return (
+                                            <article key={message.id} className={`min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/20 bg-primary-500/[0.055]"}`}>
+                                                <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
+                                                    <Avatar name={inbound ? selectedInAppThread.displayName : "AnimalDex"} src={inbound ? selectedInAppThread.avatarUrl : "/images/logo.webp"} size="sm" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                            <p className="truncate text-sm font-bold text-white">{inbound ? selectedInAppThread.displayName : "AnimalDex"}</p>
+                                                            <time className="text-xs text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-5"><MessageBody body={message.body} /></div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+
+                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
+                                    <div className="overflow-hidden rounded-xl border border-line-300 bg-canvas-900 focus-within:border-primary-300">
+                                        <textarea
+                                            value={reply}
+                                            onChange={(event) => setReply(event.target.value.slice(0, 1000))}
+                                            rows={4}
+                                            maxLength={1000}
+                                            placeholder={`Reply to ${selectedInAppThread.displayName}…`}
+                                            className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
+                                        />
+                                        <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
+                                            <p className="text-[11px] text-ink-500">{reply.trim().length}/1000 · Replies appear as AnimalDex in the app</p>
+                                            <button type="submit" disabled={!canSend} className="ml-auto rounded-lg bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-500">
+                                                {submitting ? "Sending…" : "Send reply"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </>
+                            )
+                        ) : !selectedThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select a support thread.</div> : (
                             <>
                                 <div className="shrink-0 border-b border-line-300 bg-surface-900/45 px-4 py-4 sm:px-6">
                                     <div className="flex min-w-0 items-center gap-3">

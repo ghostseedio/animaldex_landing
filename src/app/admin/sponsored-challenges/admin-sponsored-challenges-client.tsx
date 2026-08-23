@@ -410,17 +410,15 @@ export default function AdminSponsoredChallengesClient() {
         <div className="space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">Internal operations</p>
+                    <Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link>
+                    <p className="mt-5 text-[10px] font-black uppercase tracking-[.18em] text-primary-200">Internal operations</p>
                     <h1 className="mt-2 font-display text-4xl text-white">Sponsored Challenges</h1>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-300">
                         AnimalDex operator console for time-limited Challenges. Privileged mutations run server-side.
                         This is not the public PvP /challenges route and not a /business portal.
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/admin" className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white">Overview</Link>
-                    <button type="button" onClick={startCreate} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950">New campaign</button>
-                </div>
+                <button type="button" onClick={startCreate} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950">New campaign</button>
             </div>
 
             {error ? <p className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</p> : null}
