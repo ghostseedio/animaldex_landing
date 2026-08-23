@@ -1,0 +1,89 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {dirname, join} from "node:path";
+import test from "node:test";
+import {fileURLToPath} from "node:url";
+import {
+    communityStatPoints,
+    communitySupportScore,
+    communitySupportSenderPoints,
+    endorsedStatForSlug,
+    giftDisplayName,
+    LAUNCH_GIFT_CATALOG
+} from "./capture-gifts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const gradeSource = readFileSync(join(here, "capture-grade.ts"), "utf8");
+const guideSource = readFileSync(join(here, "guide-marketplace-core.ts"), "utf8");
+const giftSource = readFileSync(join(here, "capture-gifts.ts"), "utf8");
+const giftRouteSource = readFileSync(join(here, "../app/api/app/gifts/route.ts"), "utf8");
+const catalogRouteSource = readFileSync(join(here, "../app/api/app/gifts/catalog/route.ts"), "utf8");
+
+test("capture grade still lifts from endorsements, not gifts or credits", () => {
+    assert.match(gradeSource, /dominance_endorsements/);
+    assert.match(gradeSource, /Community endorsements/);
+    assert.doesNotMatch(gradeSource, /gift_credit/);
+    assert.doesNotMatch(gradeSource, /capture_gift/);
+    assert.doesNotMatch(gradeSource, /earning_entr/);
+});
+
+test("launch gift catalog is diminishing and never encodes cash", () => {
+    const rates = LAUNCH_GIFT_CATALOG.map((item: (typeof LAUNCH_GIFT_CATALOG)[number]) => item.captureXpGrant / item.creditCost);
+    for (let index = 1; index < rates.length; index += 1) {
+        assert.ok(rates[index] < rates[index - 1]);
+    }
+    assert.ok(LAUNCH_GIFT_CATALOG[4].captureXpGrant < 20 * LAUNCH_GIFT_CATALOG[0].captureXpGrant);
+    assert.doesNotMatch(giftSource, /usd/i);
+    assert.doesNotMatch(giftSource, /earning/i);
+    assert.doesNotMatch(giftSource, /payout/i);
+});
+
+test("community support scoring favors broad support over whales and never uses credit cost", () => {
+    assert.equal(communitySupportSenderPoints(20, 1), 10);
+    assert.equal(communitySupportSenderPoints(2, 1), 9);
+    assert.equal(communitySupportSenderPoints(1, 1), 8);
+    assert.equal(communityStatPoints(20), 8);
+
+    const whale = communitySupportScore([{giftCount: 20, captureCount: 1}]);
+    const tenSupporters = communitySupportScore(
+        Array.from({length: 10}, () => ({giftCount: 2, captureCount: 1}))
+    );
+    const twentySupporters = communitySupportScore(
+        Array.from({length: 20}, () => ({giftCount: 1, captureCount: 1}))
+    );
+    assert.equal(whale, 10);
+    assert.equal(tenSupporters, 90);
+    assert.equal(twentySupporters, 160);
+    assert.ok(tenSupporters > whale);
+    assert.ok(twentySupporters > tenSupporters);
+    assert.equal(communitySupportSenderPoints(5, 1), 10);
+    assert.doesNotMatch(giftSource, /SUM\(.*credit/i);
+});
+
+test("gift slug mapping is Phase 1B canonical", () => {
+    assert.equal(giftDisplayName("big_brain"), "Big Brain");
+    assert.equal(giftDisplayName("electric_find"), "Lightning Bolt");
+    assert.equal(giftDisplayName("great_capture"), "Absolute Unit");
+    assert.equal(giftDisplayName("wild"), "Powerhouse");
+    assert.equal(giftDisplayName("legendary_capture"), "Legendary");
+    assert.equal(endorsedStatForSlug("big_brain"), "intelligence");
+    assert.equal(endorsedStatForSlug("electric_find"), "speed");
+    assert.equal(endorsedStatForSlug("great_capture"), "size");
+    assert.equal(endorsedStatForSlug("wild"), "dominance");
+    assert.equal(endorsedStatForSlug("legendary_capture"), "rarity");
+});
+
+test("gift API routes use user session client and fail closed", () => {
+    assert.match(giftRouteSource, /createSupabaseServerClient/);
+    assert.match(catalogRouteSource, /createSupabaseServerClient/);
+    assert.doesNotMatch(giftRouteSource, /service_role|getSupabaseServiceKey|SUPABASE_SERVICE/);
+    assert.doesNotMatch(catalogRouteSource, /service_role|getSupabaseServiceKey|SUPABASE_SERVICE/);
+    assert.match(catalogRouteSource, /enabled: false/);
+});
+
+test("guide listed price helpers do not describe credits or earnings ledgers", () => {
+    assert.match(guideSource, /amount_minor/);
+    assert.match(guideSource, /currency_code/);
+    assert.doesNotMatch(guideSource, /credit_balances/);
+    assert.doesNotMatch(guideSource, /earning_entries/);
+});

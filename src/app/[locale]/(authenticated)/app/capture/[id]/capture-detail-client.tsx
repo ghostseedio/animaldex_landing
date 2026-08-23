@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
+import CaptureGiftsPanel from "@/app/[locale]/(authenticated)/app/_components/capture-gifts-panel";
 import AnimalDetailTabBar, {type AnimalDetailTab} from "@/components/animal-detail/animal-detail-tab-bar";
 import AnimalStoryCard, {type AnimalStoryPrinciple} from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
@@ -162,6 +163,7 @@ export default function CaptureDetailClient({
                                 conservationTier={capture.conservationTier}
                             />
                         ) : null}
+                        {capture.isDiscoverable ? <CaptureGiftsPanel captureId={capture.id} /> : null}
                     </div>
 
                     <div
