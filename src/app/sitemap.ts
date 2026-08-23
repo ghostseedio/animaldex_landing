@@ -18,6 +18,8 @@ import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
 import {speciesEntries} from "@/data/species";
 import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
+import {getPublicGuideListings} from "@/data/guide-marketplace";
+import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
 
 async function getSitemapSpeciesEntries() {
     try {
@@ -54,6 +56,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const unifiedSpeciesEntries = await getSitemapSpeciesEntries();
     const discoverPosts = await getSitemapDiscoverPosts();
     const mergedChallengeEntries = await getSitemapChallengeEntries();
+    const guideListings = await getPublicGuideListings().catch((error) => {
+        console.error("Unable to load public Guide listings for sitemap.", error);
+        return [];
+    });
+    const guideEntries: MetadataRoute.Sitemap = [
+        {url: new URL("/wildlife-guides", getSiteUrl()).toString()},
+        ...buildGuideSitemapPaths(guideListings).map((path) => {
+            const listing = guideListings.find((item) => guidePath(item) === path);
+            return {url: new URL(path, getSiteUrl()).toString(), ...(listing ? {lastModified: new Date(listing.updated_at)} : {})};
+        })
+    ];
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
             url: new URL("/legal/privacy", getSiteUrl()).toString(),
@@ -239,6 +252,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [
         ...publicLegalEntries,
+        ...guideEntries,
         ...localizedEntries
     ];
 }

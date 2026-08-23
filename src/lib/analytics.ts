@@ -31,3 +31,8 @@ export function trackPageView(url: string): void {
         page_path: url
     });
 }
+
+export function trackEvent(name: string, parameters: Record<string, string | number | boolean | undefined> = {}): void {
+    if (!isGoogleAnalyticsEnabled() || typeof window === "undefined" || !window.gtag) return;
+    window.gtag("event", name, parameters);
+}
