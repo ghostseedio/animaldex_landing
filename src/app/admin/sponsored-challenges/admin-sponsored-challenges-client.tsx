@@ -2,14 +2,47 @@
 
 import Link from "next/link";
 import {ReactNode, useCallback, useEffect, useMemo, useState} from "react";
+import {CampaignPreview} from "@/app/admin/sponsored-challenges/campaign-preview";
+import {CampaignReadinessPanel} from "@/app/admin/sponsored-challenges/campaign-readiness-panel";
+import {CampaignTemplatePicker} from "@/app/admin/sponsored-challenges/campaign-template-picker";
+import {
+    ADMIN_TIMEZONES,
+    COPY_FIELDS,
+    DATE_FIELDS,
+    GENERATED_RULES_NOTICE,
+    REGENERATE_CONFIRM,
+    SETTING_TAGS,
+    TEMPLATE_CHANGE_CONFIRM,
+    applyTemplateDefaults,
+    blankDraft,
+    currentGeneratedCopy,
+    emptyFieldOrigins,
+    generateBuilderCopy,
+    inferTemplateId,
+    isFormSubstantiallyModified,
+    markManual,
+    mergeCopyIntoDraft,
+    nextAutoValues,
+    pickCopy,
+    type CampaignTemplateId,
+    type FieldOrigin,
+    type FieldOrigins,
+    type GeneratedCopy,
+    type GeneratedField
+} from "@/lib/sponsored-challenge-builder";
+import {toPreviewCampaign} from "@/lib/sponsored-challenge-preview";
+import {evaluateReadiness} from "@/lib/sponsored-challenge-readiness";
 import {
     APPLE_DISCLAIMER,
     ARCHIVE_COPY,
     CAMPAIGN_STATUSES,
     DISCOVERY_GEOGRAPHY_COPY,
     NON_VENUE_COUNTRY_COPY,
+    canonicalizeSettingTag,
+    canonicalizeTypeTag,
     OBJECTIVE_TYPES,
     RULES_HISTORY_COPY,
+    settingTagDisplayLabel,
     VENUE_CONSTRAINT_COPY,
     VENUE_SECURITY_COPY,
     authorshipLabel,
@@ -59,37 +92,6 @@ const STATUS_LABEL: Record<CampaignStatus, string> = {
     archived: "Archived"
 };
 
-const SETTING_TAGS = ["", "Wild", "Zoo", "Farm", "Domestic", "Unknown"];
-const TIMEZONES = ["UTC", "Asia/Jakarta", "Asia/Singapore", "Asia/Bangkok", "Asia/Tokyo", "Europe/London", "America/New_York"];
-
-function emptyDraft(): CampaignDraftInput {
-    const start = new Date();
-    const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return {
-        slug: "",
-        title: "",
-        publicSummary: "",
-        description: "",
-        presenterName: "",
-        sponsorOrganizationId: null,
-        startsAt: start.toISOString().slice(0, 16),
-        endsAt: end.toISOString().slice(0, 16),
-        timezoneIdentifier: "Asia/Jakarta",
-        objectiveType: "unique_indexed_entries",
-        targetCount: 3,
-        officialRules: `Official Challenge rules.\n\n${APPLE_DISCLAIMER}`,
-        rewardTerms: "Completing this Challenge grants a deterministic AnimalDex achievement only. No credits, cash, vouchers, or sweepstakes.",
-        requiredTypeTag: "",
-        requiredSettingTag: "",
-        minimumCaptureGrade: null,
-        liveOnly: true,
-        externalImportsAllowed: false,
-        discoveryRadiusM: 25000,
-        geoMode: "unrestricted",
-        hasVenue: false
-    };
-}
-
 function draftFromCampaign(campaign: AdminCampaignDetail): CampaignDraftInput {
     return {
         id: campaign.id,
@@ -106,8 +108,8 @@ function draftFromCampaign(campaign: AdminCampaignDetail): CampaignDraftInput {
         targetCount: campaign.targetCount,
         officialRules: campaign.officialRules,
         rewardTerms: campaign.rewardTerms,
-        requiredTypeTag: campaign.requiredTypeTag ?? "",
-        requiredSettingTag: campaign.requiredSettingTag ?? "",
+        requiredTypeTag: canonicalizeTypeTag(campaign.requiredTypeTag) ?? "",
+        requiredSettingTag: canonicalizeSettingTag(campaign.requiredSettingTag) ?? "",
         minimumCaptureGrade: campaign.minimumCaptureGrade,
         liveOnly: campaign.liveOnly,
         externalImportsAllowed: campaign.externalImportsAllowed,
@@ -133,7 +135,9 @@ export default function AdminSponsoredChallengesClient() {
     const [filter, setFilter] = useState<CampaignStatus | "all">("all");
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [campaign, setCampaign] = useState<AdminCampaignDetail | null>(null);
-    const [draft, setDraft] = useState<CampaignDraftInput>(emptyDraft());
+    const [draft, setDraft] = useState<CampaignDraftInput>(() => blankDraft());
+    const [templateId, setTemplateId] = useState<CampaignTemplateId>("blank");
+    const [origins, setOrigins] = useState<FieldOrigins>(() => emptyFieldOrigins("auto"));
     const [venueName, setVenueName] = useState("");
     const [venuePlaceId, setVenuePlaceId] = useState("");
     const [venueLat, setVenueLat] = useState("");
@@ -159,7 +163,7 @@ export default function AdminSponsoredChallengesClient() {
         setOrganizations(payload.organizations ?? []);
     }, []);
 
-    const applyDetail = useCallback((detail: AdminCampaignDetail) => {
+    const applyDetail = useCallback((detail: AdminCampaignDetail, resetOrigins = true) => {
         setCampaign(detail);
         setSelectedId(detail.id);
         setDraft(draftFromCampaign(detail));
@@ -174,13 +178,17 @@ export default function AdminSponsoredChallengesClient() {
         setAchievementTitle(detail.reward?.title ?? "");
         setAchievementDetail(detail.reward?.detail ?? "");
         setConfirmArchive(false);
+        if (resetOrigins) {
+            setOrigins(emptyFieldOrigins("manual"));
+            setTemplateId(inferTemplateId(detail) ?? "blank");
+        }
     }, []);
 
     const loadDetail = useCallback(async (id: string) => {
         const response = await fetch(`/api/admin/sponsored-challenges?id=${id}`, {cache: "no-store"});
         const payload = await response.json() as DetailPayload;
         if (!response.ok || !payload.ok || !payload.campaign) throw new Error(payload.error || "Unable to load campaign");
-        applyDetail(payload.campaign);
+        applyDetail(payload.campaign, true);
     }, [applyDetail]);
 
     useEffect(() => {
@@ -208,7 +216,7 @@ export default function AdminSponsoredChallengesClient() {
                 });
                 setDraft((current) => ({...current, sponsorOrganizationId: payload.organization!.id}));
             }
-            if (payload.campaign) applyDetail(payload.campaign);
+            if (payload.campaign) applyDetail(payload.campaign, false);
             await loadList();
             setNotice(success);
         } catch (err) {
@@ -218,7 +226,87 @@ export default function AdminSponsoredChallengesClient() {
         }
     }, [applyDetail, loadList]);
 
+    const sponsorDisplayName = organizations.find((org) => org.id === draft.sponsorOrganizationId)?.displayName ?? campaign?.sponsorDisplayName ?? null;
     const hasVenue = Boolean(venueName.trim() && venueLat && venueLng);
+    const builderSource = useMemo(() => ({
+        templateId,
+        draft: {...draft, hasVenue: hasVenue || Boolean(campaign?.venue)},
+        venueName,
+        venueCountry,
+        sponsorDisplayName,
+        achievementSlug,
+        achievementTitle,
+        achievementDetail
+    }), [templateId, draft, hasVenue, campaign?.venue, venueName, venueCountry, sponsorDisplayName, achievementSlug, achievementTitle, achievementDetail]);
+
+    useEffect(() => {
+        if (!selectedId || !canMutate(campaign)) return;
+        const generated = generateBuilderCopy(builderSource, origins);
+        const current = currentGeneratedCopy(builderSource);
+        const next = nextAutoValues(current, generated, origins);
+        if (!next) return;
+        applyGeneratedCopy(next);
+    }, [builderSource, origins, campaign, selectedId]);
+
+    function applyGeneratedCopy(copy: Partial<GeneratedCopy>) {
+        setDraft((current) => mergeCopyIntoDraft(current, copy));
+        if (copy.achievementSlug != null) setAchievementSlug(copy.achievementSlug);
+        if (copy.achievementTitle != null) setAchievementTitle(copy.achievementTitle);
+        if (copy.achievementDetail != null) setAchievementDetail(copy.achievementDetail);
+    }
+
+    function updateDraft<K extends keyof CampaignDraftInput>(key: K, value: CampaignDraftInput[K]) {
+        setDraft((current) => ({...current, [key]: value}));
+        if (isGeneratedDraftKey(key)) {
+            setOrigins((current) => markManual(current, key));
+        }
+    }
+
+    function applyTemplate(nextId: CampaignTemplateId, force = false) {
+        if (nextId === templateId && !force) return;
+        if (!force && isFormSubstantiallyModified(origins, {venueName})) {
+            if (!window.confirm(TEMPLATE_CHANGE_CONFIRM)) return;
+        }
+        const nextDraft = applyTemplateDefaults(nextId, {
+            ...draft,
+            hasVenue: hasVenue || Boolean(campaign?.venue)
+        });
+        setTemplateId(nextId);
+        setOrigins(emptyFieldOrigins("auto"));
+        const generated = generateBuilderCopy({
+            templateId: nextId,
+            draft: nextDraft,
+            venueName,
+            venueCountry,
+            sponsorDisplayName,
+            achievementSlug: "",
+            achievementTitle: "",
+            achievementDetail: ""
+        }, emptyFieldOrigins("auto"));
+        setDraft(mergeCopyIntoDraft(nextDraft, generated));
+        setAchievementSlug(generated.achievementSlug);
+        setAchievementTitle(generated.achievementTitle);
+        setAchievementDetail(generated.achievementDetail);
+    }
+
+    function regenerate(fields: readonly GeneratedField[] | "all") {
+        if (fields === "all" || fields === COPY_FIELDS) {
+            if (isFormSubstantiallyModified(origins, {venueName}) && !window.confirm(REGENERATE_CONFIRM)) return;
+        }
+        const generated = generateBuilderCopy(builderSource, emptyFieldOrigins("auto"));
+        const selected = fields === "all" ? generated : {...currentGeneratedCopy(builderSource), ...pickCopy(generated, fields)};
+        const nextOrigins = emptyFieldOrigins("manual");
+        const touched = fields === "all" ? Object.keys(generated) as GeneratedField[] : fields;
+        for (const field of touched) nextOrigins[field] = "auto";
+        if (fields !== "all") {
+            for (const field of Object.keys(origins) as GeneratedField[]) {
+                if (!touched.includes(field)) nextOrigins[field] = origins[field];
+            }
+        }
+        setOrigins(nextOrigins);
+        applyGeneratedCopy(selected);
+    }
+
     const filtered = useMemo(
         () => campaigns.filter((item) => filter === "all" || item.status === filter),
         [campaigns, filter]
@@ -229,15 +317,68 @@ export default function AdminSponsoredChallengesClient() {
         return next;
     }, [campaigns]);
 
+    const discoveryCountries = countries.split(",").map((code) => code.trim()).filter(Boolean);
     const blocked = publishBlockedReason(draft.geoMode, hasVenue || Boolean(campaign?.venue));
     const buttons = lifecycleButtons(campaign?.status ?? "draft");
     const currentVersion = campaign ? currentRulesVersion(campaign.ruleVersions, campaign.rulesVersion) : null;
     const previousVersions = campaign ? historicalRulesVersions(campaign.ruleVersions, campaign.rulesVersion) : [];
+    const readiness = evaluateReadiness({
+        draft,
+        templateId,
+        venueName,
+        venueLat,
+        venueLng,
+        venueRadius,
+        achievementSlug,
+        achievementTitle,
+        achievementDetail,
+        hasPersistedDraft: Boolean(campaign),
+        persistedRulesVersion: campaign?.rulesVersion ?? null,
+        hasHistoricalRules: previousVersions.length > 0,
+        discoveryCountries
+    });
+    const preview = toPreviewCampaign({
+        title: draft.title,
+        publicSummary: draft.publicSummary,
+        description: draft.description,
+        presenterName: draft.presenterName,
+        sponsorOrganizationId: draft.sponsorOrganizationId,
+        sponsorDisplayName,
+        startsAt: draft.startsAt,
+        endsAt: draft.endsAt,
+        timezoneIdentifier: draft.timezoneIdentifier,
+        objectiveType: draft.objectiveType,
+        targetCount: draft.targetCount,
+        requiredTypeTag: draft.requiredTypeTag,
+        requiredSettingTag: draft.requiredSettingTag,
+        minimumCaptureGrade: draft.minimumCaptureGrade,
+        liveOnly: hasVenue ? true : draft.liveOnly,
+        externalImportsAllowed: hasVenue ? false : draft.externalImportsAllowed,
+        venueName,
+        rewardTitle: achievementTitle,
+        officialRules: draft.officialRules
+    });
+    const timezoneOptions = ADMIN_TIMEZONES.includes(draft.timezoneIdentifier as typeof ADMIN_TIMEZONES[number])
+        ? ADMIN_TIMEZONES
+        : [draft.timezoneIdentifier, ...ADMIN_TIMEZONES];
 
     function startCreate() {
+        const next = blankDraft();
+        const generated = generateBuilderCopy({
+            templateId: "blank",
+            draft: next,
+            venueName: "",
+            venueCountry: "",
+            sponsorDisplayName: null,
+            achievementSlug: "",
+            achievementTitle: "",
+            achievementDetail: ""
+        }, emptyFieldOrigins("auto"));
         setSelectedId("new");
         setCampaign(null);
-        setDraft(emptyDraft());
+        setTemplateId("blank");
+        setOrigins(emptyFieldOrigins("auto"));
+        setDraft(mergeCopyIntoDraft(next, generated));
         setVenueName("");
         setVenuePlaceId("");
         setVenueLat("");
@@ -245,9 +386,9 @@ export default function AdminSponsoredChallengesClient() {
         setVenueRadius("400");
         setVenueCountry("");
         setCountries("");
-        setAchievementSlug("");
-        setAchievementTitle("");
-        setAchievementDetail("");
+        setAchievementSlug(generated.achievementSlug);
+        setAchievementTitle(generated.achievementTitle);
+        setAchievementDetail(generated.achievementDetail);
         setConfirmArchive(false);
         setNotice(null);
         setError(null);
@@ -262,6 +403,8 @@ export default function AdminSponsoredChallengesClient() {
         };
         await act({action: "upsert_campaign", draft: payload}, "Campaign saved.");
     }
+
+    const editable = canMutate(campaign);
 
     return (
         <div className="space-y-6">
@@ -335,257 +478,319 @@ export default function AdminSponsoredChallengesClient() {
                         draft → submitted → approved → scheduled → live → completed → archived. submitted → rejected. Browser code never writes the status column.
                     </p>
 
-                    <FieldGrid>
-                        <Field label="Title">
-                            <input className={inputClass} value={draft.title} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, title: e.target.value})} />
-                        </Field>
-                        <Field label="Slug">
-                            <input className={inputClass} value={draft.slug} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, slug: e.target.value})} />
-                        </Field>
-                        <Field label="Authorship">
-                            <select
-                                className={inputClass}
-                                disabled={!canMutate(campaign)}
-                                value={draft.sponsorOrganizationId ?? ""}
-                                onChange={(e) => setDraft({...draft, sponsorOrganizationId: e.target.value || null})}
-                            >
-                                <option value="">AnimalDex-authored</option>
-                                {organizations.map((org) => <option key={org.id} value={org.id}>{org.displayName}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Presenter / sponsor display">
-                            <input className={inputClass} value={draft.presenterName ?? ""} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, presenterName: e.target.value})} />
-                        </Field>
-                        <Field label="Starts">
-                            <input type="datetime-local" className={inputClass} value={draft.startsAt} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, startsAt: e.target.value})} />
-                        </Field>
-                        <Field label="Ends">
-                            <input type="datetime-local" className={inputClass} value={draft.endsAt} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, endsAt: e.target.value})} />
-                        </Field>
-                        <Field label="Timezone">
-                            <select className={inputClass} value={draft.timezoneIdentifier} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, timezoneIdentifier: e.target.value})}>
-                                {TIMEZONES.map((zone) => <option key={zone}>{zone}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Objective">
-                            <select className={inputClass} value={draft.objectiveType} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, objectiveType: e.target.value})}>
-                                {OBJECTIVE_TYPES.map((type) => <option key={type} value={type}>{objectiveLabel(type)}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Target count">
-                            <input type="number" min={1} className={inputClass} value={draft.targetCount} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, targetCount: Number(e.target.value)})} />
-                        </Field>
-                        <Field label="Required type tag">
-                            <input className={inputClass} placeholder="Bird" value={draft.requiredTypeTag ?? ""} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, requiredTypeTag: e.target.value})} />
-                        </Field>
-                        <Field label="Required setting">
-                            <select className={inputClass} value={draft.requiredSettingTag ?? ""} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, requiredSettingTag: e.target.value})}>
-                                {SETTING_TAGS.map((tag) => <option key={tag} value={tag}>{tag || "Any"}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Minimum capture grade">
-                            <input type="number" min={1} max={10} className={inputClass} value={draft.minimumCaptureGrade ?? ""} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, minimumCaptureGrade: e.target.value ? Number(e.target.value) : null})} />
-                        </Field>
-                    </FieldGrid>
-
-                    <Field label="Public summary">
-                        <textarea className={inputClass} rows={2} value={draft.publicSummary} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, publicSummary: e.target.value})} />
-                    </Field>
-                    <Field label="Description">
-                        <textarea className={inputClass} rows={4} value={draft.description} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, description: e.target.value})} />
-                    </Field>
-
-                    <label className="flex items-center gap-2 text-sm text-ink-200">
-                        <input type="checkbox" checked={hasVenue ? true : draft.liveOnly} disabled={!canMutate(campaign) || hasVenue} onChange={(e) => setDraft({...draft, liveOnly: e.target.checked})} />
-                        Live captures only
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-ink-200">
-                        <input type="checkbox" checked={hasVenue ? false : draft.externalImportsAllowed} disabled={!canMutate(campaign) || hasVenue} onChange={(e) => setDraft({...draft, externalImportsAllowed: e.target.checked})} />
-                        Allow external imports
-                    </label>
-                    {hasVenue ? <p className="text-xs text-ink-400">{VENUE_CONSTRAINT_COPY}</p> : null}
-
-                    {canMutate(campaign) ? (
-                        <button type="button" disabled={busy} onClick={() => saveDraft()} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50">
-                            Save campaign
-                        </button>
-                    ) : <p className="text-xs text-ink-500">Eligibility fields are locked after approval. Use rules revision for copy changes.</p>}
-
-                    <OrgBox
-                        disabled={busy || !canMutate(campaign)}
-                        name={orgName}
-                        slug={orgSlug}
-                        onName={setOrgName}
-                        onSlug={setOrgSlug}
-                        onCreate={() => act({
-                            action: "upsert_organization",
-                            organization: {displayName: orgName, slug: orgSlug}
-                        }, "Sponsor organization saved.")}
-                    />
-
-                    <Block title="Venue" note={VENUE_SECURITY_COPY}>
-                        <p className="text-xs text-ink-400">Validation radius is the qualification geofence. Discovery radius is only used for nearby listing.</p>
-                        <FieldGrid>
-                            <Field label="Venue display name"><input className={inputClass} value={venueName} disabled={!canMutate(campaign)} onChange={(e) => setVenueName(e.target.value)} /></Field>
-                            <Field label="Google Place ID"><input className={inputClass} value={venuePlaceId} disabled={!canMutate(campaign)} onChange={(e) => setVenuePlaceId(e.target.value)} /></Field>
-                            <Field label="Latitude"><input className={inputClass} value={venueLat} disabled={!canMutate(campaign)} onChange={(e) => setVenueLat(e.target.value)} /></Field>
-                            <Field label="Longitude"><input className={inputClass} value={venueLng} disabled={!canMutate(campaign)} onChange={(e) => setVenueLng(e.target.value)} /></Field>
-                            <Field label="Validation radius (m)"><input className={inputClass} value={venueRadius} disabled={!canMutate(campaign)} onChange={(e) => setVenueRadius(e.target.value)} /></Field>
-                            <Field label="Venue country code"><input className={inputClass} value={venueCountry} disabled={!canMutate(campaign)} onChange={(e) => setVenueCountry(e.target.value)} /></Field>
-                            <Field label="Discovery radius (m)">
-                                <input className={inputClass} value={draft.discoveryRadiusM ?? ""} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, discoveryRadiusM: e.target.value ? Number(e.target.value) : null})} />
-                            </Field>
-                        </FieldGrid>
-                        {campaign && canMutate(campaign) ? (
-                            <button type="button" disabled={busy || !venueName || !venueLat || !venueLng} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" onClick={() => act({
-                                action: "set_venue",
-                                campaignId: campaign.id,
-                                venue: {
-                                    displayName: venueName,
-                                    latitude: Number(venueLat),
-                                    longitude: Number(venueLng),
-                                    validationRadiusM: Number(venueRadius),
-                                    googlePlaceId: venuePlaceId || null,
-                                    countryCode: venueCountry || null
-                                }
-                            }, "Venue saved.")}>
-                                Save venue
-                            </button>
-                        ) : null}
-                    </Block>
-
-                    <Block title="Discovery targeting" note={DISCOVERY_GEOGRAPHY_COPY}>
-                        <p className="text-xs font-black uppercase tracking-[.14em] text-amber-200">Not participant eligibility</p>
-                        <FieldGrid>
-                            <Field label="Discovery mode">
-                                <select className={inputClass} value={draft.geoMode} disabled={!canMutate(campaign)} onChange={(e) => setDraft({...draft, geoMode: e.target.value})}>
-                                    <option value="unrestricted">Unrestricted</option>
-                                    <option value="allowlist">Allowlist</option>
-                                    <option value="denylist">Denylist</option>
-                                </select>
-                            </Field>
-                            <Field label="Country codes (comma separated)">
-                                <input className={inputClass} placeholder="ID, SG" value={countries} disabled={!canMutate(campaign)} onChange={(e) => setCountries(e.target.value)} />
-                            </Field>
-                        </FieldGrid>
-                        {blocked ? <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">{NON_VENUE_COUNTRY_COPY}</p> : null}
-                        {campaign && canMutate(campaign) ? (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => saveDraft()}>Save discovery mode</button>
-                                <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
-                                    action: "set_geo",
-                                    campaignId: campaign.id,
-                                    countryCodes: countries.split(",").map((code) => code.trim()).filter(Boolean)
-                                }, "Discovery countries saved.")}>Save discovery countries</button>
-                            </div>
-                        ) : null}
-                    </Block>
-
-                    <Block title="Official rules & reward terms">
-                        <p className="text-xs text-ink-400">Current rules version: {campaign?.rulesVersion ?? 1}. Apple disclaimer is persisted with each immutable version.</p>
-                        <Field label="Official rules">
-                            <textarea className={inputClass} rows={7} value={draft.officialRules} disabled={campaign ? !canReviseRules(campaign.status) && !canMutate(campaign) : false} onChange={(e) => setDraft({...draft, officialRules: e.target.value})} />
-                        </Field>
-                        <Field label="Reward terms">
-                            <textarea className={inputClass} rows={4} value={draft.rewardTerms} disabled={campaign ? !canReviseRules(campaign.status) && !canMutate(campaign) : false} onChange={(e) => setDraft({...draft, rewardTerms: e.target.value})} />
-                        </Field>
-                        <p className="text-xs text-ink-400">Persisted Apple disclaimer: {APPLE_DISCLAIMER}</p>
-                        {campaign && canReviseRules(campaign.status) && !canMutate(campaign) ? (
-                            <button type="button" disabled={busy} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
-                                action: "revise_rules",
-                                campaignId: campaign.id,
-                                officialRules: draft.officialRules,
-                                rewardTerms: draft.rewardTerms
-                            }, "New immutable rules version created. Existing participants stay on the version they accepted.")}>
-                                Revise rules (new version)
-                            </button>
-                        ) : null}
-                    </Block>
-
-                    <Block title="Rules history" note={RULES_HISTORY_COPY}>
-                        {currentVersion ? (
-                            <article className="rounded-2xl border border-primary-400/40 bg-primary-500/10 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-primary-200">Current · v{currentVersion.rulesVersion}</p>
-                                <p className="mt-1 text-xs text-ink-400">{new Date(currentVersion.createdAt).toLocaleString()}</p>
-                                <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-100">{currentVersion.officialRules}</pre>
-                                <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-300">{currentVersion.rewardTerms}</pre>
-                                <p className="mt-3 text-xs text-ink-400">{currentVersion.appleDisclaimer}</p>
-                            </article>
-                        ) : <p className="text-sm text-ink-500">Save the campaign to persist version 1.</p>}
-                        {previousVersions.map((version) => (
-                            <article key={version.rulesVersion} className="rounded-2xl border border-line-300 bg-canvas-950/60 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Accepted history · v{version.rulesVersion}</p>
-                                <p className="mt-1 text-xs text-ink-500">{new Date(version.createdAt).toLocaleString()}</p>
-                                <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-200">{version.officialRules}</pre>
-                                <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-400">{version.rewardTerms}</pre>
-                                <p className="mt-3 text-xs text-ink-500">{version.appleDisclaimer}</p>
-                            </article>
-                        ))}
-                    </Block>
-
-                    <Block title="Achievement reward">
-                        <p className="text-xs text-ink-400">Phase 1 supports achievement only. Credits, cash, vouchers, sweepstakes, prize pools, and winner selection are not available.</p>
-                        <FieldGrid>
-                            <Field label="Achievement key / slug"><input className={inputClass} value={achievementSlug} disabled={!canMutate(campaign) && Boolean(campaign)} onChange={(e) => setAchievementSlug(e.target.value)} /></Field>
-                            <Field label="Achievement name"><input className={inputClass} value={achievementTitle} disabled={!canMutate(campaign) && Boolean(campaign)} onChange={(e) => setAchievementTitle(e.target.value)} /></Field>
-                        </FieldGrid>
-                        <Field label="Description">
-                            <textarea className={inputClass} rows={2} value={achievementDetail} disabled={!canMutate(campaign) && Boolean(campaign)} onChange={(e) => setAchievementDetail(e.target.value)} />
-                        </Field>
-                        {campaign && canMutate(campaign) ? (
-                            <button type="button" disabled={busy} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
-                                action: "set_reward",
-                                campaignId: campaign.id,
-                                achievement: {slug: achievementSlug, title: achievementTitle, detail: achievementDetail}
-                            }, "Achievement reward saved.")}>Save achievement</button>
-                        ) : null}
-                    </Block>
-
-                    {campaign ? (
-                        <Block title="Operator review">
-                            <ReviewList campaign={campaign} blocked={blocked} />
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {buttons.submit && canSubmitCampaign(campaign.status) ? (
-                                    <button type="button" disabled={busy || Boolean(blocked)} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50" onClick={() => act({action: "submit", campaignId: campaign.id}, "Submitted for review.")}>Submit</button>
-                                ) : null}
-                                {buttons.approve ? (
-                                    <button type="button" disabled={busy} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950" onClick={() => act({action: "review", campaignId: campaign.id, reviewAction: "approve"}, "Approved.")}>Approve</button>
-                                ) : null}
-                                {buttons.reject ? (
-                                    <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({action: "review", campaignId: campaign.id, reviewAction: "reject"}, "Rejected.")}>Reject</button>
-                                ) : null}
-                            </div>
-                            {canReviewCampaign(campaign.status) ? <p className="mt-2 text-xs text-ink-400">Approval is backend-authoritative. If the RPC rejects the configuration, this screen will show that error.</p> : null}
-                        </Block>
+                    {editable ? (
+                        <CampaignTemplatePicker
+                            selected={templateId}
+                            disabled={busy}
+                            onSelect={(id) => applyTemplate(id)}
+                        />
                     ) : null}
 
-                    {campaign && canArchiveCampaign(campaign.status) ? (
-                        <Block title="Archive kill switch" note={ARCHIVE_COPY}>
-                            {!confirmArchive ? (
-                                <button type="button" className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100" onClick={() => setConfirmArchive(true)}>Archive campaign</button>
-                            ) : (
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_26rem] lg:items-start">
+                        <div className="space-y-6">
+                            <CampaignReadinessPanel result={readiness} />
+
+                            {editable ? (
                                 <div className="flex flex-wrap gap-2">
-                                    <button type="button" disabled={busy} className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-black text-white" onClick={() => act({action: "archive", campaignId: campaign.id}, "Campaign archived.")}>Confirm archive</button>
-                                    <button type="button" className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => setConfirmArchive(false)}>Cancel</button>
+                                    <button type="button" className={ghostButton} onClick={() => regenerate("all")}>Use generated defaults</button>
+                                    <button type="button" className={ghostButton} onClick={() => regenerate(COPY_FIELDS)}>Regenerate copy</button>
+                                    <button type="button" className={ghostButton} onClick={() => regenerate(["slug"])}>Reset slug</button>
+                                    <button type="button" className={ghostButton} onClick={() => regenerate(DATE_FIELDS)}>Reset dates</button>
                                 </div>
-                            )}
-                        </Block>
-                    ) : null}
+                            ) : null}
 
-                    {campaign?.stats ? (
-                        <Block title="Operational totals">
-                            <div className="grid grid-cols-3 gap-3">
-                                <Stat value={campaign.stats.participantCount} label="Joined participants" />
-                                <Stat value={campaign.stats.completedCount} label="Completed / rewarded" />
-                                <Stat value={campaign.stats.qualifyingCaptureCount} label="Qualifying captures" />
-                            </div>
-                            <p className="mt-3 text-xs text-ink-500">Counts only. No user identities, emails, capture IDs, media, or location evidence.</p>
-                        </Block>
-                    ) : null}
+                            <FieldGrid>
+                                <Field label="Title" origin={origins.title}>
+                                    <input className={inputClass} value={draft.title} disabled={!editable} onChange={(e) => updateDraft("title", e.target.value)} />
+                                </Field>
+                                <Field
+                                    label="Slug"
+                                    origin={origins.slug}
+                                    action={editable ? {label: "Reset slug", onClick: () => regenerate(["slug"])} : undefined}
+                                >
+                                    <input className={inputClass} value={draft.slug} disabled={!editable} onChange={(e) => updateDraft("slug", e.target.value)} />
+                                </Field>
+                                <Field label="Authorship">
+                                    <select
+                                        className={inputClass}
+                                        disabled={!editable}
+                                        value={draft.sponsorOrganizationId ?? ""}
+                                        onChange={(e) => updateDraft("sponsorOrganizationId", e.target.value || null)}
+                                    >
+                                        <option value="">AnimalDex-authored</option>
+                                        {organizations.map((org) => <option key={org.id} value={org.id}>{org.displayName}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Presenter / sponsor display" origin={origins.presenterName} warning={readiness.fieldWarnings.sponsor}>
+                                    <input className={inputClass} value={draft.presenterName ?? ""} disabled={!editable} onChange={(e) => updateDraft("presenterName", e.target.value)} />
+                                </Field>
+                                <Field label="Starts" origin={origins.startsAt} warning={readiness.fieldWarnings.dates}>
+                                    <input type="datetime-local" className={inputClass} value={draft.startsAt} disabled={!editable} onChange={(e) => updateDraft("startsAt", e.target.value)} />
+                                </Field>
+                                <Field
+                                    label="Ends"
+                                    origin={origins.endsAt}
+                                    warning={readiness.fieldWarnings.dates}
+                                    action={editable ? {label: "Reset dates", onClick: () => regenerate(DATE_FIELDS)} : undefined}
+                                >
+                                    <input type="datetime-local" className={inputClass} value={draft.endsAt} disabled={!editable} onChange={(e) => updateDraft("endsAt", e.target.value)} />
+                                </Field>
+                                <Field label="Timezone" origin={origins.timezoneIdentifier}>
+                                    <select className={inputClass} value={draft.timezoneIdentifier} disabled={!editable} onChange={(e) => updateDraft("timezoneIdentifier", e.target.value)}>
+                                        {timezoneOptions.map((zone) => <option key={zone}>{zone}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Objective">
+                                    <select className={inputClass} value={draft.objectiveType} disabled={!editable} onChange={(e) => updateDraft("objectiveType", e.target.value)}>
+                                        {OBJECTIVE_TYPES.map((type) => <option key={type} value={type}>{objectiveLabel(type)}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Target count">
+                                    <input type="number" min={1} className={inputClass} value={draft.targetCount} disabled={!editable} onChange={(e) => updateDraft("targetCount", Number(e.target.value))} />
+                                </Field>
+                                <Field label="Required type tag">
+                                    <input className={inputClass} placeholder="Bird" value={draft.requiredTypeTag ?? ""} disabled={!editable} onChange={(e) => updateDraft("requiredTypeTag", e.target.value)} onBlur={(e) => updateDraft("requiredTypeTag", canonicalizeTypeTag(e.target.value) ?? "")} />
+                                </Field>
+                                <Field label="Required setting">
+                                    <select className={inputClass} value={draft.requiredSettingTag ?? ""} disabled={!editable} onChange={(e) => updateDraft("requiredSettingTag", canonicalizeSettingTag(e.target.value) ?? "")}>
+                                        {SETTING_TAGS.map((tag) => <option key={tag} value={tag}>{tag ? settingTagDisplayLabel(tag) : "Any"}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Minimum capture grade">
+                                    <input type="number" min={1} max={10} className={inputClass} value={draft.minimumCaptureGrade ?? ""} disabled={!editable} onChange={(e) => updateDraft("minimumCaptureGrade", e.target.value ? Number(e.target.value) : null)} />
+                                </Field>
+                            </FieldGrid>
+
+                            <Field label="Public summary" origin={origins.publicSummary}>
+                                <textarea className={inputClass} rows={2} value={draft.publicSummary} disabled={!editable} onChange={(e) => updateDraft("publicSummary", e.target.value)} />
+                            </Field>
+                            <Field label="Description" origin={origins.description}>
+                                <textarea className={inputClass} rows={4} value={draft.description} disabled={!editable} onChange={(e) => updateDraft("description", e.target.value)} />
+                            </Field>
+
+                            <label className="flex items-center gap-2 text-sm text-ink-200">
+                                <input type="checkbox" checked={hasVenue ? true : draft.liveOnly} disabled={!editable || hasVenue} onChange={(e) => updateDraft("liveOnly", e.target.checked)} />
+                                Live captures only
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-ink-200">
+                                <input type="checkbox" checked={hasVenue ? false : draft.externalImportsAllowed} disabled={!editable || hasVenue} onChange={(e) => updateDraft("externalImportsAllowed", e.target.checked)} />
+                                Allow external imports
+                            </label>
+                            {hasVenue ? <p className="text-xs text-ink-400">{VENUE_CONSTRAINT_COPY}</p> : null}
+                            {readiness.fieldWarnings.imports ? <p className="text-xs text-amber-100">{readiness.fieldWarnings.imports}</p> : null}
+                            {readiness.fieldWarnings.liveOnly ? <p className="text-xs text-amber-100">{readiness.fieldWarnings.liveOnly}</p> : null}
+
+                            {editable ? (
+                                <button type="button" disabled={busy} onClick={() => saveDraft()} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50">
+                                    Save campaign
+                                </button>
+                            ) : <p className="text-xs text-ink-500">Eligibility fields are locked after approval. Use rules revision for copy changes.</p>}
+
+                            <OrgBox
+                                disabled={busy || !editable}
+                                name={orgName}
+                                slug={orgSlug}
+                                onName={setOrgName}
+                                onSlug={setOrgSlug}
+                                onCreate={() => act({
+                                    action: "upsert_organization",
+                                    organization: {displayName: orgName, slug: orgSlug}
+                                }, "Sponsor organization saved.")}
+                            />
+
+                            <Block title="Venue" note={VENUE_SECURITY_COPY}>
+                                <p className="text-xs text-ink-400">Validation radius is the qualification geofence. Discovery radius is only used for nearby listing.</p>
+                                {readiness.fieldWarnings.venue ? <p className="text-sm text-amber-100">{readiness.fieldWarnings.venue}</p> : null}
+                                <FieldGrid>
+                                    <Field label="Venue display name"><input className={inputClass} value={venueName} disabled={!editable} onChange={(e) => setVenueName(e.target.value)} /></Field>
+                                    <Field label="Google Place ID"><input className={inputClass} value={venuePlaceId} disabled={!editable} onChange={(e) => setVenuePlaceId(e.target.value)} /></Field>
+                                    <Field label="Latitude"><input className={inputClass} value={venueLat} disabled={!editable} onChange={(e) => setVenueLat(e.target.value)} /></Field>
+                                    <Field label="Longitude"><input className={inputClass} value={venueLng} disabled={!editable} onChange={(e) => setVenueLng(e.target.value)} /></Field>
+                                    <Field label="Validation radius (m)"><input className={inputClass} value={venueRadius} disabled={!editable} onChange={(e) => setVenueRadius(e.target.value)} /></Field>
+                                    <Field label="Venue country code"><input className={inputClass} value={venueCountry} disabled={!editable} onChange={(e) => setVenueCountry(e.target.value)} /></Field>
+                                    <Field label="Discovery radius (m)">
+                                        <input className={inputClass} value={draft.discoveryRadiusM ?? ""} disabled={!editable} onChange={(e) => updateDraft("discoveryRadiusM", e.target.value ? Number(e.target.value) : null)} />
+                                    </Field>
+                                </FieldGrid>
+                                {campaign && editable ? (
+                                    <button type="button" disabled={busy || !venueName || !venueLat || !venueLng} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" onClick={() => act({
+                                        action: "set_venue",
+                                        campaignId: campaign.id,
+                                        venue: {
+                                            displayName: venueName,
+                                            latitude: Number(venueLat),
+                                            longitude: Number(venueLng),
+                                            validationRadiusM: Number(venueRadius),
+                                            googlePlaceId: venuePlaceId || null,
+                                            countryCode: venueCountry || null
+                                        }
+                                    }, "Venue saved.")}>
+                                        Save venue
+                                    </button>
+                                ) : null}
+                            </Block>
+
+                            <Block title="Discovery targeting" note={DISCOVERY_GEOGRAPHY_COPY}>
+                                <p className="text-xs font-black uppercase tracking-[.14em] text-amber-200">Not participant eligibility</p>
+                                {readiness.fieldWarnings.geo ? <p className="text-sm text-amber-100">{readiness.fieldWarnings.geo}</p> : null}
+                                <FieldGrid>
+                                    <Field label="Discovery mode">
+                                        <select className={inputClass} value={draft.geoMode} disabled={!editable} onChange={(e) => updateDraft("geoMode", e.target.value)}>
+                                            <option value="unrestricted">Unrestricted</option>
+                                            <option value="allowlist">Allowlist</option>
+                                            <option value="denylist">Denylist</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Country codes (comma separated)">
+                                        <input className={inputClass} placeholder="ID, SG" value={countries} disabled={!editable} onChange={(e) => setCountries(e.target.value)} />
+                                    </Field>
+                                </FieldGrid>
+                                {blocked ? <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">{NON_VENUE_COUNTRY_COPY}</p> : null}
+                                {campaign && editable ? (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => saveDraft()}>Save discovery mode</button>
+                                        <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
+                                            action: "set_geo",
+                                            campaignId: campaign.id,
+                                            countryCodes: discoveryCountries
+                                        }, "Discovery countries saved.")}>Save discovery countries</button>
+                                    </div>
+                                ) : null}
+                            </Block>
+
+                            <Block title="Official rules & reward terms">
+                                <p className="text-xs text-ink-400">Current rules version: {campaign?.rulesVersion ?? 1}. Apple disclaimer is persisted with each immutable version.</p>
+                                <p className="text-xs text-primary-100">{GENERATED_RULES_NOTICE}</p>
+                                {readiness.fieldWarnings.rulesHistory ? <p className="text-xs text-amber-100">{readiness.fieldWarnings.rulesHistory}</p> : null}
+                                <Field label="Official rules" origin={origins.officialRules}>
+                                    <textarea className={inputClass} rows={7} value={draft.officialRules} disabled={campaign ? !canReviseRules(campaign.status) && !editable : false} onChange={(e) => updateDraft("officialRules", e.target.value)} />
+                                </Field>
+                                <Field label="Reward terms" origin={origins.rewardTerms}>
+                                    <textarea className={inputClass} rows={4} value={draft.rewardTerms} disabled={campaign ? !canReviseRules(campaign.status) && !editable : false} onChange={(e) => updateDraft("rewardTerms", e.target.value)} />
+                                </Field>
+                                <p className="text-xs text-ink-400">Persisted Apple disclaimer: {APPLE_DISCLAIMER}</p>
+                                {campaign && canReviseRules(campaign.status) && !editable ? (
+                                    <button type="button" disabled={busy} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
+                                        action: "revise_rules",
+                                        campaignId: campaign.id,
+                                        officialRules: draft.officialRules,
+                                        rewardTerms: draft.rewardTerms
+                                    }, "New immutable rules version created. Existing participants stay on the version they accepted.")}>
+                                        Revise rules (new version)
+                                    </button>
+                                ) : null}
+                            </Block>
+
+                            <Block title="Rules history" note={RULES_HISTORY_COPY}>
+                                {currentVersion ? (
+                                    <article className="rounded-2xl border border-primary-400/40 bg-primary-500/10 p-4">
+                                        <p className="text-xs font-black uppercase tracking-[.14em] text-primary-200">Current · v{currentVersion.rulesVersion}</p>
+                                        <p className="mt-1 text-xs text-ink-400">{new Date(currentVersion.createdAt).toLocaleString()}</p>
+                                        <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-100">{currentVersion.officialRules}</pre>
+                                        <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-300">{currentVersion.rewardTerms}</pre>
+                                        <p className="mt-3 text-xs text-ink-400">{currentVersion.appleDisclaimer}</p>
+                                    </article>
+                                ) : <p className="text-sm text-ink-500">Save the campaign to persist version 1.</p>}
+                                {previousVersions.map((version) => (
+                                    <article key={version.rulesVersion} className="rounded-2xl border border-line-300 bg-canvas-950/60 p-4">
+                                        <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Accepted history · v{version.rulesVersion}</p>
+                                        <p className="mt-1 text-xs text-ink-500">{new Date(version.createdAt).toLocaleString()}</p>
+                                        <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-200">{version.officialRules}</pre>
+                                        <pre className="mt-3 whitespace-pre-wrap text-sm text-ink-400">{version.rewardTerms}</pre>
+                                        <p className="mt-3 text-xs text-ink-500">{version.appleDisclaimer}</p>
+                                    </article>
+                                ))}
+                            </Block>
+
+                            <Block title="Achievement reward">
+                                <p className="text-xs text-ink-400">Phase 1 supports achievement only. Credits, cash, vouchers, sweepstakes, prize pools, and winner selection are not available.</p>
+                                {readiness.fieldWarnings.reward ? <p className="text-sm text-amber-100">{readiness.fieldWarnings.reward}</p> : null}
+                                <FieldGrid>
+                                    <Field label="Achievement key / slug" origin={origins.achievementSlug}>
+                                        <input className={inputClass} value={achievementSlug} disabled={!editable && Boolean(campaign)} onChange={(e) => {
+                                            setAchievementSlug(e.target.value);
+                                            setOrigins((current) => markManual(current, "achievementSlug"));
+                                        }} />
+                                    </Field>
+                                    <Field label="Achievement name" origin={origins.achievementTitle}>
+                                        <input className={inputClass} value={achievementTitle} disabled={!editable && Boolean(campaign)} onChange={(e) => {
+                                            setAchievementTitle(e.target.value);
+                                            setOrigins((current) => markManual(current, "achievementTitle"));
+                                        }} />
+                                    </Field>
+                                </FieldGrid>
+                                <Field label="Description" origin={origins.achievementDetail}>
+                                    <textarea className={inputClass} rows={2} value={achievementDetail} disabled={!editable && Boolean(campaign)} onChange={(e) => {
+                                        setAchievementDetail(e.target.value);
+                                        setOrigins((current) => markManual(current, "achievementDetail"));
+                                    }} />
+                                </Field>
+                                {campaign && editable ? (
+                                    <button type="button" disabled={busy} className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({
+                                        action: "set_reward",
+                                        campaignId: campaign.id,
+                                        achievement: {slug: achievementSlug, title: achievementTitle, detail: achievementDetail}
+                                    }, "Achievement reward saved.")}>Save achievement</button>
+                                ) : null}
+                            </Block>
+
+                            {campaign ? (
+                                <Block title="Operator review">
+                                    <ReviewList campaign={campaign} blocked={blocked} />
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        {buttons.submit && canSubmitCampaign(campaign.status) ? (
+                                            <button type="button" disabled={busy || Boolean(blocked)} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50" onClick={() => act({action: "submit", campaignId: campaign.id}, "Submitted for review.")}>Submit</button>
+                                        ) : null}
+                                        {buttons.approve ? (
+                                            <button type="button" disabled={busy} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950" onClick={() => act({action: "review", campaignId: campaign.id, reviewAction: "approve"}, "Approved.")}>Approve</button>
+                                        ) : null}
+                                        {buttons.reject ? (
+                                            <button type="button" disabled={busy} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => act({action: "review", campaignId: campaign.id, reviewAction: "reject"}, "Rejected.")}>Reject</button>
+                                        ) : null}
+                                    </div>
+                                    {canReviewCampaign(campaign.status) ? <p className="mt-2 text-xs text-ink-400">Approval is backend-authoritative. If the RPC rejects the configuration, this screen will show that error.</p> : null}
+                                </Block>
+                            ) : null}
+
+                            {campaign && canArchiveCampaign(campaign.status) ? (
+                                <Block title="Archive kill switch" note={ARCHIVE_COPY}>
+                                    {!confirmArchive ? (
+                                        <button type="button" className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100" onClick={() => setConfirmArchive(true)}>Archive campaign</button>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            <button type="button" disabled={busy} className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-black text-white" onClick={() => act({action: "archive", campaignId: campaign.id}, "Campaign archived.")}>Confirm archive</button>
+                                            <button type="button" className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white" onClick={() => setConfirmArchive(false)}>Cancel</button>
+                                        </div>
+                                    )}
+                                </Block>
+                            ) : null}
+
+                            {campaign?.stats ? (
+                                <Block title="Operational totals">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <Stat value={campaign.stats.participantCount} label="Joined participants" />
+                                        <Stat value={campaign.stats.completedCount} label="Completed / rewarded" />
+                                        <Stat value={campaign.stats.qualifyingCaptureCount} label="Qualifying captures" />
+                                    </div>
+                                    <p className="mt-3 text-xs text-ink-500">Counts only. No user identities, emails, capture IDs, media, or location evidence.</p>
+                                </Block>
+                            ) : null}
+                        </div>
+                        <CampaignPreview campaign={preview} />
+                    </div>
                 </section>
             ) : null}
         </div>
     );
+}
+
+const DRAFT_GENERATED_KEYS: ReadonlyArray<keyof CampaignDraftInput> = [
+    "title", "slug", "publicSummary", "description", "officialRules", "rewardTerms",
+    "presenterName", "startsAt", "endsAt", "timezoneIdentifier"
+];
+
+function isGeneratedDraftKey(key: keyof CampaignDraftInput): key is Extract<GeneratedField, keyof CampaignDraftInput> {
+    return DRAFT_GENERATED_KEYS.includes(key);
 }
 
 function canMutate(campaign: AdminCampaignDetail | null) {
@@ -593,6 +798,7 @@ function canMutate(campaign: AdminCampaignDetail | null) {
 }
 
 const inputClass = "w-full rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white outline-none focus:border-primary-300 disabled:opacity-60";
+const ghostButton = "rounded-xl border border-line-300 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50";
 
 function FilterChip({active, label, onClick}: {active: boolean; label: string; onClick: () => void}) {
     return (
@@ -615,12 +821,35 @@ function FieldGrid({children}: {children: ReactNode}) {
     return <div className="grid gap-3 md:grid-cols-2">{children}</div>;
 }
 
-function Field({label, children}: {label: string; children: ReactNode}) {
+function Field({
+    label,
+    children,
+    origin,
+    warning,
+    action
+}: {
+    label: string;
+    children: ReactNode;
+    origin?: FieldOrigin;
+    warning?: string;
+    action?: {label: string; onClick: () => void};
+}) {
     return (
-        <label className="block space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-[.12em] text-ink-500">{label}</span>
+        <div className="block space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-[.12em] text-ink-500">{label}</span>
+                {origin === "auto" ? (
+                    <span className="rounded-full border border-primary-400/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[.12em] text-primary-100">Auto</span>
+                ) : null}
+                {action ? (
+                    <button type="button" className="text-[10px] font-bold text-primary-200" onClick={action.onClick}>
+                        {action.label}
+                    </button>
+                ) : null}
+            </div>
             {children}
-        </label>
+            {warning ? <p className="text-xs text-amber-100">{warning}</p> : null}
+        </div>
     );
 }
 

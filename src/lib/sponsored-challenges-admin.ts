@@ -272,6 +272,92 @@ export function applyVenueConstraints(input: CampaignDraftInput): CampaignDraftI
     };
 }
 
+/**
+ * Canonical persisted values for campaign tags.
+ *
+ * Type tags: evaluator matches `lower(btrim(capture_tag)) = lower(btrim(required))`.
+ * Capture `type_tags` and official SQL fixtures use title-case (`Bird`).
+ *
+ * Setting tags: evaluator compares
+ * `sponsored_campaign_normalize_setting` on both sides, which calls
+ * `capture_game_stats_setting_tag(value, NULL)` — a case-sensitive CASE.
+ * `zoo` becomes `Unknown` and will not match a capture stored as `Zoo`.
+ * Official fixtures and iOS `SettingTag` raw values are title-case (`Zoo`).
+ *
+ * Preferred lowercase stored values are therefore not compatible for settings.
+ * Do not change the SQL helper; serialize title-case instead.
+ */
+export const CANONICAL_SETTING_TAGS = ["Wild", "Zoo", "Farm", "Domestic", "Unknown"] as const;
+export const CANONICAL_TYPE_TAGS = [
+    "Big Cat",
+    "Bird",
+    "Reptile",
+    "Mammal",
+    "Rainforest",
+    "Safari",
+    "Herbivore",
+    "Amphibian",
+    "Domestic",
+    "Pet",
+    "Farm Animal",
+    "Feline",
+    "Canine",
+    "Livestock",
+    "Primate",
+    "Aquatic",
+    "Rodent",
+    "Ungulate"
+] as const;
+
+function matchCanonical(value: string, known: readonly string[]): string | undefined {
+    const trimmed = value.trim();
+    return known.find((item) => item.toLowerCase() === trimmed.toLowerCase());
+}
+
+export function canonicalizeSettingTag(value?: string | null): string | null {
+    const trimmed = value?.trim();
+    if (!trimmed) return null;
+    return matchCanonical(trimmed, CANONICAL_SETTING_TAGS) ?? null;
+}
+
+export function canonicalizeTypeTag(value?: string | null): string | null {
+    const trimmed = value?.trim();
+    if (!trimmed) return null;
+    return matchCanonical(trimmed, CANONICAL_TYPE_TAGS) ?? trimmed;
+}
+
+export function settingTagDisplayLabel(value?: string | null): string {
+    return canonicalizeSettingTag(value) ?? value?.trim() ?? "";
+}
+
+export function typeTagDisplayLabel(value?: string | null): string {
+    return canonicalizeTypeTag(value) ?? "";
+}
+
+/** Exact mirror of `capture_game_stats_setting_tag(p_setting, NULL)`. Not a second rules engine. */
+export function backendNormalizeSetting(value?: string | null): string {
+    switch ((value ?? "").trim()) {
+        case "Zoo":
+            return "Zoo";
+        case "Farm":
+            return "Farm";
+        case "Domestic":
+            return "Domestic";
+        case "Wild":
+            return "Wild";
+        default:
+            return "Unknown";
+    }
+}
+
+export function backendTypeTagMatches(captureTag: string, requiredTag: string): boolean {
+    return captureTag.trim().toLowerCase() === requiredTag.trim().toLowerCase();
+}
+
+export function backendSettingMatches(captureSetting: string, requiredSetting: string): boolean {
+    return backendNormalizeSetting(captureSetting) === backendNormalizeSetting(requiredSetting);
+}
+
 export function serializeCampaignUpsert(input: CampaignDraftInput) {
     const draft = applyVenueConstraints(input);
     if (!isObjectiveType(draft.objectiveType)) {
@@ -297,8 +383,8 @@ export function serializeCampaignUpsert(input: CampaignDraftInput) {
         p_id: draft.id?.trim() || null,
         p_sponsor_organization_id: draft.sponsorOrganizationId?.trim() || null,
         p_presenter_name: draft.presenterName?.trim() || null,
-        p_required_type_tag: draft.requiredTypeTag?.trim() || null,
-        p_required_setting_tag: draft.requiredSettingTag?.trim() || null,
+        p_required_type_tag: canonicalizeTypeTag(draft.requiredTypeTag),
+        p_required_setting_tag: canonicalizeSettingTag(draft.requiredSettingTag),
         p_minimum_capture_grade: draft.minimumCaptureGrade ?? null,
         p_live_only: draft.liveOnly,
         p_external_imports_allowed: draft.externalImportsAllowed,

@@ -6,9 +6,14 @@ import {
     applyVenueConstraints,
     assertSafeAdminDto,
     authorshipLabel,
+    backendNormalizeSetting,
+    backendSettingMatches,
+    backendTypeTagMatches,
     canArchiveCampaign,
     canReviewCampaign,
     canSubmitCampaign,
+    canonicalizeSettingTag,
+    canonicalizeTypeTag,
     containsForbiddenAdminDtoKeys,
     currentRulesVersion,
     groupCampaignsByStatus,
@@ -21,7 +26,9 @@ import {
     serializeCampaignUpsert,
     serializeGeoCountries,
     serializeVenueUpsert,
-    toListItem
+    settingTagDisplayLabel,
+    toListItem,
+    typeTagDisplayLabel
 } from "./sponsored-challenges-admin";
 
 const draft = {
@@ -217,4 +224,44 @@ test("list rows never include venue GPS or qualified-capture identifiers", () =>
     assert.equal(json.includes("longitude"), false);
     assert.equal(json.includes("capture_id"), false);
     assert.equal(item.venueName, "Taman Safari");
+});
+
+test("Bird template serializes the type tag the backend evaluator will match", () => {
+    const payload = serializeCampaignUpsert({...draft, requiredTypeTag: "bird"});
+    assert.equal(payload.p_required_type_tag, "Bird");
+    assert.equal(backendTypeTagMatches("Bird", payload.p_required_type_tag!), true);
+    assert.equal(canonicalizeTypeTag("BIRD"), "Bird");
+    assert.equal(typeTagDisplayLabel("bird"), "Bird");
+});
+
+test("Venue Collector setting serializes the value the backend evaluator will match", () => {
+    const payload = serializeCampaignUpsert({...draft, requiredSettingTag: "zoo"});
+    assert.equal(payload.p_required_setting_tag, "Zoo");
+    assert.equal(backendSettingMatches("Zoo", payload.p_required_setting_tag!), true);
+    assert.equal(canonicalizeSettingTag("ZOO"), "Zoo");
+    assert.equal(settingTagDisplayLabel("zoo"), "Zoo");
+});
+
+test("manual editor tag selection round-trips to canonical stored values", () => {
+    const selected = serializeCampaignUpsert({
+        ...draft,
+        requiredTypeTag: "Bird",
+        requiredSettingTag: "Zoo"
+    });
+    assert.equal(selected.p_required_type_tag, "Bird");
+    assert.equal(selected.p_required_setting_tag, "Zoo");
+    assert.equal(canonicalizeTypeTag(selected.p_required_type_tag), "Bird");
+    assert.equal(canonicalizeSettingTag(selected.p_required_setting_tag), "Zoo");
+    assert.equal(typeTagDisplayLabel(selected.p_required_type_tag), "Bird");
+    assert.equal(settingTagDisplayLabel(selected.p_required_setting_tag), "Zoo");
+});
+
+test("lowercase setting storage would publish but never qualify captures", () => {
+    assert.equal(backendNormalizeSetting("Zoo"), "Zoo");
+    assert.equal(backendNormalizeSetting("zoo"), "Unknown");
+    assert.equal(backendSettingMatches("Zoo", "zoo"), false);
+    assert.equal(backendSettingMatches("Zoo", "Zoo"), true);
+    const trapped = serializeCampaignUpsert({...draft, requiredSettingTag: "zoo"});
+    assert.notEqual(trapped.p_required_setting_tag, "zoo");
+    assert.equal(backendSettingMatches("Zoo", trapped.p_required_setting_tag!), true);
 });
