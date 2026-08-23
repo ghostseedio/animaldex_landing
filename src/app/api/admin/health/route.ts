@@ -49,6 +49,19 @@ async function count(table: string, params: string) {
     return Number.isFinite(total) ? total : 0;
 }
 
+async function rpc(name: string, args: Record<string, unknown> = {}) {
+    const {url, key} = config();
+    const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: getSupabaseHeaders(key, {"Content-Type": "application/json", Accept: "application/json"}),
+        cache: "no-store",
+        body: JSON.stringify(args)
+    });
+    if (!response.ok) throw new Error(`${name} failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+}
+
 /** Groups raw error text by the code in front of the colon. */
 function errorKind(message: string) {
     const trimmed = message.trim();
@@ -64,12 +77,11 @@ export async function GET(request: NextRequest) {
 
     try {
         const since = new Date(Date.now() - WINDOW_HOURS * 3600_000).toISOString();
-        const stuckBefore = new Date(Date.now() - STUCK_MINUTES * 60_000).toISOString();
 
-        const [recent, latestSuccess, stuck, unanalysed, unlinked] = await Promise.all([
+        const [recent, latestSuccess, stuckCounts, unanalysed, unlinked] = await Promise.all([
             rows("analysis_results", `select=capture_id,error_message,completed_at,created_at&created_at=gte.${since}&limit=2000`),
             rows("analysis_results", "select=completed_at&completed_at=not.is.null&order=completed_at.desc&limit=1"),
-            count("captures", `select=id&status=in.(pending,uploading,ready_for_analysis,analyzing)&created_at=lt.${stuckBefore}`),
+            rpc("capture_pipeline_stuck_counts", {p_stuck_after: `${STUCK_MINUTES} minutes`}).catch(() => null),
             count("captures", `select=id&status=eq.failed&created_at=gte.${since}`),
             // An analysis with no species_profile_id still reaches its number
             // through the identity key, so nothing looks wrong — but duplicate
@@ -77,6 +89,11 @@ export async function GET(request: NextRequest) {
             // sit side by side forever. /api/admin/catalog/relink repairs them.
             count("analysis_results", `select=capture_id&species_profile_id=is.null&identity_kind=eq.domestic_parent&created_at=gte.${since}`)
         ]);
+
+        const stuckRow = Array.isArray(stuckCounts) ? stuckCounts[0] : stuckCounts;
+        const stuckMidFlight = Number(stuckRow?.stuck_mid_flight ?? 0);
+        const creditBlocked = Number(stuckRow?.credit_blocked ?? 0);
+        const abandonedPending = Number(stuckRow?.abandoned_pending ?? 0);
 
         const failures = recent.filter((row) => String(row.error_message ?? "").trim().length > 0);
         const successes = recent.filter((row) => row.completed_at && !String(row.error_message ?? "").trim());
@@ -93,13 +110,12 @@ export async function GET(request: NextRequest) {
             ? Math.round((Date.now() - new Date(lastSuccessAt).getTime()) / 60_000)
             : null;
 
-        // Nothing succeeding for hours is the strongest signal that the function
-        // itself is down, rather than individual captures being bad.
-        // Unlinked analyses are a data gap, not an outage: they do not change
-        // the pipeline's status, only what is worth going and fixing.
+        // Credit-blocked captures are waiting on the user, not mid-flight.
+        // Abandoned pending rows are dead uploads, not an analysis outage.
+        // Only true stuck_mid_flight should degrade the pipeline status.
         const status = (minutesSinceSuccess != null && minutesSinceSuccess > 240) || failureRate > 0.5
             ? "down"
-            : failureRate > DEGRADED_FAILURE_RATE || stuck > 0
+            : failureRate > DEGRADED_FAILURE_RATE || stuckMidFlight > 0
                 ? "degraded"
                 : "healthy";
 
@@ -117,7 +133,9 @@ export async function GET(request: NextRequest) {
                 .sort((left, right) => right[1] - left[1])
                 .map(([kind, total]) => ({kind, total})),
             capturesFailed: unanalysed,
-            stuckCaptures: stuck,
+            stuckCaptures: stuckMidFlight,
+            creditBlockedCaptures: creditBlocked,
+            abandonedPendingCaptures: abandonedPending,
             unlinkedDomesticAnalyses: unlinked,
             lastSuccessAt,
             minutesSinceSuccess,

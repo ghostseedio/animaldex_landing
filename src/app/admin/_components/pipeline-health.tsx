@@ -15,6 +15,8 @@ type Health = {
     analyses: {total: number; succeeded: number; failed: number; failureRate: number};
     errorsByKind: Array<{kind: string; total: number}>;
     stuckCaptures: number;
+    creditBlockedCaptures?: number;
+    abandonedPendingCaptures?: number;
     unlinkedDomesticAnalyses?: number;
     minutesSinceSuccess: number | null;
 };
@@ -90,6 +92,8 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
                 {health.analyses.succeeded} analyses completed and {health.analyses.failed} failed in the last{" "}
                 {health.windowHours}h ({health.analyses.failureRate}% failure rate). Last success {ago(health.minutesSinceSuccess)}.
                 {health.stuckCaptures > 0 && ` ${health.stuckCaptures} capture(s) stuck mid-flight.`}
+                {(health.creditBlockedCaptures ?? 0) > 0 && ` ${health.creditBlockedCaptures} waiting on credits.`}
+                {(health.abandonedPendingCaptures ?? 0) > 0 && ` ${health.abandonedPendingCaptures} abandoned upload(s).`}
                 {(health.unlinkedDomesticAnalyses ?? 0) > 0 && ` ${health.unlinkedDomesticAnalyses} pet capture(s) reached their entry without linking to it, so duplicate merging will skip them.`}
             </p>
             {health.errorsByKind.length > 0 && (
