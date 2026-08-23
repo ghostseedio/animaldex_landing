@@ -513,21 +513,41 @@ export default function SupportInboxClient() {
 
     async function submitReply(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (channel === "in-app" ? !selectedInAppThread || !canSend : !selectedThread || !canSend) return;
+
+        let request: {url: string; body: Record<string, unknown>; refreshId: string};
+        if (channel === "in-app") {
+            if (!selectedInAppThread || !canSend) return;
+            request = {
+                url: "/api/admin/support/in-app-reply",
+                body: {userId: selectedInAppThread.id, message: reply},
+                refreshId: selectedInAppThread.id
+            };
+        } else {
+            if (!selectedThread || !canSend) return;
+            request = {
+                url: "/api/admin/support/reply",
+                body: {
+                    threadId: selectedThread.id,
+                    message: reply,
+                    attachments: attachments.map(({filename, contentType, content, contentId}) => ({
+                        filename,
+                        contentType,
+                        content,
+                        contentId
+                    }))
+                },
+                refreshId: selectedThread.id
+            };
+        }
+
         setSubmitting(true);
         setError(null);
 
         try {
-            const response = await fetch(channel === "in-app" ? "/api/admin/support/in-app-reply" : "/api/admin/support/reply", {
+            const response = await fetch(request.url, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(channel === "in-app"
-                    ? {userId: selectedInAppThread?.id, message: reply}
-                    : {
-                        threadId: selectedThread.id,
-                        message: reply,
-                        attachments: attachments.map(({filename, contentType, content, contentId}) => ({filename, contentType, content, contentId}))
-                    })
+                body: JSON.stringify(request.body)
             });
             const body = await response.json() as {ok: boolean; error?: string};
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to send reply.");
@@ -535,7 +555,7 @@ export default function SupportInboxClient() {
             attachments.forEach((attachment) => attachment.previewUrl && URL.revokeObjectURL(attachment.previewUrl));
             setReply("");
             setAttachments([]);
-            await loadInbox(channel === "in-app" ? selectedInAppThread?.id : selectedThread.id);
+            await loadInbox(request.refreshId);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to send reply.");
         } finally {
