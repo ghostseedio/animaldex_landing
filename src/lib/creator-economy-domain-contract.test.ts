@@ -11,6 +11,11 @@ import {
     giftDisplayName,
     LAUNCH_GIFT_CATALOG
 } from "./capture-gifts";
+import {
+    EARNINGS_ALLOWED_SOURCE_TYPES,
+    EARNINGS_FORBIDDEN_SOURCE_TYPES,
+    mapEarningsSummaryRow
+} from "./earnings";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const gradeSource = readFileSync(join(here, "capture-grade.ts"), "utf8");
@@ -86,4 +91,39 @@ test("guide listed price helpers do not describe credits or earnings ledgers", (
     assert.match(guideSource, /currency_code/);
     assert.doesNotMatch(guideSource, /credit_balances/);
     assert.doesNotMatch(guideSource, /earning_entries/);
+});
+
+test("earnings contract forbids credits gift and pvp sources", () => {
+    for (const allowed of EARNINGS_ALLOWED_SOURCE_TYPES) {
+        assert.ok(!EARNINGS_FORBIDDEN_SOURCE_TYPES.includes(allowed as never));
+    }
+    assert.ok(EARNINGS_ALLOWED_SOURCE_TYPES.includes("creator_reward"));
+    assert.ok(EARNINGS_ALLOWED_SOURCE_TYPES.includes("guide_settlement"));
+    assert.ok(EARNINGS_ALLOWED_SOURCE_TYPES.includes("campaign_reward"));
+    assert.ok(EARNINGS_FORBIDDEN_SOURCE_TYPES.includes("credit"));
+    assert.ok(EARNINGS_FORBIDDEN_SOURCE_TYPES.includes("gift"));
+    assert.ok(EARNINGS_FORBIDDEN_SOURCE_TYPES.includes("pvp"));
+});
+
+test("earnings summary mapper keeps currencies as separate minor-unit rows", () => {
+    const usd = mapEarningsSummaryRow({
+        currency_code: "USD",
+        pending_amount_minor: 0,
+        available_amount_minor: 4210,
+        held_amount_minor: 0,
+        paid_amount_minor: 0,
+        lifetime_earned_amount_minor: 4210,
+    });
+    const gbp = mapEarningsSummaryRow({
+        currency_code: "GBP",
+        pending_amount_minor: 0,
+        available_amount_minor: 1825,
+        held_amount_minor: 0,
+        paid_amount_minor: 0,
+        lifetime_earned_amount_minor: 1825,
+    });
+    assert.equal(usd.currencyCode, "USD");
+    assert.equal(usd.availableAmountMinor, 4210);
+    assert.equal(gbp.currencyCode, "GBP");
+    assert.equal(gbp.availableAmountMinor, 1825);
 });
