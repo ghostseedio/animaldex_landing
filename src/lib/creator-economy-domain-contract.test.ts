@@ -16,6 +16,11 @@ import {
     EARNINGS_FORBIDDEN_SOURCE_TYPES,
     mapEarningsSummaryRow
 } from "./earnings";
+import {
+    creatorRewardGiftPoints,
+    creatorRewardRiskMultiplierBps,
+    mapCreatorRewardConfig
+} from "./creator-rewards";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const gradeSource = readFileSync(join(here, "capture-grade.ts"), "utf8");
@@ -126,4 +131,15 @@ test("earnings summary mapper keeps currencies as separate minor-unit rows", () 
     assert.equal(usd.availableAmountMinor, 4210);
     assert.equal(gbp.currencyCode, "GBP");
     assert.equal(gbp.availableAmountMinor, 1825);
+});
+
+test("creator reward gift points ignore credit cost and default config is fail-closed", () => {
+    assert.equal(creatorRewardGiftPoints(1, 2), 1);
+    assert.equal(creatorRewardGiftPoints(5, 2), 2);
+    assert.equal(creatorRewardRiskMultiplierBps("excluded"), 0);
+    assert.equal(creatorRewardRiskMultiplierBps("discounted"), 5_000);
+    assert.equal(creatorRewardRiskMultiplierBps("clear"), 10_000);
+    const cfg = mapCreatorRewardConfig({enabled: false, auto_post_earnings: false});
+    assert.equal(cfg.enabled, false);
+    assert.equal(cfg.autoPostEarnings, false);
 });
