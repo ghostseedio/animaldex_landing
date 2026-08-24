@@ -85,6 +85,15 @@ const tools = [
         status: "Accounting ops"
     },
     {
+        href: "/admin/payouts",
+        icon: "⇄",
+        eyebrow: "Creator economy",
+        title: "Payouts",
+        description: "Wise sandbox payout console. Named finance operators only. No real money.",
+        accent: "from-teal-400/20 to-transparent",
+        status: "Sandbox only"
+    },
+    {
         href: "/admin/sponsored-challenges",
         icon: "★",
         eyebrow: "Time-limited events",
@@ -106,6 +115,7 @@ const navigation = [
     {href: "/admin/catalog", label: "Index", icon: "№"},
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"},
     {href: "/admin/creator-rewards", label: "Creator Rewards", icon: "¤"},
+    {href: "/admin/payouts", label: "Payouts", icon: "⇄"},
     {href: "/admin/sponsored-challenges", label: "Sponsored Challenges", icon: "★"}
 ];
 
