@@ -159,3 +159,23 @@ test("creator reward gift points ignore credit cost and default config is fail-c
     assert.equal(withEnv.environment?.isProduction, true);
     assert.equal(withEnv.environment?.environmentLabel, "production");
 });
+
+test("payout eligibility mapping is fail-closed and named finance actors only", async () => {
+    const {mapPayoutEligibility, sharedPasswordMayApproveFinance} = await import("./monetization");
+    const elig = mapPayoutEligibility({
+        eligible: false,
+        payoutsEnabled: false,
+        betaMember: false,
+        countryState: "unsupported",
+        legalCapacityState: "unknown",
+        identityState: "not_started",
+        taxState: "not_started",
+        payoutProfileState: "missing",
+        accountStanding: "good",
+        reasonCodes: ["payouts_disabled", "beta_membership_required"],
+    });
+    assert.equal(elig.eligible, false);
+    assert.deepEqual(elig.reasonCodes, ["payouts_disabled", "beta_membership_required"]);
+    assert.equal(sharedPasswordMayApproveFinance("shared_password"), false);
+    assert.equal(sharedPasswordMayApproveFinance("named_email"), true);
+});

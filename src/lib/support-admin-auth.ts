@@ -108,28 +108,80 @@ export async function isSupportAdminRequestAuthorized(request: NextRequest) {
     return isSupportAdminCookieAuthorized(request.cookies);
 }
 
-export async function isSupportAdminCookieAuthorized(cookieStore: AdminCookieReader) {
-    if (verifySupportAdminSession(cookieStore.get(supportAdminCookieName)?.value)) {
-        return true;
-    }
+export type AdminActorKind = "named_email" | "shared_password" | "none";
 
+export type AdminActor = {
+    authorized: boolean;
+    kind: AdminActorKind;
+    email: string | null;
+    userId: string | null;
+    /** Shared-password sessions are never finance-capable actors. */
+    canActAsFinanceActor: boolean;
+};
+
+export async function resolveAdminActor(cookieStore: AdminCookieReader): Promise<AdminActor> {
     const url = getSupabaseUrl();
     const key = getSupabaseAuthKey();
-    if (!url || !key) return false;
-
-    const supabase = createServerClient(url, key, {
-        cookies: {
-            getAll() {
-                return cookieStore.getAll();
-            },
-            setAll() {
-                // Authorization checks never mutate the browser session.
+    if (url && key) {
+        const supabase = createServerClient(url, key, {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll();
+                },
+                setAll() {
+                    // Authorization checks never mutate the browser session.
+                }
             }
+        });
+        const {
+            data: {user}
+        } = await supabase.auth.getUser();
+        const email = user?.email?.trim().toLowerCase() ?? null;
+        if (email && getAdminEmails().has(email)) {
+            return {
+                authorized: true,
+                kind: "named_email",
+                email,
+                userId: user?.id ?? null,
+                canActAsFinanceActor: true
+            };
         }
-    });
-    const {data: {user}} = await supabase.auth.getUser();
-    const email = user?.email?.trim().toLowerCase();
-    return Boolean(email && getAdminEmails().has(email));
+    }
+
+    if (verifySupportAdminSession(cookieStore.get(supportAdminCookieName)?.value)) {
+        return {
+            authorized: true,
+            kind: "shared_password",
+            email: null,
+            userId: null,
+            canActAsFinanceActor: false
+        };
+    }
+
+    return {
+        authorized: false,
+        kind: "none",
+        email: null,
+        userId: null,
+        canActAsFinanceActor: false
+    };
+}
+
+export async function isSupportAdminCookieAuthorized(cookieStore: AdminCookieReader) {
+    const actor = await resolveAdminActor(cookieStore);
+    return actor.authorized;
+}
+
+/** Phase 7A: financial approvals require a named human actor, not shared password. */
+export async function requireNamedFinanceAdminActor(cookieStore: AdminCookieReader): Promise<AdminActor> {
+    const actor = await resolveAdminActor(cookieStore);
+    if (!actor.authorized) {
+        throw new Error("Unauthorized");
+    }
+    if (!actor.canActAsFinanceActor || actor.kind !== "named_email" || !actor.email) {
+        throw new Error("named_operator_required_for_finance");
+    }
+    return actor;
 }
 
 export function getSupportAdminCookieOptions() {
