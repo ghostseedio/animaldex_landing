@@ -57,3 +57,11 @@ test("shared password cannot approve finance payouts", () => {
     assert.equal(sharedPasswordMayApproveFinance("shared_password"), false);
     assert.equal(sharedPasswordMayApproveFinance("named_email"), true);
 });
+
+
+test("unsigned Wise webhook probe is acknowledged without processing", async () => {
+    const {ingestWiseWebhook} = await import("./wise-sandbox-payouts");
+    const result = await ingestWiseWebhook("{}", new Headers());
+    assert.equal(result.ok, true);
+    assert.equal(result.ready, true);
+});

@@ -22,6 +22,69 @@ const PRODUCTION_BASE = "https://api.wise.com";
 /** Current Wise Platform versioned path from official docs (2026Q3). */
 const API_PREFIX = "/v1";
 
+/**
+ * Official Wise webhook verification public keys (published by Wise; not secrets).
+ * Source: https://docs.wise.com/guides/developer/webhooks/event-handling
+ */
+export const WISE_PRODUCTION_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvO8vXV+JksBzZAY6GhSO
+XdoTCfhXaaiZ+qAbtaDBiu2AGkGVpmEygFmWP4Li9m5+Ni85BhVvZOodM9epgW3F
+bA5Q1SexvAF1PPjX4JpMstak/QhAgl1qMSqEevL8cmUeTgcMuVWCJmlge9h7B1CS
+D4rtlimGZozG39rUBDg6Qt2K+P4wBfLblL0k4C4YUdLnpGYEDIth+i8XsRpFlogx
+CAFyH9+knYsDbR43UJ9shtc42Ybd40Afihj8KnYKXzchyQ42aC8aZ/h5hyZ28yVy
+Oj3Vos0VdBIs/gAyJ/4yyQFCXYte64I7ssrlbGRaco4nKF3HmaNhxwyKyJafz19e
+HwIDAQAB
+-----END PUBLIC KEY-----`;
+
+export const WISE_SANDBOX_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwpb91cEYuyJNQepZAVfP
+ZIlPZfNUefH+n6w9SW3fykqKu938cR7WadQv87oF2VuT+fDt7kqeRziTmPSUhqPU
+ys/V2Q1rlfJuXbE+Gga37t7zwd0egQ+KyOEHQOpcTwKmtZ81ieGHynAQzsn1We3j
+wt760MsCPJ7GMT141ByQM+yW1Bx+4SG3IGjXWyqOWrcXsxAvIXkpUD/jK/L958Cg
+nZEgz0BSEh0QxYLITnW1lLokSx/dTianWPFEhMC9BgijempgNXHNfcVirg1lPSyg
+z7KqoKUN0oHqWLr2U1A+7kqrl6O2nx3CKs1bj1hToT1+p4kcMoHXA7kA+VBLUpEs
+VwIDAQAB
+-----END PUBLIC KEY-----`;
+
+function verifyWithPem(rawBody: string, signatureBase64: string, pem: string): boolean {
+    try {
+        const verifier = createVerify("RSA-SHA256");
+        verifier.update(rawBody);
+        verifier.end();
+        return verifier.verify(pem, signatureBase64, "base64");
+    } catch {
+        return false;
+    }
+}
+
+/** Verify Wise webhook RSA signature without requiring API token/profile config. */
+export function verifyWiseWebhookSignature(
+    rawBody: string,
+    headers: Headers,
+    preferredEnvironment?: "sandbox" | "production"
+): boolean {
+    const signature =
+        headers.get("X-Signature-SHA256") ||
+        headers.get("x-signature-sha256") ||
+        headers.get("X-Signature-Sha256") ||
+        headers.get("X-Signature-SHA256");
+    if (!signature) return false;
+
+    const envKey = process.env.WISE_WEBHOOK_PUBLIC_KEY?.trim() || null;
+    const ordered =
+        preferredEnvironment === "sandbox"
+            ? [envKey, WISE_SANDBOX_WEBHOOK_PUBLIC_KEY, WISE_PRODUCTION_WEBHOOK_PUBLIC_KEY]
+            : preferredEnvironment === "production"
+              ? [envKey, WISE_PRODUCTION_WEBHOOK_PUBLIC_KEY, WISE_SANDBOX_WEBHOOK_PUBLIC_KEY]
+              : [envKey, WISE_PRODUCTION_WEBHOOK_PUBLIC_KEY, WISE_SANDBOX_WEBHOOK_PUBLIC_KEY];
+
+    for (const pem of ordered) {
+        if (!pem) continue;
+        if (verifyWithPem(rawBody, signature, pem)) return true;
+    }
+    return false;
+}
+
 export type WiseConfig = {
     environment: "sandbox" | "production";
     apiToken: string;
@@ -249,19 +312,7 @@ export class WisePayoutProvider implements PayoutProvider {
     }
 
     verifyWebhook(headers: Headers, rawBody: string): boolean {
-        const signature = headers.get("X-Signature-SHA256") || headers.get("x-signature-sha256");
-        const pem = this.config.webhookPublicKeyPem;
-        if (!signature || !pem) {
-            return false;
-        }
-        try {
-            const verifier = createVerify("RSA-SHA256");
-            verifier.update(rawBody);
-            verifier.end();
-            return verifier.verify(pem, signature, "base64");
-        } catch {
-            return false;
-        }
+        return verifyWiseWebhookSignature(rawBody, headers, this.config.environment);
     }
 
     parseProviderEvent(payload: unknown): {

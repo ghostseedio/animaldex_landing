@@ -13,6 +13,7 @@ import type {AdminActor} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {
     loadWiseConfigFromEnv,
+    verifyWiseWebhookSignature,
     WISE_SANDBOX_GBP_FAILURE_RECIPIENT,
     WISE_SANDBOX_GBP_SUCCESS_RECIPIENT,
     WiseConfigurationError,
@@ -396,29 +397,63 @@ async function applyProviderStatusToPayout(input: {
     return decision;
 }
 
+/**
+ * Wise webhook ingress is allowed on production.
+ * Sandbox fixture generation remains blocked elsewhere via requireNonProductionForFixtures.
+ */
 export async function ingestWiseWebhook(rawBody: string, headers: Headers) {
-    await requireNonProductionForFixtures();
-    let provider: WisePayoutProvider;
-    try {
-        provider = new WisePayoutProvider(loadWiseConfigFromEnv());
-    } catch (error) {
-        if (error instanceof WiseConfigurationError) throw error;
-        throw error;
+    const signatureHeader =
+        headers.get("X-Signature-SHA256") ||
+        headers.get("x-signature-sha256") ||
+        headers.get("X-Signature-Sha256");
+
+    // Wise Developer Hub reachability probes are often unsigned GET/HEAD/POST.
+    // Ack without processing; only signed deliveries may mutate payout state.
+    if (!signatureHeader) {
+        return {ok: true, ready: true};
     }
-    if (!provider.verifyWebhook(headers, rawBody)) {
+
+    const preferred =
+        (process.env.WISE_ENVIRONMENT?.trim().toLowerCase() as "sandbox" | "production" | undefined) ||
+        "production";
+    if (!verifyWiseWebhookSignature(rawBody, headers, preferred)) {
         throw new Error("wise_webhook_signature_invalid");
     }
-    const payload = JSON.parse(rawBody) as unknown;
+
+
+    const isTestNotification =
+        (headers.get("X-Test-Notification") || headers.get("x-test-notification") || "").toLowerCase() ===
+        "true";
+
+    let payload: unknown;
+    try {
+        payload = JSON.parse(rawBody) as unknown;
+    } catch {
+        throw new Error("wise_webhook_payload_invalid");
+    }
+
+    // Subscription setup sends a signed test event; ack without ledger side effects.
+    if (isTestNotification) {
+        return {ok: true, test: true};
+    }
+
+    const provider = new WisePayoutProvider({
+        environment: preferred === "sandbox" ? "sandbox" : "production",
+        apiToken: "webhook-only",
+        profileId: "webhook-only",
+        webhookPublicKeyPem: process.env.WISE_WEBHOOK_PUBLIC_KEY?.trim() || null
+    });
     const parsed = provider.parseProviderEvent(payload);
     const deliveryId = headers.get("X-Delivery-Id") || headers.get("x-delivery-id") || parsed.eventId;
     const payloadHash = createHash("sha256").update(rawBody).digest("hex");
+    const environment = preferred === "sandbox" ? "sandbox" : "production";
 
     try {
         await rest("payout_provider_events", {
             method: "POST",
             body: JSON.stringify({
                 provider: "wise",
-                environment: "sandbox",
+                environment,
                 provider_event_id: deliveryId,
                 event_type: parsed.eventType,
                 provider_transfer_ref: parsed.transferRef,
@@ -432,7 +467,6 @@ export async function ingestWiseWebhook(rawBody: string, headers: Headers) {
         if (message.toLowerCase().includes("duplicate") || message.includes("23505")) {
             return {ok: true, duplicate: true};
         }
-        // Unique violation often comes as PostgREST message
         if (message.includes("payout_provider_events_unique")) {
             return {ok: true, duplicate: true};
         }
@@ -440,7 +474,7 @@ export async function ingestWiseWebhook(rawBody: string, headers: Headers) {
 
     if (parsed.transferRef && parsed.providerStatus) {
         const rows = await rest<Array<Record<string, unknown>>>(
-            `payouts?provider_transfer_ref=eq.${parsed.transferRef}&select=id,status&limit=1`
+            `payouts?provider_transfer_ref=eq.${encodeURIComponent(parsed.transferRef)}&select=id,status&limit=1`
         );
         const payout = rows?.[0];
         if (payout) {
@@ -450,15 +484,18 @@ export async function ingestWiseWebhook(rawBody: string, headers: Headers) {
                 wiseStatus: parsed.providerStatus,
                 operatorId: null
             });
-            await rest(`payout_provider_events?provider=eq.wise&provider_event_id=eq.${encodeURIComponent(deliveryId)}`, {
-                method: "PATCH",
-                body: JSON.stringify({
-                    payout_id: payout.id,
-                    processed_at: new Date().toISOString(),
-                    processing_status: "processed",
-                    status: "processed"
-                })
-            });
+            await rest(
+                `payout_provider_events?provider=eq.wise&provider_event_id=eq.${encodeURIComponent(deliveryId)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        payout_id: payout.id,
+                        processed_at: new Date().toISOString(),
+                        processing_status: "processed",
+                        status: "processed"
+                    })
+                }
+            );
         }
     }
 

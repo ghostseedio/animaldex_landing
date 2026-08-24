@@ -4,6 +4,15 @@ import {ingestWiseWebhook} from "@/lib/wise-sandbox-payouts";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/** Wise hub / browser reachability checks use GET or HEAD. */
+export async function GET() {
+    return NextResponse.json({ok: true, service: "wise-webhook"});
+}
+
+export async function HEAD() {
+    return new NextResponse(null, {status: 200});
+}
+
 export async function POST(request: NextRequest) {
     try {
         const rawBody = await request.text();
