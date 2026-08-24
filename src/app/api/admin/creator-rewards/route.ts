@@ -41,9 +41,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
     try {
-        const [config, periods] = await Promise.all([
+        const [config, periods, formula] = await Promise.all([
             rpc("get_creator_reward_config"),
             rpc("admin_list_creator_reward_period_summaries"),
+            rpc("get_creator_reward_formula_summary", {
+                p_calculation_version: "creator_rewards_v1_calibrated",
+            }).catch(() => null),
         ]);
         const mapped = (Array.isArray(periods) ? periods : []).map((p: Record<string, unknown>) => ({
             periodId: String(p.period_id ?? ""),
@@ -59,12 +62,27 @@ export async function GET(request: NextRequest) {
             unallocatedRemainderMinor: Number(p.unallocated_remainder_minor ?? 0),
             calculationVersion: String(p.calculation_version ?? ""),
         }));
+        const formulaMapped = formula
+            ? {
+                  calculationVersion: String(formula.calculation_version ?? ""),
+                  weights: formula.weights ?? undefined,
+                  socialCapBps:
+                      typeof formula.social_cap_bps === "number" ? formula.social_cap_bps : undefined,
+                  minAllocationAmountMinor:
+                      typeof formula.min_allocation_amount_minor === "number"
+                          ? formula.min_allocation_amount_minor
+                          : undefined,
+                  firewalls: Array.isArray(formula.firewalls) ? formula.firewalls : undefined,
+                  notes: typeof formula.notes === "string" ? formula.notes : undefined,
+              }
+            : null;
         return NextResponse.json(scrub({
             config: {
                 enabled: Boolean(config?.enabled),
                 autoPostEarnings: Boolean(config?.auto_post_earnings),
             },
             periods: mapped,
+            formula: formulaMapped,
         }));
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
@@ -79,6 +97,25 @@ export async function POST(request: NextRequest) {
         const body = await request.json().catch(() => ({}));
         const action = String(body.action ?? "");
         const periodId = String(body.periodId ?? "");
+
+        if (action === "create") {
+            const result = await rpc("admin_create_creator_reward_period", {
+                p_slug: String(body.slug ?? ""),
+                p_display_name: String(body.displayName ?? ""),
+                p_currency_code: String(body.currencyCode ?? "USD"),
+                p_pool_amount_minor: Number(body.poolAmountMinor ?? 0),
+                p_period_start: String(body.periodStart ?? ""),
+                p_period_end: String(body.periodEnd ?? ""),
+                p_notes: typeof body.notes === "string" ? body.notes : null,
+                p_calculation_version: String(body.calculationVersion ?? "creator_rewards_v1_calibrated"),
+                p_eligibility_version: String(body.eligibilityVersion ?? "eligibility_v1"),
+                p_risk_version: String(body.riskVersion ?? "risk_v1"),
+                p_min_allocation_amount_minor: Number(body.minAllocationAmountMinor ?? 50),
+                p_social_cap_bps: Number(body.socialCapBps ?? 1500),
+            });
+            return NextResponse.json(scrub({ok: true, message: "draft created", result}));
+        }
+
         const map: Record<string, string> = {
             open: "admin_open_creator_reward_period",
             freeze: "freeze_creator_reward_period_inputs",
