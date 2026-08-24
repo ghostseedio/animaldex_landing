@@ -2,7 +2,20 @@
 
 import {useEffect, useState, type FormEvent} from "react";
 
-type Config = {enabled: boolean; autoPostEarnings: boolean};
+type Environment = {
+    environmentLabel: string;
+    supabaseProjectRef: string | null;
+    allowTestFixtures: boolean;
+    betaAllowlistRequired: boolean;
+    isProduction: boolean;
+    creatorRewardsEnabled: boolean;
+    autoPostEarnings: boolean;
+};
+type Config = {
+    enabled: boolean;
+    autoPostEarnings: boolean;
+    environment: Environment | null;
+};
 type PeriodSummary = {
     periodId: string;
     slug: string;
@@ -49,6 +62,10 @@ export function AdminCreatorRewardsClient() {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
+    const env = config?.environment;
+    const envBadge = (env?.environmentLabel ?? "unknown").toUpperCase();
+    const projectRef = env?.supabaseProjectRef ?? "unknown";
+
     async function load() {
         setError(null);
         const res = await fetch("/api/admin/creator-rewards?action=list", {cache: "no-store"});
@@ -69,7 +86,9 @@ export function AdminCreatorRewardsClient() {
             return;
         }
         const confirmed = ["finalize", "post", "cancel"].includes(action)
-            ? window.confirm(`Confirm ${action}? This cannot be mixed with payout.`)
+            ? window.confirm(
+                  `Confirm ${action} on ${envBadge} (${projectRef})?\nThis cannot be mixed with payout.`
+              )
             : true;
         if (!confirmed) return;
         setBusy(true);
@@ -134,9 +153,23 @@ export function AdminCreatorRewardsClient() {
 
     return (
         <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
-            <h1 className="font-display text-3xl text-white">Creator Rewards</h1>
+            <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-3xl text-white">Creator Rewards</h1>
+                <span
+                    className={`rounded-md px-2.5 py-1 text-xs font-black tracking-wide ${
+                        env?.isProduction
+                            ? "bg-rose-600 text-white"
+                            : envBadge === "STAGING" || envBadge === "LOCAL"
+                              ? "bg-emerald-600 text-white"
+                              : "bg-amber-500 text-black"
+                    }`}
+                >
+                    {envBadge}
+                </span>
+            </div>
             <p className="mt-2 text-sm text-ink-400">
-                Internal operations console. Service role stays server-side only. No “Calculate & Pay” shortcut.
+                Internal operations console. Environment from authoritative server config (project{" "}
+                <code className="text-ink-200">{projectRef}</code>). Service role stays server-side only.
             </p>
 
             {config && (
@@ -146,11 +179,16 @@ export function AdminCreatorRewardsClient() {
                     }`}
                 >
                     <p className="font-bold text-white">
-                        {config.enabled ? "Creator Rewards enabled" : "Creator Rewards disabled"}
+                        {config.enabled
+                            ? `Creator Rewards enabled — ${envBadge}`
+                            : env?.isProduction
+                              ? "Creator Rewards disabled — no live periods can be created."
+                              : `Creator Rewards disabled — ${envBadge}`}
                     </p>
                     <p className="text-sm text-ink-300">
-                        auto_post_earnings={String(config.autoPostEarnings)}. Lifecycle actions (except draft create) are
-                        blocked while disabled.
+                        auto_post_earnings={String(config.autoPostEarnings)}. Beta allowlist required=
+                        {String(env?.betaAllowlistRequired ?? false)}. Test fixtures allowed=
+                        {String(env?.allowTestFixtures ?? false)}.
                     </p>
                 </div>
             )}
@@ -186,8 +224,8 @@ export function AdminCreatorRewardsClient() {
             <section className="mt-8 rounded-2xl border border-line-300 px-4 py-4">
                 <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Create draft period</h2>
                 <p className="mt-1 text-xs text-ink-500">
-                    Draft creation is allowed while disabled. Opening/freezing still requires enablement on a non-production
-                    project.
+                    Draft creation is allowed while disabled. Opening/freezing still requires enablement. Staging/test
+                    slug names are refused on PRODUCTION.
                 </p>
                 <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={createDraft}>
                     <label className="text-sm">
@@ -234,8 +272,7 @@ export function AdminCreatorRewardsClient() {
                         <input
                             className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
                             value={draft.currency}
-                            onChange={(e) => setDraft({...draft, currency: e.target.value.toUpperCase()})}
-                            maxLength={3}
+                            onChange={(e) => setDraft({...draft, currency: e.target.value})}
                             required
                         />
                     </label>
@@ -266,110 +303,62 @@ export function AdminCreatorRewardsClient() {
                             required
                         />
                     </label>
-                    <label className="text-sm">
-                        Calculation version
+                    <label className="text-sm md:col-span-2">
+                        Formula version
                         <select
                             className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
                             value={draft.calculationVersion}
                             onChange={(e) => setDraft({...draft, calculationVersion: e.target.value})}
                         >
                             <option value="creator_rewards_v1_calibrated">creator_rewards_v1_calibrated</option>
-                            <option value="event_caps_v1">event_caps_v1 (Phase 3)</option>
+                            <option value="event_caps_v1">event_caps_v1</option>
                         </select>
                     </label>
-                    <label className="text-sm">
-                        Eligibility version
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.eligibilityVersion}
-                            onChange={(e) => setDraft({...draft, eligibilityVersion: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Risk version
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.riskVersion}
-                            onChange={(e) => setDraft({...draft, riskVersion: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <div className="md:col-span-2">
-                        <button
-                            type="submit"
-                            disabled={busy}
-                            className="rounded-lg border border-white/10 px-4 py-2 text-xs font-bold uppercase disabled:opacity-40"
-                        >
-                            Create draft
-                        </button>
-                    </div>
+                    <button
+                        type="submit"
+                        disabled={busy}
+                        className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-50 md:col-span-2"
+                    >
+                        Create draft
+                    </button>
                 </form>
             </section>
 
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
-            {message && <p className="mt-4 text-sm text-primary-200">{message}</p>}
+            {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
 
-            <div className="mt-8 overflow-x-auto rounded-2xl border border-line-300">
-                <table className="min-w-full text-left text-sm">
-                    <thead className="bg-white/[0.03] text-ink-400">
-                        <tr>
-                            <th className="px-3 py-2">Period</th>
-                            <th className="px-3 py-2">Status</th>
-                            <th className="px-3 py-2">Pool</th>
-                            <th className="px-3 py-2">Allocated</th>
-                            <th className="px-3 py-2">Remainder</th>
-                            <th className="px-3 py-2">Creators</th>
-                            <th className="px-3 py-2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {periods.map((p) => (
-                            <tr key={p.periodId} className="border-t border-line-300/70">
-                                <td className="px-3 py-3">
-                                    <div className="font-semibold text-white">{p.displayName}</div>
-                                    <div className="text-xs text-ink-500">
-                                        {p.slug} · {p.calculationVersion || "—"}
-                                    </div>
-                                    {p.status === "draft" || p.status === "calculated" || p.status === "frozen" ? (
-                                        <div className="mt-1 text-[10px] font-black uppercase tracking-wide text-amber-300">
-                                            Simulation / Not finalized
-                                        </div>
-                                    ) : null}
-                                </td>
-                                <td className="px-3 py-3">{p.status}</td>
-                                <td className="px-3 py-3">
-                                    {p.currencyCode} {(p.poolAmountMinor / 100).toFixed(2)}
-                                </td>
-                                <td className="px-3 py-3">{(p.allocatedAmountMinor / 100).toFixed(2)}</td>
-                                <td className="px-3 py-3">{(p.unallocatedRemainderMinor / 100).toFixed(2)}</td>
-                                <td className="px-3 py-3">{p.eligibleCreatorCount}</td>
-                                <td className="px-3 py-3">
-                                    <div className="flex flex-wrap gap-2">
-                                        {["open", "freeze", "calculate", "finalize", "post", "cancel"].map((action) => (
-                                            <button
-                                                key={action}
-                                                disabled={busy || !config?.enabled}
-                                                onClick={() => run(action, p.periodId)}
-                                                className="rounded-lg border border-white/10 px-2 py-1 text-xs font-bold uppercase disabled:opacity-40"
-                                            >
-                                                {action}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {periods.length === 0 && (
-                            <tr>
-                                <td className="px-3 py-6 text-ink-500" colSpan={7}>
-                                    No Creator Reward periods yet.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <section className="mt-8">
+                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Periods</h2>
+                <div className="mt-3 space-y-3">
+                    {periods.map((p) => (
+                        <article key={p.periodId} className="rounded-2xl border border-line-300 px-4 py-3">
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                <h3 className="font-semibold text-white">{p.displayName}</h3>
+                                <span className="text-xs uppercase text-ink-400">{p.status}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-ink-400">
+                                {p.slug} · {p.currencyCode} · pool {(p.poolAmountMinor / 100).toFixed(2)} · allocated{" "}
+                                {(p.allocatedAmountMinor / 100).toFixed(2)} · remainder{" "}
+                                {(p.unallocatedRemainderMinor / 100).toFixed(2)} · {p.calculationVersion}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {["open", "freeze", "calculate", "finalize", "post", "cancel"].map((action) => (
+                                    <button
+                                        key={action}
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => run(action, p.periodId)}
+                                        className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold text-ink-100 disabled:opacity-50"
+                                    >
+                                        {action}
+                                    </button>
+                                ))}
+                            </div>
+                        </article>
+                    ))}
+                    {periods.length === 0 && <p className="text-sm text-ink-500">No periods.</p>}
+                </div>
+            </section>
         </main>
     );
 }

@@ -142,4 +142,20 @@ test("creator reward gift points ignore credit cost and default config is fail-c
     const cfg = mapCreatorRewardConfig({enabled: false, auto_post_earnings: false});
     assert.equal(cfg.enabled, false);
     assert.equal(cfg.autoPostEarnings, false);
+    assert.equal(cfg.environment, null);
+    const withEnv = mapCreatorRewardConfig({
+        enabled: false,
+        auto_post_earnings: false,
+        environment: {
+            environment_label: "production",
+            supabase_project_ref: "wwhsdzpczekgdlobwaej",
+            allow_test_fixtures: false,
+            beta_allowlist_required: false,
+            is_production: true,
+            creator_rewards_enabled: false,
+            auto_post_earnings: false,
+        },
+    });
+    assert.equal(withEnv.environment?.isProduction, true);
+    assert.equal(withEnv.environment?.environmentLabel, "production");
 });

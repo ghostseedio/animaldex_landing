@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
+import {mapCreatorRewardConfig} from "@/lib/creator-rewards";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export const dynamic = "force-dynamic";
@@ -41,13 +42,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
     try {
-        const [config, periods, formula] = await Promise.all([
+        const [configRaw, periods, formula] = await Promise.all([
             rpc("get_creator_reward_config"),
             rpc("admin_list_creator_reward_period_summaries"),
             rpc("get_creator_reward_formula_summary", {
                 p_calculation_version: "creator_rewards_v1_calibrated",
             }).catch(() => null),
         ]);
+        const config = mapCreatorRewardConfig(
+            configRaw && typeof configRaw === "object" ? (configRaw as Record<string, unknown>) : {}
+        );
         const mapped = (Array.isArray(periods) ? periods : []).map((p: Record<string, unknown>) => ({
             periodId: String(p.period_id ?? ""),
             slug: String(p.slug ?? ""),
@@ -76,14 +80,17 @@ export async function GET(request: NextRequest) {
                   notes: typeof formula.notes === "string" ? formula.notes : undefined,
               }
             : null;
-        return NextResponse.json(scrub({
-            config: {
-                enabled: Boolean(config?.enabled),
-                autoPostEarnings: Boolean(config?.auto_post_earnings),
-            },
-            periods: mapped,
-            formula: formulaMapped,
-        }));
+        return NextResponse.json(
+            scrub({
+                config: {
+                    enabled: config.enabled,
+                    autoPostEarnings: config.autoPostEarnings,
+                    environment: config.environment,
+                },
+                periods: mapped,
+                formula: formulaMapped,
+            })
+        );
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
     }
@@ -98,10 +105,30 @@ export async function POST(request: NextRequest) {
         const action = String(body.action ?? "");
         const periodId = String(body.periodId ?? "");
 
+        const configRaw = await rpc("get_creator_reward_config");
+        const config = mapCreatorRewardConfig(
+            configRaw && typeof configRaw === "object" ? (configRaw as Record<string, unknown>) : {}
+        );
+        const envLabel = (config.environment?.environmentLabel ?? "unknown").toUpperCase();
+        const projectRef = config.environment?.supabaseProjectRef ?? "unknown";
+
         if (action === "create") {
+            const slug = String(body.slug ?? "");
+            const displayName = String(body.displayName ?? "");
+            const looksLikeTest =
+                /staging|test[_-]?only|fixture|local[_-]?dev/i.test(slug) ||
+                /STAGING|TEST ONLY|fixture/i.test(displayName);
+            if (config.environment?.isProduction && looksLikeTest) {
+                return NextResponse.json(
+                    {
+                        error: `Refusing test/staging period create on PRODUCTION (${projectRef}).`,
+                    },
+                    {status: 403}
+                );
+            }
             const result = await rpc("admin_create_creator_reward_period", {
-                p_slug: String(body.slug ?? ""),
-                p_display_name: String(body.displayName ?? ""),
+                p_slug: slug,
+                p_display_name: displayName,
                 p_currency_code: String(body.currencyCode ?? "USD"),
                 p_pool_amount_minor: Number(body.poolAmountMinor ?? 0),
                 p_period_start: String(body.periodStart ?? ""),
@@ -113,7 +140,7 @@ export async function POST(request: NextRequest) {
                 p_min_allocation_amount_minor: Number(body.minAllocationAmountMinor ?? 50),
                 p_social_cap_bps: Number(body.socialCapBps ?? 1500),
             });
-            return NextResponse.json(scrub({ok: true, message: "draft created", result}));
+            return NextResponse.json(scrub({ok: true, message: `draft created (${envLabel})`, result}));
         }
 
         const map: Record<string, string> = {
@@ -125,10 +152,17 @@ export async function POST(request: NextRequest) {
             cancel: "admin_cancel_creator_reward_period",
         };
         const rpcName = map[action];
-        if (!rpcName) return NextResponse.json({error: "Unknown action"}, {status: 400});
-        if (!periodId) return NextResponse.json({error: "periodId required"}, {status: 400});
+        if (!rpcName) {
+            return NextResponse.json({error: "Unknown action"}, {status: 400});
+        }
         const result = await rpc(rpcName, {p_period_id: periodId});
-        return NextResponse.json(scrub({ok: true, message: `${action} completed`, result}));
+        return NextResponse.json(
+            scrub({
+                ok: true,
+                message: `${action} ok on ${envLabel} (${projectRef})`,
+                result,
+            })
+        );
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
     }

@@ -3,9 +3,20 @@
  * No UI wiring. Pool math stays server-authoritative.
  */
 
+export type CreatorRewardEnvironment = {
+    environmentLabel: string;
+    supabaseProjectRef: string | null;
+    allowTestFixtures: boolean;
+    betaAllowlistRequired: boolean;
+    isProduction: boolean;
+    creatorRewardsEnabled: boolean;
+    autoPostEarnings: boolean;
+};
+
 export type CreatorRewardConfig = {
     enabled: boolean;
     autoPostEarnings: boolean;
+    environment: CreatorRewardEnvironment | null;
 };
 
 export type CreatorRewardAllocation = {
@@ -40,9 +51,28 @@ export function creatorRewardRiskMultiplierBps(riskState: string): number {
     }
 }
 
+export function mapCreatorRewardEnvironment(row: Record<string, unknown> | null | undefined): CreatorRewardEnvironment | null {
+    if (!row || typeof row !== "object") return null;
+    return {
+        environmentLabel: String(row.environment_label ?? "unknown"),
+        supabaseProjectRef:
+            typeof row.supabase_project_ref === "string" ? row.supabase_project_ref : null,
+        allowTestFixtures: Boolean(row.allow_test_fixtures),
+        betaAllowlistRequired: Boolean(row.beta_allowlist_required),
+        isProduction: Boolean(row.is_production),
+        creatorRewardsEnabled: Boolean(row.creator_rewards_enabled),
+        autoPostEarnings: Boolean(row.auto_post_earnings),
+    };
+}
+
 export function mapCreatorRewardConfig(row: Record<string, unknown>): CreatorRewardConfig {
+    const envRaw =
+        row.environment && typeof row.environment === "object"
+            ? (row.environment as Record<string, unknown>)
+            : null;
     return {
         enabled: Boolean(row.enabled),
         autoPostEarnings: Boolean(row.auto_post_earnings),
+        environment: mapCreatorRewardEnvironment(envRaw),
     };
 }
