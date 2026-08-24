@@ -13,6 +13,7 @@ import type {AdminActor} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {
     loadWiseConfigFromEnv,
+    loadWiseProductionConfigFromEnv,
     verifyWiseWebhookSignature,
     WISE_SANDBOX_GBP_FAILURE_RECIPIENT,
     WISE_SANDBOX_GBP_SUCCESS_RECIPIENT,
@@ -69,25 +70,45 @@ export async function getPayoutDiagnostics() {
     const monetization = await rpc<Record<string, unknown>>("get_monetization_config");
     let wiseConfigured = false;
     let wiseEnvironment: string | null = null;
+    let wiseProfileId: string | null = null;
+    let wiseBalanceId: string | null = null;
     try {
-        const cfg = loadWiseConfigFromEnv();
-        wiseConfigured = true;
-        wiseEnvironment = cfg.environment;
+        if (Boolean(animaldex.is_production)) {
+            const cfg = loadWiseProductionConfigFromEnv();
+            wiseConfigured = true;
+            wiseEnvironment = cfg.environment;
+            wiseProfileId = cfg.profileId;
+            wiseBalanceId = cfg.balanceId ?? null;
+        } else {
+            const cfg = loadWiseConfigFromEnv();
+            wiseConfigured = true;
+            wiseEnvironment = cfg.environment;
+            wiseProfileId = cfg.profileId;
+            wiseBalanceId = cfg.balanceId ?? null;
+        }
     } catch {
         wiseConfigured = false;
     }
+    const isProduction = Boolean(animaldex.is_production);
     return {
         animaldexEnvironment: String(animaldex.environment_label ?? "unknown"),
-        isProduction: Boolean(animaldex.is_production),
+        isProduction,
         payoutsEnabled: Boolean(monetization.payouts_enabled),
         autoPayoutEnabled: Boolean(monetization.auto_payout_enabled),
         feeTreatment: String(monetization.fee_treatment ?? ""),
         provider: "wise",
         wiseEnvironment,
         wiseCredentialsConfigured: wiseConfigured,
-        wiseProfileBound: Boolean(process.env.WISE_PROFILE_ID?.trim()),
+        wiseProfileBound: Boolean(wiseProfileId),
+        wiseBalanceBound: Boolean(wiseBalanceId),
         webhookPublicKeyConfigured: Boolean(process.env.WISE_WEBHOOK_PUBLIC_KEY?.trim()),
-        banner: "WISE SANDBOX · LOCAL / STAGING · NO REAL MONEY"
+        legalEntityName: "Ghostseed Ltd",
+        banner: isProduction
+            ? "PRODUCTION — REAL MONEY — WISE"
+            : "WISE SANDBOX · LOCAL / STAGING · NO REAL MONEY",
+        phase7cStopReason: isProduction
+            ? "Live £5 payout blocked until Ghostseed Wise GBP balance is funded and finance operator confirms recipient."
+            : null
     };
 }
 

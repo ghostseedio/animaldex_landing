@@ -10,8 +10,11 @@ type Diagnostics = {
     wiseCredentialsConfigured: boolean;
     wiseEnvironment: string | null;
     wiseProfileBound: boolean;
+    wiseBalanceBound?: boolean;
     webhookPublicKeyConfigured: boolean;
     banner: string;
+    phase7cStopReason?: string | null;
+    legalEntityName?: string;
 };
 
 type PayoutRow = {
@@ -78,12 +81,17 @@ export function AdminPayoutsClient() {
         <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
             <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-3xl text-white">Payouts</h1>
-                <span className="rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-black tracking-wide text-white">
-                    WISE SANDBOX
+                <span
+                    className={`rounded-md px-2.5 py-1 text-xs font-black tracking-wide text-white ${
+                        diagnostics?.isProduction ? "bg-rose-700" : "bg-emerald-700"
+                    }`}
+                >
+                    {diagnostics?.isProduction ? "PRODUCTION — REAL MONEY" : "WISE SANDBOX"}
                 </span>
             </div>
             <p className="mt-2 text-sm text-ink-400">
-                Ghostseed Ltd · Phase 7B sandbox console. Shared password cannot approve. No raw bank details.
+                Ghostseed Ltd · Named finance operator required. Shared password cannot approve. No raw bank
+                details.
             </p>
 
             {diagnostics && (
@@ -102,7 +110,9 @@ export function AdminPayoutsClient() {
 
             {blocked && (
                 <p className="mt-4 text-sm text-rose-300">
-                    Production payout execution is blocked. Use local Supabase + Wise sandbox only.
+                    {diagnostics?.isProduction
+                        ? "Production payout execution is gated. Fund Ghostseed Wise GBP and complete Phase 7C readiness before any real transfer."
+                        : "Production payout execution is blocked. Use local Supabase + Wise sandbox only."}
                 </p>
             )}
 

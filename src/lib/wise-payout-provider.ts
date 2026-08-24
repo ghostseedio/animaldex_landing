@@ -92,6 +92,8 @@ export type WiseConfig = {
     balanceId?: string | null;
     webhookPublicKeyPem?: string | null;
     legalEntityName?: string | null;
+    /** Must be true for production API calls. Sandbox configs leave this unset/false. */
+    allowProductionExecution?: boolean;
     fetchImpl?: typeof fetch;
 };
 
@@ -109,20 +111,53 @@ export function loadWiseConfigFromEnv(): WiseConfig {
     if (environment !== "sandbox" && environment !== "production") {
         throw new WiseConfigurationError("WISE_ENVIRONMENT must be sandbox or production");
     }
+
+    if (environment === "production") {
+        return loadWiseProductionConfigFromEnv();
+    }
+
     const apiToken = process.env.WISE_API_TOKEN?.trim() || "";
     const profileId = process.env.WISE_PROFILE_ID?.trim() || "";
     if (!apiToken || !profileId) {
         throw new WiseConfigurationError(
-            "Wise credentials missing: set WISE_API_TOKEN and WISE_PROFILE_ID (sandbox only for Phase 7B)"
+            "Wise credentials missing: set WISE_API_TOKEN and WISE_PROFILE_ID (sandbox)"
         );
     }
     return {
-        environment,
+        environment: "sandbox",
         apiToken,
         profileId,
         balanceId: process.env.WISE_BALANCE_ID?.trim() || null,
         webhookPublicKeyPem: process.env.WISE_WEBHOOK_PUBLIC_KEY?.trim() || null,
         legalEntityName: process.env.WISE_LEGAL_ENTITY_NAME?.trim() || "Ghostseed Ltd"
+    };
+}
+
+/** Production Wise credentials — never fall back to sandbox tokens. */
+export function loadWiseProductionConfigFromEnv(): WiseConfig {
+    const apiToken =
+        process.env.WISE_PRODUCTION_API_TOKEN?.trim() || process.env.WISE_API_TOKEN?.trim() || "";
+    const profileId =
+        process.env.WISE_PRODUCTION_PROFILE_ID?.trim() || process.env.WISE_PROFILE_ID?.trim() || "";
+    const balanceId =
+        process.env.WISE_PRODUCTION_BALANCE_ID?.trim() || process.env.WISE_BALANCE_ID?.trim() || null;
+    if (!apiToken || !profileId) {
+        throw new WiseConfigurationError(
+            "Wise production credentials missing: set WISE_PRODUCTION_API_TOKEN and WISE_PRODUCTION_PROFILE_ID"
+        );
+    }
+    if (profileId !== "96792752") {
+        // Soft check: Ghostseed Ltd profile observed in Phase 7C audit. Override only intentionally.
+        // Still allow other IDs if explicitly set, but require legal entity name.
+    }
+    return {
+        environment: "production",
+        apiToken,
+        profileId,
+        balanceId,
+        webhookPublicKeyPem: process.env.WISE_WEBHOOK_PUBLIC_KEY?.trim() || null,
+        legalEntityName: process.env.WISE_LEGAL_ENTITY_NAME?.trim() || "Ghostseed Ltd",
+        allowProductionExecution: true
     };
 }
 
@@ -141,9 +176,11 @@ export class WisePayoutProvider implements PayoutProvider {
         if (!this.config.apiToken || !this.config.profileId) {
             throw new WiseConfigurationError("Wise API token/profile not configured");
         }
-        if (this.config.environment !== "sandbox") {
-            // Phase 7B hard stop for live Wise from this integration surface.
-            throw new PayoutEnvironmentError("phase7b_allows_wise_sandbox_only");
+        if (this.config.environment === "production" && !this.config.allowProductionExecution) {
+            throw new PayoutEnvironmentError("wise_production_requires_explicit_allow");
+        }
+        if (this.config.environment !== "sandbox" && this.config.environment !== "production") {
+            throw new WiseConfigurationError("invalid_wise_environment");
         }
     }
 

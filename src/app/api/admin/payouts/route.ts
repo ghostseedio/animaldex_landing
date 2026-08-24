@@ -17,14 +17,16 @@ export async function GET(request: NextRequest) {
     }
     try {
         const diagnostics = await getPayoutDiagnostics();
+        // Production: diagnostics always available to admins; execution remains gated.
+        // Phase 7C: do not list/execute live payouts until funded readiness is confirmed.
         if (diagnostics.isProduction) {
             return NextResponse.json({
-                diagnostics: {
-                    ...diagnostics,
-                    banner: "PRODUCTION · PAYOUTS DISABLED · NO WISE EXECUTION"
-                },
+                diagnostics,
                 payouts: [],
-                blocked: true
+                blocked: true,
+                blockedReason:
+                    diagnostics.phase7cStopReason ||
+                    "Production payout execution is gated until funded Wise GBP readiness is confirmed."
             });
         }
         const payouts = await listAdminPayouts();
@@ -40,6 +42,18 @@ export async function POST(request: NextRequest) {
         const body = await request.json().catch(() => ({}));
         const action = String(body.action ?? "");
         const payoutId = String(body.payoutId ?? "");
+        const diagnostics = await getPayoutDiagnostics();
+
+        if (diagnostics.isProduction) {
+            return NextResponse.json(
+                {
+                    error:
+                        "production_payout_execution_blocked_until_wise_gbp_funded_and_phase7c_gates_pass",
+                    diagnostics
+                },
+                {status: 403}
+            );
+        }
 
         if (action === "approve_execute") {
             if (!payoutId) return NextResponse.json({error: "payoutId required"}, {status: 400});
