@@ -14,7 +14,10 @@ import {
 import {
     EARNINGS_ALLOWED_SOURCE_TYPES,
     EARNINGS_FORBIDDEN_SOURCE_TYPES,
-    mapEarningsSummaryRow
+    eligibilityTitle,
+    mapCreatorRewardPeriodProgress,
+    mapEarningsSummaryRow,
+    payoutChecklist
 } from "./earnings";
 import {
     creatorRewardGiftPoints,
@@ -131,6 +134,49 @@ test("earnings summary mapper keeps currencies as separate minor-unit rows", () 
     assert.equal(usd.availableAmountMinor, 4210);
     assert.equal(gbp.currencyCode, "GBP");
     assert.equal(gbp.availableAmountMinor, 1825);
+});
+
+test("creator reward period progress mapper keeps provisional signal meters", () => {
+    const progress = mapCreatorRewardPeriodProgress({
+        featureEnabled: true,
+        mayParticipate: true,
+        isProvisional: true,
+        eligibility: {state: "participating", message: "Live"},
+        period: {
+            id: "11111111-1111-1111-1111-111111111111",
+            displayName: "August",
+            status: "open",
+            currencyCode: "GBP",
+            poolAmountMinor: 10000,
+            daysRemaining: 3,
+            timelineFraction: 0.8,
+        },
+        activity: {liveCaptureCount: 4, uniqueSpeciesCount: 2},
+        signals: [
+            {
+                key: "original_captures",
+                title: "Live captures",
+                subtitle: "Ready",
+                count: 4,
+                target: 20,
+                fraction: 0.2,
+                active: true,
+            },
+        ],
+    });
+    assert.equal(progress.eligibility.state, "participating");
+    assert.equal(progress.period?.displayName, "August");
+    assert.equal(progress.signals[0]?.fraction, 0.2);
+    assert.equal(eligibilityTitle("waiting_for_period"), "Waiting for a period");
+    const checklist = payoutChecklist({
+        setupComplete: true,
+        payoutsEnabled: true,
+        canWithdraw: false,
+        reasonCodes: ["legal_capacity_unknown"],
+        maskedDestination: "•••• 1234",
+    });
+    assert.equal(checklist.find((i) => i.id === "setup")?.isComplete, true);
+    assert.equal(checklist.find((i) => i.id === "legal")?.isComplete, false);
 });
 
 test("creator reward gift points ignore credit cost and default config is fail-closed", () => {

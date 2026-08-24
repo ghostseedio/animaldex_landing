@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import {describe, it} from "node:test";
+import {
+    assertNoSensitivePersistencePayload,
+    maskGbpBankAccount
+} from "./user-payout-setup";
+import {mapPayoutEligibility} from "./monetization";
+
+describe("Phase 7C user payout setup", () => {
+    it("masks UK account numbers for display", () => {
+        assert.equal(maskGbpBankAccount("12345678"), "GBP • Bank account •••• 5678");
+        assert.equal(maskGbpBankAccount("12-34-56 78901234"), "GBP • Bank account •••• 1234");
+    });
+
+    it("refuses payloads that embed raw bank field names", () => {
+        assert.throws(
+            () => assertNoSensitivePersistencePayload({sort_code: "040075"}),
+            /refuse_persist_raw_bank_fields/
+        );
+        assert.throws(
+            () => assertNoSensitivePersistencePayload({accountNumber: "12345678"}),
+            /refuse_persist_raw_bank_fields/
+        );
+        assert.doesNotThrow(() =>
+            assertNoSensitivePersistencePayload({
+                masked_destination: "GBP • Bank account •••• 5678",
+                provider_recipient_ref: "1393656685",
+                destination_type: "bank_account"
+            })
+        );
+    });
+
+    it("maps setupComplete without inventing withdraw entitlement", () => {
+        const mapped = mapPayoutEligibility({
+            eligible: false,
+            payoutsEnabled: false,
+            setupComplete: true,
+            maskedDestination: "GBP • Bank account •••• 5367",
+            canWithdraw: false,
+            reasonCodes: ["payouts_disabled"]
+        });
+        assert.equal(mapped.setupComplete, true);
+        assert.equal(mapped.payoutsEnabled, false);
+        assert.equal(mapped.canWithdraw, false);
+        assert.equal(mapped.maskedDestination, "GBP • Bank account •••• 5367");
+        assert.deepEqual(mapped.reasonCodes, ["payouts_disabled"]);
+    });
+});

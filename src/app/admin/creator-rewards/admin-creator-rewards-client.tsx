@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {useEffect, useState, type FormEvent} from "react";
 
 type Environment = {
@@ -153,7 +154,10 @@ export function AdminCreatorRewardsClient() {
 
     return (
         <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
-            <div className="flex flex-wrap items-center gap-3">
+            <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
+                ← Admin
+            </Link>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-3xl text-white">Creator Rewards</h1>
                 <span
                     className={`rounded-md px-2.5 py-1 text-xs font-black tracking-wide ${

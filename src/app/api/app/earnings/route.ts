@@ -1,10 +1,12 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {
+    mapCreatorRewardPeriodProgress,
     mapCreatorRewardReceiptSummary,
     mapEarningEntryRow,
     mapEarningsSummaryRow,
 } from "@/lib/earnings";
+import {loadPayoutSetupStatusForUser} from "@/lib/user-payout-setup";
 
 export async function GET() {
     const supabase = createSupabaseServerClient();
@@ -13,10 +15,13 @@ export async function GET() {
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
 
-    const [summaryRes, entriesRes, receiptsRes] = await Promise.all([
+    const [summaryRes, entriesRes, receiptsRes, progressRes, eligibilityRes, corridorsRes] = await Promise.all([
         supabase.rpc("get_my_earnings_summary"),
         supabase.rpc("list_my_earning_entries", {p_limit: 50}),
         supabase.rpc("list_my_creator_reward_receipts"),
+        supabase.rpc("get_my_creator_reward_period_progress"),
+        supabase.rpc("get_my_payout_eligibility"),
+        supabase.rpc("list_my_payout_setup_corridors"),
     ]);
 
     if (summaryRes.error) return NextResponse.json({error: summaryRes.error.message}, {status: 400});
@@ -27,9 +32,28 @@ export async function GET() {
     const entryRows = Array.isArray(entriesRes.data) ? entriesRes.data : [];
     const receiptRows = Array.isArray(receiptsRes.data) ? receiptsRes.data : [];
 
+    let payoutSetup = null;
+    if (!eligibilityRes.error) {
+        try {
+            payoutSetup = await loadPayoutSetupStatusForUser({
+                eligibilityRow: (eligibilityRes.data ?? {}) as Record<string, unknown>,
+                corridorsRaw: corridorsRes.error ? [] : corridorsRes.data,
+                contactEmail: user.email ?? null,
+            });
+        } catch {
+            payoutSetup = null;
+        }
+    }
+
+    const periodProgress = progressRes.error
+        ? mapCreatorRewardPeriodProgress({})
+        : mapCreatorRewardPeriodProgress(progressRes.data);
+
     return NextResponse.json({
         balances: summaryRows.map((row) => mapEarningsSummaryRow(row as Record<string, unknown>)),
         entries: entryRows.map((row) => mapEarningEntryRow(row as Record<string, unknown>)),
         creatorRewardReceipts: receiptRows.map((row) => mapCreatorRewardReceiptSummary(row as Record<string, unknown>)),
+        periodProgress,
+        payoutSetup,
     });
 }
