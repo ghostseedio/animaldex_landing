@@ -263,7 +263,7 @@ export async function getMatchupHistory(userId: string, limit = 40) {
     if (!supabase) return [] as MatchupHistoryItem[];
 
     const {data} = await supabase
-        .from("discover_challenge_history_v1")
+        .from("discover_challenge_history_v2")
         .select(HISTORY_SELECT)
         .or(`attacker_user_id.eq.${userId},defender_user_id.eq.${userId}`)
         .order("created_at", {ascending: false})

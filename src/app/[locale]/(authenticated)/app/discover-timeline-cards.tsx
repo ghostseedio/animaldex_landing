@@ -1408,10 +1408,23 @@ function ChallengeCard({
   share: { url: string; title: string; text?: string };
 }) {
   const attackerWon = item.winnerCaptureId === item.attacker.captureId;
+  const isV2 = item.challengeFormat === "best_of_3_v2";
+  const isComplete = item.battleStatus === "completed";
+  const roundLabel = isComplete ? "Battle complete" : "Round 2 of 3 · Community vote";
 
   return (
     <TimelineShell badge="Scenario arena" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="space-y-4 p-4">
+        {isV2 ? (
+          <div className="rounded-2xl border border-primary-300/25 bg-primary-300/10 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-200">{roundLabel}</p>
+            {isComplete ? (
+              <p className="mt-1 text-sm font-bold text-white">Final score {item.roundsWonAttacker}–{item.roundsWonDefender}</p>
+            ) : (
+              <p className="mt-1 text-sm text-white/65">{item.votesCount} of {item.requiredVotes} community votes</p>
+            )}
+          </div>
+        ) : null}
         <p className="font-display text-xl font-bold text-white">{item.outcomeLine}</p>
         {item.winningsLine ? (
           <p className="text-sm font-semibold text-amber-200">{item.winningsLine}</p>
@@ -1432,6 +1445,11 @@ function ChallengeCard({
             highlighted={!attackerWon}
           />
         </div>
+        {isV2 && isComplete && item.speciesComparisonSlug ? (
+          <Link href={`/comparisons/${item.speciesComparisonSlug}`} className="block rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center text-sm font-black text-primary-200 hover:bg-white/[0.07]">
+            Round 3 of 3 · View species comparison
+          </Link>
+        ) : null}
       </div>
     </TimelineShell>
   );
