@@ -91,6 +91,8 @@ export function AdminCreatorRewardsClient() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [creators, setCreators] = useState<CreatorRow[]>([]);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [detailCreatorCount, setDetailCreatorCount] = useState<number | null>(null);
 
     const env = config?.environment;
     const envBadge = (env?.environmentLabel ?? "unknown").toUpperCase();
@@ -109,7 +111,8 @@ export function AdminCreatorRewardsClient() {
 
     async function loadDetail(periodId: string) {
         setDetailLoading(true);
-        setError(null);
+        setDetailError(null);
+        setDetailCreatorCount(null);
         try {
             const res = await fetch(`/api/admin/creator-rewards?periodId=${encodeURIComponent(periodId)}`, {
                 cache: "no-store",
@@ -118,8 +121,11 @@ export function AdminCreatorRewardsClient() {
             if (!res.ok) throw new Error(json.error || "Failed to load creators");
             const rows = Array.isArray(json.detail?.creators) ? json.detail.creators : [];
             setCreators(rows);
+            setDetailCreatorCount(
+                typeof json.detail?.creator_count === "number" ? json.detail.creator_count : rows.length
+            );
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Failed to load creators");
+            setDetailError(e instanceof Error ? e.message : "Failed to load creators");
             setCreators([]);
         } finally {
             setDetailLoading(false);
@@ -406,6 +412,10 @@ export function AdminCreatorRewardsClient() {
                                 {money(p.unallocatedRemainderMinor, p.currencyCode)} · {p.eligibleCreatorCount}{" "}
                                 creators · {p.calculationVersion}
                             </p>
+                            <p className="mt-1 text-xs text-ink-500">
+                                Allocated here is a Creator Rewards proposal — not Earnings and not a bank payout.
+                                After Finalize → Post, money appears on /admin/payouts once Available.
+                            </p>
                             {p.nextStep && (
                                 <div className="mt-3 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2">
                                     <p className="text-xs font-black uppercase tracking-wide text-sky-200">
@@ -413,6 +423,13 @@ export function AdminCreatorRewardsClient() {
                                     </p>
                                     <p className="mt-1 text-sm text-white">{p.nextStep}</p>
                                     {p.why && <p className="mt-1 text-xs text-ink-400">{p.why}</p>}
+                                    {["calculated", "finalized", "posted"].includes(p.status) && (
+                                        <p className="mt-2 text-xs text-sky-100/90">
+                                            Click <strong>Show individuals</strong> to see who the{" "}
+                                            {money(p.allocatedAmountMinor, p.currencyCode)} is allocated to (
+                                            {p.eligibleCreatorCount} creators).
+                                        </p>
+                                    )}
                                 </div>
                             )}
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -434,54 +451,80 @@ export function AdminCreatorRewardsClient() {
                                     onClick={() => togglePeriod(p.periodId)}
                                     className="rounded-md border border-emerald-400/40 px-2.5 py-1 text-xs font-semibold text-emerald-200"
                                 >
-                                    {expandedId === p.periodId ? "Hide individuals" : "Show individuals"}
+                                    {expandedId === p.periodId
+                                        ? "Hide individuals"
+                                        : `Show individuals (${p.eligibleCreatorCount})`}
                                 </button>
                             </div>
 
                             {expandedId === p.periodId && (
                                 <div className="mt-4 overflow-x-auto rounded-xl border border-white/10">
                                     {detailLoading ? (
-                                        <p className="px-3 py-4 text-sm text-ink-400">Loading creators…</p>
+                                        <p className="px-3 py-4 text-sm text-ink-400">
+                                            Loading {p.eligibleCreatorCount} creators…
+                                        </p>
+                                    ) : detailError ? (
+                                        <p className="px-3 py-4 text-sm text-rose-300">
+                                            Couldn’t load individuals: {detailError}. Allocated totals above are still
+                                            authoritative — refresh after the detail RPC fix if this persists.
+                                        </p>
                                     ) : creators.length === 0 ? (
                                         <p className="px-3 py-4 text-sm text-ink-400">
-                                            No creator rows yet. Freeze + Calculate first.
+                                            {p.allocatedAmountMinor > 0
+                                                ? `Expected ~${p.eligibleCreatorCount} creators for ${money(p.allocatedAmountMinor, p.currencyCode)} but the detail query returned none.`
+                                                : "No creator rows yet. Freeze + Calculate first."}
                                         </p>
                                     ) : (
-                                        <table className="min-w-full text-left text-sm">
-                                            <thead className="bg-white/5 text-xs uppercase tracking-wide text-ink-400">
-                                                <tr>
-                                                    <th className="px-3 py-2">Creator</th>
-                                                    <th className="px-3 py-2">Allocation</th>
-                                                    <th className="px-3 py-2">Status</th>
-                                                    <th className="px-3 py-2">Earnings</th>
-                                                    <th className="px-3 py-2">Points</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {creators.map((c) => (
-                                                    <tr key={c.user_id} className="border-t border-white/10">
-                                                        <td className="px-3 py-2 text-white">
-                                                            {c.display_name || c.username || c.user_id.slice(0, 8)}
-                                                            {c.username ? (
-                                                                <span className="block text-xs text-ink-500">
-                                                                    @{c.username}
-                                                                </span>
-                                                            ) : null}
-                                                        </td>
-                                                        <td className="px-3 py-2 tabular-nums text-ink-100">
-                                                            {money(Number(c.allocation_amount_minor || 0), p.currencyCode)}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-ink-300">
-                                                            {c.allocation_status}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-ink-300">{c.posting_status}</td>
-                                                        <td className="px-3 py-2 tabular-nums text-ink-400">
-                                                            {Number(c.contribution_points || 0).toFixed(2)}
-                                                        </td>
+                                        <>
+                                            <p className="border-b border-white/10 px-3 py-2 text-xs text-ink-400">
+                                                Showing {creators.length}
+                                                {detailCreatorCount != null ? ` / ${detailCreatorCount}` : ""}{" "}
+                                                creators · sorted by allocation · who the{" "}
+                                                {money(p.allocatedAmountMinor, p.currencyCode)} is assigned to
+                                            </p>
+                                            <table className="min-w-full text-left text-sm">
+                                                <thead className="bg-white/5 text-xs uppercase tracking-wide text-ink-400">
+                                                    <tr>
+                                                        <th className="px-3 py-2">Creator</th>
+                                                        <th className="px-3 py-2">Allocation</th>
+                                                        <th className="px-3 py-2">Status</th>
+                                                        <th className="px-3 py-2">Earnings</th>
+                                                        <th className="px-3 py-2">Points</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {creators.map((c) => (
+                                                        <tr key={c.user_id} className="border-t border-white/10">
+                                                            <td className="px-3 py-2 text-white">
+                                                                {c.display_name ||
+                                                                    c.username ||
+                                                                    c.user_id.slice(0, 8)}
+                                                                {c.username ? (
+                                                                    <span className="block text-xs text-ink-500">
+                                                                        @{c.username}
+                                                                    </span>
+                                                                ) : null}
+                                                            </td>
+                                                            <td className="px-3 py-2 tabular-nums text-ink-100">
+                                                                {money(
+                                                                    Number(c.allocation_amount_minor || 0),
+                                                                    p.currencyCode
+                                                                )}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-ink-300">
+                                                                {c.allocation_status}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-ink-300">
+                                                                {c.posting_status}
+                                                            </td>
+                                                            <td className="px-3 py-2 tabular-nums text-ink-400">
+                                                                {Number(c.contribution_points || 0).toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </>
                                     )}
                                     <p className="border-t border-white/10 px-3 py-2 text-xs text-ink-500">
                                         After Posted: pay Available balances on /admin/payouts. Target SLA 14 days

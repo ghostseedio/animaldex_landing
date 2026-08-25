@@ -196,6 +196,20 @@ export function AdminPayoutsClient() {
                 </p>
             )}
 
+            {diagnostics?.autoPayoutEnabled && (
+                <p className="mt-4 rounded-xl border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                    Warning: <code>auto_payout_enabled=true</code> on this environment. Product policy is manual
+                    finance approval only — turn this off unless you intentionally changed ops policy.
+                </p>
+            )}
+
+            <p className="mt-4 text-xs text-ink-500">
+                Bank corridor live today: <strong className="text-ink-200">United Kingdom · GBP · Wise</strong>.
+                Other countries can earn Creator Rewards; payout destination setup opens when their corridor is
+                enabled. This page stays empty until Creator Rewards are Finalized → Posted and balances become
+                Available.
+            </p>
+
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
             {message && <p className="mt-4 break-all text-sm text-emerald-300">{message}</p>}
 

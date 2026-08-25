@@ -244,31 +244,43 @@ export function payoutChecklist(setup: {
     const reasons = setup.reasonCodes ?? [];
     const done = (code: string) =>
         !reasons.some((r) => r === code || r.startsWith(code));
+    const countryUnsupported = !done("country_unsupported");
     const slaDays = setup.payoutSlaDays ?? 14;
     const payByDetail = setup.targetPayBy
         ? `Target pay by ${setup.targetPayBy} (within ${slaDays} days of Available)`
         : `Ghostseed aims to pay within ${slaDays} days after Earnings become Available`;
 
+    const setupDetail = setup.setupComplete
+        ? setup.maskedDestination || "UK bank connected"
+        : countryUnsupported
+          ? "Bank payouts are open for United Kingdom (GBP) first. Other countries can still earn — setup opens when we add your corridor."
+          : setup.blockerDetail || "Add a UK bank account (GBP via Wise). Only this step opens the form.";
+
     return [
         {
             id: "setup",
             title: "Payout method",
-            detail: setup.setupComplete
-                ? setup.maskedDestination || "Connected"
-                : setup.blockerDetail || "Add your UK bank details to get paid",
+            detail: setupDetail,
             isComplete: Boolean(setup.setupComplete),
         },
         {
             id: "legal",
-            title: "Eligibility confirmed",
-            detail: "Age / capacity for payouts",
+            title: "Eligibility (at bank setup)",
+            detail:
+                setup.setupComplete || (done("legal_capacity") && done("monetization_profile_missing"))
+                    ? "Confirmed with your bank-setup attestation — not a separate button"
+                    : "Confirm with the checkbox when you add bank details. There’s nothing to click here.",
             isComplete: done("legal_capacity") && done("monetization_profile_missing"),
         },
         {
             id: "country",
-            title: "Supported country",
-            detail: setup.destinationCountry || "United Kingdom first corridor",
-            isComplete: done("country_unsupported"),
+            title: "Payout country",
+            detail: countryUnsupported
+                ? "Your country isn’t in the live payout corridor yet (UK/GBP only). Earnings still accrue."
+                : setup.destinationCountry
+                  ? `${setup.destinationCountry} · live corridor is United Kingdom (GBP)`
+                  : "Live corridor: United Kingdom (GBP) only. More countries come later.",
+            isComplete: !countryUnsupported && Boolean(setup.setupComplete || done("country_unsupported")),
         },
         {
             id: "timeline",
@@ -315,9 +327,9 @@ export const EARNINGS_COPY = {
     payoutsComingLater: "Coming later",
     availableNoPayoutNote:
         "Your Available Earnings stay recorded here until Ghostseed finance completes a payout.",
-    setUpPayoutsTitle: "Add bank details",
+    setUpPayoutsTitle: "Add UK bank details",
     setUpPayoutsBody:
-        "Enter your UK bank details so Ghostseed can pay Available Earnings via Wise. We don’t keep full account numbers after setup.",
+        "Bank payouts are open for the United Kingdom (GBP) first. Enter UK sort code + account number so Ghostseed can pay via Wise. We don’t keep full account numbers after setup. Other countries can still earn — payout setup opens when we add their corridor.",
     payoutsReadyTitle: "Bank details saved",
     payoutsNotAvailableYet: "Payouts aren’t open for your account yet. Your balance remains recorded.",
     giftsSignal:
@@ -325,4 +337,8 @@ export const EARNINGS_COPY = {
     score: "AnimalDex Score is a public reputation metric. Creator Rewards use separate period-specific contribution calculations.",
     pool: "Creator Rewards are allocated from an AnimalDex-funded reward pool. Gift prices, Credits, XP, and AnimalDex Score are not directly converted into cash.",
     paymentModelNote: "Payouts are reviewed by Ghostseed finance and are not automatic.",
+    otherCountriesNote:
+        "Not in the UK? You can keep earning. We’ll open bank setup for more countries later — we won’t ask you to use an unsupported corridor.",
+    legalCapacityHint:
+        "This checkbox is how eligibility is confirmed. There’s no separate “Eligibility confirmed” button.",
 } as const;

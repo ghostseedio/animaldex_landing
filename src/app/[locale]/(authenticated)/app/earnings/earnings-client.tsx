@@ -408,6 +408,7 @@ export function EarningsClient() {
                                                 <p className="text-xs text-white/45">Contact: {setup.contactEmail}</p>
                                             )}
                                             <p className="text-xs text-white/45">United Kingdom · GBP · Bank account</p>
+                                            <p className="text-xs text-white/45">{EARNINGS_COPY.otherCountriesNote}</p>
                                             <input
                                                 className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
                                                 placeholder="Account holder name"
@@ -437,8 +438,10 @@ export function EarningsClient() {
                                                     checked={legalCapacityAttested}
                                                     onChange={(e) => setLegalCapacityAttested(e.target.checked)}
                                                 />
-                                                I confirm I am eligible to receive payouts for this account.
+                                                I confirm I am eligible to receive payouts for this account (age /
+                                                capacity).
                                             </label>
+                                            <p className="text-xs text-white/40">{EARNINGS_COPY.legalCapacityHint}</p>
                                             {setupError && <p className="text-sm text-rose-300">{setupError}</p>}
                                             <button
                                                 type="submit"
