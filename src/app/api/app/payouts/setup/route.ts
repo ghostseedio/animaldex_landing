@@ -41,20 +41,21 @@ export async function GET(request: Request) {
 
     const [eligibilityRes, corridorsRes] = await Promise.all([
         session.supabase.rpc("get_my_payout_eligibility"),
-        session.supabase.rpc("list_my_payout_setup_corridors")
+        session.supabase.rpc("list_my_payout_corridors")
     ]);
 
     if (eligibilityRes.error) {
         return NextResponse.json({error: eligibilityRes.error.message}, {status: 400});
     }
-    if (corridorsRes.error) {
-        return NextResponse.json({error: corridorsRes.error.message}, {status: 400});
-    }
+
+    const corridorsRaw = corridorsRes.error
+        ? await session.supabase.rpc("list_my_payout_setup_corridors").then((r) => r.data)
+        : corridorsRes.data;
 
     try {
         const status = await loadPayoutSetupStatusForUser({
             eligibilityRow: (eligibilityRes.data ?? {}) as Record<string, unknown>,
-            corridorsRaw: corridorsRes.data,
+            corridorsRaw,
             contactEmail: session.email
         });
         return NextResponse.json(status);
@@ -72,13 +73,21 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     try {
+        const fields =
+            body.fields && typeof body.fields === "object"
+                ? Object.fromEntries(
+                      Object.entries(body.fields as Record<string, unknown>).map(([k, v]) => [k, String(v ?? "")])
+                  )
+                : {};
         const status = await completeUserPayoutSetup({
             userId: session.userId,
             contactEmail: session.email,
+            corridorId: String(body.corridorId ?? ""),
+            legalCapacityAttested: Boolean(body.legalCapacityAttested),
+            fields,
             countryCode: String(body.countryCode ?? ""),
             currencyCode: String(body.currencyCode ?? ""),
             accountHolderName: String(body.accountHolderName ?? ""),
-            legalCapacityAttested: Boolean(body.legalCapacityAttested),
             sortCode: String(body.sortCode ?? ""),
             accountNumber: String(body.accountNumber ?? "")
         });

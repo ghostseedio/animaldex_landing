@@ -188,7 +188,12 @@ export class WisePayoutProvider implements PayoutProvider {
         return this.config.environment === "sandbox" ? SANDBOX_BASE : PRODUCTION_BASE;
     }
 
-    private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    private async request<T>(
+        method: string,
+        path: string,
+        body?: unknown,
+        extraHeaders?: Record<string, string>
+    ): Promise<T> {
         this.validateConfiguration();
         const fetchImpl = this.config.fetchImpl ?? fetch;
         const response = await fetchImpl(`${this.baseUrl()}${path}`, {
@@ -196,7 +201,8 @@ export class WisePayoutProvider implements PayoutProvider {
             headers: {
                 Authorization: `Bearer ${this.config.apiToken}`,
                 "Content-Type": "application/json",
-                Accept: "application/json"
+                Accept: "application/json",
+                ...extraHeaders
             },
             body: body === undefined ? undefined : JSON.stringify(body),
             cache: "no-store"
@@ -238,9 +244,6 @@ export class WisePayoutProvider implements PayoutProvider {
         sourceAmount: number;
         targetAccount?: string | number;
     }): Promise<ProviderQuote> {
-        if (input.sourceCurrency !== input.targetCurrency) {
-            throw new Error("phase7b_same_currency_only");
-        }
         const body: Record<string, unknown> = {
             sourceCurrency: input.sourceCurrency,
             targetCurrency: input.targetCurrency,
@@ -284,6 +287,30 @@ export class WisePayoutProvider implements PayoutProvider {
             rate: quote.rate == null ? null : Number(quote.rate),
             expiresAt: quote.expirationTime ? String(quote.expirationTime) : null
         };
+    }
+
+    /**
+     * Dynamic recipient field requirements for a corridor.
+     * Docs: GET /v1/account-requirements?source=&target=&sourceAmount=
+     */
+    async getAccountRequirements(input: {
+        sourceCurrency: string;
+        targetCurrency: string;
+        sourceAmount?: number;
+    }): Promise<unknown> {
+        const params = new URLSearchParams({
+            source: input.sourceCurrency,
+            target: input.targetCurrency,
+            sourceAmount: String(input.sourceAmount ?? 1000)
+        });
+        // Ghostseed pays as BUSINESS; PRIVATE originatorLegalEntityType is for end-user sender cases.
+        params.set("originatorLegalEntityType", "BUSINESS");
+        return this.request(
+            "GET",
+            `${API_PREFIX}/account-requirements?${params.toString()}`,
+            undefined,
+            {"Accept-Minor-Version": "1"}
+        );
     }
 
     async createTransfer(input: {

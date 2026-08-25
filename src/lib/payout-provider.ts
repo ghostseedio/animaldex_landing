@@ -14,7 +14,7 @@ export type WiseRecipientDetails = {
     type: string;
     accountHolderName: string;
     profileId: string;
-    details: Record<string, string>;
+    details: Record<string, unknown>;
     /** Masked for AnimalDex storage only */
     maskedDestination: string;
 };
@@ -53,6 +53,11 @@ export interface PayoutProvider {
         sourceAmount: number;
         targetAccount?: string | number;
     }): Promise<ProviderQuote>;
+    getAccountRequirements?(input: {
+        sourceCurrency: string;
+        targetCurrency: string;
+        sourceAmount?: number;
+    }): Promise<unknown>;
     createTransfer(input: {
         quoteUuid: string;
         targetAccount: string | number;

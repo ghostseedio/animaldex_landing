@@ -8,6 +8,12 @@
  */
 
 import {
+    buildWiseRecipientDetailsFromFields,
+    maskDestinationFromFields,
+    normalizeDbSchema,
+    validateFieldsAgainstSchema
+} from "@/lib/payout-destination-requirements";
+import {
     assertPayoutEnvironmentCompatible,
     PayoutEnvironmentError,
     type AnimaldexEnvironmentLabel
@@ -23,11 +29,17 @@ import {
 } from "@/lib/wise-payout-provider";
 
 export type PayoutSetupCorridor = {
+    id?: string;
     countryCode: string;
+    currencyCode?: string;
     provider: string;
+    recipientType?: string;
+    displayName?: string;
     currencies: string[];
     minimumPayoutAmountMinor: number | null;
     minimumPayoutCurrency: string | null;
+    enabledForSetup?: boolean;
+    comingSoon?: boolean;
 };
 
 export type PayoutSetupStatus = PayoutEligibility & {
@@ -46,14 +58,16 @@ export type PayoutSetupStatus = PayoutEligibility & {
 export type CompletePayoutSetupInput = {
     userId: string;
     contactEmail: string | null;
-    countryCode: string;
-    currencyCode: string;
-    accountHolderName: string;
+    corridorId: string;
     legalCapacityAttested: boolean;
-    /** Ephemeral — never persisted */
-    sortCode: string;
-    /** Ephemeral — never persisted */
-    accountNumber: string;
+    /** Ephemeral field map — never persisted */
+    fields: Record<string, string>;
+    /** @deprecated GB-only compat — mapped into fields */
+    countryCode?: string;
+    currencyCode?: string;
+    accountHolderName?: string;
+    sortCode?: string;
+    accountNumber?: string;
 };
 
 function restHeaders(extra?: Record<string, string>) {
@@ -186,14 +200,27 @@ function mapCorridors(raw: unknown): PayoutSetupCorridor[] {
     if (!Array.isArray(raw)) return [];
     return raw.map((row) => {
         const item = row as Record<string, unknown>;
+        const currencyCode = String(item.currencyCode ?? item.currency_code ?? "");
         const currencies = Array.isArray(item.currencies)
             ? item.currencies.map(String)
             : Array.isArray(item.supported_currencies)
               ? (item.supported_currencies as unknown[]).map(String)
-              : [];
+              : currencyCode
+                ? [currencyCode]
+                : [];
         return {
+            id: item.id == null ? undefined : String(item.id),
             countryCode: String(item.countryCode ?? item.country_code ?? ""),
+            currencyCode: currencyCode || undefined,
             provider: String(item.provider ?? "wise"),
+            recipientType:
+                item.recipientType == null && item.recipient_type == null
+                    ? undefined
+                    : String(item.recipientType ?? item.recipient_type),
+            displayName:
+                item.displayName == null && item.display_name == null
+                    ? undefined
+                    : String(item.displayName ?? item.display_name),
             currencies,
             minimumPayoutAmountMinor:
                 item.minimumPayoutAmountMinor == null && item.minimum_payout_amount_minor == null
@@ -202,7 +229,9 @@ function mapCorridors(raw: unknown): PayoutSetupCorridor[] {
             minimumPayoutCurrency:
                 item.minimumPayoutCurrency == null && item.minimum_payout_currency == null
                     ? null
-                    : String(item.minimumPayoutCurrency ?? item.minimum_payout_currency)
+                    : String(item.minimumPayoutCurrency ?? item.minimum_payout_currency),
+            enabledForSetup: Boolean(item.enabledForSetup ?? item.enabled_for_setup),
+            comingSoon: Boolean(item.comingSoon ?? item.coming_soon ?? !(item.enabledForSetup ?? item.enabled_for_setup))
         };
     });
 }
@@ -257,30 +286,49 @@ export async function loadPayoutSetupStatusForUser(input: {
 }
 
 export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): Promise<PayoutSetupStatus> {
-    const countryCode = input.countryCode.trim().toUpperCase();
-    const currencyCode = input.currencyCode.trim().toUpperCase();
-    const accountHolderName = input.accountHolderName.trim();
-    const sortCode = digitsOnly(input.sortCode);
-    const accountNumber = digitsOnly(input.accountNumber);
-
-    if (countryCode !== "GB") {
-        throw new Error("Only United Kingdom bank payouts are available for setup right now.");
-    }
-    if (currencyCode !== "GBP") {
-        throw new Error("GBP is required for United Kingdom payout setup.");
-    }
     if (!input.legalCapacityAttested) {
         throw new Error("Confirm you are eligible to receive payouts.");
     }
+
+    const fields: Record<string, string> = {...(input.fields ?? {})};
+    // GB backward-compat for older clients still posting sortCode/accountNumber.
+    if (input.accountHolderName && !fields.accountHolderName) {
+        fields.accountHolderName = input.accountHolderName;
+    }
+    if (input.sortCode && !fields.sortCode) fields.sortCode = digitsOnly(input.sortCode);
+    if (input.accountNumber && !fields.accountNumber) fields.accountNumber = digitsOnly(input.accountNumber);
+
+    const accountHolderName = String(fields.accountHolderName ?? "").trim();
     if (accountHolderName.length < 2) {
         throw new Error("Enter the account holder name.");
     }
-    if (sortCode.length !== 6) {
-        throw new Error("Enter a valid 6-digit UK sort code.");
+
+    let corridorId = String(input.corridorId ?? "").trim();
+    if (!corridorId && input.countryCode && input.currencyCode) {
+        const rows = await serviceRest<Array<Record<string, unknown>>>(
+            `monetization_payout_corridors?country_code=eq.${encodeURIComponent(input.countryCode.trim().toUpperCase())}&currency_code=eq.${encodeURIComponent(input.currencyCode.trim().toUpperCase())}&provider=eq.wise&enabled_for_setup=eq.true&select=id&limit=1`
+        );
+        corridorId = rows[0]?.id ? String(rows[0].id) : "";
     }
-    if (accountNumber.length < 6 || accountNumber.length > 10) {
-        throw new Error("Enter a valid UK account number.");
+    if (!corridorId) {
+        throw new Error("Select a supported payout country.");
     }
+
+    const corridorRows = await serviceRest<Array<Record<string, unknown>>>(
+        `monetization_payout_corridors?id=eq.${encodeURIComponent(corridorId)}&select=*&limit=1`
+    );
+    const corridor = corridorRows[0];
+    if (!corridor) throw new Error("Payout corridor not found.");
+    if (!Boolean(corridor.enabled_for_setup)) {
+        throw new Error("Payouts aren't available in your country yet.");
+    }
+
+    const countryCode = String(corridor.country_code);
+    const currencyCode = String(corridor.currency_code);
+    const recipientType = String(corridor.recipient_type);
+    const schemaFields = normalizeDbSchema(corridor.requirements_schema);
+    const validationError = validateFieldsAgainstSchema(schemaFields, fields);
+    if (validationError) throw new Error(validationError);
 
     const wise = await resolveWiseConfigForUserSetup();
     if (!wise.setupProviderReady) {
@@ -288,18 +336,19 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
     }
 
     const provider = new WisePayoutProvider(wise.config);
-    const maskedDestination = maskGbpBankAccount(accountNumber);
+    const maskedDestination = maskDestinationFromFields({
+        currencyCode,
+        recipientType,
+        fields
+    });
+    const details = buildWiseRecipientDetailsFromFields(fields);
 
     const created = await provider.createRecipient({
-        currency: "GBP",
-        type: "sort_code",
+        currency: currencyCode,
+        type: recipientType,
         accountHolderName,
         profileId: wise.config.profileId,
-        details: {
-            legalType: "PRIVATE",
-            sortCode,
-            accountNumber
-        },
+        details,
         maskedDestination
     });
 
@@ -323,8 +372,18 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         body: JSON.stringify(persistPayload)
     });
 
-    const existing = await serviceRest<Array<Record<string, unknown>>>(
-        `payout_profiles?user_id=eq.${input.userId}&provider=eq.wise&status=in.(draft,onboarding,active,restricted)&select=id&limit=1`
+    // Supersede prior active profiles for replace-destination flow.
+    await serviceRest(
+        `payout_profiles?user_id=eq.${input.userId}&provider=eq.wise&status=in.(draft,onboarding,active,restricted)`,
+        {
+            method: "PATCH",
+            headers: restHeaders({Prefer: "return=minimal"}),
+            body: JSON.stringify({
+                status: "closed",
+                superseded_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+        }
     );
 
     const profileRow = {
@@ -333,7 +392,10 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         provider_account_ref: wise.config.profileId,
         provider_recipient_ref: created.providerRecipientRef,
         masked_destination: maskedDestination,
-        destination_type: "bank_account",
+        destination_type: recipientType === "iban" ? "iban" : "bank_account",
+        recipient_type: recipientType,
+        corridor_id: corridorId,
+        bank_label: recipientType,
         country_code: countryCode,
         default_currency: currencyCode,
         status: "active",
@@ -341,30 +403,19 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         tax_status: "not_required",
         environment: wise.config.environment,
         verification_mode: wise.config.environment === "sandbox" ? "sandbox_test" : "provider_hosted",
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
     };
     assertNoSensitivePersistencePayload(profileRow);
 
-    if (existing[0]?.id) {
-        await serviceRest(`payout_profiles?id=eq.${existing[0].id}`, {
-            method: "PATCH",
-            headers: restHeaders({Prefer: "return=minimal"}),
-            body: JSON.stringify(profileRow)
-        });
-    } else {
-        await serviceRest("payout_profiles", {
-            method: "POST",
-            headers: restHeaders({Prefer: "return=minimal"}),
-            body: JSON.stringify({
-                ...profileRow,
-                created_at: new Date().toISOString()
-            })
-        });
-    }
+    await serviceRest("payout_profiles", {
+        method: "POST",
+        headers: restHeaders({Prefer: "return=minimal"}),
+        body: JSON.stringify(profileRow)
+    });
 
-    // Re-read eligibility as the user via service role impersonation is not available;
-    // reconstruct from persisted facts + config.
     const monetization = await serviceRpc<Record<string, unknown>>("get_monetization_config");
+    const corridorsRaw = await serviceRpc<unknown>("list_my_payout_corridors").catch(() => []);
     const eligibilityShape: Record<string, unknown> = {
         eligible: false,
         payoutsEnabled: Boolean(monetization.payouts_enabled ?? monetization.payoutsEnabled),
@@ -384,22 +435,14 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         maskedDestination,
         destinationCurrency: currencyCode,
         destinationCountry: countryCode,
-        destinationType: "bank_account",
+        destinationType: recipientType === "iban" ? "iban" : "bank_account",
         provider: "wise",
         canWithdraw: false
     };
 
     return mapPayoutSetupStatus(eligibilityShape, {
         setupProviderReady: true,
-        corridors: [
-            {
-                countryCode: "GB",
-                provider: "wise",
-                currencies: ["GBP"],
-                minimumPayoutAmountMinor: 2000,
-                minimumPayoutCurrency: "GBP"
-            }
-        ],
+        corridors: mapCorridors(Array.isArray(corridorsRaw) ? corridorsRaw : []),
         contactEmail: input.contactEmail
     });
 }
