@@ -13,14 +13,40 @@ import {
     type EarningsCurrencyBalance,
 } from "@/lib/earnings";
 
+type PayoutCorridor = {
+    id?: string;
+    countryCode: string;
+    currencyCode?: string;
+    displayName?: string;
+    recipientType?: string;
+    currencies: string[];
+    enabledForSetup?: boolean;
+    comingSoon?: boolean;
+    minimumPayoutAmountMinor?: number | null;
+};
+
+type PayoutField = {
+    key: string;
+    label: string;
+    type: string;
+    required: boolean;
+    minLength?: number | null;
+    maxLength?: number | null;
+    pattern?: string | null;
+    options?: string[] | null;
+    sensitive?: boolean;
+};
+
 type PayoutSetup = {
     setupComplete?: boolean;
     payoutsEnabled?: boolean;
     canWithdraw?: boolean;
+    eligible?: boolean;
     maskedDestination?: string | null;
     setupProviderReady?: boolean;
     contactEmail?: string | null;
     destinationCountry?: string | null;
+    destinationCurrency?: string | null;
     reasonCodes?: string[];
     payoutSlaDays?: number;
     availableAmountMinor?: number;
@@ -28,6 +54,7 @@ type PayoutSetup = {
     blockerTitle?: string | null;
     blockerDetail?: string | null;
     nextStep?: string | null;
+    corridors?: PayoutCorridor[];
 };
 
 type Payload = {
@@ -114,10 +141,15 @@ export function EarningsClient() {
     const [showSetup, setShowSetup] = useState(false);
     const [setupBusy, setSetupBusy] = useState(false);
     const [setupError, setSetupError] = useState<string | null>(null);
-    const [accountHolderName, setAccountHolderName] = useState("");
-    const [sortCode, setSortCode] = useState("");
-    const [accountNumber, setAccountNumber] = useState("");
     const [legalCapacityAttested, setLegalCapacityAttested] = useState(false);
+    const [selectedCorridorId, setSelectedCorridorId] = useState("");
+    const [fieldDefs, setFieldDefs] = useState<PayoutField[]>([]);
+    const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+    const [fieldsLoading, setFieldsLoading] = useState(false);
+    const [requestBusy, setRequestBusy] = useState(false);
+    const [requestError, setRequestError] = useState<string | null>(null);
+    const [requestMessage, setRequestMessage] = useState<string | null>(null);
+    const [estimateNote, setEstimateNote] = useState<string | null>(null);
 
     async function reload() {
         const res = await fetch("/api/app/earnings", {cache: "no-store"});
@@ -152,9 +184,40 @@ export function EarningsClient() {
     const checklistDone = checklist.filter((i) => i.isComplete).length;
     const accent =
         progress?.eligibility.state === "participating" || progress?.eligibility.state === "period_closing";
+    const corridors = (setup?.corridors ?? []).filter((c) => c.id);
+    const enabledCorridors = corridors.filter((c) => c.enabledForSetup && !c.comingSoon);
+    const selectedCorridor = enabledCorridors.find((c) => c.id === selectedCorridorId) ?? null;
+    const primaryBalance = data?.balances.find((b) => b.availableAmountMinor > 0) ?? data?.balances[0];
+
+    async function loadCorridorFields(corridorId: string) {
+        setFieldsLoading(true);
+        setSetupError(null);
+        setFieldDefs([]);
+        setFieldValues({});
+        try {
+            const res = await fetch(`/api/app/payouts/corridors?corridorId=${encodeURIComponent(corridorId)}`, {
+                cache: "no-store",
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Failed to load bank fields");
+            const fields = Array.isArray(json.requirements?.fields) ? json.requirements.fields : [];
+            setFieldDefs(fields);
+            const next: Record<string, string> = {};
+            for (const f of fields) next[f.key] = "";
+            setFieldValues(next);
+        } catch (e) {
+            setSetupError(e instanceof Error ? e.message : "Failed to load bank fields");
+        } finally {
+            setFieldsLoading(false);
+        }
+    }
 
     async function submitSetup(event: React.FormEvent) {
         event.preventDefault();
+        if (!selectedCorridorId) {
+            setSetupError("Select a country corridor first.");
+            return;
+        }
         setSetupBusy(true);
         setSetupError(null);
         try {
@@ -162,24 +225,75 @@ export function EarningsClient() {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    countryCode: "GB",
-                    currencyCode: "GBP",
-                    accountHolderName,
-                    sortCode,
-                    accountNumber,
+                    corridorId: selectedCorridorId,
                     legalCapacityAttested,
+                    fields: fieldValues,
                 }),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || "Setup failed");
             setShowSetup(false);
-            setAccountNumber("");
-            setSortCode("");
+            setFieldValues({});
+            setLegalCapacityAttested(false);
             await reload();
         } catch (e) {
             setSetupError(e instanceof Error ? e.message : "Setup failed");
         } finally {
             setSetupBusy(false);
+        }
+    }
+
+    async function requestPayout() {
+        if (!primaryBalance || primaryBalance.availableAmountMinor <= 0) return;
+        setRequestBusy(true);
+        setRequestError(null);
+        setRequestMessage(null);
+        setEstimateNote(null);
+        try {
+            const destCurrency = setup?.destinationCurrency || selectedCorridor?.currencyCode || primaryBalance.currencyCode;
+            let estimateTarget: number | null = null;
+            let estimateRate: number | null = null;
+            let estimateFee: number | null = null;
+            if (destCurrency && destCurrency !== primaryBalance.currencyCode) {
+                const estRes = await fetch("/api/app/payouts/estimate", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        sourceCurrency: primaryBalance.currencyCode,
+                        targetCurrency: destCurrency,
+                        sourceAmountMinor: primaryBalance.availableAmountMinor,
+                    }),
+                });
+                const est = await estRes.json();
+                if (est.estimateAvailable) {
+                    estimateTarget = Number(est.targetAmountMinor);
+                    estimateRate = Number(est.exchangeRate);
+                    estimateFee = Number(est.providerFeeMinor);
+                    setEstimateNote(est.note || null);
+                }
+            }
+            const res = await fetch("/api/app/payouts/request", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    currencyCode: primaryBalance.currencyCode,
+                    amountMinor: primaryBalance.availableAmountMinor,
+                    idempotencyKey: `web-${primaryBalance.currencyCode}-${Date.now()}`,
+                    estimateTargetAmountMinor: estimateTarget,
+                    estimateExchangeRate: estimateRate,
+                    estimateProviderFeeMinor: estimateFee,
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Request failed");
+            setRequestMessage(
+                `Payout requested — status ${json.status || "held"}. Ghostseed finance will pay via Wise.`
+            );
+            await reload();
+        } catch (e) {
+            setRequestError(e instanceof Error ? e.message : "Request failed");
+        } finally {
+            setRequestBusy(false);
         }
     }
 
@@ -367,6 +481,11 @@ export function EarningsClient() {
                                     {setup?.maskedDestination && (
                                         <p className="mt-1 text-sm text-white/60">{setup.maskedDestination}</p>
                                     )}
+                                    {setup?.destinationCountry && setup?.destinationCurrency && (
+                                        <p className="mt-1 text-xs text-white/45">
+                                            {setup.destinationCountry} · {setup.destinationCurrency}
+                                        </p>
+                                    )}
                                     {setup?.targetPayBy && (setup.availableAmountMinor ?? 0) > 0 ? (
                                         <p className="mt-2 text-sm font-semibold text-primary-400">
                                             Target pay by {setup.targetPayBy}
@@ -380,6 +499,35 @@ export function EarningsClient() {
                                     {setup?.nextStep && (
                                         <p className="mt-2 text-sm text-white/55">{setup.nextStep}</p>
                                     )}
+                                    {setup?.payoutsEnabled &&
+                                        setup?.canWithdraw &&
+                                        (primaryBalance?.availableAmountMinor ?? 0) > 0 && (
+                                            <div className="mt-4 space-y-2">
+                                                <p className="text-sm text-white/60">{EARNINGS_COPY.requestPayoutBody}</p>
+                                                {estimateNote && (
+                                                    <p className="text-xs text-white/45">{estimateNote}</p>
+                                                )}
+                                                {requestError && (
+                                                    <p className="text-sm text-rose-300">{requestError}</p>
+                                                )}
+                                                {requestMessage && (
+                                                    <p className="text-sm text-emerald-300">{requestMessage}</p>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={requestBusy}
+                                                    onClick={() => void requestPayout()}
+                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                >
+                                                    {requestBusy
+                                                        ? "Requesting…"
+                                                        : `${EARNINGS_COPY.requestPayoutTitle} ${formatEarningsMinor(
+                                                              primaryBalance!.availableAmountMinor,
+                                                              primaryBalance!.currencyCode
+                                                          )}`}
+                                                </button>
+                                            </div>
+                                        )}
                                     {!setup?.payoutsEnabled && (
                                         <p className="mt-2 text-sm text-white/45">
                                             {EARNINGS_COPY.payoutsNotAvailableYet}
@@ -395,9 +543,9 @@ export function EarningsClient() {
                                             type="button"
                                             className="mt-3 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950"
                                             onClick={() => setShowSetup(true)}
-                                            disabled={!setup?.setupProviderReady}
+                                            disabled={!setup?.setupProviderReady || enabledCorridors.length === 0}
                                         >
-                                            {setup?.setupProviderReady
+                                            {setup?.setupProviderReady && enabledCorridors.length > 0
                                                 ? EARNINGS_COPY.setUpPayoutsTitle
                                                 : EARNINGS_COPY.payoutsNotAvailableYet}
                                         </button>
@@ -407,31 +555,73 @@ export function EarningsClient() {
                                             {setup.contactEmail && (
                                                 <p className="text-xs text-white/45">Contact: {setup.contactEmail}</p>
                                             )}
-                                            <p className="text-xs text-white/45">United Kingdom · GBP · Bank account</p>
+                                            <label className="block text-xs text-white/45">
+                                                Country / corridor
+                                                <select
+                                                    className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                                                    value={selectedCorridorId}
+                                                    onChange={(e) => {
+                                                        const id = e.target.value;
+                                                        setSelectedCorridorId(id);
+                                                        if (id) void loadCorridorFields(id);
+                                                    }}
+                                                    required
+                                                >
+                                                    <option value="">Select…</option>
+                                                    {enabledCorridors.map((c) => (
+                                                        <option key={c.id} value={c.id}>
+                                                            {c.displayName || c.countryCode} ·{" "}
+                                                            {c.currencyCode || c.currencies[0] || "—"}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
                                             <p className="text-xs text-white/45">{EARNINGS_COPY.otherCountriesNote}</p>
-                                            <input
-                                                className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
-                                                placeholder="Account holder name"
-                                                value={accountHolderName}
-                                                onChange={(e) => setAccountHolderName(e.target.value)}
-                                                required
-                                            />
-                                            <input
-                                                className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
-                                                placeholder="Sort code"
-                                                value={sortCode}
-                                                onChange={(e) => setSortCode(e.target.value)}
-                                                required
-                                                autoComplete="off"
-                                            />
-                                            <input
-                                                className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
-                                                placeholder="Account number"
-                                                value={accountNumber}
-                                                onChange={(e) => setAccountNumber(e.target.value)}
-                                                required
-                                                autoComplete="off"
-                                            />
+                                            {fieldsLoading && (
+                                                <p className="text-sm text-white/45">Loading bank fields…</p>
+                                            )}
+                                            {fieldDefs.map((field) => (
+                                                <label key={field.key} className="block text-xs text-white/45">
+                                                    {field.label}
+                                                    {field.options && field.options.length > 0 ? (
+                                                        <select
+                                                            className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                                                            value={fieldValues[field.key] ?? ""}
+                                                            onChange={(e) =>
+                                                                setFieldValues((v) => ({
+                                                                    ...v,
+                                                                    [field.key]: e.target.value,
+                                                                }))
+                                                            }
+                                                            required={field.required}
+                                                        >
+                                                            <option value="">Select…</option>
+                                                            {field.options.map((opt) => (
+                                                                <option key={opt} value={opt}>
+                                                                    {opt}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <input
+                                                            className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
+                                                            type={field.sensitive ? "password" : "text"}
+                                                            autoComplete="off"
+                                                            value={fieldValues[field.key] ?? ""}
+                                                            onChange={(e) =>
+                                                                setFieldValues((v) => ({
+                                                                    ...v,
+                                                                    [field.key]: e.target.value,
+                                                                }))
+                                                            }
+                                                            required={field.required}
+                                                            minLength={field.minLength ?? undefined}
+                                                            maxLength={field.maxLength ?? undefined}
+                                                            pattern={field.pattern ?? undefined}
+                                                        />
+                                                    )}
+                                                </label>
+                                            ))}
                                             <label className="flex items-start gap-2 text-sm text-white/70">
                                                 <input
                                                     type="checkbox"
@@ -445,7 +635,12 @@ export function EarningsClient() {
                                             {setupError && <p className="text-sm text-rose-300">{setupError}</p>}
                                             <button
                                                 type="submit"
-                                                disabled={setupBusy || !legalCapacityAttested}
+                                                disabled={
+                                                    setupBusy ||
+                                                    !legalCapacityAttested ||
+                                                    !selectedCorridorId ||
+                                                    fieldsLoading
+                                                }
                                                 className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
                                             >
                                                 {setupBusy ? "Saving…" : "Confirm payout method"}

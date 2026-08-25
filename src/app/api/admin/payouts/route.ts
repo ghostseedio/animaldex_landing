@@ -2,8 +2,11 @@ import {NextRequest, NextResponse} from "next/server";
 import {requireNamedFinanceAdminActor, resolveAdminActor} from "@/lib/support-admin-auth";
 import {
     approveAndExecuteSandboxPayout,
+    approvePayoutForManualPayment,
+    confirmManualPayoutPaid,
     getPayoutDiagnostics,
     listAdminPayouts,
+    recordManualWiseTransfer,
     refreshPayoutProviderStatus
 } from "@/lib/wise-sandbox-payouts";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -32,6 +35,12 @@ async function rpc(name: string, body: Record<string, unknown> = {}) {
     return payload;
 }
 
+const MANUAL_ACTIONS = new Set([
+    "approve_manual",
+    "record_wise_transfer",
+    "confirm_paid"
+]);
+
 export async function GET(request: NextRequest) {
     const actor = await resolveAdminActor(request.cookies);
     if (!actor.authorized) {
@@ -45,24 +54,33 @@ export async function GET(request: NextRequest) {
         } catch {
             readiness = null;
         }
-
-        if (diagnostics.isProduction) {
-            return NextResponse.json({
-                diagnostics: {
-                    ...diagnostics,
-                    banner: diagnostics.banner || "PRODUCTION — REAL MONEY — WISE"
-                },
-                payouts: [],
-                readiness,
-                blocked: true,
-                blockedReason:
-                    diagnostics.phase7cStopReason ||
-                    "Live Wise execution stays gated until funding + Phase 7C gates pass. Readiness board is still visible for ops planning."
-            });
+        try {
+            const howTo = await rpc("admin_list_payout_readiness_how_to_pay");
+            if (readiness && typeof readiness === "object" && Array.isArray(howTo)) {
+                (readiness as Record<string, unknown>).how_to_pay = howTo;
+            }
+        } catch {
+            // optional helper until migration applied
         }
 
         const payouts = await listAdminPayouts();
-        return NextResponse.json({diagnostics, payouts, readiness, blocked: false});
+        const autoExecuteBlocked = diagnostics.isProduction;
+
+        return NextResponse.json({
+            diagnostics: {
+                ...diagnostics,
+                banner: diagnostics.isProduction
+                    ? diagnostics.banner || "PRODUCTION — REAL MONEY — MANUAL WISE"
+                    : diagnostics.banner
+            },
+            payouts,
+            readiness,
+            blocked: false,
+            autoExecuteBlocked,
+            blockedReason: autoExecuteBlocked
+                ? "Sandbox Approve & execute stays gated on production. Use Approve → Record Wise → Confirm Paid."
+                : null
+        });
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
     }
@@ -76,11 +94,39 @@ export async function POST(request: NextRequest) {
         const payoutId = String(body.payoutId ?? "");
         const diagnostics = await getPayoutDiagnostics();
 
+        if (!payoutId && action !== "") {
+            return NextResponse.json({error: "payoutId required"}, {status: 400});
+        }
+
+        if (MANUAL_ACTIONS.has(action)) {
+            if (action === "approve_manual") {
+                const result = await approvePayoutForManualPayment(payoutId, actor);
+                return NextResponse.json({ok: true, result});
+            }
+            if (action === "record_wise_transfer") {
+                const result = await recordManualWiseTransfer(payoutId, actor, {
+                    providerTransferRef: String(body.providerTransferRef ?? ""),
+                    quoteSourceCurrency: String(body.quoteSourceCurrency ?? ""),
+                    quoteTargetCurrency: String(body.quoteTargetCurrency ?? ""),
+                    quoteSourceAmountMinor: Number(body.quoteSourceAmountMinor ?? 0),
+                    quoteTargetAmountMinor: Number(body.quoteTargetAmountMinor ?? 0),
+                    quoteFeeAmountMinor: Number(body.quoteFeeAmountMinor ?? 0),
+                    quoteRate: Number(body.quoteRate ?? 0),
+                    providerStatus: body.providerStatus ? String(body.providerStatus) : undefined
+                });
+                return NextResponse.json({ok: true, result});
+            }
+            if (action === "confirm_paid") {
+                const result = await confirmManualPayoutPaid(payoutId, actor);
+                return NextResponse.json({ok: true, result});
+            }
+        }
+
         if (diagnostics.isProduction) {
             return NextResponse.json(
                 {
                     error:
-                        "production_payout_execution_blocked_until_wise_gbp_funded_and_phase7c_gates_pass",
+                        "production_auto_execute_blocked — use approve_manual → record_wise_transfer → confirm_paid",
                     diagnostics
                 },
                 {status: 403}
@@ -88,12 +134,10 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === "approve_execute") {
-            if (!payoutId) return NextResponse.json({error: "payoutId required"}, {status: 400});
             const result = await approveAndExecuteSandboxPayout(payoutId, actor);
             return NextResponse.json({ok: true, result});
         }
         if (action === "refresh_status") {
-            if (!payoutId) return NextResponse.json({error: "payoutId required"}, {status: 400});
             const result = await refreshPayoutProviderStatus(payoutId, actor);
             return NextResponse.json({ok: true, result});
         }

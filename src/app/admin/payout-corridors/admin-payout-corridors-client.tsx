@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 
 type Corridor = {
     id: string;
@@ -18,11 +18,48 @@ type Corridor = {
     blocker_reason: string | null;
 };
 
+const WAVE1_PRIORITY = [
+    "ID",
+    "SG",
+    "AU",
+    "NZ",
+    "US",
+    "CA",
+    "FR",
+    "DE",
+    "NL",
+    "ES",
+    "IT",
+    "IE",
+    "MY",
+    "PH",
+    "TH",
+    "JP",
+    "KR",
+    "IN",
+    "GB"
+];
+
+function priorityRank(country: string) {
+    const idx = WAVE1_PRIORITY.indexOf(country);
+    return idx === -1 ? 500 + country.charCodeAt(0) : idx;
+}
+
 export function AdminPayoutCorridorsClient() {
     const [rows, setRows] = useState<Corridor[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+
+    const sorted = useMemo(
+        () =>
+            [...rows].sort((a, b) => {
+                const pr = priorityRank(a.country_code) - priorityRank(b.country_code);
+                if (pr !== 0) return pr;
+                return a.currency_code.localeCompare(b.currency_code);
+            }),
+        [rows]
+    );
 
     async function load() {
         setError(null);
@@ -57,6 +94,33 @@ export function AdminPayoutCorridorsClient() {
         }
     }
 
+    async function probe(currencyCode: string) {
+        setBusy(true);
+        setMessage(null);
+        setError(null);
+        try {
+            const res = await fetch("/api/admin/payout-corridors", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "probe_requirements", currencyCode})
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Probe failed");
+            const types = Array.isArray(json.requirements)
+                ? json.requirements
+                      .map((r: {type?: string; title?: string}) => r.type || r.title || "?")
+                      .slice(0, 8)
+                : [];
+            setMessage(
+                `Wise requirements for ${currencyCode}: ${types.join(", ") || "ok"} — ${json.checklistHint || ""}`
+            );
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Probe failed");
+        } finally {
+            setBusy(false);
+        }
+    }
+
     return (
         <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
             <Link href="/admin/payouts" className="text-sm text-ink-400 hover:text-white">
@@ -64,8 +128,9 @@ export function AdminPayoutCorridorsClient() {
             </Link>
             <h1 className="mt-5 font-display text-3xl text-white">Payout corridors</h1>
             <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Wave 1 international corridors. Enable setup/requests only after Wise verification. Enabling without{" "}
-                <code>tested_at</code> is rejected. Manual Wise payment only — no auto-payout.
+                Wave 1 international corridors (sorted by activation priority). Probe Wise requirements before enabling.
+                Enabling without <code>tested_at</code> is rejected. Manual Wise payment only — no auto-payout. Clients
+                pick up newly enabled corridors without an app release.
             </p>
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
             {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
@@ -84,7 +149,7 @@ export function AdminPayoutCorridorsClient() {
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map((r) => (
+                        {sorted.map((r) => (
                             <tr key={r.id} className="border-t border-white/10 align-top">
                                 <td className="px-3 py-2 text-white">
                                     {r.display_name}
@@ -98,6 +163,14 @@ export function AdminPayoutCorridorsClient() {
                                 <td className="px-3 py-2">
                                     <p className="text-xs text-ink-500">{r.blocker_reason || "—"}</p>
                                     <div className="mt-2 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            className="rounded border border-sky-500/40 px-2 py-1 text-xs text-sky-100"
+                                            onClick={() => void probe(r.currency_code)}
+                                        >
+                                            Probe Wise reqs
+                                        </button>
                                         <button
                                             type="button"
                                             disabled={busy}

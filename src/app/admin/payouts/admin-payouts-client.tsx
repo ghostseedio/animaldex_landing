@@ -29,6 +29,23 @@ type PayoutRow = {
     providerTransferRef: string | null;
     providerStatus: string | null;
     failureCode: string | null;
+    sourceEarningsCurrency: string | null;
+    sourceEarningsAmountMinor: number | null;
+    targetCurrency: string | null;
+    targetAmountMinor: number | null;
+    estimateTargetAmountMinor: number | null;
+    estimateExchangeRate: number | null;
+    quoteSourceCurrency: string | null;
+    quoteTargetCurrency: string | null;
+    quoteSourceAmountMinor: number | null;
+    quoteTargetAmountMinor: number | null;
+    quoteFeeAmountMinor: number | null;
+    quoteRate: number | null;
+    feePolicy: string | null;
+    reviewTier: string | null;
+    hasHold: boolean;
+    paidAt: string | null;
+    manualTransferRecordedAt: string | null;
 };
 
 type ReadinessRow = {
@@ -57,19 +74,51 @@ type Readiness = {
     rows?: ReadinessRow[];
 };
 
+type RecordForm = {
+    providerTransferRef: string;
+    quoteSourceCurrency: string;
+    quoteTargetCurrency: string;
+    quoteSourceAmount: string;
+    quoteTargetAmount: string;
+    quoteFeeAmount: string;
+    quoteRate: string;
+};
+
 function money(minor: number, currency: string) {
     return `${currency} ${(Number(minor) / 100).toFixed(2)}`;
 }
+
+function toMinor(amount: string): number {
+    return Math.round(Number(amount) * 100);
+}
+
+const DEFAULT_HOW_TO_PAY = [
+    "Confirm Available Earnings (not Credits) and masked bank destination.",
+    "Creator requests payout → Available becomes Held.",
+    "Named finance: Approve for manual payment.",
+    "Send via Ghostseed Wise Business using the stored recipient.",
+    "Record Wise transfer id + final quote amounts/rate.",
+    "Confirm Paid (releases hold + posts payout debit).",
+];
 
 export function AdminPayoutsClient() {
     const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
     const [payouts, setPayouts] = useState<PayoutRow[]>([]);
     const [readiness, setReadiness] = useState<Readiness | null>(null);
-    const [blocked, setBlocked] = useState(false);
-    const [blockedReason, setBlockedReason] = useState<string | null>(null);
+    const [autoExecuteBlocked, setAutoExecuteBlocked] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [recordFor, setRecordFor] = useState<string | null>(null);
+    const [recordForm, setRecordForm] = useState<RecordForm>({
+        providerTransferRef: "",
+        quoteSourceCurrency: "GBP",
+        quoteTargetCurrency: "GBP",
+        quoteSourceAmount: "",
+        quoteTargetAmount: "",
+        quoteFeeAmount: "0",
+        quoteRate: "1",
+    });
 
     async function load() {
         setError(null);
@@ -79,15 +128,32 @@ export function AdminPayoutsClient() {
         setDiagnostics(json.diagnostics);
         setPayouts(json.payouts || []);
         setReadiness(json.readiness || null);
-        setBlocked(Boolean(json.blocked));
-        setBlockedReason(typeof json.blockedReason === "string" ? json.blockedReason : null);
+        setAutoExecuteBlocked(Boolean(json.autoExecuteBlocked));
     }
 
     useEffect(() => {
         load().catch((e) => setError(e instanceof Error ? e.message : "Failed"));
     }, []);
 
-    async function run(action: string, payoutId: string) {
+    function openRecord(p: PayoutRow) {
+        setRecordFor(p.payoutId);
+        setRecordForm({
+            providerTransferRef: p.providerTransferRef || "",
+            quoteSourceCurrency: p.quoteSourceCurrency || p.sourceEarningsCurrency || p.currencyCode,
+            quoteTargetCurrency: p.quoteTargetCurrency || p.targetCurrency || p.currencyCode,
+            quoteSourceAmount: String(
+                ((p.quoteSourceAmountMinor ?? p.sourceEarningsAmountMinor ?? p.amountMinor) || 0) / 100
+            ),
+            quoteTargetAmount: String(
+                ((p.quoteTargetAmountMinor ?? p.targetAmountMinor ?? p.estimateTargetAmountMinor ?? p.amountMinor) ||
+                    0) / 100
+            ),
+            quoteFeeAmount: String((p.quoteFeeAmountMinor ?? 0) / 100),
+            quoteRate: String(p.quoteRate ?? p.estimateExchangeRate ?? 1),
+        });
+    }
+
+    async function run(action: string, payoutId: string, extra?: Record<string, unknown>) {
         const amountHint = payouts.find((p) => p.payoutId === payoutId);
         const confirmed = window.confirm(
             [
@@ -97,7 +163,7 @@ export function AdminPayoutsClient() {
                 amountHint
                     ? `Amount: ${money(amountHint.amountMinor, amountHint.currencyCode)}`
                     : null,
-                "Named finance operator required. Shared password alone cannot approve.",
+                "Named finance operator required.",
                 "Continue?",
             ]
                 .filter(Boolean)
@@ -111,17 +177,31 @@ export function AdminPayoutsClient() {
             const res = await fetch("/api/admin/payouts", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({action, payoutId}),
+                body: JSON.stringify({action, payoutId, ...extra}),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || "Action failed");
-            setMessage(JSON.stringify(json.result ?? json));
+            setMessage(`${action} ok`);
+            setRecordFor(null);
             await load();
         } catch (e) {
             setError(e instanceof Error ? e.message : "Action failed");
         } finally {
             setBusy(false);
         }
+    }
+
+    async function submitRecord() {
+        if (!recordFor) return;
+        await run("record_wise_transfer", recordFor, {
+            providerTransferRef: recordForm.providerTransferRef.trim(),
+            quoteSourceCurrency: recordForm.quoteSourceCurrency.trim().toUpperCase(),
+            quoteTargetCurrency: recordForm.quoteTargetCurrency.trim().toUpperCase(),
+            quoteSourceAmountMinor: toMinor(recordForm.quoteSourceAmount),
+            quoteTargetAmountMinor: toMinor(recordForm.quoteTargetAmount),
+            quoteFeeAmountMinor: toMinor(recordForm.quoteFeeAmount),
+            quoteRate: Number(recordForm.quoteRate),
+        });
     }
 
     const rows = readiness?.rows || [];
@@ -140,11 +220,17 @@ export function AdminPayoutsClient() {
                 >
                     {diagnostics?.isProduction ? "PRODUCTION — REAL MONEY" : "WISE SANDBOX"}
                 </span>
+                <Link
+                    href="/admin/payout-corridors"
+                    className="rounded-md border border-white/20 px-2.5 py-1 text-xs font-semibold text-ink-200 hover:bg-white/5"
+                >
+                    Corridors
+                </Link>
             </div>
             <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Ghostseed Ltd pays creators from Available Earnings via Wise. Payouts are{" "}
-                <strong className="text-ink-200">never automatic</strong>. Target SLA:{" "}
-                {readiness?.payout_sla_days ?? 14} days after balance becomes Available.
+                Ghostseed Ltd pays creators from Available Earnings via Wise. Model:{" "}
+                <strong className="text-ink-200">request → Held → Approve → manual Wise → record → Paid</strong>.
+                Target SLA: {readiness?.payout_sla_days ?? 14} days. Auto-payout stays off.
             </p>
 
             {diagnostics && (
@@ -167,48 +253,30 @@ export function AdminPayoutsClient() {
                     How to pay a creator
                 </h2>
                 <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-ink-300">
-                    {(readiness?.how_to_pay?.length
-                        ? readiness.how_to_pay
-                        : [
-                              "Confirm Available Earnings (not Credits).",
-                              "Confirm bank destination setup (masked only).",
-                              "Create payout request → named finance approves.",
-                              "System reserves → Wise quote/transfer/fund.",
-                              "Paid only after Wise outgoing_payment_sent.",
-                          ]
-                    ).map((step) => (
-                        <li key={step}>{step}</li>
-                    ))}
+                    {(readiness?.how_to_pay?.length ? readiness.how_to_pay : DEFAULT_HOW_TO_PAY).map(
+                        (step) => (
+                            <li key={step}>{step}</li>
+                        )
+                    )}
                 </ol>
                 <p className="mt-3 text-xs text-ink-500">
-                    Creator Rewards allocations are prepared on{" "}
+                    Creator Rewards on{" "}
                     <Link href="/admin/creator-rewards" className="text-white underline-offset-2 hover:underline">
                         /admin/creator-rewards
                     </Link>
-                    . This page is the bank rail.
+                    . Enable countries on{" "}
+                    <Link href="/admin/payout-corridors" className="text-white underline-offset-2 hover:underline">
+                        /admin/payout-corridors
+                    </Link>{" "}
+                    after Wise verification (no app release).
                 </p>
             </section>
 
-            {blocked && (
-                <p className="mt-4 text-sm text-rose-300">
-                    {blockedReason ||
-                        "Production payout execution is gated until Wise GBP is funded and Phase 7C gates pass."}
-                </p>
-            )}
-
             {diagnostics?.autoPayoutEnabled && (
                 <p className="mt-4 rounded-xl border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-                    Warning: <code>auto_payout_enabled=true</code> on this environment. Product policy is manual
-                    finance approval only — turn this off unless you intentionally changed ops policy.
+                    Warning: <code>auto_payout_enabled=true</code>. Product policy is manual finance only.
                 </p>
             )}
-
-            <p className="mt-4 text-xs text-ink-500">
-                Bank corridor live today: <strong className="text-ink-200">United Kingdom · GBP · Wise</strong>.
-                Other countries can earn Creator Rewards; payout destination setup opens when their corridor is
-                enabled. This page stays empty until Creator Rewards are Finalized → Posted and balances become
-                Available.
-            </p>
 
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
             {message && <p className="mt-4 break-all text-sm text-emerald-300">{message}</p>}
@@ -217,9 +285,6 @@ export function AdminPayoutsClient() {
                 <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">
                     Who needs paying / setup
                 </h2>
-                <p className="mt-1 text-xs text-ink-500">
-                    Available balances, bank setup status, and SLA due dates. No raw bank details.
-                </p>
                 <div className="mt-3 overflow-x-auto rounded-2xl border border-line-300">
                     {rows.length === 0 ? (
                         <p className="px-4 py-6 text-sm text-ink-500">
@@ -248,7 +313,7 @@ export function AdminPayoutsClient() {
                                         <td className="px-3 py-2 tabular-nums">
                                             {money(r.available_amount_minor, r.currency_code)}
                                             <span className="block text-xs text-ink-500">
-                                                pending {money(r.pending_amount_minor, r.currency_code)}
+                                                held {money(r.held_amount_minor, r.currency_code)}
                                             </span>
                                         </td>
                                         <td className="px-3 py-2">
@@ -280,42 +345,208 @@ export function AdminPayoutsClient() {
 
             <section className="mt-8 space-y-3">
                 <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Payout requests</h2>
-                {payouts.map((p) => (
-                    <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <h3 className="font-semibold text-white">
-                                {money(p.amountMinor, p.currencyCode)} · {p.status}
-                            </h3>
-                            <span className="text-xs uppercase text-ink-400">
-                                {p.provider}/{p.environment}
-                            </span>
-                        </div>
-                        <p className="mt-1 text-xs text-ink-500">
-                            {p.payoutId} · user {p.userId.slice(0, 8)}… · transfer{" "}
-                            {p.providerTransferRef || "—"}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                disabled={busy || blocked}
-                                onClick={() => run("approve_execute", p.payoutId)}
-                                className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
-                            >
-                                Approve & execute
-                            </button>
-                            <button
-                                type="button"
-                                disabled={busy || blocked}
-                                onClick={() => run("refresh_status", p.payoutId)}
-                                className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
-                            >
-                                Refresh status
-                            </button>
-                        </div>
-                    </article>
-                ))}
+                {payouts.map((p) => {
+                    const canApprove = ["requested", "reserved", "eligibility_check", "approved"].includes(
+                        p.status
+                    );
+                    const canRecord = [
+                        "approved_for_manual_payment",
+                        "processing",
+                        "reserved",
+                    ].includes(p.status);
+                    const canConfirm =
+                        p.status === "processing" ||
+                        (p.status === "approved_for_manual_payment" && Boolean(p.manualTransferRecordedAt));
+
+                    return (
+                        <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                <h3 className="font-semibold text-white">
+                                    {money(p.amountMinor, p.currencyCode)} · {p.status}
+                                </h3>
+                                <span className="text-xs uppercase text-ink-400">
+                                    {p.provider}/{p.environment}
+                                    {p.reviewTier ? ` · ${p.reviewTier}` : ""}
+                                </span>
+                            </div>
+                            <p className="mt-1 text-xs text-ink-500">
+                                {p.payoutId} · user {p.userId.slice(0, 8)}… · transfer{" "}
+                                {p.providerTransferRef || "—"}
+                                {p.hasHold ? " · hold yes" : ""}
+                            </p>
+                            {(p.targetCurrency || p.estimateTargetAmountMinor != null) && (
+                                <p className="mt-1 text-xs text-ink-400">
+                                    Dest {p.targetCurrency || "—"}
+                                    {p.estimateTargetAmountMinor != null
+                                        ? ` · est ${money(p.estimateTargetAmountMinor, p.targetCurrency || p.currencyCode)}`
+                                        : ""}
+                                    {p.quoteTargetAmountMinor != null
+                                        ? ` · final ${money(p.quoteTargetAmountMinor, p.quoteTargetCurrency || p.targetCurrency || p.currencyCode)} @ ${p.quoteRate ?? "—"}`
+                                        : ""}
+                                </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={busy || !canApprove}
+                                    onClick={() => run("approve_manual", p.payoutId)}
+                                    className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
+                                >
+                                    1. Approve for manual pay
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={busy || !canRecord}
+                                    onClick={() => openRecord(p)}
+                                    className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-100 disabled:opacity-50"
+                                >
+                                    2. Record Wise transfer
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={busy || !canConfirm}
+                                    onClick={() => run("confirm_paid", p.payoutId)}
+                                    className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-100 disabled:opacity-50"
+                                >
+                                    3. Confirm Paid
+                                </button>
+                                {!autoExecuteBlocked && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => run("approve_execute", p.payoutId)}
+                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
+                                        >
+                                            Sandbox auto-execute
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => run("refresh_status", p.payoutId)}
+                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
+                                        >
+                                            Refresh status
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {recordFor === p.payoutId && (
+                                <div className="mt-4 grid gap-2 rounded-xl border border-white/10 bg-white/5 p-3 sm:grid-cols-2">
+                                    <label className="text-xs text-ink-400 sm:col-span-2">
+                                        Wise transfer id
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.providerTransferRef}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    providerTransferRef: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Source currency
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteSourceCurrency}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    quoteSourceCurrency: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Target currency
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteTargetCurrency}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    quoteTargetCurrency: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Source amount
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteSourceAmount}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    quoteSourceAmount: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Target amount
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteTargetAmount}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    quoteTargetAmount: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Fee (company-absorbed)
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteFeeAmount}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({
+                                                    ...f,
+                                                    quoteFeeAmount: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </label>
+                                    <label className="text-xs text-ink-400">
+                                        Rate
+                                        <input
+                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            value={recordForm.quoteRate}
+                                            onChange={(e) =>
+                                                setRecordForm((f) => ({...f, quoteRate: e.target.value}))
+                                            }
+                                        />
+                                    </label>
+                                    <div className="flex gap-2 sm:col-span-2">
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => void submitRecord()}
+                                            className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                                        >
+                                            Save Wise record
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecordFor(null)}
+                                            className="rounded-md border border-white/20 px-3 py-1.5 text-xs"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </article>
+                    );
+                })}
                 {payouts.length === 0 && (
-                    <p className="text-sm text-ink-500">No payout requests in this environment yet.</p>
+                    <p className="text-sm text-ink-500">No payout requests yet.</p>
                 )}
             </section>
         </main>

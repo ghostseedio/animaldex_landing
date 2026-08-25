@@ -45,6 +45,43 @@ export async function POST(request: NextRequest) {
     try {
         await requireNamedFinanceAdminActor(await cookies());
         const body = await request.json().catch(() => ({}));
+        const action = String(body.action ?? "update");
+
+        if (action === "probe_requirements") {
+            const currency = String(body.currencyCode ?? "").toUpperCase();
+            if (!/^[A-Z]{3}$/.test(currency)) {
+                return NextResponse.json({error: "currencyCode required"}, {status: 400});
+            }
+            const {
+                loadWiseConfigFromEnv,
+                loadWiseProductionConfigFromEnv,
+                WisePayoutProvider
+            } = await import("@/lib/wise-payout-provider");
+            const {getPayoutDiagnostics} = await import("@/lib/wise-sandbox-payouts");
+            const diagnostics = await getPayoutDiagnostics();
+            const config = diagnostics.isProduction
+                ? loadWiseProductionConfigFromEnv()
+                : loadWiseConfigFromEnv();
+            if (!config.apiToken || !config.profileId) {
+                return NextResponse.json({error: "Wise credentials not configured"}, {status: 400});
+            }
+            const provider = new WisePayoutProvider(config);
+            const sourceCurrency = String(body.sourceCurrency ?? "GBP").toUpperCase();
+            const wiseReqs = await provider.getAccountRequirements({
+                sourceCurrency,
+                targetCurrency: currency,
+                sourceAmount: 100
+            });
+            return NextResponse.json({
+                ok: true,
+                sourceCurrency,
+                targetCurrency: currency,
+                requirements: wiseReqs,
+                checklistHint:
+                    "Confirm types match seeded recipient_type, create a test recipient, quote, then Mark tested + enable."
+            });
+        }
+
         const result = await rpc("admin_update_payout_corridor", {
             p_corridor_id: body.corridorId,
             p_enabled_for_setup: body.enabledForSetup ?? null,

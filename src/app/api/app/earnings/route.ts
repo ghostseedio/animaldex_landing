@@ -21,7 +21,7 @@ export async function GET() {
         supabase.rpc("list_my_creator_reward_receipts"),
         supabase.rpc("get_my_creator_reward_period_progress"),
         supabase.rpc("get_my_payout_eligibility"),
-        supabase.rpc("list_my_payout_setup_corridors"),
+        supabase.rpc("list_my_payout_corridors"),
     ]);
 
     if (summaryRes.error) return NextResponse.json({error: summaryRes.error.message}, {status: 400});
@@ -32,12 +32,18 @@ export async function GET() {
     const entryRows = Array.isArray(entriesRes.data) ? entriesRes.data : [];
     const receiptRows = Array.isArray(receiptsRes.data) ? receiptsRes.data : [];
 
+    let corridorsRaw: unknown = corridorsRes.error ? null : corridorsRes.data;
+    if (corridorsRes.error || corridorsRaw == null) {
+        const legacy = await supabase.rpc("list_my_payout_setup_corridors");
+        corridorsRaw = legacy.error ? [] : legacy.data;
+    }
+
     let payoutSetup = null;
     if (!eligibilityRes.error) {
         try {
             payoutSetup = await loadPayoutSetupStatusForUser({
                 eligibilityRow: (eligibilityRes.data ?? {}) as Record<string, unknown>,
-                corridorsRaw: corridorsRes.error ? [] : corridorsRes.data,
+                corridorsRaw,
                 contactEmail: user.email ?? null,
             });
         } catch {

@@ -327,18 +327,21 @@ export const EARNINGS_COPY = {
     payoutsComingLater: "Coming later",
     availableNoPayoutNote:
         "Your Available Earnings stay recorded here until Ghostseed finance completes a payout.",
-    setUpPayoutsTitle: "Add UK bank details",
+    setUpPayoutsTitle: "Add payout destination",
     setUpPayoutsBody:
-        "Bank payouts are open for the United Kingdom (GBP) first. Enter UK sort code + account number so Ghostseed can pay via Wise. We don’t keep full account numbers after setup. Other countries can still earn — payout setup opens when we add their corridor.",
-    payoutsReadyTitle: "Bank details saved",
+        "Choose your country and currency, then enter the bank fields Wise needs. Ghostseed pays manually via Wise — we don’t keep full account numbers after setup. More countries unlock from the admin corridor board without an app update.",
+    payoutsReadyTitle: "Payout destination saved",
     payoutsNotAvailableYet: "Payouts aren’t open for your account yet. Your balance remains recorded.",
+    requestPayoutTitle: "Request payout",
+    requestPayoutBody:
+        "Requesting moves Available Earnings to Held while Ghostseed finance pays you via Wise.",
     giftsSignal:
         "Genuine Gift activity may contribute as one limited community-support signal. The Credit price of a Gift does not determine your reward.",
     score: "AnimalDex Score is a public reputation metric. Creator Rewards use separate period-specific contribution calculations.",
     pool: "Creator Rewards are allocated from an AnimalDex-funded reward pool. Gift prices, Credits, XP, and AnimalDex Score are not directly converted into cash.",
     paymentModelNote: "Payouts are reviewed by Ghostseed finance and are not automatic.",
     otherCountriesNote:
-        "Not in the UK? You can keep earning. We’ll open bank setup for more countries later — we won’t ask you to use an unsupported corridor.",
+        "Only corridors enabled for setup appear here. Coming-soon countries can still earn — setup opens when finance verifies and enables them.",
     legalCapacityHint:
         "This checkbox is how eligibility is confirmed. There’s no separate “Eligibility confirmed” button.",
 } as const;

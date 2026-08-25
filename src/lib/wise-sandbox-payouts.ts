@@ -141,9 +141,18 @@ export async function ensureNamedFinanceOperator(actor: AdminActor) {
 }
 
 export async function listAdminPayouts() {
-    await requireNonProductionForFixtures();
     const rows = await rest<Array<Record<string, unknown>>>(
-        "payouts?select=id,user_id,currency_code,amount_minor,status,provider,environment,provider_transfer_ref,provider_status,failure_code,created_at,updated_at,approved_by&order=created_at.desc&limit=100"
+        [
+            "payouts?select=",
+            "id,user_id,currency_code,amount_minor,status,provider,environment,",
+            "provider_transfer_ref,provider_status,failure_code,created_at,updated_at,approved_by,",
+            "source_earnings_currency,source_earnings_amount_minor,target_currency,target_amount_minor,",
+            "estimate_target_amount_minor,estimate_exchange_rate,estimate_provider_fee_minor,",
+            "quote_source_currency,quote_target_currency,quote_source_amount_minor,quote_target_amount_minor,",
+            "quote_fee_amount_minor,quote_rate,fee_policy,review_tier,corridor_id,",
+            "earning_hold_id,paid_at,manual_transfer_recorded_at",
+            "&order=created_at.desc&limit=100"
+        ].join("")
     );
     return (rows || []).map((p) => ({
         payoutId: String(p.id),
@@ -157,8 +166,89 @@ export async function listAdminPayouts() {
         providerStatus: p.provider_status ? String(p.provider_status) : null,
         failureCode: p.failure_code ? String(p.failure_code) : null,
         createdAt: String(p.created_at ?? ""),
-        approvedBy: p.approved_by ? String(p.approved_by) : null
+        approvedBy: p.approved_by ? String(p.approved_by) : null,
+        sourceEarningsCurrency: p.source_earnings_currency ? String(p.source_earnings_currency) : null,
+        sourceEarningsAmountMinor:
+            p.source_earnings_amount_minor == null ? null : Number(p.source_earnings_amount_minor),
+        targetCurrency: p.target_currency ? String(p.target_currency) : null,
+        targetAmountMinor: p.target_amount_minor == null ? null : Number(p.target_amount_minor),
+        estimateTargetAmountMinor:
+            p.estimate_target_amount_minor == null ? null : Number(p.estimate_target_amount_minor),
+        estimateExchangeRate: p.estimate_exchange_rate == null ? null : Number(p.estimate_exchange_rate),
+        quoteSourceCurrency: p.quote_source_currency ? String(p.quote_source_currency) : null,
+        quoteTargetCurrency: p.quote_target_currency ? String(p.quote_target_currency) : null,
+        quoteSourceAmountMinor:
+            p.quote_source_amount_minor == null ? null : Number(p.quote_source_amount_minor),
+        quoteTargetAmountMinor:
+            p.quote_target_amount_minor == null ? null : Number(p.quote_target_amount_minor),
+        quoteFeeAmountMinor: p.quote_fee_amount_minor == null ? null : Number(p.quote_fee_amount_minor),
+        quoteRate: p.quote_rate == null ? null : Number(p.quote_rate),
+        feePolicy: p.fee_policy ? String(p.fee_policy) : null,
+        reviewTier: p.review_tier ? String(p.review_tier) : null,
+        corridorId: p.corridor_id ? String(p.corridor_id) : null,
+        hasHold: Boolean(p.earning_hold_id),
+        paidAt: p.paid_at ? String(p.paid_at) : null,
+        manualTransferRecordedAt: p.manual_transfer_recorded_at
+            ? String(p.manual_transfer_recorded_at)
+            : null
     }));
+}
+
+/** Production-safe: Held/reserved → approve for manual Wise send. */
+export async function approvePayoutForManualPayment(payoutId: string, actor: AdminActor) {
+    const operator = await ensureNamedFinanceOperator(actor);
+    return rpc<Record<string, unknown>>("admin_approve_payout_for_manual_payment", {
+        p_payout_id: payoutId,
+        p_actor_operator_id: operator.id
+    });
+}
+
+/** Production-safe: record final Wise quote after you paid in Wise Business. */
+export async function recordManualWiseTransfer(
+    payoutId: string,
+    actor: AdminActor,
+    input: {
+        providerTransferRef: string;
+        quoteSourceCurrency: string;
+        quoteTargetCurrency: string;
+        quoteSourceAmountMinor: number;
+        quoteTargetAmountMinor: number;
+        quoteFeeAmountMinor: number;
+        quoteRate: number;
+        providerStatus?: string;
+    }
+) {
+    const operator = await ensureNamedFinanceOperator(actor);
+    return rpc<Record<string, unknown>>("admin_record_manual_wise_transfer", {
+        p_payout_id: payoutId,
+        p_actor_operator_id: operator.id,
+        p_provider_transfer_ref: input.providerTransferRef,
+        p_quote_source_currency: input.quoteSourceCurrency.toUpperCase(),
+        p_quote_target_currency: input.quoteTargetCurrency.toUpperCase(),
+        p_quote_source_amount_minor: input.quoteSourceAmountMinor,
+        p_quote_target_amount_minor: input.quoteTargetAmountMinor,
+        p_quote_fee_amount_minor: input.quoteFeeAmountMinor,
+        p_quote_rate: input.quoteRate,
+        p_provider_status: input.providerStatus ?? "outgoing_payment_sent"
+    });
+}
+
+/** Production-safe: release hold + debit Available → Paid. */
+export async function confirmManualPayoutPaid(payoutId: string, actor: AdminActor) {
+    const operator = await ensureNamedFinanceOperator(actor);
+    try {
+        return await rpc<Record<string, unknown>>("admin_confirm_manual_payout_paid", {
+            p_payout_id: payoutId,
+            p_actor_operator_id: operator.id
+        });
+    } catch {
+        // Fallback before notification migration is applied.
+        return rpc<Record<string, unknown>>("admin_complete_payout_from_hold", {
+            p_payout_id: payoutId,
+            p_actor_operator_id: operator.id,
+            p_provider_status: "outgoing_payment_sent"
+        });
+    }
 }
 
 async function recordAttempt(
