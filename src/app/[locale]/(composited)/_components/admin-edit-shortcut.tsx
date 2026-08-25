@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {useEffect, useMemo, useState} from "react";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 export default function AdminEditShortcut({editablePageSlugs}: {editablePageSlugs: string[]}) {
     const pathname = usePathname();
@@ -21,6 +22,10 @@ export default function AdminEditShortcut({editablePageSlugs}: {editablePageSlug
 
     useEffect(() => {
         if (!target) return;
+        // Shared-password admin sessions are httpOnly and cannot be seen here.
+        // Named email admins are signed into Supabase, so skip the status call
+        // unless an auth cookie is already present.
+        if (!requestHasSupabaseAuthCookie(document.cookie)) return;
         let active = true;
         fetch("/api/admin/auth/status", {cache: "no-store"})
             .then((response) => response.json())

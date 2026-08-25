@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {apexGrowthMatchTitle, apexGrowthPresentation} from "@/data/apex-growth";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 type GrowthLabels = {
     apexPathEyebrow: string;
@@ -429,6 +430,13 @@ export default function SpeciesGrowthInteractive({
     const [comparisonError, setComparisonError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
     const [isComparisonPending, startComparisonTransition] = useTransition();
+    const [clientSignedIn, setClientSignedIn] = useState(false);
+
+    useEffect(() => {
+        setClientSignedIn(requestHasSupabaseAuthCookie(document.cookie));
+    }, []);
+
+    const treatAsSignedIn = growth.isAuthenticated || clientSignedIn;
 
     const presentation = growth.match ? apexGrowthPresentation(growth.match) : null;
     const powerName = growth.principle?.principle ?? speciesName;
@@ -834,7 +842,7 @@ export default function SpeciesGrowthInteractive({
                             <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#38fa47]">✦</span> Available actions</h3>
                             <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
                             {canOpenPublicComparison ? (
-                                <Link href={growth.isAuthenticated ? `/app/matchups?target=${encodeURIComponent(comparison.captureId)}` : "/account"} className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-[rgba(0,255,255,.90)] px-3.5 py-3 text-black">
+                                <Link href={treatAsSignedIn ? `/app/matchups?target=${encodeURIComponent(comparison.captureId)}` : "/account"} className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-[rgba(0,255,255,.90)] px-3.5 py-3 text-black">
                                     <span aria-hidden="true" className="w-[18px] text-center text-sm">⚡</span>
                                     <span className="min-w-0 flex-1">
                                         <span className="block text-xs font-medium">Compare</span>
@@ -920,7 +928,7 @@ export default function SpeciesGrowthInteractive({
                         <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
                             <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#38fa47]">✦</span> Available actions</h3>
                             <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
-                            <Link href={growth.isAuthenticated ? "/app" : "/account"} className="mt-3 flex items-center gap-3 rounded-[14px] border border-white/[0.07] bg-white/[0.03] p-3.5">
+                            <Link href={treatAsSignedIn ? "/app" : "/account"} className="mt-3 flex items-center gap-3 rounded-[14px] border border-white/[0.07] bg-white/[0.03] p-3.5">
                                 <span className="text-cyan-300">⚡</span>
                                 <span className="min-w-0 flex-1">
                                     <span className="block text-xs font-medium text-white">Compare</span>

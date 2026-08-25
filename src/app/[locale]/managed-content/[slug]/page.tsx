@@ -36,4 +36,5 @@ export default async function ManagedRoutePage({params}: ManagedPageProps) {
     return <ManagedContentRenderer locale={params.locale} page={page} />;
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+export const dynamicParams = true;

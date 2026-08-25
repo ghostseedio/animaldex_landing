@@ -1,6 +1,7 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {getManagedPage} from "@/lib/admin-content";
+import {shouldLookupPublishedManagedPage} from "@/lib/managed-page-slugs";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import ManagedContentRenderer from "@/app/[locale]/_components/managed-content-renderer";
 
@@ -10,7 +11,9 @@ type ManagedPageProps = {
 
 async function resolvePage(params: ManagedPageProps["params"]) {
     if (params.catchall.length !== 1) return null;
-    return getManagedPage(params.catchall[0]);
+    const slug = params.catchall[0];
+    if (!shouldLookupPublishedManagedPage(slug)) return null;
+    return getManagedPage(slug);
 }
 
 export async function generateMetadata({params}: ManagedPageProps): Promise<Metadata> {
@@ -38,4 +41,5 @@ export default async function ManagedContentPage({params}: ManagedPageProps) {
     return <ManagedContentRenderer locale={params.locale} page={page} />;
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+export const dynamicParams = true;

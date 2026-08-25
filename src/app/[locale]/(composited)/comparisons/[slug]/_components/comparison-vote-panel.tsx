@@ -1,7 +1,8 @@
 "use client";
 
-import {useCallback, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import type {ComparisonVoteSide, ComparisonVoteTally} from "@/data/comparison-engagement";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 export type ComparisonVoteCopy = {
     eyebrow: string;
@@ -47,6 +48,25 @@ export default function ComparisonVotePanel({
     const [vote, setVote] = useState<ComparisonVoteSide | null>(initialVote);
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState<ComparisonVoteSide | null>(null);
+
+    useEffect(() => {
+        const hasGuest = document.cookie.split(";").some((part) => part.trim().startsWith("animaldex_guest="));
+        if (!requestHasSupabaseAuthCookie(document.cookie) && !hasGuest) return;
+
+        let isMounted = true;
+        void fetch(`/api/comparisons/vote?slug=${encodeURIComponent(slug)}`, {cache: "no-store"})
+            .then((response) => response.ok ? response.json() as Promise<{tally?: ComparisonVoteTally; viewerVote?: ComparisonVoteSide | null}> : null)
+            .then((payload) => {
+                if (!isMounted || !payload) return;
+                if (payload.tally) setTally(payload.tally);
+                if (payload.viewerVote) setVote(payload.viewerVote);
+            })
+            .catch(() => {});
+
+        return () => {
+            isMounted = false;
+        };
+    }, [slug]);
 
     const castVote = useCallback(async (side: ComparisonVoteSide) => {
         if (pending) return;

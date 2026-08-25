@@ -1,17 +1,22 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {hasAuthCookie} from "@/lib/viewer";
 
 export async function GET() {
+    if (!hasAuthCookie()) {
+        return NextResponse.json({user: null, username: null, displayName: null});
+    }
+
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {
-        return NextResponse.json({user: null, username: null});
+        return NextResponse.json({user: null, username: null, displayName: null});
     }
 
     const {data: {user}} = await supabase.auth.getUser();
 
     if (!user) {
-        return NextResponse.json({user: null, username: null});
+        return NextResponse.json({user: null, username: null, displayName: null});
     }
 
     const {data: profile} = await supabase

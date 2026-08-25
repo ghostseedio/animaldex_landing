@@ -14,6 +14,7 @@ import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {hasAuthCookie} from "@/lib/viewer";
 
 export type AppProfile = NonNullable<Awaited<ReturnType<typeof getAuthenticatedUserProfile>>>;
 
@@ -488,6 +489,8 @@ function looksLikeGarbageDescriptiveIdentity(value: string) {
 }
 
 async function getAuthenticatedSupabaseUser() {
+    if (!hasAuthCookie()) return null;
+
     const supabase = createSupabaseServerClient();
     if (!supabase) return null;
 
@@ -545,6 +548,8 @@ export async function getAuthenticatedAppContext() {
 }
 
 export async function getAppCreditBalance() {
+    if (!hasAuthCookie()) return null;
+
     const supabase = createSupabaseServerClient();
     if (!supabase) return null;
 

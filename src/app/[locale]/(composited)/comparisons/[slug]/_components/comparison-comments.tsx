@@ -3,6 +3,7 @@
 import {useCallback, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import type {ComparisonComment} from "@/data/comparison-engagement";
+import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 
 export type ComparisonCommentsCopy = {
     eyebrow: string;
@@ -45,6 +46,8 @@ export default function ComparisonComments({
     maxLength,
     copy
 }: ComparisonCommentsProps) {
+    const {session} = useHeaderAuth();
+    const signedIn = isSignedIn || Boolean(session.user);
     const [comments, setComments] = useState(initialComments);
     const [draft, setDraft] = useState("");
     const [busy, setBusy] = useState(false);
@@ -126,7 +129,7 @@ export default function ComparisonComments({
                 <p className="mt-3 max-w-2xl text-base leading-7 text-ink-200">{copy.description}</p>
             </div>
 
-            {isSignedIn ? (
+            {signedIn ? (
                 <div className="rounded-3xl border border-line-300 bg-surface-900/60 p-5 md:p-6">
                     <label className="block">
                         <span className="sr-only">{copy.placeholder}</span>
@@ -201,7 +204,7 @@ export default function ComparisonComments({
                                     </div>
                                     <p className="mt-2 whitespace-pre-line text-base leading-7 text-ink-200">{comment.body}</p>
                                     <div className="mt-3 flex gap-4 text-xs font-semibold">
-                                        {comment.isOwn ? (
+                                        {comment.isOwn || Boolean(session.username && comment.authorUsername === session.username) ? (
                                             <button
                                                 type="button"
                                                 onClick={() => remove(comment.id)}
@@ -210,7 +213,7 @@ export default function ComparisonComments({
                                             >
                                                 {copy.delete}
                                             </button>
-                                        ) : isSignedIn ? (
+                                        ) : signedIn ? (
                                             <button
                                                 type="button"
                                                 onClick={() => report(comment.id)}

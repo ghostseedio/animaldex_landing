@@ -6,6 +6,7 @@ import {
 } from "@/data/comparison-engagement";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {hasAuthCookie} from "@/lib/viewer";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     const slug = normalizeSlug(new URL(request.url).searchParams.get("slug"));
     if (!slug) return NextResponse.json({error: "invalid_slug"}, {status: 400});
 
-    const supabase = createSupabaseServerClient();
+    const supabase = hasAuthCookie() ? createSupabaseServerClient() : null;
     const {data} = supabase ? await supabase.auth.getUser() : {data: {user: null}};
     const comments = await fetchComparisonComments(slug, data.user?.id ?? null);
 

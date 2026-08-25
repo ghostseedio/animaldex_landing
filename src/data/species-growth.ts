@@ -603,8 +603,14 @@ function canGenerateApexChallenge(match: ApexGrowthMatch | null) {
     return match?.strength === "strong" || match?.strength === "partial";
 }
 
-export async function getSpeciesGrowthContext(entry: SpeciesEntry, publicCaptureId: string | null = null): Promise<SpeciesGrowthContext> {
-    const userId = await getAuthenticatedUserId();
+export async function getSpeciesGrowthContext(
+    entry: SpeciesEntry,
+    publicCaptureId: string | null = null,
+    options?: {includeAuthenticatedViewer?: boolean}
+): Promise<SpeciesGrowthContext> {
+    const userId = options?.includeAuthenticatedViewer === false
+        ? null
+        : await getAuthenticatedUserId();
     const empty: SpeciesGrowthContext = {
         isAuthenticated: Boolean(userId),
         hasCapture: false,

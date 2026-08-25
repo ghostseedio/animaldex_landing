@@ -1,157 +1,68 @@
 import createIntlMiddleware from "next-intl/middleware";
-import {createServerClient} from "@supabase/ssr";
 import {type NextRequest, NextResponse} from "next/server";
 import {localeConfig} from "@/i18n";
 import {updateSupabaseSession} from "@/lib/supabase/middleware";
-import {getSupabaseAuthKey, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {
+    isProtectedAppPath,
+    middlewareShouldRefreshSession,
+    splitLocalePath
+} from "@/lib/request-routing";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
+import {traceRequestAmplification} from "@/lib/request-trace";
 
 const intlMiddleware = createIntlMiddleware(localeConfig);
 
-const protectedAppPrefixes = [
-    "/app/arena",
-    "/app/capture",
-    "/app/collection",
-    "/app/journal",
-    "/app/matchups",
-    "/app/messages",
-    "/app/missions",
-    "/app/notifications",
-    "/app/profile",
-    "/app/earnings",
-    "/app/sets",
-    "/app/trades",
-    "/app/train"
-];
-
-const selfRenderedCmsPageSlugs = new Set([
-    "best-animal-identification-app",
-    "what-is-animal-collecting",
-    "pokemon-like-animal-app",
-    "animal-collection-app",
-    "animal-identifier-app",
-    "ai-animal-scanner",
-    "identify-insects",
-    "identify-birds",
-    "identify-reptiles",
-    "identify-pets",
-    "wildlife-discovery-app",
-    "animal-breed-price-estimator",
-    "animal-breed-grading-app",
-    "sell-custom-animal-cards",
-    "learn-from-animals"
-]);
-
-function splitLocalePath(pathname: string) {
-    const segments = pathname.split("/");
-    const firstSegment = segments[1];
-    const hasLocalePrefix = localeConfig.locales.includes(firstSegment);
-    const locale = hasLocalePrefix ? firstSegment : localeConfig.defaultLocale;
-    const appPath = hasLocalePrefix ? `/${segments.slice(2).join("/")}` : pathname;
-
-    return {
-        locale,
-        appPath: appPath === "/" ? "/" : appPath.replace(/\/+$/, "") || "/"
-    };
-}
-
-function isProtectedAppPath(pathname: string) {
-    const {appPath} = splitLocalePath(pathname);
-
-    return protectedAppPrefixes.some((prefix) => appPath === prefix || appPath.startsWith(`${prefix}/`));
-}
-
-function isSingleSegmentPublicPage(appPath: string) {
-    if (appPath === "/" || appPath.startsWith("/managed-content")) return false;
-    if (appPath.startsWith("/app") || appPath.startsWith("/blog") || appPath.startsWith("/p/") || appPath.startsWith("/u/")) return false;
-    if (appPath.includes(".")) return false;
-    return appPath.split("/").filter(Boolean).length === 1;
-}
-
-async function hasPublishedManagedPage(slug: string) {
-    const supabaseUrl = getSupabaseUrl();
-    const serviceKey = getSupabaseServiceKey();
-
-    if (!supabaseUrl || !serviceKey) return false;
-
-    try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/admin_content_entries?content_type=eq.page&slug=eq.${encodeURIComponent(slug)}&is_published=eq.true&select=id&limit=1`, {
-            headers: {
-                apikey: serviceKey,
-                Authorization: `Bearer ${serviceKey}`,
-                Accept: "application/json"
-            },
-            cache: "no-store"
-        });
-        if (!response.ok) return false;
-        const rows = await response.json() as Array<{id: string}>;
-        return rows.length > 0;
-    } catch {
-        return false;
-    }
-}
-
-async function hasSupabaseUser(request: NextRequest, response: NextResponse) {
-    const supabaseUrl = getSupabaseUrl();
-    const supabaseAuthKey = getSupabaseAuthKey();
-
-    if (!supabaseUrl || !supabaseAuthKey) {
-        return false;
-    }
-
-    const supabase = createServerClient(supabaseUrl, supabaseAuthKey, {
-        cookies: {
-            getAll() {
-                return request.cookies.getAll();
-            },
-            setAll(cookiesToSet, headers) {
-                cookiesToSet.forEach(({name, value, options}) => {
-                    request.cookies.set({name, value, ...options});
-                    response.cookies.set({name, value, ...options});
-                });
-
-                for (const [key, value] of Object.entries(headers)) {
-                    response.headers.set(key, value);
-                }
-            }
-        }
-    });
-
-    const {data: {user}} = await supabase.auth.getUser();
-
-    return Boolean(user);
-}
-
-export async function middleware(request: NextRequest) {
-    const response = intlMiddleware(request);
-
-    const sessionResponse = await updateSupabaseSession(request, response);
-    const {locale, appPath} = splitLocalePath(request.nextUrl.pathname);
-
-    if (isSingleSegmentPublicPage(appPath)) {
-        const slug = appPath.slice(1);
-        const isCmsSourceRequest = request.nextUrl.searchParams.get("cmsSource") === "1"
-            || request.headers.get("x-animaldex-cms-source") === "1";
-        if (!isCmsSourceRequest && !selfRenderedCmsPageSlugs.has(slug) && await hasPublishedManagedPage(slug)) {
-            const rewriteUrl = request.nextUrl.clone();
-            rewriteUrl.pathname = `/${locale}/managed-content/${slug}`;
-            return NextResponse.rewrite(rewriteUrl, sessionResponse);
-        }
-    }
-
-    if (!isProtectedAppPath(request.nextUrl.pathname)) {
-        return sessionResponse;
-    }
-
-    if (await hasSupabaseUser(request, sessionResponse)) {
-        return sessionResponse;
-    }
-
+function redirectToAccount(request: NextRequest, locale: string, sessionResponse?: NextResponse) {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = locale === localeConfig.defaultLocale ? "/account" : `/${locale}/account`;
     signInUrl.search = "";
     signInUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    const redirect = NextResponse.redirect(signInUrl);
 
-    return NextResponse.redirect(signInUrl);
+    sessionResponse?.cookies.getAll().forEach((cookie) => {
+        redirect.cookies.set(cookie);
+    });
+
+    return redirect;
+}
+
+/**
+ * Middleware stays broad so next-intl can handle `as-needed` locale routing
+ * and legacy public URLs keep working. That does **not** mean every public
+ * request may contact Supabase.
+ *
+ * Safe split:
+ * - Locale/redirect work always runs (no network).
+ * - Auth/session refresh runs only when a Supabase auth cookie is present or
+ *   the path is a protected `/app/*` gate.
+ * - Protected routes without a cookie redirect locally — no `getUser()`.
+ * - CMS vanity slugs are resolved in the catch-all route, never here.
+ * - Authorization for APIs and RSC still uses server `auth.getUser()`.
+ */
+export async function middleware(request: NextRequest) {
+    const response = intlMiddleware(request);
+    const {locale} = splitLocalePath(request.nextUrl.pathname);
+    const hasAuthCookie = requestHasSupabaseAuthCookie(request.cookies.getAll());
+    const isProtected = isProtectedAppPath(request.nextUrl.pathname);
+
+    if (!middlewareShouldRefreshSession(request.nextUrl.pathname, hasAuthCookie)) {
+        traceRequestAmplification("middleware-public-anonymous", {path: request.nextUrl.pathname});
+        return response;
+    }
+
+    if (isProtected && !hasAuthCookie) {
+        traceRequestAmplification("middleware-protected-anonymous-redirect", {path: request.nextUrl.pathname});
+        return redirectToAccount(request, locale);
+    }
+
+    const session = await updateSupabaseSession(request, response);
+
+    if (isProtected && !session.user) {
+        traceRequestAmplification("middleware-protected-invalid-session", {path: request.nextUrl.pathname});
+        return redirectToAccount(request, locale, session.response);
+    }
+
+    return session.response;
 }
 
 export const config = {

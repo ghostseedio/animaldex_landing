@@ -403,7 +403,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
     const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug, entry);
     const [growthContext, featuredCapture] = await Promise.all([
-        getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null),
+        getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null, {includeAuthenticatedViewer: false}),
         featuredMedia?.captureId ? getDiscoverCaptureById(featuredMedia.captureId) : null
     ]);
     const heroFeaturedMedia = featuredMediaList.length > 0

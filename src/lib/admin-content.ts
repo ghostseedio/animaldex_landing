@@ -1,8 +1,12 @@
 import "server-only";
+import {revalidatePath, revalidateTag} from "next/cache";
 import type {BlogPost} from "@/data/blog/types";
 import {blogPosts, getIndexedBlogPosts} from "@/data/blog";
 import {answerPages} from "@/data/answer-pages";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+
+export const ADMIN_CONTENT_CACHE_TAG = "admin-content";
+export const ADMIN_CONTENT_REVALIDATE_SECONDS = 300;
 
 type ContentEntry = {
     id: string;
@@ -50,18 +54,31 @@ function config() {
     return url && key ? {url, key} : null;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type RequestCacheMode = "no-store" | "public";
+
+function publicContentNext(type?: "blog" | "page", slug?: string) {
+    const tags = [ADMIN_CONTENT_CACHE_TAG];
+    if (type) tags.push(`${ADMIN_CONTENT_CACHE_TAG}:${type}`);
+    if (type && slug) tags.push(`${ADMIN_CONTENT_CACHE_TAG}:${type}:${slug}`);
+    return {revalidate: ADMIN_CONTENT_REVALIDATE_SECONDS, tags};
+}
+
+async function request<T>(path: string, init?: RequestInit & {cacheMode?: RequestCacheMode; contentType?: "blog" | "page"; slug?: string}): Promise<T> {
     const resolved = config();
     if (!resolved) throw new Error("Supabase admin content storage is not configured");
 
+    const {cacheMode = "no-store", contentType, slug, ...fetchInit} = init ?? {};
+
     const response = await fetch(`${resolved.url}/rest/v1/${path}`, {
-        ...init,
+        ...fetchInit,
         headers: getSupabaseHeaders(resolved.key, {
             Accept: "application/json",
-            ...(init?.body ? {"Content-Type": "application/json"} : {}),
-            ...(init?.headers as Record<string, string> | undefined)
+            ...(fetchInit.body ? {"Content-Type": "application/json"} : {}),
+            ...(fetchInit.headers as Record<string, string> | undefined)
         }),
-        cache: "no-store"
+        ...(cacheMode === "public"
+            ? {next: publicContentNext(contentType, slug)}
+            : {cache: "no-store"})
     });
 
     if (!response.ok) {
@@ -71,16 +88,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return response.status === 204 ? null as T : await response.json() as T;
 }
 
-export async function getContentEntry(type: "blog" | "page", slug: string) {
+export async function getContentEntry(type: "blog" | "page", slug: string, cacheMode: RequestCacheMode = "no-store") {
     const rows = await request<ContentEntry[]>(
-        `admin_content_entries?content_type=eq.${encodeURIComponent(type)}&slug=eq.${encodeURIComponent(slug)}&limit=1`
+        `admin_content_entries?content_type=eq.${encodeURIComponent(type)}&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+        {cacheMode, contentType: type, slug}
     );
     return rows[0] ?? null;
 }
 
-export async function listContentEntries(type: "blog" | "page") {
+export async function listContentEntries(type: "blog" | "page", cacheMode: RequestCacheMode = "no-store") {
     return request<ContentEntry[]>(
-        `admin_content_entries?content_type=eq.${type}&select=id,content_type,slug,payload,is_published,created_at,updated_at&order=updated_at.desc`
+        `admin_content_entries?content_type=eq.${type}&select=id,content_type,slug,payload,is_published,created_at,updated_at&order=updated_at.desc`,
+        {cacheMode, contentType: type}
     );
 }
 
@@ -96,7 +115,21 @@ export async function saveContentEntry(type: "blog" | "page", slug: string, payl
             updated_at: new Date().toISOString()
         })
     });
-    return rows[0];
+    const saved = rows[0];
+    if (saved) revalidateSavedContent(type, slug);
+    return saved;
+}
+
+function revalidateSavedContent(type: "blog" | "page", slug: string) {
+    revalidateTag(ADMIN_CONTENT_CACHE_TAG);
+    revalidateTag(`${ADMIN_CONTENT_CACHE_TAG}:${type}`);
+    revalidateTag(`${ADMIN_CONTENT_CACHE_TAG}:${type}:${slug}`);
+    revalidatePath(`/${slug}`);
+    revalidatePath(`/managed-content/${slug}`);
+    if (type === "blog") {
+        revalidatePath(`/blog/${slug}`);
+        revalidatePath("/blog");
+    }
 }
 
 function isBlogPost(value: unknown): value is BlogPost {
@@ -111,7 +144,7 @@ function isBlogPost(value: unknown): value is BlogPost {
 
 export async function getManagedBlogPost(slug: string) {
     try {
-        const entry = await getContentEntry("blog", slug);
+        const entry = await getContentEntry("blog", slug, "public");
         if (entry?.is_published && isBlogPost(entry.payload)) return entry.payload;
     } catch (error) {
         console.warn("[admin-content] Falling back to compiled blog post", {
@@ -125,7 +158,7 @@ export async function getManagedBlogPost(slug: string) {
 export async function getManagedBlogPosts() {
     const compiled = getIndexedBlogPosts();
     try {
-        const overrides = await listContentEntries("blog");
+        const overrides = await listContentEntries("blog", "public");
         const overrideMap = new Map(
             overrides
                 .filter((entry) => entry.is_published && isBlogPost(entry.payload))
@@ -149,7 +182,7 @@ export async function getManagedBlogPosts() {
 
 export async function getManagedPage(slug: string) {
     try {
-        const entry = await getContentEntry("page", slug);
+        const entry = await getContentEntry("page", slug, "public");
         return entry?.is_published && isBlogPost(entry.payload) ? entry.payload : null;
     } catch (error) {
         console.warn("[admin-content] Unable to load managed page", {
@@ -162,7 +195,7 @@ export async function getManagedPage(slug: string) {
 
 export async function getManagedPages() {
     try {
-        return (await listContentEntries("page"))
+        return (await listContentEntries("page", "public"))
             .filter((entry) => entry.is_published && isBlogPost(entry.payload))
             .map((entry) => entry.payload as BlogPost);
     } catch {
@@ -336,7 +369,7 @@ export function getCompiledPageSummaries() {
 export async function getManagedPageSummaries() {
     const compiled = getCompiledPageSummaries();
     try {
-        const overrides = await listContentEntries("page");
+        const overrides = await listContentEntries("page", "public");
         const overrideMap = new Map(
             overrides
                 .filter((entry) => entry.is_published && isBlogPost(entry.payload))

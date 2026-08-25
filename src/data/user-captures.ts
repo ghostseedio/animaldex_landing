@@ -4,6 +4,7 @@ import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {resolveCanonicalIdentityKey} from "@/lib/species-life-stage-policy";
 import {countCaptureSettingLabels, getCaptureContextLabel, type CaptureSettingRow} from "@/lib/capture-setting-label";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {hasAuthCookie} from "@/lib/viewer";
 
 export type UserCaptureSummary = {
     captureId: string;
@@ -160,6 +161,10 @@ const USER_CAPTURE_MANIFEST_SELECT = [
 ].join(",");
 
 export async function getAuthenticatedUserId() {
+    if (!hasAuthCookie()) {
+        return null;
+    }
+
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {
@@ -371,6 +376,10 @@ export async function getUserCapturesForSpecies(entry: SpeciesEntry, limit = 24)
 }
 
 export async function getAuthenticatedUserProfile() {
+    if (!hasAuthCookie()) {
+        return null;
+    }
+
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {

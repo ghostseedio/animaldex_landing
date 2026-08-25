@@ -11,7 +11,11 @@ import {identityKindShortLabel} from "@/lib/identity-kind";
 import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
-import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
+
+type DiscoverSupabaseClient = NonNullable<
+    ReturnType<typeof createSupabaseServerClient> | ReturnType<typeof createSupabasePublicClient>
+>;
 
 type QueryRow = Record<string, unknown>;
 
@@ -172,6 +176,17 @@ export type DiscoverChallengeItem = {
     payoutAmount: number;
     attackerContextScore: number | null;
     defenderContextScore: number | null;
+    challengeFormat: string | null;
+    battleStatus: string | null;
+    requiredVotes: number;
+    votesCount: number;
+    round1WinnerCaptureId: string | null;
+    round2WinnerCaptureId: string | null;
+    round3WinnerCaptureId: string | null;
+    overallWinnerCaptureId: string | null;
+    roundsWonAttacker: number;
+    roundsWonDefender: number;
+    speciesComparisonSlug: string | null;
     outcomeLine: string;
     winningsLine: string | null;
     activitySummary: string;
@@ -1057,6 +1072,17 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
         payoutAmount,
         attackerContextScore,
         defenderContextScore,
+        challengeFormat: readString(row, "challenge_format"),
+        battleStatus: readString(row, "battle_status"),
+        requiredVotes: readNumber(row, "required_votes"),
+        votesCount: readNumber(row, "votes_count"),
+        round1WinnerCaptureId: readString(row, "round1_winner_capture_id"),
+        round2WinnerCaptureId: readString(row, "round2_winner_capture_id"),
+        round3WinnerCaptureId: readString(row, "round3_winner_capture_id"),
+        overallWinnerCaptureId: readString(row, "overall_winner_capture_id"),
+        roundsWonAttacker: readNumber(row, "rounds_won_attacker"),
+        roundsWonDefender: readNumber(row, "rounds_won_defender"),
+        speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
         outcomeLine: challengeOutcomeLine({
             scenarioTitle,
             chosenStat,
@@ -1250,6 +1276,10 @@ const discoverChallengeSelect = [
     "scenario_key", "scenario_family", "scenario_domain", "scenario_title", "scenario_description",
     "deciding_edge_label", "attacker_context_score", "defender_context_score",
     "winner_explanation", "strategic_insight", "scenario_version",
+    "challenge_format", "battle_status", "required_votes", "votes_count",
+    "round1_winner_capture_id", "round2_winner_capture_id", "round3_winner_capture_id",
+    "overall_winner_capture_id", "rounds_won_attacker", "rounds_won_defender",
+    "round3_species_comparison_slug",
     "attacker_profile_display_name", "attacker_profile_username", "attacker_profile_avatar_url", "attacker_profile_instagram_url",
     "defender_profile_display_name", "defender_profile_username", "defender_profile_avatar_url", "defender_profile_instagram_url",
     "attacker_animal_name", "attacker_scientific_name", "attacker_breed_guess", "attacker_breed_confidence",
@@ -1386,7 +1416,7 @@ const compatibilityFeedSelect = [
     "media_assets"
 ].join(",");
 
-async function hydrateDiscoverFeedMediaRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, rows: QueryRow[]) {
+async function hydrateDiscoverFeedMediaRows(supabase: DiscoverSupabaseClient, rows: QueryRow[]) {
     const captureIdsNeedingMedia = rows
         .filter((row) => mediaAssets(row).length <= 1)
         .map((row) => readString(row, "capture_id"))
@@ -1420,7 +1450,7 @@ async function hydrateDiscoverFeedMediaRows(supabase: NonNullable<ReturnType<typ
     });
 }
 
-async function fetchDiscoverFeedRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, limit: number) {
+async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: number) {
     const requestedLimit = Math.max(limit, 24);
     const richResult = await supabase
         .from("discover_feed_v1")
@@ -1462,7 +1492,7 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         fetchDiscoverFeedRows(supabase, candidateLimit),
         supabase.from("discover_alignment_timeline_v1").select("*").order("completed_at", {ascending: false}).limit(activityLimit),
         supabase.from("discover_principle_fusion_timeline_v1").select("*").order("created_at", {ascending: false}).limit(activityLimit),
-        supabase.from("discover_challenge_history_v1").select(discoverChallengeSelect).order("created_at", {ascending: false}).limit(activityLimit),
+        supabase.from("discover_challenge_history_v2").select(discoverChallengeSelect).order("created_at", {ascending: false}).limit(activityLimit),
         supabase.from("discover_trade_history_v1").select("id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind").order("completed_at", {ascending: false}).limit(activityLimit),
         buildAnimalDexNumberIndex(),
         getCatalogBehaviorPrincipleIndex()
@@ -1538,7 +1568,7 @@ export async function getChallengeArenaCaptureById(captureId: string, excludeUse
 }
 
 async function fetchDiscoverFeedRowByCaptureId(
-    supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>,
+    supabase: DiscoverSupabaseClient,
     captureId: string
 ) {
     const richResult = await supabase
@@ -1567,7 +1597,7 @@ export async function getDiscoverCaptureById(captureId: string): Promise<Discove
     const normalizedCaptureId = captureId.trim();
     if (!normalizedCaptureId) return null;
 
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
     if (!supabase) return null;
 
     const row = await fetchDiscoverFeedRowByCaptureId(supabase, normalizedCaptureId);
@@ -1630,7 +1660,7 @@ export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTi
 
     if (parsed.kind === "challenge") {
         const {data, error} = await supabase
-            .from("discover_challenge_history_v1")
+            .from("discover_challenge_history_v2")
             .select(discoverChallengeSelect)
             .eq("id", parsed.entityId)
             .limit(1);
@@ -1751,7 +1781,7 @@ export type DiscoverSitemapPost = {
 };
 
 export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<DiscoverSitemapPost[]> {
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
     if (!supabase) return [];
 
     const rows = await fetchDiscoverFeedRows(supabase, Math.max(24, Math.min(limit, 500)));

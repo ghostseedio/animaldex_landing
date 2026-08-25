@@ -1,8 +1,9 @@
 "use client";
 
-import {useContext, useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {MenuContext} from "@/app/[locale]/(composited)/_components/header-menu";
+import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
+import {useContext} from "react";
 
 type HeaderAuthLinkProps = {
     /** Shown to signed-out visitors: this is a doorway to the web app, not a login wall. */
@@ -11,57 +12,12 @@ type HeaderAuthLinkProps = {
     mobile?: boolean;
 };
 
-type SessionResponse = {
-    user: {id: string; email: string | null} | null;
-    username: string | null;
-    displayName: string | null;
-};
-
 export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
     const {setOpen} = useContext(MenuContext);
-    const [session, setSession] = useState<SessionResponse | null>(null);
-    const [isReady, setIsReady] = useState(false);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        async function loadSession() {
-            try {
-                const response = await fetch("/api/auth/session", {cache: "no-store"});
-                const payload = await response.json() as SessionResponse;
-
-                if (isMounted) {
-                    setSession(payload);
-                    setIsReady(true);
-                }
-            } catch {
-                if (isMounted) {
-                    setSession({user: null, username: null, displayName: null});
-                    setIsReady(true);
-                }
-            }
-        }
-
-        void loadSession();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    if (!isReady) {
-        return (
-            <span
-                className={mobile
-                    ? "inline-flex h-12 w-full rounded-2xl border border-white/10 bg-white/5 md:hidden"
-                    : "hidden h-10 w-24 rounded-2xl border border-white/10 bg-white/5 md:inline-flex"}
-                aria-hidden="true"
-            />
-        );
-    }
+    const {session} = useHeaderAuth();
 
     const href = "/app";
-    const label = session?.user
+    const label = session.user
         ? (session.username ? `@${session.username}` : session.displayName ?? myAnimalsLabel)
         : webAppLabel;
 

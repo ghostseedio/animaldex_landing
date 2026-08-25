@@ -19,7 +19,6 @@ import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-ani
 import {
     COMMENT_MAX_LENGTH,
     fetchComparisonComments,
-    fetchViewerVote,
     fetchVoteTally
 } from "@/data/comparison-engagement";
 import {
@@ -37,10 +36,10 @@ import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
-import {readGuestKey} from "@/lib/guest-identity";
-import {getViewerUserId} from "@/lib/viewer";
 
 type Props = {params: {locale: string; slug: string}};
+
+export const revalidate = 300;
 
 type ComparisonSpecies = SpeciesEntry & {hasCatalogPage: boolean};
 
@@ -231,12 +230,9 @@ export default async function ComparisonDetailPage({params}: Props) {
             entry
         }));
 
-    const viewerUserId = await getViewerUserId();
-    const guestKey = viewerUserId ? null : readGuestKey();
-    const [voteTally, viewerVote, comments, artworkFiles] = await Promise.all([
+    const [voteTally, comments, artworkFiles] = await Promise.all([
         fetchVoteTally(challenge.slug).catch(() => ({animalAVotes: 0, animalBVotes: 0, totalVotes: 0})),
-        fetchViewerVote(challenge.slug, {userId: viewerUserId, guestKey}).catch(() => null),
-        fetchComparisonComments(challenge.slug, viewerUserId).catch(() => []),
+        fetchComparisonComments(challenge.slug).catch(() => []),
         resolveSpeciesArtworkFiles([animalA.slug, animalB.slug]).catch(() => new Map<string, string | null>())
     ]);
 
@@ -311,7 +307,7 @@ export default async function ComparisonDetailPage({params}: Props) {
                 animalAArtwork={buildSpeciesArtworkSrc(animalA.slug, artworkFiles.get(animalA.slug))}
                 animalBArtwork={buildSpeciesArtworkSrc(animalB.slug, artworkFiles.get(animalB.slug))}
                 initialTally={voteTally}
-                initialVote={viewerVote}
+                initialVote={null}
                 copy={{
                     eyebrow: t("vote.eyebrow"),
                     title: t("vote.title"),
@@ -399,7 +395,7 @@ export default async function ComparisonDetailPage({params}: Props) {
             <ComparisonComments
                 slug={challenge.slug}
                 signInHref={`/account?next=${encodeURIComponent(`/comparisons/${challenge.slug}#comments`)}`}
-                isSignedIn={Boolean(viewerUserId)}
+                isSignedIn={false}
                 initialComments={comments}
                 maxLength={COMMENT_MAX_LENGTH}
                 copy={{
