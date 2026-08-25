@@ -143,26 +143,26 @@ export function normalizeDbSchema(raw: unknown): PayoutDestinationField[] {
     const always = Array.isArray(obj.alwaysInclude) ? obj.alwaysInclude : [];
     const fields = Array.isArray(obj.fields) ? obj.fields : [];
     const merged = [...always, ...fields];
-    return merged
-        .map((item) => {
-            if (!item || typeof item !== "object") return null;
-            const f = item as Record<string, unknown>;
-            const key = String(f.key ?? "");
-            if (!key) return null;
-            return {
-                key,
-                label: String(f.label ?? key),
-                type: String(f.type ?? "text"),
-                required: Boolean(f.required ?? true),
-                minLength: f.minLength == null ? null : Number(f.minLength),
-                maxLength: f.maxLength == null ? null : Number(f.maxLength),
-                pattern: f.pattern == null ? null : String(f.pattern),
-                options: Array.isArray(f.options) ? f.options.map(String) : null,
-                sensitive: f.sensitive == null ? isSensitiveFieldKey(key) : Boolean(f.sensitive),
-                group: f.group == null ? "account" : String(f.group)
-            } satisfies PayoutDestinationField;
-        })
-        .filter((f): f is PayoutDestinationField => Boolean(f));
+    const out: PayoutDestinationField[] = [];
+    for (const item of merged) {
+        if (!item || typeof item !== "object") continue;
+        const f = item as Record<string, unknown>;
+        const key = String(f.key ?? "");
+        if (!key) continue;
+        out.push({
+            key,
+            label: String(f.label ?? key),
+            type: String(f.type ?? "text"),
+            required: Boolean(f.required ?? true),
+            minLength: f.minLength == null ? null : Number(f.minLength),
+            maxLength: f.maxLength == null ? null : Number(f.maxLength),
+            pattern: f.pattern == null ? null : String(f.pattern),
+            options: Array.isArray(f.options) ? f.options.map(String) : null,
+            sensitive: f.sensitive == null ? isSensitiveFieldKey(key) : Boolean(f.sensitive),
+            group: f.group == null ? "account" : String(f.group)
+        });
+    }
+    return out;
 }
 
 /**
