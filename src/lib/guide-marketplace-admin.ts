@@ -298,6 +298,7 @@ export function mapBookingRow(
 }
 
 export function sellerReviewRpc(action: Extract<GuideAdminAction, "approve_seller" | "reject_seller" | "suspend_seller">, userId: string, reviewerId: string | null) {
+    // Approval writes the in-app + push notification inside set_guide_seller_review.
     if (action === "approve_seller") {
         return {
             name: "set_guide_seller_review" as const,

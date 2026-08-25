@@ -139,3 +139,8 @@ test("admin route uses service-role review RPCs and does not resolve bookings", 
     assert.doesNotMatch(routeSource, /credit_balances/);
     assert.doesNotMatch(routeSource, /location_lat|capture_id/);
 });
+
+test("approving an applicant is described as notifying them", () => {
+    const client = readFileSync(join(here, "../app/admin/guides/admin-guides-client.tsx"), "utf8");
+    assert.match(client, /notifies them in the app and by push/);
+});

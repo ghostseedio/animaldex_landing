@@ -396,13 +396,17 @@ function ApplicationDetail({
                     <>
                         <button type="button" disabled={busy || !row.canApprove} onClick={onApprove} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
                         <button type="button" disabled={busy} onClick={onReject} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Reject</button>
+                        <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
                     </>
                 )}
                 {row.sellerStatus === "approved" && (
                     <button type="button" disabled={busy} onClick={onSuspend} className="rounded-xl border border-orange-400/40 px-4 py-2 text-sm font-bold text-orange-100 disabled:opacity-40">Suspend</button>
                 )}
                 {(row.sellerStatus === "rejected" || row.sellerStatus === "suspended") && (
-                    <button type="button" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
+                    <>
+                        <button type="button" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
+                        <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
+                    </>
                 )}
             </div>
         </article>
