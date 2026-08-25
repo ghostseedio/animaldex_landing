@@ -42,12 +42,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
     try {
-        const [configRaw, periods, formula] = await Promise.all([
+        const periodId = request.nextUrl.searchParams.get("periodId");
+        if (periodId) {
+            const detail = await rpc("admin_get_creator_reward_period_detail", {
+                p_period_id: periodId,
+            });
+            return NextResponse.json(scrub({detail}));
+        }
+
+        const [configRaw, periods, formula, identity] = await Promise.all([
             rpc("get_creator_reward_config"),
             rpc("admin_list_creator_reward_period_summaries"),
             rpc("get_creator_reward_formula_summary", {
                 p_calculation_version: "creator_rewards_v1_calibrated",
             }).catch(() => null),
+            rpc("get_animaldex_environment_identity").catch(() => null),
         ]);
         const config = mapCreatorRewardConfig(
             configRaw && typeof configRaw === "object" ? (configRaw as Record<string, unknown>) : {}
@@ -65,6 +74,8 @@ export async function GET(request: NextRequest) {
             allocatedAmountMinor: Number(p.allocated_amount_minor ?? 0),
             unallocatedRemainderMinor: Number(p.unallocated_remainder_minor ?? 0),
             calculationVersion: String(p.calculation_version ?? ""),
+            nextStep: nextStepForPeriodStatus(String(p.status ?? "")),
+            why: whyForPeriodStatus(String(p.status ?? "")),
         }));
         const formulaMapped = formula
             ? {
@@ -87,14 +98,75 @@ export async function GET(request: NextRequest) {
                     autoPostEarnings: config.autoPostEarnings,
                     environment: config.environment,
                 },
+                identity,
                 periods: mapped,
                 formula: formulaMapped,
+                playbook: CREATOR_REWARDS_ADMIN_PLAYBOOK,
             })
         );
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
     }
 }
+
+function nextStepForPeriodStatus(status: string): string {
+    switch (status) {
+        case "draft":
+            return "Open the period when you want contribution scoring to begin.";
+        case "open":
+            return "When the window ends, Freeze to lock inputs for calculation.";
+        case "frozen":
+            return "Run Calculate to create individual allocations from the formula.";
+        case "calculated":
+            return "Review individuals below, then Finalize to lock the money split.";
+        case "finalized":
+            return "Post to Earnings (or rely on auto_post if enabled) so creators get Pending balances.";
+        case "posted":
+            return "Creators now have Earnings. Pay Available balances via /admin/payouts (manual finance).";
+        case "cancelled":
+            return "No further action. Start a new period if needed.";
+        default:
+            return "Review period status and follow the lifecycle playbook.";
+    }
+}
+
+function whyForPeriodStatus(status: string): string {
+    switch (status) {
+        case "draft":
+            return "Drafts are planning records. They do not score creators or create money.";
+        case "open":
+            return "Open periods collect contribution signals (captures, quality, gifts-as-events).";
+        case "frozen":
+            return "Freeze stops intake so Calculate is deterministic and auditable.";
+        case "calculated":
+            return "Calculated allocations are proposals — not yet final money and not bank payouts.";
+        case "finalized":
+            return "Finalized locks shares. Posting creates Earnings obligations (still not a bank transfer).";
+        case "posted":
+            return "Posted = Earnings ledger only. Wise bank payouts are a separate finance step.";
+        default:
+            return "Each status is an auditable lifecycle gate.";
+    }
+}
+
+const CREATOR_REWARDS_ADMIN_PLAYBOOK = [
+    {
+        title: "1. Create & open a period",
+        body: "Set pool, dates, and formula. Opening starts contribution scoring. This does not pay anyone.",
+    },
+    {
+        title: "2. Freeze → Calculate",
+        body: "Freeze locks inputs. Calculate shows each creator’s share. Review individuals before continuing.",
+    },
+    {
+        title: "3. Finalize → Post to Earnings",
+        body: "Finalize locks the split. Post creates Pending Earnings. With auto_post_earnings=true, finalize may post automatically.",
+    },
+    {
+        title: "4. Pay via /admin/payouts",
+        body: "Payouts are NOT automatic. After Available Earnings + bank setup, finance manually approves a Wise transfer. Target SLA: 14 days after Available.",
+    },
+];
 
 export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {

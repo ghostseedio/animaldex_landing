@@ -45,4 +45,26 @@ describe("Phase 7C user payout setup", () => {
         assert.equal(mapped.maskedDestination, "GBP • Bank account •••• 5367");
         assert.deepEqual(mapped.reasonCodes, ["payouts_disabled"]);
     });
+
+    it("maps payout SLA and blocker transparency fields", () => {
+        const mapped = mapPayoutEligibility({
+            eligible: true,
+            payoutsEnabled: true,
+            setupComplete: true,
+            canWithdraw: true,
+            payoutSlaDays: 14,
+            payoutSlaStartsOn: "available",
+            availableAmountMinor: 500,
+            targetPayBy: "2026-09-07",
+            blockerTitle: null,
+            nextStep: "Finance will send your Available balance by the target pay date",
+            paymentModel: "manual_finance_approval",
+            reasonCodes: []
+        });
+        assert.equal(mapped.payoutSlaDays, 14);
+        assert.equal(mapped.targetPayBy, "2026-09-07");
+        assert.equal(mapped.availableAmountMinor, 500);
+        assert.equal(mapped.paymentModel, "manual_finance_approval");
+        assert.match(String(mapped.nextStep), /Finance will send/);
+    });
 });

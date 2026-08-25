@@ -23,6 +23,14 @@ export type PayoutEligibility = {
     destinationType?: string | null;
     provider?: string | null;
     canWithdraw?: boolean;
+    payoutSlaDays?: number;
+    payoutSlaStartsOn?: string;
+    availableAmountMinor?: number;
+    targetPayBy?: string | null;
+    blockerTitle?: string | null;
+    blockerDetail?: string | null;
+    nextStep?: string | null;
+    paymentModel?: string | null;
 };
 
 export function mapPayoutEligibility(row: Record<string, unknown>): PayoutEligibility {
@@ -65,7 +73,30 @@ export function mapPayoutEligibility(row: Record<string, unknown>): PayoutEligib
                 ? null
                 : String(row.destinationType ?? row.destination_type),
         provider: row.provider == null ? null : String(row.provider),
-        canWithdraw: Boolean(row.canWithdraw ?? row.can_withdraw ?? row.eligible)
+        canWithdraw: Boolean(row.canWithdraw ?? row.can_withdraw ?? row.eligible),
+        payoutSlaDays: Number(row.payoutSlaDays ?? row.payout_sla_days ?? 14) || 14,
+        payoutSlaStartsOn: String(row.payoutSlaStartsOn ?? row.payout_sla_starts_on ?? "available"),
+        availableAmountMinor: Number(row.availableAmountMinor ?? row.available_amount_minor ?? 0) || 0,
+        targetPayBy:
+            row.targetPayBy == null && row.target_pay_by == null
+                ? null
+                : String(row.targetPayBy ?? row.target_pay_by),
+        blockerTitle:
+            row.blockerTitle == null && row.blocker_title == null
+                ? null
+                : String(row.blockerTitle ?? row.blocker_title),
+        blockerDetail:
+            row.blockerDetail == null && row.blocker_detail == null
+                ? null
+                : String(row.blockerDetail ?? row.blocker_detail),
+        nextStep:
+            row.nextStep == null && row.next_step == null
+                ? null
+                : String(row.nextStep ?? row.next_step),
+        paymentModel:
+            row.paymentModel == null && row.payment_model == null
+                ? null
+                : String(row.paymentModel ?? row.payment_model),
     };
 }
 

@@ -22,6 +22,12 @@ type PayoutSetup = {
     contactEmail?: string | null;
     destinationCountry?: string | null;
     reasonCodes?: string[];
+    payoutSlaDays?: number;
+    availableAmountMinor?: number;
+    targetPayBy?: string | null;
+    blockerTitle?: string | null;
+    blockerDetail?: string | null;
+    nextStep?: string | null;
 };
 
 type Payload = {
@@ -347,11 +353,32 @@ export function EarningsClient() {
                     {showPayoutCard && (
                         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                             <p className="text-xs font-bold uppercase text-white/40">{EARNINGS_COPY.payoutsTitle}</p>
+                            {setup?.blockerTitle && (!setupComplete || !setup?.payoutsEnabled) && (
+                                <>
+                                    <p className="mt-1 font-semibold text-white">{setup.blockerTitle}</p>
+                                    {setup.blockerDetail && (
+                                        <p className="mt-1 text-sm text-white/55">{setup.blockerDetail}</p>
+                                    )}
+                                </>
+                            )}
                             {setupComplete ? (
                                 <>
                                     <p className="mt-1 font-semibold text-white">{EARNINGS_COPY.payoutsReadyTitle}</p>
                                     {setup?.maskedDestination && (
                                         <p className="mt-1 text-sm text-white/60">{setup.maskedDestination}</p>
+                                    )}
+                                    {setup?.targetPayBy && (setup.availableAmountMinor ?? 0) > 0 ? (
+                                        <p className="mt-2 text-sm font-semibold text-primary-400">
+                                            Target pay by {setup.targetPayBy}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-2 text-sm text-white/45">
+                                            Ghostseed aims to pay within {setup?.payoutSlaDays ?? 14} days after
+                                            your balance becomes Available. {EARNINGS_COPY.paymentModelNote}
+                                        </p>
+                                    )}
+                                    {setup?.nextStep && (
+                                        <p className="mt-2 text-sm text-white/55">{setup.nextStep}</p>
                                     )}
                                     {!setup?.payoutsEnabled && (
                                         <p className="mt-2 text-sm text-white/45">

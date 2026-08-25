@@ -235,10 +235,19 @@ export function payoutChecklist(setup: {
     maskedDestination?: string | null;
     destinationCountry?: string | null;
     reasonCodes?: string[];
+    payoutSlaDays?: number;
+    availableAmountMinor?: number;
+    targetPayBy?: string | null;
+    blockerDetail?: string | null;
+    nextStep?: string | null;
 }): PayoutChecklistItem[] {
     const reasons = setup.reasonCodes ?? [];
     const done = (code: string) =>
         !reasons.some((r) => r === code || r.startsWith(code));
+    const slaDays = setup.payoutSlaDays ?? 14;
+    const payByDetail = setup.targetPayBy
+        ? `Target pay by ${setup.targetPayBy} (within ${slaDays} days of Available)`
+        : `Ghostseed aims to pay within ${slaDays} days after Earnings become Available`;
 
     return [
         {
@@ -246,7 +255,7 @@ export function payoutChecklist(setup: {
             title: "Payout method",
             detail: setup.setupComplete
                 ? setup.maskedDestination || "Connected"
-                : "Add a bank destination",
+                : setup.blockerDetail || "Add your UK bank details to get paid",
             isComplete: Boolean(setup.setupComplete),
         },
         {
@@ -262,12 +271,18 @@ export function payoutChecklist(setup: {
             isComplete: done("country_unsupported"),
         },
         {
+            id: "timeline",
+            title: "When you’ll be paid",
+            detail: payByDetail,
+            isComplete: Boolean(setup.setupComplete && (setup.availableAmountMinor ?? 0) > 0),
+        },
+        {
             id: "withdrawals",
-            title: "Withdrawals open",
+            title: "Payouts",
             detail: !setup.payoutsEnabled
-                ? "AnimalDex has not opened withdrawals yet"
+                ? setup.nextStep || "Payouts open when AnimalDex enables withdrawals for your cohort"
                 : setup.canWithdraw
-                  ? "Ready when you have Available Earnings"
+                  ? setup.nextStep || "Finance sends Available Earnings manually — not automatic"
                   : "Enabled — finish remaining checks",
             isComplete: Boolean(setup.payoutsEnabled && setup.canWithdraw),
         },
@@ -289,20 +304,25 @@ export function hasAnyEarningsBalance(balances: EarningsCurrencyBalance[]): bool
 }
 
 export const EARNINGS_COPY = {
-    homeSupporting: "Track real-money earnings from eligible AnimalDex programs.",
+    homeSupporting:
+        "See what you’ve earned, when Ghostseed aims to pay you, and anything blocking payout (like bank details).",
     emptyTitle: "No Earnings yet",
     emptyBody: "Creator Rewards and other eligible AnimalDex earnings will appear here when available.",
     creditsAreSeparateTitle: "Credits are separate",
-    creditsAreSeparateBody: "Credits are AnimalDex virtual currency and cannot be withdrawn or converted into Earnings.",
+    creditsAreSeparateBody:
+        "Credits are AnimalDex virtual currency. They are not cash, cannot be withdrawn, and do not convert into Earnings.",
     payoutsTitle: "Payouts",
     payoutsComingLater: "Coming later",
-    availableNoPayoutNote: "Payouts aren’t available yet. Your available Earnings will remain recorded here.",
-    setUpPayoutsTitle: "Set up payouts",
+    availableNoPayoutNote:
+        "Your Available Earnings stay recorded here until Ghostseed finance completes a payout.",
+    setUpPayoutsTitle: "Add bank details",
     setUpPayoutsBody:
-        "Add a payout method so your eligible AnimalDex Earnings can be paid to you when payouts become available.",
-    payoutsReadyTitle: "Payouts ready",
-    payoutsNotAvailableYet: "Payouts aren't available yet.",
-    giftsSignal: "Genuine Gift activity may contribute as one limited community-support signal. The Credit price of a Gift does not determine your reward.",
+        "Enter your UK bank details so Ghostseed can pay Available Earnings via Wise. We don’t keep full account numbers after setup.",
+    payoutsReadyTitle: "Bank details saved",
+    payoutsNotAvailableYet: "Payouts aren’t open for your account yet. Your balance remains recorded.",
+    giftsSignal:
+        "Genuine Gift activity may contribute as one limited community-support signal. The Credit price of a Gift does not determine your reward.",
     score: "AnimalDex Score is a public reputation metric. Creator Rewards use separate period-specific contribution calculations.",
     pool: "Creator Rewards are allocated from an AnimalDex-funded reward pool. Gift prices, Credits, XP, and AnimalDex Score are not directly converted into cash.",
+    paymentModelNote: "Payouts are reviewed by Ghostseed finance and are not automatic.",
 } as const;

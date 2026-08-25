@@ -6,9 +6,31 @@ import {
     listAdminPayouts,
     refreshPayoutProviderStatus
 } from "@/lib/wise-sandbox-payouts";
+import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+async function rpc(name: string, body: Record<string, unknown> = {}) {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServiceKey();
+    if (!url || !key) throw new Error("Supabase is not configured");
+    const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: getSupabaseHeaders(key, {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+        }),
+        body: JSON.stringify(body),
+        cache: "no-store"
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+        const message = typeof payload?.message === "string" ? payload.message : `${name} failed`;
+        throw new Error(message);
+    }
+    return payload;
+}
 
 export async function GET(request: NextRequest) {
     const actor = await resolveAdminActor(request.cookies);
@@ -17,20 +39,30 @@ export async function GET(request: NextRequest) {
     }
     try {
         const diagnostics = await getPayoutDiagnostics();
-        // Production: diagnostics always available to admins; execution remains gated.
-        // Phase 7C: do not list/execute live payouts until funded readiness is confirmed.
+        let readiness: unknown = null;
+        try {
+            readiness = await rpc("admin_list_payout_readiness");
+        } catch {
+            readiness = null;
+        }
+
         if (diagnostics.isProduction) {
             return NextResponse.json({
-                diagnostics,
+                diagnostics: {
+                    ...diagnostics,
+                    banner: diagnostics.banner || "PRODUCTION — REAL MONEY — WISE"
+                },
                 payouts: [],
+                readiness,
                 blocked: true,
                 blockedReason:
                     diagnostics.phase7cStopReason ||
-                    "Production payout execution is gated until funded Wise GBP readiness is confirmed."
+                    "Live Wise execution stays gated until funding + Phase 7C gates pass. Readiness board is still visible for ops planning."
             });
         }
+
         const payouts = await listAdminPayouts();
-        return NextResponse.json({diagnostics, payouts, blocked: false});
+        return NextResponse.json({diagnostics, payouts, readiness, blocked: false});
     } catch (e) {
         return NextResponse.json({error: e instanceof Error ? e.message : "Failed"}, {status: 400});
     }
