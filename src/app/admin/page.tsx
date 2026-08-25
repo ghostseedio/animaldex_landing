@@ -94,6 +94,15 @@ const tools = [
         status: "Sandbox only"
     },
     {
+        href: "/admin/guides",
+        icon: "⌖",
+        eyebrow: "Guide marketplace",
+        title: "Wildlife Guides",
+        description: "Review seller applications, publish listings, and see booking requests waiting on Guides.",
+        accent: "from-cyan-400/20 to-transparent",
+        status: "Review queue"
+    },
+    {
         href: "/admin/sponsored-challenges",
         icon: "★",
         eyebrow: "Time-limited events",
@@ -116,6 +125,7 @@ const navigation = [
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"},
     {href: "/admin/creator-rewards", label: "Creator Rewards", icon: "¤"},
     {href: "/admin/payouts", label: "Payouts", icon: "⇄"},
+    {href: "/admin/guides", label: "Wildlife Guides", icon: "⌖"},
     {href: "/admin/sponsored-challenges", label: "Sponsored Challenges", icon: "★"}
 ];
 
