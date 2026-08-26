@@ -16,6 +16,7 @@ import {
     normalizeActionPlans,
     normalizeTargets,
     normalizeWeeklyTargets,
+    splitMonthlyTargetsByCalendarWeeks,
     todayKey,
     type GrowthTargets
 } from "@/lib/growth-command-center";
@@ -169,14 +170,13 @@ export async function GET(request: NextRequest) {
             weeklyActionPlans: normalizeActionPlans(previousPlans[0].weekly_action_plans)
         } : null;
 
-        if (!plan) return NextResponse.json({ok: true, month: selectedMonth, timezone: growthTimezone, plan: null, previousPlan});
-
         const totalDays = daysInMonth(selectedMonth);
         const dates = monthDateKeys(selectedMonth);
         const nowKey = todayKey();
         const currentDay = selectedMonth === nowKey.slice(0, 7) ? Number(nowKey.slice(8, 10)) : selectedMonth < nowKey.slice(0, 7) ? totalDays : 0;
         const actualMonth = await loadMonthActuals(selectedMonth, currentDay || totalDays);
         const previousActuals = previousPlan ? await loadMonthActuals(previousPlan.month) : null;
+        const weeklyTargets = plan ? plan.weeklyTargets.length ? plan.weeklyTargets : splitMonthlyTargetsByCalendarWeeks(selectedMonth, plan.targets) : [];
 
         return NextResponse.json({
             ok: true,
@@ -187,8 +187,9 @@ export async function GET(request: NextRequest) {
             totalDays,
             plan,
             previousPlan,
+            payingProDefinition: "Current profiles where is_pro=true. This is not yet verified as active production-paying Pro subscribers.",
             actuals: actualMonth.actuals,
-            monthResult: currentDay >= totalDays ? {month: selectedMonth, targets: plan.targets, actuals: actualMonth.actuals} : null,
+            monthResult: plan && currentDay >= totalDays ? {month: selectedMonth, targets: plan.targets, actuals: actualMonth.actuals} : null,
             previousMonthResult: previousPlan && previousActuals ? {month: previousPlan.month, targets: previousPlan.targets, actuals: previousActuals.actuals} : null,
             daily: dates.map((date, index) => ({
                 date,
@@ -197,7 +198,7 @@ export async function GET(request: NextRequest) {
                 captures: actualMonth.captureDaily[date] ?? 0,
                 marketing: actualMonth.manualByDate[date] ?? {date, socialViews: 0, searchClicks: 0, adSpend: 0, paidUsers: 0, notes: ""}
             })),
-            weeklyActuals: plan.weeklyTargets.map((week) => ({
+            weeklyActuals: weeklyTargets.map((week) => ({
                 label: week.label,
                 startDay: week.startDay,
                 endDay: week.endDay,

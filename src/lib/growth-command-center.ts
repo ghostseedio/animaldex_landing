@@ -2,7 +2,7 @@ export const growthTimezone = "Asia/Jakarta";
 
 export type GrowthMetricKey = "users" | "captures" | "socialViews" | "searchClicks" | "activePro" | "adSpend";
 export type GrowthTargets = Record<GrowthMetricKey, number>;
-export type GrowthMetricStatus = "on_target" | "close" | "behind" | "future";
+export type GrowthMetricStatus = "on_target" | "close" | "behind" | "future" | "no_target";
 
 export type GrowthWeeklyTarget = {
     label: string;
@@ -96,7 +96,7 @@ export function cumulativeTargetByDay(target: number, totalDays: number) {
 
 export function statusForMetric(actual: number, expected: number, options?: {future?: boolean; lowerIsBudget?: boolean}) {
     if (options?.future) return "future" as const;
-    if (expected <= 0) return "on_target" as const;
+    if (expected <= 0) return "no_target" as const;
     if (options?.lowerIsBudget) {
         if (actual <= expected) return "on_target" as const;
         if (actual <= expected * 1.15) return "close" as const;
@@ -113,12 +113,43 @@ export function aheadBehind(actual: number, expected: number) {
 
 export function requiredPerDay(actual: number, target: number, currentDay: number, totalDays: number) {
     const remaining = Math.max(0, target - actual);
-    const daysRemaining = Math.max(0, totalDays - currentDay);
+    const daysRemaining = Math.max(0, totalDays - currentDay + 1);
     return daysRemaining === 0 ? remaining : Math.ceil(remaining / daysRemaining);
 }
 
 export function weekDateRange(month: string, week: Pick<GrowthWeeklyTarget, "startDay" | "endDay">) {
     return {start: dateKeyForDay(month, week.startDay), end: dateKeyForDay(month, week.endDay)};
+}
+
+export function calendarWeeksForMonth(month: string) {
+    const totalDays = daysInMonth(month);
+    const weeks: Array<{label: string; startDay: number; endDay: number}> = [];
+    let startDay = 1;
+    while (startDay <= totalDays) {
+        const endDay = Math.min(totalDays, startDay === 1 ? 6 : startDay + 6);
+        weeks.push({label: `Week ${weeks.length + 1}`, startDay, endDay});
+        startDay = endDay + 1;
+    }
+    return weeks;
+}
+
+export function splitMonthlyTargetsByCalendarWeeks(month: string, targets: GrowthTargets): GrowthWeeklyTarget[] {
+    const totalDays = daysInMonth(month);
+    return calendarWeeksForMonth(month).map((week) => {
+        const weekDays = week.endDay - week.startDay + 1;
+        const prorated = (target: number) => target > 0 ? Math.round((target * weekDays) / totalDays) : 0;
+        return {
+            ...week,
+            targets: {
+                users: prorated(targets.users),
+                captures: prorated(targets.captures),
+                socialViews: prorated(targets.socialViews),
+                searchClicks: prorated(targets.searchClicks),
+                activePro: expectedByDay(targets.activePro, week.endDay, totalDays),
+                adSpend: prorated(targets.adSpend)
+            }
+        };
+    });
 }
 
 export function normalizeTargets(input: Partial<Record<GrowthMetricKey, unknown>> | null | undefined): GrowthTargets {
