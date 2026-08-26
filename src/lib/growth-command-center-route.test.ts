@@ -4,6 +4,7 @@ import {describe, it} from "node:test";
 import * as assert from "node:assert/strict";
 
 const routeSource = readFileSync(join(process.cwd(), "src/app/api/admin/growth/route.ts"), "utf8");
+const metricsRouteSource = readFileSync(join(process.cwd(), "src/app/api/admin/metrics/route.ts"), "utf8");
 const migrationSource = readFileSync(join(process.cwd(), "supabase/migrations/20260826090000_growth_command_center.sql"), "utf8");
 
 describe("growth command center route contract", () => {
@@ -29,5 +30,13 @@ describe("growth command center route contract", () => {
         assert.match(migrationSource, /alter table public\.growth_monthly_plans enable row level security/);
         assert.match(migrationSource, /alter table public\.growth_marketing_daily enable row level security/);
         assert.doesNotMatch(migrationSource, /create policy/i);
+    });
+
+    it("exposes last 24 hours separately from daily buckets", () => {
+        assert.match(metricsRouteSource, /type Period = "hour" \| "day" \| "week" \| "month"/);
+        assert.match(metricsRouteSource, /hour: \{windowMs: 24 \* HOUR_MS, bucketMs: HOUR_MS, bucketCount: 24\}/);
+        assert.match(metricsRouteSource, /requested === "hour"/);
+        assert.match(metricsRouteSource, /requested === "week"/);
+        assert.match(metricsRouteSource, /requested === "month"/);
     });
 });

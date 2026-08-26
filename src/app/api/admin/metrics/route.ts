@@ -2,15 +2,19 @@ import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
-type Period = "day" | "week" | "month";
+type Period = "hour" | "day" | "week" | "month";
 type MetricRow = {created_at?: string; delta?: number; reason?: string; product_id?: string; product_code?: string; environment?: string};
 type PostType = "captures" | "alignments" | "fusions" | "challenges" | "trades";
 type PostMetricRow = {date?: string};
 
-const periodConfig: Record<Period, {days: number; bucketDays: number}> = {
-    day: {days: 30, bucketDays: 1},
-    week: {days: 84, bucketDays: 7},
-    month: {days: 365, bucketDays: 30}
+const DAY_MS = 86400000;
+const HOUR_MS = 3600000;
+
+const periodConfig: Record<Period, {windowMs: number; bucketMs: number; bucketCount: number}> = {
+    hour: {windowMs: 24 * HOUR_MS, bucketMs: HOUR_MS, bucketCount: 24},
+    day: {windowMs: 30 * DAY_MS, bucketMs: DAY_MS, bucketCount: 30},
+    week: {windowMs: 84 * DAY_MS, bucketMs: 7 * DAY_MS, bucketCount: 12},
+    month: {windowMs: 365 * DAY_MS, bucketMs: 30 * DAY_MS, bucketCount: 13}
 };
 
 function supabaseConfig() {
@@ -52,8 +56,8 @@ async function countRows(table: string, query = "") {
     return Number(range?.split("/")[1] ?? 0);
 }
 
-function bucketKey(date: Date, start: Date, bucketDays: number) {
-    return Math.floor((date.getTime() - start.getTime()) / (bucketDays * 86400000));
+function bucketKey(date: Date, start: Date, bucketMs: number) {
+    return Math.floor((date.getTime() - start.getTime()) / bucketMs);
 }
 
 function percentChange(current: number, previous: number) {
@@ -118,11 +122,11 @@ export async function GET(request: NextRequest) {
 
     try {
         const requested = request.nextUrl.searchParams.get("period");
-        const period: Period = requested === "week" || requested === "month" ? requested : "day";
-        const {days, bucketDays} = periodConfig[period];
+        const period: Period = requested === "hour" || requested === "week" || requested === "month" ? requested : "day";
+        const {windowMs, bucketMs, bucketCount} = periodConfig[period];
         const end = new Date();
-        const start = new Date(end.getTime() - days * 86400000);
-        const previousStart = new Date(start.getTime() - days * 86400000);
+        const start = new Date(end.getTime() - windowMs);
+        const previousStart = new Date(start.getTime() - windowMs);
         const dateFilter = `created_at=gte.${encodeURIComponent(previousStart.toISOString())}&order=created_at.asc`;
 
         const [profiles, captures, purchases, creditTransactions, postRows, totals] = await Promise.all([
@@ -170,9 +174,8 @@ export async function GET(request: NextRequest) {
         const previousSubscriptions = purchases.filter((row) => isPrevious(row) && isSubscription(row) && isProduction(row)).length;
         const currentCredits = creditTransactions.filter(isCurrent).reduce((sum, row) => sum + Math.max(0, row.delta ?? 0), 0);
         const previousCredits = creditTransactions.filter(isPrevious).reduce((sum, row) => sum + Math.max(0, row.delta ?? 0), 0);
-        const bucketCount = Math.ceil(days / bucketDays);
         const series = Array.from({length: bucketCount}, (_, index) => {
-            const bucketStart = new Date(start.getTime() + index * bucketDays * 86400000);
+            const bucketStart = new Date(start.getTime() + index * bucketMs);
             return {
                 date: bucketStart.toISOString(),
                 users: 0,
@@ -182,14 +185,14 @@ export async function GET(request: NextRequest) {
             };
         });
 
-        profiles.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketDays); if (series[i]) series[i].users += 1; });
-        captures.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketDays); if (series[i]) series[i].captures += 1; });
-        purchases.filter((row) => isCurrent(row) && isSubscription(row) && isProduction(row)).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketDays); if (series[i]) series[i].subscriptions += 1; });
-        creditTransactions.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketDays); if (series[i]) series[i].credits += Math.max(0, row.delta ?? 0); });
+        profiles.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketMs); if (series[i]) series[i].users += 1; });
+        captures.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketMs); if (series[i]) series[i].captures += 1; });
+        purchases.filter((row) => isCurrent(row) && isSubscription(row) && isProduction(row)).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketMs); if (series[i]) series[i].subscriptions += 1; });
+        creditTransactions.filter(isCurrent).forEach((row) => { const i = bucketKey(new Date(row.created_at!), start, bucketMs); if (series[i]) series[i].credits += Math.max(0, row.delta ?? 0); });
 
         const postTypeKeys: PostType[] = ["captures", "alignments", "fusions", "challenges", "trades"];
         const postTypeSeries = Array.from({length: bucketCount}, (_, index) => ({
-            date: new Date(start.getTime() + index * bucketDays * 86400000).toISOString(),
+            date: new Date(start.getTime() + index * bucketMs).toISOString(),
             captures: 0,
             alignments: 0,
             fusions: 0,
@@ -201,7 +204,7 @@ export async function GET(request: NextRequest) {
             const current = rows.filter((row) => new Date(row.date ?? 0) >= start);
             const previous = rows.filter((row) => new Date(row.date ?? 0) >= previousStart && new Date(row.date ?? 0) < start);
             current.forEach((row) => {
-                const i = bucketKey(new Date(row.date!), start, bucketDays);
+                const i = bucketKey(new Date(row.date!), start, bucketMs);
                 if (postTypeSeries[i]) postTypeSeries[i][key] += 1;
             });
             return [key, {value: current.length, change: percentChange(current.length, previous.length)}];
