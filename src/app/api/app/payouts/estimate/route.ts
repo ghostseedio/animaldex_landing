@@ -62,7 +62,7 @@ export async function POST(request: Request) {
                 targetCurrency,
                 sourceAmountMinor,
                 feePolicy: "company_absorbed_beta",
-                note: "Final conversion is confirmed when finance processes your payout."
+                note: "Estimated conversion. Final amount is confirmed when your payout is processed."
             });
         }
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
             feePolicy: "company_absorbed_beta",
             providerQuoteRef: quote.providerQuoteRef,
             quoteExpiresAt: quote.expiresAt,
-            note: "Estimated conversion. Final Wise rate is confirmed when your payout is processed. Fees are covered by AnimalDex."
+            note: "Estimated conversion. Final amount is confirmed when your payout is processed."
         });
     } catch (error) {
         return NextResponse.json(
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
                 targetCurrency,
                 sourceAmountMinor,
                 feePolicy: "company_absorbed_beta",
-                note: "Final conversion is confirmed when finance processes your payout."
+                note: "Estimated conversion. Final amount is confirmed when your payout is processed."
             },
             {status: 200}
         );

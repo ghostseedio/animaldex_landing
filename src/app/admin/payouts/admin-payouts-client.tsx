@@ -369,6 +369,20 @@ export function AdminPayoutsClient() {
                                     {p.reviewTier ? ` · ${p.reviewTier}` : ""}
                                 </span>
                             </div>
+                            {p.targetCurrency &&
+                                p.targetCurrency !== p.currencyCode &&
+                                !p.paidAt && (
+                                <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                                    BETA / FIRST-PAYOUT REVIEW — destination {p.targetCurrency}. Confirm recipient,
+                                    estimate, held reconciliation, then send manually in Wise. Do not auto-fund.
+                                </p>
+                            )}
+                            {!p.paidAt && p.targetCurrency && p.targetCurrency === p.currencyCode && (
+                                <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/90">
+                                    Manual finance review required. Confirm masked destination and Available→Held
+                                    before sending.
+                                </p>
+                            )}
                             <p className="mt-1 text-xs text-ink-500">
                                 {p.payoutId} · user {p.userId.slice(0, 8)}… · transfer{" "}
                                 {p.providerTransferRef || "—"}

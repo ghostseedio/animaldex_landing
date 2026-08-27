@@ -228,12 +228,31 @@ export type PayoutChecklistItem = {
     isComplete: boolean;
 };
 
+export function scrubConsumerPayoutCopy(text?: string | null): string | null {
+    if (!text) return null;
+    const banned = [
+        "Wise",
+        "Ghostseed",
+        "corridor",
+        "finance",
+        "manual",
+        "provider",
+        "recipient ref",
+        "account requirements",
+        "without an app update",
+        "eligibility confirmed",
+    ];
+    if (banned.some((b) => text.toLowerCase().includes(b.toLowerCase()))) return null;
+    return text;
+}
+
 export function payoutChecklist(setup: {
     setupComplete?: boolean;
     payoutsEnabled?: boolean;
     canWithdraw?: boolean;
     maskedDestination?: string | null;
     destinationCountry?: string | null;
+    destinationCurrency?: string | null;
     reasonCodes?: string[];
     payoutSlaDays?: number;
     availableAmountMinor?: number;
@@ -244,17 +263,38 @@ export function payoutChecklist(setup: {
     const reasons = setup.reasonCodes ?? [];
     const done = (code: string) =>
         !reasons.some((r) => r === code || r.startsWith(code));
+    const scrub = scrubConsumerPayoutCopy;
     const countryUnsupported = !done("country_unsupported");
-    const slaDays = setup.payoutSlaDays ?? 14;
-    const payByDetail = setup.targetPayBy
-        ? `Target pay by ${setup.targetPayBy} (within ${slaDays} days of Available)`
-        : `Ghostseed aims to pay within ${slaDays} days after Earnings become Available`;
 
     const setupDetail = setup.setupComplete
-        ? setup.maskedDestination || "UK bank connected"
+        ? setup.maskedDestination || "Payout method saved"
         : countryUnsupported
-          ? "Bank payouts are open for United Kingdom (GBP) first. Other countries can still earn — setup opens when we add your corridor."
-          : setup.blockerDetail || "Add a UK bank account (GBP via Wise). Only this step opens the form.";
+          ? "Payout support for your country isn’t available yet. You can keep earning."
+          : scrub(setup.blockerDetail) || "Add a payout method to receive Available Earnings.";
+
+    const corridors = (
+        setup as {
+            corridors?: Array<{
+                countryCode?: string;
+                currencyCode?: string;
+                minimumPayoutAmountMinor?: number;
+            }>;
+        }
+    ).corridors;
+    const matchedCorridor = corridors?.find(
+        (c) =>
+            c.countryCode === setup.destinationCountry &&
+            c.currencyCode === setup.destinationCurrency
+    );
+    const minimum = matchedCorridor?.minimumPayoutAmountMinor;
+    const currency = setup.destinationCurrency;
+    const available = setup.availableAmountMinor ?? 0;
+    const minimumDetail =
+        minimum == null || !currency
+            ? "Your minimum appears after you choose a payout method."
+            : available >= minimum
+              ? "You’ve reached the minimum payout."
+              : `${formatEarningsMinor(Math.max(0, minimum - available), currency)} more to request a payout.`;
 
     return [
         {
@@ -265,38 +305,18 @@ export function payoutChecklist(setup: {
         },
         {
             id: "legal",
-            title: "Eligibility (at bank setup)",
+            title: "Eligibility",
             detail:
                 setup.setupComplete || (done("legal_capacity") && done("monetization_profile_missing"))
-                    ? "Confirmed with your bank-setup attestation — not a separate button"
-                    : "Confirm with the checkbox when you add bank details. There’s nothing to click here.",
+                    ? "Confirmed when you added your payout method"
+                    : "You’ll confirm eligibility when you add a payout method.",
             isComplete: done("legal_capacity") && done("monetization_profile_missing"),
         },
         {
-            id: "country",
-            title: "Payout country",
-            detail: countryUnsupported
-                ? "Your country isn’t in the live payout corridor yet (UK/GBP only). Earnings still accrue."
-                : setup.destinationCountry
-                  ? `${setup.destinationCountry} · live corridor is United Kingdom (GBP)`
-                  : "Live corridor: United Kingdom (GBP) only. More countries come later.",
-            isComplete: !countryUnsupported && Boolean(setup.setupComplete || done("country_unsupported")),
-        },
-        {
-            id: "timeline",
-            title: "When you’ll be paid",
-            detail: payByDetail,
-            isComplete: Boolean(setup.setupComplete && (setup.availableAmountMinor ?? 0) > 0),
-        },
-        {
-            id: "withdrawals",
-            title: "Payouts",
-            detail: !setup.payoutsEnabled
-                ? setup.nextStep || "Payouts open when AnimalDex enables withdrawals for your cohort"
-                : setup.canWithdraw
-                  ? setup.nextStep || "Finance sends Available Earnings manually — not automatic"
-                  : "Enabled — finish remaining checks",
-            isComplete: Boolean(setup.payoutsEnabled && setup.canWithdraw),
+            id: "minimum",
+            title: "Minimum payout",
+            detail: minimumDetail,
+            isComplete: minimum != null && available >= minimum,
         },
     ];
 }
@@ -317,7 +337,7 @@ export function hasAnyEarningsBalance(balances: EarningsCurrencyBalance[]): bool
 
 export const EARNINGS_COPY = {
     homeSupporting:
-        "See what you’ve earned, when Ghostseed aims to pay you, and anything blocking payout (like bank details).",
+        "See what you’ve earned, when you’ll be paid, and anything needed for payout (like a payout method).",
     emptyTitle: "No Earnings yet",
     emptyBody: "Creator Rewards and other eligible AnimalDex earnings will appear here when available.",
     creditsAreSeparateTitle: "Credits are separate",
@@ -326,22 +346,32 @@ export const EARNINGS_COPY = {
     payoutsTitle: "Payouts",
     payoutsComingLater: "Coming later",
     availableNoPayoutNote:
-        "Your Available Earnings stay recorded here until Ghostseed finance completes a payout.",
-    setUpPayoutsTitle: "Add payout destination",
-    setUpPayoutsBody:
-        "Choose your country and currency, then enter the bank fields Wise needs. Ghostseed pays manually via Wise — we don’t keep full account numbers after setup. More countries unlock from the admin corridor board without an app update.",
-    payoutsReadyTitle: "Payout destination saved",
+        "Your Available Earnings stay recorded here until a payout is completed.",
+    setUpPayoutsTitle: "Add payout method",
+    setUpPayoutsBody: "Choose where you'd like to receive your earnings.",
+    payoutsReadyTitle: "Payout method saved",
     payoutsNotAvailableYet: "Payouts aren’t open for your account yet. Your balance remains recorded.",
-    requestPayoutTitle: "Request payout",
-    requestPayoutBody:
-        "Requesting moves Available Earnings to Held while Ghostseed finance pays you via Wise.",
+    requestPayoutTitle: "Payout",
+    requestPayoutCTA: "Request payout",
+    requestPayoutYouSend: "You send from Earnings",
+    requestPayoutYouReceive: "You’ll receive approximately",
+    requestPayoutMethod: "Payout method",
+    requestPayoutRate: "Exchange rate",
+    requestPayoutFee: "Fee",
+    requestPayoutFeeCovered: "Covered by AnimalDex",
+    requestPayoutEstimateNote:
+        "Estimated conversion. Final amount is confirmed when your payout is processed.",
+    requestPayoutHeldNote: "Your request is in review. We’ll update you when it’s paid.",
     giftsSignal:
         "Genuine Gift activity may contribute as one limited community-support signal. The Credit price of a Gift does not determine your reward.",
     score: "AnimalDex Score is a public reputation metric. Creator Rewards use separate period-specific contribution calculations.",
     pool: "Creator Rewards are allocated from an AnimalDex-funded reward pool. Gift prices, Credits, XP, and AnimalDex Score are not directly converted into cash.",
-    paymentModelNote: "Payouts are reviewed by Ghostseed finance and are not automatic.",
-    otherCountriesNote:
-        "Only corridors enabled for setup appear here. Coming-soon countries can still earn — setup opens when finance verifies and enables them.",
-    legalCapacityHint:
-        "This checkbox is how eligibility is confirmed. There’s no separate “Eligibility confirmed” button.",
+    paymentModelNote: "Payouts are reviewed before they’re sent.",
+    dontSeeCountry: "Don’t see your country?",
+    comingSoonBody:
+        "We’re expanding payout support. You can keep earning — more countries will appear here when available.",
+    countryLabel: "Country or region",
+    currencyLabel: "Payout currency",
+    legalCapacityHint: "I confirm that I'm eligible to receive payouts to this account.",
+    privacyNote: "Your payment details are securely processed and aren’t displayed publicly.",
 } as const;

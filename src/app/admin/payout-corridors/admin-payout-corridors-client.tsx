@@ -15,29 +15,16 @@ type Corridor = {
     minimum_payout_amount_minor: number;
     enhanced_review_amount_minor: number | null;
     tested_at: string | null;
+    requirements_verified_at?: string | null;
+    quote_verified_at?: string | null;
+    first_successful_payout_at?: string | null;
+    verified_at?: string | null;
     blocker_reason: string | null;
 };
 
 const WAVE1_PRIORITY = [
-    "ID",
-    "SG",
-    "AU",
-    "NZ",
-    "US",
-    "CA",
-    "FR",
-    "DE",
-    "NL",
-    "ES",
-    "IT",
-    "IE",
-    "MY",
-    "PH",
-    "TH",
-    "JP",
-    "KR",
-    "IN",
-    "GB"
+    "ID", "SG", "AU", "NZ", "US", "CA", "FR", "DE", "NL", "ES", "IT", "IE",
+    "MY", "PH", "TH", "JP", "KR", "IN", "GB",
 ];
 
 function priorityRank(country: string) {
@@ -81,7 +68,7 @@ export function AdminPayoutCorridorsClient() {
             const res = await fetch("/api/admin/payout-corridors", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({corridorId: id, ...body})
+                body: JSON.stringify({corridorId: id, ...body}),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || "Update failed");
@@ -102,7 +89,7 @@ export function AdminPayoutCorridorsClient() {
             const res = await fetch("/api/admin/payout-corridors", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({action: "probe_requirements", currencyCode})
+                body: JSON.stringify({action: "probe_requirements", currencyCode}),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || "Probe failed");
@@ -111,9 +98,7 @@ export function AdminPayoutCorridorsClient() {
                       .map((r: {type?: string; title?: string}) => r.type || r.title || "?")
                       .slice(0, 8)
                 : [];
-            setMessage(
-                `Wise requirements for ${currencyCode}: ${types.join(", ") || "ok"} — ${json.checklistHint || ""}`
-            );
+            setMessage(`Requirements for ${currencyCode}: ${types.join(", ") || "ok"}`);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Probe failed");
         } finally {
@@ -128,9 +113,10 @@ export function AdminPayoutCorridorsClient() {
             </Link>
             <h1 className="mt-5 font-display text-3xl text-white">Payout corridors</h1>
             <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Wave 1 international corridors (sorted by activation priority). Probe Wise requirements before enabling.
-                Enabling without <code>tested_at</code> is rejected. Manual Wise payment only — no auto-payout. Clients
-                pick up newly enabled corridors without an app release.
+                Lifecycle: provider_supported → testing → <strong className="text-ink-200">beta</strong> → verified.
+                Promote to Beta when requirements + form + quote pass — a live smoke payout is{" "}
+                <em>not</em> required. First genuine Paid payout promotes Beta → Verified. Manual Wise only —
+                auto_payout stays off.
             </p>
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
             {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
@@ -144,8 +130,9 @@ export function AdminPayoutCorridorsClient() {
                             <th className="px-3 py-2">Type</th>
                             <th className="px-3 py-2">Status</th>
                             <th className="px-3 py-2">Setup</th>
-                            <th className="px-3 py-2">Requests</th>
-                            <th className="px-3 py-2">Blocker / actions</th>
+                            <th className="px-3 py-2">Reqs / Quote</th>
+                            <th className="px-3 py-2">First payout</th>
+                            <th className="px-3 py-2">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -157,9 +144,39 @@ export function AdminPayoutCorridorsClient() {
                                 </td>
                                 <td className="px-3 py-2">{r.currency_code}</td>
                                 <td className="px-3 py-2 text-ink-300">{r.recipient_type}</td>
-                                <td className="px-3 py-2">{r.status}</td>
-                                <td className="px-3 py-2">{r.enabled_for_setup ? "on" : "off"}</td>
-                                <td className="px-3 py-2">{r.enabled_for_requests ? "on" : "off"}</td>
+                                <td className="px-3 py-2">
+                                    <span
+                                        className={
+                                            r.status === "beta"
+                                                ? "text-amber-200"
+                                                : r.status === "verified" || r.status === "enabled"
+                                                  ? "text-emerald-300"
+                                                  : r.status === "paused"
+                                                    ? "text-rose-300"
+                                                    : ""
+                                        }
+                                    >
+                                        {r.status}
+                                    </span>
+                                </td>
+                                <td className="px-3 py-2">
+                                    {r.enabled_for_setup ? "on" : "off"} / {r.enabled_for_requests ? "on" : "off"}
+                                </td>
+                                <td className="px-3 py-2 text-xs text-ink-400">
+                                    reqs {r.requirements_verified_at ? "✓" : "—"}
+                                    <br />
+                                    quote {r.quote_verified_at || r.tested_at ? "✓" : "—"}
+                                </td>
+                                <td className="px-3 py-2 text-xs text-ink-400">
+                                    {r.first_successful_payout_at
+                                        ? new Date(r.first_successful_payout_at).toISOString().slice(0, 10)
+                                        : "—"}
+                                    {r.verified_at ? (
+                                        <span className="block text-emerald-400/80">
+                                            verified {new Date(r.verified_at).toISOString().slice(0, 10)}
+                                        </span>
+                                    ) : null}
+                                </td>
                                 <td className="px-3 py-2">
                                     <p className="text-xs text-ink-500">{r.blocker_reason || "—"}</p>
                                     <div className="mt-2 flex flex-wrap gap-2">
@@ -169,23 +186,19 @@ export function AdminPayoutCorridorsClient() {
                                             className="rounded border border-sky-500/40 px-2 py-1 text-xs text-sky-100"
                                             onClick={() => void probe(r.currency_code)}
                                         >
-                                            Probe Wise reqs
+                                            Probe reqs
                                         </button>
                                         <button
                                             type="button"
                                             disabled={busy}
-                                            className="rounded border border-white/20 px-2 py-1 text-xs"
+                                            className="rounded border border-amber-500/40 px-2 py-1 text-xs text-amber-100"
                                             onClick={() =>
                                                 patch(r.id, {
-                                                    testedAt: new Date().toISOString(),
-                                                    status: "beta",
-                                                    blockerReason: null,
-                                                    enabledForSetup: true,
-                                                    enabledForRequests: true
+                                                    action: "promote_beta",
                                                 })
                                             }
                                         >
-                                            Mark tested + enable
+                                            Promote to Beta
                                         </button>
                                         <button
                                             type="button"
@@ -195,11 +208,23 @@ export function AdminPayoutCorridorsClient() {
                                                 patch(r.id, {
                                                     enabledForSetup: false,
                                                     enabledForRequests: false,
-                                                    status: "paused"
+                                                    status: "paused",
                                                 })
                                             }
                                         >
                                             Pause
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={busy || r.status !== "paused"}
+                                            className="rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-40"
+                                            onClick={() =>
+                                                patch(r.id, {
+                                                    action: "promote_beta",
+                                                })
+                                            }
+                                        >
+                                            Resume → Beta
                                         </button>
                                     </div>
                                 </td>

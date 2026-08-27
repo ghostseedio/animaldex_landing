@@ -7,6 +7,7 @@ import {
     formatEarningsMinor,
     hasAnyEarningsBalance,
     payoutChecklist,
+    scrubConsumerPayoutCopy,
     type CreatorRewardPeriodProgress,
     type CreatorRewardReceiptSummary,
     type EarningEntry,
@@ -25,6 +26,11 @@ type PayoutCorridor = {
     minimumPayoutAmountMinor?: number | null;
 };
 
+type PayoutFieldOption = {
+    label: string;
+    value: string;
+};
+
 type PayoutField = {
     key: string;
     label: string;
@@ -33,9 +39,48 @@ type PayoutField = {
     minLength?: number | null;
     maxLength?: number | null;
     pattern?: string | null;
-    options?: string[] | null;
+    options?: PayoutFieldOption[] | null;
     sensitive?: boolean;
+    group?: string | null;
+    defaultValue?: string | null;
+    readOnly?: boolean;
 };
+
+const SEARCHABLE_SELECT_OPTION_THRESHOLD = 12;
+
+function normalizeFieldOptions(raw: unknown): PayoutFieldOption[] | null {
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const out: PayoutFieldOption[] = [];
+    for (const item of raw) {
+        if (item == null) continue;
+        if (typeof item === "string" || typeof item === "number") {
+            const value = String(item);
+            out.push({label: value, value});
+            continue;
+        }
+        if (typeof item === "object") {
+            const row = item as Record<string, unknown>;
+            const value = String(row.value ?? row.key ?? "");
+            if (!value) continue;
+            const label = String(row.label ?? row.name ?? row.title ?? value).trim() || value;
+            out.push({label, value});
+        }
+    }
+    return out.length > 0 ? out : null;
+}
+
+function fieldUsesSearchableSelect(field: PayoutField): boolean {
+    return field.type === "select" && (field.options?.length ?? 0) >= SEARCHABLE_SELECT_OPTION_THRESHOLD;
+}
+
+function fieldPresentationSection(field: PayoutField): "bank" | "address" {
+    return field.group === "address" || field.key.startsWith("address.") ? "address" : "bank";
+}
+
+function optionLabel(field: PayoutField, value: string): string {
+    if (!value) return "";
+    return field.options?.find((o) => o.value === value)?.label ?? value;
+}
 
 type PayoutSetup = {
     setupComplete?: boolean;
@@ -142,14 +187,24 @@ export function EarningsClient() {
     const [setupBusy, setSetupBusy] = useState(false);
     const [setupError, setSetupError] = useState<string | null>(null);
     const [legalCapacityAttested, setLegalCapacityAttested] = useState(false);
+    const [selectedCountryCode, setSelectedCountryCode] = useState("");
     const [selectedCorridorId, setSelectedCorridorId] = useState("");
     const [fieldDefs, setFieldDefs] = useState<PayoutField[]>([]);
     const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
     const [fieldsLoading, setFieldsLoading] = useState(false);
+    const [showComingSoon, setShowComingSoon] = useState(false);
+    const [showRequestSheet, setShowRequestSheet] = useState(false);
     const [requestBusy, setRequestBusy] = useState(false);
     const [requestError, setRequestError] = useState<string | null>(null);
     const [requestMessage, setRequestMessage] = useState<string | null>(null);
-    const [estimateNote, setEstimateNote] = useState<string | null>(null);
+    const [estimate, setEstimate] = useState<{
+        estimateAvailable?: boolean;
+        targetAmountMinor?: number;
+        targetCurrency?: string;
+        exchangeRate?: number;
+        providerFeeMinor?: number;
+        note?: string;
+    } | null>(null);
 
     async function reload() {
         const res = await fetch("/api/app/earnings", {cache: "no-store"});
@@ -186,8 +241,38 @@ export function EarningsClient() {
         progress?.eligibility.state === "participating" || progress?.eligibility.state === "period_closing";
     const corridors = (setup?.corridors ?? []).filter((c) => c.id);
     const enabledCorridors = corridors.filter((c) => c.enabledForSetup && !c.comingSoon);
+    const countries = Array.from(
+        new Map(
+            enabledCorridors.map((c) => [
+                c.countryCode,
+                {code: c.countryCode, name: c.displayName || c.countryCode},
+            ])
+        ).values()
+    ).sort((a, b) => a.name.localeCompare(b.name));
+    const currenciesForCountry = enabledCorridors.filter((c) => c.countryCode === selectedCountryCode);
+    const comingSoonNames = Array.from(
+        new Set(
+            corridors
+                .filter((c) => !c.enabledForSetup || c.comingSoon)
+                .map((c) => c.displayName || c.countryCode)
+                .filter((name) => !countries.some((c) => c.name === name))
+        )
+    ).sort();
     const selectedCorridor = enabledCorridors.find((c) => c.id === selectedCorridorId) ?? null;
     const primaryBalance = data?.balances.find((b) => b.availableAmountMinor > 0) ?? data?.balances[0];
+
+    function applyCountry(countryCode: string) {
+        setSelectedCountryCode(countryCode);
+        setSelectedCorridorId("");
+        setFieldDefs([]);
+        setFieldValues({});
+        if (!countryCode) return;
+        const options = enabledCorridors.filter((c) => c.countryCode === countryCode);
+        if (options.length === 1 && options[0]?.id) {
+            setSelectedCorridorId(options[0].id);
+            void loadCorridorFields(options[0].id);
+        }
+    }
 
     async function loadCorridorFields(corridorId: string) {
         setFieldsLoading(true);
@@ -199,14 +284,20 @@ export function EarningsClient() {
                 cache: "no-store",
             });
             const json = await res.json();
-            if (!res.ok) throw new Error(json.error || "Failed to load bank fields");
-            const fields = Array.isArray(json.requirements?.fields) ? json.requirements.fields : [];
+            if (!res.ok) throw new Error(json.error || "Failed to load payment fields");
+            const fields = (Array.isArray(json.requirements?.fields) ? json.requirements.fields : []).map(
+                (f: Record<string, unknown>) =>
+                    ({
+                        ...f,
+                        options: normalizeFieldOptions(f.options),
+                    }) as PayoutField
+            );
             setFieldDefs(fields);
             const next: Record<string, string> = {};
-            for (const f of fields) next[f.key] = "";
+            for (const f of fields) next[f.key] = String(f.defaultValue ?? "");
             setFieldValues(next);
         } catch (e) {
-            setSetupError(e instanceof Error ? e.message : "Failed to load bank fields");
+            setSetupError(e instanceof Error ? e.message : "Failed to load payment fields");
         } finally {
             setFieldsLoading(false);
         }
@@ -215,7 +306,7 @@ export function EarningsClient() {
     async function submitSetup(event: React.FormEvent) {
         event.preventDefault();
         if (!selectedCorridorId) {
-            setSetupError("Select a country corridor first.");
+            setSetupError("Select a country first.");
             return;
         }
         setSetupBusy(true);
@@ -243,18 +334,15 @@ export function EarningsClient() {
         }
     }
 
-    async function requestPayout() {
+    async function openRequestSheet() {
         if (!primaryBalance || primaryBalance.availableAmountMinor <= 0) return;
-        setRequestBusy(true);
+        setShowRequestSheet(true);
         setRequestError(null);
         setRequestMessage(null);
-        setEstimateNote(null);
-        try {
-            const destCurrency = setup?.destinationCurrency || selectedCorridor?.currencyCode || primaryBalance.currencyCode;
-            let estimateTarget: number | null = null;
-            let estimateRate: number | null = null;
-            let estimateFee: number | null = null;
-            if (destCurrency && destCurrency !== primaryBalance.currencyCode) {
+        setEstimate(null);
+        const destCurrency = setup?.destinationCurrency || selectedCorridor?.currencyCode || primaryBalance.currencyCode;
+        if (destCurrency && destCurrency !== primaryBalance.currencyCode) {
+            try {
                 const estRes = await fetch("/api/app/payouts/estimate", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
@@ -265,13 +353,19 @@ export function EarningsClient() {
                     }),
                 });
                 const est = await estRes.json();
-                if (est.estimateAvailable) {
-                    estimateTarget = Number(est.targetAmountMinor);
-                    estimateRate = Number(est.exchangeRate);
-                    estimateFee = Number(est.providerFeeMinor);
-                    setEstimateNote(est.note || null);
-                }
+                setEstimate(est);
+            } catch {
+                setEstimate({estimateAvailable: false});
             }
+        }
+    }
+
+    async function requestPayout() {
+        if (!primaryBalance || primaryBalance.availableAmountMinor <= 0) return;
+        setRequestBusy(true);
+        setRequestError(null);
+        setRequestMessage(null);
+        try {
             const res = await fetch("/api/app/payouts/request", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -279,16 +373,14 @@ export function EarningsClient() {
                     currencyCode: primaryBalance.currencyCode,
                     amountMinor: primaryBalance.availableAmountMinor,
                     idempotencyKey: `web-${primaryBalance.currencyCode}-${Date.now()}`,
-                    estimateTargetAmountMinor: estimateTarget,
-                    estimateExchangeRate: estimateRate,
-                    estimateProviderFeeMinor: estimateFee,
+                    estimateTargetAmountMinor: estimate?.targetAmountMinor ?? null,
+                    estimateExchangeRate: estimate?.exchangeRate ?? null,
+                    estimateProviderFeeMinor: estimate?.providerFeeMinor ?? null,
                 }),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || "Request failed");
-            setRequestMessage(
-                `Payout requested — status ${json.status || "held"}. Ghostseed finance will pay via Wise.`
-            );
+            setRequestMessage(EARNINGS_COPY.requestPayoutHeldNote);
             await reload();
         } catch (e) {
             setRequestError(e instanceof Error ? e.message : "Request failed");
@@ -397,7 +489,7 @@ export function EarningsClient() {
 
                             <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                                 <div className="flex items-center justify-between gap-3">
-                                    <h2 className="text-lg font-bold">Payout readiness</h2>
+                                    <h2 className="text-lg font-bold">Set up payouts</h2>
                                     <span className="text-sm font-bold text-primary-500">
                                         {checklistDone}/{checklist.length}
                                     </span>
@@ -467,11 +559,11 @@ export function EarningsClient() {
                     {showPayoutCard && (
                         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                             <p className="text-xs font-bold uppercase text-white/40">{EARNINGS_COPY.payoutsTitle}</p>
-                            {setup?.blockerTitle && (!setupComplete || !setup?.payoutsEnabled) && (
+                            {scrubConsumerPayoutCopy(setup?.blockerTitle) && (!setupComplete || !setup?.payoutsEnabled) && (
                                 <>
-                                    <p className="mt-1 font-semibold text-white">{setup.blockerTitle}</p>
-                                    {setup.blockerDetail && (
-                                        <p className="mt-1 text-sm text-white/55">{setup.blockerDetail}</p>
+                                    <p className="mt-1 font-semibold text-white">{scrubConsumerPayoutCopy(setup?.blockerTitle)}</p>
+                                    {scrubConsumerPayoutCopy(setup?.blockerDetail) && (
+                                        <p className="mt-1 text-sm text-white/55">{scrubConsumerPayoutCopy(setup?.blockerDetail)}</p>
                                     )}
                                 </>
                             )}
@@ -492,46 +584,80 @@ export function EarningsClient() {
                                         </p>
                                     ) : (
                                         <p className="mt-2 text-sm text-white/45">
-                                            Ghostseed aims to pay within {setup?.payoutSlaDays ?? 14} days after
-                                            your balance becomes Available. {EARNINGS_COPY.paymentModelNote}
+                                            We aim to pay within {setup?.payoutSlaDays ?? 14} days after your balance
+                                            becomes Available. {EARNINGS_COPY.paymentModelNote}
                                         </p>
-                                    )}
-                                    {setup?.nextStep && (
-                                        <p className="mt-2 text-sm text-white/55">{setup.nextStep}</p>
                                     )}
                                     {setup?.payoutsEnabled &&
                                         setup?.canWithdraw &&
                                         (primaryBalance?.availableAmountMinor ?? 0) > 0 && (
                                             <div className="mt-4 space-y-2">
-                                                <p className="text-sm text-white/60">{EARNINGS_COPY.requestPayoutBody}</p>
-                                                {estimateNote && (
-                                                    <p className="text-xs text-white/45">{estimateNote}</p>
-                                                )}
-                                                {requestError && (
-                                                    <p className="text-sm text-rose-300">{requestError}</p>
-                                                )}
-                                                {requestMessage && (
-                                                    <p className="text-sm text-emerald-300">{requestMessage}</p>
-                                                )}
                                                 <button
                                                     type="button"
-                                                    disabled={requestBusy}
-                                                    onClick={() => void requestPayout()}
-                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                    onClick={() => void openRequestSheet()}
+                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950"
                                                 >
-                                                    {requestBusy
-                                                        ? "Requesting…"
-                                                        : `${EARNINGS_COPY.requestPayoutTitle} ${formatEarningsMinor(
-                                                              primaryBalance!.availableAmountMinor,
-                                                              primaryBalance!.currencyCode
-                                                          )}`}
+                                                    {EARNINGS_COPY.requestPayoutTitle}
                                                 </button>
+                                                {showRequestSheet && (
+                                                    <div className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-3">
+                                                        <div>
+                                                            <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutYouSend}</p>
+                                                            <p className="font-bold">
+                                                                {formatEarningsMinor(
+                                                                    primaryBalance!.availableAmountMinor,
+                                                                    primaryBalance!.currencyCode
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        {estimate?.estimateAvailable &&
+                                                            estimate.targetAmountMinor != null &&
+                                                            estimate.targetCurrency && (
+                                                                <>
+                                                                    <div>
+                                                                        <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutYouReceive}</p>
+                                                                        <p className="font-bold">
+                                                                            {formatEarningsMinor(
+                                                                                estimate.targetAmountMinor,
+                                                                                estimate.targetCurrency
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
+                                                                    {estimate.exchangeRate != null && (
+                                                                        <div>
+                                                                            <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutRate}</p>
+                                                                            <p className="font-semibold">{estimate.exchangeRate.toFixed(4)}</p>
+                                                                        </div>
+                                                                    )}
+                                                                    <div>
+                                                                        <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutFee}</p>
+                                                                        <p className="font-semibold">{EARNINGS_COPY.requestPayoutFeeCovered}</p>
+                                                                    </div>
+                                                                    <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutEstimateNote}</p>
+                                                                </>
+                                                            )}
+                                                        {setup?.maskedDestination && (
+                                                            <div>
+                                                                <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutMethod}</p>
+                                                                <p className="font-semibold">{setup.maskedDestination}</p>
+                                                            </div>
+                                                        )}
+                                                        {requestError && <p className="text-sm text-rose-300">{requestError}</p>}
+                                                        {requestMessage && <p className="text-sm text-emerald-300">{requestMessage}</p>}
+                                                        <button
+                                                            type="button"
+                                                            disabled={requestBusy}
+                                                            onClick={() => void requestPayout()}
+                                                            className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                        >
+                                                            {requestBusy ? "Requesting…" : EARNINGS_COPY.requestPayoutCTA}
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     {!setup?.payoutsEnabled && (
-                                        <p className="mt-2 text-sm text-white/45">
-                                            {EARNINGS_COPY.payoutsNotAvailableYet}
-                                        </p>
+                                        <p className="mt-2 text-sm text-white/45">{EARNINGS_COPY.payoutsNotAvailableYet}</p>
                                     )}
                                 </>
                             ) : (
@@ -552,99 +678,123 @@ export function EarningsClient() {
                                     )}
                                     {showSetup && setup?.setupProviderReady && (
                                         <form className="mt-4 space-y-3" onSubmit={submitSetup}>
-                                            {setup.contactEmail && (
-                                                <p className="text-xs text-white/45">Contact: {setup.contactEmail}</p>
-                                            )}
                                             <label className="block text-xs text-white/45">
-                                                Country / corridor
+                                                {EARNINGS_COPY.countryLabel}
                                                 <select
                                                     className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
-                                                    value={selectedCorridorId}
-                                                    onChange={(e) => {
-                                                        const id = e.target.value;
-                                                        setSelectedCorridorId(id);
-                                                        if (id) void loadCorridorFields(id);
-                                                    }}
+                                                    value={selectedCountryCode}
+                                                    onChange={(e) => applyCountry(e.target.value)}
                                                     required
                                                 >
                                                     <option value="">Select…</option>
-                                                    {enabledCorridors.map((c) => (
-                                                        <option key={c.id} value={c.id}>
-                                                            {c.displayName || c.countryCode} ·{" "}
-                                                            {c.currencyCode || c.currencies[0] || "—"}
-                                                        </option>
+                                                    {countries.map((c) => (
+                                                        <option key={c.code} value={c.code}>{c.name}</option>
                                                     ))}
                                                 </select>
                                             </label>
-                                            <p className="text-xs text-white/45">{EARNINGS_COPY.otherCountriesNote}</p>
-                                            {fieldsLoading && (
-                                                <p className="text-sm text-white/45">Loading bank fields…</p>
-                                            )}
-                                            {fieldDefs.map((field) => (
-                                                <label key={field.key} className="block text-xs text-white/45">
-                                                    {field.label}
-                                                    {field.options && field.options.length > 0 ? (
-                                                        <select
-                                                            className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
-                                                            value={fieldValues[field.key] ?? ""}
-                                                            onChange={(e) =>
-                                                                setFieldValues((v) => ({
-                                                                    ...v,
-                                                                    [field.key]: e.target.value,
-                                                                }))
-                                                            }
-                                                            required={field.required}
-                                                        >
-                                                            <option value="">Select…</option>
-                                                            {field.options.map((opt) => (
-                                                                <option key={opt} value={opt}>
-                                                                    {opt}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    ) : (
-                                                        <input
-                                                            className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm"
-                                                            type={field.sensitive ? "password" : "text"}
-                                                            autoComplete="off"
-                                                            value={fieldValues[field.key] ?? ""}
-                                                            onChange={(e) =>
-                                                                setFieldValues((v) => ({
-                                                                    ...v,
-                                                                    [field.key]: e.target.value,
-                                                                }))
-                                                            }
-                                                            required={field.required}
-                                                            minLength={field.minLength ?? undefined}
-                                                            maxLength={field.maxLength ?? undefined}
-                                                            pattern={field.pattern ?? undefined}
-                                                        />
-                                                    )}
+                                            {selectedCountryCode && currenciesForCountry.length > 1 && (
+                                                <label className="block text-xs text-white/45">
+                                                    {EARNINGS_COPY.currencyLabel}
+                                                    <select
+                                                        className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                                                        value={selectedCorridorId}
+                                                        onChange={(e) => {
+                                                            const id = e.target.value;
+                                                            setSelectedCorridorId(id);
+                                                            if (id) void loadCorridorFields(id);
+                                                        }}
+                                                        required
+                                                    >
+                                                        <option value="">Select…</option>
+                                                        {currenciesForCountry.map((c) => (
+                                                            <option key={c.id} value={c.id}>
+                                                                {c.currencyCode || c.currencies[0] || "—"}
+                                                            </option>
+                                                        ))}
+                                                    </select>
                                                 </label>
-                                            ))}
-                                            <label className="flex items-start gap-2 text-sm text-white/70">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={legalCapacityAttested}
-                                                    onChange={(e) => setLegalCapacityAttested(e.target.checked)}
-                                                />
-                                                I confirm I am eligible to receive payouts for this account (age /
-                                                capacity).
-                                            </label>
-                                            <p className="text-xs text-white/40">{EARNINGS_COPY.legalCapacityHint}</p>
-                                            {setupError && <p className="text-sm text-rose-300">{setupError}</p>}
-                                            <button
-                                                type="submit"
-                                                disabled={
-                                                    setupBusy ||
-                                                    !legalCapacityAttested ||
-                                                    !selectedCorridorId ||
-                                                    fieldsLoading
-                                                }
-                                                className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
-                                            >
-                                                {setupBusy ? "Saving…" : "Confirm payout method"}
+                                            )}
+                                            {selectedCountryCode && currenciesForCountry.length === 1 && (
+                                                <p className="text-sm text-white/60">
+                                                    {EARNINGS_COPY.currencyLabel}: {currenciesForCountry[0]?.currencyCode || currenciesForCountry[0]?.currencies[0]}
+                                                </p>
+                                            )}
+                                            <button type="button" className="text-xs text-white/45 underline-offset-2 hover:underline" onClick={() => setShowComingSoon((v) => !v)}>
+                                                {EARNINGS_COPY.dontSeeCountry}
                                             </button>
+                                            {showComingSoon && (
+                                                <p className="text-xs text-white/45">
+                                                    {EARNINGS_COPY.comingSoonBody}
+                                                    {comingSoonNames.length > 0 ? ` ${comingSoonNames.slice(0, 12).join(" · ")}` : ""}
+                                                </p>
+                                            )}
+                                            {fieldsLoading && <p className="text-sm text-white/45">Loading fields…</p>}
+                                            {(["bank", "address"] as const).map((section) => {
+                                                const sectionFields = fieldDefs.filter((f) => fieldPresentationSection(f) === section);
+                                                if (sectionFields.length === 0) return null;
+                                                return (
+                                                    <div key={section} className="space-y-3 border-t border-white/10 pt-4">
+                                                        <p className="text-sm font-semibold text-white/80">
+                                                            {section === "bank" ? "Bank details" : "Address"}
+                                                        </p>
+                                                        {sectionFields.map((field) => (
+                                                            <label key={field.key} className="block text-xs text-white/45">
+                                                                {field.label}
+                                                                {field.readOnly || field.type === "readonly" ? (
+                                                                    <p className="mt-1 text-sm text-white">
+                                                                        {optionLabel(field, fieldValues[field.key] ?? field.defaultValue ?? "") ||
+                                                                            fieldValues[field.key] ||
+                                                                            field.defaultValue ||
+                                                                            "—"}
+                                                                    </p>
+                                                                ) : field.options && field.options.length > 0 ? (
+                                                                    <select
+                                                                        className="mt-1 w-full border-b border-white/15 bg-transparent px-0 py-2 text-sm text-white"
+                                                                        value={fieldValues[field.key] ?? ""}
+                                                                        onChange={(e) => setFieldValues((v) => ({...v, [field.key]: e.target.value}))}
+                                                                        required={field.required}
+                                                                    >
+                                                                        <option value="">Select…</option>
+                                                                        {field.options.map((opt) => (
+                                                                            <option key={opt.value} value={opt.value}>
+                                                                                {opt.label}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                ) : (
+                                                                    <input
+                                                                        className="mt-1 w-full border-b border-white/15 bg-transparent px-0 py-2 text-sm"
+                                                                        type={field.sensitive ? "password" : "text"}
+                                                                        autoComplete="off"
+                                                                        value={fieldValues[field.key] ?? ""}
+                                                                        onChange={(e) => setFieldValues((v) => ({...v, [field.key]: e.target.value}))}
+                                                                        required={field.required}
+                                                                        minLength={field.minLength ?? undefined}
+                                                                        maxLength={field.maxLength ?? undefined}
+                                                                        pattern={field.pattern ?? undefined}
+                                                                    />
+                                                                )}
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="space-y-3 border-t border-white/10 pt-4">
+                                                <p className="text-sm font-semibold text-white/80">Confirmation</p>
+                                                <label className="flex items-start gap-2 text-sm text-white/70">
+                                                    <input type="checkbox" checked={legalCapacityAttested} onChange={(e) => setLegalCapacityAttested(e.target.checked)} />
+                                                    {EARNINGS_COPY.legalCapacityHint}
+                                                </label>
+                                                <p className="text-xs text-white/40">{EARNINGS_COPY.privacyNote}</p>
+                                                {setupError && <p className="text-sm text-rose-300">{setupError}</p>}
+                                                <button
+                                                    type="submit"
+                                                    disabled={setupBusy || !legalCapacityAttested || !selectedCorridorId || fieldsLoading}
+                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                >
+                                                    {setupBusy ? "Saving…" : EARNINGS_COPY.setUpPayoutsTitle}
+                                                </button>
+                                            </div>
                                         </form>
                                     )}
                                 </>
@@ -663,7 +813,18 @@ export function EarningsClient() {
                                     >
                                         <p className="font-semibold">{r.periodDisplayName}</p>
                                         <p className="text-sm text-white/50">
-                                            {r.status} · {formatEarningsMinor(r.amountMinor, r.currencyCode)}
+                                            {(() => {
+                                                const status = String(r.status || "").toLowerCase();
+                                                const proposal =
+                                                    ["calculating", "calculated", "finalized"].includes(status) &&
+                                                    (r.amountMinor === 0 || status === "calculating" || status === "calculated");
+                                                if (proposal) {
+                                                    if (status === "finalized") return "Reward confirmed · Not in Earnings yet";
+                                                    if (status === "calculated") return "Calculated · Not in Earnings yet";
+                                                    return "Being finalized · Not in Earnings yet";
+                                                }
+                                                return `${r.status} · ${formatEarningsMinor(r.amountMinor, r.currencyCode)}`;
+                                            })()}
                                         </p>
                                     </li>
                                 ))}

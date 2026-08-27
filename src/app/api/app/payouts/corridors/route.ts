@@ -1,6 +1,11 @@
 import {createClient, type SupabaseClient} from "@supabase/supabase-js";
 import {NextRequest, NextResponse} from "next/server";
-import {mapWiseRequirementsToFields, normalizeDbSchema} from "@/lib/payout-destination-requirements";
+import {
+    applyCorridorDefaults,
+    enrichOptionLabels,
+    mapWiseRequirementsToFields,
+    normalizeDbSchema
+} from "@/lib/payout-destination-requirements";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {
@@ -61,7 +66,8 @@ export async function GET(request: NextRequest) {
         }
 
         const requirements = (reqRes.data ?? {}) as Record<string, unknown>;
-        let fields = normalizeDbSchema(requirements.schema);
+        const countryCode = String(requirements.countryCode ?? "").toUpperCase();
+        let fields = applyCorridorDefaults(normalizeDbSchema(requirements.schema), countryCode);
         let source = String(requirements.requirementsSource ?? "static_verified");
 
         try {
@@ -72,22 +78,37 @@ export async function GET(request: NextRequest) {
             if (config.apiToken && config.profileId) {
                 const provider = new WisePayoutProvider(config);
                 const wiseReqs = await provider.getAccountRequirements({
-                    sourceCurrency: String(requirements.currencyCode ?? "USD"),
+                    sourceCurrency: String(
+                        process.env.WISE_PROBE_SOURCE_CURRENCY ||
+                            (String(requirements.currencyCode).toUpperCase() === "GBP" ? "GBP" : "USD")
+                    ),
                     targetCurrency: String(requirements.currencyCode ?? "GBP"),
                     sourceAmount: 100
                 });
                 const mapped = mapWiseRequirementsToFields(
                     wiseReqs,
-                    String(requirements.recipientType ?? "")
+                    String(requirements.recipientType ?? ""),
+                    countryCode
                 );
+                // Require a substantive live mapping (holder + at least one more field).
                 if (mapped.length > 1) {
-                    fields = mapped;
-                    source = "wise_api";
+                    // Prefer live provider contract, but keep any required address.*
+                    // fields from the verified static schema if the live payload omitted them.
+                    const staticAddress = fields.filter(
+                        (f) => f.key.startsWith("address.") && f.required !== false
+                    );
+                    const liveKeys = new Set(mapped.map((f) => f.key));
+                    const missingAddress = staticAddress.filter((f) => !liveKeys.has(f.key));
+                    fields = missingAddress.length > 0 ? [...mapped, ...missingAddress] : mapped;
+                    source = missingAddress.length > 0 ? "hybrid" : "wise_api";
                 }
             }
         } catch {
-            // static fallback
+            // static fallback already applied
         }
+
+        // Enrich static string-only options (e.g. IDR bank codes) with friendly labels.
+        fields = enrichOptionLabels(fields);
 
         return NextResponse.json({
             corridor: requirements,

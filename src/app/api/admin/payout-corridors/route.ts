@@ -47,6 +47,13 @@ export async function POST(request: NextRequest) {
         const body = await request.json().catch(() => ({}));
         const action = String(body.action ?? "update");
 
+        if (action === "promote_beta") {
+            const result = await rpc("admin_promote_payout_corridor_to_beta", {
+                p_corridor_id: body.corridorId
+            });
+            return NextResponse.json({corridor: result});
+        }
+
         if (action === "probe_requirements") {
             const currency = String(body.currencyCode ?? "").toUpperCase();
             if (!/^[A-Z]{3}$/.test(currency)) {

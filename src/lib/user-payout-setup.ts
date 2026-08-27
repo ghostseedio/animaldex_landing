@@ -8,6 +8,7 @@
  */
 
 import {
+    applyCorridorDefaults,
     buildWiseRecipientDetailsFromFields,
     maskDestinationFromFields,
     normalizeDbSchema,
@@ -319,14 +320,37 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
     );
     const corridor = corridorRows[0];
     if (!corridor) throw new Error("Payout corridor not found.");
-    if (!Boolean(corridor.enabled_for_setup)) {
-        throw new Error("Payouts aren't available in your country yet.");
+
+    const status = String(corridor.status ?? "");
+    const enabledForSetup = Boolean(corridor.enabled_for_setup);
+    let betaMember = false;
+    if (!enabledForSetup) {
+        if (status !== "testing") {
+            throw new Error("Payouts aren't available in your country yet.");
+        }
+        try {
+            const betaRows = await serviceRest<Array<Record<string, unknown>>>(
+                `creator_reward_beta_members?user_id=eq.${encodeURIComponent(input.userId)}&enabled=eq.true&select=user_id&limit=1`
+            );
+            betaMember = Boolean(betaRows[0]?.user_id);
+        } catch {
+            betaMember = false;
+        }
+        if (!betaMember) {
+            throw new Error("Payouts aren't available in your country yet.");
+        }
     }
 
     const countryCode = String(corridor.country_code);
     const currencyCode = String(corridor.currency_code);
     const recipientType = String(corridor.recipient_type);
-    const schemaFields = normalizeDbSchema(corridor.requirements_schema);
+    const schemaFields = applyCorridorDefaults(normalizeDbSchema(corridor.requirements_schema), countryCode);
+    // Apply readonly defaults (e.g. address.country) before validation.
+    for (const field of schemaFields) {
+        if (field.defaultValue && !String(fields[field.key] ?? "").trim()) {
+            fields[field.key] = field.defaultValue;
+        }
+    }
     const validationError = validateFieldsAgainstSchema(schemaFields, fields);
     if (validationError) throw new Error(validationError);
 
@@ -336,10 +360,18 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
     }
 
     const provider = new WisePayoutProvider(wise.config);
+    const bankField = schemaFields.find((f) => f.key === "bankCode" || f.key === "bic" || f.key === "swiftCode");
+    const bankLabels =
+        bankField?.options?.reduce<Record<string, string>>((acc, opt) => {
+            acc[opt.value] = opt.label;
+            return acc;
+        }, {}) ?? undefined;
+
     const maskedDestination = maskDestinationFromFields({
         currencyCode,
         recipientType,
-        fields
+        fields,
+        bankLabels
     });
     const details = buildWiseRecipientDetailsFromFields(fields);
 
