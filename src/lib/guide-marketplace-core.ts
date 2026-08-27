@@ -33,6 +33,7 @@ export type PublicGuideListing = {
     updated_at: string;
     qualifying_wild_capture_count: number;
     qualifying_wild_species_count: number;
+    cover_image_url?: string | null;
 };
 
 const UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
