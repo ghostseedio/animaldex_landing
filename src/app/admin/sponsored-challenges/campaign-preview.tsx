@@ -33,7 +33,7 @@ export function CampaignPreview({ campaign }: { campaign: PreviewCampaign }) {
   const title = campaign.title.trim() || "Untitled Challenge";
 
   return (
-    <aside className="rounded-3xl border border-line-300 bg-canvas-950/70 p-4 lg:sticky lg:top-4">
+    <aside className="rounded-3xl border border-line-300 bg-canvas-950/70 p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">
@@ -143,7 +143,14 @@ function CardPreview({
           alt={campaign.thumbnailAltText ?? ""}
           className="aspect-video w-full rounded-2xl object-cover"
         />
-      ) : null}
+      ) : (
+        <div className="grid aspect-video w-full place-items-center rounded-2xl border border-dashed border-line-300 bg-surface-900 text-center">
+          <div>
+            <p className="text-sm font-bold text-ink-300">Challenge artwork</p>
+            <p className="mt-1 text-xs text-ink-500">No artwork uploaded yet</p>
+          </div>
+        </div>
+      )}
       <h3 className="font-display text-2xl text-white">{title}</h3>
       {authorship.showSponsored ? (
         <div className="space-y-1">
@@ -160,6 +167,12 @@ function CardPreview({
         <p className="text-sm text-ink-300">{authorship.authorLabel}</p>
       )}
       <p className="text-sm text-ink-100">{objective}</p>
+      <div className="space-y-1.5">
+        <p className="text-sm font-black text-ink-100">0 / {campaign.targetCount}</p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-0 rounded-full bg-primary-500" />
+        </div>
+      </div>
       {windowLabel ? (
         <p className="text-sm text-ink-300">{windowLabel}</p>
       ) : null}
@@ -213,7 +226,14 @@ function DetailPreview({
           alt={campaign.thumbnailAltText ?? ""}
           className="aspect-video w-full rounded-2xl object-cover"
         />
-      ) : null}
+      ) : (
+        <div className="grid aspect-video w-full place-items-center rounded-2xl border border-dashed border-line-300 bg-surface-900 text-center">
+          <div>
+            <p className="text-sm font-bold text-ink-300">Challenge artwork</p>
+            <p className="mt-1 text-xs text-ink-500">No artwork uploaded yet</p>
+          </div>
+        </div>
+      )}
       <h3 className="font-display text-2xl text-white">{title}</h3>
       <p className="text-sm text-ink-300">
         {authorship.showSponsored

@@ -164,7 +164,7 @@ export function evaluateReadiness(input: ReadinessInput): ReadinessResult {
       "cash_funding",
       "Cash reward fully funded",
       cashFundingConfirmed,
-      "Confirm the full maximum campaign liability before approval.",
+      "Save this reward configuration, then enter the funding reference and confirm the full campaign total before approval.",
     ]);
     required.push([
       "cash_reward_terms",
