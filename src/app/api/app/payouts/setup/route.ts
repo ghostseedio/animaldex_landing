@@ -7,6 +7,14 @@ import {
     loadPayoutSetupStatusForUser
 } from "@/lib/user-payout-setup";
 
+function publicPayoutSetupError(error: unknown): string {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "refuse_persist_raw_bank_fields") {
+        return "Unable to save payout destination safely. Please try again.";
+    }
+    return message || "Unable to complete payout setup.";
+}
+
 async function resolveUserClient(request: Request): Promise<{
     supabase: SupabaseClient;
     userId: string;
@@ -94,7 +102,7 @@ export async function POST(request: Request) {
         return NextResponse.json(status);
     } catch (error) {
         return NextResponse.json(
-            {error: error instanceof Error ? error.message : "Unable to complete payout setup."},
+            {error: publicPayoutSetupError(error)},
             {status: 400}
         );
     }

@@ -25,7 +25,28 @@ describe("Phase 7C user payout setup", () => {
             assertNoSensitivePersistencePayload({
                 masked_destination: "GBP • Bank account •••• 5678",
                 provider_recipient_ref: "1393656685",
-                destination_type: "bank_account"
+                destination_type: "bank_account",
+                recipient_type: "sort_code",
+                bank_label: "sort_code"
+            })
+        );
+    });
+
+    it("allows safe payout profile storage metadata columns", () => {
+        assert.doesNotThrow(() =>
+            assertNoSensitivePersistencePayload({
+                user_id: "00000000-0000-0000-0000-000000000000",
+                provider: "wise",
+                provider_account_ref: "96792752",
+                provider_recipient_ref: "1393656685",
+                masked_destination: "GBP • Bank account •••• 8842",
+                destination_type: "bank_account",
+                recipient_type: "sort_code",
+                corridor_id: "11111111-1111-1111-1111-111111111111",
+                bank_label: "sort_code",
+                country_code: "GB",
+                default_currency: "GBP",
+                status: "active"
             })
         );
     });

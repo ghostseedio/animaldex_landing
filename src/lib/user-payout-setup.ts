@@ -129,8 +129,7 @@ export function maskGbpBankAccount(accountNumber: string): string {
 }
 
 export function assertNoSensitivePersistencePayload(payload: unknown): void {
-    const text = JSON.stringify(payload ?? {}).toLowerCase();
-    const forbidden = [
+    const forbidden = new Set([
         "accountnumber",
         "account_number",
         "sortcode",
@@ -142,10 +141,23 @@ export function assertNoSensitivePersistencePayload(payload: unknown): void {
         "bic",
         "cardnumber",
         "card_number"
-    ];
-    for (const key of forbidden) {
-        if (text.includes(`"${key}"`)) {
-            throw new Error("refuse_persist_raw_bank_fields");
+    ]);
+    const stack: unknown[] = [payload];
+    while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current || typeof current !== "object") continue;
+        if (Array.isArray(current)) {
+            stack.push(...current);
+            continue;
+        }
+        for (const [key, value] of Object.entries(current as Record<string, unknown>)) {
+            const normalized = key.replace(/[.\s-]/g, "").toLowerCase();
+            if (forbidden.has(key.toLowerCase()) || forbidden.has(normalized)) {
+                throw new Error("refuse_persist_raw_bank_fields");
+            }
+            if (value && typeof value === "object") {
+                stack.push(value);
+            }
         }
     }
 }
