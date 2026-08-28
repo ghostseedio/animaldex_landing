@@ -88,19 +88,24 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const actor = await requireNamedFinanceAdminActor(request.cookies);
         const body = await request.json().catch(() => ({}));
         const action = String(body.action ?? "");
         const payoutId = String(body.payoutId ?? "");
         const diagnostics = await getPayoutDiagnostics();
 
         if (action === "release_posted_creator_rewards") {
+            const actor = await resolveAdminActor(request.cookies);
+            if (!actor.authorized) {
+                return NextResponse.json({error: "Unauthorized"}, {status: 401});
+            }
             const result = await rpc("admin_release_posted_creator_rewards_to_available", {
                 p_period_id: body.periodId || null,
                 p_created_by: actor.userId || null
             });
             return NextResponse.json({ok: true, result});
         }
+
+        const actor = await requireNamedFinanceAdminActor(request.cookies);
 
         if (!payoutId && action !== "") {
             return NextResponse.json({error: "payoutId required"}, {status: 400});
