@@ -94,6 +94,14 @@ export async function POST(request: NextRequest) {
         const payoutId = String(body.payoutId ?? "");
         const diagnostics = await getPayoutDiagnostics();
 
+        if (action === "release_posted_creator_rewards") {
+            const result = await rpc("admin_release_posted_creator_rewards_to_available", {
+                p_period_id: body.periodId || null,
+                p_created_by: actor.userId || null
+            });
+            return NextResponse.json({ok: true, result});
+        }
+
         if (!payoutId && action !== "") {
             return NextResponse.json({error: "payoutId required"}, {status: 400});
         }

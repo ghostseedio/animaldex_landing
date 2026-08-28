@@ -191,6 +191,47 @@ export function AdminPayoutsClient() {
         }
     }
 
+    async function releasePostedCreatorRewards() {
+        const pendingByCurrency = rows.reduce<Record<string, number>>((acc, r) => {
+            acc[r.currency_code] = (acc[r.currency_code] || 0) + Number(r.pending_amount_minor || 0);
+            return acc;
+        }, {});
+        const pendingSummary = Object.entries(pendingByCurrency)
+            .filter(([, amount]) => amount > 0)
+            .map(([currency, amount]) => money(amount, currency))
+            .join(", ");
+        const confirmed = window.confirm(
+            [
+                diagnostics?.isProduction ? "PRODUCTION — REAL MONEY" : "SANDBOX",
+                "Action: release posted Creator Rewards to Available",
+                `Pending total shown: ${pendingSummary || "0"}`,
+                "This makes posted rewards eligible for creator payout requests.",
+                "Continue?",
+            ].join("\n")
+        );
+        if (!confirmed) return;
+        setBusy(true);
+        setMessage(null);
+        setError(null);
+        try {
+            const res = await fetch("/api/admin/payouts", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "release_posted_creator_rewards"}),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Release failed");
+            const count = json.result?.released_count ?? 0;
+            const amount = json.result?.released_amount_minor ?? 0;
+            setMessage(`Released ${count} reward entries (${amount} minor units)`);
+            await load();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Release failed");
+        } finally {
+            setBusy(false);
+        }
+    }
+
     async function submitRecord() {
         if (!recordFor) return;
         await run("record_wise_transfer", recordFor, {
@@ -270,6 +311,14 @@ export function AdminPayoutsClient() {
                     </Link>{" "}
                     after Wise verification (no app release).
                 </p>
+                <button
+                    type="button"
+                    disabled={busy || rows.every((r) => Number(r.pending_amount_minor || 0) <= 0)}
+                    onClick={() => void releasePostedCreatorRewards()}
+                    className="mt-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-100 disabled:opacity-50"
+                >
+                    Release posted rewards to Available
+                </button>
             </section>
 
             {diagnostics?.autoPayoutEnabled && (
@@ -313,6 +362,7 @@ export function AdminPayoutsClient() {
                                         <td className="px-3 py-2 tabular-nums">
                                             {money(r.available_amount_minor, r.currency_code)}
                                             <span className="block text-xs text-ink-500">
+                                                pending {money(r.pending_amount_minor, r.currency_code)} ·{" "}
                                                 held {money(r.held_amount_minor, r.currency_code)}
                                             </span>
                                         </td>
