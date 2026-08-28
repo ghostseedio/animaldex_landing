@@ -1,5 +1,8 @@
 "use client";
 
+/* Dynamic Supabase and local asset URLs are selected at runtime. */
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { CampaignPreview } from "@/app/admin/sponsored-challenges/campaign-preview";
@@ -744,7 +747,7 @@ export default function AdminSponsoredChallengesClient() {
     } catch {
       window.localStorage.removeItem(draftStorageKey);
     }
-  }, [campaign]);
+  }, [campaign, steps.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

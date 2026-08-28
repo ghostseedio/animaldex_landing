@@ -556,8 +556,8 @@ function perMinuteRate(value: number) {
 }
 
 function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
-  if (!rows.length) return null;
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  if (!rows.length) return null;
   const usersPerDay = rollingDailyAverage(rows.map((row) => row.users));
   const capturesPerDay = rollingDailyAverage(rows.map((row) => row.captures));
   const users = usersPerDay.map(perMinuteRate);

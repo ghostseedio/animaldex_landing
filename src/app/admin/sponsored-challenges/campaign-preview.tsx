@@ -1,5 +1,8 @@
 "use client";
 
+/* Preview URLs can come from Supabase storage or the local asset picker. */
+/* eslint-disable @next/next/no-img-element */
+
 import { useState } from "react";
 import { formatEarningsMinor } from "@/lib/earnings";
 import {

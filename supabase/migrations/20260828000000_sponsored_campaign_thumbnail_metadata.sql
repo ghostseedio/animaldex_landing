@@ -217,8 +217,8 @@ as $$
          r.amount_minor,
          r.currency_code,
          r.max_recipients,
-         r.max_recipients,
-         (r.amount_minor * r.max_recipients) + r.platform_fee_minor,
+         r.max_recipients as remaining_recipients,
+         (r.amount_minor * r.max_recipients) + r.platform_fee_minor as campaign_total_minor,
          r.funding_status
   from public.campaign_cash_rewards r
   join public.sponsored_campaigns c on c.id = r.campaign_id
