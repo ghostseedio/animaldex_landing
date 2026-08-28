@@ -11,7 +11,8 @@ import {
     maskDestinationFromFields,
     normalizeDbSchema,
     normalizeOptions,
-    validateFieldsAgainstSchema
+    validateFieldsAgainstSchema,
+    wiseRecipientDetailsShouldIncludeAddress
 } from "./payout-destination-requirements";
 
 describe("payout destination requirements", () => {
@@ -196,6 +197,30 @@ describe("payout destination requirements", () => {
             () => assertNoSensitivePersistencePayload({accountNumber: "123"}),
             /refuse_persist_raw_bank_fields/
         );
+    });
+
+    it("keeps collected address out of Wise GBP sort-code recipient details", () => {
+        assert.equal(
+            wiseRecipientDetailsShouldIncludeAddress({currencyCode: "GBP", recipientType: "sort_code"}),
+            false
+        );
+        const details = buildWiseRecipientDetailsFromFields(
+            {
+                accountHolderName: "Leonard Beadle",
+                sortCode: "040075",
+                accountNumber: "37778842",
+                "address.firstLine": "1 Test Street",
+                "address.city": "Darlington",
+                "address.postCode": "DL2 3PD",
+                "address.country": "GB"
+            },
+            {includeAddress: false}
+        );
+        assert.deepEqual(details, {
+            legalType: "PRIVATE",
+            sortCode: "040075",
+            accountNumber: "37778842"
+        });
     });
 
     it("applyCorridorDefaults prefills Indonesia country", () => {

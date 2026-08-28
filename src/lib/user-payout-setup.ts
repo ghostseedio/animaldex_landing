@@ -12,7 +12,8 @@ import {
     buildWiseRecipientDetailsFromFields,
     maskDestinationFromFields,
     normalizeDbSchema,
-    validateFieldsAgainstSchema
+    validateFieldsAgainstSchema,
+    wiseRecipientDetailsShouldIncludeAddress
 } from "@/lib/payout-destination-requirements";
 import {
     assertPayoutEnvironmentCompatible,
@@ -373,7 +374,9 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         fields,
         bankLabels
     });
-    const details = buildWiseRecipientDetailsFromFields(fields);
+    const details = buildWiseRecipientDetailsFromFields(fields, {
+        includeAddress: wiseRecipientDetailsShouldIncludeAddress({currencyCode, recipientType})
+    });
 
     const created = await provider.createRecipient({
         currency: currencyCode,

@@ -128,19 +128,36 @@ export function assertNoSensitivePersistencePayload(payload: Record<string, unkn
     }
 }
 
-/** Flatten nested address.* keys into Wise details.address object. */
+export function wiseRecipientDetailsShouldIncludeAddress(input: {
+    currencyCode: string;
+    recipientType: string;
+}): boolean {
+    const currency = input.currencyCode.trim().toUpperCase();
+    const recipientType = input.recipientType.trim().toLowerCase();
+    // Wise's GBP sort-code account contract only accepts bank/account details.
+    // We can still collect recipient address for AnimalDex setup validation, but
+    // it must not be forwarded as GBP recipient account details.
+    if (currency === "GBP" && recipientType === "sort_code") return false;
+    return true;
+}
+
+/** Flatten nested address.* keys into Wise details.address object when accepted by this corridor. */
 export function buildWiseRecipientDetailsFromFields(
-    fields: Record<string, string>
+    fields: Record<string, string>,
+    options: {includeAddress?: boolean} = {}
 ): Record<string, unknown> {
     const details: Record<string, unknown> = {legalType: "PRIVATE"};
     const address: Record<string, string> = {};
+    const includeAddress = options.includeAddress ?? true;
 
     for (const [rawKey, rawValue] of Object.entries(fields)) {
         const value = String(rawValue ?? "").trim();
         if (!value) continue;
         if (rawKey === "accountHolderName" || rawKey === "legalCapacityAttested") continue;
         if (rawKey.startsWith("address.")) {
-            address[rawKey.slice("address.".length)] = value;
+            if (includeAddress) {
+                address[rawKey.slice("address.".length)] = value;
+            }
             continue;
         }
         details[rawKey] = value;
