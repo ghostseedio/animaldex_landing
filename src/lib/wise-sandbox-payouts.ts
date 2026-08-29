@@ -9,6 +9,17 @@ import {
     PayoutEnvironmentError
 } from "@/lib/payout-environment";
 import {applyProviderPayoutStatus} from "@/lib/payout-status-engine";
+import {
+    applyCorridorDefaults,
+    mapWiseRequirementsToFields,
+    missingAddressFieldKeys,
+    normalizeDbSchema,
+    RECIPIENT_ADDRESS_PART_LABELS,
+    recipientAddressFromProfileRow,
+    requiredAddressParts,
+    type RecipientAddressPart
+} from "@/lib/payout-destination-requirements";
+import {payoutNeedsManualApproval, shouldReuseQuote} from "@/lib/payout-preparation-state";
 import type {AdminActor} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {
@@ -144,7 +155,7 @@ export async function listAdminPayouts() {
     const rows = await rest<Array<Record<string, unknown>>>(
         [
             "payouts?select=",
-            "id,user_id,currency_code,amount_minor,status,provider,environment,",
+            "id,user_id,payout_profile_id,currency_code,amount_minor,status,provider,environment,",
             "provider_quote_ref,provider_transfer_ref,provider_status,failure_code,created_at,updated_at,approved_by,",
             "source_earnings_currency,source_earnings_amount_minor,target_currency,target_amount_minor,",
             "estimate_target_amount_minor,estimate_exchange_rate,estimate_provider_fee_minor,",
@@ -157,6 +168,7 @@ export async function listAdminPayouts() {
     return (rows || []).map((p) => ({
         payoutId: String(p.id),
         userId: String(p.user_id),
+        payoutProfileId: p.payout_profile_id ? String(p.payout_profile_id) : null,
         currencyCode: String(p.currency_code),
         amountMinor: Number(p.amount_minor ?? 0),
         status: String(p.status),
@@ -195,6 +207,154 @@ export async function listAdminPayouts() {
     }));
 }
 
+/** Non-sensitive resolved payout destination shown on /admin/payouts. */
+export type AdminPayoutDestination = {
+    originalProfileId: string | null;
+    activeProfileId: string | null;
+    usingRecovery: boolean;
+    recipientRefMasked: string | null;
+    profileStatus: string | null;
+    addressCountry: string | null;
+    addressCity: string | null;
+    addressPostCode: string | null;
+    addressFirstLine: string | null;
+    addressState: string | null;
+    missingAddressLabels: string[];
+    addressComplete: boolean;
+};
+
+const PROFILE_DESTINATION_COLUMNS = [
+    "id", "user_id", "provider", "status", "country_code", "default_currency",
+    "recipient_type", "corridor_id", "provider_recipient_ref", "masked_destination",
+    "address_country", "address_city", "address_post_code", "address_first_line",
+    "address_state", "created_at"
+].join(",");
+
+export function maskRecipientRef(ref: string): string {
+    const trimmed = String(ref ?? "").trim();
+    if (!trimmed) return "";
+    if (trimmed.length <= 6) return `${trimmed.slice(0, 2)}***`;
+    return `${trimmed.slice(0, 3)}***${trimmed.slice(-2)}`;
+}
+
+type PayoutDestinationKey = {
+    payoutId: string;
+    userId: string;
+    payoutProfileId: string | null;
+    corridorId: string | null;
+};
+
+async function resolveAdminPayoutDestinations(
+    payouts: PayoutDestinationKey[]
+): Promise<Map<string, AdminPayoutDestination>> {
+    const out = new Map<string, AdminPayoutDestination>();
+    if (payouts.length === 0) return out;
+
+    const userIds = Array.from(new Set(payouts.map((p) => p.userId).filter(Boolean)));
+    const corridorIds = Array.from(
+        new Set(payouts.map((p) => p.corridorId).filter((id): id is string => Boolean(id)))
+    );
+
+    const [profileRows, corridorRows] = await Promise.all([
+        userIds.length
+            ? rest<Array<Record<string, unknown>>>(
+                  `payout_profiles?user_id=in.(${userIds.map((id) => encodeURIComponent(id)).join(",")})&provider=eq.wise&select=${PROFILE_DESTINATION_COLUMNS}&order=created_at.desc`
+              )
+            : Promise.resolve([] as Record<string, unknown>[]),
+        corridorIds.length
+            ? rest<Array<Record<string, unknown>>>(
+                  `monetization_payout_corridors?id=in.(${corridorIds.map((id) => encodeURIComponent(id)).join(",")})&select=id,requirements_schema,country_code,currency_code,recipient_type`
+              )
+            : Promise.resolve([] as Record<string, unknown>[])
+    ]);
+
+    const profilesByUser = new Map<string, Record<string, unknown>[]>();
+    for (const row of profileRows) {
+        const uid = String(row.user_id);
+        const list = profilesByUser.get(uid) ?? [];
+        list.push(row);
+        profilesByUser.set(uid, list);
+    }
+    const corridorById = new Map<string, Record<string, unknown>>();
+    for (const row of corridorRows) {
+        corridorById.set(String(row.id), row);
+    }
+
+    for (const payout of payouts) {
+        const userProfiles = profilesByUser.get(payout.userId) ?? [];
+        const activeProfile = userProfiles.find((r) => String(r.status) === "active") ?? null;
+        const snapshottedProfile = payout.payoutProfileId
+            ? userProfiles.find((r) => String(r.id) === payout.payoutProfileId) ?? null
+            : null;
+        const profile =
+            (activeProfile?.provider_recipient_ref ? activeProfile : snapshottedProfile) ?? activeProfile;
+
+        if (!profile) {
+            out.set(payout.payoutId, {
+                originalProfileId: payout.payoutProfileId,
+                activeProfileId: activeProfile ? String(activeProfile.id) : null,
+                usingRecovery: false,
+                recipientRefMasked: null,
+                profileStatus: null,
+                addressCountry: null,
+                addressCity: null,
+                addressPostCode: null,
+                addressFirstLine: null,
+                addressState: null,
+                missingAddressLabels: [],
+                addressComplete: false
+            });
+            continue;
+        }
+
+        const address = recipientAddressFromProfileRow(profile);
+        const corridor = payout.corridorId ? corridorById.get(payout.corridorId) : undefined;
+        const requiredParts =
+            corridor?.requirements_schema != null
+                ? requiredAddressParts(normalizeDbSchema(corridor.requirements_schema))
+                : [];
+        const missingAddressLabels = requiredParts
+            .filter((part) => !String(address[part] ?? "").trim())
+            .map((part) => RECIPIENT_ADDRESS_PART_LABELS[part]);
+
+        out.set(payout.payoutId, {
+            originalProfileId: payout.payoutProfileId,
+            activeProfileId: activeProfile ? String(activeProfile.id) : null,
+            usingRecovery: Boolean(
+                snapshottedProfile?.id &&
+                    activeProfile?.id &&
+                    String(snapshottedProfile.id) !== String(activeProfile.id)
+            ),
+            recipientRefMasked: profile.provider_recipient_ref
+                ? maskRecipientRef(String(profile.provider_recipient_ref))
+                : null,
+            profileStatus: profile.status ? String(profile.status) : null,
+            addressCountry: address.country || null,
+            addressCity: address.city || null,
+            addressPostCode: address.postCode || null,
+            addressFirstLine: address.firstLine || null,
+            addressState: address.state || null,
+            missingAddressLabels,
+            addressComplete: missingAddressLabels.length === 0
+        });
+    }
+
+    return out;
+}
+
+export async function listAdminPayoutsWithDestinations() {
+    const payouts = await listAdminPayouts();
+    const destinations = await resolveAdminPayoutDestinations(
+        payouts.map((p) => ({
+            payoutId: p.payoutId,
+            userId: p.userId,
+            payoutProfileId: p.payoutProfileId,
+            corridorId: p.corridorId
+        }))
+    );
+    return payouts.map((p) => ({...p, destination: destinations.get(p.payoutId) ?? null}));
+}
+
 /** Production-safe: Held/reserved → approve for manual Wise send. */
 export async function approvePayoutForManualPayment(payoutId: string, actor: AdminActor) {
     const operator = await ensureNamedFinanceOperator(actor);
@@ -206,6 +366,45 @@ export async function approvePayoutForManualPayment(payoutId: string, actor: Adm
 
 function loadWiseConfigForCurrentEnvironment(isProduction: boolean) {
     return isProduction ? loadWiseProductionConfigFromEnv() : loadWiseConfigFromEnv();
+}
+
+/**
+ * Resolve the address fields Wise requires for a corridor, taking the union of
+ * the corridor's verified static schema and the live `account-requirements`
+ * contract. The union is fail-closed: a required address field is never dropped
+ * just because the live payload happened to omit it.
+ */
+async function resolveRequiredRecipientAddressParts(
+    provider: WisePayoutProvider,
+    input: {
+        sourceCurrency: string;
+        targetCurrency: string;
+        recipientType: string;
+        countryCode: string;
+        staticSchema: unknown;
+    }
+): Promise<RecipientAddressPart[]> {
+    const staticFields = applyCorridorDefaults(normalizeDbSchema(input.staticSchema), input.countryCode);
+    const staticParts = requiredAddressParts(staticFields);
+    let liveParts: RecipientAddressPart[] = [];
+    try {
+        const wiseRequirements = await provider.getAccountRequirements({
+            sourceCurrency: input.sourceCurrency,
+            targetCurrency: input.targetCurrency,
+            sourceAmount: 100
+        });
+        const liveFields = mapWiseRequirementsToFields(
+            wiseRequirements,
+            input.recipientType,
+            input.countryCode
+        );
+        if (liveFields.length > 1) {
+            liveParts = requiredAddressParts(liveFields);
+        }
+    } catch {
+        // Keep static parts only.
+    }
+    return Array.from(new Set([...staticParts, ...liveParts]));
 }
 
 export async function approveAndPrepareWiseTransfer(payoutId: string, actor: AdminActor) {
@@ -222,15 +421,8 @@ export async function approveAndPrepareWiseTransfer(payoutId: string, actor: Adm
     if (!payout) throw new Error("payout_not_found");
     if (!payout.earning_hold_id) throw new Error("payout_not_held");
 
-    if (String(payout.status) !== "approved_for_manual_payment") {
-        await approvePayoutForManualPayment(payoutId, actor);
-        const refreshed = await rest<Array<Record<string, unknown>>>(
-            `payouts?id=eq.${encodeURIComponent(payoutId)}&select=*&limit=1`
-        );
-        payout = refreshed?.[0];
-        if (!payout) throw new Error("payout_not_found");
-    }
-
+    // Idempotent short-circuit: a transfer reference already exists, so the
+    // payout has been prepared. Never create a second transfer for this payout.
     if (payout.provider_transfer_ref) {
         return {
             ok: true,
@@ -240,45 +432,162 @@ export async function approveAndPrepareWiseTransfer(payoutId: string, actor: Adm
         };
     }
 
-    const profileRows = await rest<Array<Record<string, unknown>>>(
+    // Only transition the held payout to manual-approval while it is still in a
+    // pre-approval state. `provider_quote_created` is an *incomplete* preparation
+    // state (quote persisted, transfer not yet created) and must be resumable
+    // without re-running the approval transition.
+    if (payoutNeedsManualApproval(String(payout.status))) {
+        await approvePayoutForManualPayment(payoutId, actor);
+        const refreshed = await rest<Array<Record<string, unknown>>>(
+            `payouts?id=eq.${encodeURIComponent(payoutId)}&select=*&limit=1`
+        );
+        payout = refreshed?.[0];
+        if (!payout) throw new Error("payout_not_found");
+    }
+
+    // Re-read the CURRENT destination. The payout request snapshots
+    // `payout_profile_id`; a creator who re-submits their destination closes the
+    // old profile and creates a fresh active one with a new provider recipient.
+    // Prefer the active profile so recovery never re-uses an obsolete recipient.
+    const snapshottedRows = await rest<Array<Record<string, unknown>>>(
         `payout_profiles?id=eq.${encodeURIComponent(String(payout.payout_profile_id))}&select=*&limit=1`
     );
-    const profile = profileRows?.[0];
+    const snapshottedProfile = snapshottedRows?.[0];
+    const activeRows = await rest<Array<Record<string, unknown>>>(
+        `payout_profiles?user_id=eq.${encodeURIComponent(String(payout.user_id))}&provider=eq.wise&status=eq.active&order=created_at.desc&limit=1`
+    );
+    const activeProfile = activeRows?.[0];
+
+    const profile =
+        (activeProfile?.provider_recipient_ref ? activeProfile : snapshottedProfile) ?? activeProfile;
     if (!profile) throw new Error("payout_profile_not_found");
     const recipientRef = profile.provider_recipient_ref ? String(profile.provider_recipient_ref) : "";
     if (!recipientRef.trim()) throw new Error("provider_recipient_ref_missing");
+
+    const snapshotRecipientRef = snapshottedProfile?.provider_recipient_ref
+        ? String(snapshottedProfile.provider_recipient_ref)
+        : "";
 
     const sourceCurrency = String(payout.source_earnings_currency || payout.currency_code);
     const targetCurrency = String(payout.target_currency || profile.default_currency || payout.currency_code);
     const sourceAmountMinor = Number(payout.source_earnings_amount_minor ?? payout.amount_minor);
     const sourceAmount = sourceAmountMinor / 100;
 
-    await recordAttempt(payoutId, "create_quote", "started");
-    const quote = await provider.createQuote({
-        profileId: config.profileId,
+    const corridorId = payout.corridor_id
+        ? String(payout.corridor_id)
+        : profile.corridor_id
+          ? String(profile.corridor_id)
+          : "";
+    let corridor: Record<string, unknown> | undefined;
+    if (corridorId) {
+        const corridorRows = await rest<Array<Record<string, unknown>>>(
+            `monetization_payout_corridors?id=eq.${encodeURIComponent(corridorId)}&select=requirements_schema,recipient_type,currency_code,country_code&limit=1`
+        );
+        corridor = corridorRows?.[0];
+    }
+
+    // Validate recipient address BEFORE any new Wise mutation. This is the
+    // boundary that turns a silent Wise 422 into a recoverable, named error.
+    const requiredParts = await resolveRequiredRecipientAddressParts(provider, {
         sourceCurrency,
         targetCurrency,
-        sourceAmount,
-        targetAccount: recipientRef
+        recipientType: String(corridor?.recipient_type ?? profile.recipient_type ?? "sort_code"),
+        countryCode: String(corridor?.country_code ?? profile.country_code ?? ""),
+        staticSchema: corridor?.requirements_schema ?? null
     });
-    await recordAttempt(payoutId, "create_quote", "succeeded", quote.providerQuoteRef);
 
-    await rest(`payouts?id=eq.${encodeURIComponent(payoutId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-            status: "provider_quote_created",
-            provider_quote_ref: quote.providerQuoteRef,
-            quote_source_currency: quote.sourceCurrency,
-            quote_target_currency: quote.targetCurrency,
-            quote_source_amount_minor: Math.round(quote.sourceAmount * 100),
-            quote_target_amount_minor: Math.round(quote.targetAmount * 100),
-            quote_fee_amount_minor: Math.round(quote.fee * 100),
-            quote_rate: quote.rate,
-            quote_expires_at: quote.expiresAt,
-            updated_at: new Date().toISOString()
+    const resolvedAddress = recipientAddressFromProfileRow(profile);
+    // Structured, server-side diagnostic log for payout preparation. Contains
+    // ONLY presence booleans + ids/masked ref — never the street address or bank
+    // details. Kept intentionally small for operator traceability.
+    console.log(
+        JSON.stringify({
+            event: "payout_preparation_destination",
+            payout_id: payoutId,
+            payout_profile_id: payout.payout_profile_id ? String(payout.payout_profile_id) : null,
+            active_profile_id: activeProfile ? String(activeProfile.id) : null,
+            recipient_ref: recipientRef ? maskRecipientRef(recipientRef) : null,
+            address_country_present: Boolean(resolvedAddress.country),
+            address_city_present: Boolean(resolvedAddress.city),
+            address_post_code_present: Boolean(resolvedAddress.postCode),
+            address_first_line_present: Boolean(resolvedAddress.firstLine),
+            address_state_present: Boolean(resolvedAddress.state)
         })
+    );
+
+    if (requiredParts.length > 0) {
+        const missing = missingAddressFieldKeys(resolvedAddress, requiredParts);
+        if (missing.length > 0) {
+            throw new Error(`recipient_address_incomplete:${missing.join(", ")}`);
+        }
+    }
+
+    // Reuse the persisted quote when it is still valid and was created against
+    // the current recipient; otherwise create a replacement quote. Quotes are
+    // cheap and expiring, so replacing a stale/incompatible quote is safe.
+    const existingQuoteRef = payout.provider_quote_ref ? String(payout.provider_quote_ref) : "";
+    const quoteExpiresAt = payout.quote_expires_at ? String(payout.quote_expires_at) : "";
+    const canReuseQuote = shouldReuseQuote({
+        providerQuoteRef: existingQuoteRef || null,
+        quoteExpiresAt: quoteExpiresAt || null,
+        snapshotRecipientRef,
+        currentRecipientRef: recipientRef
     });
 
+    let quote: {
+        providerQuoteRef: string;
+        sourceCurrency: string;
+        targetCurrency: string;
+        sourceAmount: number;
+        targetAmount: number;
+        fee: number;
+        rate: number | null;
+        expiresAt: string | null;
+    };
+
+    if (canReuseQuote) {
+        quote = {
+            providerQuoteRef: existingQuoteRef,
+            sourceCurrency,
+            targetCurrency,
+            sourceAmount,
+            targetAmount: Number(payout.quote_target_amount_minor ?? 0) / 100,
+            fee: Number(payout.quote_fee_amount_minor ?? 0) / 100,
+            rate: payout.quote_rate == null ? null : Number(payout.quote_rate),
+            expiresAt: quoteExpiresAt
+        };
+    } else {
+        await recordAttempt(payoutId, "create_quote", "started");
+        quote = await provider.createQuote({
+            profileId: config.profileId,
+            sourceCurrency,
+            targetCurrency,
+            sourceAmount,
+            targetAccount: recipientRef
+        });
+        await recordAttempt(payoutId, "create_quote", "succeeded", quote.providerQuoteRef);
+
+        // Persist the quote as the incomplete-but-recoverable preparation state.
+        await rest(`payouts?id=eq.${encodeURIComponent(payoutId)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+                status: "provider_quote_created",
+                provider_quote_ref: quote.providerQuoteRef,
+                quote_source_currency: quote.sourceCurrency,
+                quote_target_currency: quote.targetCurrency,
+                quote_source_amount_minor: Math.round(quote.sourceAmount * 100),
+                quote_target_amount_minor: Math.round(quote.targetAmount * 100),
+                quote_fee_amount_minor: Math.round(quote.fee * 100),
+                quote_rate: quote.rate,
+                quote_expires_at: quote.expiresAt,
+                updated_at: new Date().toISOString()
+            })
+        });
+    }
+
+    // Create exactly one transfer. `customerTransactionId` is the Wise
+    // idempotency key, so retries reconcile with any transfer Wise may already
+    // have created rather than minting a duplicate real-money transfer.
     await recordAttempt(payoutId, "create_transfer", "started");
     const transfer = await provider.createTransfer({
         quoteUuid: quote.providerQuoteRef,
@@ -312,7 +621,8 @@ export async function approveAndPrepareWiseTransfer(payoutId: string, actor: Adm
             quote_ref: quote.providerQuoteRef,
             transfer_ref: transfer.providerTransferRef,
             provider_status: transfer.status,
-            funded: false
+            funded: false,
+            reused_quote: canReuseQuote
         }
     });
 

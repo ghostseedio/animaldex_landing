@@ -1,16 +1,21 @@
 import assert from "node:assert/strict";
 import {describe, it} from "node:test";
 import {
+    addressColumnsFromFields,
     applyCorridorDefaults,
     assertNoSensitivePersistencePayload,
     buildWiseRecipientDetailsFromFields,
     consumerLabelForKey,
     enrichOptionLabels,
+    extractRecipientAddress,
     fieldUsesSearchableSelect,
     mapWiseRequirementsToFields,
     maskDestinationFromFields,
+    missingAddressFieldKeys,
     normalizeDbSchema,
     normalizeOptions,
+    recipientAddressFromProfileRow,
+    requiredAddressParts,
     validateFieldsAgainstSchema,
     wiseRecipientDetailsShouldIncludeAddress
 } from "./payout-destination-requirements";
@@ -199,20 +204,36 @@ describe("payout destination requirements", () => {
         );
     });
 
-    it("keeps collected address out of Wise GBP sort-code recipient details", () => {
+    it("includes recipient address for Wise GBP sort-code details (address is required)", () => {
         assert.equal(
             wiseRecipientDetailsShouldIncludeAddress({currencyCode: "GBP", recipientType: "sort_code"}),
-            false
+            true
         );
+        const details = buildWiseRecipientDetailsFromFields({
+            accountHolderName: "Leonard Beadle",
+            sortCode: "040075",
+            accountNumber: "37778842",
+            "address.firstLine": "1 Test Street",
+            "address.city": "Darlington",
+            "address.postCode": "DL2 3PD",
+            "address.country": "GB"
+        });
+        assert.deepEqual(details, {
+            legalType: "PRIVATE",
+            sortCode: "040075",
+            accountNumber: "37778842",
+            address: {firstLine: "1 Test Street", city: "Darlington", postCode: "DL2 3PD", country: "GB"}
+        });
+    });
+
+    it("still supports opt-out of address via includeAddress flag", () => {
         const details = buildWiseRecipientDetailsFromFields(
             {
                 accountHolderName: "Leonard Beadle",
                 sortCode: "040075",
                 accountNumber: "37778842",
                 "address.firstLine": "1 Test Street",
-                "address.city": "Darlington",
-                "address.postCode": "DL2 3PD",
-                "address.country": "GB"
+                "address.city": "Darlington"
             },
             {includeAddress: false}
         );
@@ -254,5 +275,175 @@ describe("payout destination requirements", () => {
         assert.equal(fields[0]?.options?.[0]?.label, "BCA Bank Central Asia");
         assert.notEqual(fields[0]?.options?.[0]?.label, "140397");
         assert.equal(fields[0]?.options?.[1]?.label, "BANK JATIM UNIT USAHA SYARIAH");
+    });
+
+    it("extracts and round-trips recipient address fields", () => {
+        const address = extractRecipientAddress({
+            "address.firstLine": "12 Main St",
+            "address.city": "London",
+            "address.postCode": "E1 6AN",
+            "address.country": "GB",
+            "address.state": "",
+            accountNumber: "12345678"
+        });
+        assert.equal(address.firstLine, "12 Main St");
+        assert.equal(address.city, "London");
+        assert.equal(address.postCode, "E1 6AN");
+        assert.equal(address.country, "GB");
+        assert.equal(address.state, undefined);
+
+        const columns = addressColumnsFromFields(
+            {"address.city": "London", "address.firstLine": "12 Main St"},
+            "GB"
+        );
+        assert.equal(columns.address_country, "GB");
+        assert.equal(columns.address_city, "London");
+        assert.equal(columns.address_first_line, "12 Main St");
+        assert.equal(columns.address_post_code, null);
+        assert.equal(columns.address_state, null);
+    });
+
+    it("reads persisted recipient address back from a profile row with country fallback", () => {
+        const address = recipientAddressFromProfileRow({
+            address_country: "ID",
+            address_city: "Jakarta",
+            address_post_code: "10110",
+            address_first_line: "Jl. Merdeka 1",
+            address_state: null
+        });
+        assert.equal(address.country, "ID");
+        assert.equal(address.city, "Jakarta");
+        assert.equal(address.postCode, "10110");
+        assert.equal(address.firstLine, "Jl. Merdeka 1");
+        assert.equal(address.state, "");
+
+        const legacy = recipientAddressFromProfileRow({country_code: "GB"});
+        assert.equal(legacy.country, "GB");
+        assert.equal(legacy.city, "");
+    });
+
+    it("computes required address parts from a field schema", () => {
+        const fields = mapWiseRequirementsToFields(
+            [
+                {
+                    type: "indonesian",
+                    fields: [
+                        {
+                            group: [
+                                {key: "bankCode", name: "Bank", type: "select", required: true, valuesAllowed: [{key: "140397", name: "BCA"}]},
+                                {key: "accountNumber", name: "Account number", type: "text", required: true},
+                                {key: "address.country", name: "Country", type: "select", required: true, valuesAllowed: [{key: "ID", name: "Indonesia"}]},
+                                {key: "address.city", name: "City", type: "text", required: true},
+                                {key: "address.firstLine", name: "Address", type: "text", required: true},
+                                {key: "address.postCode", name: "Post code", type: "text", required: true}
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "indonesian",
+            "ID"
+        );
+        assert.deepEqual(requiredAddressParts(fields).sort(), ["city", "country", "firstLine", "postCode"].sort());
+    });
+
+    it("accepts a complete required address and reports each missing part", () => {
+        const required = ["country", "city", "postCode", "firstLine"] as const;
+        const complete = {country: "GB", city: "London", postCode: "E1 6AN", firstLine: "12 Main St", state: ""};
+        assert.deepEqual(missingAddressFieldKeys(complete, [...required]), []);
+
+        const missingCountry = {...complete, country: ""};
+        assert.deepEqual(missingAddressFieldKeys(missingCountry, [...required]), ["address.country"]);
+
+        const missingCity = {...complete, city: ""};
+        assert.deepEqual(missingAddressFieldKeys(missingCity, [...required]), ["address.city"]);
+
+        const missingPostCodeAndLine = {...complete, postCode: "", firstLine: ""};
+        assert.deepEqual(missingAddressFieldKeys(missingPostCodeAndLine, [...required]).sort(), ["address.firstLine", "address.postCode"].sort());
+    });
+
+    it("requires state only for country-specific corridors that demand it", () => {
+        const baseRequired = ["country", "city", "postCode", "firstLine"] as const;
+        const usRequired = [...baseRequired, "state"] as const;
+        const address = {country: "US", city: "Austin", postCode: "78701", firstLine: "1 Congress Ave", state: ""};
+
+        // Without state in the required list, it is not reported missing.
+        assert.deepEqual(missingAddressFieldKeys(address, [...baseRequired]), []);
+        // With state required (US corridor), it is reported missing.
+        assert.deepEqual(missingAddressFieldKeys(address, [...usRequired]), ["address.state"]);
+    });
+
+    it("round-trips the real GBP sort_code setup payload into a profile row and back", () => {
+        // Exact shape the setup UI emits for the UK sort-code corridor.
+        const fields = {
+            accountHolderName: "Leonard Beadle",
+            sortCode: "040075",
+            accountNumber: "37778842",
+            "address.firstLine": "1 Test Street",
+            "address.city": "Darlington",
+            "address.postCode": "DL2 3PD",
+            "address.country": "GB"
+        };
+
+        // extractRecipientAddress → addressColumnsFromFields
+        const address = extractRecipientAddress(fields);
+        assert.equal(address.firstLine, "1 Test Street");
+        assert.equal(address.city, "Darlington");
+        assert.equal(address.postCode, "DL2 3PD");
+        assert.equal(address.country, "GB");
+
+        const columns = addressColumnsFromFields(fields, "GB");
+        assert.equal(columns.address_country, "GB");
+        assert.equal(columns.address_city, "Darlington");
+        assert.equal(columns.address_post_code, "DL2 3PD");
+        assert.equal(columns.address_first_line, "1 Test Street");
+        assert.equal(columns.address_state, null);
+
+        // payout_profiles representation (columns merged with the corridor row).
+        const profileRow = {
+            id: "profile-1",
+            user_id: "user-1",
+            provider: "wise",
+            status: "active",
+            country_code: "GB",
+            default_currency: "GBP",
+            recipient_type: "sort_code",
+            provider_recipient_ref: "155000000065",
+            ...columns
+        };
+
+        // recipientAddressFromProfileRow reconstructs the address.
+        const reconstructed = recipientAddressFromProfileRow(profileRow);
+        assert.equal(reconstructed.country, "GB");
+        assert.equal(reconstructed.city, "Darlington");
+        assert.equal(reconstructed.postCode, "DL2 3PD");
+        assert.equal(reconstructed.firstLine, "1 Test Street");
+
+        // GBP corridor requires country/city/postCode/firstLine (not state).
+        const required = ["country", "city", "postCode", "firstLine"] as const;
+        assert.deepEqual(missingAddressFieldKeys(reconstructed, [...required]), []);
+    });
+
+    it("round-trips common address alias forms", () => {
+        const aliasFields = {
+            accountHolderName: "Leonard Beadle",
+            sortCode: "040075",
+            accountNumber: "37778842",
+            "address.first_line": "10 Downing Street",
+            "address.city": "London",
+            "address.postalCode": "SW1A 2AA",
+            "address.countryCode": "GB"
+        };
+        const address = extractRecipientAddress(aliasFields);
+        assert.equal(address.firstLine, "10 Downing Street");
+        assert.equal(address.city, "London");
+        assert.equal(address.postCode, "SW1A 2AA");
+        assert.equal(address.country, "GB");
+
+        const columns = addressColumnsFromFields(aliasFields, "GB");
+        assert.equal(columns.address_first_line, "10 Downing Street");
+        assert.equal(columns.address_city, "London");
+        assert.equal(columns.address_post_code, "SW1A 2AA");
+        assert.equal(columns.address_country, "GB");
     });
 });

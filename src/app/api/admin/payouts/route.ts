@@ -7,7 +7,7 @@ import {
     confirmManualPayoutPaid,
     confirmManualPayoutPaidWithoutProviderCheck,
     getPayoutDiagnostics,
-    listAdminPayouts,
+    listAdminPayoutsWithDestinations,
     recordManualWiseTransfer,
     refreshPayoutProviderStatus
 } from "@/lib/wise-sandbox-payouts";
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
             // optional helper until migration applied
         }
 
-        const payouts = await listAdminPayouts();
+        const payouts = await listAdminPayoutsWithDestinations();
         const autoExecuteBlocked = diagnostics.isProduction;
 
         return NextResponse.json({

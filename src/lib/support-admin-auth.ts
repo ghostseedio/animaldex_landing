@@ -95,6 +95,12 @@ function getAdminEmails() {
     ]);
 }
 
+/** Whether an email belongs to a named finance-capable operator. */
+export function isNamedFinanceAdminEmail(email: string | null | undefined) {
+    const normalized = email?.trim().toLowerCase();
+    return normalized ? getAdminEmails().has(normalized) : false;
+}
+
 /**
  * The cookies an authorization check needs, in the shape both a route handler's
  * NextRequest and a server component's `cookies()` already provide.

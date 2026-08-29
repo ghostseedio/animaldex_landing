@@ -132,12 +132,12 @@ export function wiseRecipientDetailsShouldIncludeAddress(input: {
     currencyCode: string;
     recipientType: string;
 }): boolean {
-    const currency = input.currencyCode.trim().toUpperCase();
-    const recipientType = input.recipientType.trim().toLowerCase();
-    // Wise's GBP sort-code account contract only accepts bank/account details.
-    // We can still collect recipient address for AnimalDex setup validation, but
-    // it must not be forwarded as GBP recipient account details.
-    if (currency === "GBP" && recipientType === "sort_code") return false;
+    // Wise requires the recipient's address across the catalog — including GBP
+    // sort-code, where the transfer is rejected with a 422 when the account
+    // lacks an address. Forwarding is data-driven: buildWiseRecipientDetailsFromFields
+    // only sends the address.* fields the user actually collected, so address is
+    // always included when present.
+    void input;
     return true;
 }
 
@@ -459,6 +459,142 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
     checking: "Checking",
     savings: "Savings"
 };
+
+export type RecipientAddress = {
+    country: string;
+    city: string;
+    postCode: string;
+    firstLine: string;
+    state: string;
+};
+
+export const RECIPIENT_ADDRESS_PARTS = ["country", "city", "postCode", "firstLine", "state"] as const;
+export type RecipientAddressPart = (typeof RECIPIENT_ADDRESS_PARTS)[number];
+
+export const RECIPIENT_ADDRESS_COLUMNS: Record<RecipientAddressPart, string> = {
+    country: "address_country",
+    city: "address_city",
+    postCode: "address_post_code",
+    firstLine: "address_first_line",
+    state: "address_state"
+};
+
+/** Human labels for the admin diagnostics (keep out of consumer copy). */
+export const RECIPIENT_ADDRESS_PART_LABELS: Record<RecipientAddressPart, string> = {
+    country: "Country",
+    city: "City",
+    postCode: "Postcode",
+    firstLine: "Address line 1",
+    state: "State / region"
+};
+
+export function addressFieldKeyFor(part: RecipientAddressPart): string {
+    return `address.${part}`;
+}
+
+function isRecipientAddressPart(value: string): value is RecipientAddressPart {
+    return (RECIPIENT_ADDRESS_PARTS as readonly string[]).includes(value);
+}
+
+/**
+ * Common alias forms the setup schema / live provider contract can legitimately
+ * emit. The canonical key (address.firstLine etc.) is tried first, then these.
+ */
+const RECIPIENT_ADDRESS_ALIASES: Record<RecipientAddressPart, string[]> = {
+    country: ["address.country", "address.countryCode", "country"],
+    city: ["address.city", "address_city", "city"],
+    postCode: [
+        "address.postCode",
+        "address.postcode",
+        "address.postalCode",
+        "address.post_code",
+        "address.zip",
+        "address.zipCode"
+    ],
+    firstLine: [
+        "address.firstLine",
+        "address.first_line",
+        "address.line1",
+        "address.addressLine1",
+        "address_line_1"
+    ],
+    state: ["address.state", "address.region", "address.province"]
+};
+
+/** Read the flattened `address.*` fields out of a submitted field map. */
+export function extractRecipientAddress(fields: Record<string, string>): Partial<RecipientAddress> {
+    const out: Partial<RecipientAddress> = {};
+    for (const part of RECIPIENT_ADDRESS_PARTS) {
+        let value = String(fields[addressFieldKeyFor(part)] ?? "").trim();
+        if (!value) {
+            for (const alias of RECIPIENT_ADDRESS_ALIASES[part]) {
+                value = String(fields[alias] ?? "").trim();
+                if (value) break;
+            }
+        }
+        if (value) out[part] = value;
+    }
+    return out;
+}
+
+/**
+ * Read a persisted recipient address back out of a `payout_profiles` row.
+ * Country falls back to the corridor `country_code` (the recipient country).
+ */
+export function recipientAddressFromProfileRow(row: Record<string, unknown>): Partial<RecipientAddress> {
+    return {
+        country: row.address_country != null
+            ? String(row.address_country)
+            : row.country_code != null
+              ? String(row.country_code)
+              : "",
+        city: row.address_city != null ? String(row.address_city) : "",
+        postCode: row.address_post_code != null ? String(row.address_post_code) : "",
+        firstLine: row.address_first_line != null ? String(row.address_first_line) : "",
+        state: row.address_state != null ? String(row.address_state) : ""
+    };
+}
+
+/** Required address parts for a corridor, derived from its field schema. */
+export function requiredAddressParts(fields: PayoutDestinationField[]): RecipientAddressPart[] {
+    const out: RecipientAddressPart[] = [];
+    for (const field of fields) {
+        if (!field.required || !field.key.startsWith("address.")) continue;
+        const part = field.key.slice("address.".length);
+        if (isRecipientAddressPart(part) && !out.includes(part)) out.push(part);
+    }
+    return out;
+}
+
+export function missingAddressParts(
+    address: Partial<RecipientAddress>,
+    required: RecipientAddressPart[]
+): RecipientAddressPart[] {
+    return required.filter((part) => !String(address[part] ?? "").trim());
+}
+
+export function missingAddressFieldKeys(
+    address: Partial<RecipientAddress>,
+    required: RecipientAddressPart[]
+): string[] {
+    return missingAddressParts(address, required).map(addressFieldKeyFor);
+}
+
+/** Map submitted fields → persisted `payout_profiles` address columns (null when absent). */
+export function addressColumnsFromFields(
+    fields: Record<string, string>,
+    fallbackCountry?: string
+): Record<string, string | null> {
+    const address = extractRecipientAddress(fields);
+    const out: Record<string, string | null> = {};
+    for (const part of RECIPIENT_ADDRESS_PARTS) {
+        const column = RECIPIENT_ADDRESS_COLUMNS[part];
+        let value = address[part] ?? "";
+        if (part === "country" && !value && fallbackCountry) value = fallbackCountry;
+        out[column] = value || null;
+    }
+    return out;
+}
 
 export function enrichOptionLabels(
     fields: PayoutDestinationField[],

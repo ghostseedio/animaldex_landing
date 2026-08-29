@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {useEffect, useMemo, useState} from "react";
+import {FinanceOperatorSignInCard, useFinanceActor} from "@/app/admin/_components/finance-operator-auth";
 
 type Corridor = {
     id: string;
@@ -33,6 +34,8 @@ function priorityRank(country: string) {
 }
 
 export function AdminPayoutCorridorsClient() {
+    const {actor, loaded: actorLoaded, signedIn} = useFinanceActor();
+    const canFinance = actor?.canActAsFinanceActor === true;
     const [rows, setRows] = useState<Corridor[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
@@ -118,6 +121,22 @@ export function AdminPayoutCorridorsClient() {
                 <em>not</em> required. First genuine Paid payout promotes Beta → Verified. Manual Wise only —
                 auto_payout stays off.
             </p>
+            {actorLoaded && !canFinance && (
+                <div className="mt-5 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                    <p className="font-bold text-white">Finance actions locked</p>
+                    <p className="mt-1 text-sm text-ink-300">
+                        Corridor changes require a named finance operator. The shared admin password
+                        cannot change payout corridors. Sign in below to enable changes.
+                    </p>
+                    <FinanceOperatorSignInCard onSignedIn={signedIn} />
+                </div>
+            )}
+            {actorLoaded && canFinance && (
+                <div className="mt-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
+                    <p className="font-bold text-white">Named finance operator: {actor?.email}</p>
+                    <p className="mt-1 text-sm text-ink-300">Corridor changes are enabled.</p>
+                </div>
+            )}
             {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
             {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
 
@@ -182,7 +201,7 @@ export function AdminPayoutCorridorsClient() {
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             className="rounded border border-sky-500/40 px-2 py-1 text-xs text-sky-100"
                                             onClick={() => void probe(r.currency_code)}
                                         >
@@ -190,7 +209,7 @@ export function AdminPayoutCorridorsClient() {
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             className="rounded border border-amber-500/40 px-2 py-1 text-xs text-amber-100"
                                             onClick={() =>
                                                 patch(r.id, {
@@ -202,7 +221,7 @@ export function AdminPayoutCorridorsClient() {
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             className="rounded border border-white/20 px-2 py-1 text-xs"
                                             onClick={() =>
                                                 patch(r.id, {
@@ -216,7 +235,7 @@ export function AdminPayoutCorridorsClient() {
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={busy || r.status !== "paused"}
+                                            disabled={busy || r.status !== "paused" || !canFinance}
                                             className="rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-40"
                                             onClick={() =>
                                                 patch(r.id, {

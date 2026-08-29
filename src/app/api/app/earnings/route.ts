@@ -3,6 +3,7 @@ import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {
     mapCreatorRewardPeriodProgress,
     mapCreatorRewardReceiptSummary,
+    mapEarningActivityRow,
     mapEarningEntryRow,
     mapEarningsSummaryRow,
 } from "@/lib/earnings";
@@ -15,8 +16,9 @@ export async function GET() {
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
 
-    const [summaryRes, entriesRes, receiptsRes, progressRes, eligibilityRes, corridorsRes] = await Promise.all([
+    const [summaryRes, activityRes, entriesRes, receiptsRes, progressRes, eligibilityRes, corridorsRes] = await Promise.all([
         supabase.rpc("get_my_earnings_summary"),
+        supabase.rpc("list_my_earning_activity", {p_limit: 50}),
         supabase.rpc("list_my_earning_entries", {p_limit: 50}),
         supabase.rpc("list_my_creator_reward_receipts"),
         supabase.rpc("get_my_creator_reward_period_progress"),
@@ -29,6 +31,7 @@ export async function GET() {
     if (receiptsRes.error) return NextResponse.json({error: receiptsRes.error.message}, {status: 400});
 
     const summaryRows = Array.isArray(summaryRes.data) ? summaryRes.data : [];
+    const activityRows = activityRes.error ? [] : Array.isArray(activityRes.data) ? activityRes.data : [];
     const entryRows = Array.isArray(entriesRes.data) ? entriesRes.data : [];
     const receiptRows = Array.isArray(receiptsRes.data) ? receiptsRes.data : [];
 
@@ -57,6 +60,7 @@ export async function GET() {
 
     return NextResponse.json({
         balances: summaryRows.map((row) => mapEarningsSummaryRow(row as Record<string, unknown>)),
+        activity: activityRows.map((row) => mapEarningActivityRow(row as Record<string, unknown>)),
         entries: entryRows.map((row) => mapEarningEntryRow(row as Record<string, unknown>)),
         creatorRewardReceipts: receiptRows.map((row) => mapCreatorRewardReceiptSummary(row as Record<string, unknown>)),
         periodProgress,

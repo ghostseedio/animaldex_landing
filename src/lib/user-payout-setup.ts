@@ -8,10 +8,14 @@
  */
 
 import {
+    addressColumnsFromFields,
     applyCorridorDefaults,
     buildWiseRecipientDetailsFromFields,
+    extractRecipientAddress,
     maskDestinationFromFields,
+    missingAddressFieldKeys,
     normalizeDbSchema,
+    requiredAddressParts,
     validateFieldsAgainstSchema,
     wiseRecipientDetailsShouldIncludeAddress
 } from "@/lib/payout-destination-requirements";
@@ -364,6 +368,14 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
             fields[field.key] = field.defaultValue;
         }
     }
+    // Fail closed: never create/reuse a Wise recipient or persist a profile when
+    // a required recipient address part is missing from the submission. This runs
+    // before the generic schema validation so the error is address-specific.
+    const requiredAddress = requiredAddressParts(schemaFields);
+    const missingAddress = missingAddressFieldKeys(extractRecipientAddress(fields), requiredAddress);
+    if (missingAddress.length > 0) {
+        throw new Error(`recipient_address_required:${missingAddress.join(", ")}`);
+    }
     const validationError = validateFieldsAgainstSchema(schemaFields, fields);
     if (validationError) throw new Error(validationError);
 
@@ -445,6 +457,7 @@ export async function completeUserPayoutSetup(input: CompletePayoutSetupInput): 
         bank_label: recipientType,
         country_code: countryCode,
         default_currency: currencyCode,
+        ...addressColumnsFromFields(fields, countryCode),
         status: "active",
         verification_status: "verified",
         tax_status: "not_required",

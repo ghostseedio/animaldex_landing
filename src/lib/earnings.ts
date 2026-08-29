@@ -27,6 +27,20 @@ export type EarningEntry = {
     sourceReference: string;
 };
 
+export type EarningActivityItem = {
+    id: string;
+    sourceType: string;
+    sourceId: string;
+    displayTitle: string;
+    amountMinor: number;
+    currencyCode: string;
+    currentStatus: string;
+    earnedAt: string;
+    latestStatusAt: string;
+    payoutId: string | null;
+    amountPrefix: string;
+};
+
 export const EARNINGS_ALLOWED_SOURCE_TYPES = [
     "creator_reward",
     "guide_settlement",
@@ -67,6 +81,22 @@ export function mapEarningEntryRow(row: Record<string, unknown>): EarningEntry {
         displayLabel: String(row.display_label ?? ""),
         createdAt: String(row.created_at ?? ""),
         sourceReference: String(row.source_reference ?? ""),
+    };
+}
+
+export function mapEarningActivityRow(row: Record<string, unknown>): EarningActivityItem {
+    return {
+        id: String(row.id ?? ""),
+        sourceType: String(row.source_type ?? ""),
+        sourceId: String(row.source_id ?? ""),
+        displayTitle: String(row.display_title ?? "Earning"),
+        amountMinor: Number(row.amount_minor ?? 0),
+        currencyCode: String(row.currency_code ?? ""),
+        currentStatus: String(row.current_status ?? ""),
+        earnedAt: String(row.earned_at ?? ""),
+        latestStatusAt: String(row.latest_status_at ?? ""),
+        payoutId: row.payout_id ? String(row.payout_id) : null,
+        amountPrefix: String(row.amount_prefix ?? ""),
     };
 }
 

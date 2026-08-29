@@ -2,6 +2,15 @@
 
 import Link from "next/link";
 import {useEffect, useState} from "react";
+import {FinanceOperatorSignInCard, useFinanceActor} from "@/app/admin/_components/finance-operator-auth";
+import {
+    canConfirmPaid,
+    canPrepareStep,
+    canRecordManualTransfer,
+    isPreparationIncomplete,
+    isTransferPrepared,
+    step1ActionLabel
+} from "@/lib/payout-preparation-state";
 
 type Diagnostics = {
     animaldexEnvironment: string;
@@ -21,6 +30,7 @@ type Diagnostics = {
 type PayoutRow = {
     payoutId: string;
     userId: string;
+    payoutProfileId: string | null;
     currencyCode: string;
     amountMinor: number;
     status: string;
@@ -47,6 +57,22 @@ type PayoutRow = {
     hasHold: boolean;
     paidAt: string | null;
     manualTransferRecordedAt: string | null;
+    destination: PayoutDestination | null;
+};
+
+type PayoutDestination = {
+    originalProfileId: string | null;
+    activeProfileId: string | null;
+    usingRecovery: boolean;
+    recipientRefMasked: string | null;
+    profileStatus: string | null;
+    addressCountry: string | null;
+    addressCity: string | null;
+    addressPostCode: string | null;
+    addressFirstLine: string | null;
+    addressState: string | null;
+    missingAddressLabels: string[];
+    addressComplete: boolean;
 };
 
 type ReadinessRow = {
@@ -89,6 +115,10 @@ function money(minor: number, currency: string) {
     return `${currency} ${(Number(minor) / 100).toFixed(2)}`;
 }
 
+function shortId(id: string | null | undefined) {
+    return id ? `${id.slice(0, 8)}…` : "—";
+}
+
 function toMinor(amount: string): number {
     return Math.round(Number(amount) * 100);
 }
@@ -103,6 +133,8 @@ const DEFAULT_HOW_TO_PAY = [
 ];
 
 export function AdminPayoutsClient() {
+    const {actor, loaded: actorLoaded, signedIn} = useFinanceActor();
+    const canFinance = actor?.canActAsFinanceActor === true;
     const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
     const [payouts, setPayouts] = useState<PayoutRow[]>([]);
     const [readiness, setReadiness] = useState<Readiness | null>(null);
@@ -281,6 +313,28 @@ export function AdminPayoutsClient() {
                 Target SLA: {readiness?.payout_sla_days ?? 14} days. Auto-payout stays off.
             </p>
 
+            {actorLoaded && canFinance && (
+                <div className="mt-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
+                    <p className="font-bold text-white">
+                        Named finance operator: {actor?.email}
+                    </p>
+                    <p className="mt-1 text-sm text-ink-300">
+                        Finance actions are enabled for this session.
+                    </p>
+                </div>
+            )}
+
+            {actorLoaded && !canFinance && (
+                <div className="mt-5 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                    <p className="font-bold text-white">Finance actions locked</p>
+                    <p className="mt-1 text-sm text-ink-300">
+                        Your current session is a shared-password admin session, which cannot approve
+                        payouts. Sign in as a named finance operator below to enable payout approvals.
+                    </p>
+                    <FinanceOperatorSignInCard onSignedIn={signedIn} />
+                </div>
+            )}
+
             {diagnostics && (
                 <div className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
                     <p className="font-bold text-white">{diagnostics.banner}</p>
@@ -408,25 +462,18 @@ export function AdminPayoutsClient() {
             <section className="mt-8 space-y-3">
                 <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Payout requests</h2>
                 {payouts.map((p) => {
-                    const canApprove = [
-                        "requested",
-                        "reserved",
-                        "eligibility_check",
-                        "approved",
-                        "approved_for_manual_payment",
-                    ].includes(p.status);
-                    const transferPrepared = Boolean(p.providerTransferRef);
-                    const canRecord = [
-                        "approved_for_manual_payment",
-                        "processing",
-                        "reserved",
-                        "provider_transfer_created",
-                    ].includes(p.status);
-                    const canConfirm =
-                        transferPrepared &&
-                        ["provider_transfer_created", "processing", "approved_for_manual_payment"].includes(
-                            p.status
-                        );
+                    const facts = {
+                        status: p.status,
+                        hasHold: p.hasHold,
+                        providerQuoteRef: p.providerQuoteRef,
+                        providerTransferRef: p.providerTransferRef,
+                    };
+                    const transferPrepared = isTransferPrepared(facts);
+                    const preparingIncomplete = isPreparationIncomplete(facts);
+                    const canPrepare = canPrepareStep(facts);
+                    const canRecord = canRecordManualTransfer(p.status);
+                    const canConfirm = canConfirmPaid(facts);
+                    const step1Label = step1ActionLabel(facts);
 
                     return (
                         <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
@@ -469,6 +516,85 @@ export function AdminPayoutsClient() {
                                         : ""}
                                 </p>
                             )}
+                            {preparingIncomplete && (
+                                <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                                    Wise quote created, but transfer preparation is incomplete. Resume
+                                    preparation to create the Wise transfer — or confirm the creator has
+                                    re-submitted their payout destination if the recipient address was
+                                    incomplete.
+                                </p>
+                            )}
+                            {p.destination && (
+                                <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">
+                                    <p className="font-semibold text-white">Resolved payout destination</p>
+                                    <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                                        <p>
+                                            Recipient:{" "}
+                                            <span className="text-ink-100">
+                                                {p.destination.recipientRefMasked || "Not provided"}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            Active profile:{" "}
+                                            <span className="text-ink-100">
+                                                {shortId(p.destination.activeProfileId)}
+                                            </span>{" "}
+                                            · {p.destination.profileStatus || "—"}
+                                        </p>
+                                    </div>
+                                    <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                                        <p>
+                                            Country:{" "}
+                                            <span className="text-ink-100">
+                                                {p.destination.addressCountry || "Not provided"}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            City:{" "}
+                                            <span className="text-ink-100">
+                                                {p.destination.addressCity || "Not provided"}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            Postcode:{" "}
+                                            <span className="text-ink-100">
+                                                {p.destination.addressPostCode || "Not provided"}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            Address line 1:{" "}
+                                            <span className="text-ink-100">
+                                                {p.destination.addressFirstLine || "Not provided"}
+                                            </span>
+                                        </p>
+                                        {p.destination.addressState ? (
+                                            <p>
+                                                State / region:{" "}
+                                                <span className="text-ink-100">
+                                                    {p.destination.addressState}
+                                                </span>
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    {p.destination.usingRecovery && (
+                                        <p className="mt-1 text-amber-200">
+                                            Original payout profile: {shortId(p.destination.originalProfileId)} ·
+                                            Active recovery profile: {shortId(p.destination.activeProfileId)} ·
+                                            Using current active destination for recovery
+                                        </p>
+                                    )}
+                                    <p className="mt-1">
+                                        Address validation:{" "}
+                                        {p.destination.addressComplete ? (
+                                            <span className="text-emerald-300">Complete</span>
+                                        ) : (
+                                            <span className="text-rose-300">
+                                                Missing: {p.destination.missingAddressLabels.join(", ") || "—"}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
                             {p.providerTransferRef && !p.paidAt && (
                                 <p className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100">
                                     Ready to send in Wise. Transfer {p.providerTransferRef}; status{" "}
@@ -480,11 +606,11 @@ export function AdminPayoutsClient() {
                             <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                     type="button"
-                                    disabled={busy || !canApprove}
+                                    disabled={busy || !canPrepare || !canFinance}
                                     onClick={() => run("approve_prepare", p.payoutId)}
                                     className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
                                 >
-                                    1. Approve + prepare Wise transfer
+                                    {step1Label}
                                 </button>
                                 <button
                                     type="button"
@@ -496,7 +622,7 @@ export function AdminPayoutsClient() {
                                 </button>
                                 <button
                                     type="button"
-                                    disabled={busy || !transferPrepared}
+                                    disabled={busy || !transferPrepared || !canFinance}
                                     onClick={() => run("refresh_status", p.payoutId)}
                                     className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
                                 >
@@ -504,7 +630,7 @@ export function AdminPayoutsClient() {
                                 </button>
                                 <button
                                     type="button"
-                                    disabled={busy || !canConfirm}
+                                    disabled={busy || !canConfirm || !canFinance}
                                     onClick={() => run("confirm_paid", p.payoutId)}
                                     className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-100 disabled:opacity-50"
                                 >
@@ -512,7 +638,7 @@ export function AdminPayoutsClient() {
                                 </button>
                                 <button
                                     type="button"
-                                    disabled={busy || !canRecord}
+                                    disabled={busy || !canRecord || !canFinance}
                                     onClick={() => openRecord(p)}
                                     className="rounded-md border border-amber-500/30 px-2.5 py-1 text-xs font-semibold text-amber-100 disabled:opacity-50"
                                 >
@@ -522,7 +648,7 @@ export function AdminPayoutsClient() {
                                     <>
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             onClick={() => run("approve_execute", p.payoutId)}
                                             className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
                                         >
@@ -629,7 +755,7 @@ export function AdminPayoutsClient() {
                                     <div className="flex gap-2 sm:col-span-2">
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             onClick={() => void submitRecord()}
                                             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
                                         >
@@ -637,7 +763,7 @@ export function AdminPayoutsClient() {
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={busy}
+                                            disabled={busy || !canFinance}
                                             onClick={() => run("confirm_paid_manual_override", p.payoutId)}
                                             className="rounded-md border border-rose-500/40 px-3 py-1.5 text-xs font-bold text-rose-100 disabled:opacity-50"
                                         >

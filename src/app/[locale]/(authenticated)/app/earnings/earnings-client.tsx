@@ -9,6 +9,7 @@ import {
     payoutChecklist,
     scrubConsumerPayoutCopy,
     type CreatorRewardPeriodProgress,
+    type EarningActivityItem,
     type CreatorRewardReceiptSummary,
     type EarningEntry,
     type EarningsCurrencyBalance,
@@ -104,11 +105,49 @@ type PayoutSetup = {
 
 type Payload = {
     balances: EarningsCurrencyBalance[];
+    activity?: EarningActivityItem[];
     entries: EarningEntry[];
     creatorRewardReceipts: CreatorRewardReceiptSummary[];
     periodProgress?: CreatorRewardPeriodProgress | null;
     payoutSetup?: PayoutSetup | null;
 };
+
+function activitySourceLabel(sourceType: string): string {
+    switch (sourceType) {
+        case "creator_reward":
+            return "Creator Rewards";
+        case "guide_settlement":
+            return "Guide earning";
+        case "campaign_reward":
+            return "Sponsored Challenge";
+        case "payout":
+            return "Payout";
+        case "adjustment":
+            return "Adjustment";
+        default:
+            return "Earnings";
+    }
+}
+
+function activityStatusLabel(status: string): string {
+    switch (status.toLowerCase()) {
+        case "pending":
+            return "Pending";
+        case "available":
+            return "Available";
+        case "held":
+            return "Held for payout";
+        case "paid":
+            return "Paid";
+        case "adjustment":
+            return "Adjustment";
+        case "reversed":
+        case "reversal":
+            return "Reversal";
+        default:
+            return status.replaceAll("_", " ");
+    }
+}
 
 function ProgressRing({fraction}: {fraction: number}) {
     const clamped = Math.min(1, Math.max(0, fraction));
@@ -230,6 +269,7 @@ export function EarningsClient() {
     }, []);
 
     const hasBalances = Boolean(data && hasAnyEarningsBalance(data.balances));
+    const activity = data?.activity ?? [];
     const hasAvailable = Boolean(data?.balances.some((b) => b.availableAmountMinor > 0));
     const setup = data?.payoutSetup ?? null;
     const setupComplete = Boolean(setup?.setupComplete);
@@ -764,7 +804,7 @@ export function EarningsClient() {
                                                                 ) : (
                                                                     <input
                                                                         className="mt-1 w-full border-b border-white/15 bg-transparent px-0 py-2 text-sm"
-                                                                        type={field.sensitive ? "password" : "text"}
+                                                                        type="text"
                                                                         autoComplete="off"
                                                                         value={fieldValues[field.key] ?? ""}
                                                                         onChange={(e) => setFieldValues((v) => ({...v, [field.key]: e.target.value}))}
@@ -834,23 +874,23 @@ export function EarningsClient() {
 
                     <section>
                         <h2 className="text-lg font-bold">History</h2>
-                        {data.entries.length === 0 ? (
+                        {activity.length === 0 ? (
                             <p className="mt-2 text-sm text-white/50">No Earnings history yet.</p>
                         ) : (
                             <ul className="mt-3 space-y-2">
-                                {data.entries.slice(0, 20).map((e) => (
+                                {activity.slice(0, 20).map((e) => (
                                     <li
                                         key={e.id}
                                         className="flex items-start justify-between gap-3 border-b border-white/5 py-3"
                                     >
                                         <div>
-                                            <p className="font-semibold">{e.displayLabel}</p>
+                                            <p className="font-semibold">{e.displayTitle}</p>
                                             <p className="text-xs text-white/45">
-                                                {e.sourceType} · {e.displayStatus}
+                                                {activitySourceLabel(e.sourceType)} · {activityStatusLabel(e.currentStatus)}
                                             </p>
                                         </div>
                                         <p className="font-bold tabular-nums">
-                                            {formatEarningsMinor(e.amountMinor, e.currencyCode)}
+                                            {e.amountPrefix}{formatEarningsMinor(e.amountMinor, e.currencyCode)}
                                         </p>
                                     </li>
                                 ))}

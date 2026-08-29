@@ -57,6 +57,28 @@ function verifyWithPem(rawBody: string, signatureBase64: string, pem: string): b
     }
 }
 
+/** Turn a Wise error body into a compact operator-readable message. */
+export function providerErrorMessage(json: unknown, text: string): string {
+    if (json && typeof json === "object") {
+        const obj = json as Record<string, unknown>;
+        if (Array.isArray(obj.errors)) {
+            const parts = obj.errors
+                .map((item) => {
+                    if (!item || typeof item !== "object") return String(item);
+                    const row = item as Record<string, unknown>;
+                    const code = row.code ? String(row.code) : "";
+                    const field = row.field ? String(row.field) : "";
+                    return field ? `${code} (${field})` : code;
+                })
+                .filter(Boolean);
+            if (parts.length > 0) return parts.join("; ");
+        }
+        if ("error" in obj) return JSON.stringify(obj.error);
+        if (typeof obj.message === "string") return obj.message;
+    }
+    return text.slice(0, 300);
+}
+
 /** Verify Wise webhook RSA signature without requiring API token/profile config. */
 export function verifyWiseWebhookSignature(
     rawBody: string,
@@ -215,10 +237,7 @@ export class WisePayoutProvider implements PayoutProvider {
             json = {raw: text};
         }
         if (!response.ok) {
-            const message =
-                typeof json === "object" && json && "error" in json
-                    ? JSON.stringify((json as {error: unknown}).error)
-                    : text.slice(0, 300);
+            const message = providerErrorMessage(json, text);
             throw new Error(`wise_http_${response.status}:${message}`);
         }
         return json as T;
