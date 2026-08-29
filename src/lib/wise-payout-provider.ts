@@ -277,14 +277,21 @@ export class WisePayoutProvider implements PayoutProvider {
             typeof option.fee === "object" && option.fee && "total" in (option.fee as object)
                 ? Number((option.fee as {total: number}).total)
                 : Number(quote.fee ?? 0);
+        const rate = quote.rate == null ? null : Number(quote.rate);
+        const quotedTargetAmount = Number(quote.targetAmount);
+        const targetAmount = Number.isFinite(quotedTargetAmount)
+            ? quotedTargetAmount
+            : Number.isFinite(rate)
+              ? input.sourceAmount * Number(rate)
+              : input.sourceAmount;
         return {
             providerQuoteRef: id,
             sourceCurrency: String(quote.sourceCurrency ?? input.sourceCurrency),
             targetCurrency: String(quote.targetCurrency ?? input.targetCurrency),
             sourceAmount: Number(quote.sourceAmount ?? input.sourceAmount),
-            targetAmount: Number(quote.targetAmount ?? input.sourceAmount),
+            targetAmount,
             fee: Number.isFinite(fee) ? fee : 0,
-            rate: quote.rate == null ? null : Number(quote.rate),
+            rate,
             expiresAt: quote.expirationTime ? String(quote.expirationTime) : null
         };
     }
