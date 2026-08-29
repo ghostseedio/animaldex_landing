@@ -110,6 +110,7 @@ export type CreatorRewardReceiptSummary = {
     currencyCode: string;
     amountMinor: number;
     status: string;
+    financialStatus: string | null;
     eligibilityState: string;
     contributionCategories: string[];
     createdAt: string | null;
@@ -129,6 +130,7 @@ export function mapCreatorRewardReceiptSummary(row: Record<string, unknown>): Cr
         currencyCode: String(row.currency_code ?? ""),
         amountMinor: Number(row.amount_minor ?? 0),
         status: String(row.status ?? ""),
+        financialStatus: row.financial_status ? String(row.financial_status) : null,
         eligibilityState: String(row.eligibility_state ?? ""),
         contributionCategories: Array.isArray(row.contribution_categories)
             ? row.contribution_categories.map(String)

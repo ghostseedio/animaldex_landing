@@ -115,6 +115,17 @@ function money(minor: number, currency: string) {
     return `${currency} ${(Number(minor) / 100).toFixed(2)}`;
 }
 
+function formatDateTime(value: string | null) {
+    if (!value) return "—";
+    return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(new Date(value));
+}
+
 function shortId(id: string | null | undefined) {
     return id ? `${id.slice(0, 8)}…` : "—";
 }
@@ -474,18 +485,36 @@ export function AdminPayoutsClient() {
                     const canRecord = canRecordManualTransfer(p.status);
                     const canConfirm = canConfirmPaid(facts);
                     const step1Label = step1ActionLabel(facts);
+                    const isPaid = p.status === "paid" || Boolean(p.paidAt);
 
                     return (
                         <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
                             <div className="flex flex-wrap items-baseline justify-between gap-2">
                                 <h3 className="font-semibold text-white">
-                                    {money(p.amountMinor, p.currencyCode)} · {p.status}
+                                    {isPaid ? "✓ Paid" : `${money(p.amountMinor, p.currencyCode)} · ${p.status}`}
                                 </h3>
                                 <span className="text-xs uppercase text-ink-400">
                                     {p.provider}/{p.environment}
                                     {p.reviewTier ? ` · ${p.reviewTier}` : ""}
                                 </span>
                             </div>
+                            {isPaid && (
+                                <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-50">
+                                    <p className="font-bold">
+                                        {money(p.amountMinor, p.currencyCode)}
+                                        {p.quoteTargetAmountMinor != null
+                                            ? ` → ${money(p.quoteTargetAmountMinor, p.quoteTargetCurrency || p.targetCurrency || p.currencyCode)}`
+                                            : ""}
+                                    </p>
+                                    <p className="mt-1 text-xs text-emerald-100/85">
+                                        Paid via Wise
+                                        {p.providerTransferRef ? ` · transfer ${p.providerTransferRef}` : ""}
+                                    </p>
+                                    <p className="mt-1 text-xs text-emerald-100/70">
+                                        Paid {formatDateTime(p.paidAt)} · payout hold: {p.hasHold ? "released / historical record" : "none"}
+                                    </p>
+                                </div>
+                            )}
                             {p.targetCurrency &&
                                 p.targetCurrency !== p.currencyCode &&
                                 !p.paidAt && (
@@ -503,7 +532,7 @@ export function AdminPayoutsClient() {
                             <p className="mt-1 text-xs text-ink-500">
                                 {p.payoutId} · user {p.userId.slice(0, 8)}… · transfer{" "}
                                 {p.providerTransferRef || "—"}
-                                {p.hasHold ? " · hold yes" : ""}
+                                {p.hasHold ? ` · payout hold ${isPaid ? "recorded/released" : "recorded"}` : ""}
                             </p>
                             {(p.targetCurrency || p.estimateTargetAmountMinor != null) && (
                                 <p className="mt-1 text-xs text-ink-400">
@@ -604,6 +633,27 @@ export function AdminPayoutsClient() {
                             )}
 
                             <div className="mt-3 flex flex-wrap gap-2">
+                                {isPaid ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            disabled={!transferPrepared}
+                                            onClick={() => openWiseTransfer(p)}
+                                            className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-100 disabled:opacity-50"
+                                        >
+                                            Open in Wise
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={busy || !transferPrepared || !canFinance}
+                                            onClick={() => run("refresh_status", p.payoutId)}
+                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
+                                        >
+                                            Refresh provider status
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
                                 <button
                                     type="button"
                                     disabled={busy || !canPrepare || !canFinance}
@@ -656,9 +706,11 @@ export function AdminPayoutsClient() {
                                         </button>
                                     </>
                                 )}
+                                    </>
+                                )}
                             </div>
 
-                            {recordFor === p.payoutId && (
+                            {!isPaid && recordFor === p.payoutId && (
                                 <div className="mt-4 grid gap-2 rounded-xl border border-white/10 bg-white/5 p-3 sm:grid-cols-2">
                                     <p className="text-xs text-amber-100 sm:col-span-2">
                                         Manual fallback only. Normal flow should use the prepared Wise transfer and
