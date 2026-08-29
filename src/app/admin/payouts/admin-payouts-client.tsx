@@ -246,6 +246,7 @@ export function AdminPayoutsClient() {
     }
 
     const rows = readiness?.rows || [];
+    const hasPendingRewards = rows.some((r) => Number(r.pending_amount_minor || 0) > 0);
 
     return (
         <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
@@ -313,12 +314,17 @@ export function AdminPayoutsClient() {
                 </p>
                 <button
                     type="button"
-                    disabled={busy || rows.every((r) => Number(r.pending_amount_minor || 0) <= 0)}
+                    disabled={busy || !hasPendingRewards}
                     onClick={() => void releasePostedCreatorRewards()}
                     className="mt-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-100 disabled:opacity-50"
                 >
-                    Release posted rewards to Available
+                    {hasPendingRewards ? "Release posted rewards to Available" : "Posted rewards already Available"}
                 </button>
+                {!hasPendingRewards && rows.some((r) => Number(r.available_amount_minor || 0) > 0) && (
+                    <p className="mt-2 text-xs text-emerald-300">
+                        No pending rewards remain. Creators with complete bank setup can now request payout.
+                    </p>
+                )}
             </section>
 
             {diagnostics?.autoPayoutEnabled && (
