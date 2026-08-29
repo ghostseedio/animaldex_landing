@@ -1,9 +1,11 @@
 import {NextRequest, NextResponse} from "next/server";
 import {requireNamedFinanceAdminActor, resolveAdminActor} from "@/lib/support-admin-auth";
 import {
+    approveAndPrepareWiseTransfer,
     approveAndExecuteSandboxPayout,
     approvePayoutForManualPayment,
     confirmManualPayoutPaid,
+    confirmManualPayoutPaidWithoutProviderCheck,
     getPayoutDiagnostics,
     listAdminPayouts,
     recordManualWiseTransfer,
@@ -135,6 +137,19 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        if (action === "approve_prepare") {
+            const result = await approveAndPrepareWiseTransfer(payoutId, actor);
+            return NextResponse.json({ok: true, result});
+        }
+        if (action === "confirm_paid_manual_override") {
+            const result = await confirmManualPayoutPaidWithoutProviderCheck(payoutId, actor);
+            return NextResponse.json({ok: true, result});
+        }
+        if (action === "refresh_status") {
+            const result = await refreshPayoutProviderStatus(payoutId, actor);
+            return NextResponse.json({ok: true, result});
+        }
+
         if (diagnostics.isProduction) {
             return NextResponse.json(
                 {
@@ -148,10 +163,6 @@ export async function POST(request: NextRequest) {
 
         if (action === "approve_execute") {
             const result = await approveAndExecuteSandboxPayout(payoutId, actor);
-            return NextResponse.json({ok: true, result});
-        }
-        if (action === "refresh_status") {
-            const result = await refreshPayoutProviderStatus(payoutId, actor);
             return NextResponse.json({ok: true, result});
         }
         return NextResponse.json({error: "Unknown action"}, {status: 400});

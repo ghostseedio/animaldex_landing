@@ -145,7 +145,7 @@ export async function listAdminPayouts() {
         [
             "payouts?select=",
             "id,user_id,currency_code,amount_minor,status,provider,environment,",
-            "provider_transfer_ref,provider_status,failure_code,created_at,updated_at,approved_by,",
+            "provider_quote_ref,provider_transfer_ref,provider_status,failure_code,created_at,updated_at,approved_by,",
             "source_earnings_currency,source_earnings_amount_minor,target_currency,target_amount_minor,",
             "estimate_target_amount_minor,estimate_exchange_rate,estimate_provider_fee_minor,",
             "quote_source_currency,quote_target_currency,quote_source_amount_minor,quote_target_amount_minor,",
@@ -162,6 +162,7 @@ export async function listAdminPayouts() {
         status: String(p.status),
         provider: String(p.provider),
         environment: String(p.environment),
+        providerQuoteRef: p.provider_quote_ref ? String(p.provider_quote_ref) : null,
         providerTransferRef: p.provider_transfer_ref ? String(p.provider_transfer_ref) : null,
         providerStatus: p.provider_status ? String(p.provider_status) : null,
         failureCode: p.failure_code ? String(p.failure_code) : null,
@@ -203,6 +204,134 @@ export async function approvePayoutForManualPayment(payoutId: string, actor: Adm
     });
 }
 
+function loadWiseConfigForCurrentEnvironment(isProduction: boolean) {
+    return isProduction ? loadWiseProductionConfigFromEnv() : loadWiseConfigFromEnv();
+}
+
+export async function approveAndPrepareWiseTransfer(payoutId: string, actor: AdminActor) {
+    const operator = await ensureNamedFinanceOperator(actor);
+    const diagnostics = await getPayoutDiagnostics();
+    const config = loadWiseConfigForCurrentEnvironment(diagnostics.isProduction);
+    const provider = new WisePayoutProvider(config);
+    provider.validateConfiguration();
+
+    const rows = await rest<Array<Record<string, unknown>>>(
+        `payouts?id=eq.${encodeURIComponent(payoutId)}&select=*&limit=1`
+    );
+    let payout = rows?.[0];
+    if (!payout) throw new Error("payout_not_found");
+    if (!payout.earning_hold_id) throw new Error("payout_not_held");
+
+    if (String(payout.status) !== "approved_for_manual_payment") {
+        await approvePayoutForManualPayment(payoutId, actor);
+        const refreshed = await rest<Array<Record<string, unknown>>>(
+            `payouts?id=eq.${encodeURIComponent(payoutId)}&select=*&limit=1`
+        );
+        payout = refreshed?.[0];
+        if (!payout) throw new Error("payout_not_found");
+    }
+
+    if (payout.provider_transfer_ref) {
+        return {
+            ok: true,
+            status: payout.status,
+            transferRef: String(payout.provider_transfer_ref),
+            reused: true
+        };
+    }
+
+    const profileRows = await rest<Array<Record<string, unknown>>>(
+        `payout_profiles?id=eq.${encodeURIComponent(String(payout.payout_profile_id))}&select=*&limit=1`
+    );
+    const profile = profileRows?.[0];
+    if (!profile) throw new Error("payout_profile_not_found");
+    const recipientRef = profile.provider_recipient_ref ? String(profile.provider_recipient_ref) : "";
+    if (!recipientRef.trim()) throw new Error("provider_recipient_ref_missing");
+
+    const sourceCurrency = String(payout.source_earnings_currency || payout.currency_code);
+    const targetCurrency = String(payout.target_currency || profile.default_currency || payout.currency_code);
+    const sourceAmountMinor = Number(payout.source_earnings_amount_minor ?? payout.amount_minor);
+    const sourceAmount = sourceAmountMinor / 100;
+
+    await recordAttempt(payoutId, "create_quote", "started");
+    const quote = await provider.createQuote({
+        profileId: config.profileId,
+        sourceCurrency,
+        targetCurrency,
+        sourceAmount,
+        targetAccount: recipientRef
+    });
+    await recordAttempt(payoutId, "create_quote", "succeeded", quote.providerQuoteRef);
+
+    await rest(`payouts?id=eq.${encodeURIComponent(payoutId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+            status: "provider_quote_created",
+            provider_quote_ref: quote.providerQuoteRef,
+            quote_source_currency: quote.sourceCurrency,
+            quote_target_currency: quote.targetCurrency,
+            quote_source_amount_minor: Math.round(quote.sourceAmount * 100),
+            quote_target_amount_minor: Math.round(quote.targetAmount * 100),
+            quote_fee_amount_minor: Math.round(quote.fee * 100),
+            quote_rate: quote.rate,
+            quote_expires_at: quote.expiresAt,
+            updated_at: new Date().toISOString()
+        })
+    });
+
+    await recordAttempt(payoutId, "create_transfer", "started");
+    const transfer = await provider.createTransfer({
+        quoteUuid: quote.providerQuoteRef,
+        targetAccount: recipientRef,
+        customerTransactionId: payoutId,
+        reference: `AnimalDex ${payoutId.slice(0, 8)}`
+    });
+    await recordAttempt(payoutId, "create_transfer", "succeeded", transfer.providerTransferRef);
+
+    await rest(`payouts?id=eq.${encodeURIComponent(payoutId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+            status: "provider_transfer_created",
+            provider_transfer_ref: transfer.providerTransferRef,
+            provider_payout_ref: transfer.providerTransferRef,
+            provider_status: transfer.status,
+            submitted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        })
+    });
+
+    await rpc("monetization_admin_audit_write", {
+        p_action: "payout_provider_transfer_prepared",
+        p_actor_operator_id: operator.id,
+        p_actor_label: operator.email,
+        p_user_id: payout.user_id,
+        p_payout_id: payoutId,
+        p_metadata: {
+            provider: "wise",
+            environment: config.environment,
+            quote_ref: quote.providerQuoteRef,
+            transfer_ref: transfer.providerTransferRef,
+            provider_status: transfer.status,
+            funded: false
+        }
+    });
+
+    return {
+        ok: true,
+        status: "provider_transfer_created",
+        transferRef: transfer.providerTransferRef,
+        providerStatus: transfer.status,
+        quote: {
+            sourceCurrency: quote.sourceCurrency,
+            sourceAmountMinor: Math.round(quote.sourceAmount * 100),
+            targetCurrency: quote.targetCurrency,
+            targetAmountMinor: Math.round(quote.targetAmount * 100),
+            feeAmountMinor: Math.round(quote.fee * 100),
+            rate: quote.rate
+        }
+    };
+}
+
 /** Production-safe: record final Wise quote after you paid in Wise Business. */
 export async function recordManualWiseTransfer(
     payoutId: string,
@@ -235,6 +364,43 @@ export async function recordManualWiseTransfer(
 
 /** Production-safe: release hold + debit Available → Paid. */
 export async function confirmManualPayoutPaid(payoutId: string, actor: AdminActor) {
+    const operator = await ensureNamedFinanceOperator(actor);
+    const rows = await rest<Array<Record<string, unknown>>>(
+        `payouts?id=eq.${encodeURIComponent(payoutId)}&select=*&limit=1`
+    );
+    const payout = rows?.[0];
+    if (!payout) throw new Error("payout_not_found");
+    const transferRef = payout.provider_transfer_ref ? String(payout.provider_transfer_ref) : "";
+    if (!transferRef.trim()) throw new Error("provider_transfer_missing");
+
+    const diagnostics = await getPayoutDiagnostics();
+    const provider = new WisePayoutProvider(loadWiseConfigForCurrentEnvironment(diagnostics.isProduction));
+    provider.validateConfiguration();
+    const transfer = await provider.getTransfer(transferRef);
+    const decision = await applyProviderStatusToPayout({
+        payoutId,
+        currentStatus: String(payout.status),
+        wiseStatus: transfer.status,
+        operatorId: operator.id
+    });
+    if (decision.action !== "paid") {
+        return {
+            ok: false,
+            status: decision.nextStatus,
+            providerStatus: transfer.status,
+            message: "Wise has not reported outgoing_payment_sent yet."
+        };
+    }
+
+    return {
+        ok: true,
+        status: "paid",
+        providerStatus: transfer.status
+    };
+}
+
+/** Legacy fallback: trusts operator-entered Wise facts. Not the normal production path. */
+export async function confirmManualPayoutPaidWithoutProviderCheck(payoutId: string, actor: AdminActor) {
     const operator = await ensureNamedFinanceOperator(actor);
     try {
         return await rpc<Record<string, unknown>>("admin_confirm_manual_payout_paid", {
@@ -430,9 +596,9 @@ export async function approveAndExecuteSandboxPayout(payoutId: string, actor: Ad
 }
 
 export async function refreshPayoutProviderStatus(payoutId: string, actor: AdminActor) {
-    await requireNonProductionForFixtures();
     const operator = await ensureNamedFinanceOperator(actor);
-    const provider = new WisePayoutProvider(loadWiseConfigFromEnv());
+    const diagnostics = await getPayoutDiagnostics();
+    const provider = new WisePayoutProvider(loadWiseConfigForCurrentEnvironment(diagnostics.isProduction));
     provider.validateConfiguration();
 
     const rows = await rest<Array<Record<string, unknown>>>(

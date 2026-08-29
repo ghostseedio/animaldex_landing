@@ -26,6 +26,7 @@ type PayoutRow = {
     status: string;
     provider: string;
     environment: string;
+    providerQuoteRef: string | null;
     providerTransferRef: string | null;
     providerStatus: string | null;
     failureCode: string | null;
@@ -95,10 +96,10 @@ function toMinor(amount: string): number {
 const DEFAULT_HOW_TO_PAY = [
     "Confirm Available Earnings (not Credits) and masked bank destination.",
     "Creator requests payout → Available becomes Held.",
-    "Named finance: Approve for manual payment.",
-    "Send via Ghostseed Wise Business using the stored recipient.",
-    "Record Wise transfer id + final quote amounts/rate.",
-    "Confirm Paid (releases hold + posts payout debit).",
+    "Named finance approves payout; AnimalDex prepares Wise quote + transfer using the stored recipient.",
+    "Send/fund the prepared transfer in Ghostseed Wise Business.",
+    "Refresh Wise status until outgoing_payment_sent.",
+    "Confirm Paid from Wise status (releases hold + posts payout debit).",
 ];
 
 export function AdminPayoutsClient() {
@@ -151,6 +152,11 @@ export function AdminPayoutsClient() {
             quoteFeeAmount: String((p.quoteFeeAmountMinor ?? 0) / 100),
             quoteRate: String(p.quoteRate ?? p.estimateExchangeRate ?? 1),
         });
+    }
+
+    function openWiseTransfer(p: PayoutRow) {
+        if (!p.providerTransferRef) return;
+        window.open("https://wise.com/", "_blank", "noopener,noreferrer");
     }
 
     async function run(action: string, payoutId: string, extra?: Record<string, unknown>) {
@@ -402,17 +408,25 @@ export function AdminPayoutsClient() {
             <section className="mt-8 space-y-3">
                 <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Payout requests</h2>
                 {payouts.map((p) => {
-                    const canApprove = ["requested", "reserved", "eligibility_check", "approved"].includes(
-                        p.status
-                    );
+                    const canApprove = [
+                        "requested",
+                        "reserved",
+                        "eligibility_check",
+                        "approved",
+                        "approved_for_manual_payment",
+                    ].includes(p.status);
+                    const transferPrepared = Boolean(p.providerTransferRef);
                     const canRecord = [
                         "approved_for_manual_payment",
                         "processing",
                         "reserved",
+                        "provider_transfer_created",
                     ].includes(p.status);
                     const canConfirm =
-                        p.status === "processing" ||
-                        (p.status === "approved_for_manual_payment" && Boolean(p.manualTransferRecordedAt));
+                        transferPrepared &&
+                        ["provider_transfer_created", "processing", "approved_for_manual_payment"].includes(
+                            p.status
+                        );
 
                     return (
                         <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
@@ -455,23 +469,38 @@ export function AdminPayoutsClient() {
                                         : ""}
                                 </p>
                             )}
+                            {p.providerTransferRef && !p.paidAt && (
+                                <p className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100">
+                                    Ready to send in Wise. Transfer {p.providerTransferRef}; status{" "}
+                                    {p.providerStatus || "unknown"}. Do not mark Paid until Wise reports
+                                    outgoing_payment_sent.
+                                </p>
+                            )}
 
                             <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                     type="button"
                                     disabled={busy || !canApprove}
-                                    onClick={() => run("approve_manual", p.payoutId)}
+                                    onClick={() => run("approve_prepare", p.payoutId)}
                                     className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
                                 >
-                                    1. Approve for manual pay
+                                    1. Approve + prepare Wise transfer
                                 </button>
                                 <button
                                     type="button"
-                                    disabled={busy || !canRecord}
-                                    onClick={() => openRecord(p)}
+                                    disabled={!transferPrepared}
+                                    onClick={() => openWiseTransfer(p)}
                                     className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-100 disabled:opacity-50"
                                 >
-                                    2. Record Wise transfer
+                                    2. Open Wise to send
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={busy || !transferPrepared}
+                                    onClick={() => run("refresh_status", p.payoutId)}
+                                    className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
+                                >
+                                    Refresh Wise status
                                 </button>
                                 <button
                                     type="button"
@@ -479,7 +508,15 @@ export function AdminPayoutsClient() {
                                     onClick={() => run("confirm_paid", p.payoutId)}
                                     className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-100 disabled:opacity-50"
                                 >
-                                    3. Confirm Paid
+                                    3. Confirm Paid from Wise
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={busy || !canRecord}
+                                    onClick={() => openRecord(p)}
+                                    className="rounded-md border border-amber-500/30 px-2.5 py-1 text-xs font-semibold text-amber-100 disabled:opacity-50"
+                                >
+                                    Manual fallback
                                 </button>
                                 {!autoExecuteBlocked && (
                                     <>
@@ -491,20 +528,16 @@ export function AdminPayoutsClient() {
                                         >
                                             Sandbox auto-execute
                                         </button>
-                                        <button
-                                            type="button"
-                                            disabled={busy}
-                                            onClick={() => run("refresh_status", p.payoutId)}
-                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
-                                        >
-                                            Refresh status
-                                        </button>
                                     </>
                                 )}
                             </div>
 
                             {recordFor === p.payoutId && (
                                 <div className="mt-4 grid gap-2 rounded-xl border border-white/10 bg-white/5 p-3 sm:grid-cols-2">
+                                    <p className="text-xs text-amber-100 sm:col-span-2">
+                                        Manual fallback only. Normal flow should use the prepared Wise transfer and
+                                        provider status/webhook reconciliation.
+                                    </p>
                                     <label className="text-xs text-ink-400 sm:col-span-2">
                                         Wise transfer id
                                         <input
@@ -601,6 +634,14 @@ export function AdminPayoutsClient() {
                                             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
                                         >
                                             Save Wise record
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => run("confirm_paid_manual_override", p.payoutId)}
+                                            className="rounded-md border border-rose-500/40 px-3 py-1.5 text-xs font-bold text-rose-100 disabled:opacity-50"
+                                        >
+                                            Confirm Paid manual override
                                         </button>
                                         <button
                                             type="button"
