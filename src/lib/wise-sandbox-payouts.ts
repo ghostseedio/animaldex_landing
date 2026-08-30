@@ -20,6 +20,7 @@ import {
     type RecipientAddressPart
 } from "@/lib/payout-destination-requirements";
 import {payoutNeedsManualApproval, shouldReuseQuote} from "@/lib/payout-preparation-state";
+import {providerFinalSnapshotPatch} from "@/lib/payout-provenance";
 import type {AdminActor} from "@/lib/support-admin-auth";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {
@@ -31,6 +32,7 @@ import {
     WiseConfigurationError,
     WisePayoutProvider
 } from "@/lib/wise-payout-provider";
+import type {ProviderTransfer} from "@/lib/payout-provider";
 
 async function rpc<T>(name: string, body: Record<string, unknown> = {}): Promise<T> {
     const url = getSupabaseUrl();
@@ -161,6 +163,8 @@ export async function listAdminPayouts() {
             "estimate_target_amount_minor,estimate_exchange_rate,estimate_provider_fee_minor,",
             "quote_source_currency,quote_target_currency,quote_source_amount_minor,quote_target_amount_minor,",
             "quote_fee_amount_minor,quote_rate,fee_policy,review_tier,corridor_id,",
+            "provider_final_source_amount_minor,provider_final_source_currency,",
+            "provider_final_target_amount_minor,provider_final_target_currency,provider_payment_reference,provider_finalized_at,",
             "earning_hold_id,paid_at,manual_transfer_recorded_at",
             "&order=created_at.desc&limit=100"
         ].join("")
@@ -196,6 +200,18 @@ export async function listAdminPayouts() {
             p.quote_target_amount_minor == null ? null : Number(p.quote_target_amount_minor),
         quoteFeeAmountMinor: p.quote_fee_amount_minor == null ? null : Number(p.quote_fee_amount_minor),
         quoteRate: p.quote_rate == null ? null : Number(p.quote_rate),
+        providerFinalSourceAmountMinor:
+            p.provider_final_source_amount_minor == null ? null : Number(p.provider_final_source_amount_minor),
+        providerFinalSourceCurrency:
+            p.provider_final_source_currency ? String(p.provider_final_source_currency) : null,
+        providerFinalTargetAmountMinor:
+            p.provider_final_target_amount_minor == null ? null : Number(p.provider_final_target_amount_minor),
+        providerFinalTargetCurrency:
+            p.provider_final_target_currency ? String(p.provider_final_target_currency) : null,
+        providerPaymentReference:
+            p.provider_payment_reference ? String(p.provider_payment_reference) : null,
+        providerFinalizedAt:
+            p.provider_finalized_at ? String(p.provider_finalized_at) : null,
         feePolicy: p.fee_policy ? String(p.fee_policy) : null,
         reviewTier: p.review_tier ? String(p.review_tier) : null,
         corridorId: p.corridor_id ? String(p.corridor_id) : null,
@@ -691,6 +707,7 @@ export async function confirmManualPayoutPaid(payoutId: string, actor: AdminActo
         payoutId,
         currentStatus: String(payout.status),
         wiseStatus: transfer.status,
+        providerTransfer: transfer,
         operatorId: operator.id
     });
     if (decision.action !== "paid") {
@@ -750,6 +767,26 @@ async function recordAttempt(
             failure_code: failureCode ?? null,
             completed_at: status === "started" ? null : new Date().toISOString()
         })
+    });
+}
+
+async function snapshotProviderFinalPaymentFacts(
+    payoutId: string,
+    transfer: ProviderTransfer | null | undefined
+) {
+    if (!transfer || transfer.status !== "outgoing_payment_sent") return;
+
+    // Read current snapshot so a later, less-complete provider response never
+    // overwrites already-stored non-null final facts.
+    const rows = await rest<Array<Record<string, unknown>>>(
+        `payouts?id=eq.${encodeURIComponent(payoutId)}&select=provider_final_source_amount_minor,provider_final_source_currency,provider_final_target_amount_minor,provider_final_target_currency,provider_payment_reference,provider_finalized_at&limit=1`
+    );
+    const patch = providerFinalSnapshotPatch(rows?.[0], transfer, new Date().toISOString());
+    if (!patch) return;
+
+    await rest(`payouts?id=eq.${encodeURIComponent(payoutId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch)
     });
 }
 
@@ -924,6 +961,7 @@ export async function refreshPayoutProviderStatus(payoutId: string, actor: Admin
         payoutId,
         currentStatus: String(payout.status),
         wiseStatus: transfer.status,
+        providerTransfer: transfer,
         operatorId: operator.id
     });
 }
@@ -932,6 +970,7 @@ async function applyProviderStatusToPayout(input: {
     payoutId: string;
     currentStatus: string;
     wiseStatus: string;
+    providerTransfer?: ProviderTransfer | null;
     operatorId: string | null;
 }) {
     const decision = applyProviderPayoutStatus({
@@ -949,6 +988,7 @@ async function applyProviderStatusToPayout(input: {
     });
 
     if (decision.action === "paid") {
+        await snapshotProviderFinalPaymentFacts(input.payoutId, input.providerTransfer);
         await rpc("admin_complete_payout_from_hold", {
             p_payout_id: input.payoutId,
             p_actor_operator_id: input.operatorId,
@@ -966,6 +1006,10 @@ async function applyProviderStatusToPayout(input: {
             p_actor_operator_id: input.operatorId,
             p_reason: input.wiseStatus
         });
+    } else if (decision.action === "noop" && input.currentStatus === "paid") {
+        // Re-observing an already-paid payout: refresh the provider-final
+        // snapshot without touching accounting, holds, or state.
+        await snapshotProviderFinalPaymentFacts(input.payoutId, input.providerTransfer);
     }
 
     await rpc("monetization_admin_audit_write", {

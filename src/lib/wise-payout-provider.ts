@@ -384,11 +384,23 @@ export class WisePayoutProvider implements PayoutProvider {
             "GET",
             `${API_PREFIX}/transfers/${transferId}`
         );
+        const details = transfer.details && typeof transfer.details === "object"
+            ? transfer.details as Record<string, unknown>
+            : {};
         return {
             providerTransferRef: String(transfer.id),
             customerTransactionId: String(transfer.customerTransactionId ?? ""),
             status: String(transfer.status ?? "unknown"),
-            createdAt: transfer.created ? String(transfer.created) : null
+            createdAt: transfer.created ? String(transfer.created) : null,
+            sourceCurrency: transfer.sourceCurrency ? String(transfer.sourceCurrency) : null,
+            sourceAmount: transfer.sourceValue == null ? null : Number(transfer.sourceValue),
+            targetCurrency: transfer.targetCurrency ? String(transfer.targetCurrency) : null,
+            targetAmount: transfer.targetValue == null ? null : Number(transfer.targetValue),
+            paymentReference: details.reference
+                ? String(details.reference)
+                : transfer.reference
+                  ? String(transfer.reference)
+                  : null
         };
     }
 

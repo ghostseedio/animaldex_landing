@@ -55,4 +55,67 @@ describe("Wise payout provider error handling", () => {
             /wise_http_422:.*validation\.failure\.address\.country\.empty/
         );
     });
+
+    it("maps getTransfer final facts (source/target amounts + payment reference)", async () => {
+        const fetchImpl = (async () => ({
+            ok: true,
+            status: 200,
+            text: async () =>
+                JSON.stringify({
+                    id: 2338505126,
+                    customerTransactionId: "43a4089b-cea0-4369-b754-5a89c7db6e66",
+                    status: "outgoing_payment_sent",
+                    created: "2026-08-29T12:49:14.360518Z",
+                    sourceValue: 1.3,
+                    sourceCurrency: "USD",
+                    targetValue: 0.96,
+                    targetCurrency: "GBP",
+                    details: {reference: "AnimalDex 43a4089b"}
+                })
+        })) as unknown as typeof fetch;
+
+        const provider = new WisePayoutProvider({
+            environment: "production",
+            apiToken: "test-token",
+            profileId: "96792752",
+            allowProductionExecution: true,
+            fetchImpl
+        });
+
+        const transfer = await provider.getTransfer(2338505126);
+        assert.equal(transfer.providerTransferRef, "2338505126");
+        assert.equal(transfer.status, "outgoing_payment_sent");
+        assert.equal(transfer.sourceAmount, 1.3);
+        assert.equal(transfer.sourceCurrency, "USD");
+        assert.equal(transfer.targetAmount, 0.96);
+        assert.equal(transfer.targetCurrency, "GBP");
+        assert.equal(transfer.paymentReference, "AnimalDex 43a4089b");
+    });
+
+    it("maps getTransfer with a top-level reference fallback", async () => {
+        const fetchImpl = (async () => ({
+            ok: true,
+            status: 200,
+            text: async () =>
+                JSON.stringify({
+                    id: 999,
+                    status: "processing",
+                    sourceValue: 5,
+                    sourceCurrency: "GBP",
+                    targetValue: 5,
+                    targetCurrency: "GBP",
+                    reference: "fallback-ref"
+                })
+        })) as unknown as typeof fetch;
+
+        const provider = new WisePayoutProvider({
+            environment: "sandbox",
+            apiToken: "test-token",
+            profileId: "12345",
+            fetchImpl
+        });
+
+        const transfer = await provider.getTransfer(999);
+        assert.equal(transfer.paymentReference, "fallback-ref");
+    });
 });

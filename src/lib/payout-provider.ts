@@ -35,6 +35,11 @@ export type ProviderTransfer = {
     customerTransactionId: string;
     status: string;
     createdAt: string | null;
+    sourceCurrency?: string | null;
+    sourceAmount?: number | null;
+    targetCurrency?: string | null;
+    targetAmount?: number | null;
+    paymentReference?: string | null;
 };
 
 export type ProviderFundResult = {

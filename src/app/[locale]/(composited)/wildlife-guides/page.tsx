@@ -10,7 +10,10 @@ export const metadata: Metadata = {
     title: "Wildlife Guides",
     description: "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.",
     alternates: {canonical: "/wildlife-guides"},
-    openGraph: {title: "AnimalDex Wildlife Guides", description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.", url: "/wildlife-guides", images: ["/images/og.png"]}
+    openGraph: {title: "AnimalDex Wildlife Guides", description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.", url: "/wildlife-guides", images: ["/images/og.png"]},
+    other: {
+  "facebook-domain-verification": "hi8zc0bm4dg7qrn95luj9isnn21ldo",
+},
 };
 
 export default async function WildlifeGuidesPage({params}: {params: {locale: string}}) {

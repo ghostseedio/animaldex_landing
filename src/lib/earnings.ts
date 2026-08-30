@@ -114,11 +114,47 @@ export type CreatorRewardReceiptSummary = {
     eligibilityState: string;
     contributionCategories: string[];
     createdAt: string | null;
+    // Provider-confirmed payment provenance (populated for paid rewards only).
+    paidAt: string | null;
+    provider: string | null;
+    paymentMethodLabel: string | null;
+    providerPaymentReference: string | null;
+    providerTransferRef: string | null;
+    destinationMask: string | null;
+    finalSourceAmountMinor: number | null;
+    finalSourceCurrency: string | null;
+    finalTargetAmountMinor: number | null;
+    finalTargetCurrency: string | null;
 };
 
 export type CreatorRewardReceiptDetail = CreatorRewardReceiptSummary & {
     eligibilityMessage: string | null;
 };
+
+/**
+ * Parse the canonical `payment_details` JSON object returned by the Creator
+ * Reward receipt RPCs (`list_my_creator_reward_receipts` /
+ * `get_my_creator_reward_receipt`). This is the single source of truth for paid
+ * receipt provenance, built server-side from the provider-final payout snapshot.
+ */
+export function parseReceiptPaymentDetails(raw: unknown) {
+    const details = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const provider = details.provider ? String(details.provider) : null;
+    return {
+        paidAt: details.paid_at ? String(details.paid_at) : null,
+        provider,
+        paymentMethodLabel: provider ? "Wise" : null,
+        providerPaymentReference: details.payment_reference ? String(details.payment_reference) : null,
+        providerTransferRef: details.provider_transfer_ref ? String(details.provider_transfer_ref) : null,
+        destinationMask: details.destination_mask ? String(details.destination_mask) : null,
+        finalSourceAmountMinor:
+            details.source_amount_minor == null ? null : Number(details.source_amount_minor),
+        finalSourceCurrency: details.source_currency ? String(details.source_currency) : null,
+        finalTargetAmountMinor:
+            details.target_amount_minor == null ? null : Number(details.target_amount_minor),
+        finalTargetCurrency: details.target_currency ? String(details.target_currency) : null,
+    };
+}
 
 export function mapCreatorRewardReceiptSummary(row: Record<string, unknown>): CreatorRewardReceiptSummary {
     return {
@@ -136,6 +172,7 @@ export function mapCreatorRewardReceiptSummary(row: Record<string, unknown>): Cr
             ? row.contribution_categories.map(String)
             : [],
         createdAt: row.created_at ? String(row.created_at) : null,
+        ...parseReceiptPaymentDetails(row.payment_details),
     };
 }
 

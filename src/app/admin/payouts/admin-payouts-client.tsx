@@ -52,6 +52,12 @@ type PayoutRow = {
     quoteTargetAmountMinor: number | null;
     quoteFeeAmountMinor: number | null;
     quoteRate: number | null;
+    providerFinalSourceAmountMinor: number | null;
+    providerFinalSourceCurrency: string | null;
+    providerFinalTargetAmountMinor: number | null;
+    providerFinalTargetCurrency: string | null;
+    providerPaymentReference: string | null;
+    providerFinalizedAt: string | null;
     feePolicy: string | null;
     reviewTier: string | null;
     hasHold: boolean;
@@ -502,14 +508,21 @@ export function AdminPayoutsClient() {
                                 <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-50">
                                     <p className="font-bold">
                                         {money(p.amountMinor, p.currencyCode)}
-                                        {p.quoteTargetAmountMinor != null
-                                            ? ` → ${money(p.quoteTargetAmountMinor, p.quoteTargetCurrency || p.targetCurrency || p.currencyCode)}`
-                                            : ""}
+                                        {p.providerFinalTargetAmountMinor != null
+                                            ? ` → ${money(p.providerFinalTargetAmountMinor, p.providerFinalTargetCurrency || p.targetCurrency || p.currencyCode)}`
+                                            : p.quoteTargetAmountMinor != null
+                                              ? ` → ${money(p.quoteTargetAmountMinor, p.quoteTargetCurrency || p.targetCurrency || p.currencyCode)} (quoted)`
+                                              : ""}
                                     </p>
                                     <p className="mt-1 text-xs text-emerald-100/85">
                                         Paid via Wise
                                         {p.providerTransferRef ? ` · transfer ${p.providerTransferRef}` : ""}
                                     </p>
+                                    {p.providerPaymentReference && (
+                                        <p className="mt-1 text-xs text-emerald-100/85">
+                                            Reference {p.providerPaymentReference}
+                                        </p>
+                                    )}
                                     <p className="mt-1 text-xs text-emerald-100/70">
                                         Paid {formatDateTime(p.paidAt)} · payout hold: {p.hasHold ? "released / historical record" : "none"}
                                     </p>

@@ -58,11 +58,17 @@ export async function GET() {
         ? mapCreatorRewardPeriodProgress({})
         : mapCreatorRewardPeriodProgress(progressRes.data);
 
+    // Payment provenance comes from the canonical `payment_details` field on the
+    // receipt RPC itself — no independent enrichment.
+    const creatorRewardReceipts = receiptRows.map((row) =>
+        mapCreatorRewardReceiptSummary(row as Record<string, unknown>)
+    );
+
     return NextResponse.json({
         balances: summaryRows.map((row) => mapEarningsSummaryRow(row as Record<string, unknown>)),
         activity: activityRows.map((row) => mapEarningActivityRow(row as Record<string, unknown>)),
         entries: entryRows.map((row) => mapEarningEntryRow(row as Record<string, unknown>)),
-        creatorRewardReceipts: receiptRows.map((row) => mapCreatorRewardReceiptSummary(row as Record<string, unknown>)),
+        creatorRewardReceipts,
         periodProgress,
         payoutSetup,
     });
