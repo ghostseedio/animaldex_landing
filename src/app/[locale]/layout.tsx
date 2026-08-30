@@ -89,7 +89,8 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
         keywords,
         generator: "Next.js",
         other: {
-            "apple-itunes-app": "app-id=6761607780"
+            "apple-itunes-app": "app-id=6761607780",
+            "facebook-domain-verification": "hi8zc0bm4dg7qrn95luj9isnn21ldo"
         },
         colorScheme: "dark",
         themeColor: "#1BC451",
