@@ -6,6 +6,8 @@ import {whatIfEveryAnimalIsALessonPost} from "@/data/blog/what-if-every-animal-i
 import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
 import {captureAnimalsAppPost} from "@/data/blog/capture-animals-app";
 import {howAnimalDexIndexesAnimalsPost} from "@/data/blog/how-animaldex-indexes-animals";
+import {instagramWildlifeArchivePosts} from "@/data/blog/instagram-wildlife-archive";
+import {earnEconomyBlogPosts} from "@/data/blog/earn";
 import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
 import {
     BlogFAQ,
@@ -4917,11 +4919,13 @@ const blogPostsData: BlogPost[] = [
 ];
 
 export const blogPosts: BlogPost[] = [
+    ...earnEconomyBlogPosts,
     howAnimalDexIndexesAnimalsPost,
     petrifiedGiantsPost,
     captureAnimalsAppPost,
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
+    ...instagramWildlifeArchivePosts,
     ...blogPostsData.filter((post) => ![
         howAnimalDexIndexesAnimalsPost.slug,
         whatIfEveryAnimalIsALessonPost.slug,
@@ -4967,8 +4971,13 @@ export function getRelatedBlogPosts(slug: string, limit = 3) {
         return [];
     }
 
-    return blogPosts
-        .filter((post) => post.slug !== slug)
+    const pinned = (current.relatedSlugs ?? [])
+        .map((relatedSlug) => getBlogPost(relatedSlug))
+        .filter((post): post is NonNullable<typeof post> => Boolean(post && post.slug !== slug));
+    const pinnedSlugs = new Set(pinned.map((post) => post.slug));
+
+    const scored = blogPosts
+        .filter((post) => post.slug !== slug && !pinnedSlugs.has(post.slug))
         .map((post) => {
             const sharedTags = post.tags.filter((tag) => current.tags.includes(tag)).length;
             const sharedIntents = post.searchIntents.filter((intent) => current.searchIntents.includes(intent)).length;
@@ -4980,8 +4989,9 @@ export function getRelatedBlogPosts(slug: string, limit = 3) {
             };
         })
         .sort((a, b) => b.score - a.score || b.post.publishedAt.localeCompare(a.post.publishedAt))
-        .slice(0, limit)
         .map(({post}) => post);
+
+    return [...pinned, ...scored].slice(0, limit);
 }
 
 export function getBlogPostsForSpecies(speciesSlug: string, limit = 3) {

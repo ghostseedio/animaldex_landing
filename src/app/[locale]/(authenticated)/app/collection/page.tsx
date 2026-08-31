@@ -1,5 +1,5 @@
 import {Suspense} from "react";
-import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSecondaryLink, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/collection-page-client";
 import type {CatalogSpecies} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
 import {getAppCaptures} from "@/data/authenticated-app";
@@ -88,15 +88,20 @@ export default async function CollectionPage() {
                 eyebrow="Collection"
                 title="Collection"
                 description="Browse the indexed catalog and fill curated binders with the animals you've captured."
-                action={<AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>}
+                action={(
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>
+                        <AppSecondaryLink href="/app/import/instagram">Check my Instagram</AppSecondaryLink>
+                    </div>
+                )}
             />
 
             <AppSurface>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Species collected</p>
+                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Unique AnimalDex entries</p>
                         <p className="mt-2 font-display text-3xl font-bold tabular-nums text-white">{discoveryStats.found}<span className="text-white/35"> / {discoveryStats.indexed}</span></p>
-                        <p className="mt-1 text-sm text-white/45">{discoveryStats.remaining} indexed species left to discover</p>
+                        <p className="mt-1 text-sm text-white/45">{discoveryStats.remaining} indexed animals left to discover. Totals include group-level identities, not only species.</p>
                     </div>
                     <div className="w-full sm:max-w-xs">
                         <div className="mb-2 flex justify-between text-xs font-bold text-white/40">

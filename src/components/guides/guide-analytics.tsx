@@ -4,7 +4,10 @@ import {useEffect} from "react";
 import {trackEvent} from "@/lib/analytics";
 
 export function GuidePageView({event, dimensions}: {event: string; dimensions: Record<string, string>}) {
-    useEffect(() => { trackEvent(event, dimensions); }, [event, dimensions]);
+    const serialized = JSON.stringify(dimensions);
+    useEffect(() => {
+        trackEvent(event, JSON.parse(serialized) as Record<string, string>);
+    }, [event, serialized]);
     return null;
 }
 

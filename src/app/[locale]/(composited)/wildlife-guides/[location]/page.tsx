@@ -4,7 +4,7 @@ import Link from "@/app/[locale]/_components/link";
 import GuideCard from "@/components/guides/guide-card";
 import {GuidePageView} from "@/components/guides/guide-analytics";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
-import {categoryLabel, isLocationPageIndexable, locationInventory, type GuideCategory} from "@/lib/guide-marketplace-core";
+import {categoryLabel, guideAreaServedName, isLocationPageIndexable, locationInventory, type GuideCategory} from "@/lib/guide-marketplace-core";
 
 export const revalidate = 300;
 type Props = {params: {locale: string; location: string}};
@@ -18,14 +18,14 @@ async function resolve(location: string) {
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     const listings = await resolve(params.location);
     if (!listings) return {title: "Wildlife Guides unavailable", robots: {index: false, follow: false}};
-    const area = listings[0].public_area_label;
+    const area = guideAreaServedName(listings[0]);
     return {title: `Wildlife Guides in ${area}`, description: `Explore ${listings.length} published AnimalDex wildlife experiences around ${area}, with public prices, group sizes and Guide wildlife credentials.`, alternates: {canonical: `/wildlife-guides/${params.location}`}};
 }
 
 export default async function GuideLocationPage({params}: Props) {
     const listings = await resolve(params.location);
     if (!listings) notFound();
-    const area = listings[0].public_area_label;
+    const area = guideAreaServedName(listings[0]);
     const categories = Array.from(new Set(listings.map((item) => item.service_category)));
     return <>
         <GuidePageView event="guide_web_location_page_view" dimensions={{page_type: "location", location: params.location}} />

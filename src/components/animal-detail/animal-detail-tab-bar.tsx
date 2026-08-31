@@ -67,7 +67,7 @@ export default function AnimalDetailTabBar({
                             wide ? "lg:gap-2.5 lg:rounded-[18px] lg:px-8 lg:py-3 lg:text-sm lg:leading-5" : ""
                         } ${
                             active
-                                ? "border-[#38fa47]/[0.28] bg-[linear-gradient(135deg,rgba(56,250,71,0.17),rgba(255,255,255,0.055))] text-white"
+                                ? "border-[#A7F432]/[0.28] bg-[linear-gradient(135deg,rgba(167,244,50,0.17),rgba(255,255,255,0.055))] text-white"
                                 : "border-transparent text-white/[0.42] hover:text-white/[0.62]"
                         }`}
                     >

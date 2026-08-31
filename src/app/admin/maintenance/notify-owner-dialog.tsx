@@ -156,7 +156,7 @@ export default function NotifyOwnerDialog({request, onClose, onSent}: Props) {
 
                     <div className="flex flex-wrap items-center gap-2">
                         <button type="button" onClick={() => void send()} disabled={busy || !title.trim() || !body.trim() || !recipients.length}
-                                className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
                             {busy ? "Sending…" : `Send to ${recipients.length === 1 ? "this member" : `${recipients.length} members`}`}
                         </button>
                         <button type="button" onClick={onClose} disabled={busy}

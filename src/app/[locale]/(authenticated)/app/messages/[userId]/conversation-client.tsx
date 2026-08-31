@@ -3,6 +3,7 @@
 import {useEffect, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
 import {AppAvatar, AppPage, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import type {DirectMessage, DirectMessageProfile} from "@/data/direct-messages";
 import {formatAppShortDateTime} from "@/lib/app-dates";
@@ -94,9 +95,15 @@ export default function ConversationClient({
                         return (
                             <div key={message.id} className={`flex ${outgoing ? "justify-end" : "justify-start"}`}>
                                 <div className={`max-w-[85%] space-y-1 ${outgoing ? "text-right" : "text-left"}`}>
-                                    <p className={`inline-block rounded-[1.1rem] px-4 py-3 text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
-                                        {message.body}
-                                    </p>
+                                    {message.body.includes("[[adex-article:") ? (
+                                        <div className={`inline-block max-w-full rounded-[1.1rem] px-4 py-3 text-left ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                            <SupportMessageBody body={message.body} />
+                                        </div>
+                                    ) : (
+                                        <p className={`inline-block rounded-[1.1rem] px-4 py-3 text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                            {message.body}
+                                        </p>
+                                    )}
                                     <p className="text-[0.68rem] font-bold text-white/25">{formatWhen(message.createdAt, locale)}</p>
                                 </div>
                             </div>

@@ -40,6 +40,19 @@ export async function getPublicGuideListings() {
     return Array.from(new Map(listings.map((listing) => [listing.id, listing])).values());
 }
 
+export async function getPublicGuideListingsForUser(userId: string) {
+    const {url, key} = configuration();
+    const response = await fetch(`${url}/rest/v1/rpc/get_public_guide_listings`, {
+        method: "POST",
+        headers: getSupabaseHeaders(key, {"Content-Type": "application/json", Accept: "application/json"}),
+        body: JSON.stringify({p_user_id: userId, p_cursor: null, p_limit: 20}),
+        next: {revalidate: 120, tags: [`public-guide-listings-${userId}`]}
+    });
+    if (!response.ok) return [] as PublicGuideListing[];
+    const value = await response.json();
+    return Array.isArray(value) ? value as PublicGuideListing[] : [];
+}
+
 export async function getPublicGuideListing(listingId: string) {
     let cursor: string | null = null;
     for (let page = 0; page < MAX_PAGES; page += 1) {

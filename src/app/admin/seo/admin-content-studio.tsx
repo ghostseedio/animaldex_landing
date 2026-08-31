@@ -617,7 +617,7 @@ export default function AdminContentStudio() {
                     <h1 className="mt-2 font-display text-3xl text-white">Content studio</h1>
                     <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" />
                     {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
-                    <button disabled={saving || !password} className="mt-4 w-full rounded-xl bg-primary-500 px-4 py-3 font-black text-canvas-950 disabled:opacity-50">{saving ? "Signing in…" : "Sign in"}</button>
+                    <button disabled={saving || !password} className="mt-4 w-full rounded-xl bg-primary-400 px-4 py-3 font-black text-canvas-950 disabled:opacity-50">{saving ? "Signing in…" : "Sign in"}</button>
                 </form>
             </main>
         );
@@ -634,7 +634,7 @@ export default function AdminContentStudio() {
                     {post && <span className={`hidden items-center gap-1.5 px-2 text-[11px] font-bold sm:inline-flex ${autosaveStatus === "error" ? "text-red-300" : "text-ink-400"}`}>{autosaveStatus === "saving" ? "Saving…" : autosaveStatus === "error" ? "Autosave failed" : autosaveStatus === "saved" ? "Saved" : "Not saved yet"}</span>}
                     <Link href="/admin/assets" className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-2.5 py-2 text-[11px] font-bold text-white sm:px-3 sm:text-xs"><Gallery size={15} /><span className="hidden sm:inline">Assets</span></Link>
                     {post && <a href={contentType === "blog" ? `/blog/${post.slug}` : `/${post.slug}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-2.5 py-2 text-[11px] font-bold text-white sm:px-3 sm:text-xs"><Eye size={15} />Preview</a>}
-                    {post && <button onClick={save} disabled={saving || !post.slug} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-500 px-3 py-2 text-[11px] font-black text-canvas-950 disabled:opacity-50 sm:px-4 sm:text-xs"><Diskette size={15} />{saving ? "Publishing…" : "Publish"}</button>}
+                    {post && <button onClick={save} disabled={saving || !post.slug} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-400 px-3 py-2 text-[11px] font-black text-canvas-950 disabled:opacity-50 sm:px-4 sm:text-xs"><Diskette size={15} />{saving ? "Publishing…" : "Publish"}</button>}
                 </div>
             </header>
             {(error || message) && <div className={`border-b px-4 py-2 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || message}</div>}
@@ -711,7 +711,7 @@ export default function AdminContentStudio() {
                             <div className="flex flex-col gap-3 sm:flex-row">
                                 <div className="relative min-w-0 flex-1"><Magnifer size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-500" /><input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search existing images…" className="w-full rounded-xl border border-line-300 bg-surface-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-primary-300" /></div>
                                 <button type="button" onClick={() => savePickerAltText(false)} className="rounded-xl border border-line-300 px-5 py-3 text-sm font-black text-white hover:border-primary-300">Save alt text</button>
-                                <label className="cursor-pointer rounded-xl bg-primary-500 px-5 py-3 text-center text-sm font-black text-canvas-950">
+                                <label className="cursor-pointer rounded-xl bg-primary-400 px-5 py-3 text-center text-sm font-black text-canvas-950">
                                     <span className="inline-flex items-center gap-2"><Upload size={17} />{uploadingPath ? "Uploading…" : "Upload new image"}</span>
                                     <input type="file" accept="image/*" disabled={Boolean(uploadingPath)} className="hidden" onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], pickerSlot)} />
                                 </label>

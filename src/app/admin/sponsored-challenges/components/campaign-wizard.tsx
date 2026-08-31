@@ -129,7 +129,7 @@ export function CampaignWizard({ initialData, onSave, onCancel }: CampaignWizard
               <button
                 onClick={handleNext}
                 disabled={!campaignData.title || !campaignData.slug}
-                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
               >
                 Next
               </button>
@@ -216,7 +216,7 @@ export function CampaignWizard({ initialData, onSave, onCancel }: CampaignWizard
               </button>
               <button
                 onClick={handleNext}
-                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+                className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
               >
                 Next
               </button>
@@ -324,7 +324,7 @@ export function CampaignWizard({ initialData, onSave, onCancel }: CampaignWizard
               </button>
               <button
                 onClick={handleNext}
-                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+                className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
               >
                 Next
               </button>
@@ -405,7 +405,7 @@ export function CampaignWizard({ initialData, onSave, onCancel }: CampaignWizard
               </button>
               <button
                 onClick={handleNext}
-                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+                className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
               >
                 Next
               </button>
@@ -461,7 +461,7 @@ export function CampaignWizard({ initialData, onSave, onCancel }: CampaignWizard
                   // Finish campaign creation
                   onSave(campaignData);
                 }}
-                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
               >
                 Save Campaign
               </button>

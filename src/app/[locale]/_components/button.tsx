@@ -13,8 +13,8 @@ export default function Button({className, children, onClick, disabled, as = "bu
     return (
         <Component
             className={`rounded-full font-display font-bold text-2xl text-canvas-950 hover:text-canvas-950 py-4 px-8
-                hover:bg-primary-200 bg-primary-500 active:bg-primary-400 duration-300 ease-in-out transition-all
-                border border-primary-200/30 shadow-[0_0_40px_rgba(27,196,81,0.18)] disabled:opacity-50
+                bg-primary-400 hover:bg-primary-300 active:bg-primary-500 duration-300 ease-in-out transition-all
+                border border-primary-200/40 shadow-[0_0_40px_rgba(167,244,50,0.22)] disabled:opacity-50
                 disabled:pointer-events-none hover:scale-105 active:scale-95
                 ${className || ""}`}
             onClick={onClick}

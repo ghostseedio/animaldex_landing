@@ -1,10 +1,22 @@
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
+import CaptureStatsPentagram from "@/app/[locale]/(authenticated)/app/_components/capture-stats-pentagram";
 import type {AppCapture} from "@/data/authenticated-app";
 import {formatAppShortDateWithYear} from "@/lib/app-dates";
 import {formatAnimalDexNumber} from "@/lib/animaldex-number";
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+
+function truncateCoreLesson(text: string, maxWords = 8) {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length <= maxWords) {
+        return words.join(" ");
+    }
+
+    return `${words.slice(0, maxWords).join(" ")}...`;
+}
 
 export function AppPage({children, narrow = false}: {children: React.ReactNode; narrow?: boolean}) {
     return <div className={`space-y-8 md:space-y-10 ${narrow ? "mx-auto max-w-3xl" : ""}`}>{children}</div>;
@@ -169,8 +181,74 @@ export function AppListRow({
     return <button type="button" onClick={onClick} className={`${className} w-full text-left`}>{content}</button>;
 }
 
-export function AppCaptureCard({capture, compact = false, locale = "en"}: {capture: AppCapture; compact?: boolean; locale?: string}) {
+export function AppCaptureCard({capture, compact = false, locale = "en", layout = "default"}: {capture: AppCapture; compact?: boolean; locale?: string; layout?: "default" | "peekTop"}) {
     const date = capture.capturedAt ? formatAppShortDateWithYear(capture.capturedAt, locale) : null;
+
+    if (layout === "peekTop") {
+        return (
+            <article className="group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:border-primary-400/30">
+                <Link href={capture.href} className="relative block aspect-[4/3] overflow-hidden bg-white/5">
+                    <img src={capture.imageSrc} alt={capture.displayName} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black/75" />
+                    {capture.indexNumber
+                        ? <span className="absolute right-3 top-3 z-20 rounded-full bg-black/70 px-2.5 py-1 text-xs font-black tabular-nums text-primary-200 shadow-sm">{formatAnimalDexNumber(capture.indexNumber)}</span>
+                        : null}
+                    <div className="absolute inset-x-0 top-0 z-20 p-4 pr-24">
+                        <h3 className="truncate font-display text-xl font-bold text-white">
+                            {capture.displayName}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            {capture.lifeStageChip ? (
+                                <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
+                                    {capture.lifeStageChip}
+                                </span>
+                            ) : null}
+                            {capture.contextLabel ? (
+                                <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
+                                    {capture.contextLabel}
+                                </span>
+                            ) : null}
+                            {capture.battleTier ? (
+                                <span className="inline-flex rounded-full bg-cyan-400/15 px-2.5 py-1 text-[0.68rem] font-black text-cyan-100 ring-1 ring-cyan-400/20">
+                                    Tier {capture.battleTier}
+                                </span>
+                            ) : null}
+                            {capture.captureGrade != null ? (
+                                <CaptureGradeBadge grade={capture.captureGrade} compact />
+                            ) : null}
+                            {date ? (
+                                <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
+                                    {date}
+                                </span>
+                            ) : null}
+                        </div>
+                        {capture.principle ? (
+                            <p className="mt-2 truncate text-xs font-semibold text-primary-200/90">{capture.principle}</p>
+                        ) : null}
+                    </div>
+                    {capture.gameStats || capture.coreLesson ? (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-5">
+                            <div className="flex max-w-[88%] flex-col items-center gap-2.5">
+                                {capture.gameStats ? (
+                                    <CaptureStatsPentagram
+                                        stats={capture.gameStats}
+                                        size={104}
+                                        gradientId={`capture-radar-${capture.captureId}`}
+                                    />
+                                ) : null}
+                                {capture.coreLesson ? (
+                                    <p className="w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-black/50 px-3.5 py-2 text-center text-[0.8125rem] font-medium leading-snug text-white/95 backdrop-blur-sm">
+                                        {truncateCoreLesson(capture.coreLesson)}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                    ) : null}
+                </Link>
+            </article>
+        );
+    }
+
     return (
         <article className={`group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/30 ${compact ? "flex" : ""}`}>
             <Link href={capture.href} className={`relative block overflow-hidden bg-white/5 ${compact ? "h-32 w-32 shrink-0" : "aspect-[4/3]"}`}>

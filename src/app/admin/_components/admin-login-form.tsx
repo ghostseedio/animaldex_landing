@@ -60,7 +60,7 @@ export default function AdminLoginForm() {
                 <button
                     type="submit"
                     disabled={submitting || !password}
-                    className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950 disabled:opacity-40"
+                    className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950 disabled:opacity-40"
                 >
                     {submitting ? "Signing in…" : "Sign in"}
                 </button>

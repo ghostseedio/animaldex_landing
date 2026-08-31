@@ -17,7 +17,7 @@ export default function ArenaMatchupsHero({opponentCount}: {opponentCount: numbe
         >
             <div className="relative h-[132px] w-full overflow-hidden">
                 <div
-                    className="absolute inset-0 bg-[linear-gradient(135deg,rgb(8,35,15)_0%,rgba(56,250,71,0.42)_48%,rgb(15,82,31)_100%)]"
+                    className="absolute inset-0 bg-[linear-gradient(135deg,rgb(13,42,22)_0%,rgba(167,244,50,0.42)_48%,rgb(33,192,94)_100%)]"
                     aria-hidden="true"
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}

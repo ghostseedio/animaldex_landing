@@ -131,11 +131,11 @@ const navigation = [
 
 export default async function AdminDashboardPage() {
     return withAdminGate(
-        <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(27,196,81,.12),transparent_28%)] text-ink-100">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] text-ink-100">
             <div className="mx-auto flex min-h-screen w-full max-w-[110rem]">
                 <aside className="hidden w-64 shrink-0 border-r border-line-300 bg-canvas-950/70 px-4 py-6 lg:flex lg:flex-col">
                     <Link href="/" className="flex items-center gap-3 px-2">
-                        <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-500 text-xl font-black text-canvas-950">A</span>
+                        <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-400 text-xl font-black text-canvas-950">A</span>
                         <div><p className="font-display text-xl text-white">AnimalDex</p><p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Operations</p></div>
                     </Link>
                     <nav className="mt-10 space-y-1" aria-label="Admin navigation">
@@ -165,7 +165,7 @@ export default async function AdminDashboardPage() {
                                 <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-300 sm:text-base">Monitor growth, help customers, publish content, and keep user captures healthy from one workspace.</p>
                             </div>
                             <div className="grid grid-cols-2 gap-2 sm:flex">
-                                <Link href="/admin/seo" className="rounded-xl bg-primary-500 px-4 py-3 text-center text-sm font-black text-canvas-950">Create content</Link>
+                                <Link href="/admin/seo" className="rounded-xl bg-primary-400 px-4 py-3 text-center text-sm font-black text-canvas-950">Create content</Link>
                                 <Link href="/admin/support" className="rounded-xl border border-line-300 px-4 py-3 text-center text-sm font-bold text-white">Open inbox</Link>
                             </div>
                         </section>
@@ -186,7 +186,7 @@ export default async function AdminDashboardPage() {
                                     <div className="relative">
                                         <div className="flex items-start justify-between gap-4"><span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-canvas-950/70 text-xl text-white">{tool.icon}</span><span className="rounded-full border border-line-300 bg-canvas-950/60 px-2.5 py-1 text-[10px] font-bold text-ink-400">{tool.status}</span></div>
                                         <p className="mt-7 text-[10px] font-black uppercase tracking-[.18em] text-primary-200">{tool.eyebrow}</p>
-                                        <div className="mt-2 flex items-end justify-between gap-4"><div className="min-w-0"><h3 className="font-display text-2xl text-white sm:text-3xl">{tool.title}</h3><p className="mt-2 max-w-lg text-sm leading-6 text-ink-300">{tool.description}</p></div><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[.05] text-lg text-white transition group-hover:bg-primary-500 group-hover:text-canvas-950">→</span></div>
+                                        <div className="mt-2 flex items-end justify-between gap-4"><div className="min-w-0"><h3 className="font-display text-2xl text-white sm:text-3xl">{tool.title}</h3><p className="mt-2 max-w-lg text-sm leading-6 text-ink-300">{tool.description}</p></div><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[.05] text-lg text-white transition group-hover:bg-primary-400 group-hover:text-canvas-950">→</span></div>
                                     </div>
                                 </Link>
                             ))}

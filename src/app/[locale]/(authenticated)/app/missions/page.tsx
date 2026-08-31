@@ -1,7 +1,8 @@
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppMetric, AppPage, AppPageHeader, AppProgress, AppSectionTitle, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
-import {getAppProgression} from "@/data/authenticated-app";
+import {getAppProgression, getAppSponsoredCampaigns, type AppSponsoredCampaign} from "@/data/authenticated-app";
+import {formatEarningsMinor} from "@/lib/earnings";
 
 const shelves = [
     {key: "starter", title: "Starter", detail: "Fast wins that teach the capture loop.", accent: "green" as const},
@@ -10,8 +11,88 @@ const shelves = [
     {key: "collector", title: "Legendary", detail: "The hardest long-term collector objectives.", accent: "gold" as const}
 ];
 
+function campaignObjective(campaign: AppSponsoredCampaign) {
+    if (campaign.objectiveType === "unique_indexed_entries") return `Capture ${campaign.targetCount} different indexed animals`;
+    if (campaign.objectiveType === "active_capture_days") return `Be active on ${campaign.targetCount} different days`;
+    return `Capture ${campaign.targetCount} qualifying animals`;
+}
+
+function campaignReward(campaign: AppSponsoredCampaign) {
+    const cash = campaign.cashReward
+        ? formatEarningsMinor(campaign.cashReward.amountMinor, campaign.cashReward.currencyCode)
+        : null;
+    const achievement = campaign.reward?.title ?? null;
+    if (cash && achievement) return `${cash} + ${achievement}`;
+    return cash ?? achievement ?? "Achievement";
+}
+
+function campaignStatus(campaign: AppSponsoredCampaign) {
+    if (campaign.participant?.status === "completed" || campaign.participant?.status === "rewarded") return "COMPLETED";
+    if (campaign.status === "live") return "LIVE";
+    if (campaign.status === "scheduled") return "UPCOMING";
+    return campaign.status.replaceAll("_", " ").toUpperCase();
+}
+
+function campaignWindow(campaign: AppSponsoredCampaign) {
+    const start = new Date(campaign.startsAt);
+    const end = new Date(campaign.endsAt);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return null;
+    const options = {month: "short", day: "numeric", timeZone: campaign.timezoneIdentifier || "UTC"} as const;
+    return `${start.toLocaleDateString("en-US", options)}-${end.toLocaleDateString("en-US", options)}`;
+}
+
+function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
+    const progress = Math.max(0, campaign.participant?.progressCount ?? 0);
+    const percent = Math.round(progress / Math.max(1, campaign.targetCount) * 100);
+    const presentedBy = campaign.presenterName?.trim() || null;
+
+    return (
+        <AppSurface padding={false} className="overflow-hidden">
+            {campaign.thumbnailUrl ? (
+                <div className="relative h-44 bg-white/[0.04]">
+                    <img src={campaign.thumbnailUrl} alt={campaign.thumbnailAltText ?? ""} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/30" />
+                    <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.65rem] font-black text-black">{campaignStatus(campaign)}</span>
+                        {campaign.sponsorOrganizationId ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white">Sponsored</span> : null}
+                    </div>
+                </div>
+            ) : null}
+            <div className="p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                    {!campaign.thumbnailUrl ? <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.65rem] font-black text-black">{campaignStatus(campaign)}</span> : null}
+                    {campaign.sponsorOrganizationId && presentedBy ? (
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">Presented by {presentedBy}</span>
+                    ) : (
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">AnimalDex Challenge</span>
+                    )}
+                    {campaignWindow(campaign) ? <span className="text-xs font-bold text-white/35">{campaignWindow(campaign)}</span> : null}
+                </div>
+                <h3 className="mt-4 font-display text-2xl font-bold text-white">{campaign.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-white/50">{campaign.publicSummary || campaign.description}</p>
+                <div className="mt-5">
+                    <AppProgress value={percent} accent={campaign.participant ? "green" : "violet"} />
+                    <div className="mt-2 flex justify-between text-xs font-bold text-white/35">
+                        <span>{progress} / {campaign.targetCount}</span>
+                        <span>{campaignObjective(campaign)}</span>
+                    </div>
+                </div>
+                <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-200/70">Reward</p>
+                    <p className="mt-1 text-sm font-bold text-amber-100">{campaignReward(campaign)}</p>
+                    {campaign.cashReward ? <p className="mt-1 text-xs text-amber-100/45">{campaign.cashReward.remainingRecipients} cash rewards remaining</p> : null}
+                </div>
+                <p className="mt-4 text-xs leading-5 text-white/30">Apple is not a sponsor of this Challenge and is not involved in any way.</p>
+            </div>
+        </AppSurface>
+    );
+}
+
 export default async function MissionsPage() {
-    const progression = await getAppProgression();
+    const [progression, sponsoredCampaigns] = await Promise.all([
+        getAppProgression(),
+        getAppSponsoredCampaigns()
+    ]);
     const completed = progression.missions.filter((item) => item.completedCount > 0).length;
     const active = progression.missions.filter((item) => !item.isLocked && item.completedCount === 0).length;
     const tradePercent = Math.round(progression.overallScore / Math.max(1, progression.tradeUnlockScore) * 100);
@@ -30,6 +111,19 @@ export default async function MissionsPage() {
                 <AppMetric label="Completed" value={completed} />
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
+
+            {sponsoredCampaigns.length ? (
+                <section className="space-y-4">
+                    <AppSectionTitle
+                        icon="arena"
+                        title="Sponsored Challenges"
+                        detail="Live and upcoming campaigns with clear rules, sponsor disclosure, and deterministic rewards."
+                    />
+                    <div className="grid gap-4 xl:grid-cols-2">
+                        {sponsoredCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
+                    </div>
+                </section>
+            ) : null}
 
             <AppSurface>
                 <div className="flex items-center gap-3">

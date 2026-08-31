@@ -460,7 +460,7 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                             </div>
 
                             <button type="button" onClick={() => void save()} disabled={busy}
-                                    className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                    className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
                                 {busy ? "Saving…" : "Save entry"}
                             </button>
                         </div>

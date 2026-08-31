@@ -1,4 +1,5 @@
 import Link from "@/app/[locale]/_components/link";
+import Image from "next/image";
 import {useLocale, useTranslations} from "next-intl";
 import LocaleToggle from "@/app/[locale]/(composited)/_components/locale-toggle";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
@@ -35,7 +36,14 @@ export default function Header({locale}: {locale?: string}) {
                             height={44}
                             className="h-10 w-10"
                         />
-                        <span className="text-xl tracking-tight text-white md:text-2xl">{t("title")}</span>
+                        <Image
+                            src="/images/animaldex-logo-text.webp"
+                            alt={t("title")}
+                            width={320}
+                            height={76}
+                            priority
+                            className="h-7 w-auto max-w-[7.5rem] md:h-8 md:max-w-[9rem]"
+                        />
                     </Link>
                     <LocaleToggle currentLocale={resolvedLocale} />
                 </div>
@@ -71,7 +79,7 @@ export default function Header({locale}: {locale?: string}) {
                     <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
                     <Link href="/#download" className="hidden md:inline-flex">
                         <span
-                            className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-md border border-primary-100 bg-transparent px-5 text-sm font-bold text-primary-100 transition-colors hover:border-primary-500 hover:bg-primary-500 hover:text-white focus-visible:border-primary-500 focus-visible:bg-primary-500 focus-visible:text-white"
+                            className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary-400 px-5 text-sm font-bold text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:bg-primary-300"
                         >
                             <svg
                                 viewBox="0 0 24 24"

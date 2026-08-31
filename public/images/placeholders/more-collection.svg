@@ -11,7 +11,7 @@
     </linearGradient>
 
     <linearGradient id="greenBar" x1="572" y1="0" x2="920" y2="0" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#31FF4F"/>
+      <stop stop-color="#A7F432"/>
       <stop offset="1" stop-color="#24D6C8"/>
     </linearGradient>
 
@@ -49,14 +49,14 @@
     <rect x="44.75" y="44.75" width="934.5" height="178.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="84" y="104" fill="#31FF4F" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="5">COLLECTION SYSTEM</text>
-  <text x="84" y="158" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="52" font-weight="900">Albums, sets, and progress</text>
+  <text x="84" y="104" fill="#A7F432" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="5">COLLECTION SYSTEM</text>
+  <text x="84" y="158" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="52" font-weight="900">Albums, sets, and progress</text>
   <text x="84" y="198" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="26" font-weight="700">Build themed packs from every real animal you scan.</text>
 
   <rect x="800" y="84" width="132" height="92" rx="28" fill="#12391C"/>
   <rect x="801" y="85" width="130" height="90" rx="27" stroke="#1E9638" stroke-width="2"/>
-  <text x="866" y="122" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="22" font-weight="900">TOTAL</text>
-  <text x="866" y="158" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="38" font-weight="900">70</text>
+  <text x="866" y="122" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="22" font-weight="900">TOTAL</text>
+  <text x="866" y="158" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="38" font-weight="900">70</text>
 
   <!-- Albums panel -->
   <g filter="url(#shadow)">
@@ -64,7 +64,7 @@
     <rect x="44.75" y="260.75" width="446.5" height="382.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="84" y="316" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="34" font-weight="900">Your albums</text>
+  <text x="84" y="316" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="34" font-weight="900">Your albums</text>
   <text x="84" y="350" fill="#9BA39D" font-family="Arial, sans-serif" font-size="22" font-weight="700">Curated sets from your captures</text>
 
   <!-- Zoo tile -->
@@ -133,16 +133,16 @@
     <rect x="532.75" y="260.75" width="446.5" height="178.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="572" y="316" fill="#31FF4F" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="3">INDONESIA PACK</text>
-  <text x="572" y="366" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="42" font-weight="900">14 / 50 species</text>
+  <text x="572" y="316" fill="#A7F432" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="3">INDONESIA PACK</text>
+  <text x="572" y="366" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="42" font-weight="900">14 / 50 species</text>
 
   <rect x="572" y="390" width="348" height="22" rx="11" fill="#29312C"/>
   <rect x="572" y="390" width="148" height="22" rx="11" fill="url(#greenBar)"/>
-  <circle cx="720" cy="401" r="9" fill="#F4FFF5" opacity="0.88"/>
+  <circle cx="720" cy="401" r="9" fill="#FFFFFF" opacity="0.88"/>
   <text x="930" y="408" text-anchor="end" fill="#9BA39D" font-family="Arial, sans-serif" font-size="22" font-weight="800">28%</text>
 
   <circle cx="916" cy="318" r="26" fill="#12391C"/>
-  <path d="M906 320L914 328L928 306" stroke="#31FF4F" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M906 320L914 328L928 306" stroke="#A7F432" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- Missions / Set goals -->
   <g filter="url(#shadow)">
@@ -150,15 +150,15 @@
     <rect x="532.75" y="464.75" width="446.5" height="178.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="572" y="520" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="34" font-weight="900">Active missions</text>
+  <text x="572" y="520" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="34" font-weight="900">Active missions</text>
 
   <rect x="572" y="548" width="168" height="58" rx="22" fill="#202622"/>
   <rect x="573" y="549" width="166" height="56" rx="21" stroke="#303933" stroke-width="2"/>
-  <text x="600" y="584" fill="#31FF4F" font-family="Arial, sans-serif" font-size="22" font-weight="900">3 zoo finds</text>
+  <text x="600" y="584" fill="#A7F432" font-family="Arial, sans-serif" font-size="22" font-weight="900">3 zoo finds</text>
 
   <rect x="756" y="548" width="184" height="58" rx="22" fill="#202622"/>
   <rect x="757" y="549" width="182" height="56" rx="21" stroke="#303933" stroke-width="2"/>
   <text x="784" y="584" fill="#24D6C8" font-family="Arial, sans-serif" font-size="22" font-weight="900">1 rare animal</text>
 
-  <circle cx="552" cy="624" r="5" fill="#31FF4F" filter="url(#glow)"/>
+  <circle cx="552" cy="624" r="5" fill="#A7F432" filter="url(#glow)"/>
 </svg>

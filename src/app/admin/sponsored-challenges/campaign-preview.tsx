@@ -191,7 +191,7 @@ function CardPreview({
           </p>
         ) : null}
       </div>
-      <p className="rounded-xl bg-primary-500 px-3 py-2 text-center text-sm font-black text-canvas-950">
+      <p className="rounded-xl bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
         View Challenge
       </p>
     </article>
@@ -276,7 +276,7 @@ function DetailPreview({
         <p className="mt-1 text-sm text-ink-100">{reward}</p>
       </div>
       <p className="text-sm font-bold text-primary-100">Official Rules</p>
-      <p className="rounded-xl bg-primary-500 px-3 py-2 text-center text-sm font-black text-canvas-950">
+      <p className="rounded-xl bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
         Join Challenge
       </p>
     </article>

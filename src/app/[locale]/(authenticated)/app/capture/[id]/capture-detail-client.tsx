@@ -96,7 +96,7 @@ export default function CaptureDetailClient({
                                 <CaptureGradeBadge grade={capture.captureGrade} breakdown={capture.gradeBreakdown} />
                             ) : null}
                             {capture.settingTag ? (
-                                <span className="rounded-full bg-[#38fa47] px-3 py-1.5 text-xs font-black text-black">
+                                <span className="rounded-full bg-[#A7F432] px-3 py-1.5 text-xs font-black text-black">
                                     {capture.settingTag}
                                 </span>
                             ) : null}

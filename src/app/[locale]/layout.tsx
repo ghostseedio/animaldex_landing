@@ -1,42 +1,19 @@
 import '@/app/[locale]/_assets/globals.css'
 import React, {ReactNode} from "react";
-import localFont from "next/font/local";
 import {notFound} from "next/navigation";
+import {fontClassName, fontCssVariables} from "@/app/fonts";
 import {localeConfig} from "@/i18n";
 import {Metadata} from "next";
 import Cursor from "@/app/[locale]/_components/cursor";
 import NavigationProgress from "@/app/[locale]/_components/navigation-progress";
 import {loadLocaleMessages} from "@/loaders/locale";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
+import CampaignAttribution from "@/app/[locale]/_components/campaign-attribution";
 import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 
 const brandIconUrl = "/images/logo.webp";
 const socialImageUrl = "/images/og.png";
-
-const calSans = localFont({
-    src: '_assets/fonts/CalSans-SemiBold.woff2',
-    variable: '--font-cal-sans',
-    display: "swap"
-})
-const onest = localFont({
-    src: [
-        {
-            path: '_assets/fonts/Onest-Regular.woff',
-            weight: '400',
-        },
-        {
-            path: '_assets/fonts/Onest-Medium.woff',
-            weight: '500',
-        },
-        {
-            path: '_assets/fonts/Onest-Bold.woff',
-            weight: '700'
-        }
-    ],
-    variable: '--font-onest',
-    display: "swap"
-})
 
 type RootLayoutProps = {
     children: ReactNode;
@@ -56,11 +33,9 @@ export default function RootLayout(
     return (
         <html lang={locale} className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
         <head/>
-        <body className={`${onest.variable} ${calSans.variable} font-sans overscroll-none`} style={{
-            '--font-sans': 'var(--font-onest)',
-            '--font-display': 'var(--font-cal-sans)',
-        } as any}>
+        <body className={`${fontClassName} font-sans font-medium overscroll-none`} style={fontCssVariables}>
             <GoogleAnalytics />
+            <CampaignAttribution />
             <Cursor />
             <NavigationProgress />
             {children}
@@ -93,7 +68,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             "facebook-domain-verification": "hi8zc0bm4dg7qrn95luj9isnn21ldo"
         },
         colorScheme: "dark",
-        themeColor: "#1BC451",
+        themeColor: "#21C05E",
         category: "education",
         applicationName: title,
         appLinks: {

@@ -66,8 +66,8 @@ const STAT_PRESET_CHIPS: Record<UniversalSearchStatPreset, {
     tint: string;
     suffix?: string;
 }> = {
-    fastest: {label: "Speed", key: "speed", tint: "#38fa47"},
-    slowest: {label: "Speed", key: "speed", tint: "#38fa47"},
+    fastest: {label: "Speed", key: "speed", tint: "#A7F432"},
+    slowest: {label: "Speed", key: "speed", tint: "#A7F432"},
     rarest: {label: "Rarity", key: "rarity", tint: "rgba(251, 146, 60, 0.92)", suffix: "%"},
     strongest: {label: "Dominance", key: "dominance", tint: "rgba(239, 68, 68, 0.92)"},
     smartest: {label: "Intelligence", key: "intelligence", tint: "rgba(34, 211, 238, 0.92)"},
@@ -75,7 +75,7 @@ const STAT_PRESET_CHIPS: Record<UniversalSearchStatPreset, {
     smallest: {label: "Size", key: "size", tint: "#a78bfa"},
     longestLived: {label: "Lifespan", key: "lifespan_estimate", tint: "#94a3b8"},
     shortestLived: {label: "Lifespan", key: "lifespan_estimate", tint: "#94a3b8"},
-    mostCaptures: {label: "Captures", key: "public_capture_count", tint: "#38fa47"}
+    mostCaptures: {label: "Captures", key: "public_capture_count", tint: "#A7F432"}
 };
 
 /** The edge function reports which field matched; these are its internal labels. */

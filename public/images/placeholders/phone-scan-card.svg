@@ -13,7 +13,7 @@
 
     <radialGradient id="photoGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(160 110) rotate(90) scale(110 150)">
       <stop stop-color="#D3B878" stop-opacity="0.28"/>
-      <stop offset="0.55" stop-color="#2EFF4A" stop-opacity="0.16"/>
+      <stop offset="0.55" stop-color="#A7F432" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
 
@@ -51,50 +51,50 @@
       <rect x="24" y="24" width="272" height="172" fill="url(#photoGlow)" opacity="0.58"/>
 
       <!-- scan bracket -->
-      <path d="M62 58V43C62 39 65 36 69 36H88" stroke="#2EFF4A" stroke-width="5" stroke-linecap="round"/>
-      <path d="M252 36H271C275 36 278 39 278 43V58" stroke="#2EFF4A" stroke-width="5" stroke-linecap="round"/>
-      <path d="M62 162V177C62 181 65 184 69 184H88" stroke="#2EFF4A" stroke-width="5" stroke-linecap="round"/>
-      <path d="M252 184H271C275 184 278 181 278 177V162" stroke="#2EFF4A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M62 58V43C62 39 65 36 69 36H88" stroke="#A7F432" stroke-width="5" stroke-linecap="round"/>
+      <path d="M252 36H271C275 36 278 39 278 43V58" stroke="#A7F432" stroke-width="5" stroke-linecap="round"/>
+      <path d="M62 162V177C62 181 65 184 69 184H88" stroke="#A7F432" stroke-width="5" stroke-linecap="round"/>
+      <path d="M252 184H271C275 184 278 181 278 177V162" stroke="#A7F432" stroke-width="5" stroke-linecap="round"/>
 
-      <rect x="218" y="152" width="58" height="26" rx="13" fill="#2EFF4A"/>
-      <text x="247" y="170" text-anchor="middle" fill="#041006" font-family="Arial, sans-serif" font-size="12" font-weight="900">SCAN</text>
+      <rect x="218" y="152" width="58" height="26" rx="13" fill="#A7F432"/>
+      <text x="247" y="170" text-anchor="middle" fill="#07100B" font-family="Arial, sans-serif" font-size="12" font-weight="900">SCAN</text>
     </g>
   </g>
 
   <!-- Header/meta -->
   <text x="24" y="226" fill="#9FB0A2" font-family="Arial, sans-serif" font-size="15" font-weight="800" letter-spacing="2.5">AI ANALYSIS</text>
-  <text x="24" y="257" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="30" font-weight="900">British Shorthair</text>
+  <text x="24" y="257" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="30" font-weight="900">British Shorthair</text>
   <text x="24" y="283" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="17" font-weight="700">Cat · Domestic · Calm companion</text>
 
   <!-- Chips -->
 <rect x="24" y="296" width="66" height="30" rx="15" fill="#261414"/>
 <rect x="25" y="297" width="64" height="28" rx="14" stroke="#B83A3A" stroke-opacity="0.46" stroke-width="2"/>
 <text x="38" y="316" fill="#E85A5A" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.3">TIER</text>
-<text x="73" y="316" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="15" font-weight="900">E</text>
+<text x="73" y="316" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="900">E</text>
 
 <rect x="102" y="296" width="96" height="30" rx="15" fill="#202320"/>
 <rect x="103" y="297" width="94" height="28" rx="14" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="2"/>
 <text x="116" y="316" fill="#AEB6AE" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.3">GRADE</text>
-<text x="180" y="316" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="15" font-weight="900">4</text>
+<text x="180" y="316" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="900">4</text>
 
 <rect x="210" y="296" width="126" height="30" rx="15" fill="#202320"/>
 <rect x="211" y="297" width="124" height="28" rx="14" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="2"/>
-<text x="226" y="316" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.2">RARITY</text>
-<text x="316" y="316" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="15" font-weight="900">14%</text>
+<text x="226" y="316" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.2">RARITY</text>
+<text x="316" y="316" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="900">14%</text>
     <!-- Breeding estimated price preview -->
  <rect x="24" y="344" width="312" height="52" rx="20" fill="url(#wisdomBg)"/>
 <rect x="25" y="345" width="310" height="50" rx="19" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
 
-  <circle cx="45" cy="370" r="10" fill="#2EFF4A" opacity="0.16"/>
-  <circle cx="45" cy="370" r="5" fill="#2EFF4A"/>
-  <circle cx="45" cy="370" r="15" fill="#2EFF4A" opacity="0.16" filter="url(#softGlow)"/>
+  <circle cx="45" cy="370" r="10" fill="#A7F432" opacity="0.16"/>
+  <circle cx="45" cy="370" r="5" fill="#A7F432"/>
+  <circle cx="45" cy="370" r="15" fill="#A7F432" opacity="0.16" filter="url(#softGlow)"/>
 
   <text x="64" y="364" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="1.2">BREEDING EST. PRICE</text>
-  <text x="64" y="384" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="18" font-weight="900">£350 – £900</text>
+  <text x="64" y="384" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="18" font-weight="900">£350 – £900</text>
 
 <rect x="254" y="358" width="62" height="24" rx="12" fill="#122819"/>
-<text x="285" y="374" text-anchor="middle" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="10" font-weight="900">MARKET</text>
+<text x="285" y="374" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="10" font-weight="900">MARKET</text>
   <!-- Bottom accent -->
   <rect x="24" y="407" width="184" height="6" rx="3" fill="#243028"/>
-  <rect x="24" y="407" width="112" height="6" rx="3" fill="#2EFF4A"/>
+  <rect x="24" y="407" width="112" height="6" rx="3" fill="#A7F432"/>
 </svg>

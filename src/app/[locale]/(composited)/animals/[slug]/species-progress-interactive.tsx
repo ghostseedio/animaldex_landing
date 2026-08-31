@@ -69,7 +69,7 @@ function SizeScaleRuler({
         <div className="overflow-x-auto rounded-[20px] border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,0.04),#121212,rgba(148,84,250,0.08))]">
             <div className="relative h-[150px] min-w-[560px]">
                 <div className="absolute left-[18px] right-[18px] top-[86px]">
-                    <div className="h-2.5 rounded-full bg-gradient-to-r from-white/10 via-violet-400/15 to-[#38fa47]/10" />
+                    <div className="h-2.5 rounded-full bg-gradient-to-r from-white/10 via-violet-400/15 to-[#A7F432]/10" />
                     <div className="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
                         <span>Tiny</span>
                         <span>Pet</span>
@@ -100,11 +100,11 @@ function SizeScaleRuler({
                 </div>
 
                 <span
-                    className="absolute top-[74px] block h-16 w-[3px] -translate-x-1/2 bg-gradient-to-b from-[#38fa47] to-violet-400 shadow-[0_0_18px_rgba(56,250,71,0.36)]"
+                    className="absolute top-[74px] block h-16 w-[3px] -translate-x-1/2 bg-gradient-to-b from-[#A7F432] to-violet-400 shadow-[0_0_18px_rgba(167,244,50,0.36)]"
                     style={{left: `${markerX}%`}}
                 />
                 <span
-                    className="absolute top-[103px] block h-3 w-3 -translate-x-1/2 rounded-full bg-[#38fa47] shadow-[0_0_14px_rgba(56,250,71,0.38)]"
+                    className="absolute top-[103px] block h-3 w-3 -translate-x-1/2 rounded-full bg-[#A7F432] shadow-[0_0_14px_rgba(167,244,50,0.38)]"
                     style={{left: `${markerX}%`}}
                 />
             </div>
@@ -137,11 +137,11 @@ export function SpeciesLevelProgress({progress}: {progress: CaptureProgressState
     return (
         <section className="rounded-[18px] border border-white/10 bg-[#1f1f1f] p-3.5 font-sans">
             <div className="flex items-baseline gap-2.5">
-                <span className="rounded-full border border-[#38fa47]/25 bg-[#38fa47]/10 px-2.5 py-1.5 text-[11px] font-extrabold text-[#38fa47]">{level.level >= 100 ? "Lvl 100 MAX" : `Lvl ${level.level}`}</span>
+                <span className="rounded-full border border-[#A7F432]/25 bg-[#A7F432]/10 px-2.5 py-1.5 text-[11px] font-extrabold text-[#A7F432]">{level.level >= 100 ? "Lvl 100 MAX" : `Lvl ${level.level}`}</span>
                 <span className="text-xs font-medium text-white">{level.xp} XP</span>
                 <span className="ml-auto text-[11px] font-semibold text-white/40">{level.level >= 100 ? "MAX" : `${level.needed} XP to next`}</span>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#38fa47]/80" style={{width: `${level.fraction * 100}%`}} /></div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#A7F432]/80" style={{width: `${level.fraction * 100}%`}} /></div>
             {level.level < 100 ? <p className="mt-2.5 text-[11px] font-semibold text-white/60">{level.progressXP}/{level.span} XP toward Level {level.level + 1}</p> : null}
         </section>
     );
@@ -183,23 +183,23 @@ export function SpeciesEndorsementAndSize({
         <div className="space-y-3 font-sans">
             {progress && !progress.isOwnedByCurrentUser ? (
                 isAuthenticated ? (
-                    <button type="button" disabled={isPending} onClick={() => setOpen(true)} className="flex w-full items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#38fa47] px-3.5 py-3 text-left text-black disabled:opacity-60">
+                    <button type="button" disabled={isPending} onClick={() => setOpen(true)} className="flex w-full items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#A7F432] px-3.5 py-3 text-left text-black disabled:opacity-60">
                         <span aria-hidden="true">👍</span><span className="min-w-0"><span className="block text-xs font-medium">{progress.viewerEndorsementStat ? `Endorsed ${progress.viewerEndorsementStat}` : "Endorse"}</span><span className="mt-0.5 block text-[11px] font-semibold text-black/70">{progress.viewerEndorsementStat ? `Withdraw your ${progress.viewerEndorsementStat} endorsement or keep it locked in.` : "Choose one trait carefully. You only get one endorsement on this animal at a time."}</span></span>
                     </button>
                 ) : (
-                    <Link href="/account" className="flex w-full items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#38fa47] px-3.5 py-3 text-left text-black"><span>👍</span><span><span className="block text-xs font-medium">Endorse</span><span className="mt-0.5 block text-[11px] font-semibold text-black/70">Sign in to choose one trait for this animal.</span></span></Link>
+                    <Link href="/account" className="flex w-full items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#A7F432] px-3.5 py-3 text-left text-black"><span>👍</span><span><span className="block text-xs font-medium">Endorse</span><span className="mt-0.5 block text-[11px] font-semibold text-black/70">Sign in to choose one trait for this animal.</span></span></Link>
                 )
             ) : null}
 
             {sizeScore != null ? (
-                <section className="rounded-[20px] border border-[#38fa47]/15 bg-[linear-gradient(145deg,rgba(56,250,71,0.12),rgba(56,250,71,0.06),#1f1f1f)] p-4">
+                <section className="rounded-[20px] border border-[#A7F432]/15 bg-[linear-gradient(145deg,rgba(167,244,50,0.12),rgba(167,244,50,0.06),#1f1f1f)] p-4">
                     <p className="text-xs font-medium text-white/40">Size scale</p>
                     <div className="mt-3 flex items-start justify-between gap-3">
                         <div>
                             <h3 className="text-[17px] font-semibold text-white">{sizeLabel}</h3>
                             <p className="mt-1 text-xs font-medium text-white/60">Uses the canonical size stat for consistent placement</p>
                         </div>
-                        <span className="rounded-full bg-gradient-to-r from-[#38fa47]/20 to-violet-400/20 px-3 py-2 text-lg font-extrabold text-[#38fa47]">{score}/100</span>
+                        <span className="rounded-full bg-gradient-to-r from-[#A7F432]/20 to-violet-400/20 px-3 py-2 text-lg font-extrabold text-[#A7F432]">{score}/100</span>
                     </div>
                     <div className="mt-4">
                         <SizeScaleRuler speciesName={speciesName} speciesSlug={speciesSlug} score={score} />
@@ -207,7 +207,7 @@ export function SpeciesEndorsementAndSize({
                 </section>
             ) : null}
 
-            {open && progress ? <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center"><div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5"><h3 className="text-lg font-semibold text-white">Endorse one trait</h3><p className="mt-2 text-xs font-medium leading-5 text-white/60">Choose one trait carefully. Each endorsement adds one point to that stat until you withdraw it.</p><div className="mt-4 grid grid-cols-2 gap-2">{ENDORSEMENT_STATS.map((stat) => <button key={stat} type="button" disabled={isPending || progress.viewerEndorsementStat === stat} onClick={() => endorse(stat)} className="rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-semibold capitalize text-white disabled:border-[#38fa47]/30 disabled:text-[#38fa47]">{stat}</button>)}</div>{progress.viewerEndorsementStat ? <button type="button" disabled={isPending} onClick={() => endorse(null)} className="mt-3 w-full rounded-full border border-red-400/20 px-3 py-2.5 text-xs font-semibold text-red-300">Withdraw {progress.viewerEndorsementStat} endorsement</button> : null}{error ? <p className="mt-3 text-xs text-orange-300">{error}</p> : null}<button type="button" onClick={() => setOpen(false)} className="mt-4 w-full rounded-full bg-white/10 px-3 py-2.5 text-xs font-semibold text-white">Cancel</button></div></div> : null}
+            {open && progress ? <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center"><div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5"><h3 className="text-lg font-semibold text-white">Endorse one trait</h3><p className="mt-2 text-xs font-medium leading-5 text-white/60">Choose one trait carefully. Each endorsement adds one point to that stat until you withdraw it.</p><div className="mt-4 grid grid-cols-2 gap-2">{ENDORSEMENT_STATS.map((stat) => <button key={stat} type="button" disabled={isPending || progress.viewerEndorsementStat === stat} onClick={() => endorse(stat)} className="rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-semibold capitalize text-white disabled:border-[#A7F432]/30 disabled:text-[#A7F432]">{stat}</button>)}</div>{progress.viewerEndorsementStat ? <button type="button" disabled={isPending} onClick={() => endorse(null)} className="mt-3 w-full rounded-full border border-red-400/20 px-3 py-2.5 text-xs font-semibold text-red-300">Withdraw {progress.viewerEndorsementStat} endorsement</button> : null}{error ? <p className="mt-3 text-xs text-orange-300">{error}</p> : null}<button type="button" onClick={() => setOpen(false)} className="mt-4 w-full rounded-full bg-white/10 px-3 py-2.5 text-xs font-semibold text-white">Cancel</button></div></div> : null}
         </div>
     );
 }

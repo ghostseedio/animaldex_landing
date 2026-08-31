@@ -65,7 +65,7 @@ export default function IconCanvas({
     maxScale = 1.9,
     minOpacity = 80,
     maxOpacity = 150,
-    color = "#1BC451",
+    color = "#21C05E",
     height,
     minIcons = 32,
 }: IconCanvasProps) {

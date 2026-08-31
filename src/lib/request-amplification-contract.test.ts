@@ -45,7 +45,7 @@ test("protected app layout and admin gate still authenticate on the server", () 
     const adminGate = read("app/admin/_components/admin-auth-gate.tsx");
     const routing = read("lib/request-routing.ts");
 
-    assert.match(appLayout, /getAuthenticatedAppContext/);
+    assert.match(appLayout, /getAuthenticatedAppShellData/);
     assert.match(adminGate, /isSupportAdminCookieAuthorized\(cookies\(\)\)/);
     assert.match(routing, /\/app\/collection/);
     assert.match(routing, /\/app\/earnings/);

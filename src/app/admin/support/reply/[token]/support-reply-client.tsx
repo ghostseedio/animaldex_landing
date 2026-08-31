@@ -207,7 +207,7 @@ export default function SupportReplyClient({token}: SupportReplyClientProps) {
                                 <button
                                     type="submit"
                                     disabled={!canSubmit}
-                                    className="rounded-md bg-primary-500 px-5 py-3 text-sm font-bold text-canvas-950 transition hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-400"
+                                    className="rounded-md bg-primary-400 px-5 py-3 text-sm font-bold text-canvas-950 transition hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-400"
                                 >
                                     {submitting ? "Sending..." : "Send reply"}
                                 </button>

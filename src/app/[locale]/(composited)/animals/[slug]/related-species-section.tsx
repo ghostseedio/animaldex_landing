@@ -16,7 +16,7 @@ function RelatedSpeciesTile({item, openLabel}: {item: SpeciesEntry; openLabel: s
             href={`/animals/${item.slug}`}
             className="group relative flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-[#121512] transition duration-200 hover:-translate-y-0.5 hover:border-primary-300/35 hover:bg-[#161b16] motion-reduce:transform-none"
         >
-            <div className="relative flex aspect-[5/4] items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(56,250,71,0.12),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent)]">
+            <div className="relative flex aspect-[5/4] items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(167,244,50,0.12),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent)]">
                 <span className="relative h-[72%] w-[72%]">
                     <SpeciesArtworkImage
                         slug={item.slug}

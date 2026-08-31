@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
 import {
+    adminLocationStatusLabel,
     personLabel,
     reasonLabel,
     type GuideBookingRow,
@@ -249,9 +250,9 @@ export default function AdminGuidesClient() {
                                     {action: "publish_listing", listingId: selectedListing.id},
                                     `Publish “${selectedListing.title}”? It will appear on public Wildlife Guides.`
                                 )}
-                                onReject={() => run(
+                                onRequestCorrection={() => run(
                                     {action: "reject_listing", listingId: selectedListing.id},
-                                    `Reject “${selectedListing.title}”? The seller can edit and resubmit.`
+                                    `Request correction for “${selectedListing.title}”? This rejects the pending listing so the seller can edit the title or public area and resubmit. Do not rewrite seller content here.`
                                 )}
                             />
                         ) : null}
@@ -394,7 +395,7 @@ function ApplicationDetail({
             <div className="mt-6 flex flex-wrap gap-2">
                 {row.sellerStatus === "pending" && (
                     <>
-                        <button type="button" disabled={busy || !row.canApprove} onClick={onApprove} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
+                        <button type="button" disabled={busy || !row.canApprove} onClick={onApprove} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
                         <button type="button" disabled={busy} onClick={onReject} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Reject</button>
                         <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
                     </>
@@ -404,7 +405,7 @@ function ApplicationDetail({
                 )}
                 {(row.sellerStatus === "rejected" || row.sellerStatus === "suspended") && (
                     <>
-                        <button type="button" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
+                        <button type="button" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
                         <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
                     </>
                 )}
@@ -426,12 +427,12 @@ function ListingDetail({
     row,
     busy,
     onPublish,
-    onReject
+    onRequestCorrection
 }: {
     row: GuideListingReview;
     busy: boolean;
     onPublish: () => void;
-    onReject: () => void;
+    onRequestCorrection: () => void;
 }) {
     return (
         <article className="rounded-3xl border border-line-300 bg-surface-900 p-6">
@@ -439,10 +440,27 @@ function ListingDetail({
                 <div>
                     <p className="text-xs font-black uppercase tracking-[.18em] text-ink-500">{row.serviceCategoryLabel}</p>
                     <h2 className="mt-1 font-display text-3xl text-white">{row.title}</h2>
-                    <p className="mt-2 text-sm text-ink-400">{row.publicAreaLabel} · {row.countryCode}</p>
                 </div>
                 <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusClass(row.status)}`}>{row.status.replace("_", " ")}</span>
             </div>
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Stat label="Title" value={row.title} />
+                <Stat label="Public experience area" value={row.publicAreaLabel} />
+                <Stat label="Normalized location" value={normalizedLocation(row)} />
+                <Stat label="Location status" value={adminLocationStatusLabel(row.locationMismatch)} />
+            </dl>
+            {row.locationMismatch ? (
+                <div className="mt-4 space-y-3 text-sm text-amber-200">
+                    <p>{row.locationMismatchMessage}</p>
+                    <p>Do not rewrite the title or public area here. There is no automatic fix.</p>
+                    {row.status === "published" ? (
+                        <p>
+                            This listing stays published until the Guide pauses it or you wait for a corrected resubmission.
+                            Pause remains a seller action. After they resubmit, publish only if the mismatch is gone.
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
             <p className="mt-5 text-sm leading-6 text-ink-200">{row.publicSummary}</p>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-ink-300">{row.description}</p>
             <dl className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -458,12 +476,32 @@ function ListingDetail({
             )}
             {row.status === "pending_review" && (
                 <div className="mt-6 flex flex-wrap gap-2">
-                    <button type="button" disabled={busy || !row.canPublish} onClick={onPublish} className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Publish</button>
-                    <button type="button" disabled={busy} onClick={onReject} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Reject</button>
+                    <button type="button" disabled={busy || !row.canPublish} onClick={onPublish} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Publish</button>
+                    <button type="button" disabled={busy} onClick={onRequestCorrection} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Request correction</button>
                 </div>
             )}
+            {row.status === "published" && row.locationMismatch ? (
+                <div className="mt-6 flex flex-wrap gap-2">
+                    <p className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-ink-200">Keep published</p>
+                    <p className="rounded-xl border border-white/10 px-4 py-2 text-sm text-ink-400">Pause: seller only</p>
+                </div>
+            ) : null}
         </article>
     );
+}
+
+function normalizedLocation(row: GuideListingReview) {
+    const parts = [row.publicLocality || row.publicPlaceName, row.publicAdminArea, countryName(row.countryCode)]
+        .filter((part): part is string => Boolean(part && part.trim()));
+    return parts.length > 0 ? parts.join(" · ") : `${row.publicAreaLabel} · ${row.countryCode}`;
+}
+
+function countryName(code: string) {
+    try {
+        return new Intl.DisplayNames(["en"], {type: "region"}).of(code.toUpperCase()) || code;
+    } catch {
+        return code;
+    }
 }
 
 function Stat({label, value}: {label: string; value: string}) {

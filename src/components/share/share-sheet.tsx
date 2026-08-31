@@ -266,7 +266,7 @@ export default function ShareSheet({
                             setPanel("options");
                             setStatus(null);
                         }}
-                        className="text-sm font-semibold text-[#38fa47]"
+                        className="text-sm font-semibold text-[#A7F432]"
                     >
                         {panel === "options" ? "Close" : "Back"}
                     </button>

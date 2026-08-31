@@ -187,7 +187,7 @@ export default function AdminNotificationsClient() {
                 <input type="password" value={password} onChange={(event) => setPassword(event.target.value)}
                        placeholder="Admin password"
                        className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" />
-                <button className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950">Sign in</button>
+                <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>
                 {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
             </form>
         </main>;
@@ -205,7 +205,7 @@ export default function AdminNotificationsClient() {
                         notifications list; accounts with a registered device also get a push banner on top.
                     </p>
                 </div>
-                <button onClick={() => void load()} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
+                <button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
             </header>
 
             {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
@@ -330,7 +330,7 @@ export default function AdminNotificationsClient() {
                         </div>}
 
                         <button onClick={() => void send()} disabled={!canSend}
-                                className="mt-5 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950 disabled:opacity-40">
+                                className="mt-5 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950 disabled:opacity-40">
                             {sending
                                 ? "Sending…"
                                 : `Send to ${targetPeople} ${targetPeople === 1 ? "person" : "people"}`

@@ -6,10 +6,35 @@ import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/s
 import publicImageAssets from "@/data/public-image-assets.json";
 
 const MAX_ASSET_BYTES = 15 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"]);
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/avif"]);
+const TYPE_BY_EXTENSION: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    svg: "image/svg+xml",
+    avif: "image/avif"
+};
 const WEBP_CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_OPTIMIZED_DIMENSION = 2400;
 const WEBP_QUALITY = 84;
+const ALLOWED_FORMAT_ERROR = "Choose a JPG, PNG, WebP, GIF, SVG, or AVIF up to 15 MB";
+
+function fileExtension(name: string) {
+    return name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "";
+}
+
+function resolveImageContentType(file: File) {
+    if (ALLOWED_TYPES.has(file.type)) {
+        return file.type;
+    }
+    const fromName = TYPE_BY_EXTENSION[fileExtension(file.name)];
+    if (fromName && (!file.type || file.type === "application/octet-stream")) {
+        return fromName;
+    }
+    return file.type;
+}
 
 type OptimizedUpload = {
     buffer: Buffer;
@@ -22,12 +47,13 @@ type OptimizedUpload = {
 };
 
 async function optimizeUpload(file: File): Promise<OptimizedUpload> {
+    const contentType = resolveImageContentType(file);
     const input = Buffer.from(await file.arrayBuffer());
-    if (!WEBP_CONVERTIBLE_TYPES.has(file.type)) {
+    if (!WEBP_CONVERTIBLE_TYPES.has(contentType)) {
         return {
             buffer: input,
-            contentType: file.type,
-            extension: file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin",
+            contentType,
+            extension: fileExtension(file.name) || "bin",
             size: file.size,
             optimized: false
         };
@@ -61,11 +87,43 @@ async function optimizeUpload(file: File): Promise<OptimizedUpload> {
     } catch {
         return {
             buffer: input,
-            contentType: file.type,
-            extension: file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin",
+            contentType,
+            extension: fileExtension(file.name) || "bin",
             size: file.size,
             optimized: false
         };
+    }
+}
+
+async function ensureAdminAssetsBucket(url: string, key: string) {
+    const allowedMimeTypes = Array.from(ALLOWED_TYPES);
+    const create = await fetch(`${url}/storage/v1/bucket`, {
+        method: "POST",
+        headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+        body: JSON.stringify({
+            id: "admin-assets",
+            name: "admin-assets",
+            public: true,
+            file_size_limit: MAX_ASSET_BYTES,
+            allowed_mime_types: allowedMimeTypes
+        })
+    });
+    if (create.ok) return;
+    const reason = (await create.text()).trim();
+    if (create.status !== 409 && !reason.includes("BucketAlreadyExists")) {
+        throw new Error(`Asset bucket setup failed (${create.status})${reason ? `: ${reason}` : ""}`);
+    }
+    const update = await fetch(`${url}/storage/v1/bucket/admin-assets`, {
+        method: "PUT",
+        headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+        body: JSON.stringify({
+            public: true,
+            file_size_limit: MAX_ASSET_BYTES,
+            allowed_mime_types: allowedMimeTypes
+        })
+    });
+    if (!update.ok) {
+        await update.text();
     }
 }
 
@@ -153,12 +211,13 @@ export async function PUT(request: NextRequest) {
         if (!assetPath.startsWith("blog/") || assetPath.includes("..")) {
             return NextResponse.json({ok: false, error: "Only uploaded assets can be replaced"}, {status: 400});
         }
-        if (!(file instanceof File) || !ALLOWED_TYPES.has(file.type) || file.size > MAX_ASSET_BYTES) {
-            return NextResponse.json({ok: false, error: "Choose a JPG, PNG, WebP, GIF, or SVG up to 15 MB"}, {status: 400});
+        if (!(file instanceof File) || !ALLOWED_TYPES.has(resolveImageContentType(file)) || file.size > MAX_ASSET_BYTES) {
+            return NextResponse.json({ok: false, error: ALLOWED_FORMAT_ERROR}, {status: 400});
         }
         const supabaseUrl = getSupabaseUrl();
         const serviceKey = getSupabaseServiceKey();
         if (!supabaseUrl || !serviceKey) throw new Error("Supabase asset storage is not configured");
+        await ensureAdminAssetsBucket(supabaseUrl, serviceKey);
         const optimized = await optimizeUpload(file);
         const response = await fetch(`${supabaseUrl}/storage/v1/object/admin-assets/${assetPath}`, {
             method: "POST",
@@ -220,13 +279,14 @@ export async function POST(request: NextRequest) {
         const form = await request.formData();
         const file = form.get("file");
 
-        if (!(file instanceof File) || !ALLOWED_TYPES.has(file.type) || file.size > MAX_ASSET_BYTES) {
-            return NextResponse.json({ok: false, error: "Choose a JPG, PNG, WebP, GIF, or SVG up to 15 MB"}, {status: 400});
+        if (!(file instanceof File) || !ALLOWED_TYPES.has(resolveImageContentType(file)) || file.size > MAX_ASSET_BYTES) {
+            return NextResponse.json({ok: false, error: ALLOWED_FORMAT_ERROR}, {status: 400});
         }
 
         const supabaseUrl = getSupabaseUrl();
         const serviceKey = getSupabaseServiceKey();
         if (!supabaseUrl || !serviceKey) throw new Error("Supabase asset storage is not configured");
+        await ensureAdminAssetsBucket(supabaseUrl, serviceKey);
 
         const optimized = await optimizeUpload(file);
         const stem = file.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "asset";

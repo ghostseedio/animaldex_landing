@@ -37,7 +37,7 @@ export default function SpeciesDetailTabs({
                 {eyebrow || title ? (
                     <div className="hidden min-w-0 flex-col gap-1 lg:flex">
                         {eyebrow ? (
-                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#38fa47]">{eyebrow}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#A7F432]">{eyebrow}</p>
                         ) : null}
                         {title ? (
                             <h2 className="truncate font-display text-2xl font-bold text-white xl:text-3xl">{title}</h2>

@@ -16,6 +16,37 @@ function clampHealth(value: number) {
     return Math.max(0, Math.min(MAX_HEARTS, value));
 }
 
+function isBestOfThree(result: MatchupResolveResult) {
+    return result.challengeFormat === "best_of_3_v2";
+}
+
+function isBattleVoting(result: MatchupResolveResult) {
+    return isBestOfThree(result) && result.battleStatus === "round_2_voting";
+}
+
+function isBattleComplete(result: MatchupResolveResult) {
+    return !isBestOfThree(result) || result.battleStatus === "completed";
+}
+
+function finalScoreText(result: MatchupResolveResult) {
+    if (!isBestOfThree(result) || !isBattleComplete(result)) return null;
+    if (result.roundsWonAttacker == null || result.roundsWonDefender == null) return null;
+    return `${result.roundsWonAttacker}-${result.roundsWonDefender}`;
+}
+
+function voteTimeRemaining(deadline: string | null) {
+    if (!deadline) return null;
+    const end = new Date(deadline).getTime();
+    if (!Number.isFinite(end)) return null;
+    const minutes = Math.max(0, Math.ceil((end - Date.now()) / 60000));
+    if (minutes <= 0) return "Closing now";
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h left`;
+    if (hours > 0) return `${hours}h ${remainder}m left`;
+    return `${minutes}m left`;
+}
+
 function SideCard({
     title,
     name,
@@ -88,7 +119,12 @@ export default function ResultStep({
     const viewerWon = result.winnerUserId === viewerUserId;
     const attackerWon = result.winnerCaptureId === attacker.captureId;
     const winnerName = attackerWon ? attacker.animalName : opponent.animalName;
-    const creditsDelta = viewerWon ? result.payoutAmount - result.stakeAmount : -result.stakeAmount;
+    const battleComplete = isBattleComplete(result);
+    const battleVoting = isBattleVoting(result);
+    const battleFinalScore = finalScoreText(result);
+    const creditsDelta = battleComplete
+        ? viewerWon ? result.payoutAmount - result.stakeAmount : -result.stakeAmount
+        : -result.stakeAmount;
     const loserHealth = attackerWon ? opponentHealth : attackerHealth;
     const baselineLoserHealth = attackerWon ? baselineOpponentHealth : baselineAttackerHealth;
     const damageTaken = Math.max(0, clampHealth(baselineLoserHealth) - loserHealth);
@@ -101,7 +137,7 @@ export default function ResultStep({
     const canOpenComparison = Boolean(attacker.speciesSlug && opponent.speciesSlug);
 
     const rewardItems = useMemo(() => {
-        if (!viewerWon) return [] as RewardShowcaseItem[];
+        if (!battleComplete || !viewerWon) return [] as RewardShowcaseItem[];
         const items: RewardShowcaseItem[] = [];
         if (result.pointsAwarded > 0) {
             items.push({
@@ -122,7 +158,7 @@ export default function ResultStep({
             });
         }
         return items;
-    }, [result.payoutAmount, result.pointsAwarded, viewerWon]);
+    }, [battleComplete, result.payoutAmount, result.pointsAwarded, viewerWon]);
 
     useEffect(() => {
         if (!rewardItems.length) return;
@@ -165,16 +201,40 @@ export default function ResultStep({
                 <RewardShowcaseOverlay item={showcaseItem} visible={showcaseVisible} />
             ) : null}
 
-            <div className={`relative overflow-hidden rounded-[1.35rem] border px-4 py-5 ${viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
+            <div className={`relative overflow-hidden rounded-[1.35rem] border px-4 py-5 ${!battleComplete || viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(163,230,53,0.16),transparent_55%)]" />
                 <p className="relative text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/40">
-                    {survival ? "Best adapted" : "Scenario fit resolved"}
+                    {battleVoting ? "Round 1 of 3 resolved" : survival ? "Best adapted" : "Scenario fit resolved"}
                 </p>
                 <p className="relative mt-2 font-display text-3xl font-bold text-white">
-                    {viewerWon ? "You won" : "You lost"}
+                    {battleVoting ? "Community vote is next" : viewerWon ? "You won" : "You lost"}
                 </p>
-                <p className="relative mt-1 text-sm text-white/55">{winnerName} won the scenario.</p>
+                <p className="relative mt-1 text-sm text-white/55">
+                    {battleVoting
+                        ? `${winnerName} won Round 1. The battle settles after Round 3.`
+                        : `${winnerName} won the scenario.`}
+                </p>
+                {battleFinalScore ? <p className="relative mt-3 text-sm font-black text-primary-200">Final score {battleFinalScore}</p> : null}
             </div>
+
+            {battleVoting ? (
+                <div className="rounded-[1.15rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-100">Round 2 of 3 - Community vote</p>
+                    <p className="mt-2 font-display text-xl font-bold text-white">{result.votesCount} / {result.requiredVotes ?? 0} votes</p>
+                    <p className="mt-1 text-sm leading-6 text-white/55">
+                        Voting is live. If the target is not reached, the Round 1 winner takes the battle.
+                    </p>
+                    {voteTimeRemaining(result.votingDeadlineAt) ? (
+                        <p className="mt-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100">{voteTimeRemaining(result.votingDeadlineAt)} - No quorum means R1 wins</p>
+                    ) : null}
+                </div>
+            ) : null}
+
+            {isBestOfThree(result) && battleComplete && result.settlementReason === "voting_timeout_round1_fallback" ? (
+                <div className="rounded-[1.15rem] border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-50/80">
+                    Voting ended before the target was reached. The Round 1 winner takes the battle.
+                </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3">
                 <SideCard
@@ -224,9 +284,37 @@ export default function ResultStep({
                     defenderStats: opponent.gameStats,
                     damageTaken,
                     loserRemainingHearts: loserHealth,
-                    maxHearts: MAX_HEARTS
+                    maxHearts: MAX_HEARTS,
+                    challengeFormat: result.challengeFormat,
+                    battleStatus: result.battleStatus,
+                    requiredVotes: result.requiredVotes,
+                    votesCount: result.votesCount,
+                    settlementReason: result.settlementReason,
+                    finalScore: battleFinalScore
                 })}
             />
+
+            {isBestOfThree(result) && battleComplete && result.settlementReason !== "voting_timeout_round1_fallback" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Round 2 of 3 - Community</p>
+                        <p className="mt-2 text-sm font-bold text-white">
+                            The community backed {(result.round2WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName)}.
+                        </p>
+                    </div>
+                    <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Round 3 of 3 - Species</p>
+                        <p className="mt-2 text-sm font-bold text-white">
+                            Species comparison favored {(result.round3WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName)}.
+                        </p>
+                        {result.speciesComparisonSlug ? (
+                            <Link href={`/challenges/${result.speciesComparisonSlug}`} className="mt-3 inline-flex text-xs font-black text-primary-200">
+                                View species comparison
+                            </Link>
+                        ) : null}
+                    </div>
+                </div>
+            ) : null}
 
             {canOpenComparison ? (
                 <button
@@ -248,11 +336,11 @@ export default function ResultStep({
             <div className="space-y-2">
                 <button
                     type="button"
-                    disabled={!rematchEnabled || isRematching}
+                    disabled={!battleComplete || !rematchEnabled || isRematching}
                     onClick={onRematch}
-                    className={`w-full rounded-2xl px-4 py-3 text-sm font-black transition ${rematchEnabled && !isRematching ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
+                    className={`w-full rounded-2xl px-4 py-3 text-sm font-black transition ${battleComplete && rematchEnabled && !isRematching ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
                 >
-                    {isRematching ? "Running rematch..." : `Rematch for ${stakeLabel}`}
+                    {battleComplete ? isRematching ? "Running rematch..." : `Rematch for ${stakeLabel}` : "Battle settling after Round 3"}
                 </button>
                 {rematchSubtitle ? (
                     <p className="text-xs leading-5 text-white/40">{rematchSubtitle}</p>

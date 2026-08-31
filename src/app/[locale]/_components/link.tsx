@@ -144,7 +144,7 @@ export default function Link(
         >
             {children}
             {underline &&
-                <span className="block w-full scale-x-0 group-hover:scale-x-100 h-1 mt-1 rounded-full bg-primary-500 transition-transform duration-300 ease-in-out" />
+                <span className="block w-full scale-x-0 group-hover:scale-x-100 h-1 mt-1 rounded-full bg-primary-200 transition-transform duration-300 ease-in-out" />
             }
         </NextLink>
     )

@@ -11,7 +11,10 @@
       "width": 340,
       "height": 86,
       "rotate": "{p} * -3",
-      "translateX": "{p} * -250 + 20"
+      "rotateX": "{p} * -8 - 6",
+      "rotateY": "{p} * 16 + 14",
+      "translateX": "{p} * -400 - 70",
+      "translateZ": "{p} * -80 - 40"
     },
     {
       "id": "update",
@@ -21,16 +24,24 @@
       "width": 320,
       "height": 420,
       "rotate": "{p} * -5 - 3",
-      "translateX": "{p} * -250 + 20"
+      "rotateX": "{p} * -6 - 8",
+      "rotateY": "{p} * 18 + 16",
+      "translateX": "{p} * -400 - 70",
+      "translateZ": "{p} * -60 - 70"
     },
     {
       "id": "speed",
       "src": "/images/placeholders/phone-collection-card.svg",
+      "top": 36,
       "width": 340,
       "height": 150,
       "z": -10,
-      "rotate": "{p} * 6",
-      "translateY": "{p} * -86"
+      "rotate": "{p} * -4",
+      "rotateX": "{p} * 10 + 8",
+      "rotateY": "{p} * 16 + 14",
+      "translateX": "{p} * -400 - 70",
+      "translateY": "{p} * -30",
+      "translateZ": "{p} * -90 - 50"
     },
     {
       "id": "icons",
@@ -41,7 +52,10 @@
       "height": 96,
       "opacity": "{p}",
       "rotate": "{p} * 4",
-      "translateX": "{p} * 250 - 20"
+      "rotateX": "{p} * 8 + 4",
+      "rotateY": "{p} * -16 - 12",
+      "translateX": "{p} * 250 - 20",
+      "translateZ": "{p} * 90 + 50"
     },
     {
       "id": "settings",
@@ -52,7 +66,10 @@
       "height": 210,
       "opacity": "{p}",
       "rotate": "(1 - {p}) * 5",
-      "translateX": "{p} * 250 - 20"
+      "rotateX": "{p} * 6 + 5",
+      "rotateY": "{p} * -18 - 14",
+      "translateX": "{p} * 250 - 20",
+      "translateZ": "{p} * 110 + 60"
     }
   ]
 }

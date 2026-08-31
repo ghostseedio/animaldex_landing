@@ -323,7 +323,7 @@ export default function AdminCatalogClient() {
                     </div>
                     <div className="flex w-fit flex-wrap gap-2">
                         <button type="button" onClick={() => setIndexingNew(true)}
-                                className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">
+                                className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">
                             Index a new animal
                         </button>
                         <Link href="/admin/maintenance" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white hover:border-primary-300">

@@ -75,7 +75,7 @@ export default function NearbyRouteMap({
             });
 
             const originMarker = leaflet
-                .marker([origin.latitude, origin.longitude], {icon: pin("#1bc451", "◎")})
+                .marker([origin.latitude, origin.longitude], {icon: pin("#21C05E", "◎")})
                 .addTo(map)
                 .bindPopup(origin.label);
             layersRef.current.push(originMarker);

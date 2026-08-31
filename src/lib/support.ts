@@ -792,7 +792,7 @@ export async function sendSupportForwardNotification(input: {
     const metadataHtml = [
         "<div>",
         "<p>New inbound support email for AnimalDex.</p>",
-        `<p><a href="${escapeHtml(replyLink)}" style="display:inline-block;padding:10px 14px;background:#1bc451;color:#040705;text-decoration:none;border-radius:6px;font-weight:700">Reply in AnimalDex Admin</a></p>`,
+        `<p><a href="${escapeHtml(replyLink)}" style="display:inline-block;padding:10px 14px;background:#21C05E;color:#07100B;text-decoration:none;border-radius:6px;font-weight:700">Reply in AnimalDex Admin</a></p>`,
         "<dl>",
         `<dt><strong>From</strong></dt><dd>${escapeHtml(email.from ?? "(unknown)")}</dd>`,
         `<dt><strong>To</strong></dt><dd>${escapeHtml(originalTo)}</dd>`,

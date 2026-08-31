@@ -97,7 +97,7 @@ export default function SpeciesRankingCarousel({
                                     wide ? "lg:w-[164px]" : ""
                                 } ${
                                     isCurrentCapture
-                                        ? "border-[#38fa47]/80 ring-1 ring-[#38fa47]/80"
+                                        ? "border-[#A7F432]/80 ring-1 ring-[#A7F432]/80"
                                         : "border-white/10"
                                 }`}
                             >
@@ -111,7 +111,7 @@ export default function SpeciesRankingCarousel({
                                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
                                     <span
                                         className={`absolute left-2 top-2 rounded-full px-2 py-[5px] text-[10px] font-bold leading-none text-black/90 ${
-                                            isCurrentCapture ? "bg-[#38fa47]" : "bg-[#d5ddd6]"
+                                            isCurrentCapture ? "bg-[#A7F432]" : "bg-[#d5ddd6]"
                                         }`}
                                     >
                                         #{item.rank}
@@ -122,7 +122,7 @@ export default function SpeciesRankingCarousel({
                                     {item.username ? (
                                         <Link
                                             href={`/u/${encodeURIComponent(item.username)}`}
-                                            className="block truncate text-[11px] font-medium leading-[13px] text-white hover:text-[#38fa47]"
+                                            className="block truncate text-[11px] font-medium leading-[13px] text-white hover:text-[#A7F432]"
                                         >
                                             @{handle}
                                         </Link>

@@ -20,6 +20,7 @@ import {speciesEntries} from "@/data/species";
 import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
+import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 
 async function getSitemapSpeciesEntries() {
     try {
@@ -62,6 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
     const guideEntries: MetadataRoute.Sitemap = [
         {url: new URL("/wildlife-guides", getSiteUrl()).toString()},
+        {url: new URL("/wildlife-experiences", getSiteUrl()).toString()},
         ...buildGuideSitemapPaths(guideListings).map((path) => {
             const listing = guideListings.find((item) => guidePath(item) === path);
             return {url: new URL(path, getSiteUrl()).toString(), ...(listing ? {lastModified: new Date(listing.updated_at)} : {})};
@@ -105,6 +107,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             },
             {
                 url: getAbsoluteUrl(locale, "/contact")
+            },
+            {
+                url: getAbsoluteUrl(locale, "/earn-on-animaldex")
+            },
+            {
+                url: getAbsoluteUrl(locale, "/become-a-wildlife-guide")
+            },
+            {
+                url: getAbsoluteUrl(locale, "/creator-rewards")
+            },
+            {
+                url: getAbsoluteUrl(locale, "/sponsor-a-challenge")
+            },
+            {
+                url: getAbsoluteUrl(locale, "/wildlife-experiences")
             },
             {
                 url: getAbsoluteUrl(locale, "/branding")
@@ -225,6 +242,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: "daily" as const,
             priority: post.hasVideoMedia ? 0.7 : 0.55
         }));
+        const supportArticleEntries = listSupportArticles(locale).map((article) => ({
+            url: getAbsoluteUrl(locale, getSupportArticlePath(article)),
+            lastModified: new Date(article.updatedAt)
+        }));
 
         return [
             ...staticEntries,
@@ -246,7 +267,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             captureAnimalsAppEntry,
             legendaryEarthBeastHubEntry,
             ...legendaryEarthBeastPageEntries,
-            ...discoverPostEntries
+            ...discoverPostEntries,
+            ...supportArticleEntries
         ];
     });
 

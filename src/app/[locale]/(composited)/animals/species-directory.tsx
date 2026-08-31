@@ -109,7 +109,7 @@ function isSortStatKey(sort: SpeciesDirectorySort): sort is SortStatKey {
 const SORT_OPTION_ICONS: Record<SpeciesDirectorySort, {badge: string; tint: string; icon: ReactNode}> = {
     number: {
         badge: "#",
-        tint: "#38fa47",
+        tint: "#A7F432",
         icon: (
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M5 8.5h14M5 15.5h14M9.5 4.5 7.5 19.5M16.5 4.5 14.5 19.5" strokeLinecap="round" />
@@ -137,7 +137,7 @@ const SORT_OPTION_ICONS: Record<SpeciesDirectorySort, {badge: string; tint: stri
     },
     speed: {
         badge: "SPD",
-        tint: "#38fa47",
+        tint: "#A7F432",
         icon: (
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M13 3.5 6.5 13.2h5L11 20.5 17.5 10.8h-5L13 3.5Z" strokeLinejoin="round" />

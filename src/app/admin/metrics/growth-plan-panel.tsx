@@ -1136,7 +1136,7 @@ function PlanForm({
       <div className="mt-5 flex gap-2">
         <button
           disabled={saving}
-          className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+          className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
         >
           {saving ? "Saving..." : `Save ${monthLabel(month)} targets`}
         </button>
@@ -1180,7 +1180,7 @@ function NorthStarCard({
         </p>
         <button
           onClick={onEdit}
-          className="mt-4 rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+          className="mt-4 rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
         >
           Set North Star
         </button>
@@ -1335,7 +1335,7 @@ function NorthStarForm({
       <div className="mt-5 flex gap-2">
         <button
           disabled={saving}
-          className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+          className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
         >
           {saving ? "Saving..." : "Save goal and generate months"}
         </button>
@@ -1661,7 +1661,7 @@ function SocialPagesPanel({
           <button
             onClick={savePages}
             disabled={saving}
-            className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+            className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
           >
             {saving ? "Saving..." : "Save pages"}
           </button>
@@ -1894,7 +1894,7 @@ function SocialPagesPanel({
           type="button"
           onClick={saveManualIdea}
           disabled={saving}
-          className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+          className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
         >
           Save manual post
         </button>
@@ -2001,7 +2001,7 @@ function TodayCard({
         </div>
         <button
           onClick={() => onEdit(row)}
-          className="rounded-lg bg-primary-500 px-3 py-2 text-xs font-black text-canvas-950"
+          className="rounded-lg bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"
         >
           Update today
         </button>
@@ -3017,7 +3017,7 @@ export function GrowthCommandCenter({
                   <button
                     key={key}
                     onClick={() => setChartMetric(key)}
-                    className={`rounded-md px-2 py-1.5 text-[11px] font-black ${chartMetric === key ? "bg-primary-500 text-canvas-950" : "text-ink-400"}`}
+                    className={`rounded-md px-2 py-1.5 text-[11px] font-black ${chartMetric === key ? "bg-primary-400 text-canvas-950" : "text-ink-400"}`}
                   >
                     {growthMeta[key].short}
                   </button>
@@ -3073,7 +3073,7 @@ export function GrowthCommandCenter({
                   setMarketingError("");
                   setEditingDate(todayRow);
                 }}
-                className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+                className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
               >
                 Update today
               </button>
@@ -3277,7 +3277,7 @@ export function GrowthCommandCenter({
             <div className="sticky bottom-0 -mx-5 -mb-5 mt-5 flex gap-2 border-t border-line-300 bg-surface-900 px-5 py-4">
               <button
                 disabled={marketingSaving}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {marketingSaving ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-canvas-950/30 border-t-canvas-950" />

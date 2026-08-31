@@ -39,7 +39,7 @@ export default function AdminEditShortcut({editablePageSlugs}: {editablePageSlug
     return (
         <Link
             href={`/admin/seo?type=${target.type}&slug=${encodeURIComponent(target.slug)}`}
-            className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full border border-primary-300/50 bg-canvas-950/95 px-4 py-3 text-sm font-black text-primary-100 shadow-[0_16px_50px_rgba(0,0,0,.45)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-primary-500 hover:text-canvas-950 sm:bottom-7 sm:right-7"
+            className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full border border-primary-300/50 bg-canvas-950/95 px-4 py-3 text-sm font-black text-primary-100 shadow-[0_16px_50px_rgba(0,0,0,.45)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-primary-400 hover:text-canvas-950 sm:bottom-7 sm:right-7"
             aria-label={`${target.label}: ${target.slug}`}
         >
             <span aria-hidden="true">✎</span><span>{target.label}</span>

@@ -67,7 +67,8 @@ export default function MatchupsHub({
     }
 
     function handleComplete(result: MatchupResolveResult) {
-        const creditsDelta = result.winnerUserId === viewerUserId
+        const battleComplete = result.challengeFormat !== "best_of_3_v2" || result.battleStatus === "completed";
+        const creditsDelta = battleComplete && result.winnerUserId === viewerUserId
             ? result.payoutAmount - result.stakeAmount
             : -result.stakeAmount;
         applyDelta(creditsDelta);
@@ -107,14 +108,28 @@ export default function MatchupsHub({
                 defenderContextScore: result.defenderContextScore,
                 viewerWasAttacker: true,
                 viewerWon: result.winnerUserId === viewerUserId,
-                creditsDelta
+                creditsDelta,
+                challengeFormat: result.challengeFormat,
+                battleStatus: result.battleStatus,
+                requiredVotes: result.requiredVotes,
+                votesCount: result.votesCount,
+                round1WinnerCaptureId: result.round1WinnerCaptureId,
+                round2WinnerCaptureId: result.round2WinnerCaptureId,
+                round3WinnerCaptureId: result.round3WinnerCaptureId,
+                overallWinnerCaptureId: result.overallWinnerCaptureId,
+                roundsWonAttacker: result.roundsWonAttacker,
+                roundsWonDefender: result.roundsWonDefender,
+                speciesComparisonSlug: result.speciesComparisonSlug,
+                viewerVotedCaptureId: result.viewerVotedCaptureId,
+                votingDeadlineAt: result.votingDeadlineAt,
+                settlementReason: result.settlementReason
             };
             return [next, ...current.filter((item) => item.id !== next.id)];
         });
         setArena((current) => current.filter((item) => item.captureId !== result.defenderCaptureId));
     }
 
-    const winCount = history.filter((item) => item.viewerWon).length;
+    const winCount = history.filter((item) => item.viewerWon && (item.challengeFormat !== "best_of_3_v2" || item.battleStatus === "completed")).length;
     const netCredits = history.reduce((total, item) => total + item.creditsDelta, 0);
     const netCreditsLabel = netCredits >= 0 ? `+${netCredits}` : `${netCredits}`;
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import {useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
+import SettingsActivityDrawer from "@/app/[locale]/(composited)/u/[handle]/settings-activity-drawer";
 import {
     AverageTraitsCard,
     BestForTagsChartCard,
@@ -35,8 +36,9 @@ import type {
     ProfileViewerState
 } from "@/data/profile-authenticated";
 import {formatAppInteger, formatAppUsd} from "@/lib/format-numbers";
+import {categoryLabel, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
-export type ProfileTab = "history" | "stats" | "packs" | "locations";
+export type ProfileTab = "history" | "stats" | "shop" | "locations";
 
 export type ProfileContentLabels = {
     profileTitle: string;
@@ -47,6 +49,43 @@ export type ProfileContentLabels = {
     proBadge: string;
     tabStats: string;
     tabHistory: string;
+    tabShop: string;
+    settingsActivity: string;
+    earnings: string;
+    settingsEndorsements: string;
+    settingsEndorsementsDetail: string;
+    settingsMissions: string;
+    settingsMissionsDetail: string;
+    settingsCreditsUnlocks: string;
+    settingsCreditsUnlocksCount: string;
+    settingsCreditsDetail: string;
+    settingsEarningsDetail: string;
+    settingsWidgets: string;
+    settingsWidgetsDetail: string;
+    settingsLanguage: string;
+    settingsLanguageDetail: string;
+    settingsLanguageValue: string;
+    settingsCurrency: string;
+    settingsCurrencyDetail: string;
+    settingsCurrencyValue: string;
+    settingsLocationPrivacyDetail: string;
+    settingsDataUploadsDetail: string;
+    settingsDone: string;
+    settingsClose: string;
+    manageShop: string;
+    settingsPreferences: string;
+    settingsNotifications: string;
+    settingsPrivacyData: string;
+    settingsLocationPrivacy: string;
+    settingsDataUploads: string;
+    settingsSupportAbout: string;
+    settingsHelpSupport: string;
+    settingsPrivacyPolicy: string;
+    settingsTerms: string;
+    settingsAccount: string;
+    settingsAccountDetail: string;
+    settingsActivityDetail: string;
+    settingsConnectedServices: string;
     netWorthFootnote: string;
     keepScanning: string;
     wildProfileTitle: string;
@@ -132,6 +171,8 @@ type ProfileContentProps = {
         signOutButton: React.ReactNode;
     } | null;
     listedPacks: ProfileListedPack[];
+    listedGuides?: PublicGuideListing[];
+    surface?: "marketing" | "app";
 };
 
 /* ------------------------------------------------------------------ *
@@ -154,7 +195,7 @@ const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
             <rect x="16.5" y="9" width="4.5" height="12" rx="1.2" />
         </svg>
     ),
-    packs: (
+    shop: (
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
             <path d="M12 2.2 21.4 6v1.1H2.6V6z" />
             <path d="M3.4 8.6h17.2v10.1a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2zM8.5 11.4h7v1.9h-7z" fillOpacity="1" />
@@ -168,12 +209,58 @@ const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
     )
 };
 
-const TAB_LABELS: Record<ProfileTab, string> = {
-    history: "History",
-    stats: "Stats",
-    packs: "Packs",
-    locations: "Locations"
-};
+function ProfileChromeButton({
+    children,
+    onClick,
+    href,
+    ariaLabel
+}: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    href?: string;
+    ariaLabel: string;
+}) {
+    const className =
+        "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.1] bg-[#12351C] text-white transition hover:bg-[#1a4528]";
+
+    if (href) {
+        return (
+            <Link href={href} aria-label={ariaLabel} className={className}>
+                {children}
+            </Link>
+        );
+    }
+
+    return (
+        <button type="button" onClick={onClick} aria-label={ariaLabel} className={className}>
+            {children}
+        </button>
+    );
+}
+
+function ProfileMessagesIcon() {
+    return (
+        <svg viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill="currentColor" aria-hidden="true">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H9.7L5 18.2V15H6.5A2.5 2.5 0 0 1 4 12.5v-7Z" />
+        </svg>
+    );
+}
+
+function ProfileEditIcon() {
+    return (
+        <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+    );
+}
+
+function ProfileSettingsIcon() {
+    return (
+        <svg viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+    );
+}
 
 /* ------------------------------------------------------------------ *
  * Chrome — iOS `profileScrollableChrome`
@@ -241,7 +328,7 @@ function ProfileLocationsMap({visits}: {visits: ProfileLocationVisit[]}) {
                     <div
                         key={visit.id}
                         title={`${visit.label} · ${visit.captureCount} captures`}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary-100/45 bg-primary-400/25 shadow-[0_0_30px_rgba(56,250,71,.24)] backdrop-blur-[2px]"
+                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary-100/45 bg-primary-400/25 shadow-[0_0_30px_rgba(167,244,50,.24)] backdrop-blur-[2px]"
                         style={{left: `${left}%`, top: `${top}%`, width: size, height: size}}
                     >
                         <span className="absolute inset-0 grid place-items-center text-[0.65rem] font-black text-white">{visit.captureCount}</span>
@@ -265,7 +352,7 @@ function HeadToHeadPrompt({onOpen}: {onOpen: () => void}) {
         >
             <span
                 className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full"
-                style={{backgroundColor: "rgba(56,250,71,0.10)", color: THEME.neon}}
+                style={{backgroundColor: "rgba(167,244,50,0.10)", color: THEME.neon}}
             >
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M8 7H3m0 0 3-3M3 7l3 3" />
@@ -296,7 +383,9 @@ export default function ProfileContent({
     viewer,
     viewerAvatarUrl,
     ownerExtras,
-    listedPacks
+    listedPacks,
+    listedGuides = [],
+    surface = "marketing"
 }: ProfileContentProps) {
     const [activeTab, setActiveTab] = useState<ProfileTab>("history");
     const [activeChromePreset, setActiveChromePreset] = useState(profile.chromePreset);
@@ -306,6 +395,7 @@ export default function ProfileContent({
     const [chromeCollapsed, setChromeCollapsed] = useState(false);
     const [isWildInsightScope, setIsWildInsightScope] = useState(false);
     const [showHeadToHead, setShowHeadToHead] = useState(false);
+    const [showSettingsActivity, setShowSettingsActivity] = useState(false);
 
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
@@ -317,10 +407,16 @@ export default function ProfileContent({
 
     const tabs = useMemo<ProfileTab[]>(
         () => (profile.canViewLocations
-            ? ["history", "stats", "packs", "locations"]
-            : ["history", "stats", "packs"]),
+            ? ["history", "stats", "shop", "locations"]
+            : ["history", "stats", "shop"]),
         [profile.canViewLocations]
     );
+    const tabLabel = (tab: ProfileTab) => {
+        if (tab === "history") return labels.tabHistory;
+        if (tab === "stats") return labels.tabStats;
+        if (tab === "shop") return labels.tabShop;
+        return labels.locationsTitle;
+    };
 
     const binders = useMemo<ProfileBinder[]>(
         () => profile.powerSetCompletions.map((completion) => ({
@@ -418,11 +514,30 @@ export default function ProfileContent({
     }
 
     return (
-        <div className="flex flex-col gap-6 md:gap-8">
+        <div className={`flex flex-col gap-6 ${surface === "app" ? "md:gap-7" : "md:gap-8"}`}>
             {viewer.isLoggedIn && !viewer.isOwner && viewer.viewerUsername ? (
                 <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-sm text-white/45">
                     {labels.viewSignedInAs.replace("{username}", viewer.viewerUsername)}
                 </p>
+            ) : null}
+
+            {viewer.isOwner && surface === "app" ? (
+                <div className="sticky top-0 z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-[#07100B]/95 px-[18px] py-2.5 backdrop-blur-xl md:-mx-8">
+                    <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
+                        <ProfileMessagesIcon />
+                    </ProfileChromeButton>
+                    <p className={`truncate px-3 text-center font-display text-sm font-bold text-white transition ${chromeCollapsed ? "opacity-100" : "opacity-0"}`}>
+                        {profile.displayName}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => setShowSettingsActivity(true)}
+                        aria-label={labels.settingsActivity}
+                        className="grid h-8 w-8 place-items-center text-primary-200 transition hover:text-primary-100"
+                    >
+                        <ProfileSettingsIcon />
+                    </button>
+                </div>
             ) : null}
 
             <div
@@ -432,51 +547,72 @@ export default function ProfileContent({
                         : "max-h-[28rem] mb-0 translate-y-0 opacity-100"
                 }`}
             >
-            <header className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
+            <header className="flex items-center gap-3 px-[18px] pb-1 pt-1 md:px-0">
                 {profile.avatarUrl ? (
                     <Image
                         src={profile.avatarUrl}
                         alt={`${profile.displayName}'s avatar`}
-                        width={56}
-                        height={56}
+                        width={52}
+                        height={52}
                         priority
-                        className="h-14 w-14 shrink-0 rounded-2xl border border-white/15 object-cover shadow-lg shadow-black/30"
+                        className="h-[52px] w-[52px] shrink-0 rounded-full border border-white/[0.1] object-cover shadow-[0_0_24px_rgba(139,92,246,0.12)]"
                     />
                 ) : (
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary-300/20 bg-primary-400/10 font-display text-xl font-bold text-primary-100">
+                    <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-[#12351C] font-display text-lg font-bold text-primary-100">
                         {profile.displayName.slice(0, 1).toUpperCase()}
                     </div>
                 )}
-                <div className="min-w-0 flex-1 text-left">
+                <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <h1 className="truncate font-display text-xl font-bold text-white">{profile.displayName}</h1>
+                        <h1 className="truncate text-[17px] font-extrabold text-white">{profile.displayName}</h1>
                         {profile.isPro ? (
-                            <span className="shrink-0 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">Pro</span>
+                            <span className="shrink-0 rounded-full bg-primary-400 px-2 py-0.5 text-[10px] font-black uppercase text-black">{labels.proBadge}</span>
+                        ) : null}
+                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                            {viewer.isOwner ? (
+                                <ProfileChromeButton onClick={() => setShowProfileStyle(true)} ariaLabel={labels.editProfile}>
+                                    <ProfileEditIcon />
+                                </ProfileChromeButton>
+                            ) : viewer.isLoggedIn ? (
+                                <ProfileChromeButton href={`${localePrefix}/app/messages/${encodeURIComponent(profile.userId)}`} ariaLabel="Message">
+                                    <ProfileMessagesIcon />
+                                </ProfileChromeButton>
+                            ) : null}
+                            {shareButton ? (
+                                <div className="[&_button]:grid [&_button]:h-9 [&_button]:w-9 [&_button]:place-items-center [&_button]:rounded-full [&_button]:border [&_button]:border-white/[0.1] [&_button]:bg-[#12351C] [&_button]:p-0 [&_button]:text-white">
+                                    {shareButton}
+                                </div>
+                            ) : null}
+                            {viewer.isOwner && surface !== "app" ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSettingsActivity(true)}
+                                    aria-label={labels.settingsActivity}
+                                    className="grid h-9 w-9 place-items-center text-primary-200 transition hover:text-primary-100"
+                                >
+                                    <ProfileSettingsIcon />
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        <p className="truncate text-[15px] font-medium text-white/55">@{profile.username}</p>
+                        {viewer.isOwner && ownerExtras?.credits ? (
+                            <a
+                                href={appStoreUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold tabular-nums ${
+                                    ownerExtras.credits.isLow
+                                        ? "bg-primary-400 text-black"
+                                        : "border border-primary-200/35 bg-primary-400/14 text-primary-200"
+                                }`}
+                            >
+                                <span aria-hidden="true">⚡</span>
+                                {ownerExtras.credits.balance}
+                            </a>
                         ) : null}
                     </div>
-                    <p className="truncate text-sm font-semibold text-white/45">@{profile.username}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                    {viewer.isLoggedIn && !viewer.isOwner ? (
-                        <Link
-                            href={`${localePrefix}/app/messages/${encodeURIComponent(profile.userId)}`}
-                            aria-label="Message"
-                            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:bg-white/[0.1]"
-                        >
-                            <span aria-hidden="true">💬</span>
-                        </Link>
-                    ) : null}
-                    {viewer.isOwner ? (
-                        <button
-                            type="button"
-                            onClick={() => setShowProfileStyle(true)}
-                            aria-label={labels.editProfile}
-                            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:bg-white/[0.1]"
-                        >
-                            <span aria-hidden="true">✎</span>
-                        </button>
-                    ) : null}
-                    {shareButton}
                 </div>
             </header>
 
@@ -544,8 +680,8 @@ export default function ProfileContent({
             </div>
             </div>
 
-            <nav aria-label="Profile sections" className="sticky top-16 z-20 -mx-4 border-b border-white/10 bg-black/95 backdrop-blur-xl md:top-0 md:-mx-8">
-                <div className="grid" style={{gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`}}>
+            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-[#07100B]/95 backdrop-blur-xl md:-mx-8 ${viewer.isOwner && surface === "app" ? "top-[2.65rem]" : "top-0"}`}>
+                <div className="grid px-[18px]" style={{gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`}}>
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab;
                         return (
@@ -555,7 +691,7 @@ export default function ProfileContent({
                                 role="tab"
                                 aria-selected={isActive}
                                 onClick={() => setActiveTab(tab)}
-                                aria-label={TAB_LABELS[tab]}
+                                aria-label={tabLabel(tab)}
                                 className="flex flex-col items-center gap-1.5 pt-2.5"
                             >
                                 <span className={`flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
@@ -620,19 +756,73 @@ export default function ProfileContent({
                             <p className="mt-1 break-all font-mono text-xs text-white/[0.62]">{profile.userId}</p>
                         </StatsPanel>
                     ) : null}
-                    {viewer.isOwner && ownerExtras?.signOutButton ? (
-                        <div className="px-4 pt-4 md:px-8">{ownerExtras.signOutButton}</div>
-                    ) : null}
                 </div>
             ) : null}
 
-            {activeTab === "packs" ? (
-                listedPacks.length === 0 ? (
-                    <p className="px-[18px] py-7 text-center text-[15px] font-medium text-white/[0.62]">
-                        {labels.packMarketplaceEmpty}
-                    </p>
+            {activeTab === "shop" ? (
+                listedPacks.length === 0 && listedGuides.length === 0 ? (
+                    <div className="rounded-[1.35rem] border border-white/10 bg-surface-900/60 p-5">
+                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-primary-200">{labels.tabShop}</p>
+                        <h3 className="mt-2 font-display text-2xl font-bold text-white">
+                            {viewer.isOwner ? labels.manageShop : labels.packMarketplaceEmpty}
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-white/45">
+                            {viewer.isOwner
+                                ? "Sealed Packs sell for Credits. Wildlife Guides are real-money experiences you can set up here on the web."
+                                : labels.packMarketplaceEmpty}
+                        </p>
+                        {viewer.isOwner ? (
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                <a href={appStoreUrl} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
+                                    <p className="font-display text-lg font-bold text-white">Sealed Packs</p>
+                                    <p className="mt-1 text-xs leading-5 text-white/40">Bundle eligible captures into mystery packs.</p>
+                                </a>
+                                <Link href={`${localePrefix}/app/guides`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
+                                    <p className="font-display text-lg font-bold text-white">Wildlife Guides</p>
+                                    <p className="mt-1 text-xs leading-5 text-white/40">Apply, publish experiences, and manage bookings.</p>
+                                </Link>
+                            </div>
+                        ) : null}
+                    </div>
                 ) : (
                     <div className="flex flex-col gap-3">
+                        {viewer.isOwner ? (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <a href={appStoreUrl} className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
+                                    <p className="font-display text-lg font-bold text-white">Sealed Packs</p>
+                                    <p className="mt-1 text-xs text-white/40">Manage pack listings in AnimalDex.</p>
+                                </a>
+                                <Link href={`${localePrefix}/app/guides`} className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
+                                    <p className="font-display text-lg font-bold text-white">Wildlife Guides</p>
+                                    <p className="mt-1 text-xs text-white/40">Manage guide listings and bookings.</p>
+                                </Link>
+                            </div>
+                        ) : null}
+                        {listedGuides.map((guide) => (
+                            <Link
+                                key={guide.id}
+                                href={guidePath(guide)}
+                                className="rounded-[1.2rem] border border-white/10 bg-surface-900/60 p-4 transition hover:bg-surface-900/80"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-primary-200">
+                                            {categoryLabel(guide.service_category)}
+                                        </p>
+                                        <h3 className="mt-1 font-display text-xl font-bold text-white">{guide.title}</h3>
+                                        <p className="mt-1 text-sm text-white/45">
+                                            {guideAreaServedName(guide)} · {formatGuidePrice(guide.amount_minor, guide.currency_code, locale)} / person
+                                        </p>
+                                        {guide.public_summary ? (
+                                            <p className="mt-2 line-clamp-2 text-xs text-white/35">{guide.public_summary}</p>
+                                        ) : null}
+                                    </div>
+                                    <span className="shrink-0 rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-black">
+                                        View
+                                    </span>
+                                </div>
+                            </Link>
+                        ))}
                         {listedPacks.map((pack) => (
                             <div key={pack.id} className="rounded-[1.2rem] border border-white/10 bg-surface-900/60 p-4">
                                 <div className="flex items-start justify-between gap-3">
@@ -730,6 +920,17 @@ export default function ProfileContent({
                         avatarUrl: profile.avatarUrl
                     }}
                     onClose={() => setShowHeadToHead(false)}
+                />
+            ) : null}
+
+            {showSettingsActivity ? (
+                <SettingsActivityDrawer
+                    labels={labels}
+                    localePrefix={localePrefix}
+                    appStoreUrl={appStoreUrl}
+                    credits={ownerExtras?.credits ?? null}
+                    onClose={() => setShowSettingsActivity(false)}
+                    signOutButton={ownerExtras?.signOutButton}
                 />
             ) : null}
 

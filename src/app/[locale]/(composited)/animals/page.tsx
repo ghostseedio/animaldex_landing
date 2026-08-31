@@ -87,18 +87,18 @@ const catalogQuickLinks: CatalogQuickLink[] = [
 
 const TIER_CHIP_STYLE = {
     S: {
-        color: "rgba(56, 250, 71, 1)",
-        background: "rgba(56, 250, 71, 0.14)",
-        border: "rgba(56, 250, 71, 0.4)",
-        activeBackground: "rgba(56, 250, 71, 0.22)",
-        activeBorder: "rgba(56, 250, 71, 0.55)"
+        color: "rgba(167, 244, 50, 1)",
+        background: "rgba(167, 244, 50, 0.14)",
+        border: "rgba(167, 244, 50, 0.4)",
+        activeBackground: "rgba(167, 244, 50, 0.22)",
+        activeBorder: "rgba(167, 244, 50, 0.55)"
     },
     A: {
-        color: "rgba(56, 250, 71, 0.92)",
-        background: "rgba(56, 250, 71, 0.12)",
-        border: "rgba(56, 250, 71, 0.34)",
-        activeBackground: "rgba(56, 250, 71, 0.2)",
-        activeBorder: "rgba(56, 250, 71, 0.5)"
+        color: "rgba(167, 244, 50, 0.92)",
+        background: "rgba(167, 244, 50, 0.12)",
+        border: "rgba(167, 244, 50, 0.34)",
+        activeBackground: "rgba(167, 244, 50, 0.2)",
+        activeBorder: "rgba(167, 244, 50, 0.5)"
     },
     B: {
         color: "rgba(34, 211, 238, 0.95)",

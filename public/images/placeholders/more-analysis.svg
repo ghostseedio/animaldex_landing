@@ -64,31 +64,31 @@
   <rect x="85" y="85" width="248" height="228" rx="29" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
 
   <rect x="104" y="106" width="154" height="42" rx="21" fill="#12391C"/>
-<text x="181" y="133" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="0.8">LEAST CONCERN</text>
+<text x="181" y="133" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="0.8">LEAST CONCERN</text>
     <!-- Main copy -->
-    <text x="374" y="108" fill="#31FF4F" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="4">AI SCAN RESULT</text>
-<text x="374" y="168" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="56" font-weight="900">Red-lipped Batfish</text>
+    <text x="374" y="108" fill="#A7F432" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="4">AI SCAN RESULT</text>
+<text x="374" y="168" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="56" font-weight="900">Red-lipped Batfish</text>
 <text x="374" y="212" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="30" font-weight="800">Batfish</text>
 <text x="374" y="248" fill="#8E968F" font-family="Georgia, serif" font-size="28" font-style="italic">Ogcocephalus darwini</text>
     <!-- Chips -->
 <rect x="374" y="276" width="118" height="50" rx="25" fill="#261618"/>
 <rect x="375" y="277" width="116" height="48" rx="24" stroke="#873037" stroke-width="2"/>
 <text x="398" y="306" fill="#F0525C" font-family="Arial, sans-serif" font-size="17" font-weight="900" letter-spacing="1.6">TIER</text>
-<text x="456" y="309" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="27" font-weight="900">B</text>
+<text x="456" y="309" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="27" font-weight="900">B</text>
 
 <rect x="510" y="276" width="220" height="50" rx="25" fill="#202320"/>
 <rect x="511" y="277" width="218" height="48" rx="24" stroke="#424A44" stroke-width="2"/>
 <text x="532" y="306" fill="#AEB7B0" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="1.5">CONF</text>
-<text x="702" y="309" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="27" font-weight="900">99.8%</text>
+<text x="702" y="309" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="27" font-weight="900">99.8%</text>
 
 <rect x="748" y="276" width="172" height="50" rx="25" fill="#202320"/>
 <rect x="749" y="277" width="170" height="48" rx="24" stroke="#424A44" stroke-width="2"/>
-<text x="772" y="306" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="1.5">RAR</text>
-<text x="890" y="309" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="27" font-weight="900">54%</text>
+<text x="772" y="306" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="1.5">RAR</text>
+<text x="890" y="309" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="27" font-weight="900">54%</text>
 
 <rect x="938" y="276" width="90" height="50" rx="25" fill="#0E2113"/>
 <rect x="939" y="277" width="88" height="48" rx="24" stroke="#1E9638" stroke-width="2"/>
-<text x="983" y="309" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="22" font-weight="900">WILD</text>
+<text x="983" y="309" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="22" font-weight="900">WILD</text>
     <!-- Bottom cards -->
     <g filter="url(#shadow)">
       <rect x="44" y="402" width="292" height="316" rx="32" fill="url(#statCard)"/>
@@ -97,16 +97,16 @@
     <text x="84" y="446" fill="#9BA39D" font-family="Arial, sans-serif" font-size="19" font-weight="900" letter-spacing="2.2">ENCOUNTER STATS</text>
     <rect x="84" y="482" width="212" height="42" rx="21" fill="#252A27"/>
     <text x="108" y="510" fill="#9BA39D" font-family="Arial, sans-serif" font-size="18" font-weight="900">DOM</text>
-    <text x="262" y="511" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="26" font-weight="900">18</text>
+    <text x="262" y="511" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="26" font-weight="900">18</text>
 
     <rect x="84" y="540" width="212" height="42" rx="21" fill="#12391C"/>
-    <text x="108" y="568" fill="#31FF4F" font-family="Arial, sans-serif" font-size="18" font-weight="900">SPD</text>
-    <text x="262" y="569" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="26" font-weight="900">27</text>
+    <text x="108" y="568" fill="#A7F432" font-family="Arial, sans-serif" font-size="18" font-weight="900">SPD</text>
+    <text x="262" y="569" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="26" font-weight="900">27</text>
 
     <rect x="84" y="598" width="212" height="42" rx="21" fill="#252A27"/>
     <text x="108" y="626" fill="#9BA39D" font-family="Arial, sans-serif" font-size="18" font-weight="900">INT</text>
-    <text x="262" y="627" text-anchor="end" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="26" font-weight="900">21</text>
-    <text x="274" y="627" fill="#31FF4F" font-family="Arial, sans-serif" font-size="18" font-weight="900">+1</text>
+    <text x="262" y="627" text-anchor="end" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="26" font-weight="900">21</text>
+    <text x="274" y="627" fill="#A7F432" font-family="Arial, sans-serif" font-size="18" font-weight="900">+1</text>
 
         <!-- Center card: region map -->
 <g filter="url(#shadow)">
@@ -137,10 +137,10 @@
 />
 
 <!-- Simplified Galápagos island cluster highlight -->
-<circle cx="462" cy="560" r="28" fill="#31FF4F" opacity="0.16"/>
-<circle cx="462" cy="560" r="18" fill="#31FF4F" opacity="0.22"/>
-<circle cx="462" cy="560" r="8" fill="#31FF4F"/>
-<circle cx="462" cy="560" r="12" fill="none" stroke="#31FF4F" stroke-width="2" opacity="0.7"/>
+<circle cx="462" cy="560" r="28" fill="#A7F432" opacity="0.16"/>
+<circle cx="462" cy="560" r="18" fill="#A7F432" opacity="0.22"/>
+<circle cx="462" cy="560" r="8" fill="#A7F432"/>
+<circle cx="462" cy="560" r="12" fill="none" stroke="#A7F432" stroke-width="2" opacity="0.7"/>
 
 <!-- Small island dots -->
 <circle cx="450" cy="552" r="3" fill="#24D6C8"/>
@@ -149,26 +149,26 @@
 <circle cx="476" cy="573" r="2.5" fill="#24D6C8"/>
 
 <!-- Label callout -->
-<path d="M470 560C500 552 526 536 554 516" stroke="#31FF4F" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 6"/>
+<path d="M470 560C500 552 526 536 554 516" stroke="#A7F432" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 6"/>
 <rect x="526" y="500" width="94" height="34" rx="17" fill="#12391C"/>
-<text x="573" y="523" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="14" font-weight="900">GALÁPAGOS</text>
+<text x="573" y="523" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="14" font-weight="900">GALÁPAGOS</text>
 
 <!-- Region details -->
 <rect x="424" y="650" width="104" height="34" rx="17" fill="#202724"/>
-<text x="476" y="673" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="16" font-weight="900">Ecuador</text>
+<text x="476" y="673" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="16" font-weight="900">Ecuador</text>
 
 <rect x="540" y="650" width="106" height="34" rx="17" fill="#202724"/>
-<text x="593" y="673" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="16" font-weight="900">Seafloor</text>
+<text x="593" y="673" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="16" font-weight="900">Seafloor</text>
     <rect x="760" y="402" width="316" height="316" rx="32" fill="url(#insightCard)"/>
 <rect x="760.75" y="402.75" width="314.5" height="314.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
-    <text x="796" y="458" fill="#31FF4F" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="2.2">APPLIED INSIGHT</text>
-<text x="796" y="510" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="30" font-weight="900">Own your strange</text>
+    <text x="796" y="458" fill="#A7F432" font-family="Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="2.2">APPLIED INSIGHT</text>
+<text x="796" y="510" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="30" font-weight="900">Own your strange</text>
 <text x="796" y="558" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="22" font-weight="700">Standing out can be</text>
 <text x="796" y="590" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="22" font-weight="700">your advantage when</text>
 <text x="796" y="622" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="22" font-weight="700">the environment shifts.</text>
 
 <rect x="796" y="656" width="172" height="42" rx="21" fill="#12391C"/>
-<text x="882" y="684" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="21" font-weight="900">Listen</text>
+<text x="882" y="684" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="21" font-weight="900">Listen</text>
 
-<circle cx="778" cy="442" r="5" fill="#31FF4F" filter="url(#glow)"/>
+<circle cx="778" cy="442" r="5" fill="#A7F432" filter="url(#glow)"/>
   </svg>

@@ -30,7 +30,7 @@ const LABEL_PADDING_X = 12;
 const LABEL_HEIGHT = 28;
 
 const ZONE_TONES = [
-    {fill: "#1bc451", text: "text-primary-200", dot: "bg-primary-400"},
+    {fill: "#21C05E", text: "text-primary-200", dot: "bg-primary-400"},
     {fill: "#38bdf8", text: "text-sky-200", dot: "bg-sky-400"},
     {fill: "#f59e0b", text: "text-amber-200", dot: "bg-amber-400"},
     {fill: "#a78bfa", text: "text-violet-200", dot: "bg-violet-400"},

@@ -2,6 +2,7 @@ import createIntlMiddleware from "next-intl/middleware";
 import {type NextRequest, NextResponse} from "next/server";
 import {localeConfig} from "@/i18n";
 import {updateSupabaseSession} from "@/lib/supabase/middleware";
+import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {
     isProtectedAppPath,
     middlewareShouldRefreshSession,
@@ -40,29 +41,34 @@ function redirectToAccount(request: NextRequest, locale: string, sessionResponse
  * - Authorization for APIs and RSC still uses server `auth.getUser()`.
  */
 export async function middleware(request: NextRequest) {
-    const response = intlMiddleware(request);
-    const {locale} = splitLocalePath(request.nextUrl.pathname);
-    const hasAuthCookie = requestHasSupabaseAuthCookie(request.cookies.getAll());
-    const isProtected = isProtectedAppPath(request.nextUrl.pathname);
+    const timer = createDevRequestTimer("middleware", {path: request.nextUrl.pathname});
+    try {
+        const response = intlMiddleware(request);
+        const {locale} = splitLocalePath(request.nextUrl.pathname);
+        const hasAuthCookie = requestHasSupabaseAuthCookie(request.cookies.getAll());
+        const isProtected = isProtectedAppPath(request.nextUrl.pathname);
 
-    if (!middlewareShouldRefreshSession(request.nextUrl.pathname, hasAuthCookie)) {
-        traceRequestAmplification("middleware-public-anonymous", {path: request.nextUrl.pathname});
-        return response;
+        if (!middlewareShouldRefreshSession(request.nextUrl.pathname, hasAuthCookie)) {
+            traceRequestAmplification("middleware-public-anonymous", {path: request.nextUrl.pathname});
+            return response;
+        }
+
+        if (isProtected && !hasAuthCookie) {
+            traceRequestAmplification("middleware-protected-anonymous-redirect", {path: request.nextUrl.pathname});
+            return redirectToAccount(request, locale);
+        }
+
+        const session = await timeDevStep(timer, "supabase.session", () => updateSupabaseSession(request, response));
+
+        if (isProtected && !session.user) {
+            traceRequestAmplification("middleware-protected-invalid-session", {path: request.nextUrl.pathname});
+            return redirectToAccount(request, locale, session.response);
+        }
+
+        return session.response;
+    } finally {
+        finishDevRequestTimer(timer, {path: request.nextUrl.pathname});
     }
-
-    if (isProtected && !hasAuthCookie) {
-        traceRequestAmplification("middleware-protected-anonymous-redirect", {path: request.nextUrl.pathname});
-        return redirectToAccount(request, locale);
-    }
-
-    const session = await updateSupabaseSession(request, response);
-
-    if (isProtected && !session.user) {
-        traceRequestAmplification("middleware-protected-invalid-session", {path: request.nextUrl.pathname});
-        return redirectToAccount(request, locale, session.response);
-    }
-
-    return session.response;
 }
 
 export const config = {

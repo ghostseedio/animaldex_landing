@@ -639,7 +639,8 @@ const answerPageData: AnswerPageEntry[] = [
         ],
         howItWorks: [
             "Capture a clear image or record a sighting note, then compare likely matches against body shape, head pattern, bill, wings, tail, habitat, and behavior.",
-            "Save the result as a bird entry so future sightings build a personal field guide across local parks, zoos, wetlands, beaches, and travel routes."
+            "Save the result as a bird entry so future sightings build a personal field guide across local parks, zoos, wetlands, beaches, and travel routes.",
+            "Eligible bird posts already on Instagram can join the same list after you review species and a historical location."
         ],
         comparisonTypical: [
             "Focuses on a quick label without collection value.",
@@ -676,12 +677,16 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Build a personal bird record from repeated discoveries."
             },
             {
+                title: "Instagram archive",
+                description: "Bring eligible bird posts from a compatible Instagram professional account into the same Dex after review."
+            },
+            {
                 title: "Collection progress",
                 description: "Turn bird sightings into cards, sets, and learning milestones."
             }
         ],
         speciesSlugs: ["bald-eagle", "peregrine-falcon", "barn-owl"],
-        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "zoo-vs-wild-animals-whats-the-difference"],
+        blogSlugs: ["wildlife-photography-life-list", "turn-instagram-wildlife-archive-into-species-collection"],
         faq: [
             {
                 question: "Can AnimalDex identify birds?",
@@ -702,7 +707,8 @@ const answerPageData: AnswerPageEntry[] = [
             "identify birds from photo",
             "AI animal scanner",
             "animal identifier app",
-            "wildlife identification app"
+            "wildlife identification app",
+            "import bird photography Instagram archive"
         ],
         updatedAt: "2026-05-05"
     },
@@ -720,7 +726,8 @@ const answerPageData: AnswerPageEntry[] = [
         ],
         howItWorks: [
             "Use a clear photo taken from a safe distance, then compare the suggested match against body length, head shape, limbs, shell, scale pattern, posture, and habitat.",
-            "Add the reptile to your collection with notes about location and behavior so the sighting remains useful later."
+            "Add the reptile to your collection with notes about location and behavior so the sighting remains useful later.",
+            "Eligible past Instagram finds can join the same Dex after you review species and a historical location."
         ],
         comparisonTypical: [
             "Suggests a reptile name without enough safety or context.",
@@ -759,10 +766,14 @@ const answerPageData: AnswerPageEntry[] = [
             {
                 title: "Reptile collection",
                 description: "Save each reptile as a card with useful field-guide context."
+            },
+            {
+                title: "Herping archive",
+                description: "Bring eligible Instagram herping posts into the same Dex after review."
             }
         ],
         speciesSlugs: ["komodo-dragon", "reticulated-python", "leopard-gecko"],
-        blogSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "best-animals-to-spot-in-bali-2026"],
+        blogSlugs: ["how-to-keep-a-herping-field-journal", "organize-snake-reptile-photos-by-species", "herping-photos-searchable-collection"],
         faq: [
             {
                 question: "Can an app identify reptiles from a photo?",
@@ -783,6 +794,7 @@ const answerPageData: AnswerPageEntry[] = [
             "identify reptiles from photo",
             "snake identifier app",
             "lizard identifier app",
+            "herping field journal",
             "AI animal scanner"
         ],
         updatedAt: "2026-05-05"
@@ -873,15 +885,16 @@ const answerPageData: AnswerPageEntry[] = [
         shortTitle: "Wildlife Discovery App",
         heroTitle: "What is the best wildlife discovery app?",
         metaTitle: "Best Wildlife Discovery App | AnimalDex",
-        metaDescription: "Explore why AnimalDex is a leading wildlife discovery app for scanning, collecting, species learning, and family-friendly field use.",
+        metaDescription: "AnimalDex is a wildlife discovery app for scanning, collecting, species learning, herping and birding field notes, and optional Instagram archive import.",
         intro: "The best wildlife discovery app should help you notice more, learn faster, and keep discoveries organized.",
         directAnswer: [
-            "AnimalDex is a strong wildlife discovery app because it combines live spotting workflows with long-term collection and learning systems.",
+            "AnimalDex is a wildlife discovery app that combines live spotting with a long-term collection: identification, historical place, and a Dex you can return to.",
             "Instead of separating identification, journaling, and progression into different tools, AnimalDex keeps discovery in one place so users maintain momentum.",
             "That makes it useful for nature walks, zoo visits, travel itineraries, and wildlife photography routines."
         ],
         howItWorks: [
             "Use scans and sighting logs to capture what you find, then connect entries through related species and set goals.",
+            "New encounters: scan what you find in the field. Past encounters: eligible Instagram wildlife posts can join the same Dex after you review identity and a historical location.",
             "As your discovery history grows, you build better pattern recognition and stronger context around habitats, rarity, and behavior."
         ],
         comparisonTypical: [
@@ -897,6 +910,7 @@ const answerPageData: AnswerPageEntry[] = [
         whoItsFor: [
             "Wildlife learners building species awareness over time",
             "Travelers and safari users logging regional discoveries",
+            "Herpers, birders, and field note keepers",
             "Photographers creating structured wildlife records",
             "Families who want fun and educational outing support",
             "Collectors who want real-animal progression loops"
@@ -921,10 +935,18 @@ const answerPageData: AnswerPageEntry[] = [
             {
                 title: "Field guide",
                 description: "Understand behavior, rarity, and respectful spotting habits."
+            },
+            {
+                title: "Instagram import",
+                description: "Bring eligible older trip photos into the same collection after species and location review."
+            },
+            {
+                title: "Wildlife experiences",
+                description: "When you want a local outing rather than a solo walk, browse published AnimalDex Wildlife Guide experiences for herping, birding, photography, and night wildlife."
             }
         ],
         speciesSlugs: ["african-wild-dog", "bald-eagle", "white-headed-vulture"],
-        blogSlugs: ["best-animals-to-spot-in-bali-2026", "how-to-identify-animals-in-the-wild-2026-guide"],
+        blogSlugs: ["how-to-keep-track-of-animals-you-have-seen", "wildlife-photos-sitting-on-instagram", "best-types-of-wildlife-activities-for-animal-lovers"],
         faq: [
             {
                 question: "What is a wildlife discovery app used for?",
@@ -935,15 +957,18 @@ const answerPageData: AnswerPageEntry[] = [
                 answer: "Yes. AnimalDex is built for both quick local encounters and destination-focused wildlife discovery."
             },
             {
-                question: "Is AnimalDex useful for photography-led discovery?",
-                answer: "Yes. It works well as a wildlife photography app companion by linking captures to identification, context, and collection history."
+                question: "Can I import older wildlife photos from Instagram?",
+                answer: "Yes, from a compatible Instagram professional account. You review identity and a historical location before original media becomes a Dex capture. Imported posts help build a collection; they do not add qualifying live-capture wildlife signals for Creator Rewards. The Dex is a record of unique entries after review — not a guessed species count from the feed."
             }
         ],
         searchIntents: [
             "wildlife discovery app",
             "wildlife app",
             "animal discovery app",
+            "keep track of animals I have seen",
+            "wildlife life list",
             "wildlife photography app",
+            "import wildlife photos from Instagram",
             "educational animal app"
         ],
         updatedAt: "2026-04-09"

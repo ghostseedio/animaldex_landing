@@ -12,9 +12,9 @@ import {
 /** Matches iOS IdentityKindChip palette groups. */
 const TONE_STYLES: Record<IdentityKindTone, {color: string; background: string; border: string}> = {
     species: {
-        color: "rgba(56, 250, 71, 1)",
-        background: "rgba(56, 250, 71, 0.12)",
-        border: "rgba(56, 250, 71, 0.34)"
+        color: "rgba(167, 244, 50, 1)",
+        background: "rgba(167, 244, 50, 0.12)",
+        border: "rgba(167, 244, 50, 0.34)"
     },
     group: {
         color: "rgba(110, 224, 184, 1)",

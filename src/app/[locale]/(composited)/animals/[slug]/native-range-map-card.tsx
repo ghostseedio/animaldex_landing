@@ -48,7 +48,7 @@ function AnimalCardHeader() {
         <div className="flex items-center gap-2">
             <svg
                 aria-hidden="true"
-                className="h-[17px] w-[17px] shrink-0 text-[#38fa47]"
+                className="h-[17px] w-[17px] shrink-0 text-[#A7F432]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
             >
@@ -66,7 +66,7 @@ function AnimalCardHeader() {
 
 function AnimalCardShell({children, wide = false}: {children: ReactNode; wide?: boolean}) {
     return (
-        <div className={`flex w-full flex-col gap-[10px] border-b border-white/10 bg-[linear-gradient(135deg,rgba(56,250,71,0.08),rgba(255,255,255,0.03))] px-5 py-[18px] ${
+        <div className={`flex w-full flex-col gap-[10px] border-b border-white/10 bg-[linear-gradient(135deg,rgba(167,244,50,0.08),rgba(255,255,255,0.03))] px-5 py-[18px] ${
             wide ? "lg:gap-3 lg:rounded-[22px] lg:border lg:px-6 lg:py-6" : ""
         }`}>
             {children}
@@ -78,7 +78,7 @@ function SearchNearbyButton() {
     return (
         <Link
             href="/locations"
-            className="mt-1 flex w-full items-center gap-2 rounded-full bg-[#38fa47] px-3.5 py-3 text-[13px] font-extrabold text-black/[0.86]"
+            className="mt-1 flex w-full items-center gap-2 rounded-full bg-[#A7F432] px-3.5 py-3 text-[13px] font-extrabold text-black/[0.86]"
         >
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[13px] w-[13px]" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <circle cx="10" cy="10" r="5.5" />
@@ -96,7 +96,7 @@ function WildCaptureHint() {
     return (
         <div className="rounded-[14px] border border-white/[0.08] bg-white/[0.03] p-3">
             <p className="text-[11px] font-semibold text-white/[0.42]">Wild reward hint</p>
-            <p className="mt-1.5 text-[15px] font-medium leading-5 text-[#38fa47]/90">First-time wild species earn bonus rewards, including 1 free credit.</p>
+            <p className="mt-1.5 text-[15px] font-medium leading-5 text-[#A7F432]/90">First-time wild species earn bonus rewards, including 1 free credit.</p>
         </div>
     );
 }
@@ -162,7 +162,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
             return (
                 <AnimalCardShell wide={wide}>
                     <AnimalCardHeader />
-                    <span className="w-fit rounded-full bg-[#38fa47]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#38fa47]">
+                    <span className="w-fit rounded-full bg-[#A7F432]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#A7F432]">
                         {presentation.title}
                     </span>
                     {presentation.body ? (
@@ -217,7 +217,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
                         })}
                     </div>
                 ) : (
-                    <span className="w-fit rounded-full bg-[#38fa47]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#38fa47]">
+                    <span className="w-fit rounded-full bg-[#A7F432]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#A7F432]">
                         {getNativeRangeDisplayLabel(descriptor)}
                     </span>
                 )}

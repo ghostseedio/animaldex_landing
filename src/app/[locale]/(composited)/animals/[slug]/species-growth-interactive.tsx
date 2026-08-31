@@ -119,7 +119,7 @@ function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: 
     }
 
     const accent = match.strength === "strong" || match.strength === "apexReached"
-        ? "text-[#38fa47]"
+        ? "text-[#A7F432]"
         : match.strength === "partial"
             ? "text-cyan-300"
             : match.strength === "offPath"
@@ -153,7 +153,7 @@ function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: 
                 : match.strength === "offPath"
                     ? "border-orange-300/20"
                     : match.strength === "strong" || match.strength === "apexReached"
-                        ? "border-[#38fa47]/20"
+                        ? "border-[#A7F432]/20"
                         : "border-white/10"
         }`}>
             <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: 
                     <p className="text-[11px] font-semibold text-white/40">This power can train</p>
                     <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
                         {match.matchedQualities.map((quality) => (
-                            <span key={quality.key} className="rounded-full border border-[#38fa47]/20 bg-black/15 px-2.5 py-2 text-[11px] font-semibold text-white">
+                            <span key={quality.key} className="rounded-full border border-[#A7F432]/20 bg-black/15 px-2.5 py-2 text-[11px] font-semibold text-white">
                                 {quality.label}
                             </span>
                         ))}
@@ -317,7 +317,7 @@ function PrincipleFusionModal({
                     <button type="button" onClick={close} className="justify-self-start text-sm font-medium text-white/60">{result ? "Done" : "Cancel"}</button>
                     <h3 className="text-base font-semibold text-white">Fuse Principles</h3>
                     {!result ? (
-                        <button type="button" disabled={!canSubmit} onClick={() => document.getElementById("fusion-submit")?.click()} className="justify-self-end text-sm font-semibold text-[#38fa47] disabled:text-white/30">
+                        <button type="button" disabled={!canSubmit} onClick={() => document.getElementById("fusion-submit")?.click()} className="justify-self-end text-sm font-semibold text-[#A7F432] disabled:text-white/30">
                             {isPending ? "Fusing..." : "Fuse"}
                         </button>
                     ) : <span />}
@@ -326,11 +326,11 @@ function PrincipleFusionModal({
                 <div className="overflow-y-auto p-5">
                     <section className="rounded-lg border border-white/15 bg-[#1f1f1f] p-3.5">
                         <div className="flex items-start gap-3">
-                            {receiverImageSrc ? <Image src={receiverImageSrc} alt={receiverName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#121212] text-[#38fa47]">●</div>}
+                            {receiverImageSrc ? <Image src={receiverImageSrc} alt={receiverName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#121212] text-[#A7F432]">●</div>}
                             <div>
                                 <p className="text-[11px] font-semibold text-white/40">Receiver</p>
                                 <p className="mt-1 text-[17px] font-semibold text-white">{receiverName}</p>
-                                <p className="mt-1 text-[15px] font-medium text-[#38fa47]">{powerName}</p>
+                                <p className="mt-1 text-[15px] font-medium text-[#A7F432]">{powerName}</p>
                             </div>
                         </div>
                         <p className="mt-3 text-xs font-medium leading-5 text-white/60">The receiver keeps this main Animal Principle. Fusion adds one narrow sub-principle for future scenario matchups.</p>
@@ -343,17 +343,17 @@ function PrincipleFusionModal({
                     {error ? <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs font-medium leading-5 text-red-300">⚠ &nbsp; {error}</p> : null}
 
                     {result ? (
-                        <section className="mt-4 rounded-lg border border-[#38fa47]/30 bg-[#1f1f1f] p-3.5">
+                        <section className="mt-4 rounded-lg border border-[#A7F432]/30 bg-[#1f1f1f] p-3.5">
                             <div className="flex items-center gap-3">
-                                <span className="grid h-14 w-14 place-items-center rounded-full bg-[#38fa47]/15 text-2xl text-[#38fa47]">✓</span>
+                                <span className="grid h-14 w-14 place-items-center rounded-full bg-[#A7F432]/15 text-2xl text-[#A7F432]">✓</span>
                                 <div>
-                                    <p className="text-[11px] font-semibold text-[#38fa47]">SUB-PRINCIPLE LEARNED</p>
+                                    <p className="text-[11px] font-semibold text-[#A7F432]">SUB-PRINCIPLE LEARNED</p>
                                     <h4 className="mt-1 text-xl font-black text-white">{learnedName}</h4>
                                 </div>
                             </div>
                             {learnedExpression ? <p className="mt-3 text-[15px] font-medium leading-6 text-white/60">{learnedExpression}</p> : null}
                             <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                                <span className="rounded-lg border border-[#38fa47]/20 bg-[#38fa47]/10 p-2.5 text-[11px] font-semibold text-[#38fa47]">▥ &nbsp; {statBoostSummary}</span>
+                                <span className="rounded-lg border border-[#A7F432]/20 bg-[#A7F432]/10 p-2.5 text-[11px] font-semibold text-[#A7F432]">▥ &nbsp; {statBoostSummary}</span>
                                 <span className="rounded-lg border border-orange-300/20 bg-orange-300/10 p-2.5 text-[11px] font-semibold text-orange-300">▣ &nbsp; {spent} credits spent</span>
                                 <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-2.5 text-[11px] font-semibold text-cyan-300">▤ &nbsp; {remainingBalance} balance</span>
                             </div>
@@ -363,17 +363,17 @@ function PrincipleFusionModal({
                     ) : (
                         <>
                             <div className="mt-4">
-                                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search teachers" className="w-full rounded-xl border border-white/10 bg-[#1f1f1f] px-4 py-3 text-sm text-white outline-none focus:border-[#38fa47]/40" />
+                                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search teachers" className="w-full rounded-xl border border-white/10 bg-[#1f1f1f] px-4 py-3 text-sm text-white outline-none focus:border-[#A7F432]/40" />
                                 <p className="mb-2 mt-4 text-xs font-medium text-white/40">Choose a teacher</p>
                                 <div className="space-y-2">
                                     {filteredDonors.length === 0 ? <p className="text-[15px] font-medium leading-6 text-white/60">No eligible owned animals are available. Donors need a catalog Animal Principle and comparison hearts.</p> : filteredDonors.map((donor) => {
                                         const selected = donor.captureId === selectedDonorId;
-                                        return <button key={donor.captureId} type="button" disabled={!donor.principleName} onClick={() => { setSelectedDonorId(donor.captureId); setError(null); }} className={`flex w-full items-start gap-2.5 rounded-lg border p-3 text-left ${selected ? "border-[#38fa47]/35 bg-[#38fa47]/10" : "border-white/15 bg-[#1f1f1f]"} disabled:opacity-55`}>
-                                            <span className={`mt-3 text-lg ${selected ? "text-[#38fa47]" : "text-white/40"}`}>{selected ? "●" : "○"}</span>
+                                        return <button key={donor.captureId} type="button" disabled={!donor.principleName} onClick={() => { setSelectedDonorId(donor.captureId); setError(null); }} className={`flex w-full items-start gap-2.5 rounded-lg border p-3 text-left ${selected ? "border-[#A7F432]/35 bg-[#A7F432]/10" : "border-white/15 bg-[#1f1f1f]"} disabled:opacity-55`}>
+                                            <span className={`mt-3 text-lg ${selected ? "text-[#A7F432]" : "text-white/40"}`}>{selected ? "●" : "○"}</span>
                                             <Image src={donor.imageSrc} alt={donor.animalName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" />
                                             <span className="min-w-0">
                                                 <span className="block text-[15px] font-medium text-white">{donor.animalName}</span>
-                                                <span className={`mt-1 block text-xs font-medium ${donor.principleName ? "text-[#38fa47]" : "text-white/40"}`}>{donor.principleName ?? "Loading Animal Principle"}</span>
+                                                <span className={`mt-1 block text-xs font-medium ${donor.principleName ? "text-[#A7F432]" : "text-white/40"}`}>{donor.principleName ?? "Loading Animal Principle"}</span>
                                                 {donor.principleExpression ? <span className="mt-1 block text-[11px] font-semibold leading-4 text-white/60">{donor.principleExpression}</span> : null}
                                             </span>
                                         </button>;
@@ -384,8 +384,8 @@ function PrincipleFusionModal({
                             <section className="mt-4 rounded-lg border border-white/15 bg-[#1f1f1f] p-3.5">
                                 <p className="text-xs font-medium text-white/40">Fusion path</p>
                                 <div className="mt-3 grid grid-cols-[1fr_54px_1fr] items-center gap-2">
-                                    <div className="rounded-lg border border-[#38fa47]/20 bg-[#38fa47]/[0.08] p-2.5"><p className="text-[11px] font-semibold text-[#38fa47]">RECEIVER</p><p className="mt-1 truncate text-xs font-semibold text-white">{receiverName}</p><p className="mt-2 text-[11px] font-semibold text-white/60">{powerName}</p></div>
-                                    <div className={`text-center text-xl ${selectedDonor ? "text-[#38fa47]" : "text-white/40"}`}>→</div>
+                                    <div className="rounded-lg border border-[#A7F432]/20 bg-[#A7F432]/[0.08] p-2.5"><p className="text-[11px] font-semibold text-[#A7F432]">RECEIVER</p><p className="mt-1 truncate text-xs font-semibold text-white">{receiverName}</p><p className="mt-2 text-[11px] font-semibold text-white/60">{powerName}</p></div>
+                                    <div className={`text-center text-xl ${selectedDonor ? "text-[#A7F432]" : "text-white/40"}`}>→</div>
                                     <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/[0.08] p-2.5"><p className="text-[11px] font-semibold text-cyan-300">TEACHER</p><p className="mt-1 truncate text-xs font-semibold text-white">{selectedDonor?.animalName ?? "Choose one"}</p><p className="mt-2 text-[11px] font-semibold text-white/60">{selectedDonor?.principleName ?? "Waiting"}</p></div>
                                 </div>
                                 {selectedDonor?.principleName ? <><p className="mt-3 text-[15px] font-medium text-white">{powerName} learns from {selectedDonor.principleName}</p><p className="mt-2 text-xs font-medium leading-5 text-white/60">{selectedDonor.animalName} is the teacher. The donor is not consumed, and the learned lesson only helps when the future scenario fits its tags and behavior.</p></> : <p className="mt-3 text-[15px] font-medium text-white/60">Pick a teacher to preview the principle pairing.</p>}
@@ -400,7 +400,7 @@ function PrincipleFusionModal({
                                     if (!response.ok) { setError(typeof payload.error === "string" ? payload.error : "Principle Fusion is unavailable right now."); return; }
                                     setResult(payload as Record<string, any>);
                                 })(); });
-                            }} className="mt-4 w-full rounded-lg bg-[#38fa47] px-4 py-3.5 text-[15px] font-semibold text-black disabled:bg-white/20 disabled:text-white/40">
+                            }} className="mt-4 w-full rounded-lg bg-[#A7F432] px-4 py-3.5 text-[15px] font-semibold text-black disabled:bg-white/20 disabled:text-white/40">
                                 {isPending ? "Fusing..." : "⚡  Fuse Principles"}
                             </button>
                             {disabledReason && !canSubmit ? <p className="mt-2 text-xs font-medium text-white/40">{disabledReason}</p> : null}
@@ -503,7 +503,7 @@ export default function SpeciesGrowthInteractive({
 
     const cardClass = "rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4 font-sans";
     const microClass = "text-[11px] font-semibold text-white/40";
-    const capsuleButtonClass = "flex w-full items-center justify-center rounded-full bg-[#38fa47] px-4 py-3 text-[15px] font-medium text-black disabled:opacity-50";
+    const capsuleButtonClass = "flex w-full items-center justify-center rounded-full bg-[#A7F432] px-4 py-3 text-[15px] font-medium text-black disabled:opacity-50";
     const targetQuality = growth.match?.matchedQualities[0]?.label ?? growth.challenge?.targetQualityTag.replace(/-/g, " ");
     const comparison = growth.comparison;
     const normalizedSetting = settingTag?.trim().toLowerCase();
@@ -601,7 +601,7 @@ export default function SpeciesGrowthInteractive({
             {growth.isAuthenticated && growth.hasCapture ? (
                 <>
                     {!compareOnly && presentation === "profileRequired" ? (
-                        <section className={`${cardClass} border-[#38fa47]/20`}>
+                        <section className={`${cardClass} border-[#A7F432]/20`}>
                             <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Find your Apex Animal</h3>
                             <p className="mt-2 text-xs font-medium leading-5 text-white/60">Take the Wild Profile to unlock animal-powered challenges based on your growth path.</p>
@@ -612,7 +612,7 @@ export default function SpeciesGrowthInteractive({
                     ) : null}
 
                     {!compareOnly && presentation === "pathUnavailable" ? (
-                        <section className={`${cardClass} border-[#38fa47]/20`}>
+                        <section className={`${cardClass} border-[#A7F432]/20`}>
                             <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Refresh your Apex Path</h3>
                             <p className="mt-2 text-xs font-medium leading-5 text-white/60">Your profile needs quality targets before this animal can train your path.</p>
@@ -631,7 +631,7 @@ export default function SpeciesGrowthInteractive({
                                     <p className={`${microClass} mt-3`}>Needed powers</p>
                                     <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
                                         {growth.match.neededQualities.slice(0, 4).map((quality) => (
-                                            <span key={quality.key} className="rounded-full border border-[#38fa47]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold text-white">{quality.label}</span>
+                                            <span key={quality.key} className="rounded-full border border-[#A7F432]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold text-white">{quality.label}</span>
                                         ))}
                                     </div>
                                     <p className="mt-3 text-xs font-medium text-white/40">Try capturing or training animals with these powers.</p>
@@ -641,7 +641,7 @@ export default function SpeciesGrowthInteractive({
                     ) : null}
 
                     {!compareOnly && canChallenge && !growth.challenge ? (
-                        <section className={`${cardClass} border-[#38fa47]/20`}>
+                        <section className={`${cardClass} border-[#A7F432]/20`}>
                             <p className={`${microClass} uppercase`}>⚡ &nbsp; Apex Insight</p>
                             <h3 className="mt-3 text-[17px] font-semibold text-white">Use This Power</h3>
                             {growth.match?.matchedQualities.length ? (
@@ -650,7 +650,7 @@ export default function SpeciesGrowthInteractive({
                             {targetQuality ? (
                                 <div className="mt-3 flex items-center gap-2">
                                     <span className={microClass}>Train this quality</span>
-                                    <span className="rounded-full border border-[#38fa47]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
+                                    <span className="rounded-full border border-[#A7F432]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
                                 </div>
                             ) : null}
                             <p className="mt-3 text-xs font-medium leading-5 text-white/60">Turn {powerName} into one real-world move that helps your Apex path today.</p>
@@ -662,10 +662,10 @@ export default function SpeciesGrowthInteractive({
                     ) : null}
 
                     {!compareOnly && growth.challenge ? (
-                        <section className={`${cardClass} ${growth.challenge.status === "approved" ? "border-[#38fa47]/20" : "border-cyan-300/20"}`}>
+                        <section className={`${cardClass} ${growth.challenge.status === "approved" ? "border-[#A7F432]/20" : "border-cyan-300/20"}`}>
                             <div className="flex items-center justify-between gap-3">
                                 <p className={`${microClass} uppercase`}>⌾ &nbsp; Today&apos;s training</p>
-                                <span className={`rounded-full bg-black/20 px-2 py-1 text-[11px] font-semibold uppercase ${growth.challenge.status === "approved" ? "text-[#38fa47]" : "text-white/60"}`}>
+                                <span className={`rounded-full bg-black/20 px-2 py-1 text-[11px] font-semibold uppercase ${growth.challenge.status === "approved" ? "text-[#A7F432]" : "text-white/60"}`}>
                                     {challengeStatusLabel(growth.challenge.status)}
                                 </span>
                             </div>
@@ -673,7 +673,7 @@ export default function SpeciesGrowthInteractive({
                             {targetQuality ? (
                                 <div className="mt-3 flex items-center gap-2">
                                     <span className={`${microClass} uppercase`}>Target quality</span>
-                                    <span className="rounded-full border border-[#38fa47]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
+                                    <span className="rounded-full border border-[#A7F432]/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
                                 </div>
                             ) : null}
                             {growth.challenge.whyThisHelps ? (
@@ -686,8 +686,8 @@ export default function SpeciesGrowthInteractive({
                                 <span className={microClass}>Animal Power</span>
                                 <span className="text-right text-xs font-medium text-white">{powerName}</span>
                             </div>
-                            <div className="mt-3 rounded-[14px] border border-[#38fa47]/15 bg-black/15 p-3">
-                                <p className="text-[11px] font-semibold uppercase text-[#38fa47]">➜ &nbsp; Your task</p>
+                            <div className="mt-3 rounded-[14px] border border-[#A7F432]/15 bg-black/15 p-3">
+                                <p className="text-[11px] font-semibold uppercase text-[#A7F432]">➜ &nbsp; Your task</p>
                                 <p className="mt-2 text-base leading-6 text-white">{growth.challenge.challengeInstruction}</p>
                             </div>
                             <div className="mt-3 rounded-[14px] border border-cyan-300/15 bg-black/15 p-3">
@@ -697,8 +697,8 @@ export default function SpeciesGrowthInteractive({
                             {growth.challenge.proofValidationReason ? (
                                 <p className="mt-3 rounded-[14px] bg-orange-400/[0.08] p-3 text-xs font-medium leading-5 text-orange-300">{growth.challenge.proofValidationReason}</p>
                             ) : null}
-                            <div className={`mt-3 rounded-[14px] p-3 ${growth.challenge.status === "approved" ? "bg-[#38fa47]/10" : "bg-[#38fa47]/5"}`}>
-                                <p className="text-[11px] font-semibold uppercase text-[#38fa47]">✦ &nbsp; {growth.challenge.status === "approved" ? "Rewards earned" : "Reward"}</p>
+                            <div className={`mt-3 rounded-[14px] p-3 ${growth.challenge.status === "approved" ? "bg-[#A7F432]/10" : "bg-[#A7F432]/5"}`}>
+                                <p className="text-[11px] font-semibold uppercase text-[#A7F432]">✦ &nbsp; {growth.challenge.status === "approved" ? "Rewards earned" : "Reward"}</p>
                                 {(growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP) > 0 ? (
                                     <p className="mt-2 text-xs font-medium text-white">⊕ &nbsp; +{growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP} XP</p>
                                 ) : null}
@@ -715,10 +715,10 @@ export default function SpeciesGrowthInteractive({
                                 </button>
                             ) : null}
                             {growth.challenge.status === "accepted" || growth.challenge.status === "rejected" ? (
-                                <p className="mt-3 rounded-full border border-[#38fa47]/30 px-4 py-3 text-center text-[15px] font-medium text-[#38fa47]">Open AnimalDex to take live proof</p>
+                                <p className="mt-3 rounded-full border border-[#A7F432]/30 px-4 py-3 text-center text-[15px] font-medium text-[#A7F432]">Open AnimalDex to take live proof</p>
                             ) : null}
                             {growth.challenge.status === "proof_submitted" ? <p className="mt-3 text-xs font-medium text-white/60">Checking your proof…</p> : null}
-                            {growth.challenge.status === "approved" ? <p className="mt-3 text-xs font-medium text-[#38fa47]">✓ You trained {speciesName}.</p> : null}
+                            {growth.challenge.status === "approved" ? <p className="mt-3 text-xs font-medium text-[#A7F432]">✓ You trained {speciesName}.</p> : null}
                             {challengeError ? <p className="mt-3 text-xs font-medium text-orange-300">{challengeError}</p> : null}
                         </section>
                     ) : null}
@@ -737,7 +737,7 @@ export default function SpeciesGrowthInteractive({
                                     <h3 className="mt-1 text-[15px] font-semibold text-white">What else can be learned from {powerName}?</h3>
                                     <p className="mt-1 text-xs font-medium leading-5 text-white/60">Fuse animal powers together to see what else can be gained.</p>
                                     {growth.learnedPrinciples.length > 0 ? (
-                                        <p className="mt-2 text-[11px] font-semibold text-[#38fa47]">
+                                        <p className="mt-2 text-[11px] font-semibold text-[#A7F432]">
                                             {growth.learnedPrinciples.length} extra lesson{growth.learnedPrinciples.length === 1 ? "" : "s"} learned
                                         </p>
                                     ) : null}
@@ -746,7 +746,7 @@ export default function SpeciesGrowthInteractive({
                                     type="button"
                                     disabled={!canFuse}
                                     onClick={() => setFusionOpen(true)}
-                                    className="shrink-0 rounded-full bg-[#38fa47] px-3 py-2 text-[11px] font-semibold text-black disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="shrink-0 rounded-full bg-[#A7F432] px-3 py-2 text-[11px] font-semibold text-black disabled:cursor-not-allowed disabled:opacity-55"
                                 >
                                     ⚡ Fuse Powers
                                 </button>
@@ -758,7 +758,7 @@ export default function SpeciesGrowthInteractive({
                                         <article key={principle.id} className="rounded-lg bg-[#121212]/70 p-2.5">
                                             <div className="flex items-start justify-between gap-3">
                                                 <h4 className="text-[15px] font-semibold text-white">{principle.learnedSubPrincipleName}</h4>
-                                                <span className="shrink-0 text-[11px] font-semibold text-[#38fa47]">{principle.statBoostSummary}</span>
+                                                <span className="shrink-0 text-[11px] font-semibold text-[#A7F432]">{principle.statBoostSummary}</span>
                                             </div>
                                             <p className="mt-1 text-xs font-medium leading-5 text-white/60">{principle.learnedSubPrincipleExpression}</p>
                                             {principle.scenarioTags.length > 0 ? (
@@ -766,7 +766,7 @@ export default function SpeciesGrowthInteractive({
                                                     <p className={microClass}>Best For</p>
                                                     <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
                                                         {principle.scenarioTags.map((tag) => (
-                                                            <span key={tag} className="rounded-full border border-[#38fa47]/20 bg-black px-2.5 py-1.5 text-[11px] font-semibold text-white/60">{tag.replace(/_/g, " ")}</span>
+                                                            <span key={tag} className="rounded-full border border-[#A7F432]/20 bg-black px-2.5 py-1.5 text-[11px] font-semibold text-white/60">{tag.replace(/_/g, " ")}</span>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -802,7 +802,7 @@ export default function SpeciesGrowthInteractive({
                     ) : comparison.isOwnedByCurrentUser ? (
                         <div className={`${compareCardClass} border-white/[0.07] bg-white/[0.03]`}>
                             <div className="flex items-center gap-3">
-                                <div className={`flex shrink-0 items-center rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#38fa47]/20 bg-[#38fa47]/10 text-[#38fa47]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
+                                <div className={`flex shrink-0 items-center rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#A7F432]/20 bg-[#A7F432]/10 text-[#A7F432]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
                                     <span className="flex gap-1">
                                         {[0, 1, 2].map((index) => (
                                             <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
@@ -839,7 +839,7 @@ export default function SpeciesGrowthInteractive({
 
                     {!comparison.isOwnedByCurrentUser ? (
                         <div className={`${compareCardClass} border-white/[0.07] bg-white/[0.03]`}>
-                            <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#38fa47]">✦</span> Available actions</h3>
+                            <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#A7F432]">✦</span> Available actions</h3>
                             <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
                             {canOpenPublicComparison ? (
                                 <Link href={treatAsSignedIn ? `/app/matchups?target=${encodeURIComponent(comparison.captureId)}` : "/account"} className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-[rgba(0,255,255,.90)] px-3.5 py-3 text-black">
@@ -870,12 +870,12 @@ export default function SpeciesGrowthInteractive({
                                 })}
                                 className="flex w-full items-center gap-3 text-left disabled:opacity-70"
                             >
-                                <span aria-hidden="true" className={`w-5 text-center text-sm ${comparison.isChallengeReady ? "text-[#38fa47]" : "text-white/40"}`}>⚡</span>
+                                <span aria-hidden="true" className={`w-5 text-center text-sm ${comparison.isChallengeReady ? "text-[#A7F432]" : "text-white/40"}`}>⚡</span>
                                 <span className="min-w-0 flex-1">
                                     <span className="block text-xs font-medium text-white">Available for comparisons</span>
                                     <span className="mt-1 block text-[11px] font-semibold leading-4 text-white/60">{challengeAvailabilitySubtitle}</span>
                                 </span>
-                                <span className={`rounded-full border px-2.5 py-[7px] text-[11px] font-semibold ${comparison.isChallengeReady ? "border-[#38fa47]/25 bg-[#38fa47]/10 text-[#38fa47]" : "border-white/10 bg-white/5 text-white/40"}`}>
+                                <span className={`rounded-full border px-2.5 py-[7px] text-[11px] font-semibold ${comparison.isChallengeReady ? "border-[#A7F432]/25 bg-[#A7F432]/10 text-[#A7F432]" : "border-white/10 bg-white/5 text-white/40"}`}>
                                     {isComparisonPending ? "…" : comparison.isChallengeReady ? "ON" : "OFF"}
                                 </span>
                             </button>
@@ -885,7 +885,7 @@ export default function SpeciesGrowthInteractive({
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-xs font-medium text-white">Confidence</span>
                                         <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-white">Tier {displayedComparisonTier}</span>
-                                        <span className="text-[11px] font-semibold text-[#38fa47]">{automaticComparisonStake} credits</span>
+                                        <span className="text-[11px] font-semibold text-[#A7F432]">{automaticComparisonStake} credits</span>
                                     </div>
                                     <p className="text-[11px] font-semibold leading-4 text-white/60">Set automatically from this animal&apos;s battle tier.</p>
                                 </div>
@@ -898,7 +898,7 @@ export default function SpeciesGrowthInteractive({
                 <section className="mt-1 space-y-4 font-sans">
                     <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
                         <div className="flex items-center gap-3">
-                            <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#38fa47]/20 bg-[#38fa47]/10 text-[#38fa47]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
+                            <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#A7F432]/20 bg-[#A7F432]/10 text-[#A7F432]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
                                 <span className="flex gap-1">
                                     {[0, 1, 2].map((index) => (
                                         <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
@@ -926,7 +926,7 @@ export default function SpeciesGrowthInteractive({
 
                     {!comparison.isOwnedByCurrentUser ? (
                         <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
-                            <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#38fa47]">✦</span> Available actions</h3>
+                            <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#A7F432]">✦</span> Available actions</h3>
                             <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
                             <Link href={treatAsSignedIn ? "/app" : "/account"} className="mt-3 flex items-center gap-3 rounded-[14px] border border-white/[0.07] bg-white/[0.03] p-3.5">
                                 <span className="text-cyan-300">⚡</span>
@@ -945,7 +945,7 @@ export default function SpeciesGrowthInteractive({
                                 onClick={() => updateComparison("update", {isChallengeReady: !comparison.isChallengeReady})}
                                 className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5 text-left disabled:opacity-70"
                             >
-                                <span className={comparison.isChallengeReady ? "text-[#38fa47]" : "text-white/40"}>⚡</span>
+                                <span className={comparison.isChallengeReady ? "text-[#A7F432]" : "text-white/40"}>⚡</span>
                                 <span className="min-w-0 flex-1">
                                     <span className="block text-xs font-medium text-white">Available for comparisons</span>
                                     <span className="mt-1 block text-[11px] font-semibold leading-4 text-white/60">
@@ -958,7 +958,7 @@ export default function SpeciesGrowthInteractive({
                                                     : "Hidden from comparisons until you turn it on."}
                                     </span>
                                 </span>
-                                <span className={`rounded-full border px-2.5 py-1.5 text-[11px] font-semibold ${comparison.isChallengeReady ? "border-[#38fa47]/25 bg-[#38fa47]/10 text-[#38fa47]" : "border-white/10 bg-white/5 text-white/40"}`}>
+                                <span className={`rounded-full border px-2.5 py-1.5 text-[11px] font-semibold ${comparison.isChallengeReady ? "border-[#A7F432]/25 bg-[#A7F432]/10 text-[#A7F432]" : "border-white/10 bg-white/5 text-white/40"}`}>
                                     {isComparisonPending ? "…" : comparison.isChallengeReady ? "ON" : "OFF"}
                                 </span>
                             </button>
@@ -967,7 +967,7 @@ export default function SpeciesGrowthInteractive({
                                 <div className="space-y-2.5">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-medium text-white">Confidence</span>
-                                        <span className="text-[11px] font-semibold text-[#38fa47]">{comparison.challengeStake} credits</span>
+                                        <span className="text-[11px] font-semibold text-[#A7F432]">{comparison.challengeStake} credits</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         {[2, 5, 10].map((stake) => (
@@ -976,7 +976,7 @@ export default function SpeciesGrowthInteractive({
                                                 type="button"
                                                 disabled={!comparisonEnabled || isComparisonPending || (growth.creditBalance != null && growth.creditBalance < stake && comparison.challengeStake !== stake)}
                                                 onClick={() => updateComparison("update", {challengeStake: stake})}
-                                                className={`rounded-full border py-2.5 text-xs font-bold disabled:opacity-45 ${comparison.challengeStake === stake ? "border-[#38fa47]/20 bg-[#38fa47] text-black" : "border-white/10 bg-white/5 text-white"}`}
+                                                className={`rounded-full border py-2.5 text-xs font-bold disabled:opacity-45 ${comparison.challengeStake === stake ? "border-[#A7F432]/20 bg-[#A7F432] text-black" : "border-white/10 bg-white/5 text-white"}`}
                                             >
                                                 {stake}
                                             </button>

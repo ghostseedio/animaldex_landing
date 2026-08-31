@@ -3,6 +3,20 @@
 import type {MatchupHistoryItem} from "@/data/matchups-types";
 import MatchupResultDetails, {toResultPresentation} from "@/app/[locale]/(authenticated)/app/matchups/_components/matchup-result-details";
 
+function isBestOfThree(item: MatchupHistoryItem) {
+    return item.challengeFormat === "best_of_3_v2";
+}
+
+function isComplete(item: MatchupHistoryItem) {
+    return !isBestOfThree(item) || item.battleStatus === "completed";
+}
+
+function finalScore(item: MatchupHistoryItem) {
+    if (!isBestOfThree(item) || !isComplete(item)) return null;
+    if (item.roundsWonAttacker == null || item.roundsWonDefender == null) return null;
+    return `${item.roundsWonAttacker}-${item.roundsWonDefender}`;
+}
+
 export default function MatchupResultDetailSheet({
     item,
     onClose
@@ -19,8 +33,8 @@ export default function MatchupResultDetailSheet({
                         <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Matchup result</p>
                         <h3 className="mt-1 font-display text-2xl font-bold text-white">{item.scenarioTitle ?? "Scenario Arena"}</h3>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${item.viewerWon ? "bg-primary-400 text-black" : "bg-rose-400/15 text-rose-200"}`}>
-                        {item.viewerWon ? "Won" : "Lost"}
+                    <span className={`rounded-full px-3 py-1 text-xs font-black ${!isComplete(item) || item.viewerWon ? "bg-primary-400 text-black" : "bg-rose-400/15 text-rose-200"}`}>
+                        {!isComplete(item) ? "Live" : item.viewerWon ? "Won" : "Lost"}
                     </span>
                 </div>
 
@@ -60,7 +74,13 @@ export default function MatchupResultDetailSheet({
                             attackerStatValue: item.attackerStatValue,
                             defenderStatValue: item.defenderStatValue,
                             viewerWon: item.viewerWon,
-                            creditsDelta: item.creditsDelta
+                            creditsDelta: item.creditsDelta,
+                            challengeFormat: item.challengeFormat,
+                            battleStatus: item.battleStatus,
+                            requiredVotes: item.requiredVotes,
+                            votesCount: item.votesCount,
+                            settlementReason: item.settlementReason,
+                            finalScore: finalScore(item)
                         })}
                     />
                 </div>

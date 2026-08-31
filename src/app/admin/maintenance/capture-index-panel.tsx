@@ -184,7 +184,7 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
 
                     <div className="flex flex-wrap items-center gap-3">
                         <button type="button" onClick={() => void apply()} disabled={!chosen || applying}
-                                className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
                             {applying
                                 ? "Moving…"
                                 : chosen

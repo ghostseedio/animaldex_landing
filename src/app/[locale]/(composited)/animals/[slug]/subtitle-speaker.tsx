@@ -367,7 +367,7 @@ export default function SubtitleSpeaker({text, locale, cacheKey, refreshUrl}: Su
                     return (
                         <span
                             key={`${segment.start}-${index}`}
-                            className={isActive ? "rounded-md bg-primary-100 px-1 text-canvas-950 shadow-[0_0_28px_rgba(131,255,174,0.28)]" : undefined}
+                            className={isActive ? "rounded-md bg-primary-100 px-1 text-canvas-950 shadow-[0_0_28px_rgba(167,244,50,0.28)]" : undefined}
                         >
                             {segment.value}
                         </span>

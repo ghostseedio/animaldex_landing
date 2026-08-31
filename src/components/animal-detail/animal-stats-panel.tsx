@@ -25,14 +25,14 @@ const TIER_TINT: Record<AnimalBattleTier, string> = {
 
 const SETTING_TINT: Record<string, string> = {
     zoo: "rgb(250 219 71)",
-    wild: "#38fa47",
+    wild: "#A7F432",
     domestic: "rgb(140 199 255)",
     farm: "rgb(209 166 89)"
 };
 
 const CONSERVATION: Record<string, {label: string; tint: string}> = {
-    lc: {label: "Least Concern", tint: "#38fa47"},
-    leastconcern: {label: "Least Concern", tint: "#38fa47"},
+    lc: {label: "Least Concern", tint: "#A7F432"},
+    leastconcern: {label: "Least Concern", tint: "#A7F432"},
     nt: {label: "Near Threatened", tint: "rgb(250 219 56)"},
     nearthreatened: {label: "Near Threatened", tint: "rgb(250 219 56)"},
     vu: {label: "Vulnerable", tint: "rgb(250 158 51)"},
@@ -141,7 +141,7 @@ function ClassificationChips({settingTag, conservationTier, baseRarity}: {settin
                         <p className="mt-3 text-[15px] font-medium leading-6 text-white/[0.62]">
                             AnimalDex uses the visible scene and habitat cues in the capture to classify its setting as {settingLabel}.
                         </p>
-                        <button type="button" onClick={() => setShowExplanation(false)} className="mt-5 w-full rounded-full bg-[#38fa47] px-4 py-3 text-xs font-bold text-black">Done</button>
+                        <button type="button" onClick={() => setShowExplanation(false)} className="mt-5 w-full rounded-full bg-[#A7F432] px-4 py-3 text-xs font-bold text-black">Done</button>
                     </div>
                 </div>
             ) : null}
@@ -154,13 +154,13 @@ function LevelProgress({totalXP, recentSource, wide = false}: {totalXP: number; 
     return (
         <div className={`space-y-2.5 px-4 py-3.5 ${wide ? "lg:px-0 lg:py-0" : ""}`}>
             <div className="flex items-baseline gap-2.5">
-                <span className="rounded-full border border-[#38fa47]/[0.24] bg-[#38fa47]/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-[#38fa47]/95">{progress.level === 100 ? "Lvl 100 MAX" : `Lvl ${progress.level}`}</span>
+                <span className="rounded-full border border-[#A7F432]/[0.24] bg-[#A7F432]/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-[#A7F432]/95">{progress.level === 100 ? "Lvl 100 MAX" : `Lvl ${progress.level}`}</span>
                 <span className="text-xs font-medium text-white">{progress.xp} XP</span>
                 <span className="ml-auto text-[11px] font-semibold text-white/[0.42]">{progress.level === 100 ? "MAX" : `${progress.needed} XP to next`}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#38fa47]/[0.82]" style={{width: `${progress.fraction * 100}%`}} /></div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#A7F432]/[0.82]" style={{width: `${progress.fraction * 100}%`}} /></div>
             {progress.level < 100 ? <p className="text-[11px] font-semibold text-white/[0.62]">{progress.progressXP}/{progress.span} XP toward Level {progress.level + 1}</p> : null}
-            {recentSource ? <p className="text-[11px] font-semibold text-[#38fa47]/90">{recentSource}</p> : null}
+            {recentSource ? <p className="text-[11px] font-semibold text-[#A7F432]/90">{recentSource}</p> : null}
         </div>
     );
 }
@@ -193,12 +193,12 @@ function SizeScale({speciesName, speciesSlug, score, wide = false}: {speciesName
         <div className={`mt-5 border-t border-white/[0.09] pt-3.5 ${wide ? "lg:mt-0 lg:border-t-0 lg:pt-0" : ""}`}>
             <p className={`px-4 text-xs font-medium text-white/[0.42] ${wide ? "lg:px-0 lg:text-sm" : ""}`}>Size scale</p>
             <div className={`mt-3.5 flex justify-end px-4 ${wide ? "lg:px-0" : ""}`}>
-                <span className="rounded-full bg-[linear-gradient(to_right,rgba(56,250,71,.18),rgba(148,84,250,.16))] px-3 py-2 text-lg font-extrabold text-[#38fa47]">{clampedScore}/100</span>
+                <span className="rounded-full bg-[linear-gradient(to_right,rgba(167,244,50,.18),rgba(148,84,250,.16))] px-3 py-2 text-lg font-extrabold text-[#A7F432]">{clampedScore}/100</span>
             </div>
             <div className="mt-3.5 h-40 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="relative h-[150px] min-w-[560px] border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,.04),rgba(18,18,18,.92),rgba(148,84,250,.08))]">
                     <div className="absolute left-[18px] right-[18px] top-[86px]">
-                        <div className="relative h-2.5 rounded-full bg-[linear-gradient(to_right,rgba(255,255,255,.10),rgba(148,84,250,.16),rgba(56,250,71,.10))]">
+                        <div className="relative h-2.5 rounded-full bg-[linear-gradient(to_right,rgba(255,255,255,.10),rgba(148,84,250,.16),rgba(167,244,50,.10))]">
                             <div className="absolute inset-x-2 top-2 flex items-start justify-between">
                                 {Array.from({length: 21}, (_, index) => <span key={index} className={`w-px bg-white ${index % 5 === 0 ? "h-4 opacity-[.18]" : "h-2.5 opacity-[.08]"}`} />)}
                             </div>
@@ -220,8 +220,8 @@ function SizeScale({speciesName, speciesSlug, score, wide = false}: {speciesName
                         </div>
                         <span className="text-[9px] font-bold text-white/[0.62]">Scale {clampedScore}</span>
                     </div>
-                    <span className="absolute top-[41px] h-[66px] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#38fa47] to-[#9454fa] shadow-[0_0_10px_rgba(56,250,71,.36)]" style={{left: `${clampedScore}%`}} />
-                    <span className="absolute top-[101px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#38fa47] shadow-[0_0_8px_rgba(56,250,71,.38)]" style={{left: `${clampedScore}%`}} />
+                    <span className="absolute top-[41px] h-[66px] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#A7F432] to-[#9454fa] shadow-[0_0_10px_rgba(167,244,50,.36)]" style={{left: `${clampedScore}%`}} />
+                    <span className="absolute top-[101px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#A7F432] shadow-[0_0_8px_rgba(167,244,50,.38)]" style={{left: `${clampedScore}%`}} />
                 </div>
             </div>
         </div>

@@ -1,3 +1,4 @@
+import {titlePlaceCandidates, titleStructuredLocationLooksInconsistent, locationMismatchMessage} from "./guide-listing-quality";
 import {categoryLabel, formatGuidePrice, type GuideCategory} from "./guide-marketplace-core";
 
 export const GUIDE_ADMIN_QUEUE_LIMIT = 50;
@@ -55,8 +56,13 @@ export type GuideListingReview = {
     serviceCategory: string;
     serviceCategoryLabel: string;
     publicAreaLabel: string;
+    publicPlaceName: string | null;
+    publicLocality: string | null;
+    publicAdminArea: string | null;
     regionCode: string | null;
     countryCode: string;
+    locationMismatch: boolean;
+    locationMismatchMessage: string | null;
     durationMinutes: number;
     maxGuests: number;
     currencyCode: string;
@@ -200,12 +206,45 @@ export function sellerApproveGate(eligibility: GuideEligibility): {ok: boolean; 
     return {ok: true, reason: null};
 }
 
-export function listingPublishGate(status: string, sellerEligible: boolean): {ok: boolean; reason: string | null} {
+export function adminLocationStatusLabel(mismatch: boolean) {
+    return mismatch
+        ? "Location mismatch — seller confirmation required"
+        : "Title and public area look consistent";
+}
+
+export function publicExperienceAreaShortName(publicAreaLabel: string, publicLocality?: string | null) {
+    const locality = (publicLocality || "").replace(/\s+/g, " ").trim();
+    if (locality) return locality;
+    const label = publicAreaLabel.replace(/\s+/g, " ").trim();
+    return label.split(",")[0]?.trim() || label || "the selected area";
+}
+
+export function adminLocationMismatchGuidance(
+    title: string,
+    publicAreaLabel: string,
+    publicLocality?: string | null
+) {
+    const mentioned = titlePlaceCandidates(title).join(", ");
+    const area = publicExperienceAreaShortName(publicAreaLabel, publicLocality);
+    if (!mentioned) {
+        return `Ask the Guide to confirm where this experience actually takes place before republishing. The selected public experience area is ${area}.`;
+    }
+    return `The listing title mentions ${mentioned}, but the selected public experience area is ${area}. Ask the Guide to confirm where this experience actually takes place before republishing.`;
+}
+
+export function listingPublishGate(
+    status: string,
+    sellerEligible: boolean,
+    locationMismatch = false
+): {ok: boolean; reason: string | null} {
     if (status !== "pending_review") {
         return {ok: false, reason: "Only listings in pending review can be published."};
     }
     if (!sellerEligible) {
         return {ok: false, reason: "Seller is not marketplace-eligible, so publishing is blocked."};
+    }
+    if (locationMismatch) {
+        return {ok: false, reason: "Title and public experience area look inconsistent. Reject and ask the seller to correct one of them. Do not rewrite the listing."};
     }
     return {ok: true, reason: null};
 }
@@ -242,19 +281,37 @@ export function mapListingReview(
     const category = asString(listing.service_category) as GuideCategory;
     const amountMinor = asNumber(listing.amount_minor);
     const currencyCode = asString(listing.currency_code, "USD");
-    const gate = listingPublishGate(status, seller.eligibility.eligible);
+    const publicAreaLabel = asString(listing.public_area_label);
+    const title = asString(listing.title);
+    const publicLocality = asStringOrNull(listing.public_locality);
+    const publicAdminArea = asStringOrNull(listing.public_admin_area);
+    const publicPlaceName = asStringOrNull(listing.public_place_name);
+    const locationMismatch = titleStructuredLocationLooksInconsistent(title, {
+        publicAreaLabel,
+        publicLocality,
+        publicAdminArea,
+        publicPlaceName
+    });
+    const gate = listingPublishGate(status, seller.eligibility.eligible, locationMismatch);
     return {
         id: asString(listing.id),
         sellerUserId: asString(listing.seller_user_id),
         sellerDisplayName: seller.displayName,
         sellerUsername: seller.username,
-        title: asString(listing.title),
+        title,
         slug: asString(listing.slug),
         description: asString(listing.description),
         publicSummary: asString(listing.public_summary),
         serviceCategory: category,
         serviceCategoryLabel: categoryLabel(category),
-        publicAreaLabel: asString(listing.public_area_label),
+        publicAreaLabel,
+        publicPlaceName,
+        publicLocality,
+        publicAdminArea,
+        locationMismatch,
+        locationMismatchMessage: locationMismatch
+            ? adminLocationMismatchGuidance(title, publicAreaLabel, publicLocality)
+            : null,
         regionCode: asStringOrNull(listing.region_code),
         countryCode: asString(listing.country_code),
         durationMinutes: asNumber(listing.duration_minutes),

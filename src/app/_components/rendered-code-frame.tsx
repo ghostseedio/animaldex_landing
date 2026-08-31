@@ -37,7 +37,7 @@ function injectFrameEnvironment(documentHtml: string, frameId: string, styleshee
     const stylesheetLinks = stylesheetUrls
         .map((url) => `<link rel="stylesheet" href="${url.replace(/"/g, "&quot;")}">`)
         .join("");
-    const frameGuardCss = `html,body{min-height:0!important;background:transparent!important}body{margin:0!important;color:#f4fff5;font-family:var(--font-sans),system-ui,sans-serif}`;
+    const frameGuardCss = `html,body{min-height:0!important;background:transparent!important}body{margin:0!important;color:#FFFFFF;font-family:var(--font-sans),system-ui,sans-serif}`;
     const frameGuard = `<style data-animaldex-frame-guard>${frameGuardCss}</style>`;
     const head = `<base href="${typeof window === "undefined" ? "/" : `${window.location.origin}/`}" target="_blank"><meta name="viewport" content="width=device-width,initial-scale=1">${stylesheetLinks}<style>${sharedCss}</style><style>${themeCss}${frameGuardCss}</style>`;
     const resizeScript = `<script>(()=>{let observed=[];const measure=()=>{const body=document.body;if(!body)return;const top=body.getBoundingClientRect().top;let bottom=top;for(const child of body.children){if(child.tagName==="SCRIPT")continue;const rect=child.getBoundingClientRect();bottom=Math.max(bottom,rect.bottom)}const styles=getComputedStyle(body);const height=Math.ceil(Math.max(1,bottom-top+parseFloat(styles.paddingBottom||"0")));parent.postMessage({type:"animaldex-frame-height",id:${JSON.stringify(frameId)},height},"*")};const observe=()=>{observed.forEach(item=>item.disconnect());const resize=new ResizeObserver(measure);for(const child of document.body?.children||[]){if(child.tagName!=="SCRIPT")resize.observe(child)}observed=[resize];measure()};new MutationObserver(observe).observe(document.documentElement,{childList:true,subtree:true});addEventListener("load",observe);document.fonts?.ready.then(observe);setTimeout(observe,50);setTimeout(measure,500)})()</script>`;
@@ -62,7 +62,7 @@ export default function RenderedCodeFrame({documentHtml, title, className = "", 
         const urls = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')).map((link) => link.href);
         const bodyStyles = getComputedStyle(document.body);
         const rootStyles = getComputedStyle(document.documentElement);
-        const variableNames = ["--font-sans", "--font-display", "--font-onest", "--font-cal-sans"];
+        const variableNames = ["--font-sans", "--font-display", "--font-inter", "--font-barlow-condensed"];
         const variables = variableNames.map((name) => {
             const value = bodyStyles.getPropertyValue(name) || rootStyles.getPropertyValue(name);
             return value.trim() ? `${name}:${value.trim()};` : "";

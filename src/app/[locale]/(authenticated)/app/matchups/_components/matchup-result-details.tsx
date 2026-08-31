@@ -45,6 +45,12 @@ export type MatchupResultPresentation = {
     damageTaken?: number | null;
     loserRemainingHearts?: number | null;
     maxHearts?: number;
+    challengeFormat?: string | null;
+    battleStatus?: string | null;
+    requiredVotes?: number | null;
+    votesCount?: number;
+    settlementReason?: string | null;
+    finalScore?: string | null;
 };
 
 function Metric({label, value, accent}: {label: string; value: string | number; accent?: "green" | "rose" | "neutral"}) {
@@ -101,6 +107,11 @@ export default function MatchupResultDetails({
     });
     const attackerContext = result.attackerContextScore ?? result.attackerStatValue ?? 0;
     const defenderContext = result.defenderContextScore ?? result.defenderStatValue ?? 0;
+    const bestOfThree = result.challengeFormat === "best_of_3_v2";
+    const battleComplete = !bestOfThree || result.battleStatus === "completed";
+    const battleVoting = bestOfThree && result.battleStatus === "round_2_voting";
+    const creditsLabel = battleVoting ? "Locked" : `${result.creditsDelta >= 0 ? "+" : ""}${result.creditsDelta}`;
+    const payoutLabel = battleComplete ? result.payoutAmount : "After Round 3";
 
     return (
         <div className="space-y-5">
@@ -130,10 +141,10 @@ export default function MatchupResultDetails({
                 />
                 <Metric
                     label="Credits"
-                    value={`${result.creditsDelta >= 0 ? "+" : ""}${result.creditsDelta}`}
-                    accent={result.creditsDelta >= 0 ? "green" : "rose"}
+                    value={creditsLabel}
+                    accent={!battleComplete ? "neutral" : result.creditsDelta >= 0 ? "green" : "rose"}
                 />
-                <Metric label="Pot paid" value={result.payoutAmount} />
+                <Metric label="Pot paid" value={payoutLabel} />
                 <Metric label="Points" value={pointsRewardLabel(result.pointsAwarded, result.rewarded)} />
             </div>
 
@@ -177,11 +188,28 @@ export default function MatchupResultDetails({
                         <div className="space-y-2 border-t border-white/10 px-4 py-4 text-sm">
                             <DetailRow label="Matched confidence" value={`${result.stakeAmount} credits`} />
                             <DetailRow label="Total pot" value={`${result.escrowAmount || result.stakeAmount * 2} credits`} />
-                            <DetailRow
-                                label={survival ? "Best adapted payout" : "Best-fit payout"}
-                                value={`${result.payoutAmount} credits`}
-                            />
-                            <DetailRow label="Burned" value={`${result.burnAmount} credit${result.burnAmount === 1 ? "" : "s"}`} />
+                            {bestOfThree ? (
+                                <>
+                                    <DetailRow label="Format" value="Best of 3" />
+                                    <DetailRow label="Settlement" value={battleComplete ? "Complete" : "After Round 3"} />
+                                    {battleVoting ? (
+                                        <DetailRow label="Next" value={`Round 2 community vote - ${result.votesCount ?? 0}/${result.requiredVotes ?? 0}`} />
+                                    ) : null}
+                                    {result.finalScore ? <DetailRow label="Final score" value={result.finalScore} /> : null}
+                                    {result.settlementReason === "voting_timeout_round1_fallback" ? (
+                                        <DetailRow label="Reason" value="Voting timeout - Round 1 wins" />
+                                    ) : null}
+                                </>
+                            ) : null}
+                            {battleComplete ? (
+                                <>
+                                    <DetailRow
+                                        label={survival ? "Best adapted payout" : "Best-fit payout"}
+                                        value={`${result.payoutAmount} credits`}
+                                    />
+                                    <DetailRow label="Burned" value={`${result.burnAmount} credit${result.burnAmount === 1 ? "" : "s"}`} />
+                                </>
+                            ) : null}
                             {typeof result.damageTaken === "number" ? (
                                 <DetailRow
                                     label="Damage"
@@ -200,13 +228,19 @@ export default function MatchupResultDetails({
                 </div>
             ) : null}
 
-            <p className="text-sm leading-6 text-white/45">
-                {payoutSummaryText({
-                    scenarioDomain: result.scenarioDomain,
-                    payoutAmount: result.payoutAmount,
-                    escrowAmount: result.escrowAmount || result.stakeAmount * 2
-                })}
-            </p>
+            {battleComplete ? (
+                <p className="text-sm leading-6 text-white/45">
+                    {payoutSummaryText({
+                        scenarioDomain: result.scenarioDomain,
+                        payoutAmount: result.payoutAmount,
+                        escrowAmount: result.escrowAmount || result.stakeAmount * 2
+                    })}
+                </p>
+            ) : (
+                <p className="text-sm leading-6 text-white/45">
+                    Your stake stays locked while the community vote and species comparison finish the battle.
+                </p>
+            )}
 
             {footnote ? <p className="text-xs leading-5 text-white/35">{footnote}</p> : null}
         </div>
@@ -251,6 +285,12 @@ export function toResultPresentation(input: {
     damageTaken?: number | null;
     loserRemainingHearts?: number | null;
     maxHearts?: number;
+    challengeFormat?: string | null;
+    battleStatus?: string | null;
+    requiredVotes?: number | null;
+    votesCount?: number;
+    settlementReason?: string | null;
+    finalScore?: string | null;
 }): MatchupResultPresentation {
     return {
         scenarioTitle: input.scenarioTitle,
@@ -280,6 +320,12 @@ export function toResultPresentation(input: {
         defenderLabel: input.defenderLabel,
         damageTaken: input.damageTaken ?? null,
         loserRemainingHearts: input.loserRemainingHearts ?? null,
-        maxHearts: input.maxHearts ?? 3
+        maxHearts: input.maxHearts ?? 3,
+        challengeFormat: input.challengeFormat ?? null,
+        battleStatus: input.battleStatus ?? null,
+        requiredVotes: input.requiredVotes ?? null,
+        votesCount: input.votesCount ?? 0,
+        settlementReason: input.settlementReason ?? null,
+        finalScore: input.finalScore ?? null
     };
 }

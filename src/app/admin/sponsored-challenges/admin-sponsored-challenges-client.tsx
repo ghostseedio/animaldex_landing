@@ -879,7 +879,7 @@ export default function AdminSponsoredChallengesClient() {
           type="button"
           onClick={startCreate}
           disabled={loadingList || busy}
-          className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+          className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
         >
           {loadingList ? "Loading..." : "New campaign"}
         </button>
@@ -1127,7 +1127,7 @@ export default function AdminSponsoredChallengesClient() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-xl bg-primary-500 px-3 py-2 text-xs font-black text-canvas-950"
+                  className="rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"
                   onClick={() => void saveStepAndAdvance()}
                   disabled={busy || currentStep >= steps.length - 1}
                 >
@@ -2083,7 +2083,7 @@ export default function AdminSponsoredChallengesClient() {
                         <button
                           type="button"
                           disabled={busy || !fundingReference.trim()}
-                          className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                          className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
                           onClick={() =>
                             act(
                               {
@@ -2118,7 +2118,7 @@ export default function AdminSponsoredChallengesClient() {
                       <button
                         type="button"
                         disabled={busy || Boolean(blocked)}
-                        className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                        className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
                         onClick={() =>
                           act(
                             { action: "submit", campaignId: campaign.id },
@@ -2133,7 +2133,7 @@ export default function AdminSponsoredChallengesClient() {
                       <button
                         type="button"
                         disabled={busy}
-                        className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950"
+                        className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
                         onClick={() =>
                           act(
                             {

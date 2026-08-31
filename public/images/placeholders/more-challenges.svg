@@ -18,7 +18,7 @@
 
     <linearGradient id="tradeGrad" x1="572" y1="478" x2="940" y2="598" gradientUnits="userSpaceOnUse">
       <stop stop-color="#8F59FF"/>
-      <stop offset="0.55" stop-color="#31FF4F"/>
+      <stop offset="0.55" stop-color="#A7F432"/>
       <stop offset="1" stop-color="#24D6C8"/>
     </linearGradient>
 
@@ -45,7 +45,7 @@
   </g>
 
   <text x="84" y="104" fill="#F29A38" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="5">SEALED PACKS</text>
-  <text x="84" y="158" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="52" font-weight="900">Create a Pack</text>
+  <text x="84" y="158" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="52" font-weight="900">Create a Pack</text>
 
   <!-- Create a pack image -->
   <rect x="84" y="188" width="368" height="314" rx="28" fill="#071426"/>
@@ -64,7 +64,7 @@
   <rect x="85" y="189" width="366" height="312" rx="27" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
 
   <!-- Pack copy -->
-<text x="84" y="546" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="31" font-weight="900">Build sealed packs</text>
+<text x="84" y="546" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="31" font-weight="900">Build sealed packs</text>
 <text x="84" y="580" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="21" font-weight="700">Choose captures, set guarantees,</text>
 <text x="84" y="610" fill="#B8C0BA" font-family="Arial, sans-serif" font-size="21" font-weight="700">then list hidden packs for credits.</text>
   <!-- Top right: pack builder loop -->
@@ -73,23 +73,23 @@
     <rect x="532.75" y="44.75" width="446.5" height="282.5" rx="31.25" stroke="#303933" stroke-width="1.5"/>
   </g>
 
-  <text x="572" y="102" fill="#31FF4F" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="4">PACK BUILDER</text>
-  <text x="572" y="154" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="38" font-weight="900">Turn captures into</text>
-<text x="572" y="198" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="38" font-weight="900">sealed drops</text>
+  <text x="572" y="102" fill="#A7F432" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="4">PACK BUILDER</text>
+  <text x="572" y="154" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="38" font-weight="900">Turn captures into</text>
+<text x="572" y="198" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="38" font-weight="900">sealed drops</text>
   <rect x="572" y="234" width="112" height="54" rx="27" fill="#12391C"/>
-  <text x="628" y="269" text-anchor="middle" fill="#31FF4F" font-family="Arial, sans-serif" font-size="22" font-weight="900">Select</text>
+  <text x="628" y="269" text-anchor="middle" fill="#A7F432" font-family="Arial, sans-serif" font-size="22" font-weight="900">Select</text>
 
   <path d="M702 260H744" stroke="#66706A" stroke-width="5" stroke-linecap="round"/>
   <path d="M734 248L748 260L734 272" stroke="#66706A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <rect x="762" y="234" width="116" height="54" rx="27" fill="#202622"/>
-  <text x="820" y="269" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="900">Verify</text>
+  <text x="820" y="269" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="900">Verify</text>
 
   <path d="M896 260H930" stroke="#66706A" stroke-width="5" stroke-linecap="round"/>
   <path d="M920 248L934 260L920 272" stroke="#66706A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <circle cx="920" cy="108" r="30" fill="#12391C"/>
-  <path d="M909 110L918 119L933 96" stroke="#31FF4F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M909 110L918 119L933 96" stroke="#A7F432" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- Bottom right: marketplace value -->
   <g filter="url(#shadow)">
@@ -98,13 +98,13 @@
   </g>
 
   <text x="572" y="416" fill="#F29A38" font-family="Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="4">MARKET VALUE</text>
-  <text x="572" y="470" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="42" font-weight="900">Hidden contents,</text>
-  <text x="572" y="518" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="42" font-weight="900">visible guarantees</text>
+  <text x="572" y="470" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="42" font-weight="900">Hidden contents,</text>
+  <text x="572" y="518" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="42" font-weight="900">visible guarantees</text>
 
   <rect x="572" y="552" width="368" height="46" rx="23" fill="#27302B"/>
   <rect x="572" y="552" width="282" height="46" rx="23" fill="url(#tradeGrad)"/>
-  <circle cx="854" cy="575" r="16" fill="#F4FFF5"/>
+  <circle cx="854" cy="575" r="16" fill="#FFFFFF"/>
   <text x="594" y="583" fill="#07100B" font-family="Arial, sans-serif" font-size="22" font-weight="900">Pack demand</text>
 
-  <circle cx="552" cy="622" r="5" fill="#31FF4F" filter="url(#glow)"/>
+  <circle cx="552" cy="622" r="5" fill="#A7F432" filter="url(#glow)"/>
 </svg>

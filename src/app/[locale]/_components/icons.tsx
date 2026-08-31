@@ -155,6 +155,86 @@ export function HelpCircleIcon({className, size = 24}: IconProps) {
     );
 }
 
+export function ThumbsUpIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 11v8.5H4.5A1.5 1.5 0 0 1 3 18V11.8c0-.55.22-1.08.62-1.47l3.1-3.1A1.5 1.5 0 0 1 8.5 7V5.5A2 2 0 0 1 10.5 3.5h.2A2 2 0 0 1 12.5 5.4l.6 2.4c.2.8.9 1.4 1.7 1.5l2.7.4A1.5 1.5 0 0 1 18 11v8.5h-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function ThumbsDownIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 13V4.5h2.5A1.5 1.5 0 0 1 21 6v6.2c0 .55-.22 1.08-.62 1.47l-3.1 3.1A1.5 1.5 0 0 1 15.5 17v1.5a2 2 0 0 1-2 2h-.2a2 2 0 0 1-2-1.9l-.6-2.4a2 2 0 0 0-1.7-1.5l-2.7-.4A1.5 1.5 0 0 1 6 13V4.5h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function CheckCircleIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+            <path d="m8.2 12.2 2.1 2.1 5.5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function LifeBuoyIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+            <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.55 1.55M16.85 16.85l1.55 1.55M18.4 5.6l-1.55 1.55M7.15 16.85 5.6 18.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function HandshakeIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 11.5 7.2 8.3c.8-.8 2.1-.8 2.9 0l1.4 1.4c.8.8.8 2.1 0 2.9l-1.1 1.1M20 11.5l-3.2-3.2c-.8-.8-2.1-.8-2.9 0l-1.4 1.4c-.8.8-.8 2.1 0 2.9l1.1 1.1M8.8 14.2 11 16.4c.9.9 2.3.9 3.2 0l1.8-1.8c.9-.9.9-2.3 0-3.2l-1.4-1.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="m9.5 12.5 1.5 1.5M14.5 9.5 13 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function MegaphoneIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.5 10.5h3.4l6.1-3.4v13.8l-6.1-3.4H4.5v-7Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M16.5 9.2c1.1.8 1.8 2.1 1.8 3.6s-.7 2.8-1.8 3.6M19 6.8c2 1.5 3.2 3.8 3.2 6.2s-1.2 4.7-3.2 6.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function CameraIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.5 8.5h3l1.4-2.2c.3-.5.8-.8 1.4-.8h4.2c.6 0 1.1.3 1.4.8L16.5 8.5H19.5A2 2 0 0 1 21.5 10.5v7a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <circle cx="12" cy="13" r="3.1" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+    );
+}
+
+export function NewspaperIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 4.5h11.5A2.5 2.5 0 0 1 20 7v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M8.5 8.5h6M8.5 12h6M8.5 15.5h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function MessageCircleIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v5A3.5 3.5 0 0 1 15.5 15H10l-4.5 3.5V15H8.5A3.5 3.5 0 0 1 5 11.5v-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M9 8.5h6M9 11.5h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
 export function DocumentIcon({className, size = 24}: IconProps) {
     return (
         <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

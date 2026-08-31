@@ -242,7 +242,7 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
 
                             <div className="flex flex-wrap items-center gap-3">
                                 <button type="button" onClick={() => void save()} disabled={!dirty || saving || !preview}
-                                        className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                        className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
                                     {saving ? "Saving…" : `Save grade ${preview?.grade ?? ""}`}
                                 </button>
                                 <button type="button" onClick={() => state && setInputs(state.inputs)} disabled={!dirty || saving}

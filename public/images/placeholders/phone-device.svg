@@ -19,8 +19,8 @@
     </radialGradient>
 
     <radialGradient id="shutterGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(215 810) rotate(90) scale(100 120)">
-      <stop stop-color="#2EFF4A" stop-opacity="0.38"/>
-      <stop offset="1" stop-color="#2EFF4A" stop-opacity="0"/>
+      <stop stop-color="#A7F432" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#A7F432" stop-opacity="0"/>
     </radialGradient>
 
     <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
@@ -30,6 +30,11 @@
     <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="12"/>
     </filter>
+
+    <linearGradient id="phoneRadarFill" x1="360" y1="109" x2="360" y2="174" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F432" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#9454fa" stop-opacity="0.18"/>
+    </linearGradient>
 
     <clipPath id="screenClip">
       <rect x="28" y="24" width="374" height="862" rx="50"/>
@@ -70,26 +75,45 @@
 
     <!-- Status bar -->
     <rect x="28" y="24" width="374" height="86" fill="#030504" opacity="0.78"/>
-    <text x="56" y="70" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="700">23:22</text>
+    <text x="56" y="70" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="700">23:22</text>
 
-    <rect x="306" y="52" width="5" height="14" rx="2.5" fill="#F4FFF5"/>
-    <rect x="316" y="46" width="5" height="20" rx="2.5" fill="#F4FFF5"/>
-    <rect x="326" y="40" width="5" height="26" rx="2.5" fill="#F4FFF5"/>
-    <rect x="344" y="44" width="30" height="18" rx="6" stroke="#F4FFF5" stroke-width="2"/>
-    <rect x="376" y="50" width="3" height="6" rx="1.5" fill="#F4FFF5"/>
-    <rect x="348" y="48" width="20" height="10" rx="5" fill="#F4FFF5"/>
+    <rect x="306" y="52" width="5" height="14" rx="2.5" fill="#FFFFFF"/>
+    <rect x="316" y="46" width="5" height="20" rx="2.5" fill="#FFFFFF"/>
+    <rect x="326" y="40" width="5" height="26" rx="2.5" fill="#FFFFFF"/>
+    <rect x="344" y="44" width="30" height="18" rx="6" stroke="#FFFFFF" stroke-width="2"/>
+    <rect x="376" y="50" width="3" height="6" rx="1.5" fill="#FFFFFF"/>
+    <rect x="348" y="48" width="20" height="10" rx="5" fill="#FFFFFF"/>
 
     <!-- Dynamic island -->
     <rect x="145" y="38" width="140" height="34" rx="17" fill="#020403"/>
     <circle cx="263" cy="55" r="6" fill="#101814"/>
-    <circle cx="263" cy="55" r="3" fill="#2EFF4A" opacity="0.65"/>
+    <circle cx="263" cy="55" r="3" fill="#A7F432" opacity="0.65"/>
 
-    <text x="215" y="134" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="3">
-      SIGHTING SCANNER
+    <text x="56" y="128" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="1">
+      #420
     </text>
-    <text x="215" y="163" text-anchor="middle" fill="#C9D0C9" font-family="Arial, sans-serif" font-size="17">
-      Still capture
+    <text x="56" y="156" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="400">
+      Atlantic Puffin
     </text>
+
+    <!-- Mini stats pentagram: dominance, speed, size, intelligence, rarity -->
+    <g aria-hidden="true">
+      <polygon points="360,118 385.7,136.7 375.9,166.8 344.1,166.8 334.3,136.7" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <polygon points="360,127 377.1,139.4 370.6,159.6 349.4,159.6 342.9,139.4" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <polygon points="360,136 368.6,142.2 365.3,152.3 354.7,152.3 351.4,142.2" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <polygon points="360,109 394.2,133.9 381.2,174.1 338.8,174.1 325.8,133.9" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
+      <line x1="360" y1="145" x2="360" y2="109" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <line x1="360" y1="145" x2="394.2" y2="133.9" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <line x1="360" y1="145" x2="381.2" y2="174.1" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <line x1="360" y1="145" x2="338.8" y2="174.1" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <line x1="360" y1="145" x2="325.8" y2="133.9" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+      <polygon points="360,131.3 381.6,138 362.8,148.8 352,156.1 338.1,137.9" fill="url(#phoneRadarFill)" stroke="#A7F432" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="360" cy="131.3" r="2.5" fill="#A7F432"/>
+      <circle cx="381.6" cy="138" r="2.5" fill="#A7F432"/>
+      <circle cx="362.8" cy="148.8" r="2.5" fill="#A7F432"/>
+      <circle cx="352" cy="156.1" r="2.5" fill="#A7F432"/>
+      <circle cx="338.1" cy="137.9" r="2.5" fill="#A7F432"/>
+    </g>
 
     <!-- Tool controls -->
 <g filter="url(#shadow)">
@@ -110,22 +134,22 @@
 <path d="M301 209L309 214L301 219V209Z" fill="#D7DED7"/>
 <text x="322" y="220" fill="#E7EEE7" font-family="Arial, sans-serif" font-size="15" font-weight="800">GIF</text>
     <!-- Scan frame -->
-    <rect x="84" y="270" width="262" height="390" rx="14" stroke="#2EFF4A" stroke-width="4"/>
+    <rect x="84" y="270" width="262" height="390" rx="14" stroke="#A7F432" stroke-width="4"/>
 
-    <path d="M84 328V282C84 275 89 270 96 270H148" stroke="#2EFF4A" stroke-width="8" stroke-linecap="round"/>
-    <path d="M282 270H334C341 270 346 275 346 282V328" stroke="#2EFF4A" stroke-width="8" stroke-linecap="round"/>
-    <path d="M84 602V648C84 655 89 660 96 660H148" stroke="#2EFF4A" stroke-width="8" stroke-linecap="round"/>
-    <path d="M282 660H334C341 660 346 655 346 648V602" stroke="#2EFF4A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M84 328V282C84 275 89 270 96 270H148" stroke="#A7F432" stroke-width="8" stroke-linecap="round"/>
+    <path d="M282 270H334C341 270 346 275 346 282V328" stroke="#A7F432" stroke-width="8" stroke-linecap="round"/>
+    <path d="M84 602V648C84 655 89 660 96 660H148" stroke="#A7F432" stroke-width="8" stroke-linecap="round"/>
+    <path d="M282 660H334C341 660 346 655 346 648V602" stroke="#A7F432" stroke-width="8" stroke-linecap="round"/>
 
-    <circle cx="84" cy="305" r="5" fill="#2EFF4A"/>
-    <circle cx="346" cy="305" r="5" fill="#2EFF4A"/>
-    <circle cx="84" cy="625" r="5" fill="#2EFF4A"/>
-    <circle cx="346" cy="625" r="5" fill="#2EFF4A"/>
+    <circle cx="84" cy="305" r="5" fill="#A7F432"/>
+    <circle cx="346" cy="305" r="5" fill="#A7F432"/>
+    <circle cx="84" cy="625" r="5" fill="#A7F432"/>
+    <circle cx="346" cy="625" r="5" fill="#A7F432"/>
 
     <!-- Center focus detail -->
-    <circle cx="215" cy="465" r="54" stroke="#2EFF4A" stroke-opacity="0.14" stroke-width="3"/>
-    <circle cx="215" cy="465" r="6" fill="#2EFF4A" opacity="0.5"/>
-    <path d="M190 465H202M228 465H240M215 440V452M215 478V490" stroke="#2EFF4A" stroke-opacity="0.32" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="215" cy="465" r="54" stroke="#A7F432" stroke-opacity="0.14" stroke-width="3"/>
+    <circle cx="215" cy="465" r="6" fill="#A7F432" opacity="0.5"/>
+    <path d="M190 465H202M228 465H240M215 440V452M215 478V490" stroke="#A7F432" stroke-opacity="0.32" stroke-width="3" stroke-linecap="round"/>
 
     <!-- Bottom control area -->
     <rect x="28" y="704" width="374" height="182" fill="#050705" opacity="0.72"/>
@@ -135,22 +159,22 @@
       <rect x="120" y="704" width="190" height="66" rx="33" fill="#30342F" fill-opacity="0.9"/>
       <rect x="121" y="705" width="188" height="64" rx="32" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
 
-      <circle cx="158" cy="737" r="27" fill="#2EFF4A"/>
+      <circle cx="158" cy="737" r="27" fill="#A7F432"/>
       <circle cx="215" cy="737" r="27" fill="#4A4D48"/>
       <circle cx="272" cy="737" r="27" fill="#555852"/>
     </g>
 
-    <text x="158" y="745" text-anchor="middle" fill="#041006" font-family="Arial, sans-serif" font-size="20" font-weight="900">1x</text>
-    <text x="215" y="745" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="20" font-weight="900">2x</text>
-    <text x="272" y="745" text-anchor="middle" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="20" font-weight="900">5x</text>
+    <text x="158" y="745" text-anchor="middle" fill="#07100B" font-family="Arial, sans-serif" font-size="20" font-weight="900">1x</text>
+    <text x="215" y="745" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="20" font-weight="900">2x</text>
+    <text x="272" y="745" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="20" font-weight="900">5x</text>
 
     <!-- Shutter -->
     <circle cx="215" cy="815" r="70" fill="url(#shutterGlow)" filter="url(#softGlow)"/>
     <circle cx="215" cy="815" r="48" fill="#233026" opacity="0.96"/>
     <circle cx="215" cy="815" r="39" stroke="#DFFFE5" stroke-opacity="0.36" stroke-width="6"/>
-    <circle cx="215" cy="815" r="31" fill="#2EFF4A"/>
+    <circle cx="215" cy="815" r="31" fill="#A7F432"/>
 
     <!-- Bottom home indicator -->
-    <rect x="156" y="866" width="118" height="5" rx="2.5" fill="#F4FFF5" opacity="0.65"/>
+    <rect x="156" y="866" width="118" height="5" rx="2.5" fill="#FFFFFF" opacity="0.65"/>
   </g>
 </svg>

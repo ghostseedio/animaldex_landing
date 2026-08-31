@@ -5,6 +5,7 @@ import Image from "next/image";
 import {ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import {answerPages, getAnswerPage, getRelatedAnswerPages} from "@/data/answer-pages";
 import {getBlogPost} from "@/data/blog";
@@ -406,7 +407,7 @@ export default async function AnswerPage({slug, cmsSource = false}: AnswerPagePr
                         <div className="grid gap-4">
                             {entry.directAnswer.map((paragraph, index) => (
                                 <div key={paragraph} className="grid gap-4 rounded-lg border border-line-300 bg-surface-900/75 p-5 md:grid-cols-[3.5rem_minmax(0,1fr)] md:p-6">
-                                    <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary-500 text-lg font-bold text-canvas-950">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary-400 text-lg font-bold text-canvas-950">
                                         {index + 1}
                                     </span>
                                     <p className="text-lg leading-8 text-ink-200 md:text-xl">{paragraph}</p>
@@ -569,7 +570,7 @@ export default async function AnswerPage({slug, cmsSource = false}: AnswerPagePr
                         </div>
                     </SectionShell>
 
-                    <div className="relative overflow-hidden rounded-[2rem] border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(131,255,174,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <div className="relative overflow-hidden rounded-[2rem] border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
                         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/50 to-transparent" />
                         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
                             <div className="relative z-10 p-6 text-center md:p-10 lg:p-12 lg:text-left">
@@ -579,8 +580,25 @@ export default async function AnswerPage({slug, cmsSource = false}: AnswerPagePr
                                 <div className="mt-7 flex flex-col items-center gap-4 lg:items-start">
                                     <StoreLinks
                                         className="!mt-0 !justify-start"
-                                        buttonClassName="!h-16 !min-w-[13.5rem] !rounded-[1.25rem] !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(49,255,79,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(49,255,79,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
+                                        buttonClassName="!h-16 !min-w-[13.5rem] !rounded-[1.25rem] !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(167,244,50,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
                                     />
+                                    {entry.slug === "wildlife-discovery-app" ? (
+                                        <>
+                                        <UseCaseProductCta
+                                            href="/use-cases/import-instagram-wildlife-photos"
+                                            label="Import past wildlife encounters"
+                                            event="discovery_to_import"
+                                            source="wildlife_discovery"
+                                            variant="secondary"
+                                        />
+                                        <Link
+                                            href="/wildlife-experiences"
+                                            className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-primary-200/25 bg-white/[0.045] px-5 text-sm font-black uppercase tracking-[0.12em] text-primary-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-200/60 hover:bg-primary-400 hover:text-canvas-950"
+                                        >
+                                            Wildlife experiences →
+                                        </Link>
+                                        </>
+                                    ) : null}
                                     <Link
                                         href="/"
                                         className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-primary-200/25 bg-white/[0.045] px-5 text-sm font-black uppercase tracking-[0.12em] text-primary-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-200/60 hover:bg-primary-400 hover:text-canvas-950"

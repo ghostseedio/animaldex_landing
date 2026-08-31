@@ -78,6 +78,7 @@ export type BlogPost = CanonicalContentMetadata & {
     systemsSpeciesSlugs?: string[];
     relatedChallengeSlugs?: string[];
     tableOfContents?: string[];
+    relatedSlugs?: string[];
     sections: BlogSection[];
     faq?: BlogFAQ[];
     sources?: BlogSource[];

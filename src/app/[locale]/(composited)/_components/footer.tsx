@@ -25,6 +25,7 @@ export default function Footer() {
                 { href: "/tier-list", label: t("rankings") },
                 { href: "/comparisons", label: t("challenges") },
                 { href: "/locations", label: t("locations") },
+                { href: "/wildlife-experiences", label: t("wildlifeExperiences") },
                 { href: "/what-animal-am-i", label: t("whatAnimalAmI") }
             ]
         },
@@ -44,6 +45,15 @@ export default function Footer() {
                 { href: "/branding", label: "Brand assets" },
                 { href: "/support", label: t("support") },
                 { href: "/contact", label: t("contact") }
+            ]
+        },
+        {
+            title: t("footerGroups.earn"),
+            links: [
+                { href: "/earn-on-animaldex", label: t("earnOnAnimalDex") },
+                { href: "/become-a-wildlife-guide", label: t("becomeAWildlifeGuide") },
+                { href: "/creator-rewards", label: t("creatorRewards") },
+                { href: "/sponsor-a-challenge", label: t("sponsorAChallenge") }
             ]
         }
     ];
@@ -89,7 +99,7 @@ export default function Footer() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-10 w-full max-w-5xl items-center xl:items-start">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">
                         {footerSections.map(section => (
                             <div key={section.title} className="flex flex-col gap-4 items-center xl:items-start">
                                 <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-ink-400 text-center xl:text-left">
@@ -129,7 +139,7 @@ export default function Footer() {
                 <Link
                     href="#top"
                     role="button"
-                    className="group w-32 h-32 font-bold font-display aspect-square text-4xl overflow-hidden hover:bg-primary-500 flex-col
+                    className="group w-32 h-32 font-bold font-display aspect-square text-4xl overflow-hidden hover:bg-primary-400 flex-col
                         hover:text-canvas-950 rounded-full bg-surface-800 text-primary-500 flex justify-center items-center transition-colors
                         active:bg-primary-400 active:text-canvas-950 duration-300 ease-in-out min-w-max min-h-max border border-line-300"
                 >

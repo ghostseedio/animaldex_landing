@@ -46,6 +46,7 @@ export default function MatchupRevealStep({
 
     const chosenStat = normalizeStatKey(result?.chosenStat);
     const viewerWon = result ? result.winnerUserId === viewerUserId : false;
+    const bestOfThree = result?.challengeFormat === "best_of_3_v2";
     const winnerName = result
         ? (result.winnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName)
         : null;
@@ -164,7 +165,7 @@ export default function MatchupRevealStep({
                 <div className="relative space-y-4">
                     <div className="text-center">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-primary-200">
-                            {hasResolvedReveal ? "Scenario fit resolved" : "Revealing scenario"}
+                            {hasResolvedReveal ? (bestOfThree ? "Round 1 of 3 resolved" : "Scenario fit resolved") : "Revealing scenario"}
                         </p>
                         <h3 className="mt-2 font-display text-2xl font-bold text-white">
                             {hasResolvedReveal ? result.scenarioTitle : "Reading matchup"}
@@ -174,13 +175,13 @@ export default function MatchupRevealStep({
 
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                         <div className={`text-center transition ${hasResolvedReveal && result.winnerCaptureId !== attacker.captureId ? "opacity-45" : ""}`}>
-                            <img src={attacker.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === attacker.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(56,250,71,0.35)]" : "border-white/10"}`} />
+                            <img src={attacker.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === attacker.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
                             <p className="mt-2 text-xs font-bold text-white">{attacker.animalName}</p>
                             <p className="text-[0.62rem] text-white/35">You</p>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-black ${hasResolvedReveal ? "bg-primary-400 text-black" : "bg-white/10 text-white/55"}`}>VS</span>
                         <div className={`text-center transition ${hasResolvedReveal && result.winnerCaptureId !== opponent.captureId ? "opacity-45" : ""}`}>
-                            <img src={opponent.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === opponent.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(56,250,71,0.35)]" : "border-white/10"}`} />
+                            <img src={opponent.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === opponent.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
                             <p className="mt-2 text-xs font-bold text-white">{opponent.animalName}</p>
                             <p className="text-[0.62rem] text-white/35">Opponent</p>
                         </div>
@@ -242,7 +243,9 @@ export default function MatchupRevealStep({
                             </p>
                             <p className="mt-2 font-display text-2xl font-bold text-white">{winnerName}</p>
                             <p className="mt-1 text-sm text-white/50">
-                                {result.decidingEdgeLabel ?? statLabel(chosenStat)} decided the scenario.
+                                {bestOfThree
+                                    ? `${result.decidingEdgeLabel ?? statLabel(chosenStat)} decided Round 1.`
+                                    : `${result.decidingEdgeLabel ?? statLabel(chosenStat)} decided the scenario.`}
                             </p>
                         </div>
                     ) : (

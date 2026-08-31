@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {SPECIES_NO_IMAGE_SRC} from "@/data/species-images";
 import {createSignedStorageUrl, resolveCaptureImageReference} from "@/lib/capture-storage-image";
+import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 
 function buildFallbackUrl(request: NextRequest) {
     return new URL(SPECIES_NO_IMAGE_SRC, request.url);
@@ -50,30 +51,39 @@ export async function GET(
     request: NextRequest,
     {params}: {params: {captureId: string}}
 ) {
-    const captureId = params.captureId?.trim();
-    if (!captureId) {
-        return redirectWithBrowserCache(buildFallbackUrl(request));
-    }
-
-    const imageBucket = request.nextUrl.searchParams.get("bucket");
-    const imagePath = request.nextUrl.searchParams.get("path");
-    const imageMimeType = request.nextUrl.searchParams.get("mime");
-    const imageMediaKind = request.nextUrl.searchParams.get("kind");
-
+    const timer = createDevRequestTimer("api.capture-images", {captureId: params.captureId});
     try {
-        const reference = await resolveCaptureImageReference({
-            captureId,
-            imageBucket,
-            imagePath,
-            imageMimeType,
-            imageMediaKind
-        });
+        const captureId = params.captureId?.trim();
+        if (!captureId) {
+            return redirectWithBrowserCache(buildFallbackUrl(request));
+        }
+
+        const imageBucket = request.nextUrl.searchParams.get("bucket");
+        const imagePath = request.nextUrl.searchParams.get("path");
+        const imageMimeType = request.nextUrl.searchParams.get("mime");
+        const imageMediaKind = request.nextUrl.searchParams.get("kind");
+        const hasDirectReference = Boolean(imageBucket?.trim() && imagePath?.trim());
+
+        const reference = await timeDevStep(
+            timer,
+            hasDirectReference ? "resolve.direct" : "resolve.lookup",
+            () => resolveCaptureImageReference({
+                captureId,
+                imageBucket,
+                imagePath,
+                imageMimeType,
+                imageMediaKind
+            }),
+            {hasDirectReference}
+        );
 
         if (!reference?.imageBucket || !reference.imagePath) {
             return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
-        const signedUrl = await createSignedStorageUrl(reference.imageBucket, reference.imagePath);
+        const signedUrl = await timeDevStep(timer, "storage.sign", () =>
+            createSignedStorageUrl(reference.imageBucket!, reference.imagePath!)
+        );
         if (!signedUrl) {
             return redirectWithBrowserCache(buildFallbackUrl(request));
         }
@@ -83,6 +93,8 @@ export async function GET(
             : redirectWithBrowserCache(signedUrl);
     } catch {
         return redirectWithBrowserCache(buildFallbackUrl(request));
+    } finally {
+        finishDevRequestTimer(timer);
     }
 }
 

@@ -167,9 +167,13 @@ export default function HeaderMenu({
                                 height={40}
                                 className="h-10 w-10"
                             />
-                            <span className="truncate font-display text-xl font-bold tracking-tight text-white">
-                                {brandTitle}
-                            </span>
+                            <Image
+                                src="/images/animaldex-logo-text.webp"
+                                alt={brandTitle}
+                                width={320}
+                                height={76}
+                                className="h-7 w-auto max-w-[7.5rem]"
+                            />
                         </Link>
                         <button
                             ref={closeButtonRef}
@@ -220,7 +224,7 @@ export default function HeaderMenu({
                             <Link
                                 href="/#download"
                                 onClick={closeMenu}
-                                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-canvas-950 shadow-[0_0_28px_rgba(27,196,81,0.2)] transition hover:bg-primary-300 active:scale-[0.98]"
+                                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-400 px-4 text-sm font-black text-canvas-950 shadow-[0_0_28px_rgba(167,244,50,0.28)] transition hover:bg-primary-300 active:scale-[0.98]"
                             >
                                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
                                     <path d="M12 3v12" strokeLinecap="round" />

@@ -31,11 +31,17 @@
     "signIn": "Sign in",
     "myAnimals": "My animals",
     "articlesGuides": "Articles & Guides",
+    "earnOnAnimalDex": "Earn on AnimalDex",
+    "becomeAWildlifeGuide": "Become a Wildlife Guide",
+    "creatorRewards": "Creator Rewards",
+    "sponsorAChallenge": "Sponsor a Challenge",
+    "wildlifeExperiences": "Wildlife Experiences",
     "footerGroups": {
       "product": "Product",
       "explore": "Animal Encyclopedia",
       "wisdom": "Animal Guide",
       "resources": "Resources",
+      "earn": "Earn",
       "follow": "Follow"
     },
     "credits": {
@@ -50,7 +56,16 @@
     "title": "AnimalDex",
     "tagline": "Discover what animals can teach you.",
     "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
-    "description": "Discover what animals can teach you.",
+    "headlineCollectThe": "Collect the",
+    "headlineWild": "Wild.",
+    "headlineBuildYour": "Build your ",
+    "headlineAnimal": "Animal",
+    "headlineDex": "Dex.",
+    "heroLaurelMadeFor": "Made for",
+    "heroLaurelExplorers": "explorers",
+    "heroLaurelBuiltFor": "Built for",
+    "heroLaurelCollectors": "collectors",
+    "description": "Scan animals in the real world. Identify species, build your collection, level up your finds and see how much of the wild you can discover.",
     "supporting": "Every encounter is a chance to learn how they succeed.",
     "phone": {
       "phone": "AnimalDex mobile app preview",
@@ -62,29 +77,50 @@
     },
     "features": {
       "title": "Wait… animals can teach me?",
+      "titleLead": "Wait… animals can",
+      "titleAccentLine": "teach",
+      "titleAccentEnd": "me?",
       "description": "Absolutely.",
-      "settings": "Discover\nLessons",
-      "music": "Real-life\nScenarios",
-      "customization": "Animal\nMind",
-      "wisdom": "Animal\nGuide",
-      "wisdomDescription": "Every animal has their own winning strategy.",
-      "appliedInsight": "Capture it and you it keep forever.",
-      "more": "See the full\nexperience",
+      "settings": "DISCOVER|Lessons",
+      "music": "TEST|Real-life Scenarios",
+      "customization": "MATCH|Animal Mind",
+      "wisdom": "EXPLORE|Field Guide",
+      "wisdomDescription": "Every animal has a strategy for survival.",
+      "appliedInsight": "Capture one. Discover what it can teach you.",
+      "appliedInsightLead": "Capture one.",
+      "appliedInsightBody": "Discover what it can teach you.",
+      "more": "THE FULL|AnimalDex",
       "button": "Explore"
+    },
+    "archive": {
+      "eyebrow": "You’ve probably already started",
+      "title": "Your AnimalDex may already be partly built.",
+      "body": "Old wildlife photos and posts can become unique AnimalDex entries after review — they do not have to stay buried in a feed.",
+      "cta": "Check my Instagram"
     },
     "more": {
       "title": "Where will you go?",
       "description": "Take us on your next adventure!",
       "theme": {
+        "headlineLead": "Make encounters",
+        "headlineAccent": "Memorable.",
+        "eyebrow": "Make encounters memorable.",
+        "line1": "Every animal has a story.",
+        "line2": "Capture it. Understand it. Remember it.",
         "title": "Make encounters Memorable.",
         "description": "Every animal has a story to tell.",
         "note": "",
-        "alt": "Placeholder visual for AnimalDex AI scan analysis"
+        "alt": "AnimalDex capture detail for Red-lipped Batfish"
       },
       "ui": {
+        "headlineLead": "Grow with",
+        "headlineAccent": "Nature.",
+        "eyebrow": "Grow with nature.",
+        "line1": "Discover how animals survive, adapt and win.",
+        "line2": "Then see what the wild can teach you.",
         "title": "Grow with Nature",
         "description": "Learn how animals win.",
-        "alt": "Placeholder visual for AnimalDex discovery feed"
+        "alt": "AnimalDex community discovery feed"
       },
       "design": {
         "title": "Make exploring Fun",
@@ -99,9 +135,44 @@
       "download": "Download"
     },
     "team": {
-      "title": "You may like us if...",
-      "description": "We've noticed these types of users on AnimalDex:",
+      "eyebrow": "Find your place in AnimalDex",
+      "title": "What kind of explorer are you?",
+      "descriptionLead": "Collect. Explore. Compete. Create.",
+      "descriptionBody": "There's more than one way to experience the wild.",
+      "explore": "Explore",
       "contact": "See why",
+      "personas": {
+        "collectors": {
+          "title": "Collectors",
+          "tagline": "Gotta find them all.",
+          "description": "Build your Dex. Chase rare finds. Complete your collection.",
+          "alt": "Grid of collected wildlife species"
+        },
+        "explorers": {
+          "title": "Explorers",
+          "tagline": "See what's out there.",
+          "description": "Travel, discover wildlife and turn every trip into a hunt — including herping, birding, field notes, and bookable local wildlife experiences.",
+          "alt": "Explorer photographing wildlife in the jungle"
+        },
+        "animalLovers": {
+          "title": "Animal Lovers",
+          "tagline": "Get closer to the animals you love.",
+          "description": "Discover their behaviour, strategies and stories.",
+          "alt": "Intimate portrait of a wild animal"
+        },
+        "creators": {
+          "title": "Creators",
+          "tagline": "Turn encounters into something worth sharing.",
+          "description": "Wildlife photographers, filmmakers and field creators. Bring your wildlife archive with you — or join a photography-focused local experience.",
+          "alt": "Wildlife photographer with camera in nature"
+        },
+        "competitors": {
+          "title": "Competitors",
+          "tagline": "Put your collection to work.",
+          "description": "Compare animals, battle traits and climb the rankings.",
+          "alt": "Two striking animals facing one another"
+        }
+      },
       "roles": {
         "collector": "Collectors",
         "traveler": "Travelers",
@@ -132,7 +203,10 @@
       "stats": {
         "captures": "{count} Captures",
         "users": "{count} Users",
-        "indexes": "{count} Indexes"
+        "indexes": "{count} Indexes",
+        "capturesLabel": "Captures",
+        "usersLabel": "Collectors",
+        "indexesLabel": "Indexed Animals"
       },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
       "blogLink": "Read the Blog",
@@ -1704,6 +1778,43 @@
     "proBadge": "AnimalDex Pro",
     "tabStats": "Stats",
     "tabHistory": "History",
+    "tabShop": "Shop",
+    "settingsActivity": "Settings & Activity",
+    "earnings": "Earnings",
+    "settingsEndorsements": "Endorsements",
+    "settingsEndorsementsDetail": "Captures you've endorsed",
+    "settingsMissions": "Missions",
+    "settingsMissionsDetail": "Daily and weekly AnimalDex missions",
+    "settingsCreditsUnlocks": "Credits & Unlocks",
+    "settingsCreditsUnlocksCount": "Credits & Unlocks ({count})",
+    "settingsCreditsDetail": "Buy credits, restore purchases, and unlock Pro in AnimalDex",
+    "settingsEarningsDetail": "See how earning with AnimalDex works",
+    "settingsWidgets": "Widgets",
+    "settingsWidgetsDetail": "Add Friend and Travel to your Home Screen",
+    "settingsLanguage": "Language",
+    "settingsLanguageDetail": "Managed in the AnimalDex app",
+    "settingsLanguageValue": "System",
+    "settingsCurrency": "Currency",
+    "settingsCurrencyDetail": "Price display preference",
+    "settingsCurrencyValue": "USD",
+    "settingsLocationPrivacyDetail": "Choose who can see your capture locations",
+    "settingsDataUploadsDetail": "Review synced captures, packs, and collection data",
+    "settingsDone": "Done",
+    "settingsClose": "Close settings",
+    "manageShop": "Shop",
+    "settingsPreferences": "Preferences",
+    "settingsNotifications": "Notifications",
+    "settingsPrivacyData": "Privacy & Data",
+    "settingsLocationPrivacy": "Location Privacy",
+    "settingsDataUploads": "Data & Uploads",
+    "settingsSupportAbout": "Support & About",
+    "settingsHelpSupport": "Help & Support",
+    "settingsPrivacyPolicy": "Privacy Policy",
+    "settingsTerms": "Terms of Use",
+    "settingsAccount": "Account",
+    "settingsAccountDetail": "Sign-in, profile access, and account management.",
+    "settingsActivityDetail": "Recent AnimalDex notifications and account activity.",
+    "settingsConnectedServices": "Connected services",
     "overallScore": "Overall score",
     "scoreFootnote": "Collection progress remains the foundation, with challenge wins adding controlled score on top.",
     "wildVsZooVsDomestic": "Wild vs zoo vs domestic",

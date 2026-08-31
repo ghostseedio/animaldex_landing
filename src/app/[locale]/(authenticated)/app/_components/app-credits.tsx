@@ -118,7 +118,7 @@ export function CreditBalanceChip({className = ""}: {className?: string}) {
 
     return (
         <div
-            className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${positive ? "border-primary-400/40 bg-primary-400/10 shadow-[0_0_24px_-8px_rgba(56,250,71,0.65)]" : negative ? "border-rose-400/35 bg-rose-400/10 shadow-[0_0_24px_-8px_rgba(251,113,133,0.55)]" : "border-amber-300/20 bg-amber-300/[0.07]"} ${className}`}
+            className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${positive ? "border-primary-400/40 bg-primary-400/10 shadow-[0_0_24px_-8px_rgba(167,244,50,0.65)]" : negative ? "border-rose-400/35 bg-rose-400/10 shadow-[0_0_24px_-8px_rgba(251,113,133,0.55)]" : "border-amber-300/20 bg-amber-300/[0.07]"} ${className}`}
             aria-label={`${displayBalance} credits available`}
         >
             <span className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-200/80">Credits</span>

@@ -4,6 +4,8 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {
+    adminLocationMismatchGuidance,
+    adminLocationStatusLabel,
     collectionQualified,
     isGuideAdminAction,
     listingPublishGate,
@@ -86,12 +88,13 @@ test("listing publish is blocked until the seller is marketplace-eligible", () =
     assert.equal(listingPublishGate("pending_review", false).ok, false);
     assert.equal(listingPublishGate("pending_review", true).ok, true);
     assert.equal(listingPublishGate("published", true).ok, false);
+    assert.equal(listingPublishGate("pending_review", true, true).ok, false);
     const listing = mapListingReview(
         {
             id: "22222222-2222-4222-8222-222222222222",
             seller_user_id: "11111111-1111-4111-8111-111111111111",
-            title: "Jakarta Night Herping",
-            slug: "jakarta-night-herping",
+            title: "Night Herping Walk",
+            slug: "night-herping-walk",
             description: "A careful evening walk looking for amphibians around a broad public area.",
             public_summary: "Observe amphibians responsibly.",
             service_category: "herping",
@@ -114,8 +117,57 @@ test("listing publish is blocked until the seller is marketplace-eligible", () =
         }
     );
     assert.equal(listing.canPublish, true);
+    assert.equal(listing.locationMismatch, false);
     assert.equal(listing.serviceCategoryLabel, "Herping");
     assert.match(listing.priceLabel, /Rp|IDR|350/);
+});
+
+test("admin flags title/area mismatch and does not rewrite either field", () => {
+    const raw = {
+        id: "1df4dd8e-05a1-4f08-bba8-909ade817e36",
+        seller_user_id: "11111111-1111-4111-8111-111111111111",
+        title: "Night herping around Bogor",
+        slug: "night-herping-around-bogor",
+        description: "A careful evening walk looking for amphibians around a broad public area.",
+        public_summary: "Observe amphibians responsibly.",
+        service_category: "herping",
+        public_area_label: "West Jakarta, Jakarta",
+        public_locality: null,
+        public_admin_area: null,
+        public_place_name: null,
+        region_code: "Jakarta",
+        country_code: "ID",
+        duration_minutes: 180,
+        max_guests: 6,
+        currency_code: "IDR",
+        amount_minor: 350000,
+        status: "pending_review",
+        submitted_at: "2026-08-22T08:00:00Z",
+        updated_at: "2026-08-22T08:00:00Z",
+        resume_requires_review: false
+    };
+    const mapped = mapListingReview(raw, {
+        displayName: "Guide Seller",
+        username: "guide_seller",
+        eligibility: mapEligibility({...eligibleCollection, eligible: true, sellerStatus: "approved", reasonCodes: []})
+    });
+    assert.equal(mapped.title, "Night herping around Bogor");
+    assert.equal(mapped.publicAreaLabel, "West Jakarta, Jakarta");
+    assert.equal(mapped.locationMismatch, true);
+    assert.equal(mapped.canPublish, false);
+    assert.equal(adminLocationStatusLabel(true), "Location mismatch — seller confirmation required");
+    assert.equal(
+        mapped.locationMismatchMessage,
+        "The listing title mentions Bogor, but the selected public experience area is West Jakarta. Ask the Guide to confirm where this experience actually takes place before republishing."
+    );
+    assert.equal(
+        adminLocationMismatchGuidance(mapped.title, mapped.publicAreaLabel),
+        mapped.locationMismatchMessage
+    );
+    assert.match(mapped.publishBlockedReason ?? "", /Do not rewrite/);
+    assert.equal(listingReviewRpc("publish_listing", mapped.id).body.p_decision, "published");
+    assert.equal("title" in listingReviewRpc("publish_listing", mapped.id).body, false);
+    assert.equal("public_area_label" in listingReviewRpc("publish_listing", mapped.id).body, false);
 });
 
 test("guide admin RPC errors stay operator-readable", () => {
@@ -143,4 +195,14 @@ test("admin route uses service-role review RPCs and does not resolve bookings", 
 test("approving an applicant is described as notifying them", () => {
     const client = readFileSync(join(here, "../app/admin/guides/admin-guides-client.tsx"), "utf8");
     assert.match(client, /notifies them in the app and by push/);
+    assert.match(client, /Public experience area/);
+    assert.match(client, /Normalized location/);
+    assert.match(client, /adminLocationStatusLabel/);
+    assert.match(libSource, /Location mismatch — seller confirmation required/);
+    assert.match(client, /Request correction/);
+    assert.match(client, /Keep published/);
+    assert.match(client, /Pause: seller only/);
+    assert.match(client, /There is no automatic fix/);
+    assert.doesNotMatch(client, /fix automatically/i);
+    assert.doesNotMatch(client, /rewrite the title automatically/);
 });

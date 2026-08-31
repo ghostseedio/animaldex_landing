@@ -118,33 +118,33 @@ export async function resolveCaptureImageReference(input: {
     imageMimeType?: string | null;
     imageMediaKind?: string | null;
 }): Promise<SpeciesImageReference | null> {
+    const bucket = input.imageBucket?.trim();
+    const path = input.imagePath?.trim();
+    const mediaKind = input.imageMediaKind?.trim().toLowerCase();
+
+    if (bucket && path && (!mediaKind || mediaKind === "photo")) {
+        return {
+            captureId: input.captureId,
+            imageBucket: bucket,
+            imagePath: path,
+            mimeType: input.imageMimeType ?? null,
+            mediaKind: input.imageMediaKind ?? "photo",
+            imageGrade: null,
+            gradeBreakdown: null,
+            animalName: null,
+            username: null,
+            contextLabel: null,
+            locationDisplayLabel: null
+        };
+    }
+
     const directReference = await getPublicCaptureImageReference(input.captureId);
 
     if (directReference?.imageBucket && directReference.imagePath) {
         return directReference;
     }
 
-    const bucket = input.imageBucket?.trim();
-    const path = input.imagePath?.trim();
-    const mediaKind = input.imageMediaKind?.trim().toLowerCase();
-
-    if (!bucket || !path || (mediaKind && mediaKind !== "photo")) {
-        return null;
-    }
-
-    return {
-        captureId: input.captureId,
-        imageBucket: bucket,
-        imagePath: path,
-        mimeType: input.imageMimeType ?? null,
-        mediaKind: input.imageMediaKind ?? "photo",
-        imageGrade: null,
-        gradeBreakdown: null,
-        animalName: null,
-        username: null,
-        contextLabel: null,
-        locationDisplayLabel: null
-    };
+    return null;
 }
 
 export function getCaptureImageRoute(captureId: string, options: {proxy?: boolean} = {}) {

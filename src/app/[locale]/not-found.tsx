@@ -10,11 +10,11 @@ export default function ErrorNotFound() {
 
     return (
         <>
-            <IconCanvas probability={0.02} paths={checkedIcons} color="#1BC451" />
+            <IconCanvas probability={0.02} paths={checkedIcons} color="#21C05E" />
             <div className="flex flex-col items-center justify-center h-screen w-full gap-8 px-4 text-center">
-                <h1 className="font-display font-bold text-8xl md:text-9xl text-primary-500">404</h1>
+                <h1 className="font-display font-bold text-8xl md:text-9xl text-primary-200">404</h1>
                 <p className="text-xl md:text-3xl max-w-md md:max-w-xl text-ink-200">{t("description")}</p>
-                <Link href="/" className="text-primary-500 font-bold text-3xl">
+                <Link href="/" className="text-primary-400 font-bold text-3xl">
                     <Button as="span">
                         {t("button")}
                     </Button>

@@ -2,6 +2,7 @@ import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import {EarnContentLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
@@ -473,13 +474,14 @@ function renderTextWithLinks(text: string, links: BlogLink[]) {
             parts.push(<span key={`text-${index}`}>{matchText}</span>);
         } else {
             parts.push(
-                <Link
+                <EarnContentLink
                     key={`link-${link.slug}-${index}`}
                     href={resolveBlogLinkHref(link)}
+                    source="blog"
                     className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
                 >
                     {matchText}
-                </Link>
+                </EarnContentLink>
             );
             linkedSlugs.add(link.slug);
         }
@@ -731,6 +733,20 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                                             {subsection.pullQuote && renderPullQuote(subsection.pullQuote)}
                                         </section>
                                     ))}
+                                    {section.inlineLinks && section.inlineLinks.length > 0 ? (
+                                        <p className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                                            {section.inlineLinks.map((link) => (
+                                                <EarnContentLink
+                                                    key={`${section.title}-${link.slug}`}
+                                                    href={resolveBlogLinkHref(link)}
+                                                    source="blog"
+                                                    className="font-semibold text-primary-200 underline underline-offset-4 hover:text-primary-100"
+                                                >
+                                                    {link.text}
+                                                </EarnContentLink>
+                                            ))}
+                                        </p>
+                                    ) : null}
                                     {sectionSpecies.length > 0 && (
                                         <div className="flex flex-wrap gap-2">
                                             {sectionSpecies.map((species) => (

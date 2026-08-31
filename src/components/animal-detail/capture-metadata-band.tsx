@@ -82,13 +82,13 @@ export default function CaptureMetadataBand({
                 ) : null}
                 {saved ? (
                     <div className="flex items-start gap-2 text-[15px] font-medium leading-5 text-white/[0.62]">
-                        <span className="grid w-5 shrink-0 place-items-center text-[#38fa47]"><CheckIcon /></span>
+                        <span className="grid w-5 shrink-0 place-items-center text-[#A7F432]"><CheckIcon /></span>
                         <span>Saved in your collection</span>
                     </div>
                 ) : null}
                 <div className="space-y-1 px-1 pt-1 text-[11px] font-semibold leading-[14px] text-white/[0.42]">
                     <p>RECORD ID</p>
-                    <p className="break-all text-white/[0.31] selection:bg-[#38fa47] selection:text-black">{captureId.toUpperCase()}</p>
+                    <p className="break-all text-white/[0.31] selection:bg-[#A7F432] selection:text-black">{captureId.toUpperCase()}</p>
                 </div>
             </div>
         </section>

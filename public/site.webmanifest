@@ -4,8 +4,8 @@
   "description": "Discover what animals can teach you. Every encounter is a chance to learn how they succeed.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#050806",
-  "theme_color": "#1BC451",
+  "background_color": "#07100B",
+  "theme_color": "#21C05E",
   "icons": [
     {
       "src": "/favicon-16x16.png",

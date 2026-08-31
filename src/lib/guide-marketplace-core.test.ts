@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-    buildGuideSitemapPaths, currencyFractionDigits, formatGuidePrice, guidePath, guideSeo,
-    guideStructuredData, isLocationPageIndexable, locationInventory, parseGuideRouteSegment,
+    buildGuideSitemapPaths, currencyFractionDigits, formatGuidePrice, guideAreaServedName,
+    guideLocationFilterKey, guideLocationSlug, guideNormalizedLocality, guidePath, guideSeo,
+    guideStructuredData, hasStructuredPublicLocality, isExperiencesLocationRouteEligible,
+    isLocationPageIndexable, locationInventory, parseGuideRouteSegment,
     type PublicGuideListing
 } from "./guide-marketplace-core";
+import {LIVE_CONTRADICTORY_LISTING_ID} from "./guide-listing-quality";
+import {auditPublishedGuideLocations} from "./guide-location-audit";
 
 const listing: PublicGuideListing = {
     id: "7f82c100-1234-4abc-8def-1234567890ab", slug: "jakarta-night-herping", title: "Jakarta Night Herping",
@@ -34,11 +38,104 @@ test("SEO metadata is normalized and human readable", () => {
     assert.ok(seo.description.length <= 160);
 });
 
+test("website areaServed and SEO use structured public area only", () => {
+    const contradictory = {
+        ...listing,
+        id: LIVE_CONTRADICTORY_LISTING_ID,
+        title: "Night herping around Bogor",
+        public_area_label: "West Jakarta, Jakarta",
+        region_code: "Jakarta"
+    };
+    const seo = guideSeo(contradictory);
+    const schema = guideStructuredData(contradictory, "https://animaldex.app/guides/example") as Record<string, unknown>;
+    const areaServed = schema.areaServed as Record<string, unknown>;
+    assert.equal(guideAreaServedName(contradictory), "West Jakarta, Jakarta");
+    assert.equal(areaServed.name, "West Jakarta, Jakarta");
+    assert.match(seo.title, /Night herping around Bogor/);
+    assert.match(seo.description, /West Jakarta/);
+    assert.doesNotMatch(seo.description, /Bogor in West Jakarta/);
+    assert.doesNotMatch(seo.title, /in West Jakarta/);
+    const structured = {
+        ...contradictory,
+        public_locality: "West Jakarta",
+        public_admin_area: "Jakarta",
+        public_place_name: "West Jakarta"
+    };
+    assert.equal(guideAreaServedName(structured), "West Jakarta, Jakarta");
+    assert.equal(guideNormalizedLocality(structured), "West Jakarta");
+    assert.equal(hasStructuredPublicLocality(listing), false);
+    assert.equal(hasStructuredPublicLocality(structured), true);
+});
+
+test("future location route eligibility uses structured locality never title", () => {
+    const titledBogor = {
+        ...listing,
+        title: "Night herping around Bogor",
+        public_area_label: "West Jakarta, Jakarta"
+    };
+    assert.equal(isExperiencesLocationRouteEligible([titledBogor]), false);
+    assert.equal(buildGuideSitemapPaths([titledBogor]).includes("/wildlife-experiences/bogor"), false);
+    assert.equal(buildGuideSitemapPaths([titledBogor]).includes("/wildlife-experiences/west-jakarta"), false);
+    const oneStructured = {
+        ...listing,
+        public_locality: "Bogor",
+        public_place_name: "Bogor",
+        public_admin_area: "West Java",
+        public_area_label: "Bogor, West Java"
+    };
+    assert.equal(isExperiencesLocationRouteEligible([oneStructured]), false);
+    const inventory = [1, 2, 3].map((index) => ({
+        ...oneStructured,
+        id: `7f82c100-1234-4abc-8def-1234567890a${index}`,
+        slug: `bogor-walk-${index}`
+    }));
+    assert.equal(isExperiencesLocationRouteEligible(inventory), true);
+    assert.equal(guideLocationSlug(oneStructured), "bogor");
+    assert.notEqual(guideLocationSlug(titledBogor), "bogor");
+});
+
+test("location filter keys can group provider label variants of the same locality", () => {
+    const bogor = {
+        ...listing,
+        public_area_label: "Bogor, West Java",
+        public_locality: "Bogor",
+        public_admin_area: "West Java"
+    };
+    const kotaBogor = {
+        ...listing,
+        id: "8f82c100-1234-4abc-8def-1234567890ab",
+        public_area_label: "Kota Bogor, Jawa Barat",
+        public_locality: "Bogor",
+        public_admin_area: "West Java"
+    };
+    assert.equal(guideLocationFilterKey(bogor), guideLocationFilterKey(kotaBogor));
+});
+
+test("old listings with only public_area_label still render and stay auditable", () => {
+    assert.equal(guideAreaServedName(listing), "Bogor, West Java");
+    const audit = auditPublishedGuideLocations([{
+        ...listing,
+        id: LIVE_CONTRADICTORY_LISTING_ID,
+        title: "Night herping around Bogor",
+        public_area_label: "West Jakarta, Jakarta"
+    }]);
+    assert.equal(audit[0].id, LIVE_CONTRADICTORY_LISTING_ID);
+    assert.equal(audit[0].possibleMismatch, true);
+    assert.equal(audit[0].indexable, true);
+    assert.equal(audit[0].publicArea, "West Jakarta, Jakarta");
+});
+
 test("structured data matches visible service without reviews", () => {
     const schema = guideStructuredData(listing, "https://animaldex.app" + guidePath(listing), "id-ID") as Record<string, unknown>;
+    const offers = schema.offers as Record<string, unknown>;
     assert.equal(schema["@type"], "Service");
     assert.equal("aggregateRating" in schema, false);
-    assert.deepEqual((schema.offers as Record<string, unknown>).priceCurrency, "IDR");
+    assert.equal("review" in schema, false);
+    assert.deepEqual(offers.priceCurrency, "IDR");
+    assert.equal("url" in offers, false);
+    assert.equal("availability" in offers, false);
+    assert.equal(JSON.stringify(schema).includes("Event"), false);
+    assert.equal(JSON.stringify(schema).includes("InStock"), false);
 });
 
 test("currency honors currency-specific minor units", () => {
@@ -48,13 +145,15 @@ test("currency honors currency-specific minor units", () => {
 
 test("public model and schema expose no precise or private fields", () => {
     const output = JSON.stringify({listing, schema: guideStructuredData(listing, "https://animaldex.app/example")}).toLowerCase();
-    ["latitude", "longitude", "capture_id", "meeting_location", "eligibility_evidence"].forEach((field) => assert.equal(output.includes(field), false));
+    ["latitude", "longitude", "capture_id", "meeting_location", "eligibility_evidence", "public_latitude", "public_longitude"].forEach((field) => assert.equal(output.includes(field), false));
 });
 
 test("sitemap includes only supplied public inventory", () => {
     const paths = buildGuideSitemapPaths([listing]);
     assert.ok(paths.includes(guidePath(listing)));
     assert.equal(paths.some((path) => path.includes("paused-listing")), false);
+    const thin = {...listing, title: "Walks", description: "Too short."};
+    assert.equal(buildGuideSitemapPaths([thin]).includes(guidePath(thin)), false);
 });
 
 test("location and category pages require real inventory", () => {

@@ -4,12 +4,15 @@ import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifie
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
 import {getAuthenticatedPublicProfileCard, resolveProfileSettingCounts, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
+import type {DiscoverCaptureItem} from "@/data/discover-timeline";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
+import {getDirectMessageUnreadCountForUser} from "@/data/direct-messages";
 import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {discoverPostPath} from "@/lib/discover-post";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
@@ -27,6 +30,11 @@ export type AppCapture = UserCaptureSummary & {
     capturedAsLine: string | null;
     sameSpeciesHelper: string | null;
     principle: string | null;
+    coreLesson: string | null;
+    gameStats: AppCaptureGameStats | null;
+    battleTier: "E" | "D" | "C" | "B" | "A" | "S" | null;
+    captureGrade: number | null;
+    gradeBreakdown: CaptureGradeBreakdown | null;
     indexNumber: number | null;
     href: string;
     imageSrc: string;
@@ -66,14 +74,67 @@ export type AppProgression = {
     missions: AppMission[];
 };
 
+export type AppSponsoredCampaign = {
+    id: string;
+    slug: string;
+    title: string;
+    publicSummary: string;
+    description: string;
+    presenterName: string | null;
+    sponsorOrganizationId: string | null;
+    status: string;
+    startsAt: string;
+    endsAt: string;
+    timezoneIdentifier: string;
+    objectiveType: string;
+    targetCount: number;
+    requiredTypeTag: string | null;
+    requiredSettingTag: string | null;
+    minimumCaptureGrade: number | null;
+    liveOnly: boolean;
+    externalImportsAllowed: boolean;
+    rulesVersion: number;
+    officialRules: string;
+    rewardTerms: string;
+    thumbnailUrl: string | null;
+    thumbnailAltText: string | null;
+    participant: {
+        status: string;
+        progressCount: number;
+        completedAt: string | null;
+        rewardedAt: string | null;
+    } | null;
+    reward: {
+        title: string;
+        detail: string | null;
+    } | null;
+    cashReward: {
+        amountMinor: number;
+        currencyCode: string;
+        remainingRecipients: number;
+    } | null;
+};
+
 export type AppNotification = {
     id: string;
-    captureId: string;
+    captureId: string | null;
+    actorUserId: string | null;
+    actorDisplayName: string | null;
+    actorUsername: string | null;
     tradeOfferId: string | null;
     creditOfferId: string | null;
+    comparisonSlug: string | null;
+    campaignId: string | null;
+    challengeId: string | null;
     eventType: string;
     likeCount: number | null;
     endorsedStat: string | null;
+    giftSlug: string | null;
+    subjectAnimalName: string | null;
+    subjectAnimalDexNumber: number | null;
+    sourceKey: string | null;
+    serverTitle: string | null;
+    serverBody: string | null;
     createdAt: string;
     readAt: string | null;
 };
@@ -258,6 +319,11 @@ function buildAppCapture(
         capturedAsLine: variant.capturedAsLine,
         sameSpeciesHelper: variant.sameSpeciesHelper,
         principle,
+        coreLesson: null,
+        gameStats: null,
+        battleTier: null,
+        captureGrade: null,
+        gradeBreakdown: null,
         indexNumber: getAnimalDexNumberFromEntry(species),
         href: species ? `/animals/${species.slug}` : "/animals",
         imageSrc: species
@@ -488,7 +554,7 @@ function looksLikeGarbageDescriptiveIdentity(value: string) {
         && !tokens.some((token) => taxonTokens.has(token));
 }
 
-async function getAuthenticatedSupabaseUser() {
+export async function getAuthenticatedSupabaseUser() {
     if (!hasAuthCookie()) return null;
 
     const supabase = createSupabaseServerClient();
@@ -528,6 +594,43 @@ export function mapPublicProfileCaptureToAppCapture(capture: PublicProfileCaptur
     };
 }
 
+export function mapDiscoverCaptureToAppCapture(item: DiscoverCaptureItem): AppCapture {
+    const effectiveStats = item.effectiveGameStats ?? item.gameStats;
+
+    return {
+        captureId: item.captureId,
+        animalName: item.animalName,
+        scientificName: item.scientificName,
+        speciesSlug: item.speciesSlug,
+        speciesProfileId: item.speciesProfileId,
+        lifeStage: item.lifeStage,
+        confidence: item.confidence,
+        score: item.score,
+        captureValidity: null,
+        learnedScenarioTags: item.bestForTags,
+        capturedAt: item.capturedAt,
+        imageBucket: null,
+        imagePath: null,
+        contextLabel: item.contextLabel,
+        locationDisplayLabel: item.locationLabel,
+        category: null,
+        displayName: item.animalName,
+        lifeStageChip: item.lifeStageChip,
+        countsAsLine: item.sameSpeciesHelper,
+        capturedAsLine: null,
+        sameSpeciesHelper: item.sameSpeciesHelper,
+        principle: item.learnedPrinciple,
+        coreLesson: item.coreLesson,
+        gameStats: canonicalGameStats(effectiveStats),
+        battleTier: item.battleTier,
+        captureGrade: item.captureGrade,
+        gradeBreakdown: item.gradeBreakdown,
+        indexNumber: item.animalDexNumber,
+        href: discoverPostPath(item.id),
+        imageSrc: item.imageSrc
+    };
+}
+
 export function decorateCapture(capture: UserCaptureSummary): AppCapture {
     const species = findSpeciesForCaptureIdentity(capture.speciesSlug);
     const principle = resolveCapturePrinciple(species, emptyBehaviorPrincipleIndex());
@@ -547,19 +650,62 @@ export async function getAuthenticatedAppContext() {
     return {profile};
 }
 
-export async function getAppCreditBalance() {
-    if (!hasAuthCookie()) return null;
+export async function getAuthenticatedAppShellData() {
+    const session = await getAuthenticatedSupabaseUser();
+    if (!session) {
+        return {
+            context: null,
+            notifications: [] as AppNotification[],
+            unreadMessageCount: 0,
+            creditBalance: null as number | null
+        };
+    }
 
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return null;
+    const fullSelect = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
+    const fallbackSelect = "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at";
 
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return null;
+    const [profileRow, notificationsResult, unreadMessageCount, creditBalance] = await Promise.all([
+        session.supabase
+            .from("profiles")
+            .select("display_name,username,avatar_url")
+            .eq("id", session.user.id)
+            .maybeSingle(),
+        session.supabase.from("user_notifications")
+            .select(fullSelect)
+            .order("created_at", {ascending: false})
+            .limit(40),
+        getDirectMessageUnreadCountForUser(session.supabase, session.user.id),
+        getAppCreditBalance(session)
+    ]);
 
-    const {data} = await supabase
+    const notifications = notificationsResult.error
+        ? ((await session.supabase.from("user_notifications").select(fallbackSelect).order("created_at", {ascending: false}).limit(40)).data ?? [])
+        : (notificationsResult.data ?? []);
+
+    return {
+        context: {
+            profile: {
+                id: session.user.id,
+                email: session.user.email ?? null,
+                displayName: profileRow.data?.display_name?.trim() ?? null,
+                username: profileRow.data?.username?.trim() ?? null,
+                avatarUrl: profileRow.data?.avatar_url?.trim() ?? null
+            }
+        },
+        notifications: mapAppNotificationRows(notifications as QueryRow[]),
+        unreadMessageCount,
+        creditBalance
+    };
+}
+
+export async function getAppCreditBalance(session?: Awaited<ReturnType<typeof getAuthenticatedSupabaseUser>>) {
+    const activeSession = session ?? await getAuthenticatedSupabaseUser();
+    if (!activeSession) return null;
+
+    const {data} = await activeSession.supabase
         .from("credit_balances")
         .select("balance")
-        .eq("user_id", user.id)
+        .eq("user_id", activeSession.user.id)
         .maybeSingle();
 
     return data?.balance == null ? 0 : Number(data.balance);
@@ -833,23 +979,140 @@ export async function getAppProgression(): Promise<AppProgression> {
     };
 }
 
-export async function getAppNotifications(limit = 40): Promise<AppNotification[]> {
+function sponsoredThumbnailUrl(path: string | null | undefined) {
+    const trimmed = path?.trim();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+    if (!trimmed || !supabaseUrl) return null;
+    return `${supabaseUrl}/storage/v1/object/public/sponsored-challenges/${trimmed.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function safeRpcRows<T = QueryRow>(supabase: ReturnType<typeof createSupabaseServerClient>, name: string, params?: Record<string, unknown>): Promise<T[]> {
+    if (!supabase) return [];
+    const {data, error} = await supabase.rpc(name, params);
+    if (error) return [];
+    return Array.isArray(data) ? data as T[] : data ? [data as T] : [];
+}
+
+export async function getAppSponsoredCampaigns(): Promise<AppSponsoredCampaign[]> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
-    const {data} = await supabase.from("user_notifications")
-        .select("id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at")
-        .order("created_at", {ascending: false}).limit(limit);
-    return ((data ?? []) as QueryRow[]).map((row) => ({
+
+    const [campaignRows, participantRows] = await Promise.all([
+        safeRpcRows<QueryRow>(supabase, "list_sponsored_campaigns", {p_country_code: null}),
+        safeRpcRows<QueryRow>(supabase, "list_my_sponsored_campaigns")
+    ]);
+
+    const campaigns = campaignRows.length ? campaignRows : participantRows;
+    const campaignIds = campaigns.map((row) => row.id ?? row.campaign_id).filter(Boolean);
+    const [participantsResult, rewardsResult, cashRewards] = await Promise.all([
+        supabase.from("campaign_participants")
+            .select("campaign_id,status,progress_count,completed_at,rewarded_at")
+            .in("campaign_id", campaignIds),
+        supabase.from("campaign_rewards")
+            .select("campaign_id,reward_type,achievement_definitions(title,detail)")
+            .in("campaign_id", campaignIds),
+        safeRpcRows<QueryRow>(supabase, "list_sponsored_campaign_cash_rewards", {p_campaign_ids: campaignIds})
+    ]);
+
+    const participantsByCampaign = new Map(
+        ((participantsResult.data ?? []) as QueryRow[]).map((row) => [row.campaign_id, row])
+    );
+    const rewardsByCampaign = new Map(
+        ((rewardsResult.data ?? []) as QueryRow[]).map((row) => [row.campaign_id, row])
+    );
+    const cashByCampaign = new Map(
+        cashRewards.map((row) => [row.campaign_id, row])
+    );
+
+    return campaigns.map((row) => {
+        const id = row.id ?? row.campaign_id;
+        const participant = participantsByCampaign.get(id);
+        const rewardRow = rewardsByCampaign.get(id);
+        const achievement = rewardRow?.achievement_definitions && typeof rewardRow.achievement_definitions === "object"
+            ? rewardRow.achievement_definitions as QueryRow
+            : null;
+        const cash = cashByCampaign.get(id);
+        return {
+            id,
+            slug: row.slug ?? id,
+            title: row.title ?? "Sponsored Challenge",
+            publicSummary: row.public_summary ?? "",
+            description: row.description ?? "",
+            presenterName: row.presenter_name ?? null,
+            sponsorOrganizationId: row.sponsor_organization_id ?? null,
+            status: row.status ?? "live",
+            startsAt: row.starts_at ?? "",
+            endsAt: row.ends_at ?? "",
+            timezoneIdentifier: row.timezone_identifier ?? "UTC",
+            objectiveType: row.objective_type ?? "eligible_capture_count",
+            targetCount: Number(row.target_count ?? 0),
+            requiredTypeTag: row.required_type_tag ?? null,
+            requiredSettingTag: row.required_setting_tag ?? null,
+            minimumCaptureGrade: row.minimum_capture_grade == null ? null : Number(row.minimum_capture_grade),
+            liveOnly: Boolean(row.live_only),
+            externalImportsAllowed: Boolean(row.external_imports_allowed),
+            rulesVersion: Number(row.rules_version ?? 1),
+            officialRules: row.official_rules ?? "",
+            rewardTerms: row.reward_terms ?? "",
+            thumbnailUrl: sponsoredThumbnailUrl(row.thumbnail_storage_path),
+            thumbnailAltText: row.thumbnail_alt_text ?? null,
+            participant: participant ? {
+                status: participant.status ?? "joined",
+                progressCount: Number(participant.progress_count ?? 0),
+                completedAt: participant.completed_at ?? null,
+                rewardedAt: participant.rewarded_at ?? null
+            } : null,
+            reward: achievement ? {
+                title: achievement.title ?? "Achievement",
+                detail: achievement.detail ?? null
+            } : null,
+            cashReward: cash ? {
+                amountMinor: Number(cash.amount_minor ?? 0),
+                currencyCode: cash.currency_code ?? "USD",
+                remainingRecipients: Number(cash.remaining_recipients ?? 0)
+            } : null
+        };
+    });
+}
+
+function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
+    return rows.map((row) => ({
         id: row.id,
-        captureId: row.capture_id,
+        captureId: row.capture_id ?? null,
+        actorUserId: row.actor_user_id ?? null,
+        actorDisplayName: row.actor_display_name ?? null,
+        actorUsername: row.actor_username ?? null,
         tradeOfferId: row.trade_offer_id ?? null,
         creditOfferId: row.credit_offer_id ?? null,
+        comparisonSlug: row.comparison_slug ?? null,
+        campaignId: row.campaign_id ?? null,
+        challengeId: row.challenge_id ?? null,
         eventType: row.event_type,
         likeCount: row.like_count ?? null,
         endorsedStat: row.endorsed_stat ?? null,
+        giftSlug: row.gift_slug ?? null,
+        subjectAnimalName: row.subject_animal_name ?? null,
+        subjectAnimalDexNumber: row.subject_animaldex_number == null ? null : Number(row.subject_animaldex_number),
+        sourceKey: row.source_key ?? null,
+        serverTitle: row.title ?? null,
+        serverBody: row.body ?? null,
         createdAt: row.created_at,
         readAt: row.read_at ?? null
     }));
+}
+
+export async function getAppNotifications(limit = 40): Promise<AppNotification[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+    const fullSelect = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
+    const fallbackSelect = "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at";
+    const result = await supabase.from("user_notifications")
+        .select(fullSelect)
+        .order("created_at", {ascending: false}).limit(limit);
+    const {data} = result.error
+        ? await supabase.from("user_notifications").select(fallbackSelect).order("created_at", {ascending: false}).limit(limit)
+        : result;
+    return mapAppNotificationRows((data ?? []) as QueryRow[]);
 }
 
 export async function getAppDiscoverFeed(limit = 18): Promise<AppDiscoverItem[]> {

@@ -23,8 +23,7 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/missions", label: "Missions", icon: "mission"},
-    {href: "/app/trades", label: "Trades", icon: "trade"},
-    {href: "/app/earnings", label: "Earnings", icon: "mission"}
+    {href: "/app/trades", label: "Trades", icon: "trade"}
 ];
 
 const PREFETCH_ROUTES = [
@@ -35,7 +34,9 @@ const PREFETCH_ROUTES = [
     "/app/missions",
     "/app/trades",
     "/app/messages",
-    "/app/notifications"
+    "/app/notifications",
+    "/app/earnings",
+    "/app/guides"
 ];
 
 function localePrefix(pathname: string) {

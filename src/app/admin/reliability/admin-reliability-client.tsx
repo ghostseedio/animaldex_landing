@@ -239,7 +239,7 @@ export default function AdminReliabilityClient() {
                         className="rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white placeholder:text-ink-600" />
                 </label>
                 <button onClick={() => void load()}
-                    className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950">
+                    className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950">
                     Refresh
                 </button>
             </section>

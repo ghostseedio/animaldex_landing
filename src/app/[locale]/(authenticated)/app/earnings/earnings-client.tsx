@@ -635,7 +635,7 @@ export function EarningsClient() {
                                                 <button
                                                     type="button"
                                                     onClick={() => void openRequestSheet()}
-                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950"
+                                                    className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
                                                 >
                                                     {EARNINGS_COPY.requestPayoutTitle}
                                                 </button>
@@ -688,7 +688,7 @@ export function EarningsClient() {
                                                             type="button"
                                                             disabled={requestBusy}
                                                             onClick={() => void requestPayout()}
-                                                            className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                            className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
                                                         >
                                                             {requestBusy ? "Requesting…" : EARNINGS_COPY.requestPayoutCTA}
                                                         </button>
@@ -707,7 +707,7 @@ export function EarningsClient() {
                                     {!showSetup && (
                                         <button
                                             type="button"
-                                            className="mt-3 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950"
+                                            className="mt-3 rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
                                             onClick={() => setShowSetup(true)}
                                             disabled={!setup?.setupProviderReady || enabledCorridors.length === 0}
                                         >
@@ -830,7 +830,7 @@ export function EarningsClient() {
                                                 <button
                                                     type="submit"
                                                     disabled={setupBusy || !legalCapacityAttested || !selectedCorridorId || fieldsLoading}
-                                                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                    className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
                                                 >
                                                     {setupBusy ? "Saving…" : EARNINGS_COPY.setUpPayoutsTitle}
                                                 </button>

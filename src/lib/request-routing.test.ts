@@ -15,7 +15,11 @@ test("splitLocalePath handles default and prefixed locales", () => {
 });
 
 test("protected app paths include nested routes and both locales", () => {
+    assert.equal(isProtectedAppPath("/app/import/instagram"), true);
+    assert.equal(isProtectedAppPath("/id/app/import/instagram"), true);
     assert.equal(isProtectedAppPath("/app/collection"), true);
+    assert.equal(isProtectedAppPath("/app/credits"), true);
+    assert.equal(isProtectedAppPath("/app/billing/return"), true);
     assert.equal(isProtectedAppPath("/app/collection/binders/1"), true);
     assert.equal(isProtectedAppPath("/id/app/train"), true);
     assert.equal(isProtectedAppPath("/app"), false);

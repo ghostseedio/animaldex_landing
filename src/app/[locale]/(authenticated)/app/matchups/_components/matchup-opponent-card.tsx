@@ -11,7 +11,7 @@ export default function MatchupOpponentCard({
     return (
         <article className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-[linear-gradient(145deg,rgba(18,24,20,0.98),rgba(8,10,9,0.98))] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.95)] transition hover:border-primary-400/30">
             <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,250,71,0.16),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.18),transparent_50%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(167,244,50,0.16),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.18),transparent_50%)]" />
                 <div className="relative grid gap-4 p-4 sm:grid-cols-[7.5rem_1fr]">
                     <div className="relative mx-auto w-full max-w-[7.5rem] sm:mx-0">
                         <img

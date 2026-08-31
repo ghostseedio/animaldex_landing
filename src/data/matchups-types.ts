@@ -71,6 +71,20 @@ export type MatchupHistoryItem = {
     viewerWasAttacker: boolean;
     viewerWon: boolean;
     creditsDelta: number;
+    challengeFormat: string | null;
+    battleStatus: string | null;
+    requiredVotes: number | null;
+    votesCount: number;
+    round1WinnerCaptureId: string | null;
+    round2WinnerCaptureId: string | null;
+    round3WinnerCaptureId: string | null;
+    overallWinnerCaptureId: string | null;
+    roundsWonAttacker: number | null;
+    roundsWonDefender: number | null;
+    speciesComparisonSlug: string | null;
+    viewerVotedCaptureId: string | null;
+    votingDeadlineAt: string | null;
+    settlementReason: string | null;
 };
 
 export type MatchupResolveResult = {
@@ -105,6 +119,20 @@ export type MatchupResolveResult = {
     attackerTier: string;
     defenderTier: string;
     createdAt: string;
+    challengeFormat: string | null;
+    battleStatus: string | null;
+    requiredVotes: number | null;
+    votesCount: number;
+    round1WinnerCaptureId: string | null;
+    round2WinnerCaptureId: string | null;
+    round3WinnerCaptureId: string | null;
+    overallWinnerCaptureId: string | null;
+    roundsWonAttacker: number | null;
+    roundsWonDefender: number | null;
+    speciesComparisonSlug: string | null;
+    viewerVotedCaptureId: string | null;
+    votingDeadlineAt: string | null;
+    settlementReason: string | null;
 };
 
 export type MatchupArenaFilter = "all" | "nearTier" | "lowStake" | "highReward";

@@ -11,6 +11,7 @@ import {
     getProfileCreditsSummary,
     getProfileViewerState
 } from "@/data/profile-authenticated";
+import {getPublicGuideListingsForUser} from "@/data/guide-marketplace";
 import {getScopedTranslator} from "@/loaders/translation";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
@@ -68,10 +69,18 @@ export async function generateMetadata({params}: PublicProfilePageProps): Promis
 }
 
 export default async function PublicProfilePage({params}: PublicProfilePageProps) {
-    return ProfilePageBody({locale: params.locale, handle: params.handle});
+    return ProfilePageBody({locale: params.locale, handle: params.handle, surface: "marketing"});
 }
 
-async function ProfilePageBody({locale, handle}: {locale: string; handle: string}) {
+export async function ProfilePageBody({
+    locale,
+    handle,
+    surface = "marketing"
+}: {
+    locale: string;
+    handle: string;
+    surface?: "marketing" | "app";
+}) {
     const requestedHandle = normalizePublicHandle(handle);
     if (!requestedHandle) notFound();
 
@@ -110,7 +119,9 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
         };
     }
 
-    const listedPacks = await getMemberListedPacks(profile.userId);
+    const listedPacksPromise = getMemberListedPacks(profile.userId);
+    const listedGuidesPromise = getPublicGuideListingsForUser(profile.userId);
+    const [listedPacks, listedGuides] = await Promise.all([listedPacksPromise, listedGuidesPromise]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
     const canViewLocations = viewer.isOwner || profile.locationVisibility === "everyone";
@@ -127,8 +138,13 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
         }
     };
 
+    const articleClass =
+        surface === "app"
+            ? "mx-auto w-full max-w-3xl bg-[#07100B] px-0 py-0"
+            : "mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 md:px-8 md:py-16";
+
     return (
-        <article className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 md:px-8 md:py-16">
+        <article className={articleClass}>
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
             <ProfileContent
@@ -183,6 +199,43 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                     proBadge: t("proBadge"),
                     tabStats: t("tabStats"),
                     tabHistory: t("tabHistory"),
+                    tabShop: t("tabShop"),
+                    settingsActivity: t("settingsActivity"),
+                    earnings: t("earnings"),
+                    settingsEndorsements: t("settingsEndorsements"),
+                    settingsEndorsementsDetail: t("settingsEndorsementsDetail"),
+                    settingsMissions: t("settingsMissions"),
+                    settingsMissionsDetail: t("settingsMissionsDetail"),
+                    settingsCreditsUnlocks: t("settingsCreditsUnlocks"),
+                    settingsCreditsUnlocksCount: t("settingsCreditsUnlocksCount"),
+                    settingsCreditsDetail: t("settingsCreditsDetail"),
+                    settingsEarningsDetail: t("settingsEarningsDetail"),
+                    settingsWidgets: t("settingsWidgets"),
+                    settingsWidgetsDetail: t("settingsWidgetsDetail"),
+                    settingsLanguage: t("settingsLanguage"),
+                    settingsLanguageDetail: t("settingsLanguageDetail"),
+                    settingsLanguageValue: t("settingsLanguageValue"),
+                    settingsCurrency: t("settingsCurrency"),
+                    settingsCurrencyDetail: t("settingsCurrencyDetail"),
+                    settingsCurrencyValue: t("settingsCurrencyValue"),
+                    settingsLocationPrivacyDetail: t("settingsLocationPrivacyDetail"),
+                    settingsDataUploadsDetail: t("settingsDataUploadsDetail"),
+                    settingsDone: t("settingsDone"),
+                    settingsClose: t("settingsClose"),
+                    manageShop: t("manageShop"),
+                    settingsPreferences: t("settingsPreferences"),
+                    settingsNotifications: t("settingsNotifications"),
+                    settingsPrivacyData: t("settingsPrivacyData"),
+                    settingsLocationPrivacy: t("settingsLocationPrivacy"),
+                    settingsDataUploads: t("settingsDataUploads"),
+                    settingsSupportAbout: t("settingsSupportAbout"),
+                    settingsHelpSupport: t("settingsHelpSupport"),
+                    settingsPrivacyPolicy: t("settingsPrivacyPolicy"),
+                    settingsTerms: t("settingsTerms"),
+                    settingsAccount: t("settingsAccount"),
+                    settingsAccountDetail: t("settingsAccountDetail"),
+                    settingsActivityDetail: t("settingsActivityDetail"),
+                    settingsConnectedServices: t("settingsConnectedServices"),
                     netWorthFootnote: t("netWorthFootnote"),
                     keepScanning: t("keepScanning"),
                     wildProfileTitle: t("wildProfileTitle"),
@@ -211,6 +264,8 @@ async function ProfilePageBody({locale, handle}: {locale: string; handle: string
                 viewerAvatarUrl={viewer.viewerAvatarUrl}
                 ownerExtras={ownerExtras}
                 listedPacks={listedPacks}
+                listedGuides={listedGuides}
+                surface={surface}
                 appStoreUrl={appStoreUrl}
                 shareButton={
                     <ShareProfileButton

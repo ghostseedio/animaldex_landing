@@ -12,6 +12,7 @@ import {mergeCatalogMetadata} from "@/lib/animaldex-number";
 import {dedupeCatalogSpeciesEntries, speciesCatalogIdentityKey} from "@/lib/catalog-species-dedupe";
 import {resolveCollectionIdentityToken, setRuntimeSpeciesIdentityAliases} from "@/lib/collection-identity-aliases";
 import {isNonCanonicalLifeStageCatalogIdentity, resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
+import {logDevPerfEvent} from "@/lib/dev-request-timing";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type CatalogRow = {
@@ -126,12 +127,35 @@ function emptyBehaviorPrincipleIndex(): CatalogBehaviorPrincipleIndex {
 
 export {emptyBehaviorPrincipleIndex};
 
-let catalogCache: {
+type CatalogCacheEntry = {
     expiresAt: number;
     entries: SpeciesEntry[];
     behaviorPrinciples: CatalogBehaviorPrincipleIndex;
-} | null = null;
+};
+
+let catalogCache: CatalogCacheEntry | null = null;
+let catalogLoadPromise: Promise<CatalogCacheEntry> | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000;
+
+type GlobalCatalogCache = typeof globalThis & {
+    __adexCatalogCache?: CatalogCacheEntry;
+};
+
+function readCatalogCache(): CatalogCacheEntry | null {
+    const globalCache = (globalThis as GlobalCatalogCache).__adexCatalogCache;
+    if (globalCache && globalCache.expiresAt > Date.now()) {
+        return globalCache;
+    }
+    if (catalogCache && catalogCache.expiresAt > Date.now()) {
+        return catalogCache;
+    }
+    return null;
+}
+
+function writeCatalogCache(value: CatalogCacheEntry) {
+    catalogCache = value;
+    (globalThis as GlobalCatalogCache).__adexCatalogCache = value;
+}
 
 function parseBestUseCases(value: unknown) {
     if (!Array.isArray(value)) return [] as string[];
@@ -478,12 +502,18 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
     if (!params.has("order")) params.set("order", "species_profile_id.asc");
 
     const rows: T[] = [];
+    const queryStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     for (let offset = 0; ; offset += pageSize) {
         params.set("offset", String(offset));
+        const pageStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
         const response = await fetch(`${url}/rest/v1/${table}?${params}`, {
             headers: getSupabaseHeaders(key),
             next: {revalidate: 3600}
         });
+        const pageMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - pageStartedAt;
+        if (process.env.NODE_ENV !== "production" && pageMs >= 250) {
+            logDevPerfEvent("catalog.fetch", `SLOW ${table}`, {offset, pageMs: Math.round(pageMs), status: response.status});
+        }
         if (!response.ok) {
             throw new Error(`Failed to load ${table} page at offset ${offset}: ${response.status}`);
         }
@@ -492,18 +522,28 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
             throw new Error(`Invalid ${table} response at offset ${offset}`);
         }
         rows.push(...data as T[]);
-        if (data.length < pageSize) return rows;
+        if (data.length < pageSize) {
+            if (process.env.NODE_ENV !== "production") {
+                const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - queryStartedAt;
+                logDevPerfEvent("catalog.fetch", `${table} complete`, {rows: rows.length, totalMs: Math.round(totalMs)});
+            }
+            return rows;
+        }
     }
 }
 
 type IdentityAliasRow = {
-    alias_key: string;
-    canonical_key: string;
+    alias_identity_key: string;
+    canonical_identity_key: string;
 };
 
 async function loadSpeciesIdentityAliases() {
     try {
-        const rows = await fetchRows<IdentityAliasRow>("species_identity_aliases", "alias_key,canonical_key");
+        const rows = await fetchRows<IdentityAliasRow>(
+            "species_identity_aliases",
+            "alias_identity_key,canonical_identity_key",
+            {order: "alias_identity_key.asc"}
+        );
         if (!rows.length) {
             setRuntimeSpeciesIdentityAliases(null);
             return;
@@ -511,7 +551,7 @@ async function loadSpeciesIdentityAliases() {
 
         const aliases = Object.fromEntries(
             rows
-                .map((row) => [row.alias_key?.trim().toLowerCase(), row.canonical_key?.trim().toLowerCase()] as const)
+                .map((row) => [row.alias_identity_key?.trim().toLowerCase(), row.canonical_identity_key?.trim().toLowerCase()] as const)
                 .filter(([alias, canonical]) => Boolean(alias && canonical))
         );
         setRuntimeSpeciesIdentityAliases(aliases);
@@ -556,13 +596,40 @@ async function loadDatabaseEntries() {
 
 export function invalidateDatabaseSpeciesCache() {
     catalogCache = null;
+    catalogLoadPromise = null;
+    delete (globalThis as GlobalCatalogCache).__adexCatalogCache;
+}
+
+async function ensureCatalogCache() {
+    const cached = readCatalogCache();
+    if (cached) {
+        if (process.env.NODE_ENV !== "production") {
+            logDevPerfEvent("catalog.cache", "hit", {entries: cached.entries.length});
+        }
+        return cached;
+    }
+
+    if (!catalogLoadPromise) {
+        if (process.env.NODE_ENV !== "production") {
+            logDevPerfEvent("catalog.cache", "miss");
+        }
+        catalogLoadPromise = loadDatabaseEntries()
+            .then(({entries, behaviorPrinciples}) => {
+                const value = {entries, behaviorPrinciples, expiresAt: Date.now() + CACHE_TTL_MS};
+                writeCatalogCache(value);
+                return value;
+            })
+            .finally(() => {
+                catalogLoadPromise = null;
+            });
+    }
+
+    return catalogLoadPromise;
 }
 
 export async function getDatabaseSpeciesEntries() {
-    if (catalogCache && catalogCache.expiresAt > Date.now()) return catalogCache.entries;
-    const {entries, behaviorPrinciples} = await loadDatabaseEntries();
-    catalogCache = {entries, behaviorPrinciples, expiresAt: Date.now() + CACHE_TTL_MS};
-    return entries;
+    const cached = await ensureCatalogCache();
+    return cached.entries;
 }
 
 function resolveDatabaseEntryForStatic(
@@ -580,12 +647,8 @@ function resolveDatabaseEntryForStatic(
 }
 
 export async function getCatalogBehaviorPrincipleIndex() {
-    if (catalogCache && catalogCache.expiresAt > Date.now()) {
-        return catalogCache.behaviorPrinciples;
-    }
-
-    await getDatabaseSpeciesEntries();
-    return catalogCache?.behaviorPrinciples ?? emptyBehaviorPrincipleIndex();
+    const cached = await ensureCatalogCache();
+    return cached.behaviorPrinciples;
 }
 
 export async function getDatabaseSpeciesBySlug(slug: string) {

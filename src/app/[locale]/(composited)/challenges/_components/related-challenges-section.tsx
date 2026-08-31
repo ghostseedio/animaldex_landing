@@ -38,7 +38,7 @@ export default function RelatedChallengesSection({
                         key={item.slug}
                         className="group overflow-hidden rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur flex flex-col"
                     >
-                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(49,255,79,0.18),transparent_34%),linear-gradient(135deg,rgba(17,27,22,0.96),rgba(6,10,8,0.98))]">
+                        <Link href={`/comparisons/${item.slug}`} className="relative block h-40 overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(167,244,50,0.18),transparent_34%),linear-gradient(135deg,rgba(17,27,22,0.96),rgba(6,10,8,0.98))]">
                             {item.image ? (
                                 <Image
                                     src={item.image.src}

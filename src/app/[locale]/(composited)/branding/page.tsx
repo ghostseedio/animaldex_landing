@@ -35,11 +35,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const colors = [
-    {name: "AnimalDex Lime", value: "#9DCD20", className: "bg-[#9DCD20]", text: "text-canvas-950"},
-    {name: "Signal Lime", value: "#E2FF57", className: "bg-[#E2FF57]", text: "text-canvas-950"},
-    {name: "Forest", value: "#0F2601", className: "bg-[#0F2601]", text: "text-white"},
-    {name: "Canvas", value: "#07100B", className: "bg-[#07100B]", text: "text-white"},
-    {name: "Cloud", value: "#F4FFF5", className: "bg-[#F4FFF5]", text: "text-canvas-950"}
+    {name: "AnimalDex Lime", value: "#A7F432", className: "bg-[#A7F432]", text: "text-canvas-950"},
+    {name: "Primary Green", value: "#21C05E", className: "bg-[#21C05E]", text: "text-canvas-950"},
+    {name: "Deep Forest", value: "#0D2A16", className: "bg-[#0D2A16]", text: "text-white"},
+    {name: "Near Black", value: "#07100B", className: "bg-[#07100B]", text: "text-white"},
+    {name: "White", value: "#FFFFFF", className: "bg-white", text: "text-canvas-950"},
+    {name: "Muted Text", value: "#A8B0AA", className: "bg-[#A8B0AA]", text: "text-canvas-950"}
 ];
 
 function DownloadIcon() {
@@ -76,16 +77,16 @@ export default async function BrandingPage() {
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
             <header className="relative px-4 pb-20 pt-16 md:px-8 md:pb-28 md:pt-24">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(157,205,32,.2),transparent_48%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(167,244,50,.18),transparent_48%)]" />
                 <div className="relative mx-auto flex max-w-6xl flex-col items-center text-center">
-                    <p className="text-sm font-bold uppercase tracking-[.24em] text-primary-200">AnimalDex brand resources</p>
-                    <h1 className="mt-5 max-w-5xl font-display text-5xl font-bold leading-[.95] tracking-tight text-white md:text-7xl lg:text-8xl">
+                    <p className="font-display text-sm font-bold uppercase tracking-[.24em] text-primary-200">AnimalDex brand resources</p>
+                    <h1 className="mt-5 max-w-5xl font-display text-5xl font-extrabold leading-[.95] tracking-tight text-white md:text-7xl lg:text-8xl">
                         Meet the mark behind the animal world.
                     </h1>
-                    <p className="mt-7 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">
+                    <p className="mt-7 max-w-3xl font-display text-lg font-semibold leading-8 text-ink-200 md:text-xl">
                         Official AnimalDex logos, colors, typography, and practical guidance for presenting our brand clearly and consistently.
                     </p>
-                    <a href="/images/logo.webp" download className="mt-9 inline-flex items-center gap-2 rounded-full bg-primary-500 px-6 py-3.5 font-bold text-canvas-950 transition hover:bg-primary-400">
+                    <a href="/images/logo.webp" download className="mt-9 inline-flex items-center gap-2 rounded-full bg-primary-400 px-6 py-3.5 font-bold text-canvas-950 transition hover:bg-primary-300">
                         <DownloadIcon /> Download primary logo
                     </a>
                 </div>
@@ -100,20 +101,20 @@ export default async function BrandingPage() {
                     </div>
 
                     <div className="grid gap-5 lg:grid-cols-2">
-                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-[#0B1710] p-7 md:p-10">
+                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-canvas-950 p-7 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · dark background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={400} height={400} priority className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-[#F4FFF5] p-7 md:p-10">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#405046]">Symbol · light background</p>
+                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-white p-7 md:p-10">
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · light background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a light background" width={400} height={400} className="mx-auto h-auto w-full max-w-[15rem]" />
-                            <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-[#224F06] hover:text-[#0F2601]"><DownloadIcon /> Download WebP</a>
+                            <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-600 hover:text-canvas-950"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[18rem] flex-col justify-between rounded-[2rem] bg-[#0B1710] p-7 md:col-span-2 md:p-10">
+                        <article className="flex min-h-[18rem] flex-col justify-between rounded-[2rem] bg-surface-900 p-7 md:col-span-2 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Wordmark · preferred lockup</p>
                             <Image src="/images/animaldex-logo-text.webp" alt="Official AnimalDex wordmark logo" width={1250} height={274} className="mx-auto h-auto w-full max-w-2xl" />
-                            <a href="/images/animaldex-logo-text.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download wordmark</a>
+                            <a href="/images/animaldex-logo-text.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
                     </div>
                 </section>
@@ -143,26 +144,35 @@ export default async function BrandingPage() {
                 <section aria-labelledby="brand-colors">
                     <p className="text-xs font-bold uppercase tracking-[.22em] text-primary-200">03 · Color</p>
                     <h2 id="brand-colors" className="mt-3 font-display text-4xl font-bold text-white md:text-6xl">Wild, vivid, grounded.</h2>
-                    <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        {colors.map((color) => <article key={color.value} className={`${color.className} ${color.text} flex min-h-[13rem] flex-col justify-end rounded-[1.75rem] p-6`}>
-                            <h3 className="font-bold">{color.name}</h3>
+                    <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {colors.map((color) => (
+                            <article
+                                key={color.name}
+                                className={`${color.className} ${color.text} flex min-h-[13rem] flex-col justify-end rounded-[1.75rem] p-6 ${color.value === "#FFFFFF" ? "ring-1 ring-black/10" : "ring-1 ring-white/10"}`}
+                            >
+                            <h3 className="font-display text-xl font-bold">{color.name}</h3>
                             <p className="mt-1 font-mono text-sm opacity-75">{color.value}</p>
-                        </article>)}
+                        </article>
+                        ))}
                     </div>
-                    <p className="mt-5 max-w-3xl text-base leading-7 text-ink-300">AnimalDex lime is an accent, not a page background. Pair foreground and background colors with sufficient contrast, particularly for body copy and interface controls.</p>
+                    <p className="mt-5 max-w-3xl text-base leading-7 text-ink-300">AnimalDex lime is the fill for primary buttons and accents. Use primary green for supporting states and maps, near black for canvas, and muted text for supporting copy. Pair foreground and background colors with sufficient contrast.</p>
                 </section>
 
                 <section aria-labelledby="typography" className="rounded-[2.5rem] bg-surface-900/60 p-7 md:p-12">
                     <p className="text-xs font-bold uppercase tracking-[.22em] text-primary-200">04 · Typography</p>
-                    <h2 id="typography" className="mt-3 font-display text-4xl font-bold text-white md:text-6xl">Distinctive headlines. Effortless reading.</h2>
+                    <h2 id="typography" className="mt-3 font-display text-4xl font-extrabold text-white md:text-6xl">Compact headlines. Clean reading.</h2>
                     <div className="mt-10 grid gap-10 lg:grid-cols-2">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Cal Sans · Display</p>
-                            <p className="mt-4 font-display text-5xl font-bold leading-none text-white md:text-7xl">Discover the extraordinary.</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Barlow Condensed · Titles, hooks, subtitles</p>
+                            <p className="mt-2 text-sm font-medium text-ink-300">SemiBold, Bold, and ExtraBold. Compact, tall, and adventurous without becoming messy.</p>
+                            <p className="mt-4 font-display text-5xl font-extrabold uppercase leading-none tracking-tight text-white md:text-7xl">Discover. Collect. Conquer.</p>
+                            <p className="mt-5 font-display text-2xl font-semibold text-ink-200">Scan animals in the wild and level up your discoveries.</p>
                         </div>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Onest · Body and UI</p>
-                            <p className="mt-4 text-xl leading-9 text-ink-100">Onest keeps field guides, animal profiles, and product interfaces friendly and readable across screen sizes.</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Inter · Body and UI</p>
+                            <p className="mt-2 text-sm font-medium text-ink-300">Medium and SemiBold. Clean, modern, and aligned with the AnimalDex app UI.</p>
+                            <p className="mt-4 text-xl font-medium leading-9 text-white">Inter keeps field guides, animal profiles, and product interfaces readable across screen sizes.</p>
+                            <p className="mt-3 text-base font-semibold text-ink-200">Buttons, navigation, and supporting copy stay in Inter so the condensed display type can do the work of the hook.</p>
                         </div>
                     </div>
                 </section>
@@ -172,7 +182,7 @@ export default async function BrandingPage() {
                         <h2 id="brand-help" className="font-display text-3xl font-bold text-white md:text-5xl">Need a different format?</h2>
                         <p className="mt-3 text-lg leading-8 text-ink-200">For press, partnerships, co-branding, or a format not provided here, contact us before recreating or modifying the logo.</p>
                     </div>
-                    <a href="mailto:support@animaldex.app?subject=AnimalDex%20brand%20asset%20request" className="shrink-0 rounded-full bg-white px-6 py-3.5 font-bold text-canvas-950 hover:bg-primary-100">Request brand assets</a>
+                    <a href="mailto:support@animaldex.app?subject=AnimalDex%20brand%20asset%20request" className="shrink-0 rounded-full bg-white px-6 py-3.5 font-bold text-canvas-950 hover:bg-primary-200">Request brand assets</a>
                 </section>
             </main>
         </div>

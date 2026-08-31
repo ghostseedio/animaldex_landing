@@ -27,6 +27,10 @@ const HISTORY_SELECT = [
     "scenario_key", "scenario_family", "scenario_title", "scenario_domain", "scenario_description",
     "deciding_edge_label", "attacker_context_score", "defender_context_score",
     "winner_explanation", "strategic_insight", "scenario_version",
+    "challenge_format", "battle_status", "required_votes", "votes_count",
+    "round1_winner_capture_id", "round2_winner_capture_id", "round3_winner_capture_id",
+    "overall_winner_capture_id", "rounds_won_attacker", "rounds_won_defender",
+    "round3_species_comparison_slug", "viewer_voted_capture_id", "voting_deadline_at", "settlement_reason",
     "attacker_animal_name", "defender_animal_name"
 ].join(",");
 
@@ -186,7 +190,21 @@ function mapHistoryRow(row: QueryRow, viewerUserId: string): MatchupHistoryItem 
         defenderContextScore: readNumber(row, "defender_context_score", NaN) || null,
         viewerWasAttacker,
         viewerWon,
-        creditsDelta: viewerWon ? payoutAmount - stakeAmount : -stakeAmount
+        creditsDelta: viewerWon ? payoutAmount - stakeAmount : -stakeAmount,
+        challengeFormat: readString(row, "challenge_format"),
+        battleStatus: readString(row, "battle_status"),
+        requiredVotes: readNumber(row, "required_votes", NaN) || null,
+        votesCount: readNumber(row, "votes_count"),
+        round1WinnerCaptureId: readString(row, "round1_winner_capture_id"),
+        round2WinnerCaptureId: readString(row, "round2_winner_capture_id"),
+        round3WinnerCaptureId: readString(row, "round3_winner_capture_id"),
+        overallWinnerCaptureId: readString(row, "overall_winner_capture_id"),
+        roundsWonAttacker: readNumber(row, "rounds_won_attacker", NaN) || null,
+        roundsWonDefender: readNumber(row, "rounds_won_defender", NaN) || null,
+        speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
+        viewerVotedCaptureId: readString(row, "viewer_voted_capture_id"),
+        votingDeadlineAt: readString(row, "voting_deadline_at"),
+        settlementReason: readString(row, "settlement_reason")
     };
 }
 
@@ -226,7 +244,21 @@ export function mapResolveRow(row: QueryRow): MatchupResolveResult {
         defenderBattlePower: readNumber(row, "defender_battle_power"),
         attackerTier: readString(row, "attacker_tier") ?? "C",
         defenderTier: readString(row, "defender_tier") ?? "C",
-        createdAt: readString(row, "created_at") ?? new Date().toISOString()
+        createdAt: readString(row, "created_at") ?? new Date().toISOString(),
+        challengeFormat: readString(row, "challenge_format"),
+        battleStatus: readString(row, "battle_status"),
+        requiredVotes: readNumber(row, "required_votes", NaN) || null,
+        votesCount: readNumber(row, "votes_count"),
+        round1WinnerCaptureId: readString(row, "round1_winner_capture_id"),
+        round2WinnerCaptureId: readString(row, "round2_winner_capture_id"),
+        round3WinnerCaptureId: readString(row, "round3_winner_capture_id"),
+        overallWinnerCaptureId: readString(row, "overall_winner_capture_id"),
+        roundsWonAttacker: readNumber(row, "rounds_won_attacker", NaN) || null,
+        roundsWonDefender: readNumber(row, "rounds_won_defender", NaN) || null,
+        speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
+        viewerVotedCaptureId: readString(row, "viewer_voted_capture_id"),
+        votingDeadlineAt: readString(row, "voting_deadline_at"),
+        settlementReason: readString(row, "settlement_reason")
     };
 }
 

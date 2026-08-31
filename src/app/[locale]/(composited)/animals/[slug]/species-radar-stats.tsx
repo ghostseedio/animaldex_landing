@@ -20,7 +20,7 @@ const STAT_ORDER: Array<{
     valueSuffix?: string;
 }> = [
     {key: "dominance", shortTitle: "DOM", tint: "rgba(239, 68, 68, 0.92)"},
-    {key: "speed", shortTitle: "SPD", tint: "#38fa47"},
+    {key: "speed", shortTitle: "SPD", tint: "#A7F432"},
     {key: "size", shortTitle: "SIZE", tint: "#9454fa"},
     {key: "intelligence", shortTitle: "INT", tint: "rgba(34, 211, 238, 0.92)"},
     {key: "rarity", shortTitle: "RAR", tint: "rgba(251, 146, 60, 0.92)", valueSuffix: "%"}
@@ -115,7 +115,7 @@ function SpeciesRadarLegendChip({metric}: {metric: SpeciesRadarMetric}) {
                         {metric.value}
                         {metric.valueSuffix ?? ""}
                     </p>
-                    {metric.delta > 0 ? <span className="text-[10px] font-bold text-[#38fa47]">+{metric.delta}</span> : null}
+                    {metric.delta > 0 ? <span className="text-[10px] font-bold text-[#A7F432]">+{metric.delta}</span> : null}
                 </div>
             </div>
         </div>
@@ -180,16 +180,16 @@ export default function SpeciesRadarStats({
                 >
                     <defs>
                         <radialGradient id="species-radar-glow" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stopColor="#38fa47" stopOpacity="0.16" />
+                            <stop offset="0%" stopColor="#A7F432" stopOpacity="0.16" />
                             <stop offset="55%" stopColor="#9454fa" stopOpacity="0.1" />
                             <stop offset="100%" stopColor="#9454fa" stopOpacity="0" />
                         </radialGradient>
                         <linearGradient id="species-radar-fill" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#38fa47" stopOpacity="0.24" />
+                            <stop offset="0%" stopColor="#A7F432" stopOpacity="0.24" />
                             <stop offset="100%" stopColor="#9454fa" stopOpacity="0.18" />
                         </linearGradient>
                         <linearGradient id="species-radar-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#38fa47" />
+                            <stop offset="0%" stopColor="#A7F432" />
                             <stop offset="100%" stopColor="#9454fa" />
                         </linearGradient>
                     </defs>
@@ -248,7 +248,7 @@ export default function SpeciesRadarStats({
                         stroke="url(#species-radar-stroke)"
                         strokeWidth="2.8"
                         strokeLinejoin="round"
-                        style={{filter: "drop-shadow(0 0 12px rgba(56, 250, 71, 0.2))"}}
+                        style={{filter: "drop-shadow(0 0 12px rgba(167, 244, 50, 0.2))"}}
                     />
 
                     {plotPoints.map((point, index) => {

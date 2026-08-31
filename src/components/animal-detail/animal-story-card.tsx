@@ -69,7 +69,7 @@ function Icon({name, className = "h-3 w-3"}: {name: "book" | "play" | "stop" | "
 
 function PanelLabel({icon, children, cyan = false}: {icon: "lesson" | "leaf" | "grid"; children: React.ReactNode; cyan?: boolean}) {
     return (
-        <div className={`flex items-center gap-1.5 text-[11px] font-bold ${cyan ? "text-cyan-300/90" : "text-[#38fa47]"}`}>
+        <div className={`flex items-center gap-1.5 text-[11px] font-bold ${cyan ? "text-cyan-300/90" : "text-[#A7F432]"}`}>
             <Icon name={icon} className="h-[11px] w-[11px]" />
             <span>{children}</span>
         </div>
@@ -133,17 +133,17 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
 
     const power = principleName ? (
         <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#38fa47]">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#A7F432]">
                 <Icon name="bolt" className="h-2.5 w-2.5" />
                 <span>Animal Power</span>
             </div>
             <p className={`text-[17px] font-bold leading-[1.3] text-white ${wide ? "lg:text-2xl" : ""}`}>{principleName}</p>
-            {powerLine ? <p className={`text-[15px] font-bold leading-6 text-[#38fa47] ${wide ? "lg:text-lg lg:leading-7" : ""}`}>{powerLine}</p> : null}
+            {powerLine ? <p className={`text-[15px] font-bold leading-6 text-[#A7F432] ${wide ? "lg:text-lg lg:leading-7" : ""}`}>{powerLine}</p> : null}
         </div>
     ) : null;
 
     const lesson = coreLesson ? (
-        <div className="relative space-y-[5px] pl-[11px] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-full before:bg-[#38fa47]/70">
+        <div className="relative space-y-[5px] pl-[11px] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-full before:bg-[#A7F432]/70">
             <PanelLabel icon="lesson">What it teaches</PanelLabel>
             <p className={bodyClass}>{coreLesson}</p>
         </div>
@@ -159,7 +159,7 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
         >
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-white">
-                    <Icon name="book" className="h-3 w-3 text-[#38fa47]" />
+                    <Icon name="book" className="h-3 w-3 text-[#A7F432]" />
                     <span>Story</span>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5">
@@ -167,7 +167,7 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                         <button
                             type="button"
                             onClick={toggleSpeech}
-                            className="flex items-center gap-1.5 rounded-full border border-[#38fa47]/25 bg-[#121212] px-2.5 py-2 text-[11px] font-semibold text-[#38fa47]"
+                            className="flex items-center gap-1.5 rounded-full border border-[#A7F432]/25 bg-[#121212] px-2.5 py-2 text-[11px] font-semibold text-[#A7F432]"
                         >
                             <Icon name={speaking ? "stop" : "play"} className="h-[11px] w-[11px]" />
                             {speaking ? "Stop" : "Play"}
@@ -215,10 +215,10 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                     {applicationExample ? (
                         <>
                             <div className="h-px bg-white/[0.14]" />
-                            <div className="flex items-start gap-2.5 rounded-[14px] border border-[#38fa47]/[0.14] bg-white/[0.035] p-3">
-                                <Icon name="try" className="mt-0.5 h-4 w-4 shrink-0 text-[#38fa47]" />
+                            <div className="flex items-start gap-2.5 rounded-[14px] border border-[#A7F432]/[0.14] bg-white/[0.035] p-3">
+                                <Icon name="try" className="mt-0.5 h-4 w-4 shrink-0 text-[#A7F432]" />
                                 <div className="space-y-1.5">
-                                    <p className="text-[11px] font-bold text-[#38fa47]">Try it</p>
+                                    <p className="text-[11px] font-bold text-[#A7F432]">Try it</p>
                                     <p className={bodyClass}>{applicationExample}</p>
                                 </div>
                             </div>
@@ -231,8 +231,8 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                                 <PanelLabel icon="grid">Use it for</PanelLabel>
                                 <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-[9px]">
                                     {bestUseCases.map((useCase) => (
-                                        <div key={useCase} className="flex items-start gap-2 rounded-xl border border-[#38fa47]/[0.16] bg-black/[0.16] px-2.5 py-2 text-[11px] font-semibold leading-4 text-white">
-                                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#38fa47]" />
+                                        <div key={useCase} className="flex items-start gap-2 rounded-xl border border-[#A7F432]/[0.16] bg-black/[0.16] px-2.5 py-2 text-[11px] font-semibold leading-4 text-white">
+                                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#A7F432]" />
                                             <span>{useCase}</span>
                                         </div>
                                     ))}

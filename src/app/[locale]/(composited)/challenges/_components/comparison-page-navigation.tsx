@@ -57,7 +57,7 @@ export default function ComparisonPageNavigation({title, labels}: ComparisonPage
     return (
         <>
             <div className="flex flex-wrap items-center gap-2">
-                <Link href="/comparisons" className="rounded-full bg-primary-500 px-4 py-2.5 text-sm font-bold text-surface-950 transition hover:bg-primary-300">
+                <Link href="/comparisons" className="rounded-full bg-primary-400 px-4 py-2.5 text-sm font-bold text-surface-950 transition hover:bg-primary-300">
                     {labels.compareAnother}
                 </Link>
                 <a href="#meet-animals" className="rounded-full border border-line-300 bg-surface-900/70 px-4 py-2.5 text-sm font-semibold text-white transition hover:border-primary-500/50">

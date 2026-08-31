@@ -60,7 +60,7 @@ function SystemsProfile({
     return (
         <article className="flex h-full flex-col gap-7">
             <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-surface-800/90 to-surface-900">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.14),transparent_58%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(33,192,94,0.14),transparent_58%)]" />
                 <div className="relative grid gap-5 p-5 md:grid-cols-[9.5rem_minmax(0,1fr)] md:items-end md:gap-6 md:p-6">
                     <SpeciesArtworkImage
                         slug={item.slug}

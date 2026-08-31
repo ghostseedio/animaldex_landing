@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import {FormEvent, ReactNode, useEffect, useMemo, useRef, useState} from "react";
+import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
+import SupportArticlePicker from "@/app/admin/support/_components/support-article-picker";
 
 type SupportAttachment = {
     id: string;
@@ -246,6 +248,10 @@ function splitSignature(body: string) {
 }
 
 function MessageBody({body}: {body: string}) {
+    if (body.includes("[[adex-article:")) {
+        return <SupportMessageBody body={body} readLabel="Read article" />;
+    }
+
     const {content, signature} = splitSignature(body);
 
     return (
@@ -599,7 +605,7 @@ export default function SupportInboxClient() {
                         <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border border-line-300 bg-canvas-900 px-3 py-3 text-base text-white outline-none focus:border-primary-200" autoComplete="current-password" />
                     </label>
                     {error && <p className="text-sm text-red-300">{error}</p>}
-                    <button type="submit" disabled={submitting || !password} className="rounded-lg bg-primary-500 px-4 py-3 text-sm font-bold text-canvas-950 hover:bg-primary-200 disabled:opacity-50">
+                    <button type="submit" disabled={submitting || !password} className="rounded-lg bg-primary-400 px-4 py-3 text-sm font-bold text-canvas-950 hover:bg-primary-200 disabled:opacity-50">
                         {submitting ? "Signing in…" : "Sign in"}
                     </button>
                 </form>
@@ -791,7 +797,7 @@ export default function SupportInboxClient() {
                                     </div>
                                 </div>
 
-                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
+                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(33,192,94,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
                                     {selectedInAppThread.messages.map((message) => {
                                         const inbound = message.direction === "inbound";
                                         return (
@@ -822,6 +828,7 @@ export default function SupportInboxClient() {
                                             className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
                                         />
                                         <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
+                                            <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
                                             <p className="text-[11px] text-ink-500">{reply.trim().length}/1000 · Replies appear as AnimalDex in the app</p>
                                             <button type="submit" disabled={!canSend} className="ml-auto rounded-lg bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-500">
                                                 {submitting ? "Sending…" : "Send reply"}
@@ -854,7 +861,7 @@ export default function SupportInboxClient() {
                                     </div>
                                 </div>
 
-                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(27,196,81,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
+                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(33,192,94,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
                                     {selectedThread.messages.map((message) => {
                                         const inbound = message.direction === "inbound";
                                         const imageAttachments = message.attachments.filter((attachment) => attachment.contentType.startsWith("image/"));
@@ -941,6 +948,7 @@ export default function SupportInboxClient() {
                                         <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
                                             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, false); event.target.value = ""; }} />
                                             <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, true); event.target.value = ""; }} />
+                                            <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
                                             <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">📎 Attach files</button>
                                             <button type="button" onClick={() => imageInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">▧ Insert images</button>
                                             <p className="hidden text-[11px] text-ink-500 xl:block">Links become clickable · AnimalDex signature added automatically</p>

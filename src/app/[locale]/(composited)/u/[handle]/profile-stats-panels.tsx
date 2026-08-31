@@ -24,7 +24,7 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 /** `AnimalDexTheme` tokens, resolved to sRGB. */
 export const THEME = {
-    neon: "#38FA47",
+    neon: "#A7F432",
     violet: "#9454FA",
     chrome: "#1F1F1F",
     outline: "rgba(255,255,255,0.10)",
@@ -34,7 +34,7 @@ export const THEME = {
     cyan: "#32ADE6",
     orange: "#FF9500",
     red: "#FF3B30",
-    green: "#34C759",
+    green: "#21C05E",
     domestic: "#8CC7FF",
     farm: "#D1A659"
 } as const;
@@ -470,7 +470,7 @@ export function BestForTagsChartCard({
                                     </span>
                                     <div className="relative flex h-32 w-6 items-end rounded-[5px] bg-white/[0.045]">
                                         <div
-                                            className="w-full rounded-[5px] border border-white/[0.18] shadow-[0_0_8px_rgba(56,250,71,0.16)]"
+                                            className="w-full rounded-[5px] border border-white/[0.18] shadow-[0_0_8px_rgba(167,244,50,0.16)]"
                                             style={{
                                                 height: `${Math.max(10, (score.score / maxScore) * 128)}px`,
                                                 background: `linear-gradient(to bottom, ${THEME.neon}F2, ${THEME.violet}C7, rgba(50,173,230,0.62))`

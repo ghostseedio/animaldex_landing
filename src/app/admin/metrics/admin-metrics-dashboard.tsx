@@ -990,7 +990,7 @@ export default function AdminMetricsDashboard() {
             placeholder="Admin password"
             className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300"
           />
-          <button className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950">
+          <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">
             Sign in
           </button>
           {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
@@ -1000,7 +1000,7 @@ export default function AdminMetricsDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(27,196,81,.1),transparent_28%)] p-4 text-ink-100 sm:p-7">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(33,192,94,.1),transparent_28%)] p-4 text-ink-100 sm:p-7">
       <div className="mx-auto max-w-[96rem]">
         <header className="border-b border-line-300 pb-5">
           <Link href="/admin" className="text-sm text-ink-400 hover:text-white">

@@ -118,13 +118,13 @@ export default function AdminUsersClient() {
         }).sort((a, b) => sort === "activity" ? b.activityScore - a.activityScore : sort === "recent" ? new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime() : sort === "credits" ? b.creditsPurchased - a.creditsPurchased : b.estimatedLtvUsd - a.estimatedLtvUsd);
     }, [data, query, filter, sort]);
 
-    if (authorized === false) return <main className="grid min-h-screen place-items-center px-4"><form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p><h1 className="mt-2 font-display text-3xl text-white">Customer intelligence</h1><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" /><button className="mt-3 w-full rounded-xl bg-primary-500 py-3 font-black text-canvas-950">Sign in</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</form></main>;
+    if (authorized === false) return <main className="grid min-h-screen place-items-center px-4"><form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p><h1 className="mt-2 font-display text-3xl text-white">Customer intelligence</h1><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" /><button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</form></main>;
 
     return <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(87,184,255,.09),transparent_28%)] p-4 sm:p-7">
         <div className="mx-auto max-w-[100rem]">
             <header className="flex flex-col justify-between gap-4 border-b border-line-300 pb-6 sm:flex-row sm:items-end">
                 <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Customer intelligence</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Users & LTV</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Understand who purchases, how they use AnimalDex, and which customers stay active.</p></div>
-                <div className="flex gap-2"><Link href="/admin/metrics" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Aggregate metrics</Link><button onClick={() => void load()} className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button></div>
+                <div className="flex gap-2"><Link href="/admin/metrics" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Aggregate metrics</Link><button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button></div>
             </header>
             {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
             {notice && <div className="mt-5 rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</div>}
@@ -168,7 +168,7 @@ export default function AdminUsersClient() {
                                    onChange={(event) => setGrantNote((current) => ({...current, [user.id]: event.target.value}))}
                                    placeholder="Reason, kept on the ledger entry" className="min-w-0 flex-1 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white" />
                             <button onClick={() => void grantCredits(user)} disabled={granting === user.id || !grantAmount[user.id]}
-                                    className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                    className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">
                                 {granting === user.id ? "Granting…" : "Grant"}
                             </button>
                             {[5, 10, 25].map((amount) => (

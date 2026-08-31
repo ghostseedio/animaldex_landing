@@ -2,7 +2,7 @@ import "server-only";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
 
-export async function invokeAuthenticatedSupabaseFunction(functionName: string, body: unknown) {
+export async function invokeAuthenticatedSupabaseFunctionResponse(functionName: string, body: unknown) {
     const supabase = createSupabaseServerClient();
     const url = getSupabaseUrl();
     const apiKey = getSupabasePublicKey();
@@ -18,6 +18,11 @@ export async function invokeAuthenticatedSupabaseFunction(functionName: string, 
     const text = await response.text();
     let payload: any = null;
     try { payload = text ? JSON.parse(text) : {}; } catch { payload = {error: text}; }
-    if (!response.ok) throw new Error(payload?.message || payload?.error || "The request failed.");
-    return payload;
+    return {ok: response.ok, status: response.status, payload};
+}
+
+export async function invokeAuthenticatedSupabaseFunction(functionName: string, body: unknown) {
+    const invoked = await invokeAuthenticatedSupabaseFunctionResponse(functionName, body);
+    if (!invoked.ok) throw new Error(invoked.payload?.message || invoked.payload?.error || "The request failed.");
+    return invoked.payload;
 }

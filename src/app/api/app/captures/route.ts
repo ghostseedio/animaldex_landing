@@ -43,7 +43,12 @@ export async function POST(request: Request) {
         if (uploadError) throw uploadError;
         const {error: imageError} = await supabase.from("capture_images").insert({capture_id: captureId, storage_bucket: "captures", storage_path: path, mime_type: file.type || "image/jpeg", byte_size: file.size, media_kind: "photo", sort_order: 0});
         if (imageError) throw imageError;
-        await supabase.from("captures").update({status: "ready_for_analysis"}).eq("id", captureId);
+        const {data: finalized, error: finalizeError} = await supabase.rpc("finalize_capture_upload", {p_capture_id: captureId});
+        if (finalizeError) throw finalizeError;
+        const finalizeRow = Array.isArray(finalized) ? finalized[0] : finalized;
+        if (!finalizeRow?.ok) {
+            throw new Error(String(finalizeRow?.error ?? "source_media_unavailable"));
+        }
         await invokeAuthenticatedSupabaseFunction("analyze-capture", {capture_id: captureId, identity_correction_requested: false});
         return NextResponse.json({captureId}, {status: 202});
     } catch (error) {

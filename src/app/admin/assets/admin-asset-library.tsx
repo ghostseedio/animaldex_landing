@@ -79,7 +79,7 @@ export default function AdminAssetLibrary() {
     }, [hasMore, loading, page, loadAssets]);
 
     async function uploadFiles(files: File[]) {
-        const images = files.filter((file) => file.type.startsWith("image/"));
+        const images = files.filter((file) => file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|svg|avif)$/i.test(file.name));
         if (!images.length) return;
         setUploading(true);
         setUploadProgress("");
@@ -181,7 +181,7 @@ export default function AdminAssetLibrary() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(27,196,81,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
             <div className="mx-auto w-full max-w-[100rem]">
                 <header className="flex flex-col gap-5 border-b border-line-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
                     <div>
@@ -190,9 +190,9 @@ export default function AdminAssetLibrary() {
                         <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Asset library</h1>
                         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Upload images once, reuse them across pages, or copy their public URLs into rendered HTML and code blocks.</p>
                     </div>
-                    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950">
+                    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950">
                         <Upload size={18} />{uploading ? `Uploading ${uploadProgress}` : "Upload images"}
-                        <input type="file" accept="image/*" multiple disabled={uploading} onChange={upload} className="hidden" />
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif,.avif" multiple disabled={uploading} onChange={upload} className="hidden" />
                     </label>
                 </header>
 
@@ -202,8 +202,8 @@ export default function AdminAssetLibrary() {
                     <label className={`mb-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-10 text-center transition ${isDragging ? "border-primary-300 bg-primary-500/15" : "border-line-300 bg-surface-900/55 hover:border-primary-400/60"}`}>
                         <Upload size={30} className={isDragging ? "text-primary-100" : "text-ink-400"} />
                         <span className="mt-3 text-sm font-black text-white">{uploading ? `Uploading ${uploadProgress}` : "Drop multiple images here"}</span>
-                        <span className="mt-1 text-xs text-ink-500">or click to select images. JPG, PNG and WebP are compressed to WebP automatically.</span>
-                        <input type="file" accept="image/*" multiple disabled={uploading} onChange={upload} className="hidden" />
+                        <span className="mt-1 text-xs text-ink-500">or click to select images. JPG, PNG, WebP, GIF, SVG, or AVIF up to 15 MB. JPG, PNG and WebP are compressed to WebP automatically.</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif,.avif" multiple disabled={uploading} onChange={upload} className="hidden" />
                     </label>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="relative w-full max-w-xl"><Magnifer size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filenames or paths…" className="w-full rounded-xl border border-line-300 bg-surface-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-primary-300" /></div>

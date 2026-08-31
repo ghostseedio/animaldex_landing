@@ -305,7 +305,7 @@ export default function IndexNewAnimal({onClose, onIndexed, onNotify, onEditExis
 
                             <button type="button" onClick={() => void save()}
                                     disabled={busy !== null || !displayName.trim() || !draft.subtitle.trim()}
-                                    className="rounded-xl bg-primary-500 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                                    className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
                                 {busy === "save" ? "Indexing…" : "3. Index it and take the next number"}
                             </button>
                         </div>

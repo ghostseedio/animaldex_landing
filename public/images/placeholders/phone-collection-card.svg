@@ -45,27 +45,27 @@
   </g>
 
   <!-- Copy -->
-  <text x="112" y="30" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2.4">ANIMALDEX</text>
-  <text x="112" y="55" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="22" font-weight="800">Catalog</text>
+  <text x="112" y="30" fill="#A7F432" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2.4">ANIMALDEX</text>
+  <text x="112" y="55" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="800">Catalog</text>
 
   <!-- Mini stat cards -->
   <rect x="112" y="67" width="40" height="34" rx="11" fill="#181D1A"/>
   <rect x="112.75" y="67.75" width="38.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
   <text x="122" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">FOUND</text>
-  <text x="122" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
+  <text x="122" y="96" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
 
   <rect x="158" y="67" width="40" height="34" rx="11" fill="#181A22"/>
   <rect x="158.75" y="67.75" width="38.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
   <text x="168" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">SETS</text>
-  <text x="168" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">22</text>
+  <text x="168" y="96" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="800">22</text>
 
   <rect x="204" y="67" width="50" height="34" rx="11" fill="#191621"/>
   <rect x="204.75" y="67.75" width="48.5" height="32.5" rx="10.25" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
   <text x="214" y="81" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.1">ARCHIVE</text>
-  <text x="214" y="96" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
+  <text x="214" y="96" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="800">16</text>
 
   <!-- progress accents -->
-  <rect x="122" y="104" width="30" height="4" rx="2" fill="#2EFF4A"/>
+  <rect x="122" y="104" width="30" height="4" rx="2" fill="#A7F432"/>
   <rect x="168" y="104" width="30" height="4" rx="2" fill="url(#purpleLine)"/>
   <rect x="214" y="104" width="32" height="4" rx="2" fill="#FF9B38"/>
 
@@ -75,5 +75,5 @@
   <text x="238" y="35" text-anchor="middle" fill="#AEB6AE" font-family="Arial, sans-serif" font-size="15" font-weight="800">i</text>
 
   <!-- subtle glow dot -->
-  <circle cx="252" cy="18" r="5" fill="#2EFF4A" opacity="0.55" filter="url(#greenGlow)"/>
+  <circle cx="252" cy="18" r="5" fill="#A7F432" opacity="0.55" filter="url(#greenGlow)"/>
 </svg>

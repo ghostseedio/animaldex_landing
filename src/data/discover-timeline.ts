@@ -1,7 +1,10 @@
 import "server-only";
 
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesBySlug} from "@/data/species";
+import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
+import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
@@ -11,6 +14,8 @@ import {identityKindShortLabel} from "@/lib/identity-kind";
 import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
+import {logDevPerfEvent, timeDevAsync, timeDevStep} from "@/lib/dev-request-timing";
+import {devCacheTtlMs, withServerMemoryCache} from "@/lib/server-memory-cache";
 import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
 
 type DiscoverSupabaseClient = NonNullable<
@@ -837,6 +842,50 @@ function resolveAnimalDexNumber(
     return slug ? animalDexNumbers.get(slug) ?? null : null;
 }
 
+function readPremiumCoreLesson(premiumDetails: Record<string, unknown> | null | undefined) {
+    if (!premiumDetails) {
+        return null;
+    }
+
+    for (const key of ["core_lesson", "coreLesson", "lesson"]) {
+        const value = premiumDetails[key];
+        if (typeof value === "string" && value.trim()) {
+            return value.trim();
+        }
+    }
+
+    return null;
+}
+
+function resolveCaptureCoreLesson(
+    catalogPrinciple: ReturnType<typeof resolveCatalogBehaviorPrinciple>,
+    species: ReturnType<typeof getSpeciesBySlug> | null,
+    premiumDetails: Record<string, unknown> | null | undefined
+) {
+    const catalogLesson = catalogPrinciple?.coreLesson?.trim();
+    if (catalogLesson) {
+        return catalogLesson;
+    }
+
+    if (species) {
+        const staticLesson = getBehavioralPrincipleProfile(
+            species.slug,
+            speciesSystemsIntelligence[species.slug],
+            speciesSystemsIntelligence
+        )?.coreLesson?.trim();
+        if (staticLesson) {
+            return staticLesson;
+        }
+
+        const legendaryLesson = getLegendaryEarthBeast(species.slug)?.lesson?.trim();
+        if (legendaryLesson) {
+            return legendaryLesson;
+        }
+    }
+
+    return readPremiumCoreLesson(premiumDetails);
+}
+
 function mapCaptureRow(
     row: QueryRow,
     animalDexNumbers: Map<string, number>,
@@ -859,6 +908,9 @@ function mapCaptureRow(
     const refreshedMedia = isMediaRefreshActivity(row);
     const learnedPrincipleName = primaryLearnedPrincipleName(row);
     const media = discoverMediaAssets(row, captureId);
+    const premiumDetails = row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
+        ? row.premium_details as Record<string, unknown>
+        : null;
     const headline = resolveCaptureHeadlineDisplay({
         animalName: readString(row, "animal_name"),
         scientificName: readString(row, "scientific_name"),
@@ -871,9 +923,7 @@ function mapCaptureRow(
         canonicalDisplayName: species?.name ?? null,
         humanContext: readString(row, "human_context"),
         zooOrWild: readString(row, "zoo_or_wild"),
-        premiumDetails: row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
-            ? row.premium_details as Record<string, unknown>
-            : null
+        premiumDetails
     });
     const animalName = headline.animalName;
     const catalogBestFor = catalogPrinciple?.bestUseCases ?? [];
@@ -980,7 +1030,7 @@ function mapCaptureRow(
         challengeHealth: readNumber(row, "challenge_health") || 3,
         challengeStake: readNumber(row, "challenge_stake") || 1,
         learnedPrinciple: catalogPrinciple?.principleName ?? learnedPrincipleName,
-        coreLesson: catalogPrinciple?.coreLesson ?? null,
+        coreLesson: resolveCaptureCoreLesson(catalogPrinciple, species, premiumDetails),
         learnedExpression: null,
         bestForTags: catalogBestFor.length ? catalogBestFor.slice(0, 4) : learnedTags,
         statBoosts: boosts,
@@ -1452,6 +1502,7 @@ async function hydrateDiscoverFeedMediaRows(supabase: DiscoverSupabaseClient, ro
 
 async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: number) {
     const requestedLimit = Math.max(limit, 24);
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     const richResult = await supabase
         .from("discover_feed_v1")
         .select(richFeedSelect)
@@ -1459,7 +1510,12 @@ async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: nu
         .limit(requestedLimit);
 
     if (!richResult.error) {
-        return hydrateDiscoverFeedMediaRows(supabase, (richResult.data ?? []) as unknown as QueryRow[]);
+        const rows = await hydrateDiscoverFeedMediaRows(supabase, (richResult.data ?? []) as unknown as QueryRow[]);
+        if (process.env.NODE_ENV !== "production") {
+            const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+            logDevPerfEvent("discover.feed", "rich select", {requestedLimit, rowCount: rows.length, totalMs: Math.round(totalMs)});
+        }
+        return rows;
     }
 
     const fallbackResult = await supabase
@@ -1468,7 +1524,17 @@ async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: nu
         .order("feed_activity_at", {ascending: false})
         .limit(requestedLimit);
 
-    return hydrateDiscoverFeedMediaRows(supabase, (fallbackResult.data ?? []) as unknown as QueryRow[]);
+    const rows = await hydrateDiscoverFeedMediaRows(supabase, (fallbackResult.data ?? []) as unknown as QueryRow[]);
+    if (process.env.NODE_ENV !== "production") {
+        const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+        logDevPerfEvent("discover.feed", "fallback select", {
+            requestedLimit,
+            rowCount: rows.length,
+            totalMs: Math.round(totalMs),
+            error: richResult.error.message
+        });
+    }
+    return rows;
 }
 
 export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTimelineCursor | null = null) {
@@ -1779,6 +1845,45 @@ export type DiscoverSitemapPost = {
     hasVideoMedia: boolean;
     contextLabel: string | null;
 };
+
+function recentCaptureFeedLimit(limit: number) {
+    return Math.min(Math.max(limit * 8, 24), 48);
+}
+
+async function loadRecentPublicCaptures(limit: number): Promise<DiscoverCaptureItem[]> {
+    const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
+    if (!supabase) return [];
+
+    const feedLimit = recentCaptureFeedLimit(limit);
+    const rows = await timeDevAsync("discover.recent", "fetch-feed", () => fetchDiscoverFeedRows(supabase, feedLimit), {feedLimit});
+    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
+        timeDevAsync("discover.recent", "animaldex-index", () => buildAnimalDexNumberIndex()),
+        timeDevAsync("discover.recent", "behavior-principles", () => getCatalogBehaviorPrincipleIndex())
+    ]);
+
+    return timeDevAsync("discover.recent", "map-rows", () =>
+        rows
+            .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
+            .filter((item) =>
+                item.imageSrc
+                && !item.isUncertain
+                && item.mediaAssets.length > 0
+                && Boolean(item.coreLesson?.trim())
+                && item.animalDexNumber != null
+                && item.animalDexNumber >= 1
+            )
+            .slice(0, limit),
+        {rowCount: rows.length, limit}
+    );
+}
+
+export async function getRecentPublicCaptures(limit = 4): Promise<DiscoverCaptureItem[]> {
+    return withServerMemoryCache(
+        `recent-public-captures:${limit}`,
+        devCacheTtlMs(5 * 60 * 1000),
+        () => loadRecentPublicCaptures(limit)
+    );
+}
 
 export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<DiscoverSitemapPost[]> {
     const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();

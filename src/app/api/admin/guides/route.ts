@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
 
         const [sellerRows, listingRows, bookingRows, pendingApplications, pendingListings, pendingBookings] = await Promise.all([
             rest<Row[]>(`guide_seller_profiles?select=user_id,seller_status,marketplace_standing,age_attested_18_plus,terms_version,terms_accepted_at,created_at,updated_at,reviewed_at${applicationFilter}&order=updated_at.asc&limit=${GUIDE_ADMIN_QUEUE_LIMIT}`),
-            rest<Row[]>(`guide_listings?select=id,seller_user_id,title,slug,description,public_summary,service_category,public_area_label,region_code,country_code,duration_minutes,max_guests,currency_code,amount_minor,pricing_unit,status,submitted_at,updated_at,resume_requires_review${listingFilter}&order=submitted_at.asc.nullslast&limit=${GUIDE_ADMIN_QUEUE_LIMIT}`),
+            rest<Row[]>(`guide_listings?select=id,seller_user_id,title,slug,description,public_summary,service_category,public_area_label,public_place_name,public_locality,public_admin_area,region_code,country_code,duration_minutes,max_guests,currency_code,amount_minor,pricing_unit,status,submitted_at,updated_at,resume_requires_review${listingFilter}&order=submitted_at.asc.nullslast&limit=${GUIDE_ADMIN_QUEUE_LIMIT}`),
             rest<Row[]>(`guide_booking_requests?select=id,guide_listing_id,requester_user_id,seller_user_id,requested_date,guest_count,message,status,created_at${bookingFilter}&order=created_at.desc&limit=${GUIDE_ADMIN_QUEUE_LIMIT}`),
             exactCount("guide_seller_profiles?seller_status=eq.pending&select=user_id"),
             exactCount("guide_listings?status=eq.pending_review&select=id"),

@@ -187,6 +187,20 @@ export async function getDirectMessageConversation(otherUserId: string, limit = 
         .filter((message): message is DirectMessage => Boolean(message));
 }
 
+export async function getDirectMessageUnreadCountForUser(
+    supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>,
+    userId: string
+) {
+    const {count} = await supabase
+        .from("direct_messages")
+        .select("id", {count: "exact", head: true})
+        .eq("recipient_id", userId)
+        .neq("sender_id", userId)
+        .is("read_at", null);
+
+    return count ?? 0;
+}
+
 export async function getDirectMessageUnreadCount() {
     const supabase = createSupabaseServerClient();
     if (!supabase) return 0;
@@ -194,14 +208,7 @@ export async function getDirectMessageUnreadCount() {
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return 0;
 
-    const {count} = await supabase
-        .from("direct_messages")
-        .select("id", {count: "exact", head: true})
-        .eq("recipient_id", user.id)
-        .neq("sender_id", user.id)
-        .is("read_at", null);
-
-    return count ?? 0;
+    return getDirectMessageUnreadCountForUser(supabase, user.id);
 }
 
 export async function markDirectConversationRead(otherUserId: string) {

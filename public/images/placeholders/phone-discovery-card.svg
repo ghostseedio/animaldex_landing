@@ -33,8 +33,8 @@
   <rect x="0.75" y="0.75" width="238.5" height="68.5" rx="21.25" stroke="#314036" stroke-width="1.5"/>
 
   <!-- Header -->
-  <path d="M20 12L16.5 24H21L18.7 34L27.5 19.5H22.5L25 12H20Z" fill="#2EFF4A"/>
-  <text x="34" y="25" fill="#2EFF4A" font-family="Arial, sans-serif" font-size="12" font-weight="800">Scenario result</text>
+  <path d="M20 12L16.5 24H21L18.7 34L27.5 19.5H22.5L25 12H20Z" fill="#A7F432"/>
+  <text x="34" y="25" fill="#A7F432" font-family="Arial, sans-serif" font-size="12" font-weight="800">Scenario result</text>
   <text x="184" y="25" fill="#9FA7A0" font-family="Arial, sans-serif" font-size="11" font-weight="700">won 3 cr</text>
 
   <!-- Matchup row: Dragonfly -->
@@ -55,7 +55,7 @@
 
   <circle cx="27" cy="47" r="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
 
-  <text x="40" y="51" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="11" font-weight="800">Dragon</text>
+  <text x="40" y="51" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="11" font-weight="800">Dragon</text>
   <rect x="77" y="41" width="17" height="12" rx="6" fill="#331919"/>
   <text x="85.5" y="50" text-anchor="middle" fill="#E85A5A" font-family="Arial, sans-serif" font-size="8" font-weight="800">B</text>
 
@@ -80,13 +80,13 @@
 
   <circle cx="146" cy="47" r="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
 
-  <text x="159" y="51" fill="#F4FFF5" font-family="Arial, sans-serif" font-size="11" font-weight="800">Beetle</text>
+  <text x="159" y="51" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="11" font-weight="800">Beetle</text>
   <rect x="198" y="41" width="18" height="12" rx="6" fill="#33260F"/>
   <text x="207" y="50" text-anchor="middle" fill="#FF9B38" font-family="Arial, sans-serif" font-size="8" font-weight="800">A</text>
 
   <!-- Small outcome chips -->
   <rect x="20" y="60" width="36" height="6" rx="3" fill="#243028"/>
-  <rect x="20" y="60" width="25" height="6" rx="3" fill="#2EFF4A"/>
+  <rect x="20" y="60" width="25" height="6" rx="3" fill="#A7F432"/>
   <rect x="66" y="60" width="36" height="6" rx="3" fill="#2B2613"/>
   <rect x="112" y="60" width="36" height="6" rx="3" fill="#2A1820"/>
   <rect x="158" y="60" width="36" height="6" rx="3" fill="#2A1E12"/>

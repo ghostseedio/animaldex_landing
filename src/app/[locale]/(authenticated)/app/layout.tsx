@@ -1,19 +1,18 @@
 import AppShell from "@/app/[locale]/(authenticated)/app/_components/app-shell";
 import {AppCreditsProvider} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
-import {getAuthenticatedAppContext, getAppCreditBalance, getAppNotifications, type AppNotification} from "@/data/authenticated-app";
-import {getDirectMessageUnreadCount} from "@/data/direct-messages";
+import {getAuthenticatedAppShellData} from "@/data/authenticated-app";
+import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 
 export const metadata = {robots: {index: false, follow: false}};
 
-export default async function AuthenticatedAppLayout({children, params}: {children: React.ReactNode; params: {locale: string}}) {
-    const context = await getAuthenticatedAppContext();
-    const [notifications, unreadMessageCount, creditBalance] = context
-        ? await Promise.all([
-            getAppNotifications(),
-            getDirectMessageUnreadCount(),
-            getAppCreditBalance()
-        ])
-        : [[], 0, null] as [AppNotification[], number, number | null];
+export default async function AuthenticatedAppLayout({children}: {children: React.ReactNode; params: {locale: string}}) {
+    const timer = createDevRequestTimer("app.layout");
+    const {context, notifications, unreadMessageCount, creditBalance} = await timeDevStep(
+        timer,
+        "shell-data",
+        () => getAuthenticatedAppShellData()
+    );
+    finishDevRequestTimer(timer, {authenticated: Boolean(context)});
 
     return (
         <AppCreditsProvider initialBalance={creditBalance}>

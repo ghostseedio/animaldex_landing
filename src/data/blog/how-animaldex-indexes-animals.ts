@@ -64,7 +64,7 @@ export const howAnimalDexIndexesAnimalsPost: BlogPost = {
   font-size: clamp(2.4rem, 6vw, 4.1rem);
   line-height: 0.98;
   letter-spacing: -0.03em;
-  color: #f4fff5;
+  color: #FFFFFF;
 }
 .indexing-hero__lead {
   max-width: 42rem;

@@ -28,12 +28,12 @@ const KIND_COLOR: Record<string, string> = {
     safari_park: "#f59e0b",
     wildlife_park: "#f59e0b",
     animal_sanctuary: "#a78bfa",
-    wildlife_reserve: "#1bc451",
-    national_park: "#1bc451",
-    nature_reserve: "#1bc451",
+    wildlife_reserve: "#21C05E",
+    national_park: "#21C05E",
+    nature_reserve: "#21C05E",
     wetland: "#2dd4bf",
-    forest: "#4ade80",
-    conservation_area: "#1bc451",
+    forest: "#21C05E",
+    conservation_area: "#21C05E",
     birding_site: "#fbbf24"
 };
 
@@ -78,7 +78,7 @@ export default function LocationWildlifeMap({
             layersRef.current = [];
 
             const markers = places.map((place) => {
-                const color = KIND_COLOR[place.kind] ?? "#1bc451";
+                const color = KIND_COLOR[place.kind] ?? "#21C05E";
                 const icon = leaflet.divIcon({
                     className: "",
                     html: `<span style="display:block;width:18px;height:18px;border-radius:9999px;background:${color};box-shadow:0 0 0 3px rgba(4,20,10,.75),0 0 12px ${color}88"></span>`,

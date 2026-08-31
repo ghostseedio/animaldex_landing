@@ -6,11 +6,18 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import {appDestinationHref, INSTAGRAM_WEB_IMPORT_LIVE, instagramWebImportCtaLabel} from "@/lib/instagram-import";
+import {getSupportArticleBySlugs, getSupportArticlePath} from "@/lib/support-articles";
+import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
+import InstagramImportIntro from "@/app/[locale]/(composited)/use-cases/_components/instagram-import-intro";
 
 type UseCasePageProps = {
     params: {
         locale: string;
         slug: string;
+    };
+    searchParams?: {
+        intent?: string;
     };
 };
 
@@ -68,7 +75,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
     };
 }
 
-export default async function UseCasePage({params}: UseCasePageProps) {
+export default async function UseCasePage({params, searchParams}: UseCasePageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "useCases");
     const entry = getUseCase(slug);
@@ -77,6 +84,18 @@ export default async function UseCasePage({params}: UseCasePageProps) {
 
     const pageUrl = getAbsoluteUrl(locale, `/use-cases/${entry.slug}`);
     const related = getRelatedUseCases(entry.slug, 3);
+    const localePrefix = locale === localeConfig.defaultLocale ? "" : `/${locale}`;
+    const productHref = entry.productCta
+        ? appDestinationHref(localePrefix, entry.productCta.path)
+        : null;
+    const secondaryHref = entry.secondaryCta
+        ? appDestinationHref(localePrefix, entry.secondaryCta.path)
+        : null;
+    const isImportPage = entry.slug === "import-instagram-wildlife-photos";
+    const importSupport = isImportPage
+        ? getSupportArticleBySlugs("instagram-import", "how-do-i-import-wildlife-posts-from-instagram")
+        : null;
+    const importCtaLabel = isImportPage ? instagramWebImportCtaLabel() : entry.productCta?.label;
 
     const schema = {
         "@context": "https://schema.org",
@@ -92,6 +111,16 @@ export default async function UseCasePage({params}: UseCasePageProps) {
         }))
     };
 
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: getAbsoluteUrl(locale, "/") },
+            { "@type": "ListItem", position: 2, name: t("back"), item: getAbsoluteUrl(locale, "/use-cases") },
+            { "@type": "ListItem", position: 3, name: entry.shortLabel, item: pageUrl }
+        ]
+    };
+
     const faqSchema = {
         "@context": "https://schema.org",
         "@type": "FAQPage",
@@ -105,11 +134,26 @@ export default async function UseCasePage({params}: UseCasePageProps) {
         }))
     };
 
+    const howToSchema = entry.steps?.length
+        ? {
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            name: entry.title,
+            description: entry.description,
+            step: entry.steps.map((step, index) => ({
+                "@type": "HowToStep",
+                position: index + 1,
+                name: step.title,
+                text: step.body
+            }))
+        }
+        : null;
+
     return (
         <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-10 md:py-16">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([schema, faqSchema])}}
+                dangerouslySetInnerHTML={{__html: JSON.stringify([schema, faqSchema, breadcrumbSchema, howToSchema].filter(Boolean))}}
             />
 
             <header className="max-w-4xl mx-auto text-center flex flex-col items-center gap-5">
@@ -121,14 +165,66 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                     {entry.shortLabel}
                 </p>
 
-                <h1 className="font-display font-bold text-4xl md:text-6xl text-white leading-[0.95]">
-                    {entry.title}
-                </h1>
+                {entry.heroTitle ? (
+                    <>
+                        <p className={`max-w-xl text-primary-200 ${isImportPage ? "text-sm font-semibold leading-snug md:text-base" : "text-sm uppercase tracking-[0.22em]"}`}>
+                            {entry.heroEyebrow}
+                        </p>
+                        <h1 className="font-display font-bold text-4xl md:text-6xl text-white leading-[0.95]">
+                            {entry.heroTitle}
+                        </h1>
+                    </>
+                ) : (
+                    <h1 className="font-display font-bold text-4xl md:text-6xl text-white leading-[0.95]">
+                        {entry.title}
+                    </h1>
+                )}
 
                 <p className="text-base md:text-xl text-ink-200 leading-8 max-w-3xl">
                     {entry.description}
                 </p>
 
+                {productHref && entry.productCta ? (
+                    <div className="flex flex-col items-center gap-3 pt-2">
+                        <UseCaseProductCta
+                            href={productHref}
+                            label={importCtaLabel ?? entry.productCta.label}
+                            event={entry.productCta.event ?? "use_case_product_cta"}
+                            extraEvents={isImportPage ? ["casual_archive_to_import"] : []}
+                            source={isImportPage ? "import_use_case" : entry.productCta.event}
+                        />
+                        {secondaryHref && entry.secondaryCta ? (
+                            <UseCaseProductCta
+                                href={secondaryHref}
+                                label={entry.secondaryCta.label}
+                                event={entry.secondaryCta.event ?? "use_case_secondary_cta"}
+                                source={entry.secondaryCta.event}
+                                variant="secondary"
+                            />
+                        ) : null}
+                        {entry.experienceCta ? (
+                            <UseCaseProductCta
+                                href={entry.experienceCta.href}
+                                label={entry.experienceCta.label}
+                                event={entry.experienceCta.event ?? "use_case_experience_cta"}
+                                variant="secondary"
+                            />
+                        ) : null}
+                        <StoreLinks variant="text" />
+                    </div>
+                ) : null}
+
+                {entry.limitationNote ? (
+                    <p className="max-w-2xl text-sm leading-6 text-ink-300">{entry.limitationNote}</p>
+                ) : null}
+
+                {importSupport && !isImportPage ? (
+                    <Link href={getSupportArticlePath(importSupport)} className="text-sm text-primary-200" underline>
+                        How Instagram import works
+                    </Link>
+                ) : null}
+
+                {entry.productCta ? null : (
                 <div className="flex flex-wrap justify-center gap-2 pt-1">
                     {entry.searchIntents.slice(0, 6).map((intent) => (
                         <span
@@ -139,7 +235,50 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                         </span>
                     ))}
                 </div>
+                )}
             </header>
+
+            {entry.steps?.length ? (
+                <section className="mx-auto mt-10 max-w-5xl md:mt-14">
+                    {isImportPage && productHref ? (
+                        <InstagramImportIntro productHref={productHref} intent={searchParams?.intent} />
+                    ) : null}
+                    {isImportPage && INSTAGRAM_WEB_IMPORT_LIVE ? (
+                        <section aria-labelledby="web-first-heading" className="mb-8 rounded-[1.35rem] border border-primary-400/20 bg-primary-400/[0.06] p-5">
+                            <h2 id="web-first-heading" className="font-display text-2xl font-bold text-white">
+                                No app download required to get started
+                            </h2>
+                            <p className="mt-2 text-sm leading-6 text-ink-200">
+                                Import on the web. Sign in to review eligible posts, then download the app when you capture new animals in the field.
+                            </p>
+                        </section>
+                    ) : null}
+                    {isImportPage ? null : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {entry.steps.map((step, index) => (
+                        <div key={step.title} className="rounded-[1.35rem] border border-primary-500/20 bg-primary-950/20 p-5">
+                            <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">
+                                {String(index + 1).padStart(2, "0")}
+                            </p>
+                            <h2 className="mt-2 font-display text-2xl font-bold text-white">{step.title}</h2>
+                            <p className="mt-2 text-sm leading-6 text-ink-200">{step.body}</p>
+                        </div>
+                    ))}
+                    </div>
+                    )}
+                </section>
+            ) : null}
+
+            {entry.audiences?.length && !isImportPage ? (
+                <section className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {entry.audiences.map((audience) => (
+                        <div key={audience.title} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                            <h2 className="font-display text-xl font-bold text-white">{audience.title}</h2>
+                            <p className="mt-2 text-sm leading-6 text-ink-200">{audience.body}</p>
+                        </div>
+                    ))}
+                </section>
+            ) : null}
 
             <section className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-10 md:mt-14">
                 <StatCard label={t("audienceLabel")} value={entry.audience} />
@@ -217,6 +356,45 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             ))}
                         </div>
                     </section>
+
+                    {isImportPage ? (
+                        <section
+                            aria-labelledby="past-new-heading"
+                            className="grid grid-cols-1 gap-3 md:grid-cols-2"
+                        >
+                            <h2 id="past-new-heading" className="sr-only">Past encounters and new encounters</h2>
+                            <article aria-labelledby="past-encounters-heading" className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">Past</p>
+                                <h3 id="past-encounters-heading" className="mt-2 font-display text-xl font-bold text-white">
+                                    Past encounters
+                                </h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-200">
+                                    Bring eligible wildlife posts from Instagram into AnimalDex after review.
+                                </p>
+                            </article>
+                            <article aria-labelledby="new-encounters-heading" className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">New</p>
+                                <h3 id="new-encounters-heading" className="mt-2 font-display text-xl font-bold text-white">
+                                    New encounters
+                                </h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-200">
+                                    Use AnimalDex mobile capture for new encounters in the wild, zoo, aquarium, and the field.
+                                </p>
+                            </article>
+                        </section>
+                    ) : null}
+
+                    {isImportPage && entry.audiences?.length ? (
+                        <section aria-labelledby="import-audiences-heading" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <h2 id="import-audiences-heading" className="sr-only">Who Instagram import is for</h2>
+                            {entry.audiences.map((audience) => (
+                                <article key={audience.title} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                                    <h3 className="font-display text-xl font-bold text-white">{audience.title}</h3>
+                                    <p className="mt-2 text-sm leading-6 text-ink-200">{audience.body}</p>
+                                </article>
+                            ))}
+                        </section>
+                    ) : null}
 
                     <section
                         id="actions"
@@ -318,13 +496,44 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             Start now
                         </p>
                         <h2 className="font-display font-bold text-3xl md:text-5xl text-white">
-                            {t("ctaTitle")}
+                            {entry.productCta ? entry.productCta.label : t("ctaTitle")}
                         </h2>
                         <p className="text-ink-200 text-base md:text-xl leading-8 mt-4 max-w-2xl mx-auto">
-                            {t("ctaDescription")}
+                            {entry.limitationNote ?? t("ctaDescription")}
                         </p>
-                        <div className="mt-7">
+                        <div className="mt-7 flex flex-col items-center gap-3">
+                            {productHref && entry.productCta ? (
+                                <UseCaseProductCta
+                                    href={productHref}
+                                    label={importCtaLabel ?? entry.productCta.label}
+                                    event={entry.productCta.event ?? "use_case_product_cta"}
+                                    extraEvents={isImportPage ? ["casual_archive_to_import"] : []}
+                                    source={isImportPage ? "import_use_case" : entry.productCta.event}
+                                />
+                            ) : null}
+                            {secondaryHref && entry.secondaryCta ? (
+                                <UseCaseProductCta
+                                    href={secondaryHref}
+                                    label={entry.secondaryCta.label}
+                                    event={entry.secondaryCta.event ?? "use_case_secondary_cta"}
+                                    source={entry.secondaryCta.event}
+                                    variant="secondary"
+                                />
+                            ) : null}
+                            {entry.experienceCta ? (
+                                <UseCaseProductCta
+                                    href={entry.experienceCta.href}
+                                    label={entry.experienceCta.label}
+                                    event={entry.experienceCta.event ?? "use_case_experience_cta"}
+                                    variant="secondary"
+                                />
+                            ) : null}
                             <StoreLinks variant="text" />
+                            {importSupport ? (
+                                <Link href={getSupportArticlePath(importSupport)} className="text-sm text-primary-200" underline>
+                                    How Instagram import works
+                                </Link>
+                            ) : null}
                         </div>
                     </section>
                 </main>
