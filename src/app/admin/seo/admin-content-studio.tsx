@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import NextImage from "next/image";
 import {useSearchParams} from "next/navigation";
-import {FormEvent, PointerEvent, useEffect, useRef, useState} from "react";
+import {FormEvent, PointerEvent, useCallback, useEffect, useRef, useState} from "react";
 import {
     AddCircle,
     ArrowLeft,
@@ -245,7 +246,7 @@ function LiveContentEditor({
                     <div className={`${editingHeader ? "hidden" : "block"} overflow-hidden rounded-xl`}><RenderedCodeFrame title="Page header preview" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml ?? ""})} minHeight={240} /></div>
                 </section>
                 <figure ref={featuredFigureRef} className="group relative overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
-                    <img src={post.featuredImage.src} alt={post.featuredImage.alt} style={imageDisplayStyle(post.featuredImage)} className={`${post.featuredImage.displayHeight ? "" : "aspect-video"} h-auto w-full object-cover`} />
+                    <NextImage src={post.featuredImage.src} alt={post.featuredImage.alt} width={post.featuredImage.width || 1600} height={post.featuredImage.height || 900} unoptimized style={imageDisplayStyle(post.featuredImage)} className={`${post.featuredImage.displayHeight ? "" : "aspect-video"} h-auto w-full object-cover`} />
                     <button type="button" onClick={() => chooseImage(featuredSlot)} className="absolute right-3 top-3 cursor-pointer rounded-lg bg-canvas-950/85 px-3 py-2 text-xs font-black text-white opacity-100 shadow-lg backdrop-blur sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                         <span className="inline-flex items-center gap-1.5"><Gallery size={15} />{uploadingPath === "featuredImage" ? "Uploading…" : "Replace image"}</span>
                     </button>
@@ -299,8 +300,8 @@ function LiveContentEditor({
                         <div className="flex flex-wrap gap-2">
                             <button onClick={() => updateSection(sectionIndex, (item) => ({...item, codeBlocks: [...(item.codeBlocks ?? []), {language: "html", code: "<div>Preview me</div>", caption: "", render: false}]}))} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:text-white"><Code size={15} />Code block</button>
                         </div>
-                        {section.media?.type === "image" && section.media.image && <div className="group/image relative"><img src={section.media.image.src} alt={section.media.image.alt} style={imageDisplayStyle(section.media.image)} className="w-full rounded-2xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: section.title, path: ["sections", sectionIndex, "media", "image"], image: section.media!.image!})} className="absolute right-3 top-3 rounded-lg bg-canvas-950/85 px-3 py-2 text-xs font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace image</button></div>}
-                        {section.media?.type === "gallery" && section.media.images && <div className="grid gap-3 sm:grid-cols-2">{section.media.images.map((image, imageIndex) => <div key={imageIndex} className="group/image relative"><img src={image.src} alt={image.alt} style={imageDisplayStyle(image)} className="h-full w-full rounded-xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: `${section.title} image ${imageIndex + 1}`, path: ["sections", sectionIndex, "media", "images", imageIndex], image})} className="absolute right-2 top-2 rounded-lg bg-canvas-950/85 px-2.5 py-2 text-[10px] font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace</button></div>)}</div>}
+                        {section.media?.type === "image" && section.media.image && <div className="group/image relative"><NextImage src={section.media.image.src} alt={section.media.image.alt} width={section.media.image.width || 1600} height={section.media.image.height || 900} unoptimized style={imageDisplayStyle(section.media.image)} className="h-auto w-full rounded-2xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: section.title, path: ["sections", sectionIndex, "media", "image"], image: section.media!.image!})} className="absolute right-3 top-3 rounded-lg bg-canvas-950/85 px-3 py-2 text-xs font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace image</button></div>}
+                        {section.media?.type === "gallery" && section.media.images && <div className="grid gap-3 sm:grid-cols-2">{section.media.images.map((image, imageIndex) => <div key={imageIndex} className="group/image relative"><NextImage src={image.src} alt={image.alt} width={image.width || 1600} height={image.height || 900} unoptimized style={imageDisplayStyle(image)} className="h-full w-full rounded-xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: `${section.title} image ${imageIndex + 1}`, path: ["sections", sectionIndex, "media", "images", imageIndex], image})} className="absolute right-2 top-2 rounded-lg bg-canvas-950/85 px-2.5 py-2 text-[10px] font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace</button></div>)}</div>}
                     </section>)}
                     <button onClick={() => insertCodeSection()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary-400/40 bg-primary-500/[0.04] px-4 py-4 text-sm font-bold text-primary-100 hover:bg-primary-500/[0.08]"><Code size={18} />Add code section</button>
                 </div>
@@ -334,7 +335,7 @@ export default function AdminContentStudio() {
     const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("desktop");
     const filtered = summaries.filter((item) => `${item.title} ${item.slug}`.toLowerCase().includes(query.toLowerCase()));
 
-    async function loadList(type: ContentType = contentType) {
+    const loadList = useCallback(async (type: ContentType) => {
         setError(null);
         const response = await fetch(`/api/admin/content?type=${type}`, {cache: "no-store"});
         if (response.status === 401) {
@@ -361,14 +362,35 @@ export default function AdminContentStudio() {
             }));
         setSummaries([...custom, ...compiled]);
         setAuthorized(true);
-    }
+    }, []);
+
+    const openPost = useCallback(async function openContent(slug: string, type: ContentType, allowTypeFallback = true): Promise<void> {
+        setMessage(null);
+        setError(null);
+        const response = await fetch(`/api/admin/content?type=${type}&slug=${encodeURIComponent(slug)}`, {cache: "no-store"});
+        const body = await response.json();
+        if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load article");
+        if (!body.content && allowTypeFallback) {
+            const fallbackType: ContentType = type === "blog" ? "page" : "blog";
+            await loadList(fallbackType);
+            await openContent(slug, fallbackType, false);
+            return;
+        }
+        if (!body.content) throw new Error(`No blog or page found for “${slug}”.`);
+        setContentType(type);
+        setPost(body.content);
+        setIsPublished(Boolean(body.entry?.is_published));
+        lastSavedPost.current = JSON.stringify(body.content);
+        setAutosaveStatus("saved");
+        syncEditorUrl(type, slug);
+    }, [loadList]);
 
     useEffect(() => {
         const slug = searchParams.get("slug")?.trim();
         loadList(requestedType)
             .then(() => slug ? openPost(slug, requestedType) : undefined)
             .catch((caught) => setError(caught.message));
-    }, []);
+    }, [loadList, openPost, requestedType, searchParams]);
 
     useEffect(() => {
         if (!post || saving) return;
@@ -431,27 +453,6 @@ export default function AdminContentStudio() {
         } finally {
             setSaving(false);
         }
-    }
-
-    async function openPost(slug: string, type: ContentType = contentType, allowTypeFallback = true) {
-        setMessage(null);
-        setError(null);
-        const response = await fetch(`/api/admin/content?type=${type}&slug=${encodeURIComponent(slug)}`, {cache: "no-store"});
-        const body = await response.json();
-        if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load article");
-        if (!body.content && allowTypeFallback) {
-            const fallbackType: ContentType = type === "blog" ? "page" : "blog";
-            await loadList(fallbackType);
-            await openPost(slug, fallbackType, false);
-            return;
-        }
-        if (!body.content) throw new Error(`No blog or page found for “${slug}”.`);
-        setContentType(type);
-        setPost(body.content);
-        setIsPublished(Boolean(body.entry?.is_published));
-        lastSavedPost.current = JSON.stringify(body.content);
-        setAutosaveStatus("saved");
-        syncEditorUrl(type, slug);
     }
 
     async function save() {
@@ -651,8 +652,8 @@ export default function AdminContentStudio() {
                     </div>
                     <div className="divide-y divide-line-300">
                         {filtered.map((item) => (
-                            <button key={item.slug} onClick={() => openPost(item.slug).catch((caught) => setError(caught.message))} className="flex w-full gap-3 p-3 text-left hover:bg-white/[0.035]">
-                                <img src={item.featuredImage.src} alt="" className="h-14 w-20 shrink-0 rounded-lg bg-surface-900 object-cover" />
+                            <button key={item.slug} onClick={() => openPost(item.slug, contentType).catch((caught) => setError(caught.message))} className="flex w-full gap-3 p-3 text-left hover:bg-white/[0.035]">
+                                <NextImage src={item.featuredImage.src} alt="" width={80} height={56} unoptimized className="h-14 w-20 shrink-0 rounded-lg bg-surface-900 object-cover" />
                                 <div className="min-w-0"><p className="line-clamp-2 text-sm font-bold text-white">{item.title}</p><p className="mt-1 truncate text-[11px] text-ink-500">/{item.slug}</p></div>
                             </button>
                         ))}
@@ -722,7 +723,7 @@ export default function AdminContentStudio() {
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                                     {assets.filter((asset) => `${asset.filename} ${asset.path}`.toLowerCase().includes(assetQuery.toLowerCase())).map((asset) => (
                                         <button key={asset.path} onClick={() => selectExistingAsset(asset)} className="group overflow-hidden rounded-xl border border-line-300 bg-surface-900 text-left hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-300">
-                                            <div className="aspect-[4/3] overflow-hidden bg-black/20"><img src={asset.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" /></div>
+                                            <div className="relative aspect-[4/3] overflow-hidden bg-black/20"><NextImage src={asset.url} alt="" fill unoptimized sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform group-hover:scale-105" /></div>
                                             <p className="truncate px-3 py-2 text-xs font-bold text-ink-200">{asset.filename}</p>
                                         </button>
                                     ))}

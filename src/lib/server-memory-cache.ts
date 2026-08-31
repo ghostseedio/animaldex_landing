@@ -5,6 +5,7 @@ type CacheEntry<T> = {
 
 type GlobalCacheStore = typeof globalThis & {
     __adexServerMemoryCache?: Map<string, CacheEntry<unknown>>;
+    __adexServerMemoryCachePending?: Map<string, Promise<unknown>>;
 };
 
 const store = globalThis as GlobalCacheStore;
@@ -14,6 +15,13 @@ function cacheMap() {
         store.__adexServerMemoryCache = new Map();
     }
     return store.__adexServerMemoryCache;
+}
+
+function pendingMap() {
+    if (!store.__adexServerMemoryCachePending) {
+        store.__adexServerMemoryCachePending = new Map();
+    }
+    return store.__adexServerMemoryCachePending;
 }
 
 export function readServerMemoryCache<T>(key: string): T | null {
@@ -29,9 +37,17 @@ export async function withServerMemoryCache<T>(key: string, ttlMs: number, loade
     const cached = readServerMemoryCache<T>(key);
     if (cached != null) return cached;
 
-    const value = await loader();
-    cacheMap().set(key, {value, expiresAt: Date.now() + ttlMs});
-    return value;
+    const pending = pendingMap().get(key) as Promise<T> | undefined;
+    if (pending) return pending;
+
+    const load = loader().then((value) => {
+        cacheMap().set(key, {value, expiresAt: Date.now() + ttlMs});
+        return value;
+    }).finally(() => {
+        pendingMap().delete(key);
+    });
+    pendingMap().set(key, load);
+    return load;
 }
 
 export function devCacheTtlMs(productionTtlMs: number) {

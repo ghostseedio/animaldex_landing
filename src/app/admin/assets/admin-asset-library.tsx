@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState} from "react";
 import {ArrowLeft, CheckCircle, Copy, Gallery, Magnifer, TrashBinMinimalistic, Upload} from "solar-icon-set";
 
@@ -33,6 +34,7 @@ export default function AdminAssetLibrary() {
     const [total, setTotal] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const loadingRef = useRef(false);
 
     const readJson = useCallback(async (response: Response) => {
         const contentType = response.headers.get("content-type") || "";
@@ -43,7 +45,8 @@ export default function AdminAssetLibrary() {
     }, []);
 
     const loadAssets = useCallback(async (requestedPage = 1, replace = false, search = query) => {
-        if (loading && requestedPage > 1) return;
+        if (loadingRef.current && requestedPage > 1) return;
+        loadingRef.current = true;
         setLoading(true);
         setError("");
         try {
@@ -59,14 +62,15 @@ export default function AdminAssetLibrary() {
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to load assets");
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
-    }, [loading, query, readJson]);
+    }, [query, readJson]);
 
     useEffect(() => {
         const timeout = window.setTimeout(() => loadAssets(1, true, query), 250);
         return () => window.clearTimeout(timeout);
-    }, [query]);
+    }, [loadAssets, query]);
 
     useEffect(() => {
         const target = loadMoreRef.current;
@@ -215,7 +219,7 @@ export default function AdminAssetLibrary() {
                             {assets.map((asset) => (
                                 <article key={asset.path} className="group overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
                                     <a href={asset.url} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden bg-black/20">
-                                        <img src={asset.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                                        <Image src={asset.url} alt="" fill unoptimized sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" />
                                         <span className="absolute right-2 top-2 rounded-md bg-canvas-950/80 px-2 py-1 text-[9px] font-bold text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">Open full size ↗</span>
                                     </a>
                                     <div className="p-3">

@@ -93,9 +93,7 @@
       "button": "Jelajahi"
     },
     "archive": {
-      "eyebrow": "Kamu mungkin sudah mulai",
-      "title": "AnimalDex-mu mungkin sudah sebagian terbangun.",
-      "body": "Foto dan unggahan satwa liar lama bisa menjadi entri AnimalDex setelah ditinjau — tidak harus tertinggal di umpan.",
+      "line": "Kamu mungkin sudah mulai.",
       "cta": "Periksa Instagram saya"
     },
     "more": {

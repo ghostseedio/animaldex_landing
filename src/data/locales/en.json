@@ -93,9 +93,7 @@
       "button": "Explore"
     },
     "archive": {
-      "eyebrow": "You’ve probably already started",
-      "title": "Your AnimalDex may already be partly built.",
-      "body": "Old wildlife photos and posts can become unique AnimalDex entries after review — they do not have to stay buried in a feed.",
+      "line": "You’ve probably already started.",
       "cta": "Check my Instagram"
     },
     "more": {

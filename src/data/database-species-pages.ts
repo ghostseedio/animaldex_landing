@@ -651,6 +651,263 @@ export async function getCatalogBehaviorPrincipleIndex() {
     return cached.behaviorPrinciples;
 }
 
+function postgrestInList(values: string[]) {
+    const unique = Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+    if (!unique.length) return null;
+    return `(${unique.map((value) => `"${value.replace(/"/g, "")}"`).join(",")})`;
+}
+
+function postgrestEqValue(value: string) {
+    return `"${value.replace(/"/g, "")}"`;
+}
+
+function animalDexNumberIndexFromRows(
+    indexedProfiles: IndexedProfileRow[],
+    catalogRows: CatalogRow[]
+) {
+    const index = new Map<string, number>();
+    const indexedNumbers = new Map(
+        indexedProfiles
+            .filter((row) => row.catalog_status !== "hidden" && typeof row.animaldex_number === "number" && row.animaldex_number >= 1)
+            .map((row) => [row.id.toLowerCase(), row.animaldex_number])
+    );
+
+    indexedNumbers.forEach((animalDexNumber, profileId) => {
+        index.set(profileId, animalDexNumber);
+    });
+
+    for (const row of catalogRows) {
+        const profileId = clean(row.species_profile_id)?.toLowerCase();
+        if (!profileId) continue;
+        const animalDexNumber = indexedNumbers.get(profileId);
+        if (animalDexNumber == null) continue;
+
+        const slug = databaseSpeciesCanonicalSlug({...row, animaldex_number: animalDexNumber});
+        if (slug) {
+            index.set(slug.toLowerCase(), animalDexNumber);
+        }
+
+        const identityKey = clean(row.normalized_identity_key)?.toLowerCase();
+        if (identityKey) {
+            index.set(identityKey, animalDexNumber);
+            index.set(identityKey.replace(/_/g, "-"), animalDexNumber);
+        }
+    }
+
+    return index;
+}
+
+function expandIdentityKeysForPrincipleLookup(identityKeys: string[]) {
+    const expanded = new Set<string>();
+    for (const raw of identityKeys) {
+        const key = clean(raw)?.toLowerCase();
+        if (!key) continue;
+        expanded.add(key);
+        const alias = PRINCIPLE_IDENTITY_ALIASES[key];
+        if (alias) expanded.add(alias);
+    }
+    return Array.from(expanded);
+}
+
+async function fetchCatalogRowsForCaptureKeys(options: {
+    speciesProfileIds: string[];
+    identityKeys: string[];
+}) {
+    const profileIn = postgrestInList(options.speciesProfileIds.map((id) => id.toLowerCase()));
+    const identityIn = postgrestInList(expandIdentityKeysForPrincipleLookup(options.identityKeys));
+    if (!profileIn && !identityIn) return [] as CatalogRow[];
+
+    const orParts = [
+        profileIn ? `species_profile_id.in.${profileIn}` : null,
+        identityIn ? `normalized_identity_key.in.${identityIn}` : null
+    ].filter((part): part is string => Boolean(part));
+
+    return fetchRows<CatalogRow>("species_catalog_v1", CATALOG_SELECT, {
+        or: `(${orParts.join(",")})`,
+        order: "species_profile_id.asc"
+    });
+}
+
+async function fetchCatalogRowsByProfileIds(profileIds: string[]) {
+    const profileIn = postgrestInList(profileIds.map((id) => id.toLowerCase()));
+    if (!profileIn) return [] as CatalogRow[];
+    return fetchRows<CatalogRow>("species_catalog_v1", CATALOG_SELECT, {
+        species_profile_id: `in.${profileIn}`,
+        order: "species_profile_id.asc"
+    });
+}
+
+async function fetchCatalogRowsByScientificNames(scientificNames: string[]) {
+    const uniqueNames = Array.from(new Set(scientificNames.map((name) => clean(name)).filter((name): name is string => Boolean(name))));
+    if (!uniqueNames.length) return [] as CatalogRow[];
+
+    const batches = await Promise.all(uniqueNames.map((scientificName) =>
+        fetchRows<CatalogRow>("species_catalog_v1", CATALOG_SELECT, {
+            scientific_name: `eq.${postgrestEqValue(scientificName)}`,
+            order: "species_profile_id.asc"
+        })
+    ));
+    return batches.flat();
+}
+
+async function fetchIndexedProfilesByIds(profileIds: string[]) {
+    const profileIn = postgrestInList(profileIds.map((id) => id.toLowerCase()));
+    if (!profileIn) return [] as IndexedProfileRow[];
+    return fetchRows<IndexedProfileRow>("species_profiles", INDEXED_PROFILE_SELECT, {
+        id: `in.${profileIn}`,
+        animaldex_number: "not.is.null",
+        order: "animaldex_number.asc"
+    });
+}
+
+function mergeCatalogRowsByProfileId(rows: CatalogRow[]) {
+    const byProfileId = new Map<string, CatalogRow>();
+    for (const row of rows) {
+        const profileId = clean(row.species_profile_id)?.toLowerCase();
+        if (!profileId || byProfileId.has(profileId)) continue;
+        byProfileId.set(profileId, row);
+    }
+    return Array.from(byProfileId.values());
+}
+
+/**
+ * Card-scoped catalog enrichment for a handful of captures.
+ * Avoids downloading the full ~2k-row species catalog just to resolve AnimalDex
+ * numbers and behavior lessons on the homepage.
+ */
+export async function getCaptureCardCatalogEnrichment(options: {
+    speciesProfileIds: string[];
+    identityKeys: string[];
+}) {
+    const cached = readCatalogCache();
+    if (cached) {
+        if (process.env.NODE_ENV !== "production") {
+            logDevPerfEvent("catalog.card-enrichment", "full-cache-hit", {
+                profileIds: options.speciesProfileIds.length,
+                identityKeys: options.identityKeys.length
+            });
+        }
+
+        const animalDexNumbers = new Map<string, number>();
+        for (const entry of cached.entries) {
+            const animalDexNumber = entry.databaseSource?.animalDexNumber;
+            if (typeof animalDexNumber !== "number" || animalDexNumber < 1) continue;
+
+            animalDexNumbers.set(entry.slug.toLowerCase(), animalDexNumber);
+            if (entry.normalizedIdentityKey) {
+                const identityKey = entry.normalizedIdentityKey.toLowerCase();
+                animalDexNumbers.set(identityKey, animalDexNumber);
+                animalDexNumbers.set(identityKey.replace(/_/g, "-"), animalDexNumber);
+            }
+            if (entry.speciesProfileId) {
+                animalDexNumbers.set(entry.speciesProfileId.toLowerCase(), animalDexNumber);
+            }
+        }
+
+        return {
+            animalDexNumbers,
+            behaviorPrinciples: cached.behaviorPrinciples
+        };
+    }
+
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const seedRows = await fetchCatalogRowsForCaptureKeys({
+        speciesProfileIds: options.speciesProfileIds,
+        identityKeys: options.identityKeys
+    });
+
+    const seedProfileIds = new Set(
+        seedRows
+            .map((row) => clean(row.species_profile_id)?.toLowerCase())
+            .filter((id): id is string => Boolean(id))
+    );
+    for (const id of options.speciesProfileIds) {
+        const normalized = clean(id)?.toLowerCase();
+        if (normalized) seedProfileIds.add(normalized);
+    }
+
+    const parentIds = Array.from(new Set(
+        seedRows
+            .map((row) => clean(row.canonical_species_profile_id)?.toLowerCase())
+            .filter((id): id is string => {
+                if (!id) return false;
+                return !seedProfileIds.has(id);
+            })
+    ));
+
+    const seedAndParentIds = Array.from(seedProfileIds).concat(parentIds);
+    const [parentRows, indexedSeedProfiles] = await Promise.all([
+        fetchCatalogRowsByProfileIds(parentIds),
+        fetchIndexedProfilesByIds(seedAndParentIds)
+    ]);
+    const rowsWithParents = mergeCatalogRowsByProfileId([...seedRows, ...parentRows]);
+    const principleIndexProbe = buildBehaviorPrincipleIndex(rowsWithParents);
+
+    const scientificNamesNeedingFallback = Array.from(new Set(
+        rowsWithParents
+            .filter((row) => {
+                const profileId = clean(row.species_profile_id);
+                const identityKey = clean(row.normalized_identity_key);
+                const scientificName = clean(row.scientific_name);
+                if (!scientificName) return false;
+                return !resolveCatalogBehaviorPrinciple(
+                    principleIndexProbe,
+                    profileId,
+                    identityKey,
+                    scientificName
+                );
+            })
+            .map((row) => clean(row.scientific_name))
+            .filter((name): name is string => Boolean(name))
+    ));
+
+    const scientificRows = scientificNamesNeedingFallback.length
+        ? await fetchCatalogRowsByScientificNames(scientificNamesNeedingFallback)
+        : [];
+
+    const catalogRows = mergeCatalogRowsByProfileId([...rowsWithParents, ...scientificRows]);
+    const knownProfileIds = new Set(seedAndParentIds);
+    const extraProfileIds = Array.from(new Set(
+        catalogRows
+            .map((row) => clean(row.species_profile_id)?.toLowerCase())
+            .filter((id): id is string => {
+                if (!id) return false;
+                return !knownProfileIds.has(id);
+            })
+    ));
+    const indexedExtraProfiles = extraProfileIds.length
+        ? await fetchIndexedProfilesByIds(extraProfileIds)
+        : [];
+    const indexedProfiles = [...indexedSeedProfiles, ...indexedExtraProfiles];
+
+    const indexedNumbers = new Map(
+        indexedProfiles
+            .filter((row) => row.catalog_status !== "hidden")
+            .map((row) => [row.id.toLowerCase(), row.animaldex_number])
+    );
+    const numberedRows = catalogRows.map((row) => {
+        const animalDexNumber = indexedNumbers.get(row.species_profile_id.toLowerCase());
+        return animalDexNumber == null ? row : {...row, animaldex_number: animalDexNumber};
+    });
+
+    if (process.env.NODE_ENV !== "production") {
+        const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+        logDevPerfEvent("catalog.card-enrichment", "targeted", {
+            seedRows: seedRows.length,
+            parentRows: parentRows.length,
+            scientificFallbackNames: scientificNamesNeedingFallback.length,
+            catalogRows: numberedRows.length,
+            indexedProfiles: indexedProfiles.length,
+            totalMs: Math.round(totalMs)
+        });
+    }
+
+    return {
+        animalDexNumbers: animalDexNumberIndexFromRows(indexedProfiles, numberedRows),
+        behaviorPrinciples: buildBehaviorPrincipleIndex(numberedRows)
+    };
+}
+
 export async function getDatabaseSpeciesBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
     const identity = normalized.replace(/-/g, "_");

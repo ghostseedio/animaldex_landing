@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {useEffect, useMemo, useState} from "react";
 import {
     CAPTURE_GRADE_INPUTS,
@@ -174,8 +175,8 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
                 {loading ? <p className="p-6 text-sm text-ink-400">Loading grade…</p> : (
                     <div className="grid gap-5 p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
                         <div className="space-y-4">
-                            <img src={imageUrl} alt={animalName ? `${animalName} capture` : "Capture"}
-                                 className="aspect-square w-full rounded-2xl border border-line-300 object-cover" />
+                            <Image src={imageUrl} alt={animalName ? `${animalName} capture` : "Capture"} width={352} height={352}
+                                   unoptimized className="aspect-square w-full rounded-2xl border border-line-300 object-cover" />
                             <div className="rounded-2xl border border-line-300 bg-surface-900 p-4">
                                 <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Grade</p>
                                 <div className="mt-1 flex items-end gap-3">

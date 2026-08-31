@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   formatMoney,
   growthMonthState,
@@ -894,7 +894,7 @@ export default function AdminMetricsDashboard() {
     );
   }
 
-  async function loadGrowth(month = growthMonth) {
+  const loadGrowth = useCallback(async (month: string) => {
     const response = await fetch(`/api/admin/growth?month=${month}`, {
       cache: "no-store",
     });
@@ -904,8 +904,8 @@ export default function AdminMetricsDashboard() {
     }
     const body = await response.json();
     if (response.ok && body.ok) setGrowth(body);
-  }
-  async function loadMetrics(nextPeriod: Period = period, month = growthMonth) {
+  }, []);
+  const loadMetrics = useCallback(async (nextPeriod: Period, month: string) => {
     const requestId = ++loadRequestId.current;
     setLoading(true);
     setError(null);
@@ -934,8 +934,8 @@ export default function AdminMetricsDashboard() {
         setPendingMonth(null);
       }
     }
-  }
-  async function syncSocial() {
+  }, [loadGrowth]);
+  const syncSocial = useCallback(async () => {
     setSocialLoading(true);
     try {
       const response = await fetch("/api/admin/social-metrics", {
@@ -946,7 +946,7 @@ export default function AdminMetricsDashboard() {
     } finally {
       setSocialLoading(false);
     }
-  }
+  }, []);
   async function login(event: FormEvent) {
     event.preventDefault();
     const response = await fetch("/api/admin/support/login", {
@@ -960,17 +960,16 @@ export default function AdminMetricsDashboard() {
       return;
     }
     setPassword("");
-    await loadMetrics(period);
+    await loadMetrics(period, growthMonth);
     await syncSocial();
   }
 
   useEffect(() => {
-    void loadMetrics();
-    void syncSocial();
-  }, []);
+    void loadMetrics(period, growthMonth);
+  }, [growthMonth, loadMetrics, period]);
   useEffect(() => {
-    if (authorized) void loadMetrics(period, growthMonth);
-  }, [growthMonth]);
+    void syncSocial();
+  }, [syncSocial]);
 
   if (authorized === false) {
     return (

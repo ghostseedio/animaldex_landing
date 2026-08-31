@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {FormEvent, useEffect, useMemo, useState} from "react";
+import Image from "next/image";
+import {FormEvent, useCallback, useEffect, useMemo, useState} from "react";
 import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
 import NotifyOwnerDialog, {type NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
 import CaptureIndexPanel from "@/app/admin/maintenance/capture-index-panel";
@@ -114,8 +115,8 @@ export default function AdminMaintenanceClient() {
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    async function loadPosts(nextStatus = status, options: {append?: boolean} = {}) {
-        const offset = options.append ? posts.length : 0;
+    const loadPosts = useCallback(async (nextStatus: string, options: {append?: boolean; offset?: number} = {}) => {
+        const offset = options.append ? (options.offset ?? 0) : 0;
         if (options.append) setLoadingMore(true); else setLoading(true);
         setError(null);
         try {
@@ -141,7 +142,7 @@ export default function AdminMaintenanceClient() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }
+    }, []);
 
     /**
      * Refetch what is already on screen, rather than the first page.
@@ -194,7 +195,7 @@ export default function AdminMaintenanceClient() {
         }
     }
 
-    useEffect(() => { void loadPosts(); }, []);
+    useEffect(() => { void loadPosts("all"); }, [loadPosts]);
     useEffect(() => {
         if (!viewingPost) return;
         const closeOnEscape = (event: KeyboardEvent) => {
@@ -213,7 +214,7 @@ export default function AdminMaintenanceClient() {
         const body = await response.json();
         if (!response.ok || !body.ok) { setError(body.error || "Unable to sign in"); return; }
         setPassword("");
-        await loadPosts();
+        await loadPosts(status);
     }
 
     async function refreshPost(post: Post) {
@@ -507,7 +508,7 @@ export default function AdminMaintenanceClient() {
                         return <article key={post.id} className="grid grid-cols-[auto_72px_minmax(0,1fr)] items-center gap-3 border-b border-line-300 p-3 last:border-0 sm:grid-cols-[auto_88px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4">
                             <input type="checkbox" aria-label={`Select ${post.animalName || post.id}`} checked={selected.has(post.id)} disabled={!canRefresh} onChange={(event) => setSelected((current) => {const next = new Set(current); event.target.checked ? next.add(post.id) : next.delete(post.id); return next;})} className="h-4 w-4 accent-primary-500" />
                             <button type="button" onClick={() => setViewingPost(post)} className="group relative h-16 w-16 overflow-hidden rounded-xl border border-line-300 bg-canvas-900 text-left transition hover:border-primary-300 sm:h-20 sm:w-20" aria-label={`View full-size ${post.animalName || "capture"} photo`}>
-                                <img src={post.imageUrl} alt={post.animalName ? `${post.animalName} user capture` : "User capture"} className="h-full w-full object-cover transition group-hover:scale-105" />
+                                <Image src={post.imageUrl} alt={post.animalName ? `${post.animalName} user capture` : "User capture"} fill unoptimized sizes="80px" className="object-cover transition group-hover:scale-105" />
                                 <span className="absolute inset-x-0 bottom-0 bg-black/70 py-1 text-center text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">Expand</span>
                             </button>
                             <div className="min-w-0">
@@ -543,7 +544,7 @@ export default function AdminMaintenanceClient() {
                 </section>
                 <div className="mt-4 flex items-center justify-center">
                     {hasMore ? (
-                        <button onClick={() => void loadPosts(status, {append: true})} disabled={loadingMore}
+                        <button onClick={() => void loadPosts(status, {append: true, offset: posts.length})} disabled={loadingMore}
                                 className="rounded-xl border border-line-300 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
                             {loadingMore ? "Loading…" : "Load older captures"}
                         </button>

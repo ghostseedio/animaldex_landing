@@ -1,6 +1,11 @@
 import "server-only";
 
-import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
+import {
+    getCaptureCardCatalogEnrichment,
+    getCatalogBehaviorPrincipleIndex,
+    getUnifiedSpeciesEntries,
+    resolveCatalogBehaviorPrinciple
+} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesBySlug} from "@/data/species";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
@@ -1537,6 +1542,31 @@ async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: nu
     return rows;
 }
 
+/** The home page only needs card essentials, not the full interactive feed payload. */
+async function fetchRecentPublicCaptureRows(supabase: DiscoverSupabaseClient, limit: number) {
+    const requestedLimit = Math.max(limit, 24);
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const result = await supabase
+        .from("discover_feed_v1")
+        .select(compatibilityFeedSelect)
+        .order("feed_activity_at", {ascending: false})
+        .limit(requestedLimit);
+
+    const rows = result.error
+        ? []
+        : await hydrateDiscoverFeedMediaRows(supabase, (result.data ?? []) as unknown as QueryRow[]);
+    if (process.env.NODE_ENV !== "production") {
+        const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+        logDevPerfEvent("discover.feed", "home select", {
+            requestedLimit,
+            rowCount: rows.length,
+            totalMs: Math.round(totalMs),
+            ...(result.error ? {error: result.error.message} : {})
+        });
+    }
+    return rows;
+}
+
 export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTimelineCursor | null = null) {
     const supabase = createSupabaseServerClient();
     if (!supabase) {
@@ -1855,11 +1885,26 @@ async function loadRecentPublicCaptures(limit: number): Promise<DiscoverCaptureI
     if (!supabase) return [];
 
     const feedLimit = recentCaptureFeedLimit(limit);
-    const rows = await timeDevAsync("discover.recent", "fetch-feed", () => fetchDiscoverFeedRows(supabase, feedLimit), {feedLimit});
-    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-        timeDevAsync("discover.recent", "animaldex-index", () => buildAnimalDexNumberIndex()),
-        timeDevAsync("discover.recent", "behavior-principles", () => getCatalogBehaviorPrincipleIndex())
-    ]);
+    const rows = await timeDevAsync("discover.recent", "fetch-feed", () => fetchRecentPublicCaptureRows(supabase, feedLimit), {feedLimit});
+
+    const speciesProfileIds = Array.from(new Set(
+        rows
+            .map((row) => readString(row, "species_profile_id"))
+            .filter((id): id is string => Boolean(id))
+    ));
+    const identityKeys = Array.from(new Set(
+        rows
+            .map((row) => readString(row, "normalized_identity_key"))
+            .filter((key): key is string => Boolean(key))
+    ));
+
+    // Homepage cards only need enrichment for the candidate capture rows — not the full ~2k catalog.
+    const {animalDexNumbers, behaviorPrinciples} = await timeDevAsync(
+        "discover.recent",
+        "card-catalog-enrichment",
+        () => getCaptureCardCatalogEnrichment({speciesProfileIds, identityKeys}),
+        {profileIds: speciesProfileIds.length, identityKeys: identityKeys.length}
+    );
 
     return timeDevAsync("discover.recent", "map-rows", () =>
         rows

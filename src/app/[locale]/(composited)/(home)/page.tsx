@@ -434,6 +434,12 @@ export default async function Home() {
                             <span className="font-semibold text-white">{t("features.appliedInsightLead")}</span>{" "}
                             {t("features.appliedInsightBody")}
                         </p>
+                        <div className="pt-1 text-center lg:text-left">
+                            <HomeArchiveModule
+                                line={t("archive.line")}
+                                cta={t("archive.cta")}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -483,13 +489,6 @@ export default async function Home() {
                     leftOffset={0}
                 />
             </section>
-
-            <HomeArchiveModule
-                eyebrow={t("archive.eyebrow")}
-                title={t("archive.title")}
-                body={t("archive.body")}
-                cta={t("archive.cta")}
-            />
 
             <Anchor id="more" />
             <section className="relative mb-16 w-full-no-offset overflow-hidden bg-[#071B0F] mx-offset o-4 md:o-16">
