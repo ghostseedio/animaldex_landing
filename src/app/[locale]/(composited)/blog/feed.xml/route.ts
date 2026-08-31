@@ -2,6 +2,8 @@ import {getManagedBlogPosts} from "@/lib/admin-content";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl} from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = {
     params: {
         locale: string;

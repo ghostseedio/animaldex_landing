@@ -4,6 +4,8 @@ import {NextResponse} from "next/server";
 import {getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {ensureAuthenticatedProfileRows} from "@/lib/supabase/auth-bootstrap";
 
+export const dynamic = "force-dynamic";
+
 function sanitizeNextPath(value: string | null) {
     if (!value || !value.startsWith("/") || value.startsWith("//")) return "/app";
     if (value.startsWith("/api/") || value.startsWith("/auth/")) return "/app";

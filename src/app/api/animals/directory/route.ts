@@ -16,6 +16,7 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function getSingleParam(value: string | null) {
     return value?.trim() || "";

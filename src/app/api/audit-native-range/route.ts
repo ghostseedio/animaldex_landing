@@ -3,6 +3,7 @@ import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolveNativeRangePresentation} from "@/data/native-range";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** Temporary audit endpoint: how many catalog species resolve to no native range. */
 export async function GET() {
