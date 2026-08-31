@@ -1,7 +1,7 @@
 import {createServerClient} from "@supabase/ssr";
 import {createClient} from "@supabase/supabase-js";
 import {cookies} from "next/headers";
-import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {getSupabaseAuthKey, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export function createSupabaseServerClient() {
     const supabaseUrl = getSupabaseUrl();
@@ -44,6 +44,19 @@ export function createSupabasePublicClient() {
     }
 
     return createClient(supabaseUrl, supabaseAuthKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+        }
+    });
+}
+
+export function createSupabaseServiceClient() {
+    const supabaseUrl = getSupabaseUrl();
+    const serviceKey = getSupabaseServiceKey();
+    if (!supabaseUrl || !serviceKey) return null;
+    return createClient(supabaseUrl, serviceKey, {
         auth: {
             persistSession: false,
             autoRefreshToken: false,
