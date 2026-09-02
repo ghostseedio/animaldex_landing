@@ -155,6 +155,7 @@ export default function Footer() {
             >
                 <FooterLink href="/legal/privacy">{t("privacy")}</FooterLink>
                 <FooterLink href="/legal/terms">{t("terms")}</FooterLink>
+                <FooterLink href="/legal/refunds">{t("refunds")}</FooterLink>
             </nav>
             <div className="flex flex-col lg:flex-row w-full justify-center items-center gap-2 lg:gap-8 text-ink-300">
                 <div className="hover:font-semibold transition-all flex gap-1">

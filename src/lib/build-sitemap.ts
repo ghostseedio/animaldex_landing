@@ -78,6 +78,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         },
         {
             url: new URL("/legal/terms", getSiteUrl()).toString()
+        },
+        {
+            url: new URL("/legal/refunds", getSiteUrl()).toString()
         }
     ];
 

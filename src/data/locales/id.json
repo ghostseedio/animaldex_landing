@@ -8,6 +8,7 @@
     "download": "Dapatkan app",
     "privacy": "Kebijakan Privasi",
     "terms": "Ketentuan Penggunaan",
+    "refunds": "Kebijakan Pengembalian Dana",
     "contact": "Kontak",
     "discover": "Temukan",
     "collection": "Koleksi",
@@ -1868,6 +1869,8 @@
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
     "termsDescription": "Pelajari ketentuan AnimalDex untuk akun, langganan, pembelian, konten pengguna, moderasi, hasil AI, dan penghapusan akun.",
+    "refundTitle": "Kebijakan Pengembalian Dana AnimalDex",
+    "refundDescription": "Pelajari cara kerja pengembalian dana dan pembatalan untuk pembelian AnimalDex melalui Paddle, Apple, dan Google Play.",
     "keywords": [
       "pemindai hewan AI",
       "aplikasi identifier hewan",

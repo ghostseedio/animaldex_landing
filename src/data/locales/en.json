@@ -8,6 +8,7 @@
     "download": "Get app",
     "privacy": "Privacy Policy",
     "terms": "Terms of Use",
+    "refunds": "Refund Policy",
     "contact": "Contact",
     "discover": "Discover",
     "collection": "Collection",
@@ -1889,6 +1890,8 @@
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
     "termsDescription": "Read the terms for AnimalDex accounts, subscriptions, purchases, user content, moderation, AI results, and account deletion.",
+    "refundTitle": "AnimalDex Refund Policy",
+    "refundDescription": "Read how refunds and cancellations work for AnimalDex purchases made through Paddle, Apple, and Google Play.",
     "keywords": [
       "AI animal scanner",
       "animal identifier app",
