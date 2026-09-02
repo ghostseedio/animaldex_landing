@@ -20,6 +20,7 @@ type ImportAction =
     | "materialize"
     | "candidates"
     | "active-operation"
+    | "rescreen-job"
     | "complete-operation"
     | "pause-operation"
     | "cancel-operation"
@@ -230,6 +231,13 @@ export async function POST(request: Request) {
             });
             if (error) return jsonError(error.message);
             return NextResponse.json({operation: data ?? null});
+        }
+        case "rescreen-job": {
+            const {data, error} = await auth.supabase.rpc("create_external_import_rescreen_job", {
+                p_connection_id: body.connectionId
+            });
+            if (error) return jsonError(error.message);
+            return NextResponse.json({jobId: data});
         }
         case "complete-operation": {
             const {data, error} = await auth.supabase.rpc("complete_external_import_operation", {

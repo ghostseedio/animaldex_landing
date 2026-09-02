@@ -210,6 +210,58 @@ export function screeningCostLabel(quote: InstagramImportQuote) {
     return `${quote.credit_cost} Credits`;
 }
 
+export type ScreeningBillingSummary = {
+    headline: string;
+    detail: string | null;
+};
+
+export function screeningBillingSummaryFromQuote(quote: InstagramImportQuote): ScreeningBillingSummary {
+    if (quote.posts_requiring_processing === 0) {
+        return {
+            headline: "No screening credits used",
+            detail: quote.zero_cost_reason === "empty" ? "Nothing new needed checking." : null,
+        };
+    }
+    const cost = screeningCostLabel(quote);
+    let detail: string | null;
+    if (quote.pro_included) {
+        detail = "Included with your Pro plan.";
+    } else if (quote.credit_cost === 0) {
+        detail = quote.zero_cost_reason === "lifetime_free"
+            ? "This check used your free screening allowance."
+            : "No credits charged for this check.";
+    } else {
+        detail = `${quote.posts_requiring_processing} post${quote.posts_requiring_processing === 1 ? "" : "s"} checked.`;
+    }
+    return {
+        headline: `Screening for this check: ${cost}`,
+        detail,
+    };
+}
+
+export const REVIEW_BILLING_EXPLAINER =
+    "Checking posts may use Credits when you scan or refresh. Adding to your Dex uses Credits when you tap Import. Setting location is free.";
+
+export const SCREENING_QUOTE_EXPLAINER =
+    "This charge is for checking your posts for animals. Importing selected animals is billed separately when you tap Import. Setting location is free.";
+
+export function importButtonChargeHint(
+    action: PrimaryReviewAction,
+    quote: InstagramMaterializationQuote | null,
+) {
+    if (action !== "importPosts" || !quote) return null;
+    if (quote.pro_included) return "Import included with Pro";
+    if (quote.credit_cost === 0) return null;
+    return `Import will use ${materializationCostLabel(quote)}`;
+}
+
+export function unscreenedPostsBanner(count: number) {
+    if (count <= 0) return null;
+    return count === 1
+        ? "1 post still needs checking — tap refresh to identify animals."
+        : `${count} posts still need checking — tap refresh to identify animals.`;
+}
+
 export function materializationCostLabel(quote: InstagramMaterializationQuote) {
     if (quote.pro_included) return "Included with Pro";
     if (quote.credit_cost === 1) return "1 Credit";
@@ -288,6 +340,14 @@ export function catalogStateOf(candidate: ExternalImportCandidateRow): CatalogSt
     return "none";
 }
 
+export function candidateNeedsRescreen(candidate: ExternalImportCandidateRow) {
+    if (candidate.review_state !== "needs_identity" && candidate.review_state !== "needs_location") {
+        return false;
+    }
+    const outcome = candidate.identity_evidence?.screening_outcome?.trim() ?? "";
+    return outcome.length === 0;
+}
+
 export function titleText(candidate: ExternalImportCandidateRow) {
     const evidence = candidate.identity_evidence;
     return suggestedMatch(candidate)?.display_name?.trim()
@@ -305,7 +365,30 @@ export function displayName(candidate: ExternalImportCandidateRow) {
     return name === "Unknown animal" ? "this post" : name;
 }
 
+export function isGenuinelyUnknown(candidate: ExternalImportCandidateRow) {
+    if (candidate.species_profile_id) return false;
+    return titleText(candidate).toLowerCase() === "unknown animal";
+}
+
+export function indexNumber(candidate: ExternalImportCandidateRow): number | null {
+    const match = suggestedMatch(candidate) ?? candidate.proposed_index_match;
+    const number = match?.animaldex_number;
+    return number != null && number >= 1 ? number : null;
+}
+
+export function indexStatusLine(candidate: ExternalImportCandidateRow) {
+    if (isGenuinelyUnknown(candidate)) return "Unknown animal";
+    const number = indexNumber(candidate);
+    if (number != null) return `#${String(number).padStart(3, "0")}`;
+    return "Not indexed";
+}
+
+export function isSelectableForImport(candidate: ExternalImportCandidateRow) {
+    return !isGenuinelyUnknown(candidate);
+}
+
 export function catalogStatusLine(candidate: ExternalImportCandidateRow) {
+    if (isGenuinelyUnknown(candidate)) return null;
     switch (catalogStateOf(candidate)) {
         case "ready":
             return null;
@@ -316,13 +399,14 @@ export function catalogStatusLine(candidate: ExternalImportCandidateRow) {
         case "broad":
             return "Needs a more specific species";
         case "none":
-            return candidate.species_profile_id ? null : "Needs species";
+            return null;
         default:
             return null;
     }
 }
 
 export function candidateBlocker(candidate: ExternalImportCandidateRow): ImportBlocker | null {
+    if (isGenuinelyUnknown(candidate)) return "needsIdentity";
     if (candidate.review_state === "approved" || candidate.review_state === "ready") return null;
     if (candidate.review_state === "no_animal") return "noAnimal";
     if (candidate.review_state === "skipped") return "skipped";
@@ -402,6 +486,7 @@ export function canImportSelection(rows: ExternalImportCandidateRow[]) {
 
 export function primaryReviewAction(rows: ExternalImportCandidateRow[]): PrimaryReviewAction {
     if (rows.length === 0) return "disabled";
+    if (rows.some(isGenuinelyUnknown)) return "disabled";
     if (rows.some((row) => locationIsUnknown(row) || !hasResolvedLocation(row))) return "disabled";
     if (rows.some((row) => !row.species_profile_id)) return "confirmSpecies";
     return canImportSelection(rows) ? "importPosts" : "disabled";
@@ -436,6 +521,15 @@ export function reviewHint(action: PrimaryReviewAction, rows: ExternalImportCand
 
 export function selectionBlocker(rows: ExternalImportCandidateRow[]): {message: string; tone: "warn" | "info"} | null {
     if (rows.length === 0) return {message: "Pick the posts you want to add.", tone: "info"};
+    const unidentified = rows.filter(isGenuinelyUnknown).length;
+    if (unidentified > 0) {
+        return {
+            message: unidentified === 1
+                ? "This post still needs a species before it can be imported."
+                : `${unidentified} selected posts still need a species before they can be imported.`,
+            tone: "warn",
+        };
+    }
     const unknown = rows.filter(locationIsUnknown).length;
     if (unknown > 0) {
         return {

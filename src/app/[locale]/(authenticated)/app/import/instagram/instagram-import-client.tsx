@@ -8,13 +8,18 @@ import {trackEvent} from "@/lib/analytics";
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {
     canImportSelection,
+    candidateNeedsRescreen,
     catalogStatusLine,
     connectQueryMessage,
     connectionStatusLabel,
     displayName,
     humanizeImportError,
     IMPORT_SETTING_TAGS,
+    indexNumber,
+    indexStatusLine,
     indexedTitle,
+    isGenuinelyUnknown,
+    isSelectableForImport,
     INSTAGRAM_IMPORT_PATH,
     isActiveInstagramConnection,
     isGroupLevel,
@@ -37,6 +42,12 @@ import {
     titleText,
     materializationCostLabel,
     screeningCostLabel,
+    screeningBillingSummaryFromQuote,
+    REVIEW_BILLING_EXPLAINER,
+    SCREENING_QUOTE_EXPLAINER,
+    importButtonChargeHint,
+    unscreenedPostsBanner,
+    type ScreeningBillingSummary,
     type ExternalImportCandidateRow,
     type ExternalImportConnectionRow,
     type ExternalImportOperation,
@@ -139,6 +150,7 @@ function InstagramImportClientInner() {
     const quoteResolverRef = useRef<((accepted: boolean) => void) | null>(null);
     const [quote, setQuote] = useState<InstagramImportQuote | null>(null);
     const [materializationQuote, setMaterializationQuote] = useState<InstagramMaterializationQuote | null>(null);
+    const [lastScreeningBillingSummary, setLastScreeningBillingSummary] = useState<ScreeningBillingSummary | null>(null);
     const credits = useAppCredits();
 
     const connected = isActiveInstagramConnection(connection);
@@ -146,10 +158,22 @@ function InstagramImportClientInner() {
     const selectedList = useMemo(() => selectedRows(visibleCandidates, selected), [visibleCandidates, selected]);
     const action = primaryReviewAction(selectedList);
     const blocker = selectionBlocker(selectedList);
+    const unscreenedCount = useMemo(
+        () => visibleCandidates.filter(candidateNeedsRescreen).length,
+        [visibleCandidates],
+    );
+    const importChargeHint = importButtonChargeHint(action, materializationQuote);
 
     useEffect(() => {
         writeStoredSelection(selected);
     }, [selected]);
+
+    useEffect(() => {
+        if (action !== "importPosts" || selectedList.length === 0) return;
+        void importRequest<InstagramMaterializationQuote>("quote-materialization", {
+            candidateIds: selectedList.map((row) => row.candidate_id),
+        }).then((quoted) => setMaterializationQuote(quoted)).catch(() => undefined);
+    }, [action, selectedList]);
 
     const quoteRef = useRef(quote);
     const materializationQuoteRef = useRef(materializationQuote);
@@ -235,7 +259,10 @@ function InstagramImportClientInner() {
         setSelected((current) => {
             const stored = readStoredSelection();
             const merged = new Set([...Array.from(current), ...stored]);
-            return new Set(Array.from(merged).filter((id) => nextCandidates.some((row) => row.candidate_id === id)));
+            return new Set(Array.from(merged).filter((id) => {
+                const row = nextCandidates.find((candidate) => candidate.candidate_id === id);
+                return row != null && isSelectableForImport(row);
+            }));
         });
         if (nextPhase) {
             setPhase(nextPhase);
@@ -261,6 +288,7 @@ function InstagramImportClientInner() {
         const quoted = await importRequest<InstagramImportQuote>("quote-operation", {jobId});
         setQuote(quoted);
         if (quoted.accepted || quoted.posts_requiring_processing === 0) {
+            setLastScreeningBillingSummary(screeningBillingSummaryFromQuote(quoted));
             if (quoted.accepted) setQuote(null);
             return true;
         }
@@ -371,15 +399,29 @@ function InstagramImportClientInner() {
 
     const runSearch = useCallback(async (resume?: ExternalImportOperation | null, connectionId = connection?.connection_id) => {
         if (!connectionId || searchingRef.current) return;
+        if (!resume) {
+            try {
+                const activePayload = await importRequest<{operation: ExternalImportOperation | null}>("active-operation", {connectionId});
+                if (activePayload.operation) {
+                    resume = activePayload.operation;
+                }
+            } catch {
+                // Start a fresh scan when active-operation cannot be read.
+            }
+        }
         searchingRef.current = true;
         setIsSearching(true);
         setPhase("finding");
         setError(null);
         cancelledRef.current = false;
         const recheck = resume?.operation_kind === "recheck";
+        const thumbnailRescreen = resume?.operation_kind === "recheck"
+            && resume.stage === "thumbnail_screening";
         try {
             trackEvent("instagram_scan_started", {source: "import_page"});
-            setProgressHeadline(recheck ? "Taking another look…" : "Looking for new posts…");
+            setProgressHeadline(thumbnailRescreen
+                ? "Checking your posts again…"
+                : recheck ? "Taking another look…" : "Looking for new posts…");
             setProgressDetail(null);
             let jobId = resume?.id ?? null;
             if (resume?.stage === "discovery" || !resume) {
@@ -406,7 +448,9 @@ function InstagramImportClientInner() {
                 return;
             }
             setQuote(null);
-            const includeThumbnails = !resume || (resume.operation_kind === "scan" && resume.stage !== "frame_screening");
+            const includeThumbnails = !resume
+                || (resume.operation_kind === "scan" && resume.stage !== "frame_screening")
+                || thumbnailRescreen;
             const skippedVideos = await continueScreening(jobId, connectionId, includeThumbnails, recheck);
             await importRequest("complete-operation", {jobId});
             const after = await reload();
@@ -434,6 +478,56 @@ function InstagramImportClientInner() {
             setIsSearching(false);
         }
     }, [applyStatus, confirmQuote, connection?.connection_id, continueScreening, reload, visibleCandidates.length]);
+
+    const runRefresh = useCallback(async () => {
+        const connectionId = connection?.connection_id;
+        if (!connectionId || searchingRef.current) return;
+        try {
+            const activePayload = await importRequest<{operation: ExternalImportOperation | null}>("active-operation", {connectionId});
+            if (activePayload.operation) {
+                await runSearch(activePayload.operation, connectionId);
+                return;
+            }
+        } catch {
+            // Fall through to rescreen / new-post scan.
+        }
+        if (visibleCandidates.some(candidateNeedsRescreen)) {
+            searchingRef.current = true;
+            setIsSearching(true);
+            setPhase("finding");
+            setError(null);
+            cancelledRef.current = false;
+            try {
+                setProgressHeadline("Checking your posts again…");
+                setProgressDetail(null);
+                const {jobId} = await importRequest<{jobId: string}>("rescreen-job", {connectionId});
+                jobIdRef.current = jobId;
+                const accepted = await confirmQuote(jobId);
+                if (!accepted) {
+                    await importRequest("pause-operation", {jobId}).catch(() => undefined);
+                    setQuote(null);
+                    setPhase("reviewing");
+                    return;
+                }
+                setQuote(null);
+                await continueScreening(jobId, connectionId, true, true);
+                await importRequest("complete-operation", {jobId});
+                await reload();
+            } catch (caught) {
+                setError(humanizeImportError(caught));
+                if (jobIdRef.current) {
+                    try { await importRequest("pause-operation", {jobId: jobIdRef.current}); } catch { /* keep grid */ }
+                }
+                await reload().catch(() => undefined);
+                setPhase("reviewing");
+                return;
+            } finally {
+                searchingRef.current = false;
+                setIsSearching(false);
+            }
+        }
+        await runSearch(undefined, connectionId);
+    }, [confirmQuote, connection?.connection_id, continueScreening, reload, runSearch, visibleCandidates]);
 
     useEffect(() => {
         let active = true;
@@ -627,7 +721,7 @@ function InstagramImportClientInner() {
             {connected ? (
                 <>
                     <p className="mt-5 text-sm font-bold text-primary-200">{connectionStatusLabel(connection)}</p>
-                    <button type="button" onClick={() => void runSearch()} disabled={isSearching} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
                         Check for new posts
                     </button>
                     <button type="button" onClick={() => void connect()} className="mt-3 text-sm font-bold text-white/45 hover:text-white">
@@ -656,7 +750,7 @@ function InstagramImportClientInner() {
                 title="Import from Instagram"
                 description="Find animal posts you already photographed and add the ones you choose to your Dex."
                 action={phase === "reviewing" ? (
-                    <button type="button" onClick={() => void runSearch()} disabled={isSearching || busy} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/80">
+                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching || busy} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/80">
                         Check for new posts
                     </button>
                 ) : null}
@@ -714,31 +808,51 @@ function InstagramImportClientInner() {
                             : notice && /could not be checked/i.test(notice)
                                 ? "Photos may still appear after another check. Videos this browser could not sample were skipped."
                             : "We did not spot any animals we could identify in your recent posts."}
-                        action={<button type="button" onClick={() => void runSearch()} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-white">Check for new posts</button>}
+                        action={<button type="button" onClick={() => void runRefresh()} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-white">Check for new posts</button>}
                     />
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
                         {notice ? <p className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</p> : null}
+                        {unscreenedPostsBanner(unscreenedCount) ? (
+                            <div className="flex items-center gap-3 rounded-2xl border border-primary-400/20 bg-primary-400/10 px-4 py-3">
+                                <AppIcon name="refresh" className="h-4 w-4 shrink-0 text-primary-200" />
+                                <p className="flex-1 text-sm text-primary-100">{unscreenedPostsBanner(unscreenedCount)}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => void runRefresh()}
+                                    disabled={isSearching || busy}
+                                    className="shrink-0 text-sm font-bold text-primary-200"
+                                >
+                                    Check now
+                                </button>
+                            </div>
+                        ) : null}
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                             {visibleCandidates.map((candidate) => {
                                 const isSelected = selected.has(candidate.candidate_id);
+                                const selectable = isSelectableForImport(candidate);
                                 const media = candidate.media[0];
                                 const preview = proxiedMediaUrl(mediaPreviewUrl(media));
                                 const catalog = catalogStatusLine(candidate);
+                                const indexLine = indexStatusLine(candidate);
                                 const note = severalIndividualsNote(candidate);
                                 return (
                                     <button
                                         key={candidate.candidate_id}
                                         type="button"
-                                        onClick={() => setSelected((current) => {
-                                            const next = new Set(current);
-                                            if (next.has(candidate.candidate_id)) next.delete(candidate.candidate_id);
-                                            else next.add(candidate.candidate_id);
-                                            return next;
-                                        })}
-                                        className={`overflow-hidden rounded-[1.2rem] border text-left transition ${isSelected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-[#121212]"}`}
+                                        disabled={!selectable}
+                                        onClick={() => {
+                                            if (!selectable) return;
+                                            setSelected((current) => {
+                                                const next = new Set(current);
+                                                if (next.has(candidate.candidate_id)) next.delete(candidate.candidate_id);
+                                                else next.add(candidate.candidate_id);
+                                                return next;
+                                            });
+                                        }}
+                                        className={`overflow-hidden rounded-[1.2rem] border text-left transition ${!selectable ? "cursor-not-allowed opacity-55" : ""} ${isSelected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-[#121212]"}`}
                                     >
                                         <div className="relative aspect-square bg-white/5">
                                             {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : null}
@@ -754,8 +868,13 @@ function InstagramImportClientInner() {
                                         <div className="space-y-1 p-3">
                                             <p className="truncate text-sm font-bold text-white">{titleText(candidate)}</p>
                                             {catalog ? <p className="truncate text-[0.7rem] font-bold text-amber-200">{catalog}</p> : null}
+                                            {!catalog && indexLine ? (
+                                                <p className={`truncate text-[0.7rem] font-bold ${isGenuinelyUnknown(candidate) ? "text-amber-200" : indexNumber(candidate) != null ? "text-primary-200" : "text-white/45"}`}>
+                                                    {indexLine}
+                                                </p>
+                                            ) : null}
                                             {note ? <p className="truncate text-[0.7rem] font-bold text-amber-200">{note}</p> : null}
-                                            {!catalog && !note ? <p className="truncate text-[0.7rem] text-white/40">{locationSummary(candidate)}</p> : null}
+                                            {!catalog && !indexLine && !note ? <p className="truncate text-[0.7rem] text-white/40">{locationSummary(candidate)}</p> : null}
                                         </div>
                                     </button>
                                 );
@@ -763,6 +882,14 @@ function InstagramImportClientInner() {
                         </div>
                         <div className="sticky bottom-20 z-20 space-y-3 rounded-[1.35rem] border border-white/10 bg-[#101010]/95 p-4 backdrop-blur md:bottom-6">
                             {blocker ? <p className={`text-xs font-bold ${blocker.tone === "warn" ? "text-amber-200" : "text-white/45"}`}>{blocker.message}</p> : null}
+                            {lastScreeningBillingSummary ? (
+                                <div className="space-y-0.5">
+                                    <p className="text-xs text-white/55">{lastScreeningBillingSummary.headline}</p>
+                                    {lastScreeningBillingSummary.detail ? (
+                                        <p className="text-[0.7rem] text-white/35">{lastScreeningBillingSummary.detail}</p>
+                                    ) : null}
+                                </div>
+                            ) : null}
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <button
                                     type="button"
@@ -797,7 +924,10 @@ function InstagramImportClientInner() {
                                     {primaryButtonTitle(action, selected.size)}
                                 </button>
                             </div>
-                            <p className="text-[0.7rem] text-white/35">{reviewHint(action, selectedList)}</p>
+                            <p className={`text-[0.7rem] ${importChargeHint ? "text-white/55" : "text-white/35"}`}>
+                                {importChargeHint ?? reviewHint(action, selectedList)}
+                            </p>
+                            <p className="text-[0.7rem] text-white/30">{REVIEW_BILLING_EXPLAINER}</p>
                         </div>
                     </div>
                 )
@@ -893,6 +1023,9 @@ function InstagramImportClientInner() {
                                 pro: accepted.pro_included ?? quote.pro_included,
                                 source: "import_page"
                             });
+                            setLastScreeningBillingSummary(
+                                screeningBillingSummaryFromQuote({...quote, ...accepted}),
+                            );
                             quoteResolverRef.current?.(true);
                             quoteResolverRef.current = null;
                             setQuote(null);
@@ -985,8 +1118,9 @@ function QuoteSheet({
                     ? ` · ${quote.posts_remaining_after_batch} more can be checked in a later batch`
                     : ""}
             </p>
+            <p className="mt-3 text-xs leading-5 text-white/40">{SCREENING_QUOTE_EXPLAINER}</p>
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">Import cost</p>
+                <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">Screening cost</p>
                 <p className="mt-2 font-display text-3xl font-bold text-white">{costLabel}</p>
                 <p className="mt-2 text-xs leading-5 text-white/45">{quote.pricing_explanation}</p>
                 <p className="mt-3 text-xs text-white/35">

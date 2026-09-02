@@ -8,8 +8,12 @@ import {
     connectionStatusLabel,
     hasConfirmedLocation,
     screeningCostLabel,
+    screeningBillingSummaryFromQuote,
+    importButtonChargeHint,
+    unscreenedPostsBanner,
     materializationCostLabel,
     humanizeImportError,
+    indexStatusLine,
     INSTAGRAM_IMPORT_PATH,
     INSTAGRAM_IMPORT_USE_CASE_PATH,
     instagramImportAccountHref,
@@ -79,6 +83,24 @@ test("title falls back to screening evidence when listing columns are empty", ()
     });
     assert.equal(titleText(visionOnly), "Saltwater Crocodile");
     assert.notEqual(titleText(visionOnly), "Unknown animal");
+    assert.equal(indexStatusLine(visionOnly), "Not indexed");
+});
+
+test("index line shows number or not indexed", () => {
+    const indexed = candidate({
+        proposed_index_match: {
+            species_profile_id: barnOwlId,
+            animaldex_number: 134,
+            display_name: "Barn Owl"
+        },
+        identified_display_name: "Barn Owl"
+    });
+    assert.equal(indexStatusLine(indexed), "#134");
+
+    const named = candidate({identified_display_name: "Praying Mantis"});
+    assert.equal(indexStatusLine(named), "Not indexed");
+
+    assert.equal(indexStatusLine(candidate()), "Unknown animal");
 });
 
 test("broad and needs-review keep the model's name", () => {
@@ -294,4 +316,30 @@ test("screening and materialization labels distinguish Pro, free allowance, and 
         quote_id: "q", photo_equivalent_count: 1, video_equivalent_count: 1,
         credit_cost: 0, pro_included: true, pricing_explanation: "", balance: 0, sufficient_credits: true
     }), "Included with Pro");
+});
+
+test("screening billing summary and import hints explain charges clearly", () => {
+    const paid = screeningBillingSummaryFromQuote({
+        operation_id: "o", quote_id: "q", billing_status: "quoted", total_posts_seen: 20,
+        posts_requiring_processing: 15, credit_cost: 1, pro_included: false,
+        pricing_explanation: "", balance: 4, sufficient_credits: true,
+    });
+    assert.equal(paid.headline, "Screening for this check: 1 Credit");
+    assert.match(paid.detail ?? "", /15 posts checked/);
+
+    const free = screeningBillingSummaryFromQuote({
+        operation_id: "o", quote_id: "q", billing_status: "quoted", total_posts_seen: 5,
+        posts_requiring_processing: 0, credit_cost: 0, pro_included: false,
+        pricing_explanation: "", balance: 4, sufficient_credits: true, zero_cost_reason: "empty",
+    });
+    assert.equal(free.headline, "No screening credits used");
+
+    assert.equal(unscreenedPostsBanner(3), "3 posts still need checking — tap refresh to identify animals.");
+    assert.equal(unscreenedPostsBanner(0), null);
+
+    assert.equal(importButtonChargeHint("importPosts", {
+        quote_id: "q", photo_equivalent_count: 2, video_equivalent_count: 0,
+        credit_cost: 2, pro_included: false, pricing_explanation: "", balance: 9, sufficient_credits: true,
+    }), "Import will use 2 Credits");
+    assert.equal(importButtonChargeHint("confirmSpecies", null), null);
 });
