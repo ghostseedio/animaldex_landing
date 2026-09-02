@@ -57,6 +57,30 @@ test("unknown animal is reserved for a genuine miss", () => {
     assert.equal(catalogStatusLine(pending), "Preparing AnimalDex entry");
 });
 
+test("title falls back to screening evidence when listing columns are empty", () => {
+    // Production instagram-candidate-screen (Aug 22) still writes the model
+    // name into identity_evidence only. Identified_* columns stay null until
+    // the newer screening function is deployed.
+    const fromEvidence = candidate({
+        catalog_state: null,
+        identified_display_name: null,
+        identified_scientific_name: null,
+        identity_evidence: {
+            vision_animal_name: "Orangutan",
+            catalog_display_name: "Bornean Orangutan",
+            catalog_state: "pending"
+        }
+    });
+    assert.equal(titleText(fromEvidence), "Bornean Orangutan");
+    assert.equal(catalogStatusLine(fromEvidence), "Preparing AnimalDex entry");
+
+    const visionOnly = candidate({
+        identity_evidence: {vision_animal_name: "Saltwater Crocodile"}
+    });
+    assert.equal(titleText(visionOnly), "Saltwater Crocodile");
+    assert.notEqual(titleText(visionOnly), "Unknown animal");
+});
+
 test("broad and needs-review keep the model's name", () => {
     const broad = candidate({
         catalog_state: "broad",
@@ -152,6 +176,9 @@ test("humanize maps backend codes and never leaks internals", () => {
     assert.equal(humanizeImportError("candidate_accuracy_attestation_required"), "Confirm these details are accurate before importing.");
     assert.equal(humanizeImportError("poster_unavailable"), "We couldn't get a cover image for this video.");
     assert.doesNotMatch(humanizeImportError("poster_unavailable"), /HMAC|token|secret/i);
+    assert.match(humanizeImportError("invalid_thumbnail_screen_scope"), /could not continue|resume/i);
+    assert.match(humanizeImportError("invalid_frame_target_scope"), /could not continue|resume/i);
+    assert.doesNotMatch(humanizeImportError("invalid_thumbnail_screen_scope"), /importing this post/i);
     assert.equal(
         humanizeImportError("import_stage_busy"),
         "Checking your wildlife posts is taking a little longer because your archive is large."

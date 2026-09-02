@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
 
@@ -32,7 +33,9 @@ function relative(value: string | null) {
 function Avatar({user}: {user: UserRow}) {
     const name = user.displayName || user.username || user.email || "User";
     return user.avatarUrl
-        ? <img src={user.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+        ? <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl">
+            <Image src={user.avatarUrl} alt="" fill unoptimized sizes="44px" className="object-cover" />
+        </span>
         : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-500/15 font-black text-primary-100">{name.slice(0, 1).toUpperCase()}</span>;
 }
 

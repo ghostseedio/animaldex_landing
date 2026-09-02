@@ -2,26 +2,26 @@
   {
     "id": "collectors",
     "href": "/use-cases/wildlife-collection-animal-card-app",
-    "image": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&w=1200&q=80"
+    "image": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-09-02/animaldex-collectors-animal-binder-9c48b8ac-e5c8-456b-bb27-1e357f7f806c.webp"
   },
   {
     "id": "explorers",
     "href": "/wildlife-discovery-app",
-    "image": "https://images.unsplash.com/photo-1516426122078-c23e993964b9?auto=format&fit=crop&w=1200&q=80"
+    "image": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-09-02/animaldex-wildlife-photographers-41e388ce-6e6b-4328-b948-4966215062c6.webp"
   },
   {
     "id": "animalLovers",
     "href": "/use-cases/family-zoo-safari-animal-learning-app",
-    "image": "https://images.unsplash.com/photo-1564349683132-77c068b17238?auto=format&fit=crop&w=1200&q=80"
+    "image": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-09-02/animaldex-animal-lovers-9296a0a9-7951-4540-8a50-e9d6c0f44858.webp"
   },
   {
     "id": "creators",
     "href": "/use-cases/wildlife-photography-companion-app",
-    "image": "https://images.unsplash.com/photo-1452587925148-ce544e77e70b?auto=format&fit=crop&w=1200&q=80"
+    "image": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-09-02/animaldex-wildlife-creators-5da6fe4c-7bfb-4159-aa6e-69f521a8eb30.webp"
   },
   {
     "id": "competitors",
     "href": "/#download",
-    "image": "https://images.unsplash.com/photo-1605286353136-9a8fbf7198f8?auto=format&fit=crop&w=1200&q=80"
+    "image": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-09-02/animaldex-animal-arena-gamers-f3091577-16f2-42ac-8978-9ec0fe692d65.webp"
   }
 ]

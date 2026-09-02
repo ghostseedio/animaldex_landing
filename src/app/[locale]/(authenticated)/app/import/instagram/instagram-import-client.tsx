@@ -253,6 +253,7 @@ function InstagramImportClientInner() {
         applyStatus(payload, connected || isActiveInstagramConnection(payload.connection)
             ? (reviewCandidates(payload.candidates).length ? "reviewing" : "disconnected")
             : "disconnected");
+        setError(null);
         return payload;
     }, [applyStatus, connected]);
 

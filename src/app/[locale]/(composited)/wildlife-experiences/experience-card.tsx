@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {trackEvent} from "@/lib/analytics";
 import {
@@ -21,11 +22,13 @@ export default function ExperienceCard({listing, locale}: {listing: PublicGuideL
             <div className="flex w-full flex-col">
                 <div className="relative h-52 overflow-hidden bg-[#0A1A12]">
                     {listing.cover_image_url ? (
-                        <img
+                        <Image
                             src={listing.cover_image_url}
                             alt={`${listing.title} wildlife experience in ${guideAreaServedName(listing)}`}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
+                            fill
+                            unoptimized
+                            sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                            className="object-cover"
                         />
                     ) : (
                         <div className="grid h-full place-items-center text-white/30" aria-hidden="true">

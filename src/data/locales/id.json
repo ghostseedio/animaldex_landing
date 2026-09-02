@@ -142,31 +142,31 @@
       "personas": {
         "collectors": {
           "title": "Kolektor",
-          "tagline": "Harus temukan semuanya.",
+          "tagline": "Seperti Pokémon, tapi untuk hewan",
           "description": "Bangun Dex-mu. Kejar temuan langka. Lengkapi koleksimu.",
           "alt": "Grid spesies satwa liar yang terkumpul"
         },
         "explorers": {
-          "title": "Penjelajah",
-          "tagline": "Lihat apa yang ada di luar sana.",
+          "title": "Fotografer Satwa Liar",
+          "tagline": "Impor & ID karya yang sudah kamu punya",
           "description": "Bepergian, temukan satwa liar, dan ubah setiap perjalanan jadi perburuan — termasuk herping, birding, catatan lapangan, dan pengalaman satwa liar yang bisa dipesan.",
           "alt": "Penjelajah memotret satwa liar di hutan"
         },
         "animalLovers": {
           "title": "Pecinta Hewan",
-          "tagline": "Lebih dekat dengan hewan favoritmu.",
+          "tagline": "Untuk yang mencari inspirasi dari alam",
           "description": "Temukan perilaku, strategi, dan cerita mereka.",
           "alt": "Potret intim hewan liar"
         },
         "creators": {
           "title": "Kreator",
-          "tagline": "Ubah pertemuan jadi sesuatu yang layak dibagikan.",
+          "tagline": "Dapatkan penghasilan dari keahlian melacak hewan",
           "description": "Fotografer satwa liar, pembuat film, dan kreator lapangan. Bawa arsip satwa liarmu — atau ikuti pengalaman fotografi lokal.",
           "alt": "Fotografer satwa liar dengan kamera di alam"
         },
         "competitors": {
-          "title": "Kompetitor",
-          "tagline": "Gunakan koleksimu.",
+          "title": "Gamer",
+          "tagline": "Semua hewan punya tier untuk arena",
           "description": "Bandingkan hewan, adu trait, dan naik peringkat.",
           "alt": "Dua hewan yang saling berhadapan"
         }

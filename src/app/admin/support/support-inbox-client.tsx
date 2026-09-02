@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import {FormEvent, ReactNode, useEffect, useMemo, useRef, useState} from "react";
+import {FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
 import SupportArticlePicker from "@/app/admin/support/_components/support-article-picker";
 
@@ -183,15 +184,19 @@ function initials(name: string) {
 
 function Avatar({name, src, size = "md"}: {name: string; src?: string | null; size?: "sm" | "md" | "lg"}) {
     const dimensions = size === "lg" ? "h-12 w-12 text-sm" : size === "sm" ? "h-8 w-8 text-[10px]" : "h-10 w-10 text-xs";
+    const imageSize = size === "lg" ? "48px" : size === "sm" ? "32px" : "40px";
 
     return (
         <span className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-primary-500/15 font-bold text-primary-100 ring-1 ring-primary-400/20 ${dimensions}`}>
             {initials(name)}
             {src ? (
-                <img
+                <Image
                     src={src}
                     alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    sizes={imageSize}
+                    className="object-cover"
                     onError={(event) => { event.currentTarget.style.display = "none"; }}
                 />
             ) : null}
@@ -320,7 +325,7 @@ export default function SupportInboxClient() {
         return thread.category === inboxFilter;
     });
 
-    async function loadInAppInbox(userId?: string | null) {
+    const loadInAppInbox = useCallback(async (userId?: string | null) => {
         setLoading(true);
         setError(null);
 
@@ -349,9 +354,9 @@ export default function SupportInboxClient() {
         } finally {
             setLoading(false);
         }
-    }
+    }, []);
 
-    async function loadInbox(threadId?: string | null) {
+    const loadInbox = useCallback(async (threadId?: string | null) => {
         if (channel === "in-app") {
             await loadInAppInbox(threadId);
             return;
@@ -385,7 +390,7 @@ export default function SupportInboxClient() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [channel, loadInAppInbox]);
 
     async function loadThreadDetail(threadId: string) {
         setLoadingThread(true);
@@ -459,7 +464,7 @@ export default function SupportInboxClient() {
         setReply("");
         setAttachments([]);
         void loadInbox();
-    }, [channel]);
+    }, [channel, loadInbox]);
     async function submitLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setSubmitting(true);
@@ -891,7 +896,9 @@ export default function SupportInboxClient() {
                                                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                                         {imageAttachments.map((attachment) => (
                                                             <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-canvas-900">
-                                                                <img src={attachment.url} alt={attachment.filename} loading="lazy" className="max-h-[32rem] w-full object-contain transition group-hover:scale-[1.01]" />
+                                                                <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-canvas-900">
+                                                                    <Image src={attachment.url} alt={attachment.filename} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" />
+                                                                </span>
                                                                 <span className="block truncate border-t border-line-300 px-3 py-2 text-xs text-ink-300">{attachment.filename}</span>
                                                             </a>
                                                         ))}
@@ -901,7 +908,9 @@ export default function SupportInboxClient() {
                                                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                                         {message.remoteImages.map((image, index) => (
                                                             <a key={`${image.url}-${index}`} href={image.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-white">
-                                                                <img src={image.url} alt={image.alt} loading="lazy" referrerPolicy="no-referrer" className="max-h-[32rem] w-full object-contain transition group-hover:scale-[1.01]" />
+                                                                <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-white">
+                                                                    <Image src={image.url} alt={image.alt} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" referrerPolicy="no-referrer" />
+                                                                </span>
                                                                 <span className="block truncate border-t border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-300">{image.alt}</span>
                                                             </a>
                                                         ))}
@@ -935,7 +944,7 @@ export default function SupportInboxClient() {
                                             <div className="grid gap-2 border-t border-line-300/70 p-3 sm:grid-cols-2 lg:grid-cols-3">
                                                 {attachments.map((attachment) => (
                                                     <div key={attachment.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-line-300 bg-surface-900 p-2">
-                                                        {attachment.previewUrl ? <img src={attachment.previewUrl} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/5">📎</span>}
+                                                        {attachment.previewUrl ? <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded"><Image src={attachment.previewUrl} alt="" fill unoptimized sizes="40px" className="object-cover" /></span> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/5">📎</span>}
                                                         <div className="min-w-0 flex-1">
                                                             <p className="truncate text-xs font-semibold text-white">{attachment.filename}</p>
                                                             <p className="text-[10px] text-ink-500">{attachment.contentId ? "Inline image" : formatBytes(attachment.size)}</p>

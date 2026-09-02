@@ -142,31 +142,31 @@
       "personas": {
         "collectors": {
           "title": "Collectors",
-          "tagline": "Gotta find them all.",
+          "tagline": "Like Pokémon but for animals",
           "description": "Build your Dex. Chase rare finds. Complete your collection.",
           "alt": "Grid of collected wildlife species"
         },
         "explorers": {
-          "title": "Explorers",
-          "tagline": "See what's out there.",
+          "title": "Wildlife Photographers",
+          "tagline": "Import & ID your existing work",
           "description": "Travel, discover wildlife and turn every trip into a hunt — including herping, birding, field notes, and bookable local wildlife experiences.",
           "alt": "Explorer photographing wildlife in the jungle"
         },
         "animalLovers": {
           "title": "Animal Lovers",
-          "tagline": "Get closer to the animals you love.",
+          "tagline": "For those who look to nature for inspiration",
           "description": "Discover their behaviour, strategies and stories.",
           "alt": "Intimate portrait of a wild animal"
         },
         "creators": {
           "title": "Creators",
-          "tagline": "Turn encounters into something worth sharing.",
+          "tagline": "Earn from your animal tracking expertise",
           "description": "Wildlife photographers, filmmakers and field creators. Bring your wildlife archive with you — or join a photography-focused local experience.",
           "alt": "Wildlife photographer with camera in nature"
         },
         "competitors": {
-          "title": "Competitors",
-          "tagline": "Put your collection to work.",
+          "title": "Gamers",
+          "tagline": "All animals are tiered for the arena",
           "description": "Compare animals, battle traits and climb the rankings.",
           "alt": "Two striking animals facing one another"
         }

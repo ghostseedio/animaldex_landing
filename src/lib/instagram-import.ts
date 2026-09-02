@@ -95,6 +95,12 @@ export type ExternalImportScreeningEvidence = {
     contradictory_animal_signals?: boolean | null;
     several_individuals?: boolean | null;
     multi_animal_detected?: boolean | null;
+    /** Model name from thumbnail/frame screening. Production screening still
+     *  writes here even when identified_display_name is left null. */
+    vision_animal_name?: string | null;
+    catalog_state?: CatalogState | null;
+    catalog_display_name?: string | null;
+    catalog_scientific_name?: string | null;
 };
 
 export type ExternalImportMediaRow = {
@@ -276,19 +282,27 @@ export function suggestedMatch(candidate: ExternalImportCandidateRow): AnimalDex
 }
 
 export function catalogStateOf(candidate: ExternalImportCandidateRow): CatalogState {
-    return candidate.catalog_state ?? "none";
+    if (candidate.catalog_state) return candidate.catalog_state;
+    const fromEvidence = candidate.identity_evidence?.catalog_state;
+    if (fromEvidence) return fromEvidence;
+    return "none";
 }
 
 export function titleText(candidate: ExternalImportCandidateRow) {
-    return suggestedMatch(candidate)?.display_name
-        ?? candidate.identified_display_name
-        ?? candidate.identified_scientific_name
-        ?? candidate.proposed_index_match?.display_name
-        ?? "Unknown animal";
+    const evidence = candidate.identity_evidence;
+    return suggestedMatch(candidate)?.display_name?.trim()
+        || candidate.identified_display_name?.trim()
+        || evidence?.catalog_display_name?.trim()
+        || candidate.identified_scientific_name?.trim()
+        || evidence?.catalog_scientific_name?.trim()
+        || evidence?.vision_animal_name?.trim()
+        || candidate.proposed_index_match?.display_name?.trim()
+        || "Unknown animal";
 }
 
 export function displayName(candidate: ExternalImportCandidateRow) {
-    return candidate.proposed_index_match?.display_name ?? "this post";
+    const name = titleText(candidate);
+    return name === "Unknown animal" ? "this post" : name;
 }
 
 export function catalogStatusLine(candidate: ExternalImportCandidateRow) {
@@ -541,10 +555,21 @@ export function humanizeImportError(error: unknown) {
     if (raw.includes("import_quote_required") || raw.includes("import_quote_exhausted")) {
         return "Confirm this check before AnimalDex continues.";
     }
+    if (
+        raw.includes("invalid_thumbnail_screen_scope")
+        || raw.includes("invalid_frame_target_scope")
+        || raw.includes("invalid_frame_screen_scope")
+        || raw.includes("candidate_outside_operation_scope")
+    ) {
+        return "This Instagram check could not continue from where it stopped. Tap Check for new posts to resume — your reviewed posts are still here.";
+    }
     if (raw.includes("session") && raw.includes("expir")) {
         return "Your session expired. Sign in again — your Instagram import progress is saved on this account.";
     }
-    return "Something went wrong importing this post. Your reviewed posts are still here.";
+    if (raw.includes("decoding") || raw.includes("couldn't be read") || raw.includes("json")) {
+        return "We couldn't load your Instagram posts. Refresh and try again.";
+    }
+    return "Something went wrong checking your posts. Your reviewed posts are still here — try again to resume.";
 }
 
 export function requiresReauthorization(error: unknown) {

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {categoryLabel, formatDuration, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
@@ -6,7 +7,7 @@ export default function GuideCard({listing, locale}: {listing: PublicGuideListin
         <div className="flex w-full flex-col">
         <div className="relative h-52 overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
             {listing.cover_image_url ? (
-                <img src={listing.cover_image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                <Image src={listing.cover_image_url} alt="" fill unoptimized sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover" />
             ) : (
                 <div className="grid h-full place-items-center text-white/35">
                     <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
