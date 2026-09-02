@@ -6,14 +6,14 @@ import {collectorPages} from "@/data/collector-pages";
 import {getManagedBlogPosts, getManagedPages} from "@/lib/admin-content";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
-import {listMergedChallengeEntries} from "@/data/species-comparisons";
+import {listMergedChallengeSitemapEntries} from "@/data/species-comparisons";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
 import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalGenerations} from "@/data/pokemon-animal-counterparts";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
-import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getSitemapSpeciesEntries} from "@/data/database-species-pages";
 import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
 import {speciesEntries} from "@/data/species";
@@ -22,45 +22,48 @@ import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 
-async function getSitemapSpeciesEntries() {
-    try {
-        return await getUnifiedSpeciesEntries();
-    } catch (error) {
-        console.error("Unable to load unified species catalog for sitemap. Falling back to static species entries.", error);
-        return speciesEntries;
-    }
-}
-
-async function getSitemapDiscoverPosts() {
-    try {
-        return await getDiscoverCapturePostsForSitemap(400);
-    } catch (error) {
-        console.error("Unable to load discover posts for sitemap.", error);
-        return [];
-    }
-}
-
 async function getSitemapChallengeEntries() {
     try {
-        return await listMergedChallengeEntries();
+        return await listMergedChallengeSitemapEntries();
     } catch (error) {
         console.error("Unable to load generated species comparisons for sitemap. Falling back to static entries.", error);
-        return challengeEntries;
+        return challengeEntries.map((entry) => ({
+            slug: entry.slug,
+            updatedAt: entry.updatedAt || entry.publishedAt
+        }));
     }
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const managedBlogPosts = await getManagedBlogPosts();
-    const managedPages = await getManagedPages();
-    const behaviorLessons = await getBehaviorLessonIndex();
-    const principleHubs = await getPrincipleHubIndex();
-    const unifiedSpeciesEntries = await getSitemapSpeciesEntries();
-    const discoverPosts = await getSitemapDiscoverPosts();
-    const mergedChallengeEntries = await getSitemapChallengeEntries();
-    const guideListings = await getPublicGuideListings().catch((error) => {
-        console.error("Unable to load public Guide listings for sitemap.", error);
-        return [];
-    });
+export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
+    const [
+        managedBlogPosts,
+        managedPages,
+        behaviorLessons,
+        principleHubs,
+        sitemapSpeciesEntries,
+        discoverPosts,
+        mergedChallengeEntries,
+        guideListings
+    ] = await Promise.all([
+        getManagedBlogPosts(),
+        getManagedPages(),
+        getBehaviorLessonIndex(),
+        getPrincipleHubIndex(),
+        getSitemapSpeciesEntries().catch((error) => {
+            console.error("Unable to load unified species catalog for sitemap. Falling back to static species entries.", error);
+            return speciesEntries.map((entry) => ({slug: entry.slug, updatedAt: entry.updatedAt}));
+        }),
+        getDiscoverCapturePostsForSitemap(400).catch((error) => {
+            console.error("Unable to load discover posts for sitemap.", error);
+            return [];
+        }),
+        getSitemapChallengeEntries(),
+        getPublicGuideListings().catch((error) => {
+            console.error("Unable to load public Guide listings for sitemap.", error);
+            return [];
+        })
+    ]);
+
     const guideEntries: MetadataRoute.Sitemap = [
         {url: new URL("/wildlife-guides", getSiteUrl()).toString()},
         {url: new URL("/wildlife-experiences", getSiteUrl()).toString()},
@@ -71,88 +74,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ];
     const publicLegalEntries: MetadataRoute.Sitemap = [
         {
-            url: new URL("/legal/privacy", getSiteUrl()).toString(),
+            url: new URL("/legal/privacy", getSiteUrl()).toString()
         },
         {
-            url: new URL("/legal/terms", getSiteUrl()).toString(),
+            url: new URL("/legal/terms", getSiteUrl()).toString()
         }
     ];
 
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
-        // Only the homepage is fully localized today. Keep untranslated catalogue,
-        // editorial, and SEO pages out of localized sitemap variants until their
-        // underlying content (not only the interface) is translated.
         if (locale !== localeConfig.defaultLocale) {
             return [{url: getAbsoluteUrl(locale)}];
         }
 
         const staticEntries: MetadataRoute.Sitemap = [
-            {
-                url: getAbsoluteUrl(locale)
-            },
-            {
-                url: getAbsoluteUrl(locale, "/what-animal-am-i")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/animals")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/use-cases")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/blog")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/support")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/contact")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/earn-on-animaldex")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/become-a-wildlife-guide")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/creator-rewards")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/sponsor-a-challenge")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/wildlife-experiences")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/branding")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/comparisons")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/animal-wisdom")
-            },
-            {
-                url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)
-            },
-            {
-                url: getAbsoluteUrl(locale, "/locations")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/powers")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/animal-symbolism")
-            },
-            {
-                url: getAbsoluteUrl(locale, "/animal-lessons")
-            },
-            {
-                url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)
-            },
-            {
-                url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)
-            }
+            {url: getAbsoluteUrl(locale)},
+            {url: getAbsoluteUrl(locale, "/what-animal-am-i")},
+            {url: getAbsoluteUrl(locale, "/animals")},
+            {url: getAbsoluteUrl(locale, "/use-cases")},
+            {url: getAbsoluteUrl(locale, "/blog")},
+            {url: getAbsoluteUrl(locale, "/support")},
+            {url: getAbsoluteUrl(locale, "/contact")},
+            {url: getAbsoluteUrl(locale, "/earn-on-animaldex")},
+            {url: getAbsoluteUrl(locale, "/become-a-wildlife-guide")},
+            {url: getAbsoluteUrl(locale, "/creator-rewards")},
+            {url: getAbsoluteUrl(locale, "/sponsor-a-challenge")},
+            {url: getAbsoluteUrl(locale, "/wildlife-experiences")},
+            {url: getAbsoluteUrl(locale, "/branding")},
+            {url: getAbsoluteUrl(locale, "/comparisons")},
+            {url: getAbsoluteUrl(locale, "/animal-wisdom")},
+            {url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)},
+            {url: getAbsoluteUrl(locale, "/locations")},
+            {url: getAbsoluteUrl(locale, "/powers")},
+            {url: getAbsoluteUrl(locale, "/animal-symbolism")},
+            {url: getAbsoluteUrl(locale, "/animal-lessons")},
+            {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
+            {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)}
         ];
 
         const useCaseEntries = useCases.map((entry) => ({
@@ -160,7 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(entry.updatedAt)
         }));
 
-        const speciesPages = unifiedSpeciesEntries.map((entry) => ({
+        const speciesPages = sitemapSpeciesEntries.map((entry) => ({
             url: getAbsoluteUrl(locale, `/animals/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
         }));
@@ -185,7 +141,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         const challengePageEntries = mergedChallengeEntries.map((entry) => ({
             url: getAbsoluteUrl(locale, `/comparisons/${entry.slug}`),
-            lastModified: new Date(entry.updatedAt || entry.publishedAt)
+            lastModified: new Date(entry.updatedAt)
         }));
 
         const rankingPageEntries = rankingPages.map((page) => ({
@@ -277,4 +233,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...guideEntries,
         ...localizedEntries
     ];
+}
+
+function escapeXml(value: string) {
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&apos;");
+}
+
+export function serializeSitemapXml(entries: MetadataRoute.Sitemap) {
+    const urls = entries.map((entry) => {
+        const extended = entry as MetadataRoute.Sitemap[number] & {
+            changeFrequency?: string;
+            priority?: number;
+        };
+        const lastModified = extended.lastModified
+            ? `<lastmod>${new Date(extended.lastModified).toISOString()}</lastmod>`
+            : "";
+        const changeFrequency = extended.changeFrequency
+            ? `<changefreq>${extended.changeFrequency}</changefreq>`
+            : "";
+        const priority = extended.priority !== undefined
+            ? `<priority>${extended.priority}</priority>`
+            : "";
+
+        return `<url><loc>${escapeXml(extended.url)}</loc>${lastModified}${changeFrequency}${priority}</url>`;
+    }).join("");
+
+    return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;
 }

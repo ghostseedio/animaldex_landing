@@ -31,7 +31,7 @@ test("wildlife-experiences is a distinct gateway from the marketplace", () => {
     assert.doesNotMatch(page, /AggregateRating/);
     assert.doesNotMatch(page, /wildlife-experiences\/\[/);
     assert.doesNotMatch(card, /review count/i);
-    assert.match(readRepo("src/app/sitemap.ts"), /wildlife-experiences/);
+    assert.match(readRepo("src/lib/build-sitemap.ts"), /wildlife-experiences/);
 });
 
 test("filters reuse the real Guide category enum", () => {

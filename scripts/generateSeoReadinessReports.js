@@ -93,7 +93,7 @@ function main() {
     const principlesIndexSource = read("src/app/[locale]/(composited)/principles/page.tsx");
     const principleDetailSource = read("src/app/[locale]/(composited)/principles/[slug]/page.tsx");
     const animalPageSource = read("src/app/[locale]/(composited)/animals/[slug]/page.tsx");
-    const sitemapSource = read("src/app/sitemap.ts");
+    const sitemapSource = read("src/lib/build-sitemap.ts");
 
     const coreRoutes = [
         "/principles",
@@ -137,7 +137,7 @@ function main() {
     const noIndexSignals = /noindex|X-Robots-Tag/i.test([
         read("src/app/[locale]/layout.tsx"),
         read("src/app/[locale]/legal/layout.tsx"),
-        read("src/app/sitemap.ts")
+        read("src/lib/build-sitemap.ts")
     ].join("\n"));
     const canonicalChecks = {
         animal: animalPageSource.includes("buildContentMetadata("),

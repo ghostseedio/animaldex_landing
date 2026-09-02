@@ -121,7 +121,7 @@ export default async function Home() {
         {
             id: "scannerGuide",
             href: "/best-animal-identification-app",
-            image: "/images/blog/what-animal-am-i/wild-profile-hero.webp",
+            image: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-07-29/best-animal-identification-apps-2026-74c9e4aa-95a3-480c-8f37-a90f7afbc71d.png",
             layout: "small"
         },
         {

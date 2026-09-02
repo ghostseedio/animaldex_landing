@@ -40,7 +40,7 @@ test("canonical earn routes are unique and sitemap-listed", () => {
         "/creator-rewards",
         "/sponsor-a-challenge"
     ]);
-    const sitemap = readRepo("src/app/sitemap.ts");
+    const sitemap = readRepo("src/lib/build-sitemap.ts");
     for (const route of earnCanonicalRoutes) {
         assert.match(sitemap, new RegExp(route.replaceAll("/", "\\/")));
     }

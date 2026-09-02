@@ -1,9 +1,9 @@
 const withNextIntl = require('next-intl/plugin')();
 
 module.exports = withNextIntl({
-    // Sitemap and catalog pages load the unified species catalog at build time.
-    // The default 60s worker timeout kills those pages (and starves siblings)
-    // once the catalog is large enough to exceed a minute.
+    // Catalog pages still load the unified species catalog at build time.
+    // Sitemap generation is served dynamically via /sitemap.xml so it no longer
+    // blocks static page generation during deploys.
     staticPageGenerationTimeout: 180,
     experimental: {
         // Keep sharp as a native Node dependency so /api/admin/assets can boot on Vercel.

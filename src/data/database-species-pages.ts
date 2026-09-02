@@ -973,6 +973,81 @@ export async function getResolvedSpeciesBySlug(slug: string) {
     return null;
 }
 
+export type SitemapSpeciesEntry = {
+    slug: string;
+    updatedAt: string;
+};
+
+const SITEMAP_CATALOG_SELECT = [
+    "species_profile_id", "landing_page_slug", "normalized_identity_key",
+    "animaldex_number", "updated_at"
+].join(",");
+
+async function loadSitemapDatabaseSpecies(): Promise<SitemapSpeciesEntry[]> {
+    const [indexedProfileRows, catalogRows] = await Promise.all([
+        fetchRows<IndexedProfileRow>("species_profiles", INDEXED_PROFILE_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
+        fetchRows<Pick<CatalogRow, "species_profile_id" | "landing_page_slug" | "normalized_identity_key" | "animaldex_number" | "updated_at">>(
+            "species_catalog_v1",
+            SITEMAP_CATALOG_SELECT,
+            {animaldex_number: "not.is.null", order: "animaldex_number.asc"}
+        )
+    ]);
+    const indexedNumbers = new Map(
+        indexedProfileRows
+            .filter((row) => row.catalog_status !== "hidden")
+            .map((row) => [row.id, row.animaldex_number])
+    );
+    const bySlug = new Map<string, SitemapSpeciesEntry>();
+
+    for (const row of catalogRows) {
+        if (isNonCanonicalLifeStageCatalogIdentity(row.normalized_identity_key)) {
+            continue;
+        }
+
+        const animalDexNumber = indexedNumbers.get(row.species_profile_id);
+        if (animalDexNumber === undefined) continue;
+
+        const slug = databaseSpeciesCanonicalSlug({...row, animaldex_number: animalDexNumber});
+        if (!slug || bySlug.has(slug)) continue;
+
+        bySlug.set(slug, {
+            slug,
+            updatedAt: clean(row.updated_at) ?? new Date(0).toISOString()
+        });
+    }
+
+    return Array.from(bySlug.values());
+}
+
+/** Slug + updatedAt only — avoids field-guide hydration used by full catalog pages. */
+export async function getSitemapSpeciesEntries(): Promise<SitemapSpeciesEntry[]> {
+    try {
+        const databaseEntries = await loadSitemapDatabaseSpecies();
+        const databaseBySlug = new Map(databaseEntries.map((entry) => [entry.slug, entry]));
+        const staticSlugs = new Set(speciesEntries.map((entry) => entry.slug));
+        const biologyAnchorSlugs = getBiologyAnchorSlugsToExclude();
+        const fromStatic = speciesEntries
+            .filter((entry) => !biologyAnchorSlugs.has(entry.slug))
+            .map((entry) => ({
+                slug: entry.slug,
+                updatedAt: databaseBySlug.get(entry.slug)?.updatedAt ?? entry.updatedAt
+            }));
+        const fromDatabase = databaseEntries.filter((entry) => !staticSlugs.has(entry.slug) && !biologyAnchorSlugs.has(entry.slug));
+        const bySlug = new Map<string, SitemapSpeciesEntry>();
+
+        for (const entry of [...fromStatic, ...fromDatabase]) {
+            if (!bySlug.has(entry.slug)) {
+                bySlug.set(entry.slug, entry);
+            }
+        }
+
+        return Array.from(bySlug.values());
+    } catch (error) {
+        console.error("Unable to load sitemap species entries. Falling back to static species entries.", error);
+        return speciesEntries.map((entry) => ({slug: entry.slug, updatedAt: entry.updatedAt}));
+    }
+}
+
 export async function getUnifiedSpeciesEntries() {
     const databaseEntries = await getDatabaseSpeciesEntries();
     const databaseBySlug = new Map(databaseEntries.map((entry) => [entry.slug, entry]));

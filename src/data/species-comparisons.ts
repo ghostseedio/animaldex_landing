@@ -532,6 +532,69 @@ export async function resolveChallengeEntry(slug: string): Promise<ChallengeEntr
     return getOrGenerateSpeciesComparison(parsed);
 }
 
+export type ChallengeSitemapEntry = {
+    slug: string;
+    updatedAt: string;
+};
+
+async function fetchChallengeSitemapRows(): Promise<ChallengeSitemapEntry[]> {
+    const config = getReadConfig();
+    if (!config) return [];
+
+    const collected: ChallengeSitemapEntry[] = [];
+    let offset = 0;
+
+    while (offset < FEED_HARD_CAP) {
+        const url = new URL(`${config.supabaseUrl}/rest/v1/species_comparisons_feed_v1`);
+        url.searchParams.set("select", "slug,updated_at,published_at");
+        url.searchParams.set("order", "published_at.desc");
+        url.searchParams.set("limit", String(FEED_PAGE_SIZE));
+        url.searchParams.set("offset", String(offset));
+
+        const response = await fetch(url, {
+            headers: getSupabaseHeaders(config.key),
+            next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+        });
+        if (!response.ok) break;
+
+        const rows = (await response.json()) as Array<{slug: string; updated_at?: string; published_at: string}>;
+        if (!rows.length) break;
+
+        for (const row of rows) {
+            collected.push({
+                slug: row.slug,
+                updatedAt: row.updated_at || row.published_at
+            });
+        }
+
+        if (rows.length < FEED_PAGE_SIZE) break;
+        offset += FEED_PAGE_SIZE;
+    }
+
+    return collected;
+}
+
+/** Slug + dates only — avoids hydrating full comparison payloads for sitemap generation. */
+export async function listMergedChallengeSitemapEntries(): Promise<ChallengeSitemapEntry[]> {
+    const {challengeEntries} = await import("@/data/challenges");
+    const bySlug = new Map<string, ChallengeSitemapEntry>();
+
+    for (const entry of challengeEntries) {
+        bySlug.set(entry.slug, {
+            slug: entry.slug,
+            updatedAt: entry.updatedAt || entry.publishedAt
+        });
+    }
+
+    for (const entry of await fetchChallengeSitemapRows()) {
+        if (!bySlug.has(entry.slug)) {
+            bySlug.set(entry.slug, entry);
+        }
+    }
+
+    return Array.from(bySlug.values());
+}
+
 export async function listMergedChallengeEntries(limit = FEED_HARD_CAP): Promise<ChallengeEntry[]> {
     const {challengeEntries} = await import("@/data/challenges");
     const dbEntries = limit >= FEED_HARD_CAP

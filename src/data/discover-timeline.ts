@@ -1930,26 +1930,45 @@ export async function getRecentPublicCaptures(limit = 4): Promise<DiscoverCaptur
     );
 }
 
+const sitemapFeedSelect = "capture_id,feed_activity_at,capture_created_at,media_assets";
+
+async function fetchDiscoverSitemapRows(supabase: DiscoverSupabaseClient, limit: number) {
+    const capped = Math.max(24, Math.min(limit, 500));
+    const result = await supabase
+        .from("discover_feed_v1")
+        .select(sitemapFeedSelect)
+        .order("feed_activity_at", {ascending: false})
+        .limit(capped);
+
+    if (!result.error) {
+        return (result.data ?? []) as unknown as QueryRow[];
+    }
+
+    const fallback = await supabase
+        .from("discover_feed_v1")
+        .select("capture_id,feed_activity_at,capture_created_at")
+        .order("feed_activity_at", {ascending: false})
+        .limit(capped);
+
+    return (fallback.data ?? []) as unknown as QueryRow[];
+}
+
 export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<DiscoverSitemapPost[]> {
     const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
     if (!supabase) return [];
 
-    const rows = await fetchDiscoverFeedRows(supabase, Math.max(24, Math.min(limit, 500)));
-    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-        buildAnimalDexNumberIndex(),
-        getCatalogBehaviorPrincipleIndex()
-    ]);
+    const rows = await fetchDiscoverSitemapRows(supabase, limit);
 
-    return rows
-        .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
-        .slice(0, limit)
-        .map((item) => ({
-            postId: item.id,
-            date: item.date,
-            animalName: item.animalName,
-            hasVideoMedia: item.hasVideoMedia,
-            contextLabel: item.contextLabel
-        }));
+    return rows.map((row) => {
+        const captureId = readString(row, "capture_id") ?? "";
+        return {
+            postId: `capture-${captureId}`,
+            date: readString(row, "feed_activity_at") ?? readString(row, "capture_created_at") ?? new Date(0).toISOString(),
+            animalName: "",
+            hasVideoMedia: hasVideoMedia(row),
+            contextLabel: null
+        };
+    });
 }
 
 export type {ParsedDiscoverPostId};
