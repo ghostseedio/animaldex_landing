@@ -8,6 +8,7 @@
     "dev:clean": "node scripts/dev-clean.js",
     "prebuild": "node scripts/generatePublicImageAssets.js",
     "build": "next build",
+    "postinstall": "rm -rf node_modules/solar-icon-set/node_modules/@types",
     "assets:manifest": "node scripts/generatePublicImageAssets.js",
     "maps:locations": "tsx scripts/generateLocationHabitatMaps.ts",
     "start": "next start",
