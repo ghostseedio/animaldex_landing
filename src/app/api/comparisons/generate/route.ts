@@ -4,6 +4,8 @@ import {isChallengeComparisonType, type ChallengeComparisonType} from "@/data/ch
 import {findComparableAnimal} from "@/data/comparison-animals";
 import {
     SPECIES_COMPARISON_CACHE_TAG,
+    buildComparisonSlug,
+    canonicalUnpublishedComparisonSlug,
     getOrGenerateSpeciesComparison,
     parseComparisonSlug,
     resolveReadyChallengeEntry,
@@ -24,11 +26,6 @@ type GenerateRequestBody = {
     refreshImage?: boolean;
 };
 
-function buildSlug(animalA: string, animalB: string, comparisonType: ChallengeComparisonType) {
-    const base = `${animalA}-vs-${animalB}`;
-    return comparisonType === "battle" ? base : `${base}-${comparisonType}`;
-}
-
 function normalizeSlug(value: unknown) {
     return String(value ?? "").trim().toLowerCase();
 }
@@ -47,7 +44,7 @@ export async function GET(request: Request) {
         return NextResponse.json({error: "invalid_pair"}, {status: 400});
     }
 
-    const reversedSlug = buildSlug(parsed.animalBSlug, parsed.animalASlug, parsed.comparisonType);
+    const reversedSlug = buildComparisonSlug(parsed.animalBSlug, parsed.animalASlug, parsed.comparisonType);
     const existing = (await resolveReadyChallengeEntry(slug))
         ?? (await resolveReadyChallengeEntry(reversedSlug));
 
@@ -99,8 +96,8 @@ export async function POST(request: Request) {
         );
     }
 
-    const requestedSlug = buildSlug(animalA.slug, animalB.slug, comparisonType);
-    const reversedSlug = buildSlug(animalB.slug, animalA.slug, comparisonType);
+    const requestedSlug = buildComparisonSlug(animalA.slug, animalB.slug, comparisonType);
+    const reversedSlug = buildComparisonSlug(animalB.slug, animalA.slug, comparisonType);
 
     // Cache hits are free and unthrottled — including the reversed pair, which
     // shares one canonical row upstream.
@@ -125,9 +122,11 @@ export async function POST(request: Request) {
     }
 
     try {
+        const unpublishedCanonicalSlug = canonicalUnpublishedComparisonSlug(requestedSlug) || requestedSlug;
+        const unpublishedCanonical = parseComparisonSlug(unpublishedCanonicalSlug);
         const comparison = await getOrGenerateSpeciesComparison({
-            animalASlug: animalA.slug,
-            animalBSlug: animalB.slug,
+            animalASlug: unpublishedCanonical?.animalASlug || animalA.slug,
+            animalBSlug: unpublishedCanonical?.animalBSlug || animalB.slug,
             comparisonType,
             forceRegenerateImage: body.refreshImage === true
         });

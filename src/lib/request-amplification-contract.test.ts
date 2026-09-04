@@ -67,6 +67,9 @@ test("public species pages do not read the authenticated viewer on the server", 
     const comparisonPage = read("app/[locale]/(composited)/comparisons/[slug]/page.tsx");
 
     assert.match(speciesPage, /includeAuthenticatedViewer: false/);
+    assert.doesNotMatch(speciesPage, /generate-applied-insight/);
+    assert.doesNotMatch(speciesPage, /getViewerUserId/);
+    assert.match(speciesPage, /SpeciesAskAnimalDex/);
     assert.match(growth, /includeAuthenticatedViewer/);
     assert.doesNotMatch(comparisonPage, /getViewerUserId/);
     assert.doesNotMatch(comparisonPage, /readGuestKey/);

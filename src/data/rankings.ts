@@ -56,6 +56,10 @@ export type RankingPage = CanonicalContentMetadata & {
     methodology: string[];
     entries: RankingEntry[];
     breakdown: string[];
+    headline?: string;
+    seoTitle?: string;
+    immediateQuestion?: string;
+    rankingFactors?: string[];
     faq?: RankingFAQ[];
     relatedChallengeSlugs?: string[];
     relatedRankingSlugs?: string[];
@@ -68,8 +72,19 @@ type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "feature
 
 const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
 export const RANKING_CANONICAL_BASE_PATH = "/tier-list";
-const MIN_RANKING_TABLE_ENTRIES = 100;
+export const MIN_RANKING_TABLE_ENTRIES = 100;
 const STAT_RANKING_TABLE_ENTRIES = 250;
+export const FEATURED_TIER_LIST_SLUGS = [
+    "most-dangerous-animals",
+    "smartest-animals",
+    "fastest-animals",
+    "most-adaptable-animals",
+    "strongest-animals",
+    "animals-with-strongest-armor",
+    "animals-with-best-teamwork",
+    "most-agile-animals",
+    "most-resilient-animals"
+] as const;
 
 function getRankingImageSlug(page: RankingPageInput) {
     return page.title
@@ -98,26 +113,36 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "fastest-animals",
         title: "Fastest Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the fastest animals in the world, with explicit separation between air, land, and water speed so the answer stays biologically honest.",
+        headline: "100 Fastest Animals in the World",
+        seoTitle: "Fastest Animals in the World — Top 100 Ranked",
+        immediateQuestion: "What is the fastest animal in the world?",
+        rankingFactors: [
+            "AnimalDex speed profile score",
+            "Air, land, and water movement treated as different questions",
+            "Peak performance context, not one interchangeable number"
+        ],
+        description: "Ranked list of the fastest animals in the world, with land, flying, and marine speed kept separate so a diving falcon is not treated as the same kind of fast as a cheetah.",
         category: "speed",
         statRankingKey: "speed",
-        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
+        statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "fastest animals",
-            "fastest animal in the world",
-            "fastest land animal",
+            "fastest animals in the world",
+            "fastest land animals",
+            "top 100 fastest land animals",
+            "list of fastest animals",
             "fastest bird in the world",
             "fastest sea animal"
         ],
-        quickAnswer: "The peregrine falcon is the fastest animal overall in a dive. On land, the cheetah is the clearest speed leader. In water, sailfish and bluefin tuna belong near the top of the conversation. That distinction matters, because 'fastest animal' can mean air, land, or water.",
+        quickAnswer: "The peregrine falcon is the fastest animal overall in a dive. On land, the cheetah is the clearest speed leader. In water, sailfish and bluefin tuna belong near the top. 'Fastest animal' can mean air, land, or water, and those are not the same measurement.",
         introduction: [
-            "This page is built to answer a high-intent search cleanly without flattening very different kinds of movement into one misleading number. A diving falcon, a sprinting cat, and a fast pelagic fish are all 'fast' in different physical systems.",
-            "So the ranking below uses best-known peak performance as the main ordering signal, but the methodology section makes the environment explicit. That keeps the page useful for both readers and AI summaries."
+            "This page answers fastest-animal searches without flattening a dive, a land sprint, and a swimming burst into one misleading number.",
+            "The ranked table uses the AnimalDex speed profile so you can scan 100 species. The highlights below keep the three environments explicit, because that is what most people actually mean."
         ],
         methodology: [
-            "Overall ranking prioritizes the strongest widely repeated peak-speed claim for each species, but the quick answer explicitly separates air, land, and water so the page does not imply those environments are interchangeable.",
-            "Diving speed, horizontal running speed, and swimming speed are not the same performance question. When an animal's fame depends on one special movement mode, that context is stated directly in the entry.",
-            "The goal is not to crown one universal winner for all movement. It is to rank real biological speed while explaining what kind of speed each animal is actually demonstrating."
+            "The table order uses the AnimalDex speed profile score from species stats, then rarity and name as stable tie-breakers.",
+            "Diving speed, running speed, and swimming speed are different performance questions. The page names the fastest flying, land, and marine examples instead of pretending those environments are interchangeable.",
+            "The goal is a useful ranked list of fast animals, not one universal winner for every kind of movement."
         ],
         entries: [
             {rank: 1, speciesSlug: "peregrine-falcon", primaryMetric: "240+ mph dive", shortReason: "The peregrine falcon owns the overall speed headline because its hunting stoop reaches extraordinary aerial velocity."},
@@ -154,30 +179,39 @@ const rankingPagesData: RankingPage[] = [
             "tiger-vs-cheetah-speed",
             "peregrine-falcon-vs-red-tailed-hawk"
         ],
-        relatedRankingSlugs: ["strongest-animals", "most-dangerous-animals"],
+        relatedRankingSlugs: ["most-agile-animals", "most-dangerous-animals"],
         systemsSpeciesSlugs: ["peregrine-falcon", "cheetah", "bluefin-tuna"]
     }),
     createRankingPage({
         slug: "strongest-animals",
         title: "Strongest Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the strongest animals in the world, balancing sheer body power, contact force, and real dominance under biological conditions.",
+        headline: "100 Strongest Animals in the World",
+        seoTitle: "Top 100 Strongest Animals in the World, Ranked",
+        immediateQuestion: "What is the strongest animal in the world?",
+        rankingFactors: [
+            "Total body power and mass",
+            "Ability to impose force on the environment or another large animal",
+            "AnimalDex size, dominance, and speed profiles for the rest of the top 100"
+        ],
+        description: "Top 100 strongest animals in the world, ranked by biological power: body scale first, then how that force is used on land and in water.",
         category: "strength",
         searchIntents: [
             "strongest animals",
-            "strongest animal in the world",
+            "strongest animals in the world",
+            "top 100 strongest animals in the world",
+            "top 100 strongest animals",
             "most powerful animals",
-            "strongest land animals",
-            "strongest predators"
+            "strongest land animals"
         ],
-        quickAnswer: "If sheer body scale is the priority, the blue whale and elephant belong near the top. On land, elephant is the clearest overall strength answer. In direct heavy-contact contexts, white rhinoceros, hippopotamus, orca, and the largest big cats all stay relevant for different reasons.",
+        quickAnswer: "Blue whale is the strongest animal in the world by total body scale. Elephant is the clearest strongest land animal. White rhinoceros, hippopotamus, orca, and the largest big cats stay in the conversation for heavy-contact power.",
         introduction: [
-            "Strength sounds simple until you ask what kind of strength actually matters. Sheer body mass, pushing force, lifting leverage, combat power, and ecological dominance do not always point to the same animal.",
-            "This ranking prioritizes overall biological power in real conditions rather than gym-style abstraction. That means megafauna rises quickly, but predators still earn places when their force translates more efficiently into real outcomes."
+            "Strength is not one gym number. Body mass, pushing force, and combat power do not always pick the same winner, so this page ranks strongest animals in the world with that split in view.",
+            "The editorial top of the list is pinned to the animals with the strongest real-world power case. The rest of the top 100 is filled from AnimalDex size, dominance, and speed profiles so the table stays a genuine ranked list, not a ten-item trivia card."
         ],
         methodology: [
-            "Ranking weight comes from total body power, the ability to impose force on the environment or another large animal, and how reliably that force shows up under real biological conditions.",
-            "Mass matters a lot here, but the page is not just a size list. Weapon delivery, movement control, and contact efficiency still influence the final order.",
-            "Because aquatic and terrestrial animals express strength differently, the quick answer names the clearest land answer separately."
+            "The top entries are editorial: total body power, the ability to impose force, and how reliably that force shows up in real conditions.",
+            "Mass matters, but this is not only a size list. Contact efficiency and how the animal uses force still affect order.",
+            "The remaining top 100 uses AnimalDex size, dominance, and speed profiles, with predator-related species-guide signals as a boost. Land and water strength are named separately because they are not the same answer."
         ],
         entries: [
             {rank: 1, speciesSlug: "blue-whale", primaryMetric: "Largest body on Earth", shortReason: "Blue whale sits at the top of any total-body power conversation simply because its scale is unmatched."},
@@ -210,7 +244,7 @@ const rankingPagesData: RankingPage[] = [
             "elephant-vs-hippopotamus",
             "gorilla-vs-tiger"
         ],
-        relatedRankingSlugs: ["animals-with-strongest-bite-force", "most-dangerous-animals"],
+        relatedRankingSlugs: ["animals-with-strongest-armor", "most-dangerous-animals", "most-resilient-animals"],
         systemsSpeciesSlugs: ["elephant", "orca", "tiger"]
     }),
     createRankingPage({
@@ -269,26 +303,36 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "smartest-animals",
         title: "Smartest Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the smartest animals in the world, balancing social intelligence, problem solving, communication, and adaptive behavior.",
+        headline: "100 Smartest Animals Ranked",
+        seoTitle: "Top 100 Smartest Animals — Animal Intelligence Ranked",
+        immediateQuestion: "What are the smartest animals?",
+        rankingFactors: [
+            "AnimalDex intelligence profile score",
+            "Social learning and communication",
+            "Problem solving, memory, and tool-linked behavior"
+        ],
+        description: "Animal intelligence ranking of 100 smartest animals, using AnimalDex intelligence profiles and a clear note that social skill, tool use, and solitary problem solving are different jobs.",
         category: "intelligence",
         statRankingKey: "intelligence",
-        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
+        statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
         searchIntents: [
             "smartest animals",
-            "most intelligent animals",
-            "smartest animal in the world",
-            "most intelligent marine animals",
-            "smartest birds and mammals"
+            "smartest animals ranked",
+            "top 100 smartest animals",
+            "animal intelligence ranking",
+            "most intelligent animals ranked",
+            "animal intelligence tier list",
+            "most intelligent animals"
         ],
-        quickAnswer: "There is no honest one-word winner for all forms of intelligence, but dolphins, chimpanzees, orcas, octopuses, ravens, crows, elephants, and other advanced social or problem-solving species belong near the top. The best answer depends on whether you mean social intelligence, tool use, communication, or solitary problem solving.",
+        quickAnswer: "There is no single scientific intelligence score that covers every animal equally. Dolphins, chimpanzees, orcas, octopuses, ravens, and crows all belong in the top tier, depending on whether you mean social intelligence, tool use, communication, or solitary problem solving.",
         introduction: [
-            "Intelligence rankings become low quality fast when they pretend every cognitive skill can be reduced to one number. Social learning, communication, memory, object manipulation, and adaptive problem solving are different capabilities.",
-            "This page ranks the animals that most consistently appear near the top of real intelligence conversations while explaining why the order still depends on the task."
+            "Animal intelligence is multidimensional. Social learning, memory, communication, tool use, and solitary puzzle solving are different capabilities, so this ranking does not pretend they collapse into one IQ.",
+            "The table is an AnimalDex intelligence ranking: 100 species ordered by the intelligence profile used across the catalog. The write-up explains which kind of smart each top animal is actually demonstrating."
         ],
         methodology: [
-            "Ranking emphasizes a mix of social intelligence, communication, problem solving, memory, tool-linked behavior, and environmental adaptability.",
-            "No animal gets a high position based on internet myth alone. Each entry needs a real case for being cognitively impressive in biology, not just in viral anecdotes.",
-            "Because intelligence is multi-dimensional, the quick answer highlights several top-tier animals rather than pretending there is one clean universal winner."
+            "Table order uses the AnimalDex intelligence profile score, not a published scientific IQ test and not a viral anecdote score.",
+            "The editorial notes weigh social intelligence, communication, problem solving, memory, tool-linked behavior, and adaptability so the ranking stays readable when those skills diverge.",
+            "That is why the page gives a top tier rather than one fake absolute winner."
         ],
         entries: [
             {rank: 1, speciesSlug: "dolphin", primaryMetric: "Elite social cognition", shortReason: "Dolphins combine communication, play, memory, and social learning at a very high level."},
@@ -321,32 +365,40 @@ const rankingPagesData: RankingPage[] = [
             "bonobo-vs-chimpanzee",
             "raven-vs-crow"
         ],
-        relatedRankingSlugs: ["fastest-animals", "most-dangerous-animals"],
+        relatedRankingSlugs: ["most-adaptable-animals", "animals-with-best-teamwork"],
         systemsSpeciesSlugs: ["dolphin", "orca", "octopus", "raven"]
     }),
     createRankingPage({
         slug: "most-dangerous-animals",
         title: "Most Dangerous Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the most dangerous animals in the world, balancing lethality, aggression, encounter risk, and the ability to impose fatal force.",
+        headline: "100 Most Dangerous Animals in the World",
+        seoTitle: "Top 100 Most Dangerous Animals in the World, Ranked",
+        immediateQuestion: "What are the most dangerous animals?",
+        rankingFactors: [
+            "Lethal capability and encounter risk",
+            "Willingness to use force",
+            "AnimalDex dominance, size, and speed profiles, plus predator and venom signals"
+        ],
+        description: "Dangerous animals list ranking 100 species by lethal capability, aggression, and encounter risk — not a jump-scare trivia page and not a disease-vector list.",
         category: "danger",
-        statRankingKey: "dominance",
-        statRankingLimit: STAT_RANKING_TABLE_ENTRIES,
         searchIntents: [
+            "dangerous animals list",
             "most dangerous animals",
-            "most dangerous animal in the world",
+            "top 100 most dangerous animals",
+            "top 100 most dangerous animals in the world",
+            "100 most dangerous animals",
             "deadliest animals",
-            "most dangerous predators",
             "dangerous animals to humans"
         ],
-        quickAnswer: "If you mean large-animal danger in real wild encounters, crocodile, hippopotamus, elephant, king cobra, black mamba, great white shark, lion, and tiger all belong near the top. The exact order depends on whether you mean immediate lethality, aggression, predatory threat, or encounter risk.",
+        quickAnswer: "In this ranking, dangerous means the chance of a wild encounter turning lethal or severely injuring: crocodile, hippopotamus, elephant, king cobra, black mamba, great white shark, lion, and tiger all sit in the top tier. Disease-vector lists are a different question and are not what this page ranks.",
         introduction: [
-            "Danger is not the same as strength and not the same as intelligence. Some animals are dangerous because they are aggressive and huge. Others are dangerous because their weaponry works quickly. Others become dangerous because people encounter them more often than they expect.",
-            "This ranking stays focused on large-animal and apex-animal danger rather than broad disease-vector lists. The goal is practical biological threat, not trivia shock value."
+            "Danger is not the same as strength, and it is not the same as intelligence. Some animals are dangerous because they are huge and intolerant of close approach. Others because venom or a predator attack finishes the encounter quickly.",
+            "This dangerous animals list stays on large-animal and apex-animal threat. The editorial top is pinned, then the rest of the top 100 is filled from AnimalDex dominance, size, and speed profiles with predator and venom signals from species guides."
         ],
         methodology: [
-            "Ranking balances lethal capability, willingness to use force, real-world encounter risk, and how hard the animal is to survive once the encounter turns bad.",
-            "This page is not a statistics-only list, because exact human-fatality data is inconsistent across species and regions. Instead it combines biological lethality with practical encounter danger.",
-            "Where context matters heavily, the quick answer names several top-tier animals rather than pretending there is one universal danger metric."
+            "Danger here means lethal capability, willingness to use force, and how hard the encounter is to survive once it turns bad — not a single official fatality statistic.",
+            "Exact human-fatality data is inconsistent across species and regions, so this is not a CDC-style death-count ranking.",
+            "After the editorial top entries, the remaining list uses AnimalDex dominance, size, and speed profiles, boosted when species-guide text points to predators, venom, or ambush hunting."
         ],
         entries: [
             {rank: 1, speciesSlug: "crocodile", primaryMetric: "Ambush lethality", shortReason: "Crocodiles combine stealth, crushing force, and water-edge surprise into one of the harshest large-animal danger profiles."},
@@ -379,7 +431,7 @@ const rankingPagesData: RankingPage[] = [
             "king-cobra-vs-black-mamba",
             "orca-vs-great-white-shark"
         ],
-        relatedRankingSlugs: ["strongest-animals", "animals-with-strongest-bite-force"],
+        relatedRankingSlugs: ["strongest-animals", "animals-with-strongest-armor", "most-resilient-animals"],
         systemsSpeciesSlugs: ["crocodile", "elephant", "tiger"]
     }),
     createRankingPage({
@@ -441,24 +493,32 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-agile-animals",
         title: "Most Agile Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the most agile animals in the world, focusing on turning speed, body control, fast directional change, and movement precision across land, air, and water.",
+        headline: "100 Most Agile Animals",
+        seoTitle: "Most Agile Animals — Top 100 Ranked",
+        immediateQuestion: "What is the most agile animal?",
+        rankingFactors: [
+            "Directional change and body control",
+            "AnimalDex speed and intelligence profiles",
+            "Whether agility helps hunting, escape, or close-contact movement"
+        ],
+        description: "Most agile animals ranked: turning, braking, and body control across land, air, and water — not a recycled fastest-animals list.",
         category: "agility",
         searchIntents: [
+            "most agile animal",
             "most agile animals",
             "most agile animal in the world",
             "animals with the best agility",
-            "most agile predators",
             "animals that change direction fastest"
         ],
-        quickAnswer: "Agility is not just speed. Octopuses, peregrine falcons, dolphins, cheetahs, dragonflies, and jumping spiders all belong near the top depending on whether you mean aerial correction, underwater body control, or explosive land movement. The most honest answer depends on environment and movement style.",
+        quickAnswer: "Octopus is the strongest overall agility answer in this ranking because the whole body can redirect in real time. Peregrine falcon, dragonfly, dolphin, and cheetah lead other environments. Fastest is not the same as most agile.",
         introduction: [
-            "Agility is where a lot of shallow animal content falls apart. A fast animal is not automatically agile, and a very agile animal may not have the highest straight-line speed at all.",
-            "This ranking focuses on how well animals can redirect movement, stabilize under pressure, and stay effective in chaotic space. That makes it a better page for real biology than a recycled speed list."
+            "Agility is control: turning, braking, recovering, and staying effective in chaotic space. A high top speed does not automatically win this list.",
+            "The editorial top is pinned to animals with a clear agility case. The rest of the top 100 uses AnimalDex speed and intelligence profiles, with a boost when species-guide text points to fast, darting, or leaping movement."
         ],
         methodology: [
-            "Ranking emphasizes fast directional change, body control, recovery after movement, and the ability to remain effective while turning, twisting, braking, or re-accelerating.",
-            "Land, air, and water do not reward the same mechanics. The quick answer therefore names a top tier instead of pretending one movement system is automatically the winner everywhere.",
-            "Species rise when agility clearly improves hunting, escape, or close-contact performance, not just when they are famous for being fast."
+            "This ranking emphasizes directional change, body control, and whether agility improves hunting, escape, or close-contact performance.",
+            "Land, air, and water do not reward the same mechanics, so the page names a top tier by environment instead of one fake universal winner.",
+            "The remaining top 100 is filled from AnimalDex speed and intelligence profiles plus movement-related species-guide signals — not from a separate agility lab score."
         ],
         entries: [
             {rank: 1, speciesSlug: "octopus", primaryMetric: "Extreme body-control flexibility", shortReason: "Octopus may be the cleanest overall agility answer because its entire body can redirect, compress, and solve space problems in real time."},
@@ -609,7 +669,15 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-resilient-animals",
         title: "Most Resilient Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the most resilient animals in the world, focusing on recovery, stress tolerance, environmental toughness, and the ability to keep functioning under hard conditions.",
+        headline: "100 Most Resilient Animals",
+        seoTitle: "Most Resilient Animals — Top 100 Ranked",
+        immediateQuestion: "What is the most resilient animal?",
+        rankingFactors: [
+            "Environmental stress tolerance and recovery",
+            "Physical toughness without treating this as a combat list",
+            "AnimalDex rarity and dominance profiles plus habitat-stress signals"
+        ],
+        description: "Most resilient animals ranked by recovery, climate toughness, and staying functional under stress — not a copy of the strongest or most dangerous lists.",
         category: "resilience",
         searchIntents: [
             "most resilient animals",
@@ -618,15 +686,15 @@ const rankingPagesData: RankingPage[] = [
             "hardest animals to kill",
             "animals that survive harsh conditions"
         ],
-        quickAnswer: "Crocodiles, polar bears, wolverines, elephants, red kangaroos, sea cucumbers, axolotls, and green sea turtles all belong in the resilience conversation. The best answer depends on whether you mean injury recovery, climate toughness, long-term survival under stress, or the ability to keep functioning after punishment.",
+        quickAnswer: "Crocodile is the strongest overall resilience answer in this ranking. Polar bear and wolverine lead harsh-climate toughness; axolotl and sea cucumber lead recovery and regeneration. Resilience is not the same as strength.",
         introduction: [
-            "Resilience is broader than strength. It is about staying viable when the environment gets hard, when resources thin out, or when the body has to recover and continue.",
-            "That makes this a more careful ranking than a simple 'toughest animal' headline. The best entries are not always the flashiest fighters."
+            "Resilience is staying viable when the environment gets hard, resources thin out, or the body has to recover and continue. It is broader than raw power.",
+            "The editorial top is pinned. The rest of the top 100 uses AnimalDex rarity and dominance profiles, with a boost when species-guide text points to extreme habitats, regeneration, or long-term toughness."
         ],
         methodology: [
-            "Ranking balances environmental stress tolerance, physical toughness, recovery ability, and how well the species maintains function under extreme heat, cold, pressure, injury, or scarcity.",
-            "This is not a pure combat list. Animals can rank highly because of regeneration, endurance under ecological stress, or long-term durability in brutal habitats.",
-            "Because resilience can mean several different things, the quick answer names a top tier rather than forcing one shallow winner."
+            "This ranking balances environmental stress tolerance, physical toughness, recovery, and continued function under heat, cold, scarcity, or injury.",
+            "It is not a combat list. Regeneration, climate endurance, and long-term durability can outrank flashy fighters.",
+            "The remaining top 100 is filled from AnimalDex rarity and dominance profiles plus resilience-related species-guide signals."
         ],
         entries: [
             {rank: 1, speciesSlug: "crocodile", primaryMetric: "Extreme survival toughness", shortReason: "Crocodile is one of the clearest resilience answers because it pairs brutal durability with long-term ecological staying power."},
@@ -665,7 +733,15 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "animals-with-strongest-armor",
         title: "Animals with the Strongest Armor: Top 10 Ranked",
-        description: "A structured ranking of animals with the strongest armor, focusing on shells, scales, dermal protection, exoskeletons, and how well those defenses hold up in real pressure.",
+        headline: "100 Animals with the Strongest Armor",
+        seoTitle: "Animals with the Strongest Armor — Top 100 Ranked",
+        immediateQuestion: "Which animal has the strongest natural armor?",
+        rankingFactors: [
+            "Coverage and resistance to crushing or penetration",
+            "Whether the armor helps in real encounters",
+            "AnimalDex dominance and size profiles plus shell, scale, and exoskeleton signals"
+        ],
+        description: "Animals with the strongest natural armor, ranked by shells, scales, hide, and exoskeletons that actually protect — not just look impressive.",
         category: "armor",
         searchIntents: [
             "animals with the strongest armor",
@@ -674,15 +750,15 @@ const rankingPagesData: RankingPage[] = [
             "strongest shell animals",
             "animals with toughest protection"
         ],
-        quickAnswer: "If you want the cleanest overall armor headline, crocodiles, pangolins, green sea turtles, chambered nautiluses, and the toughest crustaceans belong near the top. The best answer depends on whether you mean thick body protection, shell strength, or compact defensive design.",
+        quickAnswer: "Crocodile is the strongest overall armor answer in this ranking because heavy dermal protection still works in real conflict. Pangolin and green sea turtle are the clearest scale-and-shell answers.",
         introduction: [
-            "Natural armor is not one thing. Some animals carry heavy shell protection, others rely on overlapping scales, and others turn a hard exoskeleton into close-range survivability.",
-            "This page ranks armor by how well it protects a real animal in real conditions, not by how visually impressive it looks."
+            "Natural armor is not one material. Some animals carry shells, others overlapping scales, others thick hide or a hard exoskeleton.",
+            "The editorial top is pinned to animals whose protection is biologically effective. The rest of the top 100 uses AnimalDex dominance and size profiles, boosted when species-guide text points to shells, scales, shields, or exoskeletons."
         ],
         methodology: [
-            "Ranking balances coverage, resistance to penetration or crushing, defensive usefulness during actual encounters, and how much the armor contributes to survival without destroying mobility.",
-            "Armor is not rewarded just for being thick. It has to be biologically effective when the animal is actually under pressure.",
-            "The page includes very different body plans because shell armor, plated scales, and reinforced exoskeletons solve the same problem in different ways."
+            "Ranking balances coverage, resistance to crushing or penetration, and whether the armor helps in a real encounter without making the animal useless.",
+            "Thickness alone is not enough. Armor has to be effective under pressure.",
+            "The remaining top 100 is filled from AnimalDex dominance and size profiles plus armor-related species-guide signals."
         ],
         entries: [
             {rank: 1, speciesSlug: "crocodile", primaryMetric: "Heavy dermal armor", shortReason: "Crocodile is the clearest top answer because its armored body still remains brutally functional in real conflict."},
@@ -715,7 +791,7 @@ const rankingPagesData: RankingPage[] = [
             "octopus-vs-crab",
             "jaguar-vs-crocodile"
         ],
-        relatedRankingSlugs: ["animals-with-strongest-bite-force", "most-resilient-animals"],
+        relatedRankingSlugs: ["strongest-animals", "most-resilient-animals"],
         systemsSpeciesSlugs: ["crocodile", "sunda-pangolin", "mantis-shrimp"]
     }),
     createRankingPage({
@@ -777,7 +853,15 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "animals-with-best-teamwork",
         title: "Animals with the Best Teamwork: Top 10 Ranked",
-        description: "A structured ranking of animals with the best teamwork, focusing on coordinated hunting, task splitting, communication, and group problem solving.",
+        headline: "100 Animals with the Best Teamwork",
+        seoTitle: "Animals with the Best Teamwork — Top 100 Ranked",
+        immediateQuestion: "Which animals have the best teamwork?",
+        rankingFactors: [
+            "Group hunting, shared labor, and role coordination",
+            "AnimalDex intelligence and dominance profiles",
+            "Pack, pod, colony, and cooperation signals from species guides"
+        ],
+        description: "Animals with the best teamwork, ranked by coordinated hunting, shared labor, and group problem solving — including pack hunters and social insects.",
         category: "teamwork",
         searchIntents: [
             "animals with the best teamwork",
@@ -786,15 +870,15 @@ const rankingPagesData: RankingPage[] = [
             "animals that work together best",
             "best pack hunters"
         ],
-        quickAnswer: "Orcas, wolves, African wild dogs, dolphins, lions, spotted hyenas, elephants, meerkats, leafcutter ants, and honey bees all belong in the teamwork conversation. The best answer depends on whether you care most about hunting coordination, collective labor, communication, or social problem solving.",
+        quickAnswer: "Orca is the strongest overall teamwork answer in this ranking because pod strategy and execution scale together. Wolf and African wild dog lead pack hunting; leafcutter ant and honey bee lead collective labor.",
         introduction: [
-            "Teamwork is not just living in a group. The animals that rank highest here are the ones that turn group structure into real performance gains.",
-            "Some do it through coordinated hunting. Others through shared labor, defense, childcare, or task specialization. The list rewards actual cooperative payoff."
+            "Teamwork is not just living in a group. The animals that rank here turn group structure into hunting success, shared labor, defense, or task specialization.",
+            "The editorial top is pinned. The rest of the top 100 uses AnimalDex intelligence and dominance profiles, boosted when species-guide text points to packs, pods, colonies, or cooperation."
         ],
         methodology: [
-            "Ranking balances communication quality, role coordination, collective hunting or labor success, and whether the group does things individuals clearly could not do alone.",
-            "The page includes both vertebrate and insect systems because teamwork does not require mammal-style social intelligence to be biologically impressive.",
-            "Because cooperation shows up in different ways, the quick answer names a top tier rather than forcing one simplistic winner."
+            "Ranking balances communication, role coordination, and whether the group does things individuals clearly could not do alone.",
+            "Vertebrate hunters and social insects both belong, because teamwork does not require mammal-style social intelligence to be impressive.",
+            "The remaining top 100 is filled from AnimalDex intelligence and dominance profiles plus cooperation-related species-guide signals."
         ],
         entries: [
             {rank: 1, speciesSlug: "orca", primaryMetric: "Pod-level coordinated strategy", shortReason: "Orca is the clearest top teamwork answer because group intelligence and execution scale together so effectively."},
@@ -827,30 +911,39 @@ const rankingPagesData: RankingPage[] = [
             "wolf-vs-african-wild-dog",
             "orca-vs-great-white-shark"
         ],
-        relatedRankingSlugs: ["best-hunters", "smartest-animals"],
+        relatedRankingSlugs: ["smartest-animals", "most-adaptable-animals"],
         systemsSpeciesSlugs: ["orca", "wolf", "african-wild-dog"]
     }),
     createRankingPage({
         slug: "most-adaptable-animals",
         title: "Most Adaptable Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the most adaptable animals in the world, focusing on habitat flexibility, behavioral adjustment, problem solving, and success in changing conditions.",
+        headline: "100 Most Adaptable Animals",
+        seoTitle: "Most Adaptable Animals — Top 100 Ranked",
+        immediateQuestion: "What is the most adaptable animal?",
+        rankingFactors: [
+            "Habitat and diet flexibility",
+            "Behavioral adjustment in changing conditions",
+            "AnimalDex intelligence and dominance profiles plus generalist and urban signals"
+        ],
+        description: "Most adaptable animals ranked by habitat flexibility, behavioral range, and success in changing conditions — including the current AnimalDex number one.",
         category: "adaptability",
         searchIntents: [
             "most adaptable animals",
-            "animals that adapt best",
-            "most versatile animals",
-            "animals that survive in many habitats",
-            "most adaptable predators"
+            "most adaptable animal",
+            "adaptable animals",
+            "what animal is the most adaptable",
+            "what animal is the best at adapting",
+            "animals that survive in many habitats"
         ],
-        quickAnswer: "Red foxes, crows, wolves, peregrine falcons, leopards, octopuses, dolphins, American bullfrogs, lionfish, and crocodiles all have strong cases for being among the most adaptable animals. The best answer depends on whether you mean urban success, habitat flexibility, behavioral plasticity, or survival in fast-changing environments.",
+        quickAnswer: "Red fox ranks #1 in this AnimalDex list because it stays effective across wild, rural, and human-modified landscapes. Crow, wolf, peregrine falcon, and leopard are close behind for learning, range, or hunting flexibility.",
         introduction: [
-            "Adaptability is one of the strongest ranking categories for AnimalDex because it rewards real biology instead of clickbait extremes. Animals rank well here when they keep functioning as conditions change.",
-            "That can mean shifting diet, using new habitat, learning quickly, or staying effective around human-modified environments."
+            "Adaptability is staying effective as conditions change: new habitat, new diet, new pressure, or life next to people.",
+            "The editorial top is pinned, starting with red fox. The rest of the top 100 uses AnimalDex intelligence and dominance profiles, boosted when species-guide text points to generalists, urban success, or wide range."
         ],
         methodology: [
-            "Ranking balances habitat range, diet or behavior flexibility, problem-solving ability, and evidence that the species remains effective under new or changing conditions.",
-            "A highly specialized animal can still be brilliant, but it will not rank as highly here unless it shows real adjustment across contexts.",
-            "The quick answer avoids naming one fake universal winner because urban adaptability, marine adaptability, and broad ecological adaptability do not look identical."
+            "Ranking balances habitat range, diet or behavior flexibility, problem solving, and evidence the species still works under new conditions.",
+            "A specialist can be brilliant and still rank lower here unless it actually adjusts across contexts.",
+            "The remaining top 100 is filled from AnimalDex intelligence and dominance profiles plus adaptability-related species-guide signals. Urban success, marine flexibility, and broad ecological range are not identical skills."
         ],
         entries: [
             {rank: 1, speciesSlug: "red-fox", primaryMetric: "Human-edge and habitat flexibility", shortReason: "Red fox is one of the cleanest adaptability answers because it thrives across wild, rural, and human-modified landscapes."},
@@ -1489,9 +1582,39 @@ export function getRankingPage(slug: string) {
     return rankingPages.find((page) => page.slug === slug);
 }
 
+export function getRankingTableSize(page: RankingPage) {
+    return page.statRankingKey ? page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES : MIN_RANKING_TABLE_ENTRIES;
+}
+
+export function getRankingHeadline(page: RankingPage) {
+    return page.headline || page.title.replace(/: Top 10 Ranked$/i, "");
+}
+
+export function getRankingSeoTitle(page: RankingPage) {
+    if (page.seoTitle) {
+        return page.seoTitle;
+    }
+
+    return `${getRankingHeadline(page)}: Top ${getRankingTableSize(page)} Ranked`;
+}
+
 export function getRankingTierListTitle(page: RankingPage) {
-    const tableSize = page.statRankingKey ? page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES : MIN_RANKING_TABLE_ENTRIES;
-    return page.title.replace(/: Top 10 Ranked$/i, `: Top ${tableSize} Tier List`);
+    return getRankingHeadline(page);
+}
+
+export function sortRankingPagesForHub(pages: RankingPage[] = rankingPages) {
+    const featuredIndex = new Map<string, number>(FEATURED_TIER_LIST_SLUGS.map((slug, index) => [slug, index]));
+
+    return [...pages].sort((left, right) => {
+        const leftRank = featuredIndex.get(left.slug) ?? Number.MAX_SAFE_INTEGER;
+        const rightRank = featuredIndex.get(right.slug) ?? Number.MAX_SAFE_INTEGER;
+
+        if (leftRank !== rightRank) {
+            return leftRank - rightRank;
+        }
+
+        return left.title.localeCompare(right.title);
+    });
 }
 
 function clampScore(value: number) {

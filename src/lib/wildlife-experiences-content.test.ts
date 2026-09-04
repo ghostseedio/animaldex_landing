@@ -73,10 +73,10 @@ test("listing pages request in the app and do not invent checkout", () => {
 });
 
 test("internal links expose the new route", () => {
-    const footer = readRepo("src/app/[locale]/(composited)/_components/footer.tsx");
+    const nav = readRepo("src/data/public-navigation.ts");
     const marketplace = readRepo("src/app/[locale]/(composited)/wildlife-guides/page.tsx");
     const home = readRepo("src/app/[locale]/(composited)/(home)/page.tsx");
-    assert.match(footer, /wildlife-experiences/);
+    assert.match(nav, /wildlife-experiences/);
     assert.match(marketplace, /wildlife-experiences/);
     assert.match(home, /wildlife-experiences/);
 });

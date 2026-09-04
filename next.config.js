@@ -12,6 +12,19 @@ module.exports = withNextIntl({
     },
     async redirects() {
         return [
+            // next-intl `as-needed` uses 307 for /en → unprefixed English. Google can
+            // keep ranking those URLs. Permanent redirects collapse them to the
+            // canonical unprefixed paths before locale middleware runs.
+            {
+                source: "/en",
+                destination: "/",
+                permanent: true
+            },
+            {
+                source: "/en/:path*",
+                destination: "/:path*",
+                permanent: true
+            },
             {
                 source: "/privacy",
                 destination: "/legal/privacy",
@@ -23,8 +36,13 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/animal-meanings",
-                destination: "/:locale/animal-lessons",
+                source: "/animal-meanings",
+                destination: "/animal-lessons",
+                permanent: true
+            },
+            {
+                source: "/id/animal-meanings",
+                destination: "/id/animal-lessons",
                 permanent: true
             },
             {
@@ -38,13 +56,13 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/principles",
-                destination: "/:locale/powers",
+                source: "/id/principles",
+                destination: "/id/powers",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/principles/:path*",
-                destination: "/:locale/powers/:path*",
+                source: "/id/principles/:path*",
+                destination: "/id/powers/:path*",
                 permanent: true
             },
             {
@@ -58,13 +76,13 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/qualities",
-                destination: "/:locale/powers",
+                source: "/id/qualities",
+                destination: "/id/powers",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/qualities/:path*",
-                destination: "/:locale/powers/:path*",
+                source: "/id/qualities/:path*",
+                destination: "/id/powers/:path*",
                 permanent: true
             },
             {
@@ -78,13 +96,13 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/rankings",
-                destination: "/:locale/tier-list",
+                source: "/id/rankings",
+                destination: "/id/tier-list",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/rankings/:path*",
-                destination: "/:locale/tier-list/:path*",
+                source: "/id/rankings/:path*",
+                destination: "/id/tier-list/:path*",
                 permanent: true
             },
             {
@@ -108,23 +126,23 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/journal",
-                destination: "/:locale/blog",
+                source: "/id/journal",
+                destination: "/id/blog",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/journal/feed.xml",
-                destination: "/:locale/blog/feed.xml",
+                source: "/id/journal/feed.xml",
+                destination: "/id/blog/feed.xml",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/journal/how-to-identify-animals-from-a-photo",
-                destination: "/:locale/blog/how-to-identify-animals-in-the-wild-2026-guide",
+                source: "/id/journal/how-to-identify-animals-from-a-photo",
+                destination: "/id/blog/how-to-identify-animals-in-the-wild-2026-guide",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/journal/:slug",
-                destination: "/:locale/blog/:slug",
+                source: "/id/journal/:slug",
+                destination: "/id/blog/:slug",
                 permanent: true
             },
             {
@@ -133,8 +151,8 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/blog/legendary-earth-beasts",
-                destination: "/:locale/legendary-earth-beasts",
+                source: "/id/blog/legendary-earth-beasts",
+                destination: "/id/legendary-earth-beasts",
                 permanent: true
             },
             {
@@ -143,18 +161,38 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/blog/capture-animals-app",
-                destination: "/:locale/capture-animals-app",
+                source: "/id/blog/capture-animals-app",
+                destination: "/id/capture-animals-app",
                 permanent: true
             },
             {
                 source: "/animal-identification-app",
-                destination: "/best-animal-identification-app",
+                destination: "/animal-identifier-app",
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/animal-identification-app",
-                destination: "/:locale/best-animal-identification-app",
+                source: "/id/animal-identification-app",
+                destination: "/id/animal-identifier-app",
+                permanent: true
+            },
+            {
+                source: "/ai-animal-scanner",
+                destination: "/animal-identifier-app",
+                permanent: true
+            },
+            {
+                source: "/id/ai-animal-scanner",
+                destination: "/id/animal-identifier-app",
+                permanent: true
+            },
+            {
+                source: "/use-cases/ai-animal-scanner-identification-app",
+                destination: "/animal-identifier-app",
+                permanent: true
+            },
+            {
+                source: "/id/use-cases/ai-animal-scanner-identification-app",
+                destination: "/id/animal-identifier-app",
                 permanent: true
             },
             {
@@ -163,8 +201,8 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/real-life-pokedex",
-                destination: "/:locale/pokemon-like-animal-game",
+                source: "/id/real-life-pokedex",
+                destination: "/id/pokemon-like-animal-game",
                 permanent: true
             },
             {
@@ -173,8 +211,8 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/:locale(en|id)/wildlife-spotting-app",
-                destination: "/:locale/collect-real-animals-app",
+                source: "/id/wildlife-spotting-app",
+                destination: "/id/collect-real-animals-app",
                 permanent: true
             }
         ];

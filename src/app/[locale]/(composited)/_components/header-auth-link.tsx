@@ -26,7 +26,7 @@ export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = fa
             <Link
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/20 bg-white/[0.04] px-3 text-sm font-bold text-white transition hover:border-primary-400/50 hover:bg-white/[0.07] md:flex"
+                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition hover:border-primary-400/50 hover:text-primary-100"
             >
                 {label}
             </Link>
@@ -36,7 +36,7 @@ export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = fa
     return (
         <Link
             href={href}
-            className="hidden rounded-2xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100 md:inline-flex"
+            className="hidden rounded-2xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100 xl:inline-flex"
         >
             {label}
         </Link>

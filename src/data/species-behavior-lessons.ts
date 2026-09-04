@@ -227,7 +227,7 @@ async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLe
     }
 
     const searchParams = new URLSearchParams({
-        select: "landing_page_slug,display_name,normalized_identity_key,generation_metadata,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
+        select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
         or: `(landing_page_slug.eq.${slug},normalized_identity_key.eq.${slug.replace(/-/g, "_")})`,
         core_lesson: "not.is.null",
         limit: "1"
@@ -379,7 +379,7 @@ async function fetchBehaviorLessonsFromSupabase(): Promise<SpeciesBehaviorLesson
 
     while (true) {
         const searchParams = new URLSearchParams({
-            select: "landing_page_slug,display_name,normalized_identity_key,generation_metadata,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
+            select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
             core_lesson: "not.is.null",
             principle_name: "not.is.null",
             landing_page_slug: "not.is.null",

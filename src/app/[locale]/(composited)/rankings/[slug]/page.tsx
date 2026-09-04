@@ -13,7 +13,14 @@ import TierListSummary from "@/app/[locale]/(composited)/rankings/_components/ti
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import {getChallenge} from "@/data/challenges";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import {getExpandedRankingEntries, getRankingPage, getRankingTierListTitle, getRelatedRankings, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import {
+    getExpandedRankingEntries,
+    getRankingHeadline,
+    getRankingPage,
+    getRankingSeoTitle,
+    getRelatedRankings,
+    RANKING_CANONICAL_BASE_PATH
+} from "@/data/rankings";
 import {getSpeciesBySlug, speciesEntries, SpeciesEntry} from "@/data/species";
 import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
@@ -26,6 +33,8 @@ type RankingPageProps = {
         slug: string;
     };
 };
+
+export const revalidate = 3600;
 
 type RelatedChallengeCard = {
     slug: string;
@@ -106,7 +115,7 @@ export async function generateMetadata({params}: RankingPageProps): Promise<Meta
     return buildContentMetadata({
         locale,
         pathname: `${RANKING_CANONICAL_BASE_PATH}/${ranking.slug}`,
-        title: getRankingTierListTitle(ranking),
+        title: getRankingSeoTitle(ranking),
         description: ranking.description,
         keywords,
         featuredImage: ranking.featuredImage,
@@ -145,7 +154,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     }
 
     const entries = resolvedEntries.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-    const title = getRankingTierListTitle(ranking);
+    const title = getRankingHeadline(ranking);
     const domainLabels = {
         air: t("domainAir"),
         water: t("domainWater"),
@@ -186,10 +195,35 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         });
     const relatedRankings = getRelatedRankings(ranking.slug, 3).map((page) => ({
         slug: page.slug,
-        title: getRankingTierListTitle(page),
+        title: getRankingHeadline(page),
         description: page.description,
         categoryLabel: t(`categories.${page.category}`)
     }));
+    const leader = entries[0];
+    const immediateAnswer = leader
+        ? `${leader.species.name} ranks #1 in this AnimalDex list. ${leader.shortReason}`
+        : ranking.quickAnswer;
+    const fastestHighlights = ranking.slug === "fastest-animals"
+        ? [
+            {label: t("fastestFlyingAnimal"), speciesSlug: "peregrine-falcon"},
+            {label: t("fastestLandAnimal"), speciesSlug: "cheetah"},
+            {label: t("fastestMarineAnimal"), speciesSlug: "sailfish"}
+        ].flatMap((item) => {
+            const species = getSpeciesBySlug(item.speciesSlug);
+            const entry = ranking.entries.find((ranked) => ranked.speciesSlug === item.speciesSlug);
+
+            if (!species || !entry) {
+                return [];
+            }
+
+            return [{
+                ...item,
+                speciesName: species.name,
+                metric: entry.primaryMetric,
+                href: `/animals/${species.slug}`
+            }];
+        })
+        : [];
     const ctaSupportItems = [
         t("ctaSupportOne"),
         t("ctaSupportTwo"),
@@ -293,13 +327,41 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 methodologyLabel={t("methodologyLink")}
             />
 
+            {ranking.introduction.length > 0 ? (
+                <section className="max-w-4xl">
+                    {ranking.introduction.map((paragraph) => (
+                        <p key={paragraph} className="mt-4 text-base leading-7 text-ink-200 first:mt-0 md:text-lg">
+                            {paragraph}
+                        </p>
+                    ))}
+                </section>
+            ) : null}
+
             <TierListSummary
-                title={t("quickAnswerTitle")}
-                answer={ranking.quickAnswer}
-                clarification={ranking.breakdown[0] ?? t("summaryClarification")}
+                title={ranking.immediateQuestion || t("quickAnswerTitle")}
+                answer={immediateAnswer}
+                clarification={ranking.quickAnswer}
                 readSpeciesLabel={t("readSpecies")}
                 items={tableItems.slice(0, 3)}
             />
+
+            {fastestHighlights.length > 0 ? (
+                <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
+                    <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("fastestByEnvironmentTitle")}</h2>
+                    <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("fastestByEnvironmentDescription")}</p>
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        {fastestHighlights.map((item) => (
+                            <article key={item.speciesSlug} className="rounded-md border border-line-400 bg-canvas-900/40 p-4">
+                                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-200">{item.label}</h3>
+                                <Link href={item.href} className="mt-2 block font-display text-2xl font-bold text-white transition-colors hover:text-primary-100">
+                                    {item.speciesName}
+                                </Link>
+                                <p className="mt-2 text-sm leading-6 text-ink-300">{item.metric}</p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            ) : null}
 
             <RankingTable
                 title={t("tableTitle")}
@@ -329,6 +391,8 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 title={t("methodologyTitle")}
                 description={t("methodologyDescription")}
                 items={ranking.methodology}
+                factorsTitle={t("rankingFactorsTitle")}
+                factors={ranking.rankingFactors}
             />
 
             <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">

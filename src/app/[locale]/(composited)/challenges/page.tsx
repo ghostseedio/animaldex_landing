@@ -1,4 +1,5 @@
 import {redirect} from "next/navigation";
+import {getLocalePath} from "@/lib/site";
 
 type ChallengesRedirectPageProps = {
     params: {
@@ -26,5 +27,5 @@ function buildQueryString(searchParams?: ChallengesRedirectPageProps["searchPara
 }
 
 export default function ChallengesRedirectPage({params, searchParams}: ChallengesRedirectPageProps) {
-    redirect(`/${params.locale}/comparisons${buildQueryString(searchParams)}`);
+    redirect(`${getLocalePath(params.locale, "/comparisons")}${buildQueryString(searchParams)}`);
 }

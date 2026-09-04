@@ -1,6 +1,7 @@
 import {MetadataRoute} from "next";
 import {localeConfig} from "@/i18n";
-import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
+import {getAbsoluteUrl} from "@/lib/site";
+import {serializeSitemapXml, uniqueSitemapEntries} from "@/lib/sitemap-xml";
 import {useCases} from "@/data/use-cases";
 import {collectorPages} from "@/data/collector-pages";
 import {getManagedBlogPosts, getManagedPages} from "@/lib/admin-content";
@@ -64,27 +65,12 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         })
     ]);
 
-    const guideEntries: MetadataRoute.Sitemap = [
-        {url: new URL("/wildlife-guides", getSiteUrl()).toString()},
-        {url: new URL("/wildlife-experiences", getSiteUrl()).toString()},
-        ...buildGuideSitemapPaths(guideListings).map((path) => {
-            const listing = guideListings.find((item) => guidePath(item) === path);
-            return {url: new URL(path, getSiteUrl()).toString(), ...(listing ? {lastModified: new Date(listing.updated_at)} : {})};
-        })
-    ];
-    const publicLegalEntries: MetadataRoute.Sitemap = [
-        {
-            url: new URL("/legal/privacy", getSiteUrl()).toString()
-        },
-        {
-            url: new URL("/legal/terms", getSiteUrl()).toString()
-        },
-        {
-            url: new URL("/legal/refunds", getSiteUrl()).toString()
-        }
-    ];
-
+    const guideListingsByPath = new Map(guideListings.map((item) => [guidePath(item), item]));
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
+        // Keep /id in the sitemap as a real Indonesian homepage. Do not request
+        // indexing of /id copies of English article bodies; those URLs still
+        // exist for the language toggle and hreflang, but they compete with
+        // the successful English canonicals in GSC.
         if (locale !== localeConfig.defaultLocale) {
             return [{url: getAbsoluteUrl(locale)}];
         }
@@ -102,6 +88,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/creator-rewards")},
             {url: getAbsoluteUrl(locale, "/sponsor-a-challenge")},
             {url: getAbsoluteUrl(locale, "/wildlife-experiences")},
+            {url: getAbsoluteUrl(locale, "/wildlife-guides")},
             {url: getAbsoluteUrl(locale, "/branding")},
             {url: getAbsoluteUrl(locale, "/comparisons")},
             {url: getAbsoluteUrl(locale, "/animal-wisdom")},
@@ -111,7 +98,10 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},
             {url: getAbsoluteUrl(locale, "/animal-lessons")},
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
-            {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)}
+            {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
+            {url: getAbsoluteUrl(locale, "/legal/privacy")},
+            {url: getAbsoluteUrl(locale, "/legal/terms")},
+            {url: getAbsoluteUrl(locale, "/legal/refunds")}
         ];
 
         const useCaseEntries = useCases.map((entry) => ({
@@ -205,6 +195,13 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, getSupportArticlePath(article)),
             lastModified: new Date(article.updatedAt)
         }));
+        const guideListingEntries = buildGuideSitemapPaths(guideListings).map((path) => {
+            const listing = guideListingsByPath.get(path);
+            return {
+                url: getAbsoluteUrl(locale, path),
+                ...(listing ? {lastModified: new Date(listing.updated_at)} : {})
+            };
+        });
 
         return [
             ...staticEntries,
@@ -227,44 +224,12 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             legendaryEarthBeastHubEntry,
             ...legendaryEarthBeastPageEntries,
             ...discoverPostEntries,
-            ...supportArticleEntries
+            ...supportArticleEntries,
+            ...guideListingEntries
         ];
     });
 
-    return [
-        ...publicLegalEntries,
-        ...guideEntries,
-        ...localizedEntries
-    ];
+    return uniqueSitemapEntries(localizedEntries);
 }
 
-function escapeXml(value: string) {
-    return value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&apos;");
-}
-
-export function serializeSitemapXml(entries: MetadataRoute.Sitemap) {
-    const urls = entries.map((entry) => {
-        const extended = entry as MetadataRoute.Sitemap[number] & {
-            changeFrequency?: string;
-            priority?: number;
-        };
-        const lastModified = extended.lastModified
-            ? `<lastmod>${new Date(extended.lastModified).toISOString()}</lastmod>`
-            : "";
-        const changeFrequency = extended.changeFrequency
-            ? `<changefreq>${extended.changeFrequency}</changefreq>`
-            : "";
-        const priority = extended.priority !== undefined
-            ? `<priority>${extended.priority}</priority>`
-            : "";
-
-        return `<url><loc>${escapeXml(extended.url)}</loc>${lastModified}${changeFrequency}${priority}</url>`;
-    }).join("");
-
-    return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;
-}
+export {serializeSitemapXml, uniqueSitemapEntries} from "@/lib/sitemap-xml";

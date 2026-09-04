@@ -359,7 +359,8 @@ const useCaseData: UseCaseLanding[] = [
         whyDifferent: [
             "AnimalDex emphasizes clues and context, not false certainty from one image.",
             "Users can revisit and compare results over time inside a collection structure.",
-            "The same app supports breed curiosity and broader wildlife learning."
+            "The same app supports breed curiosity and broader wildlife learning.",
+            "Links to pet identification and broader animal identification resources for complete coverage."
         ],
         sections: [
             {
@@ -761,7 +762,7 @@ const useCaseData: UseCaseLanding[] = [
             href: "/wildlife-experiences?category=herping#experiences",
             event: "herping_to_wildlife_experiences"
         },
-        relatedSlugs: ["import-instagram-wildlife-photos", "wildlife-photography-companion-app"],
+        relatedSlugs: ["import-instagram-wildlife-photos", "wildlife-photography-companion-app", "identify-reptiles"],
         limitationNote: "Some herps are indexed at group level when a species-level card is not the honest catalog result. AnimalDex will not invent a species name to look more precise.",
         keyActions: [
             "Log field finds as real captures, not throwaway IDs",

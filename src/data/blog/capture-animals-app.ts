@@ -103,7 +103,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "AnimalDex brings those ideas together. You are not just identifying an animal. You are building a collection of real creatures you have actually seen."
             ],
             inlineLinks: [
-                {text: "animal identification app", slug: "animal-identification-app", href: "/animal-identification-app"},
+                {text: "animal identification app", slug: "animal-identification-app", href: "/animal-identifier-app"},
                 {text: "wildlife spotting app", slug: "wildlife-spotting-app", href: "/wildlife-spotting-app"},
                 {text: "real-life Pokédex", slug: "real-life-pokedex", href: "/real-life-pokedex"}
             ]
@@ -162,7 +162,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "The goal is not only: what animal is this? It is also: can I collect it? How rare is it? What does it teach me? What animals have I found so far? What should I try to capture next?",
                 "That makes AnimalDex useful for learning, but also fun for long-term exploration."
             ],
-            inlineLinks: [{text: "animal identification app", slug: "animal-identification-app", href: "/animal-identification-app"}]
+            inlineLinks: [{text: "animal identification app", slug: "animal-identification-app", href: "/animal-identifier-app"}]
         },
         {
             title: "What Animals Can You Capture?",
@@ -250,7 +250,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "A capture animals app goes further: what animal is this, and can I add it to my collection?",
                 "That collection layer is what makes AnimalDex different. It gives each sighting a place to live. Instead of one-off identification, every animal becomes part of your progress."
             ],
-            inlineLinks: [{text: "animal identification app", slug: "animal-identification-app", href: "/animal-identification-app"}]
+            inlineLinks: [{text: "animal identification app", slug: "animal-identification-app", href: "/animal-identifier-app"}]
         },
         {
             title: "Capture Animals App vs Wildlife Journal",

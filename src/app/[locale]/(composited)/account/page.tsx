@@ -1,4 +1,5 @@
 import {redirect} from "next/navigation";
+import {Metadata} from "next";
 import AccountLoginForm from "@/app/[locale]/(composited)/account/account-login-form";
 import {getAuthenticatedUserId} from "@/data/user-captures";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -10,6 +11,11 @@ type AccountPageProps = {
     searchParams?: {
         next?: string;
     };
+};
+
+export const metadata: Metadata = {
+    title: "Sign in",
+    robots: {index: false, follow: false}
 };
 
 function safeRedirectTarget(next: string | undefined, locale: string) {

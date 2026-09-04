@@ -1,4 +1,5 @@
 import {getLocale, getTranslations} from "next-intl/server";
+import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Image from "next/image";
@@ -20,14 +21,17 @@ import {default as downloads} from "@/data/downloads.json";
 import {localisePath} from "@/loaders/path";
 import {unsafelyLoadSVG} from "@/loaders/svg";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
-import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
+import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 import {socialProfileUrlList} from "@/lib/social-links";
+import {localeConfig} from "@/i18n";
+import {loadLocaleMessages} from "@/loaders/locale";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
 import {signHomeFeatureCaptureImages} from "@/lib/home-feature-capture-images";
 import {getRecentPublicCaptures} from "@/data/discover-timeline";
+import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
@@ -49,6 +53,37 @@ const animalBackgroundImages = [
 ];
 
 export const revalidate = 300;
+
+type HomePageProps = {
+    params: {locale: string};
+};
+
+export async function generateMetadata({params}: HomePageProps): Promise<Metadata> {
+    const locale = localeConfig.locales.includes(params.locale) ? params.locale : localeConfig.defaultLocale;
+    const messages = await loadLocaleMessages(locale);
+    const meta = (messages.meta || {}) as Record<string, unknown>;
+    const fullTitle = typeof meta.fullTitle === "string" ? meta.fullTitle : "AnimalDex";
+    const description = typeof meta.description === "string" ? meta.description : fullTitle;
+    const canonicalPath = getLocalePath(locale);
+
+    return {
+        alternates: {
+            canonical: canonicalPath,
+            languages: localeConfig.locales.reduce((acc, localeItem) => {
+                acc[localeItem] = getLocalePath(localeItem);
+                return acc;
+            }, {
+                "x-default": getLocalePath(localeConfig.defaultLocale)
+            } as Record<string, string>)
+        },
+        openGraph: {
+            url: canonicalPath,
+            locale: getMetadataLocale(locale),
+            title: fullTitle,
+            description
+        }
+    };
+}
 
 export default async function Home() {
     const timer = createDevRequestTimer("home.page");
@@ -126,7 +161,7 @@ export default async function Home() {
         },
         {
             id: "rareAnimals",
-            href: "/rankings/rarest-animals",
+            href: `${RANKING_CANONICAL_BASE_PATH}/rarest-animals`,
             image: "/images/blog/black-rhinoceros-symbolism/black-rhinoceros-symbolism-hero.webp",
             layout: "small"
         },

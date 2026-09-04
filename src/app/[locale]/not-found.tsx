@@ -26,4 +26,5 @@ export default function ErrorNotFound() {
 
 export const metadata: Metadata = {
     title: "404",
-}
+    robots: {index: false, follow: false}
+};

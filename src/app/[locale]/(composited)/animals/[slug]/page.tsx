@@ -8,10 +8,22 @@ import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-ca
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/species-detail-tabs";
-import SpeciesFieldGuideAccordion from "@/app/[locale]/(composited)/animals/[slug]/species-field-guide-accordion";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
+import SpeciesEncyclopediaNav from "@/app/[locale]/(composited)/animals/[slug]/species-encyclopedia-nav";
+import SpeciesEncyclopediaAnalytics from "@/app/[locale]/(composited)/animals/[slug]/species-encyclopedia-analytics";
+import SpeciesAtAGlanceCard from "@/app/[locale]/(composited)/animals/[slug]/species-at-a-glance";
+import SpeciesUnderstandGuide, {type UnderstandGuideSection} from "@/app/[locale]/(composited)/animals/[slug]/species-understand-guide";
+import SpeciesAnimalPowerGuide from "@/app/[locale]/(composited)/animals/[slug]/species-animal-power-guide";
+import SpeciesAskAnimalDex from "@/app/[locale]/(composited)/animals/[slug]/species-ask-animaldex";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
+import {getEnhancedAnimalPowerProfile, type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
+import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
+import {buildSpeciesAskSuggestions, SPECIES_ASK_DAILY_LIMITS, type SpeciesAskGrounding} from "@/lib/species-ask";
+import {buildSpeciesAtAGlance, speciesHasSubstantiveFieldGuide} from "@/lib/species-field-guide";
+import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
+import {buildComparisonSlug} from "@/lib/comparison-slug";
 import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
@@ -342,11 +354,22 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         tags: entry.searchIntents
     });
 
-    return entry.databaseSource && !entry.databaseSource.seoIndexable
-        ? {...metadata, robots: {index: false, follow: true}}
-        : shouldNoindexLifeStageAliasSlug(slug, entry.slug)
-            ? {...metadata, robots: {index: false, follow: true}}
-            : metadata;
+    const indexable = speciesHasSubstantiveFieldGuide({
+        name: entry.name,
+        summary: entry.analysis.summary,
+        habitat: entry.analysis.habitat,
+        nativeRange: entry.analysis.nativeRange,
+        identification: entry.analysis.identification,
+        behaviorTraits: entry.premiumDetails.behaviorTraits,
+        interestingFacts: entry.premiumDetails.whyInteresting,
+        diet: entry.databaseSource?.fieldGuide.dietSummary ?? null,
+        predators: entry.databaseSource?.fieldGuide.predatorsSummary ?? null,
+        sleepPattern: entry.databaseSource?.fieldGuide.sleepPattern ?? null,
+        lifespan: entry.databaseSource?.fieldGuide.lifespanEstimate ?? null
+    }) && !(entry.databaseSource && !entry.databaseSource.seoIndexable)
+        && !shouldNoindexLifeStageAliasSlug(slug, entry.slug);
+
+    return indexable ? metadata : {...metadata, robots: {index: false, follow: true}};
 }
 
 export default async function SpeciesPage({params}: SpeciesPageProps) {
@@ -381,7 +404,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const relatedChallenges = await getMergedChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
-    const principleProfile = await resolveSpeciesBehaviorProfile(entry.slug);
+    const [principleProfile, enhancedPower] = await Promise.all([
+        resolveSpeciesBehaviorProfile(entry.slug),
+        getEnhancedAnimalPowerProfile(entry.speciesProfileId)
+    ]);
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
     const primaryQualityHub = primaryQualitySlug ? await getPrincipleHubBySlug(primaryQualitySlug) : null;
@@ -463,9 +489,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
                 return [otherSlug, {
                     challengeSlug: challenge.slug,
+                    otherSlug,
                     otherName: otherSpecies.name
                 }] as const;
-            }).filter((item): item is readonly [string, {challengeSlug: string; otherName: string}] => Boolean(item))
+            }).filter((item): item is readonly [string, {challengeSlug: string; otherSlug: string; otherName: string}] => Boolean(item))
         ).values()
     ).slice(0, 4);
     const ctaSupportItems = [
@@ -536,57 +563,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             }
         ]
     };
-    const principleBreadcrumbSchema = principleProfile ? {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: principleProfile.hasLessonPage
-            ? [
-                {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: getAbsoluteUrl(locale)
-                },
-                {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Animal Lessons",
-                    item: getAbsoluteUrl(locale, "/animal-lessons")
-                },
-                {
-                    "@type": "ListItem",
-                    position: 3,
-                    name: entry.name,
-                    item: getAbsoluteUrl(locale, `/animal-lessons/${entry.slug}`)
-                }
-            ]
-            : [
-                {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: getAbsoluteUrl(locale)
-                },
-                {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Powers",
-                    item: getAbsoluteUrl(locale, "/powers")
-                },
-                ...(primaryQualitySlug ? [{
-                    "@type": "ListItem",
-                    position: 3,
-                    name: primaryQuality ?? principleProfile.principle,
-                    item: getAbsoluteUrl(locale, `/powers/${primaryQualitySlug}`)
-                }] : []),
-                {
-                    "@type": "ListItem",
-                    position: primaryQualitySlug ? 4 : 3,
-                    name: entry.name,
-                    item: pageUrl
-                }
-            ]
-    } : null;
     const thingSchema = {
         "@context": "https://schema.org",
         "@type": "Thing",
@@ -645,14 +621,70 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         } : {})
     };
 
-    const fieldGuideSections = [
+    const habitatLead = entry.analysis.habitat.split(",")[0]?.trim() || entry.analysis.habitat;
+    const powerProfile: EnhancedAnimalPowerProfile | null = enhancedPower ?? (principleProfile ? {
+        speciesProfileId: entry.speciesProfileId ?? "",
+        principleName: principleProfile.principle,
+        principleExpression: principleProfile.principleExpression ?? null,
+        coreLesson: principleProfile.coreLesson,
+        shortMotto: principleProfile.motto,
+        corePattern: null,
+        biologicalBasis: principleProfile.biologicalBasis,
+        applicationExample: principleProfile.applicationExample ?? null,
+        behavioralEvidence: [],
+        powerContinuum: null,
+        embodimentPractices: [],
+        reflectionQuestions: [],
+        relatedPowers: [],
+        availability: "legacy"
+    } : null);
+    const askGrounding: SpeciesAskGrounding = {
+        slug: entry.slug,
+        name: entry.name,
+        scientificName: entry.analysis.scientificName,
+        category: displayCategory,
+        summary: entry.analysis.summary,
+        identification: entry.analysis.identification,
+        habitat: entry.analysis.habitat,
+        nativeRange: entry.analysis.nativeRange,
+        diet: databaseFieldGuide?.dietSummary ?? dietContent.summary,
+        predators: databaseFieldGuide?.predatorsSummary ?? null,
+        sleepPattern: databaseFieldGuide?.sleepPattern ?? null,
+        lifespan: databaseFieldGuide?.lifespanEstimate ?? null,
+        reproduction: databaseFieldGuide?.femaleOffspringNotes ?? null,
+        sexDifference: databaseFieldGuide?.sexDifferenceNotes ?? null,
+        interestingFacts: entry.premiumDetails.whyInteresting,
+        behaviorTraits: entry.premiumDetails.behaviorTraits,
+        spottingTips: spottingContent.tips,
+        principleName: powerProfile?.principleName ?? null,
+        principleExpression: powerProfile?.principleExpression ?? null,
+        coreLesson: powerProfile?.coreLesson ?? null,
+        corePattern: powerProfile?.corePattern ?? null,
+        biologicalBasis: powerProfile?.biologicalBasis ?? null,
+        shortMotto: powerProfile?.shortMotto ?? null,
+        relatedSpecies: (compareWithLinks.length > 0
+            ? compareWithLinks.map((item) => ({slug: item.otherSlug, name: item.otherName}))
+            : related.slice(0, 4).map((item) => ({slug: item.slug, name: item.name}))
+        ),
+        relatedLocations: getLocationsFeaturingSpecies(entry.slug)
+    };
+    const askSuggestions = buildSpeciesAskSuggestions(askGrounding);
+    const encyclopediaNav = [
+        {id: "understand", label: t("understandNav")},
+        ...(powerProfile ? [{id: "animal-power", label: t("animalPowerLabel")}] : []),
+        {id: "ask", label: t("askNav")},
+        {id: "compare", label: t("compareNav")},
+        {id: "where", label: t("whereNav")}
+    ];
+
+    const understandSections: UnderstandGuideSection[] = [
         {
-            id: "introduction",
+            id: "overview",
+            navLabel: t("understandOverview"),
             title: t("fieldGuideIntroductionTitle", {animal: entry.name}),
-            icon: "introduction" as const,
-            tintClass: "text-primary-200 bg-primary-400/15 border-primary-300/25",
+            whyQuestion: `Why is ${entry.name} built this way?`,
             content: (
-                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
+                <div className="flex flex-col gap-5">
                     <p>{renderTextWithSpeciesLinks(entry.analysis.summary, linkMatcher)}</p>
                     <div>
                         <h4 className="text-base font-semibold text-white">{t("identifyTitle", {animal: entry.name})}</h4>
@@ -676,12 +708,43 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             )
         },
         {
-            id: "environment",
-            title: t("fieldGuideEnvironmentTitle", {habitat: entry.analysis.habitat.split(",")[0] ?? entry.name}),
-            icon: "environment" as const,
-            tintClass: "text-cyan-200 bg-cyan-400/15 border-cyan-300/25",
+            id: "abilities",
+            navLabel: t("understandAbilities"),
+            title: t("understandAbilitiesTitle", {animal: entry.name}),
+            whyQuestion: `What biological abilities make ${entry.name} successful?`,
             content: (
-                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
+                <ul className="flex list-disc flex-col gap-2 pl-5">
+                    {entry.analysis.identification.map((item) => (
+                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
+                    ))}
+                </ul>
+            )
+        },
+        {
+            id: "behavior",
+            navLabel: t("understandBehavior"),
+            title: t("fieldGuideBehaviorTitle", {animal: entry.name}),
+            whyQuestion: `Why does ${entry.name} behave this way?`,
+            content: (
+                <div className="flex flex-col gap-4">
+                    <ul className="flex list-disc flex-col gap-2 pl-5">
+                        {entry.premiumDetails.behaviorTraits.map((item) => (
+                            <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
+                        ))}
+                    </ul>
+                    {databaseFieldGuide?.sleepPattern ? (
+                        <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, linkMatcher)}</p>
+                    ) : null}
+                </div>
+            )
+        },
+        {
+            id: "habitat",
+            navLabel: t("understandHabitat"),
+            title: t("fieldGuideEnvironmentTitle", {habitat: habitatLead}),
+            whyQuestion: `Why do ${entry.name} live in ${habitatLead}?`,
+            content: (
+                <div className="flex flex-col gap-5">
                     <p>
                         <span className="text-white">{t("habitatLabel")}: </span>
                         {renderTextWithSpeciesLinks(entry.analysis.habitat, linkMatcher)}
@@ -698,29 +761,16 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             missingAssets: t("nativeRangeMissingAssets")
                         }}
                     />
-                    <div className="flex flex-col gap-4">
-                        <p>{renderTextWithSpeciesLinks(spottingContent.summary, linkMatcher)}</p>
-                        <ul className="flex list-disc flex-col gap-2 pl-5">
-                            {spottingContent.locations.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), linkMatcher)}</li>
-                            ))}
-                        </ul>
-                        <ul className="flex list-disc flex-col gap-2 pl-5">
-                            {spottingContent.tips.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
-                            ))}
-                        </ul>
-                    </div>
                 </div>
             )
         },
         {
             id: "diet",
+            navLabel: t("understandDiet"),
             title: t("fieldGuideDietTitle"),
-            icon: "diet" as const,
-            tintClass: "text-orange-200 bg-orange-400/15 border-orange-300/25",
+            whyQuestion: `Why do ${entry.name} eat this way?`,
             content: (
-                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
+                <div className="flex flex-col gap-4">
                     <p>{renderTextWithSpeciesLinks(databaseFieldGuide?.dietSummary ?? dietContent.summary, linkMatcher)}</p>
                     {!databaseFieldGuide?.dietSummary ? (
                         <>
@@ -735,89 +785,69 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             )
         },
+        ...((databaseFieldGuide?.lifespanEstimate || databaseFieldGuide?.sleepPattern) ? [{
+            id: "life-cycle",
+            navLabel: t("understandLifeCycle"),
+            title: t("understandLifeCycleTitle"),
+            whyQuestion: `Why does ${entry.name} live this life cycle?`,
+            content: (
+                <div className="flex flex-col gap-4">
+                    {databaseFieldGuide?.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, linkMatcher)}</p> : null}
+                    {databaseFieldGuide?.lifespanEstimate ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.lifespanEstimate, linkMatcher)}</p> : null}
+                </div>
+            )
+        } satisfies UnderstandGuideSection] : []),
+        ...((databaseFieldGuide?.femaleOffspringNotes || databaseFieldGuide?.sexDifferenceNotes) ? [{
+            id: "reproduction",
+            navLabel: t("understandReproduction"),
+            title: t("understandReproductionTitle", {animal: entry.name}),
+            whyQuestion: `Why does ${entry.name} reproduce this way?`,
+            content: (
+                <div className="flex flex-col gap-4">
+                    {databaseFieldGuide?.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, linkMatcher)}</p> : null}
+                    {databaseFieldGuide?.sexDifferenceNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sexDifferenceNotes, linkMatcher)}</p> : null}
+                </div>
+            )
+        } satisfies UnderstandGuideSection] : []),
         ...(databaseFieldGuide?.predatorsSummary ? [{
             id: "predators",
-            title: "Predators, threats, and defense",
-            icon: "predators" as const,
-            tintClass: "text-violet-200 bg-violet-400/15 border-violet-300/25",
-            content: <p className="text-lg leading-8 text-ink-200">{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, linkMatcher)}</p>
-        }] : []),
-        ...(databaseFieldGuide && (databaseFieldGuide.sleepPattern || databaseFieldGuide.lifespanEstimate) ? [{
-            id: "life-cycle",
-            title: "Daily rhythm and lifespan",
-            icon: "lifeCycle" as const,
-            tintClass: "text-cyan-200 bg-cyan-400/15 border-cyan-300/25",
-            content: (
-                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
-                    {databaseFieldGuide.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, linkMatcher)}</p> : null}
-                    {databaseFieldGuide.lifespanEstimate ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.lifespanEstimate, linkMatcher)}</p> : null}
-                </div>
-            )
-        }] : []),
-        ...(databaseFieldGuide && (databaseFieldGuide.femaleOffspringNotes || databaseFieldGuide.sexDifferenceNotes) ? [{
-            id: "reproduction",
-            title: "Offspring and sex differences",
-            icon: "reproduction" as const,
-            tintClass: "text-rose-200 bg-rose-400/15 border-rose-300/25",
-            content: (
-                <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
-                    {databaseFieldGuide.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, linkMatcher)}</p> : null}
-                    {databaseFieldGuide.sexDifferenceNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sexDifferenceNotes, linkMatcher)}</p> : null}
-                </div>
-            )
-        }] : []),
-        {
-            id: "behavior",
-            title: t("fieldGuideBehaviorTitle", {animal: entry.name}),
-            icon: "behavior" as const,
-            tintClass: "text-amber-200 bg-amber-400/15 border-amber-300/25",
-            content: (
-                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
-                    {entry.premiumDetails.behaviorTraits.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
-                    ))}
-                </ul>
-            )
-        },
-        ...(principleProfile ? [{
-            id: "meaning",
-            title: t("fieldGuideMeaningTitle", {principle: principleProfile.principle}),
-            icon: "meaning" as const,
-            tintClass: "text-primary-200 bg-primary-400/15 border-primary-300/25",
-            content: (
-                <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
-                    <p>{entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.</p>
-                    <p>{principleProfile.coreLesson}</p>
-                    <p>{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, linkMatcher)}</p>
-                </div>
-            )
-        }] : []),
-        {
-            id: "spotting",
-            title: t("fieldGuideSpottingTitle"),
-            icon: "spotting" as const,
-            tintClass: "text-sky-200 bg-sky-400/15 border-sky-300/25",
-            content: (
-                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
-                    {entry.premiumDetails.respectfulSpotting.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
-                    ))}
-                </ul>
-            )
-        },
+            navLabel: t("understandPredators"),
+            title: t("understandPredatorsTitle"),
+            whyQuestion: `Why do these predators and threats matter for ${entry.name}?`,
+            content: <p>{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, linkMatcher)}</p>
+        } satisfies UnderstandGuideSection] : []),
         ...(entry.premiumDetails.lookalikes.length > 0 ? [{
             id: "lookalikes",
+            navLabel: t("understandLookalikes"),
             title: t("fieldGuideLookalikesTitle"),
-            icon: "lookalikes" as const,
-            tintClass: "text-lime-200 bg-lime-400/15 border-lime-300/25",
+            whyQuestion: `Why do these lookalikes matter for identifying ${entry.name}?`,
             content: (
-                <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
+                <ul className="flex list-disc flex-col gap-2 pl-5">
                     {entry.premiumDetails.lookalikes.map((item) => (
                         <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug, linkMatcher)}</li>
                     ))}
                 </ul>
             )
-        }] : [])
+        } satisfies UnderstandGuideSection] : []),
+        {
+            id: "conservation",
+            navLabel: t("understandConservation"),
+            title: t("understandConservationTitle"),
+            whyQuestion: `What conservation pressure shapes ${entry.name}?`,
+            content: (
+                <div className="flex flex-col gap-4">
+                    <p>
+                        <span className="text-white">{t("rarityLabel")}: </span>
+                        {resolvedRarityLabel} · {resolvedRarityScore}/100. {renderTextWithSpeciesLinks(entry.analysis.rarityReason, linkMatcher)}
+                    </p>
+                    <ul className="flex list-disc flex-col gap-2 pl-5">
+                        {entry.premiumDetails.respectfulSpotting.map((item) => (
+                            <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
+                        ))}
+                    </ul>
+                </div>
+            )
+        }
     ];
 
     return (
@@ -828,8 +858,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     thingSchema,
                     articleSchema,
                     faqSchema,
-                    animalBreadcrumbSchema,
-                    ...(principleBreadcrumbSchema ? [principleBreadcrumbSchema] : [])
+                    animalBreadcrumbSchema
                 ])}}
             />
 
@@ -863,6 +892,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <span className="rounded-full border border-primary-400/20 bg-primary-400/[0.08] px-3 py-1.5 text-sm font-semibold text-primary-100">
                                 {displayCategory}
                             </span>
+                            <span className="rounded-full border border-cyan-300/20 bg-cyan-400/[0.08] px-3 py-1.5 text-sm font-semibold text-cyan-100">
+                                {habitatLead}
+                            </span>
                             {battleTierLabel ? (
                                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-ink-100">
                                     {battleTierLabel}
@@ -872,11 +904,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         <div className="flex max-w-3xl flex-col gap-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/80">{t("fieldGuideLabel")}</p>
                             <h1 className="font-display text-5xl font-bold tracking-tight text-white md:text-6xl lg:text-7xl">{entry.name}</h1>
-                            <p className="max-w-2xl text-lg leading-8 text-ink-200 md:text-xl">{t("profileDescription")}</p>
+                            <p className="text-lg italic text-ink-300 md:text-xl">{entry.analysis.scientificName}</p>
+                            <p className="max-w-2xl text-lg leading-8 text-ink-200 md:text-xl">{entry.analysis.summary}</p>
                         </div>
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                             <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
-                                {t("getAnimalDex")}
+                                {t("collectCta", {animal: entry.name})}
                             </Link>
                             <Link href="/animals" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-white/15 px-7 font-bold text-white transition-colors hover:border-primary-400 hover:text-primary-100">
                                 {t("browseAnimals")}
@@ -930,6 +963,26 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             </section>
             </div>
 
+            <SpeciesEncyclopediaAnalytics slug={entry.slug} />
+
+            <SpeciesAtAGlanceCard
+                animalName={entry.name}
+                glance={buildSpeciesAtAGlance({
+                    category: displayCategory,
+                    habitat: habitatLead,
+                    nativeRange: entry.analysis.nativeRange,
+                    rarityLabel: resolvedRarityLabel,
+                    identification: entry.analysis.identification,
+                    behaviorTraits: entry.premiumDetails.behaviorTraits,
+                    principleName: powerProfile?.principleName ?? null
+                })}
+                labels={{
+                    title: t("glanceTitle"),
+                    knownFor: t("glanceKnownFor"),
+                    power: t("glancePower")
+                }}
+            />
+
             {legendaryBeast ? (
                 <section className="rounded-[1.75rem] border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Legendary Earth Beast · Tier {legendaryBeast.tier}</p>
@@ -950,6 +1003,150 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </Link>
                 </section>
             ) : null}
+
+            <SpeciesEncyclopediaNav items={encyclopediaNav} />
+
+            <SpeciesUnderstandGuide
+                animalName={t("understandTitle", {animal: entry.name})}
+                slug={entry.slug}
+                eyebrow={t("understandEyebrow")}
+                description={t("understandDescription")}
+                whyLabel={t("askWhy")}
+                sections={understandSections}
+            />
+
+            {powerProfile ? (
+                <SpeciesAnimalPowerGuide
+                    animalName={entry.name}
+                    profile={powerProfile}
+                    artwork={(
+                        <div className="relative h-44 w-44 overflow-hidden rounded-[1.5rem] border border-primary-400/20 bg-primary-400/[0.06] p-4">
+                            <SpeciesArtworkImage
+                                slug={entry.slug}
+                                alt={getSpeciesImageAltText(entry, "thumbnail")}
+                                className="h-full w-full !bg-transparent object-contain"
+                                sizes="176px"
+                                fit="contain"
+                            />
+                        </div>
+                    )}
+                    labels={{
+                        eyebrow: t("animalPowerLabel"),
+                        pattern: t("powerPattern"),
+                        natureProof: t("natureProofLabel"),
+                        observation: t("powerObservation"),
+                        function: t("powerFunction"),
+                        interpretation: t("powerInterpretation"),
+                        continuum: t("powerContinuum"),
+                        deficient: t("powerDeficient"),
+                        balanced: t("powerBalanced"),
+                        excess: t("powerExcess"),
+                        practise: t("tryItLabel"),
+                        reflection: t("powerReflection"),
+                        legacyBasis: t("biologicalBasisLabel"),
+                        legacyPractice: t("applicationExampleLabel")
+                    }}
+                />
+            ) : null}
+
+            <SpeciesAskAnimalDex
+                slug={entry.slug}
+                animalName={entry.name}
+                suggestions={askSuggestions}
+                labels={{
+                    eyebrow: t("askEyebrow"),
+                    title: t("askTitle"),
+                    description: t("askDescription"),
+                    placeholder: t("askPlaceholder"),
+                    submit: t("askSubmit"),
+                    thinking: t("askThinking"),
+                    quota: t("askQuota", {
+                        anonymous: String(SPECIES_ASK_DAILY_LIMITS.anonymous),
+                        signedIn: String(SPECIES_ASK_DAILY_LIMITS.signedIn),
+                        pro: String(SPECIES_ASK_DAILY_LIMITS.pro)
+                    }),
+                    remaining: t("askRemaining"),
+                    followups: t("askFollowups"),
+                    noscript: t("askNoscript"),
+                    limitReached: t("askLimitReached"),
+                    collectCta: t("askCollectCta"),
+                    collectHref: "/#download",
+                    error: t("askError"),
+                    layers: {
+                        biology: {title: t("askLayerBiology"), caption: t("askLayerBiologyCaption")},
+                        why: {title: t("askLayerWhy"), caption: t("askLayerWhyCaption")},
+                        lesson: {title: t("askLayerLesson"), caption: t("askLayerLessonCaption")},
+                        symbolism: {title: t("askLayerSymbolism"), caption: t("askLayerSymbolismCaption")}
+                    }
+                }}
+            />
+
+            <section id="compare" className="scroll-mt-28 flex flex-col gap-5">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">{t("compareEyebrow")}</p>
+                    <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
+                        {t("compareTitle", {animal: entry.name})}
+                    </h2>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {(compareWithLinks.length > 0 ? compareWithLinks : related.slice(0, 3).map((item) => ({
+                        challengeSlug: buildComparisonSlug(entry.slug, item.slug),
+                        otherName: item.name
+                    }))).map((item) => (
+                        <Link
+                            key={item.challengeSlug}
+                            href={`/comparisons/${item.challengeSlug}`}
+                            className="rounded-[1.5rem] border border-white/10 bg-surface-900/55 p-5 transition hover:-translate-y-0.5 hover:border-primary-300/40"
+                        >
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">VS</p>
+                            <h3 className="mt-2 font-display text-2xl font-bold text-white">{item.otherName}</h3>
+                            <p className="mt-2 text-sm text-ink-300">{t("compareWithLink", {animal: item.otherName})}</p>
+                        </Link>
+                    ))}
+                </div>
+            </section>
+
+            <section id="where" className="scroll-mt-28 rounded-[1.75rem] border border-white/10 bg-surface-900/55 p-5 md:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">{t("whereEyebrow")}</p>
+                <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
+                    {t("whereTitle", {animal: entry.name})}
+                </h2>
+                <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">
+                    {renderTextWithSpeciesLinks(spottingContent.summary, linkMatcher)}
+                </p>
+                {askGrounding.relatedLocations.length > 0 ? (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                        {askGrounding.relatedLocations.map((location) => (
+                            <Link
+                                key={location.slug}
+                                href={`/locations/${location.slug}`}
+                                className="rounded-full border border-cyan-300/25 bg-cyan-400/[0.08] px-4 py-2 text-sm font-semibold text-cyan-100 hover:border-cyan-200 hover:text-white"
+                            >
+                                {location.name}
+                            </Link>
+                        ))}
+                    </div>
+                ) : null}
+                <ul className="mt-5 flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
+                    {spottingContent.locations.map((item) => (
+                        <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), linkMatcher)}</li>
+                    ))}
+                </ul>
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <Link
+                        href="/wildlife-experiences"
+                        className="rounded-2xl border border-primary-400/30 px-5 py-3 text-sm font-bold text-primary-100 hover:border-primary-200 hover:text-white"
+                    >
+                        {t("whereExperiencesCta")}
+                    </Link>
+                    <Link
+                        href={INSTAGRAM_IMPORT_PATH}
+                        className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-bold text-white hover:border-primary-300"
+                    >
+                        {t("whereInstagramCta")}
+                    </Link>
+                </div>
+            </section>
 
             <SpeciesDetailTabs
                 defaultTab="learn"
@@ -1115,15 +1312,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
                 ))}
             </section>
-
-            <SpeciesFieldGuideAccordion
-                headerTitle={principleProfile
-                    ? t("fieldGuideHeaderTitle", {principle: principleProfile.principle})
-                    : t("fieldGuideHeaderTitleFallback", {animal: entry.name})}
-                headerDescription={t("fieldGuideHeaderDescription")}
-                sections={fieldGuideSections}
-                defaultOpenId="introduction"
-            />
 
             <RelatedSpeciesSection
                 title={t("relatedTitle")}

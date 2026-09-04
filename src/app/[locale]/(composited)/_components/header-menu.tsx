@@ -29,7 +29,8 @@ type HeaderMenuProps = {
     children: ReactNode;
     mobileLinks: ReactNode;
     mobileAuth: ReactNode;
-    getAppLabel: string;
+    ctaHref: string;
+    ctaLabel: string;
     navigationLabel: string;
     followLabel: string;
 };
@@ -41,7 +42,8 @@ export default function HeaderMenu({
     children,
     mobileLinks,
     mobileAuth,
-    getAppLabel,
+    ctaHref,
+    ctaLabel,
     navigationLabel,
     followLabel
 }: HeaderMenuProps) {
@@ -114,7 +116,7 @@ export default function HeaderMenu({
             <button
                 ref={openButtonRef}
                 type="button"
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line-300 bg-surface-900 transition hover:border-primary-300 hover:bg-surface-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 md:hidden"
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line-300 bg-surface-900 transition hover:border-primary-300 hover:bg-surface-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:hidden"
                 onClick={() => setOpen(true)}
                 aria-label="Open menu"
                 aria-expanded={open}
@@ -126,20 +128,20 @@ export default function HeaderMenu({
             {/* Desktop nav */}
             <nav
                 aria-label="Primary navigation"
-                className="hidden items-center justify-end gap-5 md:flex"
+                className="hidden items-center justify-end gap-3 xl:flex xl:gap-5"
             >
                 {children}
             </nav>
 
             {/* Mobile drawer */}
             {mounted ? createPortal(<div
-                className={`fixed inset-0 z-[100] md:hidden ${open ? "pointer-events-auto visible" : "pointer-events-none invisible"}`}
+                className={`fixed inset-0 z-[100] xl:hidden ${open ? "pointer-events-auto visible" : "pointer-events-none invisible"}`}
                 aria-hidden={!open}
             >
                 <button
                     type="button"
                     tabIndex={open ? 0 : -1}
-                    className={`absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
+                    className={`absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 motion-reduce:transition-none ${open ? "opacity-100" : "opacity-0"}`}
                     aria-label="Close menu"
                     onClick={closeMenu}
                 />
@@ -150,7 +152,7 @@ export default function HeaderMenu({
                     aria-modal="true"
                     role="dialog"
                     onKeyDown={trapFocus}
-                    className={`absolute inset-y-0 right-0 flex w-[calc(100%-0.75rem)] max-w-[26rem] flex-col overflow-hidden border-l border-line-300 bg-canvas-900 shadow-[-24px_0_80px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+                    className={`absolute inset-y-0 right-0 flex w-[calc(100%-0.75rem)] max-w-[26rem] flex-col overflow-hidden border-l border-line-300 bg-canvas-900 shadow-[-24px_0_80px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
                 >
                     <div className="flex min-h-[5rem] items-center justify-between border-b border-line-400 px-5 py-4">
                         <Link
@@ -187,11 +189,9 @@ export default function HeaderMenu({
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                        <div className="px-4 pb-5 pt-5">
-                            <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-ink-500">
-                                {navigationLabel}
-                            </p>
-                            <div className="grid gap-1">
+                        <div className="px-4 pb-8 pt-3">
+                            <p className="sr-only">{navigationLabel}</p>
+                            <div key={open ? "mobile-nav-open" : "mobile-nav-closed"}>
                                 {mobileLinks}
                             </div>
                         </div>
@@ -218,22 +218,15 @@ export default function HeaderMenu({
                         </div>
                     </div>
 
-                    <div className="shrink-0 space-y-2 border-t border-line-400 bg-canvas-950/80 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
-                        <div className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-2">
-                            {mobileAuth}
-                            <Link
-                                href="/#download"
-                                onClick={closeMenu}
-                                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-400 px-4 text-sm font-black text-canvas-950 shadow-[0_0_28px_rgba(167,244,50,0.28)] transition hover:bg-primary-300 active:scale-[0.98]"
-                            >
-                                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                                    <path d="M12 3v12" strokeLinecap="round" />
-                                    <path d="m7.5 10.5 4.5 4.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M5 20h14" strokeLinecap="round" />
-                                </svg>
-                                {getAppLabel}
-                            </Link>
-                        </div>
+                    <div className="shrink-0 space-y-2 border-t border-line-400 bg-canvas-950/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+                        <Link
+                            href={ctaHref}
+                            onClick={closeMenu}
+                            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-primary-400 px-4 text-center text-sm font-black leading-tight text-canvas-950 shadow-[0_0_28px_rgba(167,244,50,0.28)] transition hover:bg-primary-300 active:scale-[0.98] motion-reduce:active:scale-100"
+                        >
+                            {ctaLabel}
+                        </Link>
+                        {mobileAuth}
                     </div>
                 </nav>
             </div>, document.body) : null}

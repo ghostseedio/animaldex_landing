@@ -56,11 +56,11 @@ const wisdomPaths = [
     },
     {
         number: "03",
-        label: "Patterns",
-        title: "Animal Powers",
-        description: "Browse practical powers connected to animal behavior, from precision and observation to cooperation, memory, and adaptation.",
+        label: "Abilities",
+        title: "Animal Abilities",
+        description: "Browse abilities expressed through real animal behavior, from precision and observation to cooperation, memory, and adaptation.",
         href: "/powers",
-        cta: "Explore animal powers",
+        cta: "Explore animal abilities",
         examples: [
             {label: "Precision", href: "/powers/precision"},
             {label: "Observation", href: "/powers/observation"}
@@ -184,10 +184,10 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                     <p className="text-primary-200 text-sm font-semibold uppercase tracking-[0.2em]">Meaning grounded in nature</p>
                     <h1 className="font-display font-bold text-6xl md:text-7xl xl:text-8xl text-white tracking-tight">{pageTitle}</h1>
                     <p className="text-xl md:text-2xl xl:text-[1.75rem] xl:leading-10 text-ink-100 max-w-3xl">
-                        Learn what animals mean, what they teach, and how real behavior can help us understand nature — and ourselves.
+                        Animals aren&apos;t just something to identify or collect. Every species has evolved its own way of surviving, adapting and succeeding.
                     </p>
                     <p className="text-base md:text-lg text-ink-300 max-w-2xl">
-                        Start with a species, a symbol, or a lesson from the living world.
+                        AnimalDex helps you discover what those strategies can teach us — through abilities, behavior, lessons, and cultural symbolism, with interpretation kept distinct from biological fact.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
                         <Link href="#wisdom-paths" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 hover:bg-primary-300 transition-colors">

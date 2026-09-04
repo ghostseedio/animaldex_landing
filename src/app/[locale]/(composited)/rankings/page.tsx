@@ -2,17 +2,25 @@ import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import TierListFilters from "@/app/[locale]/(composited)/rankings/_components/tier-list-filters";
-import {getExpandedRankingEntries, getRankingTierListTitle, rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import {
+    getExpandedRankingEntries,
+    getRankingHeadline,
+    rankingPages,
+    RANKING_CANONICAL_BASE_PATH,
+    sortRankingPagesForHub
+} from "@/data/rankings";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+
+export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
     const locale = await getLocale();
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const rankingKeywords = Array.from(new Set(rankingPages.flatMap((page) => page.searchIntents)));
-    const title = messages.rankings?.metaTitle || "Animal Tier Lists";
+    const title = messages.rankings?.metaTitle || "Animal Tier List — Animal Rankings & Top 100 Lists";
     const description = messages.rankings?.metaDescription || messages.meta?.description || "";
 
     return {
@@ -80,19 +88,19 @@ export default async function RankingsIndexPage() {
     const itemListSchema = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        itemListElement: rankingPages.map((page, index) => ({
+        itemListElement: sortRankingPagesForHub(rankingPages).map((page, index) => ({
             "@type": "ListItem",
             position: index + 1,
             url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${page.slug}`),
-            name: getRankingTierListTitle(page)
+            name: getRankingHeadline(page)
         }))
     };
-    const cards = rankingPages.map((page) => {
+    const cards = sortRankingPagesForHub(rankingPages).map((page) => {
         const categoryLabel = t(`categories.${page.category}`);
 
         return {
             slug: page.slug,
-            title: getRankingTierListTitle(page),
+            title: getRankingHeadline(page),
             description: page.description,
             category: page.category,
             categoryLabel,

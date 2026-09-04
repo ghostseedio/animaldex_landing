@@ -110,12 +110,14 @@ test("copy keeps the Credits / Earnings firewall", () => {
 
 test("footer and contact expose the new commercial routes", () => {
     const footer = readRepo("src/app/[locale]/(composited)/_components/footer.tsx");
+    const nav = readRepo("src/data/public-navigation.ts");
     const contact = readRepo("src/data/contact-content.ts");
     const contactPage = readRepo("src/app/[locale]/(composited)/contact/page.tsx");
-    assert.match(footer, /earn-on-animaldex/);
-    assert.match(footer, /become-a-wildlife-guide/);
-    assert.match(footer, /creator-rewards/);
-    assert.match(footer, /sponsor-a-challenge/);
+    assert.match(footer, /public-navigation/);
+    assert.match(nav, /earn-on-animaldex/);
+    assert.match(nav, /become-a-wildlife-guide/);
+    assert.match(nav, /creator-rewards/);
+    assert.match(nav, /sponsor-a-challenge/);
     assert.match(contact, /\/sponsor-a-challenge/);
     assert.match(contactPage, /\/earn-on-animaldex/);
 });

@@ -10,12 +10,20 @@ import type {
 import {getChallenge as getStaticChallenge, isChallengeComparisonType} from "@/data/challenges";
 import type {SystemsIntelligenceEntry} from "@/data/content-schema";
 import type {SpeciesEntry} from "@/data/species";
+import {parseComparisonSlug} from "@/lib/comparison-slug";
 import {
     getSupabaseHeaders,
     getSupabasePublicKey,
     getSupabaseServerReadKey,
     getSupabaseUrl
 } from "@/lib/supabase-http";
+
+export {
+    buildComparisonSlug,
+    canonicalUnpublishedComparisonSlug,
+    parseComparisonSlug,
+    reversedComparisonSlug
+} from "@/lib/comparison-slug";
 
 const CHALLENGE_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
 /** Every mode the generator accepts — the static library only covers a subset. */
@@ -254,30 +262,6 @@ function mapFeedRowToChallengeEntry(row: SpeciesComparisonFeedRow): ChallengeEnt
         updatedAt: row.updated_at || row.published_at,
         featuredImage: featuredImageForSlug(row.slug, comparisonType, row.featured_image_url)
     };
-}
-
-export function parseComparisonSlug(slug: string): {
-    animalASlug: string;
-    animalBSlug: string;
-    comparisonType: ChallengeComparisonType;
-} | null {
-    const normalized = slug.trim().toLowerCase();
-    if (!normalized.includes("-vs-")) return null;
-
-    for (const type of SPECIES_COMPARISON_TYPES) {
-        if (type === "battle") continue;
-        const suffix = `-${type}`;
-        if (normalized.endsWith(suffix)) {
-            const base = normalized.slice(0, -suffix.length);
-            const [animalASlug, animalBSlug] = base.split("-vs-");
-            if (!animalASlug || !animalBSlug) return null;
-            return {animalASlug, animalBSlug, comparisonType: type};
-        }
-    }
-
-    const [animalASlug, animalBSlug] = normalized.split("-vs-");
-    if (!animalASlug || !animalBSlug) return null;
-    return {animalASlug, animalBSlug, comparisonType: "battle"};
 }
 
 export const SPECIES_COMPARISON_CACHE_TAG = "species-comparisons";

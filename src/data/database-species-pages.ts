@@ -48,6 +48,10 @@ type IndexedProfileRow = {
     id: string;
     animaldex_number: number;
     catalog_status: string | null;
+    canonical_game_stats?: Record<string, number> | null;
+    size_scale_score?: number | null;
+    generation_status?: string | null;
+    generation_metadata?: Record<string, any> | null;
 };
 
 type FieldGuideRow = {
@@ -67,11 +71,13 @@ type FieldGuideRow = {
     updated_at: string;
 };
 
+// species_catalog_v1 no longer exposes profile-owned jsonb/status columns
+// (canonical_game_stats, size_scale_score, generation_status, generation_metadata).
+// Those live on species_profiles and are merged in attachProfileOwnedCatalogFields.
 const CATALOG_SELECT = [
     "species_profile_id", "animaldex_number", "display_name", "animal_name", "refined_identity",
     "normalized_identity_key", "scientific_name", "identity_kind", "canonical_species_profile_id",
-    "canonical_game_stats", "size_scale_score",
-    "landing_page_slug", "catalog_status", "generation_status", "generation_metadata", "species_subtitle",
+    "landing_page_slug", "catalog_status", "species_subtitle",
     "species_subtitle_story", "principle_name", "principle_expression", "core_lesson", "biological_basis",
     "short_motto", "best_use_cases", "application_example", "created_at", "updated_at"
 ].join(",");
@@ -94,6 +100,7 @@ const GUIDE_SELECT = [
 ].join(",");
 
 const INDEXED_PROFILE_SELECT = "id,animaldex_number,catalog_status";
+const PROFILE_OWNED_CATALOG_SELECT = "id,animaldex_number,catalog_status,canonical_game_stats,size_scale_score,generation_status,generation_metadata";
 
 export type CatalogBehaviorPrinciple = {
     principleName: string;
@@ -515,7 +522,8 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
             logDevPerfEvent("catalog.fetch", `SLOW ${table}`, {offset, pageMs: Math.round(pageMs), status: response.status});
         }
         if (!response.ok) {
-            throw new Error(`Failed to load ${table} page at offset ${offset}: ${response.status}`);
+            const detail = await response.text().catch(() => "");
+            throw new Error(`Failed to load ${table} page at offset ${offset}: ${response.status}${detail ? ` ${detail.slice(0, 240)}` : ""}`);
         }
         const data = await response.json();
         if (!Array.isArray(data)) {
@@ -563,10 +571,11 @@ async function loadSpeciesIdentityAliases() {
 async function loadDatabaseEntries() {
     await loadSpeciesIdentityAliases();
     const [indexedProfileRows, catalogRows, guideRows] = await Promise.all([
-        fetchRows<IndexedProfileRow>("species_profiles", INDEXED_PROFILE_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
+        fetchRows<IndexedProfileRow>("species_profiles", PROFILE_OWNED_CATALOG_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
         fetchRows<CatalogRow>("species_catalog_v1", CATALOG_SELECT, {animaldex_number: "not.is.null", order: "animaldex_number.asc"}),
         fetchRows<FieldGuideRow>("species_field_guide", GUIDE_SELECT)
     ]);
+    const profilesById = new Map(indexedProfileRows.map((row) => [row.id, row]));
     const indexedNumbers = new Map(
         indexedProfileRows
             .filter((row) => row.catalog_status !== "hidden")
@@ -584,7 +593,10 @@ async function loadDatabaseEntries() {
         const slug = databaseSpeciesCanonicalSlug(row);
         if (!slug || bySlug.has(slug)) continue;
         bySlug.set(slug, mapDatabaseSpecies(
-            {...row, animaldex_number: animalDexNumber},
+            attachProfileOwnedCatalogFields(
+                {...row, animaldex_number: animalDexNumber},
+                profilesById.get(row.species_profile_id)
+            ),
             guides.get(row.species_profile_id) ?? null
         ));
     }
@@ -659,6 +671,17 @@ function postgrestInList(values: string[]) {
 
 function postgrestEqValue(value: string) {
     return `"${value.replace(/"/g, "")}"`;
+}
+
+function attachProfileOwnedCatalogFields(row: CatalogRow, profile?: IndexedProfileRow | null): CatalogRow {
+    if (!profile) return row;
+    return {
+        ...row,
+        canonical_game_stats: profile.canonical_game_stats ?? row.canonical_game_stats,
+        size_scale_score: profile.size_scale_score ?? row.size_scale_score,
+        generation_status: profile.generation_status ?? row.generation_status,
+        generation_metadata: profile.generation_metadata ?? row.generation_metadata
+    };
 }
 
 function animalDexNumberIndexFromRows(
@@ -963,7 +986,7 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
         const guide = guideRows[0] ?? null;
 
         const profileResponse = await fetch(
-            `${url}/rest/v1/species_profiles?id=eq.${postgrestEqValue(row.species_profile_id)}&select=id,animaldex_number,catalog_status&limit=1`,
+            `${url}/rest/v1/species_profiles?id=eq.${postgrestEqValue(row.species_profile_id)}&select=${PROFILE_OWNED_CATALOG_SELECT}&limit=1`,
             {headers: getSupabaseHeaders(key), next: {revalidate: 3600}}
         );
         const profileRows = profileResponse.ok ? await profileResponse.json() as IndexedProfileRow[] : [];
@@ -973,7 +996,7 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
             : row.animaldex_number;
 
         return mapDatabaseSpecies(
-            {...row, animaldex_number: animalDexNumber},
+            attachProfileOwnedCatalogFields({...row, animaldex_number: animalDexNumber}, profile),
             guide
         );
     } catch {

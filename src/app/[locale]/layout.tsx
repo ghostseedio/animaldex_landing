@@ -9,7 +9,7 @@ import NavigationProgress from "@/app/[locale]/_components/navigation-progress";
 import {loadLocaleMessages} from "@/loaders/locale";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 import CampaignAttribution from "@/app/[locale]/_components/campaign-attribution";
-import {getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
+import {getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 
 const brandIconUrl = "/images/logo.webp";
@@ -52,7 +52,6 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
     const title = typeof meta.title === "string" ? meta.title : "AnimalDex";
     const description = typeof meta.description === "string" ? meta.description : fullTitle;
     const keywords = Array.isArray(meta.keywords) ? meta.keywords : [];
-    const canonicalPath = getLocalePath(locale);
 
     return {
         metadataBase: new URL(getSiteUrl()),
@@ -122,7 +121,6 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             title: fullTitle,
             description,
             siteName: title,
-            url: canonicalPath,
             images: [
                 {
                     url: socialImageUrl,
@@ -137,15 +135,6 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             title: fullTitle,
             description,
             images: [socialImageUrl],
-        },
-        alternates: {
-            canonical: canonicalPath,
-            languages: localeConfig.locales.reduce((acc, locale) => {
-                acc[locale] = getLocalePath(locale);
-                return acc;
-            }, {
-                "x-default": getLocalePath(localeConfig.defaultLocale)
-            } as Record<string, string>)
         }
     };
 }

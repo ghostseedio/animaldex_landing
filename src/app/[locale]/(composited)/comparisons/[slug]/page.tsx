@@ -25,8 +25,10 @@ import {
     buildComparisonSpeciesFallback,
     fetchSpeciesComparisonBySlug,
     getRelatedMergedChallenges,
+    canonicalUnpublishedComparisonSlug,
     parseComparisonSlug,
-    resolveReadyChallengeEntry
+    resolveReadyChallengeEntry,
+    reversedComparisonSlug
 } from "@/data/species-comparisons";
 import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
@@ -87,18 +89,6 @@ async function resolvePendingPair(slug: string): Promise<{
     return {animalA, animalB, comparisonType: parsed.comparisonType};
 }
 
-/**
- * A pair has one canonical row upstream, so `b-vs-a` may already be published as
- * `a-vs-b`. Send crawlers and readers straight there instead of loading a
- * generator that would only redirect them anyway.
- */
-function reversedComparisonSlug(slug: string) {
-    const parsed = parseComparisonSlug(slug);
-    if (!parsed) return null;
-    const base = `${parsed.animalBSlug}-vs-${parsed.animalASlug}`;
-    return parsed.comparisonType === "battle" ? base : `${base}-${parsed.comparisonType}`;
-}
-
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     const challenge = await resolveReadyChallengeEntry(params.slug);
 
@@ -140,6 +130,11 @@ export default async function ComparisonDetailPage({params}: Props) {
         const reversedSlug = reversedComparisonSlug(slug);
         if (reversedSlug && await resolveReadyChallengeEntry(reversedSlug)) {
             redirect(getLocalePath(locale, `/comparisons/${reversedSlug}`));
+        }
+
+        const unpublishedCanonicalSlug = canonicalUnpublishedComparisonSlug(slug);
+        if (unpublishedCanonicalSlug && unpublishedCanonicalSlug !== slug) {
+            redirect(getLocalePath(locale, `/comparisons/${unpublishedCanonicalSlug}`));
         }
 
         return (

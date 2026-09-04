@@ -1,4 +1,6 @@
 import type {Metadata} from "next";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
+import {localeConfig} from "@/i18n";
 import Link from "@/app/[locale]/_components/link";
 import {EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import GuideCard from "@/components/guides/guide-card";
@@ -7,17 +9,37 @@ import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {categoryLabel, guideAreaServedName, guideLocationSlug, isLocationPageIndexable, type GuideCategory} from "@/lib/guide-marketplace-core";
 
 export const revalidate = 300;
-export const metadata: Metadata = {
-    title: "Wildlife Guides",
-    description: "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.",
-    alternates: {canonical: "/wildlife-guides"},
-    openGraph: {title: "AnimalDex Wildlife Guides", description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.", url: "/wildlife-guides", images: ["/images/og.png"]},
-    other: {
-  "facebook-domain-verification": "hi8zc0bm4dg7qrn95luj9isnn21ldo",
-},
+
+type WildlifeGuidesPageProps = {
+    params: {locale: string};
 };
 
-export default async function WildlifeGuidesPage({params}: {params: {locale: string}}) {
+export async function generateMetadata({params}: WildlifeGuidesPageProps): Promise<Metadata> {
+    const title = "Wildlife Guides";
+    const description = "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.";
+    const canonical = getLocalePath(params.locale, "/wildlife-guides");
+
+    return {
+        title,
+        description,
+        alternates: {
+            canonical,
+            languages: localeConfig.locales.reduce((acc, localeItem) => {
+                acc[localeItem] = getLocalePath(localeItem, "/wildlife-guides");
+                return acc;
+            }, {"x-default": getLocalePath(localeConfig.defaultLocale, "/wildlife-guides")} as Record<string, string>)
+        },
+        openGraph: {
+            title: "AnimalDex Wildlife Guides",
+            description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.",
+            url: canonical,
+            locale: getMetadataLocale(params.locale),
+            images: ["/images/og.png"]
+        }
+    };
+}
+
+export default async function WildlifeGuidesPage({params}: WildlifeGuidesPageProps) {
     const listings = await getPublicGuideListings();
     const categories = Array.from(new Set(listings.map((item) => item.service_category)));
     const locations = Array.from(new Map(listings.map((item) => [guideLocationSlug(item), guideAreaServedName(item)])).entries())

@@ -5,58 +5,10 @@ import Link from "@/app/[locale]/_components/link";
 import { useTranslations } from "next-intl";
 import {ArrowSquareUpIcon, FacebookIcon, InstagramIcon, RedditIcon, SubstackIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
 import {socialProfileUrls} from "@/lib/social-links";
+import {footerColumns, type PublicNavLink} from "@/data/public-navigation";
 
 export default function Footer() {
     const t = useTranslations("nav");
-    const footerSections = [
-        {
-            title: t("footerGroups.product"),
-            links: [
-                { href: "/#more", label: t("howItWorks") },
-                { href: "/#features", label: t("features") },
-                { href: "/use-cases", label: t("useCases") },
-                { href: "/#download", label: t("download") }
-            ]
-        },
-        {
-            title: t("footerGroups.explore"),
-            links: [
-                { href: "/animals", label: t("browseAnimals") },
-                { href: "/tier-list", label: t("rankings") },
-                { href: "/comparisons", label: t("challenges") },
-                { href: "/locations", label: t("locations") },
-                { href: "/wildlife-experiences", label: t("wildlifeExperiences") },
-                { href: "/what-animal-am-i", label: t("whatAnimalAmI") }
-            ]
-        },
-        {
-            title: t("footerGroups.wisdom"),
-            links: [
-                { href: "/animal-wisdom", label: t("animalWisdom") },
-                { href: "/animal-symbolism", label: t("animalSymbolism") },
-                { href: "/animal-lessons", label: t("animalLessons") },
-                { href: "/powers", label: t("qualities") }
-            ]
-        },
-        {
-            title: t("footerGroups.resources"),
-            links: [
-                { href: "/blog", label: t("articlesGuides") },
-                { href: "/branding", label: "Brand assets" },
-                { href: "/support", label: t("support") },
-                { href: "/contact", label: t("contact") }
-            ]
-        },
-        {
-            title: t("footerGroups.earn"),
-            links: [
-                { href: "/earn-on-animaldex", label: t("earnOnAnimalDex") },
-                { href: "/become-a-wildlife-guide", label: t("becomeAWildlifeGuide") },
-                { href: "/creator-rewards", label: t("creatorRewards") },
-                { href: "/sponsor-a-challenge", label: t("sponsorAChallenge") }
-            ]
-        }
-    ];
     const socialLinks = [
         {
             href: socialProfileUrls.facebook,
@@ -70,6 +22,14 @@ export default function Footer() {
         {href: socialProfileUrls.substack, label: "Substack", icon: SubstackIcon},
         {href: socialProfileUrls.reddit, label: "Reddit", icon: RedditIcon}
     ];
+
+    function renderLinks(links: PublicNavLink[]) {
+        return links.map((link) => (
+            <FooterLink key={`${link.href}-${link.labelKey}`} href={link.href}>
+                {t(link.labelKey)}
+            </FooterLink>
+        ));
+    }
 
     return (
         <footer className="flex flex-col gap-16 mt-16 px-8 md:px-16 bg-canvas-900 pt-16 pb-16 border-t border-line-400">
@@ -99,19 +59,25 @@ export default function Footer() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-10 w-full max-w-5xl items-center xl:items-start">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">
-                        {footerSections.map(section => (
-                            <div key={section.title} className="flex flex-col gap-4 items-center xl:items-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-10 gap-y-10 w-full place-items-center xl:place-items-start">
+                        {footerColumns.map((section) => (
+                            <div key={section.titleKey} className="flex flex-col gap-4 items-center xl:items-start">
                                 <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-ink-400 text-center xl:text-left">
-                                    {section.title}
+                                    {t(section.titleKey)}
                                 </p>
-                                <div className="flex flex-col gap-3 items-center xl:items-start">
-                                    {section.links.map(link => (
-                                        <FooterLink key={link.href} href={link.href}>
-                                            {link.label}
-                                        </FooterLink>
-                                    ))}
-                                </div>
+                                {section.groups ? (
+                                    <div className="flex flex-col gap-6 items-center xl:items-start">
+                                        {section.groups.map((group, index) => (
+                                            <div key={index} className="flex flex-col gap-3 items-center xl:items-start">
+                                                {renderLinks(group)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3 items-center xl:items-start">
+                                        {renderLinks(section.links || [])}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
