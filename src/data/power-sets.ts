@@ -1,6 +1,12 @@
 import "server-only";
 
-import {cache} from "react";
+function cache<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
+    let promise: Promise<unknown> | null = null;
+    return ((...args: unknown[]) => {
+        if (!promise) promise = fn(...args);
+        return promise;
+    }) as unknown as T;
+}
 import type {AppCapture} from "@/data/authenticated-app";
 import {decorateCapture} from "@/data/authenticated-app";
 import {getUserCaptures} from "@/data/user-captures";
