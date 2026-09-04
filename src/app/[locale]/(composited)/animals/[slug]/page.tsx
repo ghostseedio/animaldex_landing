@@ -202,18 +202,21 @@ function captureStatsOrFallback(
 const GLOBAL_SPECIES_TEXT_LINKS = buildSpeciesTextLinks(speciesEntries, SPECIES_ALIAS_TEXT_LINKS)
     .sort((left, right) => right.text.length - left.text.length);
 
-function renderTextWithSpeciesLinks(text: string, currentSlug: string) {
+function createSpeciesLinkMatcher(currentSlug: string) {
     const links = GLOBAL_SPECIES_TEXT_LINKS.filter((item) => item.slug !== currentSlug);
-
-    if (links.length === 0) {
-        return text;
-    }
+    if (links.length === 0) return null;
 
     const linkMap = new Map(links.map((item) => [item.text.toLowerCase(), item]));
     const pattern = links
         .map((item) => item.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
         .join("|");
     const matcher = new RegExp(`\\b(${pattern})\\b`, "gi");
+    return {matcher, linkMap};
+}
+
+function renderTextWithSpeciesLinks(text: string, matcherState: ReturnType<typeof createSpeciesLinkMatcher>) {
+    if (!matcherState) return text;
+    const {matcher, linkMap} = matcherState;
     const parts: JSX.Element[] = [];
     const linkedSlugs = new Set<string>();
     let cursor = 0;
@@ -282,7 +285,7 @@ function resolveSpeciesMentionSlug(text: string, currentSlug: string) {
     return null;
 }
 
-function renderListItemWithSpeciesLink(text: string, currentSlug: string) {
+function renderListItemWithSpeciesLink(text: string, currentSlug: string, matcherState: ReturnType<typeof createSpeciesLinkMatcher>) {
     const slug = resolveSpeciesMentionSlug(text, currentSlug);
 
     if (slug) {
@@ -296,7 +299,7 @@ function renderListItemWithSpeciesLink(text: string, currentSlug: string) {
         );
     }
 
-    return renderTextWithSpeciesLinks(text, currentSlug);
+    return renderTextWithSpeciesLinks(text, matcherState);
 }
 
 export async function generateMetadata({params}: SpeciesPageProps): Promise<Metadata> {
@@ -471,6 +474,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         t("ctaSupportThree")
     ];
     const storyText = subtitleStory ?? ([entry.analysis.summary, miniSystemsSummary].filter(Boolean).join(" ") || null);
+    const linkMatcher = createSpeciesLinkMatcher(entry.slug);
     const pageUrl = getAbsoluteUrl(locale, `/animals/${entry.slug}`);
     const faqItems = [
         {
@@ -649,12 +653,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             tintClass: "text-primary-200 bg-primary-400/15 border-primary-300/25",
             content: (
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
-                    <p>{renderTextWithSpeciesLinks(entry.analysis.summary, entry.slug)}</p>
+                    <p>{renderTextWithSpeciesLinks(entry.analysis.summary, linkMatcher)}</p>
                     <div>
                         <h4 className="text-base font-semibold text-white">{t("identifyTitle", {animal: entry.name})}</h4>
                         <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
                             {entry.analysis.identification.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                             ))}
                         </ul>
                     </div>
@@ -663,7 +667,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <h4 className="text-base font-semibold text-white">{t("interestingTitle", {animal: entry.name})}</h4>
                             <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
                                 {entry.premiumDetails.whyInteresting.map((item) => (
-                                    <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                    <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                                 ))}
                             </ul>
                         </div>
@@ -680,11 +684,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
                     <p>
                         <span className="text-white">{t("habitatLabel")}: </span>
-                        {renderTextWithSpeciesLinks(entry.analysis.habitat, entry.slug)}
+                        {renderTextWithSpeciesLinks(entry.analysis.habitat, linkMatcher)}
                     </p>
                     <p>
                         <span className="text-white">{t("nativeRangeLabel")}: </span>
-                        {renderTextWithSpeciesLinks(entry.analysis.nativeRange, entry.slug)}
+                        {renderTextWithSpeciesLinks(entry.analysis.nativeRange, linkMatcher)}
                     </p>
                     <NativeRangeMapCard
                         entry={entry}
@@ -695,15 +699,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         }}
                     />
                     <div className="flex flex-col gap-4">
-                        <p>{renderTextWithSpeciesLinks(spottingContent.summary, entry.slug)}</p>
+                        <p>{renderTextWithSpeciesLinks(spottingContent.summary, linkMatcher)}</p>
                         <ul className="flex list-disc flex-col gap-2 pl-5">
                             {spottingContent.locations.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), entry.slug)}</li>
+                                <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), linkMatcher)}</li>
                             ))}
                         </ul>
                         <ul className="flex list-disc flex-col gap-2 pl-5">
                             {spottingContent.tips.map((item) => (
-                                <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                             ))}
                         </ul>
                     </div>
@@ -717,15 +721,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             tintClass: "text-orange-200 bg-orange-400/15 border-orange-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
-                    <p>{renderTextWithSpeciesLinks(databaseFieldGuide?.dietSummary ?? dietContent.summary, entry.slug)}</p>
+                    <p>{renderTextWithSpeciesLinks(databaseFieldGuide?.dietSummary ?? dietContent.summary, linkMatcher)}</p>
                     {!databaseFieldGuide?.dietSummary ? (
                         <>
                             <ul className="flex list-disc flex-col gap-2 pl-5">
                                 {dietContent.foods.map((item) => (
-                                    <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                                    <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                                 ))}
                             </ul>
-                            <p className="text-ink-300">{renderTextWithSpeciesLinks(dietContent.note, entry.slug)}</p>
+                            <p className="text-ink-300">{renderTextWithSpeciesLinks(dietContent.note, linkMatcher)}</p>
                         </>
                     ) : null}
                 </div>
@@ -736,7 +740,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             title: "Predators, threats, and defense",
             icon: "predators" as const,
             tintClass: "text-violet-200 bg-violet-400/15 border-violet-300/25",
-            content: <p className="text-lg leading-8 text-ink-200">{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, entry.slug)}</p>
+            content: <p className="text-lg leading-8 text-ink-200">{renderTextWithSpeciesLinks(databaseFieldGuide.predatorsSummary, linkMatcher)}</p>
         }] : []),
         ...(databaseFieldGuide && (databaseFieldGuide.sleepPattern || databaseFieldGuide.lifespanEstimate) ? [{
             id: "life-cycle",
@@ -745,8 +749,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             tintClass: "text-cyan-200 bg-cyan-400/15 border-cyan-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
-                    {databaseFieldGuide.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, entry.slug)}</p> : null}
-                    {databaseFieldGuide.lifespanEstimate ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.lifespanEstimate, entry.slug)}</p> : null}
+                    {databaseFieldGuide.sleepPattern ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sleepPattern, linkMatcher)}</p> : null}
+                    {databaseFieldGuide.lifespanEstimate ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.lifespanEstimate, linkMatcher)}</p> : null}
                 </div>
             )
         }] : []),
@@ -757,8 +761,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             tintClass: "text-rose-200 bg-rose-400/15 border-rose-300/25",
             content: (
                 <div className="flex flex-col gap-4 text-lg leading-8 text-ink-200">
-                    {databaseFieldGuide.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, entry.slug)}</p> : null}
-                    {databaseFieldGuide.sexDifferenceNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sexDifferenceNotes, entry.slug)}</p> : null}
+                    {databaseFieldGuide.femaleOffspringNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.femaleOffspringNotes, linkMatcher)}</p> : null}
+                    {databaseFieldGuide.sexDifferenceNotes ? <p>{renderTextWithSpeciesLinks(databaseFieldGuide.sexDifferenceNotes, linkMatcher)}</p> : null}
                 </div>
             )
         }] : []),
@@ -770,7 +774,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.behaviorTraits.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                     ))}
                 </ul>
             )
@@ -784,7 +788,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <div className="flex flex-col gap-5 text-lg leading-8 text-ink-200">
                     <p>{entry.name} most often symbolizes {principleProfile.principle.toLowerCase()} in AnimalDex because its real survival behavior repeatedly shows this pattern.</p>
                     <p>{principleProfile.coreLesson}</p>
-                    <p>{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, entry.slug)}</p>
+                    <p>{renderTextWithSpeciesLinks(principleProfile.biologicalBasis, linkMatcher)}</p>
                 </div>
             )
         }] : []),
@@ -796,7 +800,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.respectfulSpotting.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, entry.slug)}</li>
+                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
                     ))}
                 </ul>
             )
@@ -809,7 +813,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             content: (
                 <ul className="flex list-disc flex-col gap-2 pl-5 text-lg leading-8 text-ink-200">
                     {entry.premiumDetails.lookalikes.map((item) => (
-                        <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug)}</li>
+                        <li key={item}>{renderListItemWithSpeciesLink(item, entry.slug, linkMatcher)}</li>
                     ))}
                 </ul>
             )

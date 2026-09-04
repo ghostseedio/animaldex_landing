@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, {params}: {params: {slug: string
         }
 
         const response = NextResponse.redirect(signedUrl, 307);
-        response.headers.set("Cache-Control", "private, max-age=3600, stale-while-revalidate=86400");
+        response.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
         return response;
     } catch {
         return NextResponse.redirect(buildFallbackUrl(request), 307);

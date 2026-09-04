@@ -14,7 +14,7 @@ export async function GET(request: NextRequest, {params}: {params: {slug: string
         heroSubtitle
     }, {
         headers: {
-            "Cache-Control": "no-store"
+            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"
         }
     });
 }

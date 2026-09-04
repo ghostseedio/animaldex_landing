@@ -908,17 +908,105 @@ export async function getCaptureCardCatalogEnrichment(options: {
     };
 }
 
+const SINGLE_SPECIES_CATALOG_SELECT = [
+    "species_profile_id", "animaldex_number", "display_name", "animal_name", "refined_identity",
+    "normalized_identity_key", "scientific_name", "identity_kind",
+    "landing_page_slug", "created_at", "updated_at"
+].join(",");
+
+const SINGLE_SPECIES_GUIDE_SELECT = [
+    "species_profile_id", "species_spotlight", "species_subtitle_story", "signature_traits",
+    "interesting_facts", "typical_habitat", "diet_summary", "predators_summary",
+    "sleep_pattern", "lifespan_estimate", "female_offspring_notes", "sex_difference_notes",
+    "field_guide_version", "updated_at"
+].join(",");
+
+async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry | null> {
+    const normalized = slug.trim().toLowerCase();
+    const identity = normalized.replace(/-/g, "_");
+    const url = getSupabaseUrl();
+    const key = getSupabaseServerReadKey();
+    if (!url || !key) return null;
+
+    const orFilter = `landing_page_slug.eq.${postgrestEqValue(normalized)},normalized_identity_key.eq.${postgrestEqValue(identity)}`;
+    const catalogParams = new URLSearchParams({
+        select: SINGLE_SPECIES_CATALOG_SELECT,
+        or: `(${orFilter})`,
+        limit: "2",
+        order: "animaldex_number.asc"
+    });
+
+    try {
+        const catalogResponse = await fetch(`${url}/rest/v1/species_catalog_v1?${catalogParams}`, {
+            headers: getSupabaseHeaders(key),
+            next: {revalidate: 3600}
+        });
+        if (!catalogResponse.ok) return null;
+        const catalogRows = await catalogResponse.json() as CatalogRow[];
+        if (!catalogRows.length) return null;
+
+        const row = catalogRows.find((r) => {
+            const rowSlug = databaseSpeciesCanonicalSlug({
+                landing_page_slug: r.landing_page_slug,
+                normalized_identity_key: r.normalized_identity_key,
+                animaldex_number: r.animaldex_number
+            });
+            if (rowSlug === normalized) return true;
+            return stripCatalogNumberSuffix(rowSlug, r.animaldex_number) === normalized;
+        }) ?? catalogRows[0];
+
+        const guideResponse = await fetch(
+            `${url}/rest/v1/species_field_guide?species_profile_id=eq.${postgrestEqValue(row.species_profile_id)}&select=${SINGLE_SPECIES_GUIDE_SELECT}&limit=1`,
+            {headers: getSupabaseHeaders(key), next: {revalidate: 3600}}
+        );
+        const guideRows = guideResponse.ok ? await guideResponse.json() as FieldGuideRow[] : [];
+        const guide = guideRows[0] ?? null;
+
+        const profileResponse = await fetch(
+            `${url}/rest/v1/species_profiles?id=eq.${postgrestEqValue(row.species_profile_id)}&select=id,animaldex_number,catalog_status&limit=1`,
+            {headers: getSupabaseHeaders(key), next: {revalidate: 3600}}
+        );
+        const profileRows = profileResponse.ok ? await profileResponse.json() as IndexedProfileRow[] : [];
+        const profile = profileRows[0];
+        const animalDexNumber = profile?.catalog_status !== "hidden" && typeof profile?.animaldex_number === "number"
+            ? profile.animaldex_number
+            : row.animaldex_number;
+
+        return mapDatabaseSpecies(
+            {...row, animaldex_number: animalDexNumber},
+            guide
+        );
+    } catch {
+        return null;
+    }
+}
+
 export async function getDatabaseSpeciesBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
     const identity = normalized.replace(/-/g, "_");
+
+    const cached = readCatalogCache();
+    if (cached) {
+        return cached.entries.find((entry) => {
+            if (entry.slug === normalized || entry.normalizedIdentityKey === identity) {
+                return true;
+            }
+            const catalogNumber = entry.databaseSource?.animalDexNumber;
+            return catalogNumber
+                ? stripCatalogNumberSuffix(entry.slug, catalogNumber) === normalized
+                : false;
+        }) ?? null;
+    }
+
+    const directResult = await fetchSingleSpeciesFromCatalog(slug);
+    if (directResult) return directResult;
+
     const entries = await getDatabaseSpeciesEntries();
     return entries.find((entry) => {
         if (entry.slug === normalized || entry.normalizedIdentityKey === identity) {
             return true;
         }
-
         const catalogNumber = entry.databaseSource?.animalDexNumber;
-
         return catalogNumber
             ? stripCatalogNumberSuffix(entry.slug, catalogNumber) === normalized
             : false;
