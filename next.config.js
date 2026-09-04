@@ -1,3 +1,4 @@
+const path = require("path");
 const withNextIntl = require('next-intl/plugin')();
 
 module.exports = withNextIntl({
@@ -207,6 +208,10 @@ module.exports = withNextIntl({
         ];
     },
     webpack: (config) => {
+        config.resolve.alias = {
+            ...config.resolve.alias,
+            "react$": path.resolve(__dirname, "src/lib/react-with-cache.ts"),
+        };
         config.module.rules.push({
             test: /\.md$/,
             use: 'raw-loader',
