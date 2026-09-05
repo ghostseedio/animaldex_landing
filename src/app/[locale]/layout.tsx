@@ -15,10 +15,6 @@ import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 const brandIconUrl = "/images/logo.webp";
 const socialImageUrl = "/images/og.png";
 
-export function generateStaticParams() {
-    return localeConfig.locales.map((locale) => ({locale}));
-}
-
 type RootLayoutProps = {
     children: ReactNode;
     params: { locale: string };

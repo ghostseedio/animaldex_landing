@@ -55,7 +55,7 @@ const animalBackgroundImages = [
 export const revalidate = 300;
 
 export function generateStaticParams() {
-    return [{locale: "en"}, {locale: "id"}];
+    return [];
 }
 
 type HomePageProps = {

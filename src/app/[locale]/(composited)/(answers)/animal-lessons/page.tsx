@@ -12,7 +12,7 @@ import {getScopedTranslator} from "@/loaders/translation";
 type LessonTag = "popular" | "leadership" | "wisdom" | "teamwork" | "adaptation" | "survival" | "focus" | "intelligence" | "engineering" | "cooperation" | "patience";
 
 export function generateStaticParams() {
-    return [{locale: "en"}, {locale: "id"}];
+    return [];
 }
 
 type AnimalLessonsPageProps = {

@@ -12,6 +12,10 @@ import {getScopedTranslator} from "@/loaders/translation";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 export default async function RefundPolicy() {
     const processedContent = await remark().use(html).process(policy);
 

@@ -21,7 +21,6 @@ const DYNAMIC_ALLOWLIST = [
 ];
 
 const CATALOG_WALK_ALLOWLIST = [
-    "app/[locale]/(composited)/animals/page.tsx",
     "app/[locale]/(composited)/rankings/[slug]/page.tsx"
 ];
 
@@ -113,13 +112,18 @@ test("known disaster paths stay bounded and cacheable", () => {
     const support = readFileSync(join(root, "app/[locale]/(composited)/support/[categorySlug]/[articleSlug]/page.tsx"), "utf8");
     const sitemap = readFileSync(join(root, "app/sitemap.xml/route.ts"), "utf8");
     const layout = readFileSync(join(root, "app/[locale]/(composited)/layout.tsx"), "utf8");
+    const localeLayout = readFileSync(join(root, "app/[locale]/layout.tsx"), "utf8");
 
     assert.doesNotMatch(animals, /getUnifiedSpeciesEntries/);
     assert.match(animals, /export const revalidate = 3600/);
     assert.doesNotMatch(animalsIndex, /getAppCaptures/);
+    assert.doesNotMatch(animalsIndex, /getUnifiedSpeciesEntries/);
     assert.doesNotMatch(animalsIndex, /searchParams/);
     assert.match(animalsIndex, /export const revalidate = 3600/);
     assert.match(animalsIndex, /generateStaticParams/);
+    assert.match(animalsIndex, /return \[\];/);
+    assert.doesNotMatch(localeLayout, /generateStaticParams/);
+    assert.doesNotMatch(layout, /generateStaticParams/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/pokemon-animals/page.tsx"), "utf8"), /generateStaticParams/);
     assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/pokemon-animals/page.tsx"), "utf8"), /searchParams/);
     assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/blog/page.tsx"), "utf8"), /searchParams/);

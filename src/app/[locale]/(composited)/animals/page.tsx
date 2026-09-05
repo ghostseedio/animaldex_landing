@@ -1,7 +1,6 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
-import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {buildSpeciesDirectoryImageState} from "@/data/species-images";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -177,7 +176,7 @@ function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
 export const revalidate = 3600;
 
 export function generateStaticParams() {
-    return [{locale: "en"}, {locale: "id"}];
+    return [];
 }
 
 type AnimalsIndexPageProps = {
@@ -241,7 +240,6 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
     const sort = "number" as const;
     const order = getDefaultSpeciesDirectorySortOrder(sort);
     const tier = "all" as const;
-    const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
     const ts = await getScopedTranslator(locale, "animalSearch");
     const trendingSearches = await fetchTrendingSearches(8).catch(() => []);
     const directoryPage = getSpeciesDirectoryPage({
@@ -254,9 +252,11 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
         order,
         tier,
         page: 1,
-        entries: unifiedSpeciesEntries
+        entries: speciesEntries
     });
-    const directoryImageState = await buildSpeciesDirectoryImageState(directoryPage.entries);
+    const directoryImageState = await buildSpeciesDirectoryImageState(directoryPage.entries).catch(
+        () => new Map(directoryPage.entries.map((entry) => [entry.slug, {hasPublicCapture: false as const, captureId: null}]))
+    );
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
     const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => {
         const publicCaptureId = directoryImageState.get(entry.slug)?.captureId ?? null;
@@ -297,7 +297,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                     locale={locale}
                     initialQuery={query}
                     directoryFilterPath={getLocalePath(locale, "/animals")}
-                    catalogEntries={unifiedSpeciesEntries.slice(0, 400).map((entry) => ({
+                    catalogEntries={speciesEntries.slice(0, 400).map((entry) => ({
                         slug: entry.slug,
                         name: entry.name,
                         animalDexNumber: getAnimalDexNumberFromEntry(entry)

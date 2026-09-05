@@ -26,7 +26,7 @@ type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
 
 export function generateStaticParams() {
-    return [{locale: "en"}, {locale: "id"}];
+    return [];
 }
 
 type ComparisonsIndexPageProps = {
