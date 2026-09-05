@@ -118,6 +118,7 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.match(animals, /export const revalidate = 3600/);
     assert.doesNotMatch(animalsIndex, /getAppCaptures/);
     assert.doesNotMatch(animalsIndex, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(animalsIndex, /fetchTrendingSearches|buildSpeciesDirectoryImageState|createSignedStorageUrl|cache:\s*["']no-store["']/);
     assert.doesNotMatch(animalsIndex, /searchParams/);
     assert.match(animalsIndex, /export const revalidate = 3600/);
     assert.match(animalsIndex, /generateStaticParams/);

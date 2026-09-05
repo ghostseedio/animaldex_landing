@@ -1,7 +1,6 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
-import {buildSpeciesDirectoryImageState} from "@/data/species-images";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -13,7 +12,6 @@ import SpeciesDirectory from "./species-directory";
 import SpeciesImage from "./species-image";
 import AnimalsSearch, {type AnimalsSearchSuggestion} from "./animals-search";
 import UniversalSearchField from "@/app/[locale]/(composited)/animals/_components/universal-search-field";
-import {fetchTrendingSearches} from "@/data/universal-search";
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
@@ -64,6 +62,17 @@ type CatalogQuickLink = {
     icon: "bird" | "paw" | "bolt" | "gem" | "snail" | "mountain" | "alert" | "lizard";
     tier?: "S" | "A" | "B";
 };
+
+const hubTrendingSearches = [
+    {query: "tiger", isPopular: true},
+    {query: "lion", isPopular: true},
+    {query: "wolf", isPopular: true},
+    {query: "owl", isPopular: true},
+    {query: "bird", isPopular: false},
+    {query: "shark", isPopular: false},
+    {query: "reptile", isPopular: false},
+    {query: "endangered", isPopular: false}
+];
 
 const catalogQuickLinks: CatalogQuickLink[] = [
     {label: "Birds", href: "/animals?q=bird", kind: "query", icon: "bird"},
@@ -241,7 +250,6 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
     const order = getDefaultSpeciesDirectorySortOrder(sort);
     const tier = "all" as const;
     const ts = await getScopedTranslator(locale, "animalSearch");
-    const trendingSearches = await fetchTrendingSearches(8).catch(() => []);
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
@@ -254,18 +262,9 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
         page: 1,
         entries: speciesEntries
     });
-    const directoryImageState = await buildSpeciesDirectoryImageState(directoryPage.entries).catch(
-        () => new Map(directoryPage.entries.map((entry) => [entry.slug, {hasPublicCapture: false as const, captureId: null}]))
-    );
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
-    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => {
-        const publicCaptureId = directoryImageState.get(entry.slug)?.captureId ?? null;
-        return [entry.slug, getSpeciesImageRoute(entry.slug, publicCaptureId)];
-    }));
-    const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
-        entry.slug,
-        directoryImageState.get(entry.slug)?.hasPublicCapture ?? false
-    ]));
+    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, getSpeciesImageRoute(entry.slug)]));
+    const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
 
     const schema = {
         "@context": "https://schema.org",
@@ -302,7 +301,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         name: entry.name,
                         animalDexNumber: getAnimalDexNumberFromEntry(entry)
                     }))}
-                    trending={trendingSearches.map((item) => ({query: item.query, isPopular: item.isPopular}))}
+                    trending={hubTrendingSearches}
                     copy={{
                         placeholder: ts("placeholder"),
                         searchLabel: ts("searchLabel"),
