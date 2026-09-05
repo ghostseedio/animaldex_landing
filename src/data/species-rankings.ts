@@ -1,7 +1,7 @@
 import type {SpeciesEntry} from "@/data/species";
 import {getDatabaseSpeciesBySlug} from "@/data/database-species-pages";
 import {
-    buildSpeciesCaptureMatchCandidates,
+    primarySpeciesCaptureMatchCandidate,
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {computeCaptureGrade, type CaptureGradeSource} from "@/lib/capture-grade";
@@ -62,10 +62,6 @@ function getSupabaseConfig() {
     return {supabaseUrl, readKey};
 }
 
-function buildSpeciesKeyCandidates(entry: SpeciesEntry) {
-    return buildSpeciesCaptureMatchCandidates(entry);
-}
-
 function filterRankingRowsForEntry(entry: SpeciesEntry, rows: DiscoverFeedRankingRow[]) {
     return rows.filter((row) => captureMatchesSpeciesEntry(entry, row));
 }
@@ -89,6 +85,10 @@ function prepareRankingRows(rows: DiscoverFeedRankingRow[]) {
 }
 
 async function resolveSpeciesEntryForRankings(entry: SpeciesEntry): Promise<SpeciesEntry> {
+    if (entry.speciesProfileId && entry.normalizedIdentityKey) {
+        return entry;
+    }
+
     const databaseEntry = await getDatabaseSpeciesBySlug(entry.slug);
 
     if (!databaseEntry) {
@@ -220,10 +220,11 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
 
 export async function getSpeciesRankings(entry: SpeciesEntry, limit = 24): Promise<SpeciesRankingItem[]> {
     const resolvedEntry = await resolveSpeciesEntryForRankings(entry);
+    const primary = primarySpeciesCaptureMatchCandidate(resolvedEntry);
 
-    for (const candidate of buildSpeciesKeyCandidates(resolvedEntry)) {
+    if (primary) {
         const searchParams = new URLSearchParams({
-            [candidate.column]: `eq.${candidate.value}`,
+            [primary.column]: `eq.${primary.value}`,
             limit: String(limit)
         });
         const rows = prepareRankingRows(filterRankingRowsForEntry(resolvedEntry, await fetchDiscoverFeedRankings(searchParams)));

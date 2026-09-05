@@ -498,6 +498,8 @@ function mapDatabaseSpecies(row: CatalogRow, guide: FieldGuideRow | null): Speci
     };
 }
 
+const MAX_FETCH_PAGES = 40;
+
 async function fetchRows<T>(table: string, select: string, filters: Record<string, string> = {}) {
     const url = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
@@ -510,7 +512,7 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
 
     const rows: T[] = [];
     const queryStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-    for (let offset = 0; ; offset += pageSize) {
+    for (let offset = 0, page = 0; page < MAX_FETCH_PAGES; offset += pageSize, page++) {
         params.set("offset", String(offset));
         const pageStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
         const response = await fetch(`${url}/rest/v1/${table}?${params}`, {
@@ -538,6 +540,10 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
             return rows;
         }
     }
+    if (process.env.NODE_ENV !== "production") {
+        logDevPerfEvent("catalog.fetch", `${table} page cap`, {rows: rows.length, maxPages: MAX_FETCH_PAGES});
+    }
+    return rows;
 }
 
 type IdentityAliasRow = {
@@ -977,13 +983,9 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
             if (rowSlug === normalized) return true;
             return stripCatalogNumberSuffix(rowSlug, r.animaldex_number) === normalized;
         }) ?? catalogRows[0];
-
-        const guideResponse = await fetch(
-            `${url}/rest/v1/species_field_guide?species_profile_id=eq.${postgrestEqValue(row.species_profile_id)}&select=${SINGLE_SPECIES_GUIDE_SELECT}&limit=1`,
-            {headers: getSupabaseHeaders(key), next: {revalidate: 3600}}
-        );
-        const guideRows = guideResponse.ok ? await guideResponse.json() as FieldGuideRow[] : [];
-        const guide = guideRows[0] ?? null;
+        if (!row) {
+            return null;
+        }
 
         const profileResponse = await fetch(
             `${url}/rest/v1/species_profiles?id=eq.${postgrestEqValue(row.species_profile_id)}&select=${PROFILE_OWNED_CATALOG_SELECT}&limit=1`,
@@ -991,9 +993,23 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
         );
         const profileRows = profileResponse.ok ? await profileResponse.json() as IndexedProfileRow[] : [];
         const profile = profileRows[0];
-        const animalDexNumber = profile?.catalog_status !== "hidden" && typeof profile?.animaldex_number === "number"
+        if (profile?.catalog_status === "hidden") {
+            return null;
+        }
+
+        const animalDexNumber = typeof profile?.animaldex_number === "number" && profile.animaldex_number >= 1
             ? profile.animaldex_number
             : row.animaldex_number;
+        if (typeof animalDexNumber !== "number" || animalDexNumber < 1) {
+            return null;
+        }
+
+        const guideResponse = await fetch(
+            `${url}/rest/v1/species_field_guide?species_profile_id=eq.${postgrestEqValue(row.species_profile_id)}&select=${SINGLE_SPECIES_GUIDE_SELECT}&limit=1`,
+            {headers: getSupabaseHeaders(key), next: {revalidate: 3600}}
+        );
+        const guideRows = guideResponse.ok ? await guideResponse.json() as FieldGuideRow[] : [];
+        const guide = guideRows[0] ?? null;
 
         return mapDatabaseSpecies(
             attachProfileOwnedCatalogFields({...row, animaldex_number: animalDexNumber}, profile),
@@ -1021,19 +1037,7 @@ export async function getDatabaseSpeciesBySlug(slug: string) {
         }) ?? null;
     }
 
-    const directResult = await fetchSingleSpeciesFromCatalog(slug);
-    if (directResult) return directResult;
-
-    const entries = await getDatabaseSpeciesEntries();
-    return entries.find((entry) => {
-        if (entry.slug === normalized || entry.normalizedIdentityKey === identity) {
-            return true;
-        }
-        const catalogNumber = entry.databaseSource?.animalDexNumber;
-        return catalogNumber
-            ? stripCatalogNumberSuffix(entry.slug, catalogNumber) === normalized
-            : false;
-    }) ?? null;
+    return fetchSingleSpeciesFromCatalog(slug);
 }
 
 function resolveLegendaryCatalogEntry(staticEntry: SpeciesEntry, databaseEntries: SpeciesEntry[]) {
@@ -1046,25 +1050,58 @@ function resolveLegendaryCatalogEntry(staticEntry: SpeciesEntry, databaseEntries
     return enrichLegendaryEarthBeastSpeciesEntry(staticEntry, biologyCatalogEntry);
 }
 
-export async function getResolvedSpeciesBySlug(slug: string) {
-    const normalized = slug.trim().toLowerCase();
+async function resolveLegendaryCatalogEntryBySlug(staticEntry: SpeciesEntry) {
+    const seed = getLegendaryCatalogSeedByBeastSlug(staticEntry.slug);
+    if (!seed) {
+        return staticEntry;
+    }
+
+    const biologyCatalogEntry = await getDatabaseSpeciesBySlug(seed.biologyLandingSlug);
+    return enrichLegendaryEarthBeastSpeciesEntry(staticEntry, biologyCatalogEntry);
+}
+
+async function fetchCanonicalIdentityAlias(identityKey: string): Promise<string | null> {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServerReadKey();
+    if (!url || !key) return null;
+
+    const params = new URLSearchParams({
+        select: "alias_identity_key,canonical_identity_key",
+        alias_identity_key: `eq.${postgrestEqValue(identityKey)}`,
+        limit: "1"
+    });
+
+    try {
+        const response = await fetch(`${url}/rest/v1/species_identity_aliases?${params}`, {
+            headers: getSupabaseHeaders(key),
+            next: {revalidate: 3600}
+        });
+        if (!response.ok) return null;
+        const [row] = await response.json() as IdentityAliasRow[];
+        const canonical = row?.canonical_identity_key?.trim().toLowerCase() ?? "";
+        if (!canonical || canonical === identityKey) return null;
+        return canonical;
+    } catch {
+        return null;
+    }
+}
+
+async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntry | null> {
     const identityKey = normalized.replace(/-/g, "_");
-    const canonicalIdentity = resolveCollectionIdentityToken(identityKey);
-    const canonicalSlug = resolveCanonicalSlugFromIdentity(canonicalIdentity) ?? canonicalIdentity.replace(/_/g, "-");
-    const slugCandidates = canonicalSlug === normalized
+    const staticCanonical = resolveCollectionIdentityToken(identityKey);
+    const staticCanonicalSlug = resolveCanonicalSlugFromIdentity(staticCanonical) ?? staticCanonical.replace(/_/g, "-");
+    const visited = new Set<string>([normalized, identityKey, staticCanonical, staticCanonicalSlug]);
+    const slugCandidates = staticCanonicalSlug === normalized
         ? [normalized]
-        : [canonicalSlug, normalized];
-    const databaseEntries = await getDatabaseSpeciesEntries();
+        : [staticCanonicalSlug, normalized];
 
     for (const candidate of slugCandidates) {
         const staticEntry = speciesEntries.find((entry) => entry.slug === candidate) ?? null;
-        const databaseEntry = databaseEntries.find((entry) => entry.slug === candidate) ?? null;
-
         if (staticEntry && legendaryEarthBeastSpeciesSlugs.has(staticEntry.slug)) {
-            return resolveLegendaryCatalogEntry(staticEntry, databaseEntries);
+            return resolveLegendaryCatalogEntryBySlug(staticEntry);
         }
-
         if (staticEntry) {
+            const databaseEntry = await getDatabaseSpeciesBySlug(candidate);
             return mergeCatalogMetadata(staticEntry, databaseEntry);
         }
 
@@ -1072,16 +1109,73 @@ export async function getResolvedSpeciesBySlug(slug: string) {
         if (biologySeed) {
             const beastStaticEntry = speciesEntries.find((entry) => entry.slug === biologySeed.beastSlug) ?? null;
             if (beastStaticEntry) {
-                return resolveLegendaryCatalogEntry(beastStaticEntry, databaseEntries);
+                return resolveLegendaryCatalogEntryBySlug(beastStaticEntry);
             }
         }
 
+        const databaseEntry = await getDatabaseSpeciesBySlug(candidate);
         if (databaseEntry) {
             return databaseEntry;
         }
     }
 
+    let currentIdentity = identityKey;
+    for (let depth = 0; depth < 3; depth++) {
+        const aliasCanonical = await fetchCanonicalIdentityAlias(currentIdentity);
+        if (!aliasCanonical || visited.has(aliasCanonical)) {
+            break;
+        }
+        visited.add(aliasCanonical);
+        const aliasSlug = resolveCanonicalSlugFromIdentity(aliasCanonical) ?? aliasCanonical.replace(/_/g, "-");
+        visited.add(aliasSlug);
+
+        const staticEntry = speciesEntries.find((entry) => entry.slug === aliasSlug) ?? null;
+        if (staticEntry && legendaryEarthBeastSpeciesSlugs.has(staticEntry.slug)) {
+            return resolveLegendaryCatalogEntryBySlug(staticEntry);
+        }
+        if (staticEntry) {
+            const databaseEntry = await getDatabaseSpeciesBySlug(aliasSlug);
+            return mergeCatalogMetadata(staticEntry, databaseEntry);
+        }
+
+        const databaseEntry = await getDatabaseSpeciesBySlug(aliasSlug);
+        if (databaseEntry) {
+            return databaseEntry;
+        }
+        currentIdentity = aliasCanonical;
+    }
+
     return null;
+}
+
+const RESOLVED_SPECIES_TTL_MS = 15_000;
+const resolvedSpeciesBySlug = new Map<string, {expiresAt: number; value: Promise<SpeciesEntry | null>}>();
+
+export async function getResolvedSpeciesBySlug(slug: string) {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) return null;
+
+    const now = Date.now();
+    const existing = resolvedSpeciesBySlug.get(normalized);
+    if (existing && existing.expiresAt > now) {
+        return existing.value;
+    }
+
+    const promise = resolveSpeciesBySlugOnce(normalized);
+    resolvedSpeciesBySlug.set(normalized, {expiresAt: now + RESOLVED_SPECIES_TTL_MS, value: promise});
+    if (resolvedSpeciesBySlug.size > 64) {
+        resolvedSpeciesBySlug.forEach((entry, key) => {
+            if (entry.expiresAt <= now) {
+                resolvedSpeciesBySlug.delete(key);
+            }
+        });
+    }
+    return promise;
+}
+
+/** Request-scoped species page loader. Shares one resolution between metadata and page. */
+export async function getSpeciesPageData(slug: string) {
+    return getResolvedSpeciesBySlug(slug);
 }
 
 export type SitemapSpeciesEntry = {

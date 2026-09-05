@@ -264,7 +264,7 @@ async function fetchApplicationExamplesFromSupabase(
     let offset = 0;
 
     try {
-        while (true) {
+        for (let page = 0; page < 8; page++) {
             const profileSearchParams = new URLSearchParams({
                 select: "id,landing_page_slug",
                 landing_page_slug: slug ? `eq.${slug}` : "not.is.null",
@@ -307,7 +307,7 @@ async function fetchApplicationExamplesFromSupabase(
             return examples;
         }
 
-        while (true) {
+        for (let page = 0; page < 8; page++) {
             const searchParams = new URLSearchParams({
                 select: "species_profile_id,application_example",
                 application_example: "not.is.null",
@@ -377,7 +377,7 @@ async function fetchBehaviorLessonsFromSupabase(): Promise<SpeciesBehaviorLesson
     const rows: SpeciesCatalogLessonRow[] = [];
     let offset = 0;
 
-    while (true) {
+    for (let page = 0; page < 8; page++) {
         const searchParams = new URLSearchParams({
             select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
             core_lesson: "not.is.null",
@@ -448,16 +448,54 @@ export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBeha
     return profile ? buildLocalBehaviorLesson(entry, profile) : null;
 }
 
-export async function getRelatedBehaviorLessons(slug: string, limit = 3): Promise<SpeciesBehaviorLesson[]> {
-    const current = await getBehaviorLessonBySlug(slug);
+async function fetchCatalogLessonsByPrinciple(principleName: string, excludeSlug: string, limit: number): Promise<SpeciesBehaviorLesson[]> {
+    const config = getSupabaseConfig();
+    if (!config || !principleName.trim()) {
+        return [];
+    }
+
+    const searchParams = new URLSearchParams({
+        select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
+        principle_name: `eq.${principleName}`,
+        core_lesson: "not.is.null",
+        landing_page_slug: `neq.${excludeSlug}`,
+        limit: String(Math.max(1, Math.min(8, limit)))
+    });
+
+    try {
+        const response = await fetch(`${config.supabaseUrl}/rest/v1/species_catalog_v1?${searchParams.toString()}`, {
+            headers: config.headers,
+            next: {revalidate: BEHAVIOR_LESSONS_REVALIDATE_SECONDS}
+        });
+        if (!response.ok) {
+            return [];
+        }
+        const rows = await response.json() as SpeciesCatalogLessonRow[];
+        return rows
+            .map((row) => normalizeLessonRow(row))
+            .filter((lesson): lesson is SpeciesBehaviorLesson => Boolean(lesson));
+    } catch {
+        return [];
+    }
+}
+
+export async function getRelatedBehaviorLessons(
+    slug: string,
+    limit = 3,
+    currentLesson?: SpeciesBehaviorLesson | null
+): Promise<SpeciesBehaviorLesson[]> {
+    const current = currentLesson ?? await getBehaviorLessonBySlug(slug);
 
     if (!current) {
         return [];
     }
 
-    const index = await getBehaviorLessonIndex();
+    const catalogRelated = await fetchCatalogLessonsByPrinciple(current.principleName, slug, limit);
+    if (catalogRelated.length > 0) {
+        return catalogRelated.slice(0, limit);
+    }
 
-    return index
+    return buildLocalBehaviorLessonsForWebsite()
         .filter((lesson) => lesson.slug !== slug && lesson.principleName === current.principleName)
         .slice(0, limit);
 }
@@ -541,7 +579,7 @@ export async function resolveSpeciesBehaviorProfile(slug: string): Promise<Resol
     const clusterProfile = getClusterProfile(localProfile);
 
     if (catalogLesson) {
-        const relatedLessons = await getRelatedBehaviorLessons(slug, 4);
+        const relatedLessons = await getRelatedBehaviorLessons(slug, 4, catalogLesson);
         const relatedSpeciesSlugs = relatedLessons.length > 0
             ? relatedLessons.map((lesson) => lesson.slug)
             : (localProfile?.relatedSpeciesSlugs ?? []);

@@ -13,7 +13,7 @@ import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import type {SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {getAuthenticatedUserId, getUserCaptures, getUserCapturesForSpecies, type UserCaptureSummary} from "@/data/user-captures";
-import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
 
 export type CaptureLearnedSubPrinciple = {
     id: string;
@@ -473,7 +473,7 @@ async function fetchPublicComparisonState(captureId: string | null, userId: stri
         return null;
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = userId ? createSupabaseServerClient() : createSupabasePublicClient();
 
     if (!supabase) {
         return null;
@@ -494,7 +494,7 @@ async function fetchPublicProgressState(captureId: string | null, userId: string
         return null;
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = userId ? createSupabaseServerClient() : createSupabasePublicClient();
 
     if (!supabase) {
         return null;
@@ -606,7 +606,7 @@ function canGenerateApexChallenge(match: ApexGrowthMatch | null) {
 export async function getSpeciesGrowthContext(
     entry: SpeciesEntry,
     publicCaptureId: string | null = null,
-    options?: {includeAuthenticatedViewer?: boolean}
+    options?: {includeAuthenticatedViewer?: boolean; principle?: ResolvedSpeciesBehaviorProfile | null}
 ): Promise<SpeciesGrowthContext> {
     const userId = options?.includeAuthenticatedViewer === false
         ? null
@@ -634,7 +634,9 @@ export async function getSpeciesGrowthContext(
     };
 
     const [principle, speciesCaptures] = await Promise.all([
-        resolveSpeciesBehaviorProfile(entry.slug),
+        options && "principle" in options
+            ? Promise.resolve(options.principle ?? null)
+            : resolveSpeciesBehaviorProfile(entry.slug),
         userId ? getUserCapturesForSpecies(entry) : Promise.resolve([])
     ]);
 

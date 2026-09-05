@@ -13,6 +13,7 @@ import {
 } from "@/lib/species-image-public";
 import {
     buildSpeciesCaptureMatchCandidates,
+    primarySpeciesCaptureMatchCandidate,
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -453,75 +454,94 @@ function getLocationDisplayLabel(label: string | null | undefined) {
     return genericLabels.has(normalizedLabel.toLowerCase()) ? null : normalizedLabel;
 }
 
-async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): Promise<DiscoverFeedCandidate[]> {
+async function fetchDiscoverFeedImageRows(
+    entry: SpeciesEntry,
+    candidate: {column: string; value: string}
+): Promise<DiscoverFeedCandidate[]> {
     const config = getSupabaseConfig();
 
     if (!config) {
         return [];
     }
 
-    for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
-        const searchParams = new URLSearchParams({
-            select: DISCOVER_FEED_IMAGE_SELECT,
-            [candidate.column]: `eq.${candidate.value}`,
-            limit: "12"
+    const searchParams = new URLSearchParams({
+        select: DISCOVER_FEED_IMAGE_SELECT,
+        [candidate.column]: `eq.${candidate.value}`,
+        limit: "12"
+    });
+
+    try {
+        const response = await fetch(`${config.supabaseUrl}/rest/v1/discover_feed_v1?${searchParams.toString()}`, {
+            headers: getSupabaseHeaders(config.anonKey),
+            next: {revalidate: 3600}
         });
 
-        try {
-            const response = await fetch(`${config.supabaseUrl}/rest/v1/discover_feed_v1?${searchParams.toString()}`, {
-                headers: getSupabaseHeaders(config.anonKey),
-                next: {revalidate: 3600}
-            });
+        if (!response.ok) {
+            return [];
+        }
 
-            if (!response.ok) {
-                continue;
-            }
+        return (await response.json() as DiscoverFeedCandidate[])
+            .filter((row) => captureMatchesSpeciesEntry(entry, row));
+    } catch {
+        return [];
+    }
+}
 
-            const rows = (await response.json() as DiscoverFeedCandidate[])
-                .filter((row) => captureMatchesSpeciesEntry(entry, row));
+async function fetchDiscoverableImageCandidatesBySpecies(entry: SpeciesEntry): Promise<DiscoverFeedCandidate[]> {
+    const primary = primarySpeciesCaptureMatchCandidate(entry);
 
-            if (rows.length > 0) {
-                return rows;
-            }
-        } catch {
-            continue;
+    if (!primary) {
+        return [];
+    }
+
+    const rows = await fetchDiscoverFeedImageRows(entry, primary);
+    if (rows.length > 0) {
+        return rows;
+    }
+
+    if (primary.column === "species_profile_id") {
+        const identity = (entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_")).trim();
+        if (identity) {
+            return fetchDiscoverFeedImageRows(entry, {column: "normalized_identity_key", value: identity});
         }
     }
 
     return [];
 }
 
-async function fetchAnalysisCandidatesBySpecies(entry: SpeciesEntry): Promise<AnalysisResultCandidate[]> {
+async function fetchAnalysisRowsByCandidate(
+    entry: SpeciesEntry,
+    candidate: {column: string; value: string}
+): Promise<AnalysisResultCandidate[]> {
     const config = getSupabaseConfig();
 
     if (!config) {
         return [];
     }
 
-    for (const candidate of buildSpeciesCaptureMatchCandidates(entry)) {
-        const searchParams = new URLSearchParams({
-            select: ANALYSIS_CAPTURE_SELECT,
-            completed_at: "not.is.null",
-            [candidate.column]: `eq.${candidate.value}`,
-            "captures.is_discoverable": "eq.true",
-            "captures.status": "eq.ready",
-            limit: "16",
-            order: "confidence.desc"
+    const searchParams = new URLSearchParams({
+        select: ANALYSIS_CAPTURE_SELECT,
+        completed_at: "not.is.null",
+        [candidate.column]: `eq.${candidate.value}`,
+        "captures.is_discoverable": "eq.true",
+        "captures.status": "eq.ready",
+        limit: "16",
+        order: "confidence.desc"
+    });
+
+    try {
+        const response = await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
+            headers: getSupabaseHeaders(config.anonKey),
+            next: {revalidate: 3600}
         });
 
-        try {
-            const response = await fetch(`${config.supabaseUrl}/rest/v1/analysis_results?${searchParams.toString()}`, {
-                headers: getSupabaseHeaders(config.anonKey),
-                next: {revalidate: 3600}
-            });
+        if (!response.ok) {
+            return [];
+        }
 
-            if (!response.ok) {
-                continue;
-            }
-
-            const rows = (await response.json() as AnalysisResultCandidate[])
-                .filter((row) => captureMatchesSpeciesEntry(entry, row));
-            const sortedRows = rows.sort((a, b) => {
+        return (await response.json() as AnalysisResultCandidate[])
+            .filter((row) => captureMatchesSpeciesEntry(entry, row))
+            .sort((a, b) => {
                 const confidenceDelta = (b.confidence ?? 0) - (a.confidence ?? 0);
 
                 if (confidenceDelta !== 0) {
@@ -530,12 +550,27 @@ async function fetchAnalysisCandidatesBySpecies(entry: SpeciesEntry): Promise<An
 
                 return new Date(b.captures?.created_at ?? 0).getTime() - new Date(a.captures?.created_at ?? 0).getTime();
             });
+    } catch {
+        return [];
+    }
+}
 
-            if (sortedRows.length > 0) {
-                return sortedRows;
-            }
-        } catch {
-            continue;
+async function fetchAnalysisCandidatesBySpecies(entry: SpeciesEntry): Promise<AnalysisResultCandidate[]> {
+    const primary = primarySpeciesCaptureMatchCandidate(entry);
+
+    if (!primary) {
+        return [];
+    }
+
+    const rows = await fetchAnalysisRowsByCandidate(entry, primary);
+    if (rows.length > 0) {
+        return rows;
+    }
+
+    if (primary.column === "species_profile_id") {
+        const identity = (entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_")).trim();
+        if (identity) {
+            return fetchAnalysisRowsByCandidate(entry, {column: "normalized_identity_key", value: identity});
         }
     }
 

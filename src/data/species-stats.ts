@@ -330,7 +330,7 @@ async function fetchSpeciesProfile(entry: SpeciesEntry) {
         return null;
     }
 
-    for (const candidate of buildSpeciesKeyCandidates(entry)) {
+    for (const candidate of buildSpeciesKeyCandidates(entry).slice(0, 2)) {
         const searchParams = new URLSearchParams({
             select: "id,display_name,animal_name,refined_identity,normalized_identity_key,scientific_name,canonical_game_stats",
             [candidate.profileColumn]: `eq.${candidate.value}`,
@@ -414,7 +414,7 @@ async function fetchAnalysisStats(entry: SpeciesEntry) {
         return null;
     }
 
-    for (const candidate of buildSpeciesKeyCandidates(entry)) {
+    for (const candidate of buildSpeciesKeyCandidates(entry).slice(0, 2)) {
         const searchParams = new URLSearchParams({
             select: "id,capture_id,animal_name,species_profile_id,normalized_identity_key,scientific_name,confidence,game_stats,raw_json,error_message,captures!inner(created_at)",
             completed_at: "not.is.null",
@@ -467,22 +467,22 @@ export async function resolveSpeciesStats(slug: string, entryOverride?: SpeciesE
         };
     }
 
+    const catalogStats = getCatalogCanonicalStats(entry);
+
+    if (catalogStats) {
+        return {
+            stats: catalogStats,
+            statsSource: "species_profile",
+            ...getResolvedIdentity(entry, null)
+        };
+    }
+
     const speciesProfile = await fetchSpeciesProfile(entry);
     const profileStats = parseSpeciesStats(speciesProfile?.canonical_game_stats);
 
     if (profileStats) {
         return {
             stats: profileStats,
-            statsSource: "species_profile",
-            ...getResolvedIdentity(entry, speciesProfile)
-        };
-    }
-
-    const catalogStats = getCatalogCanonicalStats(entry);
-
-    if (catalogStats) {
-        return {
-            stats: catalogStats,
             statsSource: "species_profile",
             ...getResolvedIdentity(entry, speciesProfile)
         };

@@ -32,22 +32,20 @@ import {getBlogPostsForSpecies} from "@/data/blog";
 import {getMergedChallengesForSpecies} from "@/data/species-comparisons";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
-import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getDatabaseSpeciesBySlug, getSpeciesPageData} from "@/data/database-species-pages";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {
     getSpeciesImageAltText,
     getSpeciesImageAttribution,
     getSpeciesImageRoute,
-    getSpeciesImageReferences,
-    getSpeciesRepresentativeImageReference
+    getSpeciesImageReferences
 } from "@/data/species-images";
 import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
 import {getBattleTier, resolveSpeciesStats, type SpeciesStats} from "@/data/species-stats";
-import {getDiscoverCaptureById} from "@/data/discover-timeline";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
 import type {SpeciesEntry} from "@/data/species";
-import {getPrincipleHubBySlug, resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {getSpeciesRankings} from "@/data/species-rankings";
 import {getSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
@@ -81,47 +79,6 @@ type SpeciesTextLink = {
 
 function toQualitySlug(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-
-const RELATED_NAME_STOP_WORDS = new Set(["animal", "common", "domestic", "eastern", "greater", "lesser", "northern", "southern", "western"]);
-
-function getRelatedNameTokens(entry: SpeciesEntry) {
-    return new Set(
-        entry.name.toLowerCase().split(/[^a-z0-9]+/)
-            .filter((token) => token.length >= 4 && !RELATED_NAME_STOP_WORDS.has(token))
-    );
-}
-
-function getScientificGenus(entry: SpeciesEntry) {
-    const scientificName = entry.analysis.scientificName.trim();
-
-    if (!scientificName || scientificName.toLowerCase().includes("under review")) {
-        return null;
-    }
-
-    return scientificName.split(/\s+/)[0]?.toLowerCase() ?? null;
-}
-
-function getAutomaticRelatedSpecies(entry: SpeciesEntry, entries: SpeciesEntry[], limit = 3) {
-    const currentTokens = getRelatedNameTokens(entry);
-    const currentGenus = getScientificGenus(entry);
-
-    return entries
-        .filter((candidate) => candidate.slug !== entry.slug)
-        .map((candidate) => {
-            const candidateTokens = getRelatedNameTokens(candidate);
-            const sharedNameTokens = Array.from(currentTokens).filter((token) => candidateTokens.has(token)).length;
-            const candidateGenus = getScientificGenus(candidate);
-            const sameGenus = Boolean(currentGenus && candidateGenus === currentGenus);
-            const sameSpecificCategory = entry.analysis.category !== "Animal" && candidate.analysis.category === entry.analysis.category;
-            const score = (sameGenus ? 100 : 0) + sharedNameTokens * 20 + (sameSpecificCategory ? 5 : 0);
-
-            return {candidate, score};
-        })
-        .filter(({score}) => score > 0)
-        .sort((left, right) => right.score - left.score || left.candidate.name.localeCompare(right.candidate.name))
-        .slice(0, limit)
-        .map(({candidate}) => candidate);
 }
 
 function pluralizeWord(word: string) {
@@ -316,7 +273,7 @@ function renderListItemWithSpeciesLink(text: string, currentSlug: string, matche
 
 export async function generateMetadata({params}: SpeciesPageProps): Promise<Metadata> {
     const {locale, slug} = params;
-    const entry = await getResolvedSpeciesBySlug(slug);
+    const entry = await getSpeciesPageData(slug);
 
     if (!entry) {
         return {};
@@ -376,7 +333,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "animals");
     const rankingsT = await getScopedTranslator(locale, "rankings");
-    const entry = await getResolvedSpeciesBySlug(slug);
+    const entry = await getSpeciesPageData(slug);
 
     if (!entry) {
         notFound();
@@ -389,18 +346,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
     const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
     const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
-    const unifiedSpeciesEntries = entry.databaseSource ? await getUnifiedSpeciesEntries() : speciesEntries;
-    const unifiedSpeciesBySlug = new Map(unifiedSpeciesEntries.map((item) => [item.slug, item]));
-    const related = legendaryBeast
-        ? getRelatedLegendaryEarthBeasts(entry.slug, 3)
-            .map((beast) => unifiedSpeciesBySlug.get(beast.slug) ?? getSpeciesBySlug(beast.slug))
-            .filter((item): item is SpeciesEntry => Boolean(item))
-        : (() => {
-            const staticRelated = getRelatedSpecies(entry.slug, 3);
-            return staticRelated.length > 0
-                ? staticRelated
-                : getAutomaticRelatedSpecies(entry, unifiedSpeciesEntries, 3);
-        })();
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const relatedChallenges = await getMergedChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
@@ -410,18 +355,16 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     ]);
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
-    const primaryQualityHub = primaryQualitySlug ? await getPrincipleHubBySlug(primaryQualitySlug) : null;
-    const relatedPowerSpecies = primaryQualityHub
-        ? primaryQualityHub.lessons
-            .filter((lesson) => lesson.slug !== entry.slug)
-            .slice(0, 3)
-            .map((lesson) => unifiedSpeciesBySlug.get(lesson.slug))
-            .filter((relatedEntry): relatedEntry is SpeciesEntry => Boolean(relatedEntry))
-        : principleProfile
-            ? principleProfile.relatedSpeciesSlugs
-                .map((relatedSlug) => unifiedSpeciesBySlug.get(relatedSlug))
-                .filter((relatedEntry): relatedEntry is SpeciesEntry => Boolean(relatedEntry))
-            : [];
+    const relatedSlugs = Array.from(new Set([
+        ...(legendaryBeast
+            ? getRelatedLegendaryEarthBeasts(entry.slug, 3).map((beast) => beast.slug)
+            : getRelatedSpecies(entry.slug, 3).map((item) => item.slug)),
+        ...(principleProfile?.relatedSpeciesSlugs ?? [])
+    ])).filter((relatedSlug) => relatedSlug !== entry.slug).slice(0, 3);
+    const related = (await Promise.all(
+        relatedSlugs.map(async (relatedSlug) => getSpeciesBySlug(relatedSlug) ?? await getDatabaseSpeciesBySlug(relatedSlug))
+    )).filter((item): item is SpeciesEntry => Boolean(item));
+    const relatedPowerSpecies = related.slice(0, 3);
     const dietContent = getSpeciesDietContent(entry);
     const databaseFieldGuide = entry.databaseSource?.fieldGuide;
     const spottingContent = getSpeciesSpottingContent(entry);
@@ -430,11 +373,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const statsResult = await resolveSpeciesStats(entry.slug, entry);
     const rankingItems = await getSpeciesRankings(entry);
     const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
-    const featuredMedia = featuredMediaList[0] ?? await getSpeciesRepresentativeImageReference(entry.slug, entry);
-    const [growthContext, featuredCapture] = await Promise.all([
-        getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null, {includeAuthenticatedViewer: false}),
-        featuredMedia?.captureId ? getDiscoverCaptureById(featuredMedia.captureId) : null
-    ]);
+    const featuredMedia = featuredMediaList[0] ?? null;
+    const growthContext = await getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null, {
+        includeAuthenticatedViewer: false,
+        principle: principleProfile
+    });
     const heroFeaturedMedia = featuredMediaList.length > 0
         ? featuredMediaList
         : featuredMedia?.imagePath
@@ -459,20 +402,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         return Number(normalizedGrade);
     };
     const featuredCaptureId = featuredMedia?.captureId ?? null;
-    const featuredCaptureGrade = featuredCapture?.captureGrade
-        ?? featuredMedia?.gradeBreakdown?.grade
+    const featuredCaptureGrade = featuredMedia?.gradeBreakdown?.grade
         ?? parseCaptureGrade(featuredMedia?.imageGrade);
-    const featuredCaptureLocation = featuredCapture?.locationLabel?.trim()
-        || featuredMedia?.locationDisplayLabel?.trim()
-        || null;
-    const featuredCaptureSetting = featuredCapture?.settingTag?.trim() || null;
-    const featuredStorySetting = featuredCaptureSetting
-        || featuredMedia?.contextLabel?.trim()
-        || null;
-    const featuredBaseStats = captureStatsOrFallback(featuredCapture?.gameStats, statsResult.stats);
-    const featuredEffectiveStats = captureStatsOrFallback(featuredCapture?.effectiveGameStats, featuredBaseStats);
-    const featuredIsZooComparisonBanned = featuredCapture?.isZooComparisonBanned ?? false;
-    const featuredHasChallengeStats = featuredCapture?.hasChallengeGameStats ?? false;
+    const featuredCaptureLocation = featuredMedia?.locationDisplayLabel?.trim() || null;
+    const featuredCaptureSetting = null;
+    const featuredStorySetting = featuredMedia?.contextLabel?.trim() || null;
+    const featuredBaseStats = captureStatsOrFallback(undefined, statsResult.stats);
+    const featuredEffectiveStats = featuredBaseStats;
+    const featuredIsZooComparisonBanned = false;
+    const featuredHasChallengeStats = false;
     const isBreed = isBreedSpeciesEntry(entry);
     const identityKind = entry.databaseSource?.identityKind ?? null;
     const displayCategory = speciesDisplayCategory(entry);
@@ -1204,11 +1142,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 <CaptureMetadataBand
                                     layout="wide"
                                     captureId={featuredCaptureId}
-                                    capturedAt={featuredCapture?.capturedAt}
+                                    capturedAt={undefined}
                                     locationLabel={featuredCaptureLocation}
-                                    locationHref={featuredCapture?.locationLat != null && featuredCapture.locationLng != null
-                                        ? `https://www.google.com/maps/search/?api=1&query=${featuredCapture.locationLat},${featuredCapture.locationLng}`
-                                        : null}
+                                    locationHref={null}
                                     saved={growthContext.progress?.isOwnedByCurrentUser === true}
                                 />
                             ) : null}
@@ -1218,8 +1154,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     entry={entry}
                                     variant="animal-card"
                                     layout="wide"
-                                    settingTag={featuredCapture?.settingTag}
-                                    humanContext={featuredCapture?.humanContext}
+                                    settingTag={undefined}
+                                    humanContext={undefined}
                                     labels={{
                                         title: t("nativeRangeCardTitle"),
                                         description: t("nativeRangeCardDescription"),
@@ -1231,19 +1167,18 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
                 )}
                 stats={(
-                    featuredBaseStats && featuredEffectiveStats
-                    && (!featuredCapture || (featuredCapture.isEligibleCapture && !featuredCapture.hasUncertaintyFallback)) ? (
+                    featuredBaseStats && featuredEffectiveStats ? (
                         <AnimalStatsPanel
                             layout="wide"
                             speciesName={entry.name}
                             speciesSlug={entry.slug}
                             baseStats={featuredBaseStats}
                             effectiveStats={featuredEffectiveStats}
-                            totalProgressionXP={featuredCapture?.totalProgressionXP ?? growthContext.progress?.totalProgressionXP}
-                            recentProgressionSource={featuredCapture?.recentProgressionSource}
+                            totalProgressionXP={growthContext.progress?.totalProgressionXP}
+                            recentProgressionSource={undefined}
                             captureGrade={featuredCaptureGrade}
                             settingTag={featuredCaptureSetting}
-                            conservationTier={featuredCapture?.conservationTier}
+                            conservationTier={undefined}
                         />
                     ) : null
                 )}
@@ -1257,10 +1192,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         qualityName={primaryQuality}
                         growth={growthContext}
                         compareOnly
-                        comparisonTier={featuredCapture?.battleTier ?? null}
+                        comparisonTier={null}
                         settingTag={featuredCaptureSetting}
                         isZooComparisonBanned={featuredIsZooComparisonBanned}
-                        isChallengeAnalysisEligible={featuredCapture?.isChallengeAnalysisEligible ?? false}
+                        isChallengeAnalysisEligible={false}
                         hasChallengeGameStats={featuredHasChallengeStats}
                         labels={{
                             apexPathEyebrow: t("growthApexPathEyebrow"),

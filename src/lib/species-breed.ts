@@ -77,7 +77,8 @@ export function buildSpeciesCaptureMatchCandidates(entry: SpeciesEntry) {
     push("species_profile_id", entry.speciesProfileId);
     push("normalized_identity_key", entry.normalizedIdentityKey ?? entry.slug);
 
-    for (const aliasKey of collectionIdentityMatchKeys(entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_"))) {
+    const identityToken = entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_");
+    for (const aliasKey of collectionIdentityMatchKeys(identityToken).slice(0, 2)) {
         push("normalized_identity_key", aliasKey);
     }
 
@@ -93,7 +94,22 @@ export function buildSpeciesCaptureMatchCandidates(entry: SpeciesEntry) {
 
     push("animal_name", entry.name);
 
-    return candidates;
+    return candidates.slice(0, 4);
+}
+
+/** Cheapest indexed discover/ranking match: profile id, otherwise identity key. */
+export function primarySpeciesCaptureMatchCandidate(entry: SpeciesEntry) {
+    const profileId = entry.speciesProfileId?.trim();
+    if (profileId) {
+        return {column: "species_profile_id", value: profileId};
+    }
+
+    const identity = (entry.normalizedIdentityKey ?? entry.slug.replace(/-/g, "_")).trim();
+    if (!identity) {
+        return null;
+    }
+
+    return {column: "normalized_identity_key", value: identity};
 }
 
 export function captureMatchesSpeciesEntry(entry: SpeciesEntry, row: SpeciesCaptureMatchRow) {

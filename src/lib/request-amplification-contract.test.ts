@@ -61,6 +61,35 @@ test("catchall slug routing skips scanner database lookups", () => {
     assert.doesNotMatch(catchall, /force-dynamic/);
 });
 
+test("species slug pages resolve identity once and do not load the full catalog", () => {
+    const speciesPage = read("app/[locale]/(composited)/animals/[slug]/page.tsx");
+    const catalog = read("data/database-species-pages.ts");
+    const images = read("data/species-images.ts");
+    const rankings = read("data/species-rankings.ts");
+    const growth = read("data/species-growth.ts");
+
+    assert.match(speciesPage, /export const revalidate = 3600/);
+    assert.doesNotMatch(speciesPage, /force-dynamic/);
+    assert.match(speciesPage, /getSpeciesPageData/);
+    assert.doesNotMatch(speciesPage, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(speciesPage, /getDatabaseSpeciesEntries/);
+    assert.doesNotMatch(speciesPage, /getPrincipleHubBySlug/);
+    assert.doesNotMatch(speciesPage, /getDiscoverCaptureById/);
+    assert.doesNotMatch(speciesPage, /getAutomaticRelatedSpecies/);
+    assert.match(catalog, /getSpeciesPageData/);
+    assert.match(catalog, /fetchSingleSpeciesFromCatalog/);
+    assert.match(catalog, /catalog_status === "hidden"/);
+    assert.match(catalog, /animalDexNumber < 1/);
+    assert.match(catalog, /fetchCanonicalIdentityAlias/);
+    assert.match(catalog, /depth < 3/);
+    assert.match(catalog, /MAX_FETCH_PAGES = 40/);
+    assert.doesNotMatch(catalog, /getDatabaseSpeciesEntries\(\);\s*\n\s*return cached/);
+    assert.match(images, /primarySpeciesCaptureMatchCandidate/);
+    assert.match(rankings, /primarySpeciesCaptureMatchCandidate/);
+    assert.match(growth, /createSupabasePublicClient/);
+    assert.match(growth, /principle\?:/);
+});
+
 test("public species pages do not read the authenticated viewer on the server", () => {
     const speciesPage = read("app/[locale]/(composited)/animals/[slug]/page.tsx");
     const growth = read("data/species-growth.ts");
