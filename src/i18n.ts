@@ -12,5 +12,9 @@ export default getRequestConfig(async ({locale}) => {
 export const localeConfig = {
     locales: ['en', 'id'],
     defaultLocale: 'en',
-    localePrefix: 'as-needed' as const
+    localePrefix: 'as-needed' as const,
+    // URL prefix is the locale source of truth. Auto-detecting from
+    // Accept-Language / NEXT_LOCALE would write Set-Cookie on every
+    // anonymous crawl and keep public SEO HTML out of the CDN.
+    localeDetection: false
 }

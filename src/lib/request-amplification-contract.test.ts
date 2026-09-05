@@ -21,6 +21,8 @@ test("middleware no longer does uncached CMS lookups or unconditional auth", () 
     assert.doesNotMatch(middleware, /hasPublishedManagedPage/);
     assert.doesNotMatch(middleware, /managed-content/);
     assert.match(middleware, /middlewareShouldRefreshSession/);
+    assert.match(middleware, /headers.delete\("set-cookie"\)/);
+    assert.match(read("i18n.ts"), /localeDetection: false/);
     assert.match(supabaseMiddleware, /requestHasSupabaseAuthCookie/);
     assert.match(supabaseMiddleware, /auth\.getUser\(\)/);
 });

@@ -17,6 +17,8 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
+export const revalidate = 3600;
+
 type AnimalLessonPageProps = {
     params: {
         locale: string;

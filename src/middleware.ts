@@ -50,6 +50,10 @@ export async function middleware(request: NextRequest) {
 
         if (!middlewareShouldRefreshSession(request.nextUrl.pathname, hasAuthCookie)) {
             traceRequestAmplification("middleware-public-anonymous", {path: request.nextUrl.pathname});
+            // next-intl sets NEXT_LOCALE whenever the request has no cookie.
+            // That Set-Cookie header forces private/no-store and a Function
+            // invocation on every crawler GET. Locale lives in the URL.
+            response.headers.delete("set-cookie");
             return response;
         }
 
