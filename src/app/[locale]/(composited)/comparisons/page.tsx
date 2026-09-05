@@ -6,17 +6,17 @@ import {
     ChallengeEntry,
     ChallengeComparisonType,
     challengeEntries,
-    getChallengeComparisonTypeOptions,
-    isChallengeComparisonType
+    getChallengeComparisonTypeOptions
 } from "@/data/challenges";
 import ComparisonBuilder from "@/app/[locale]/(composited)/comparisons/_components/comparison-builder";
 import {
     SPECIES_COMPARISON_TYPES,
-    animalOptionsFromChallengeEntries,
-    listMergedChallengeEntries
+    animalOptionsFromChallengeEntries
 } from "@/data/species-comparisons";
-import {countComparableAnimals, findComparableAnimal, getStarterComparableAnimals} from "@/data/comparison-animals";
-import {getSpeciesBySlug} from "@/data/species";
+import type {ComparableAnimal} from "@/data/comparison-animals";
+import {getSpeciesBySlug, speciesEntries} from "@/data/species";
+import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
@@ -24,6 +24,8 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
+
+export const revalidate = 3600;
 
 export function generateStaticParams() {
     return [];
@@ -43,6 +45,38 @@ type DirectoryState = {
 };
 
 const PAGE_SIZE = 12;
+const HUB_STARTER_SLUGS = [
+    "lion",
+    "tiger",
+    "grizzly-bear",
+    "gorilla",
+    "great-white-shark",
+    "saltwater-crocodile",
+    "african-elephant",
+    "gray-wolf",
+    "hippopotamus",
+    "polar-bear",
+    "king-cobra",
+    "komodo-dragon",
+    "cheetah",
+    "jaguar",
+    "leopard",
+    "bald-eagle"
+];
+
+function toHubComparableAnimal(slug: string): ComparableAnimal | null {
+    const entry = getSpeciesBySlug(slug);
+    if (!entry) return null;
+    return {
+        slug: entry.slug,
+        name: entry.name,
+        category: entry.analysis.category,
+        scientificName: entry.analysis.scientificName,
+        animalDexNumber: getAnimalDexNumberFromEntry(entry),
+        artworkUrl: buildSpeciesArtworkSrc(entry.slug, null)
+    };
+}
+
 const POPULAR_SLUGS = [
     "tiger-vs-lion",
     "komodo-dragon-vs-king-cobra",
@@ -178,8 +212,7 @@ export async function generateMetadata({params}: ComparisonsIndexPageProps): Pro
     const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
-    const mergedEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
-    const challengeKeywords = Array.from(new Set(mergedEntries.flatMap((entry) => entry.searchIntents)));
+    const challengeKeywords = Array.from(new Set(challengeEntries.flatMap((entry) => entry.searchIntents)));
     const title = messages.comparisons?.metaTitle || "Compare Any Two Animals | AnimalDex";
     const description = messages.comparisons?.metaDescription || messages.meta?.description || "";
 
@@ -209,7 +242,7 @@ export async function generateMetadata({params}: ComparisonsIndexPageProps): Pro
 export default async function ComparisonsIndexPage({params}: ComparisonsIndexPageProps) {
     const locale = params.locale;
     const t = await getScopedTranslator(locale, "comparisons");
-    const allEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
+    const allEntries = challengeEntries;
     const animalOptions = animalOptionsFromChallengeEntries(allEntries);
     const state: DirectoryState = {
         query: "",
@@ -222,14 +255,13 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
     const directory = getDirectoryEntries(state, allEntries);
     state.page = directory.currentPage;
     const comparisonTypeOptions = getChallengeComparisonTypeOptions();
-    const [starterAnimals, comparableAnimalCount] = await Promise.all([
-        getStarterComparableAnimals(16).catch(() => []),
-        countComparableAnimals().catch(() => 0)
-    ]);
-    const [defaultAnimalA, defaultAnimalB] = await Promise.all([
-        findComparableAnimal("lion").catch(() => null),
-        findComparableAnimal("tiger").catch(() => null)
-    ]);
+    const starterAnimals = HUB_STARTER_SLUGS
+        .map(toHubComparableAnimal)
+        .filter((animal): animal is ComparableAnimal => Boolean(animal))
+        .slice(0, 16);
+    const comparableAnimalCount = speciesEntries.length;
+    const defaultAnimalA = toHubComparableAnimal("lion");
+    const defaultAnimalB = toHubComparableAnimal("tiger");
     const speciesCount = new Set(allEntries.flatMap((entry) => entry.speciesSlugs)).size;
     const categoryCount = new Set(allEntries.map((entry) => entry.comparisonType)).size;
     const featuredCandidates = POPULAR_SLUGS.map((slug) => allEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));

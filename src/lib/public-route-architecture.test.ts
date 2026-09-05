@@ -142,4 +142,16 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.doesNotMatch(layout, /next-intl\/server/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /export const revalidate = 3600/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /return \[\];/);
+
+    const home = readFileSync(join(root, "app/[locale]/(composited)/(home)/page.tsx"), "utf8");
+    const comparisonsHub = readFileSync(join(root, "app/[locale]/(composited)/comparisons/page.tsx"), "utf8");
+    const lessonsHub = readFileSync(join(root, "app/[locale]/(composited)/(answers)/animal-lessons/page.tsx"), "utf8");
+    const powersHub = readFileSync(join(root, "app/[locale]/(composited)/qualities/page.tsx"), "utf8");
+
+    assert.doesNotMatch(home, /signHomeFeatureCaptureImages|createSignedStorageUrl|cache:\s*["']no-store["']/);
+    assert.match(home, /export const revalidate = 300/);
+    assert.doesNotMatch(comparisonsHub, /listMergedChallengeEntries|getUnifiedSpeciesEntries|countComparableAnimals|getStarterComparableAnimals|findComparableAnimal|resolveSpeciesArtworkFiles/);
+    assert.match(comparisonsHub, /export const revalidate = 3600/);
+    assert.match(lessonsHub, /export const revalidate = 3600/);
+    assert.match(powersHub, /export const revalidate = 3600/);
 });

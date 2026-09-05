@@ -29,7 +29,6 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
-import {signHomeFeatureCaptureImages} from "@/lib/home-feature-capture-images";
 import {getRecentPublicCaptures} from "@/data/discover-timeline";
 import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 
@@ -105,7 +104,7 @@ export default async function Home({params}: HomePageProps) {
         answer: t(`faq.${id}.a`)
     }));
     const faqTrustItems = ["beginner", "families", "behavior"].map((id) => t(`faq.trust.${id}`));
-    const [downloadStatCounts, rawFeatureCaptures] = await timeDevStep(
+    const [downloadStatCounts, featureCaptures] = await timeDevStep(
         timer,
         "home.data",
         () => Promise.all([
@@ -113,12 +112,6 @@ export default async function Home({params}: HomePageProps) {
             getRecentPublicCaptures(features.length)
         ]),
         {featureCount: features.length}
-    );
-    const featureCaptures = await timeDevStep(
-        timer,
-        "home.sign-images",
-        () => signHomeFeatureCaptureImages(rawFeatureCaptures),
-        {featureCount: rawFeatureCaptures.length}
     );
     const downloadHeroStats = [
         {value: downloadStatCounts.captures, label: t("download.stats.capturesLabel")},
