@@ -1,5 +1,4 @@
 import type {Metadata} from "next";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnGhostCta, EarnPrimaryCta} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import {EarnFaqList, EarnKicker, EarnPageShell, EarnStatusPill} from "@/app/[locale]/(composited)/_components/earn/earn-page-shell";
@@ -18,8 +17,8 @@ import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
 const path = earnPaths.becomeGuide;
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     return buildEarnPageMetadata({
         locale,
         path,
@@ -50,8 +49,8 @@ const faqs = [
     }
 ];
 
-export default async function BecomeAWildlifeGuidePage() {
-    const locale = await getLocale();
+export default async function BecomeAWildlifeGuidePage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const session = await getAuthenticatedAppContext();
     const setupHref = getLocalePath(locale, "/app/guides");
     const primaryHref = session ? setupHref : earnPaths.download;

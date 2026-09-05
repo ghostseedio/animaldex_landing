@@ -50,7 +50,7 @@ async function listBucketFiles(): Promise<string[]> {
                 offset: page * LIST_PAGE_SIZE,
                 sortBy: {column: "name", order: "asc"}
             }),
-            cache: "no-store"
+            next: {revalidate: 1800}
         });
 
         if (!response.ok) break;

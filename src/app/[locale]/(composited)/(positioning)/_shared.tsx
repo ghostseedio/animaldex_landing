@@ -1,4 +1,3 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -6,15 +5,16 @@ import Button from "@/app/[locale]/_components/button";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {collectorPages, getCollectorPage} from "@/data/collector-pages";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 
 type PositioningPageResult = {
     slug: string;
+    locale: string;
 };
 
-export async function generateCollectorMetadata(slug: string): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateCollectorMetadata(slug: string, locale: string): Promise<Metadata> {
     const entry = getCollectorPage(slug);
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
@@ -60,9 +60,8 @@ export async function generateCollectorMetadata(slug: string): Promise<Metadata>
     };
 }
 
-export default async function CollectorLandingPage({slug}: PositioningPageResult) {
-    const t = await getTranslations("collectorPages");
-    const locale = await getLocale();
+export default async function CollectorLandingPage({slug, locale}: PositioningPageResult) {
+    const t = await getScopedTranslator(locale, "collectorPages");
     const entry = getCollectorPage(slug);
 
     if (!entry) {

@@ -17,10 +17,15 @@ type PokemonAnimalDetailPageProps = {
     };
 };
 
-// Rendered on demand and cached, like /animals/[slug]. next-intl's server APIs
-// cannot run during static generation, so a `generateStaticParams` here produced
-// zero usable paths and left every request served by the build's static 500.
 export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "generation-i"},
+        {locale: "id", slug: "generation-i"}
+    ];
+}
 
 export async function generateMetadata({params}: PokemonAnimalDetailPageProps): Promise<Metadata> {
     const {locale, slug} = params;

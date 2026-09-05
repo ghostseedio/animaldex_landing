@@ -14,6 +14,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "tsx --test src/lib/**/*.test.ts",
+    "audit:public-cache": "node scripts/audit-public-cache.mjs",
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",

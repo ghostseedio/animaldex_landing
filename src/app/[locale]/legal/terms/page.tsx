@@ -4,11 +4,13 @@ import terms from "@/data/terms-of-service.md";
 import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import Image from "next/image";
 import {Metadata} from "next";
-import {getLocale, getTranslations} from "next-intl/server";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
+
+export const revalidate = 3600;
 
 export default async function TermsOfService() {
     const processedContent = await remark()
@@ -33,9 +35,9 @@ export default async function TermsOfService() {
     );
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
-    const t = await getTranslations("meta");
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "meta");
     const messages = await loadLocaleMessages(locale);
     const keywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
 

@@ -1,9 +1,9 @@
 import AnswerPage, {generateAnswerPageMetadata} from "@/app/[locale]/(composited)/(answers)/_shared";
 
-export async function generateMetadata() {
-    return generateAnswerPageMetadata("animal-identifier-app");
+export async function generateMetadata({params}: {params: {locale: string}}) {
+    return generateAnswerPageMetadata("animal-identifier-app", params.locale);
 }
 
-export default async function AnimalIdentifierAppPage({searchParams}: {searchParams?: {cmsSource?: string}}) {
-    return AnswerPage({slug: "animal-identifier-app", cmsSource: searchParams?.cmsSource === "1"});
+export default async function AnimalIdentifierAppPage({params, searchParams}: {params: {locale: string}; searchParams?: {cmsSource?: string}}) {
+    return AnswerPage({slug: "animal-identifier-app", locale: params.locale, cmsSource: searchParams?.cmsSource === "1"});
 }

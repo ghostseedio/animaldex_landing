@@ -1,4 +1,3 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import TierListFilters from "@/app/[locale]/(composited)/rankings/_components/tier-list-filters";
@@ -10,13 +9,14 @@ import {
     sortRankingPagesForHub
 } from "@/data/rankings";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const rankingKeywords = Array.from(new Set(rankingPages.flatMap((page) => page.searchIntents)));
@@ -72,9 +72,9 @@ function formatMethodologyLabel(categoryLabel: string, statRankingKey?: string) 
     return `${categoryLabel} signals`;
 }
 
-export default async function RankingsIndexPage() {
-    const t = await getTranslations("rankings");
-    const locale = await getLocale();
+export default async function RankingsIndexPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "rankings");
     const pageUrl = getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH);
 
     const collectionSchema = {

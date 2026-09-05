@@ -1,5 +1,4 @@
 import type {Metadata} from "next";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnGhostCta, EarnPrimaryCta} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import {EarnFaqList, EarnKicker, EarnPageShell, EarnStatusPill} from "@/app/[locale]/(composited)/_components/earn/earn-page-shell";
@@ -18,8 +17,8 @@ import {getAbsoluteUrl} from "@/lib/site";
 
 const path = earnPaths.sponsor;
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     return buildEarnPageMetadata({
         locale,
         path,
@@ -59,8 +58,8 @@ const steps = [
     {title: "Review what happened", detail: "We can discuss participation after the window. We do not claim a live sponsor analytics suite that is not in product."}
 ];
 
-export default async function SponsorAChallengePage() {
-    const locale = await getLocale();
+export default async function SponsorAChallengePage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const schema = [
         {
             "@context": "https://schema.org",

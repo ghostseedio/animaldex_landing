@@ -6,11 +6,10 @@ import {getAbsoluteUrl} from "@/lib/site";
 import {getManagedPage} from "@/lib/admin-content";
 import ManagedSectionInteractions from "./managed-section-interactions";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
 
-export async function generateMetadata() {
-    return generateAnswerPageMetadata("best-animal-identification-app");
+export async function generateMetadata({params}: {params: {locale: string}}) {
+    return generateAnswerPageMetadata("best-animal-identification-app", params.locale);
 }
 
 const quickPicks = [
@@ -22,7 +21,7 @@ const quickPicks = [
 ];
 
 const appReviews = [
-    {id: "animaldex", name: "AnimalDex", verdict: "Best if identification should lead somewhere", best: "Collectors, animal learners and people who want lessons and progression after a scan.", notIdeal: "You need community verification, research-grade observations or dependable offline identification.", strengths: ["Broad animal focus with over 2,000 indexed species profiles", "Video captures identified by consensus across sampled frames", "Every capture receives a 1–10 grade across seven weighted factors", "Species stats, E–S tiers and comparison battles", "Search any species for the nearest real place to see it", "A behavioural lesson attached to each species, not only a name"], weaknesses: ["No iNaturalist-style expert community verification", "Not the strongest offline field tool", "Does not identify plants", "Stats and tiers are an AnimalDex model, not a scientific ranking"]},
+    {id: "animaldex", name: "AnimalDex", verdict: "Best if identification should lead somewhere", best: "Collectors, animal learners and people who want lessons and progression after a scan.", notIdeal: "You need community verification, research-grade observations or dependable offline identification.", strengths: ["Broad animal focus with thousands of indexed species profiles", "Video captures identified by consensus across sampled frames", "Every capture receives a 1–10 grade across seven weighted factors", "Species stats, E–S tiers and comparison battles", "Search any species for the nearest real place to see it", "A behavioural lesson attached to each species, not only a name"], weaknesses: ["No iNaturalist-style expert community verification", "Not the strongest offline field tool", "Does not identify plants", "Stats and tiers are an AnimalDex model, not a scientific ranking"]},
     {id: "inaturalist", name: "iNaturalist", verdict: "Best wildlife science platform", best: "Naturalists, photographers and anyone who wants observations reviewed and useful to biodiversity science.", notIdeal: "You want instant, private, game-like identification with no account or public data workflow.", strengths: ["Community can confirm or refine IDs", "Research Grade status makes records usable by science", "Plants, animals, fungi and more", "Observation maps show where a species has actually been recorded", "Free, nonprofit and science-oriented"], weaknesses: ["Research Grade rates the record, not the quality of your photo", "Photos and sound only—no video observations", "Community confirmation is not always instant", "Maps show where a species was seen before, not where to go now"]},
     {id: "seek", name: "Seek by iNaturalist", verdict: "Best beginner wildlife app", best: "Children, families, classrooms and hikers who want private, real-time identification without an account.", notIdeal: "You need the newest iNaturalist model, expert review or a serious public wildlife log.", strengths: ["Works without an internet connection", "Live camera identification in real time", "No account required and private by default", "Badges and challenges reward exploration"], weaknesses: ["Its on-device model can trail iNaturalist’s current online model", "Live view identifies but keeps no clip to re-examine", "No stats, grading or species-level progression", "Less suitable for research-grade records"]},
     {id: "merlin", name: "Merlin Bird ID", verdict: "The clear specialist for birds", best: "Birders who want photo, sound and guided identification, including in places with poor reception.", notIdeal: "You want mammals, reptiles, insects, plants or a general wildlife collection.", strengths: ["Photo ID and Sound ID work offline after setup", "Real-time sound identification is genuinely best in class", "eBird data powers likely-birds-near-you lists and range maps", "Maintains a bird life list"], weaknesses: ["Birds only", "Real-time analysis is audio, not video", "Regional packs require storage and preparation", "No grading, stats or comparison layer"]},
@@ -105,7 +104,7 @@ const featureDeepDives: FeatureDeepDive[] = [
                 ["Merlin Bird ID", "Free, from the Cornell Lab of Ornithology", "Birds only; regional packs must be downloaded"],
                 ["Google Lens", "Free", "None, but it keeps no wildlife log for you"],
                 ["PictureThis", "Limited free use, subscription for the rest", "Care and diagnosis features sit behind the paywall"],
-                ["Gotcha", "Free tier with a Pro upgrade", "10 captures per day on the free tier; around 900 animals indexed"]
+                ["Gotcha", "Free tier with a Pro upgrade", "Limited free captures per day; fewer indexed animals"]
             ]
         }
     }

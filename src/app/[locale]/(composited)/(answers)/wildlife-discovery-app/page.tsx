@@ -1,9 +1,9 @@
 import AnswerPage, {generateAnswerPageMetadata} from "@/app/[locale]/(composited)/(answers)/_shared";
 
-export async function generateMetadata() {
-    return generateAnswerPageMetadata("wildlife-discovery-app");
+export async function generateMetadata({params}: {params: {locale: string}}) {
+    return generateAnswerPageMetadata("wildlife-discovery-app", params.locale);
 }
 
-export default async function WildlifeDiscoveryAppPage({searchParams}: {searchParams?: {cmsSource?: string}}) {
-    return AnswerPage({slug: "wildlife-discovery-app", cmsSource: searchParams?.cmsSource === "1"});
+export default async function WildlifeDiscoveryAppPage({params, searchParams}: {params: {locale: string}; searchParams?: {cmsSource?: string}}) {
+    return AnswerPage({slug: "wildlife-discovery-app", locale: params.locale, cmsSource: searchParams?.cmsSource === "1"});
 }

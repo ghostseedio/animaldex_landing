@@ -1,6 +1,5 @@
 import {Metadata} from "next";
 import Image from "next/image";
-import {getLocale, getTranslations} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {
@@ -19,6 +18,7 @@ import {
 import {countComparableAnimals, findComparableAnimal, getStarterComparableAnimals} from "@/data/comparison-animals";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
@@ -26,6 +26,7 @@ type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
 
 type ComparisonsIndexPageProps = {
+    params: {locale: string};
     searchParams?: {
         q?: string | string[];
         type?: string | string[];
@@ -177,8 +178,8 @@ function getPageNumbers(currentPage: number, totalPages: number) {
     return Array.from({length: end - start + 1}, (_, index) => start + index);
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: ComparisonsIndexPageProps): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const mergedEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
@@ -209,9 +210,9 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function ComparisonsIndexPage({searchParams}: ComparisonsIndexPageProps) {
-    const t = await getTranslations("comparisons");
-    const locale = await getLocale();
+export default async function ComparisonsIndexPage({params, searchParams}: ComparisonsIndexPageProps) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "comparisons");
     const allEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
     const animalOptions = animalOptionsFromChallengeEntries(allEntries);
     const query = getSingleParam(searchParams?.q) ?? "";

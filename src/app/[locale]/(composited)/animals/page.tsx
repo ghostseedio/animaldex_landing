@@ -1,11 +1,8 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, isSpeciesDirectorySort, isSpeciesDirectorySortOrder, isSpeciesDirectoryTierFilter, speciesEntries, SpeciesEntry, SpeciesRarityStatusKey} from "@/data/species";
+import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {buildSpeciesDirectoryImageState} from "@/data/species-images";
-import {isNativeRangeRegionKey} from "@/data/native-range";
-import {getLocationPage} from "@/data/locations";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -20,9 +17,7 @@ import UniversalSearchField from "@/app/[locale]/(composited)/animals/_component
 import {fetchTrendingSearches} from "@/data/universal-search";
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
-import {getAppCaptures} from "@/data/authenticated-app";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
-import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
@@ -179,29 +174,14 @@ function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
     }
 }
 
+export const revalidate = 3600;
+
 type AnimalsIndexPageProps = {
-    searchParams?: {
-        q?: string | string[];
-        letter?: string | string[];
-        region?: string | string[];
-        location?: string | string[];
-        status?: string | string[];
-        sort?: string | string[];
-        order?: string | string[];
-        tier?: string | string[];
-    };
+    params: {locale: string};
 };
 
-function getSingleParam(value?: string | string[]) {
-    return Array.isArray(value) ? value[0] : value;
-}
-
-function isSpeciesRarityStatusKey(value: string): value is SpeciesRarityStatusKey {
-    return ["very-rare", "rare", "uncommon", "relatively-common"].includes(value);
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: AnimalsIndexPageProps): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const metaKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const speciesKeywords = Array.from(new Set(speciesEntries.flatMap((entry) => entry.searchIntents)));
@@ -245,26 +225,18 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageProps) {
-    const t = await getTranslations("animals");
-    const locale = await getLocale();
+export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "animals");
     const pageUrl = getAbsoluteUrl(locale, "/animals");
-    const query = getSingleParam(searchParams?.q) ?? "";
-    const letter = getSingleParam(searchParams?.letter) ?? "all";
-    const regionParam = getSingleParam(searchParams?.region);
-    const region = regionParam && isNativeRangeRegionKey(regionParam) ? regionParam : "all";
-    const locationParam = getSingleParam(searchParams?.location);
-    const location = locationParam && getLocationPage(locationParam) ? locationParam : "all";
-    const statusParam = getSingleParam(searchParams?.status);
-    const status = statusParam && isSpeciesRarityStatusKey(statusParam) ? statusParam : "all";
-    const sortParam = getSingleParam(searchParams?.sort);
-    const sort = sortParam && isSpeciesDirectorySort(sortParam) ? sortParam : "number";
-    const orderParam = getSingleParam(searchParams?.order)?.toLowerCase();
-    const order = orderParam && isSpeciesDirectorySortOrder(orderParam)
-        ? orderParam
-        : getDefaultSpeciesDirectorySortOrder(sort);
-    const tierParam = getSingleParam(searchParams?.tier)?.toUpperCase();
-    const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
+    const query = "";
+    const letter = "all";
+    const region = "all" as const;
+    const location = "all" as const;
+    const status = "all" as const;
+    const sort = "number" as const;
+    const order = getDefaultSpeciesDirectorySortOrder(sort);
+    const tier = "all" as const;
     const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
     const ts = await getScopedTranslator(locale, "animalSearch");
     const trendingSearches = await fetchTrendingSearches(8).catch(() => []);
@@ -280,25 +252,11 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
         page: 1,
         entries: unifiedSpeciesEntries
     });
-    const [captures, directoryImageState] = await Promise.all([
-        getAppCaptures(),
-        buildSpeciesDirectoryImageState(directoryPage.entries)
-    ]);
-    const discoveryIndex = buildCollectionDiscoveryIndex(captures);
-    const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
-        entry.slug,
-        isCatalogEntryDiscovered({
-            speciesProfileId: entry.speciesProfileId,
-            normalizedIdentityKey: entry.normalizedIdentityKey
-        }, discoveryIndex)
-    ]));
+    const directoryImageState = await buildSpeciesDirectoryImageState(directoryPage.entries);
+    const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
     const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => {
-        const capture = latestCaptureForCatalogEntry({
-            speciesProfileId: entry.speciesProfileId,
-            normalizedIdentityKey: entry.normalizedIdentityKey
-        }, discoveryIndex);
         const publicCaptureId = directoryImageState.get(entry.slug)?.captureId ?? null;
-        return [entry.slug, getSpeciesImageRoute(entry.slug, capture?.captureId ?? publicCaptureId)];
+        return [entry.slug, getSpeciesImageRoute(entry.slug, publicCaptureId)];
     }));
     const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
         entry.slug,
@@ -359,20 +317,7 @@ export default async function AnimalsIndexPage({searchParams}: AnimalsIndexPageP
                 />
                 <div className="flex flex-wrap items-center gap-1.5">
                     {catalogQuickLinks.map((item) => {
-                        const isActive = (() => {
-                            if (item.href.includes("q=bird")) return query.toLowerCase() === "bird";
-                            if (item.href.includes("q=domestic")) return query.toLowerCase() === "domestic";
-                            if (item.href.includes("q=endangered")) return query.toLowerCase() === "endangered";
-                            if (item.href.includes("q=reptile")) return query.toLowerCase() === "reptile";
-                            if (item.href.includes("sort=speed&order=asc")) return sort === "speed" && order === "asc";
-                            if (item.href.includes("sort=speed")) return sort === "speed" && order === "desc";
-                            if (item.href.includes("sort=rarity")) return sort === "rarity" && order === "desc";
-                            if (item.href.includes("sort=size")) return sort === "size" && order === "desc";
-                            if (item.href.includes("tier=S")) return tier === "S";
-                            if (item.href.includes("tier=A")) return tier === "A";
-                            if (item.href.includes("tier=B")) return tier === "B";
-                            return false;
-                        })();
+                        const isActive = false;
 
                         if (item.kind === "tier" && item.tier) {
                             const tone = TIER_CHIP_STYLE[item.tier];

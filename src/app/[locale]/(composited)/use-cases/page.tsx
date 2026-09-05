@@ -1,9 +1,9 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import {useCases} from "@/data/use-cases";
 import {collectorPages} from "@/data/collector-pages";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
@@ -89,8 +89,8 @@ function getUseCaseIcon(index: number) {
     return USE_CASE_ICONS[index % USE_CASE_ICONS.length];
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const useCaseKeywords = Array.from(new Set(useCases.flatMap((entry) => entry.searchIntents)));
@@ -134,9 +134,9 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function UseCasesIndexPage() {
-    const t = await getTranslations("useCases");
-    const locale = await getLocale();
+export default async function UseCasesIndexPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "useCases");
     const pageUrl = getAbsoluteUrl(locale, "/use-cases");
 
     const schema = {

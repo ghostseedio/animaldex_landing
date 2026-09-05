@@ -23,10 +23,20 @@ import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/loca
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {buildSpeciesArtworkSrc, getResolvedSpeciesArtworkUrl, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
+import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "indonesia"},
+        {locale: "id", slug: "indonesia"}
+    ];
+}
 
 type LocationPageProps = {
     params: {
@@ -152,7 +162,6 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             animals: place.animalsToSpot.slice(0, 6)
         }];
     });
-    const listArtworkFiles = await resolveSpeciesArtworkFiles(animals.map((animal) => animal.species.slug));
     const habitatMapSpecies = new Map<string, HabitatMapSpecies>();
 
     if (habitatMap) {
@@ -166,7 +175,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     slug: entry.slug,
                     name: entry.name,
                     tier: getSpeciesTier(entry),
-                    artworkSrc: await getResolvedSpeciesArtworkUrl(entry.slug)
+                    artworkSrc: buildSpeciesArtworkSrc(entry.slug, null)
                 });
             }
         }
@@ -427,7 +436,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     whyItFits: animal.whyItFits,
                     rarityHint: animal.rarityHint,
                     tier: getSpeciesTier(animal.species),
-                    artworkSrc: buildSpeciesArtworkSrc(animal.species.slug, listArtworkFiles.get(animal.species.slug))
+                    artworkSrc: buildSpeciesArtworkSrc(animal.species.slug, null)
                 }))}
             />
 

@@ -28,10 +28,15 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-// Rendered on demand and cached, like /animals/[slug]. next-intl's server APIs
-// cannot run during static generation, so a `generateStaticParams` here produced
-// zero usable paths and left every request served by the build's static 500.
 export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "sinai-dragon"},
+        {locale: "id", slug: "sinai-dragon"}
+    ];
+}
 
 export async function generateMetadata({params}: LegendaryEarthBeastPageProps): Promise<Metadata> {
     const {locale, slug} = params;

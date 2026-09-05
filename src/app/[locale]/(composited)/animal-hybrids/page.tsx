@@ -6,6 +6,8 @@ import {getSpeciesBySlug} from "@/data/species";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
+export const revalidate = 3600;
+
 const title = "Animal Hybrid Lab";
 const description = "Speculative animal hybrid pages that answer how a cross like zebra + rhino might look, behave, and use an ultimate ability.";
 

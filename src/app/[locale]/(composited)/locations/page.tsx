@@ -1,4 +1,3 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import LocationsHubClient, {
     LocationHubItem,
@@ -14,6 +13,8 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+
+export const revalidate = 3600;
 
 const locationRegions: Record<string, LocationHubRegion> = {
     indonesia: "asia", bali: "asia", jakarta: "asia", "west-java": "asia", "komodo-national-park": "asia", "ujung-kulon": "asia", borneo: "asia",
@@ -45,8 +46,8 @@ function inferLocationTypes(page: typeof locationPages[number]): LocationHubType
     return Array.from(inferred);
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const locationKeywords = Array.from(new Set(locationPages.flatMap((page) => page.searchIntents)));
@@ -76,9 +77,9 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function LocationsIndexPage() {
-    const t = await getTranslations("locations");
-    const locale = await getLocale();
+export default async function LocationsIndexPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "locations");
     const tn = await getScopedTranslator(locale, "nearbyWildlife");
     const explorerAnimalNames = speciesEntries.map((entry) => entry.name).sort((left, right) => left.localeCompare(right));
     const pageUrl = getAbsoluteUrl(locale, "/locations");

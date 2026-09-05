@@ -1,4 +1,3 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
@@ -27,6 +26,7 @@ import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 import {socialProfileUrlList} from "@/lib/social-links";
 import {localeConfig} from "@/i18n";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
 import {signHomeFeatureCaptureImages} from "@/lib/home-feature-capture-images";
@@ -85,13 +85,12 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
     };
 }
 
-export default async function Home() {
+export default async function Home({params}: HomePageProps) {
     const timer = createDevRequestTimer("home.page");
-    let locale = "en";
+    const locale = localeConfig.locales.includes(params.locale) ? params.locale : localeConfig.defaultLocale;
 
     try {
-        const t = await timeDevStep(timer, "translations", () => getTranslations("home"));
-        locale = await timeDevStep(timer, "locale", () => getLocale());
+        const t = await timeDevStep(timer, "translations", () => getScopedTranslator(locale, "home"));
     const siteUrl = getAbsoluteUrl(locale);
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();

@@ -1,6 +1,5 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnContentLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import SupportArticleFeedback from "@/app/[locale]/(composited)/support/_components/support-article-feedback";
@@ -11,8 +10,7 @@ import {
     getSupportArticlePath,
     slugifySupportText
 } from "@/lib/support-articles";
-import {getSupportChatHref} from "@/lib/support-chat";
-import {getSupportArticleFeedbackStatsForArticle} from "@/lib/support-article-feedback";
+import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
@@ -20,10 +18,8 @@ type ArticlePageProps = {
     params: {locale: string; categorySlug: string; articleSlug: string};
 };
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({params}: ArticlePageProps): Promise<Metadata> {
-    const locale = await getLocale();
+    const locale = params.locale;
     const article = getSupportArticleBySlugs(params.categorySlug, params.articleSlug, locale);
     if (!article) return {};
 
@@ -50,17 +46,20 @@ export async function generateMetadata({params}: ArticlePageProps): Promise<Meta
 }
 
 export default async function SupportArticlePage({params}: ArticlePageProps) {
-    const locale = await getLocale();
+    const locale = params.locale;
     const content = getSupportContent(locale);
     const article = getSupportArticleBySlugs(params.categorySlug, params.articleSlug, locale);
 
     if (!article) notFound();
 
     const related = getRelatedSupportArticles(article, 3, locale);
-    const [talkToSupportHref, feedbackStats] = await Promise.all([
-        getSupportChatHref(),
-        getSupportArticleFeedbackStatsForArticle(article.id)
-    ]);
+    const talkToSupportHref = PUBLIC_SUPPORT_CHAT_HREF;
+    const feedbackStats = {
+        articleId: article.id,
+        helpfulCount: 0,
+        unhelpfulCount: 0,
+        helpfulnessPercent: null
+    };
     const path = getSupportArticlePath(article);
     const updated = new Date(article.updatedAt).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
         year: "numeric",

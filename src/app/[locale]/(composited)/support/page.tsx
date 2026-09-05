@@ -1,5 +1,4 @@
 import {Metadata} from "next";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnContentLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
@@ -7,7 +6,7 @@ import SupportSearch from "@/app/[locale]/(composited)/support/_components/suppo
 import TalkToSupportLink from "@/app/[locale]/(composited)/support/_components/talk-to-support-link";
 import {getSupportContent} from "@/data/support-content";
 import {getSupportArticlePath, slugifySupportText} from "@/lib/support-articles";
-import {getSupportChatHref} from "@/lib/support-chat";
+import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
@@ -18,8 +17,8 @@ function supportMailto(subject = "AnimalDex Support Request") {
     return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}`;
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const content = getSupportContent(locale);
 
     return {
@@ -49,10 +48,10 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function SupportPage() {
-    const locale = await getLocale();
+export default async function SupportPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const content = getSupportContent(locale);
-    const talkToSupportHref = await getSupportChatHref();
+    const talkToSupportHref = PUBLIC_SUPPORT_CHAT_HREF;
     const allFAQs = content.sections.flatMap((section) => section.items);
 
     const schema = {

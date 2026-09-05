@@ -1,5 +1,4 @@
 import type {Metadata} from "next";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnGhostCta, EarnPrimaryCta, EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import {EarnFaqList, EarnKicker, EarnPageShell, EarnStatusPill} from "@/app/[locale]/(composited)/_components/earn/earn-page-shell";
@@ -17,8 +16,8 @@ import {getAbsoluteUrl} from "@/lib/site";
 
 const path = earnPaths.earn;
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     return buildEarnPageMetadata({
         locale,
         path,
@@ -49,8 +48,8 @@ const faqs = [
     }
 ];
 
-export default async function EarnOnAnimalDexPage() {
-    const locale = await getLocale();
+export default async function EarnOnAnimalDexPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const schema = [
         {
             "@context": "https://schema.org",

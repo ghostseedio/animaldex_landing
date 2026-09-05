@@ -1,6 +1,5 @@
 import {Metadata} from "next";
 import Image from "next/image";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import ContactRouteCard from "@/app/[locale]/(composited)/contact/_components/contact-route-card";
@@ -11,8 +10,8 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 const contactPath = "/contact";
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const content = getContactContent(locale);
 
     return {
@@ -42,8 +41,8 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function ContactPage() {
-    const locale = await getLocale();
+export default async function ContactPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const content = getContactContent(locale);
     const supportRoute = content.routes.find((route) => route.featured)!;
     const secondaryRoutes = content.routes.filter((route) => !route.featured);

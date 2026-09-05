@@ -1,6 +1,5 @@
 import type {Metadata} from "next";
 import {Suspense} from "react";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnGhostCta, EarnPrimaryCta, EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import {EarnFaqList, EarnKicker, EarnPageShell} from "@/app/[locale]/(composited)/_components/earn/earn-page-shell";
@@ -59,8 +58,8 @@ const faqs = [
     }
 ];
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     return buildEarnPageMetadata({
         locale,
         path,
@@ -70,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function WildlifeExperiencesPage({params}: {params: {locale: string}}) {
-    const locale = await getLocale();
+    const locale = params.locale;
     const listings = await getPublicGuideListings();
     const herpingListings = listings.filter((listing) => listing.service_category === "herping");
     const emptyCategories = (Object.keys(GUIDE_CATEGORIES) as GuideCategory[]).filter(

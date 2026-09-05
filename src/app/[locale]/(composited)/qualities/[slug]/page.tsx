@@ -9,24 +9,26 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "resilience"},
+        {locale: "id", slug: "resilience"}
+    ];
+}
+
 type PrinciplePageProps = {
     params: {
         locale: string;
         slug: string;
     };
-    searchParams?: {
-        page?: string;
-    };
 };
 
 const PRINCIPLE_SPECIES_PAGE_SIZE = 18;
 
-function parsePage(value?: string) {
-    const page = Number.parseInt(value ?? "1", 10);
-    return Number.isFinite(page) && page > 0 ? page : 1;
-}
-
-export async function generateMetadata({params, searchParams}: PrinciplePageProps): Promise<Metadata> {
+export async function generateMetadata({params}: PrinciplePageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "qualities");
     const principle = await getPrincipleHubBySlug(params.slug);
 
@@ -34,15 +36,12 @@ export async function generateMetadata({params, searchParams}: PrinciplePageProp
         return {};
     }
 
-    const page = parsePage(searchParams?.page);
     const basePath = `/powers/${principle.principleSlug}`;
-    const pageSuffix = page > 1 ? ` — Page ${page}` : "";
 
     return buildContentMetadata({
         locale: params.locale,
         pathname: basePath,
-        canonicalUrl: page > 1 ? `${getAbsoluteUrl(params.locale, basePath)}?page=${page}` : undefined,
-        title: `${t("detailMetaTitle", {principle: principle.principle})}${pageSuffix}`,
+        title: t("detailMetaTitle", {principle: principle.principle}),
         description: t("detailMetaDescription", {principle: principle.principle}),
         featuredImage: {
             src: "/images/og.png",
@@ -59,7 +58,7 @@ export async function generateMetadata({params, searchParams}: PrinciplePageProp
     });
 }
 
-export default async function PrincipleDetailPage({params, searchParams}: PrinciplePageProps) {
+export default async function PrincipleDetailPage({params}: PrinciplePageProps) {
     const t = await getScopedTranslator(params.locale, "qualities");
     const principle = await getPrincipleHubBySlug(params.slug);
 
@@ -68,7 +67,7 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
     }
 
     const pageCount = Math.max(1, Math.ceil(principle.lessons.length / PRINCIPLE_SPECIES_PAGE_SIZE));
-    const currentPage = Math.min(parsePage(searchParams?.page), pageCount);
+    const currentPage = 1;
     const pageStart = (currentPage - 1) * PRINCIPLE_SPECIES_PAGE_SIZE;
     const pageLessons = principle.lessons.slice(pageStart, pageStart + PRINCIPLE_SPECIES_PAGE_SIZE);
     const speciesItems = (
@@ -185,25 +184,7 @@ export default async function PrincipleDetailPage({params, searchParams}: Princi
             </div>
 
             {pageCount > 1 ? (
-                <nav className="flex items-center justify-center gap-4" aria-label={t("pageStatus", {page: currentPage, pages: pageCount})}>
-                    {currentPage > 1 ? (
-                        <Link
-                            href={`/powers/${principle.principleSlug}${currentPage === 2 ? "" : `?page=${currentPage - 1}`}`}
-                            className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
-                        >
-                            ← {t("previousPage")}
-                        </Link>
-                    ) : <span />}
-                    <span className="text-sm text-ink-300">{t("pageStatus", {page: currentPage, pages: pageCount})}</span>
-                    {currentPage < pageCount ? (
-                        <Link
-                            href={`/powers/${principle.principleSlug}?page=${currentPage + 1}`}
-                            className="rounded-xl border border-line-300 px-4 py-2 font-semibold text-ink-100 hover:border-primary-400"
-                        >
-                            {t("nextPage")} →
-                        </Link>
-                    ) : <span />}
-                </nav>
+                <p className="text-center text-sm text-ink-300">{t("pageStatus", {page: currentPage, pages: pageCount})}</p>
             ) : null}
 
             <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">

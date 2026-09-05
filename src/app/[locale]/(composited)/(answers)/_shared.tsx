@@ -1,4 +1,3 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Image from "next/image";
@@ -11,6 +10,7 @@ import {answerPages, getAnswerPage, getRelatedAnswerPages} from "@/data/answer-p
 import {getBlogPost} from "@/data/blog";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getManagedPage} from "@/lib/admin-content";
@@ -19,6 +19,7 @@ import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
 
 type AnswerPageProps = {
     slug: string;
+    locale: string;
     cmsSource?: boolean;
 };
 
@@ -150,8 +151,7 @@ function getSectionNav(t: (key: string) => string) {
     ];
 }
 
-export async function generateAnswerPageMetadata(slug: string): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateAnswerPageMetadata(slug: string, locale: string): Promise<Metadata> {
     const entry = getAnswerPage(slug);
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
@@ -265,9 +265,8 @@ export function ManagedAnswerPageArticle({managed}: {managed: NonNullable<Awaite
     );
 }
 
-export default async function AnswerPage({slug, cmsSource = false}: AnswerPageProps) {
-    const t = await getTranslations("answerPages");
-    const locale = await getLocale();
+export default async function AnswerPage({slug, locale, cmsSource = false}: AnswerPageProps) {
+    const t = await getScopedTranslator(locale, "answerPages");
     const entry = getAnswerPage(slug);
 
     if (!entry) {

@@ -1,5 +1,4 @@
 import type {Metadata} from "next";
-import {getLocale} from "next-intl/server";
 import Link from "@/app/[locale]/_components/link";
 import {EarnGhostCta, EarnPrimaryCta} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import {EarnFaqList, EarnKicker, EarnPageShell, EarnStatusPill} from "@/app/[locale]/(composited)/_components/earn/earn-page-shell";
@@ -16,8 +15,8 @@ import {getAbsoluteUrl} from "@/lib/site";
 
 const path = earnPaths.creatorRewards;
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     return buildEarnPageMetadata({
         locale,
         path,
@@ -55,8 +54,8 @@ const signals = [
     {title: "Limited community support", body: "Genuine Gift activity may count as a capped signal. The Credit price of a Gift does not."}
 ];
 
-export default async function CreatorRewardsPage() {
-    const locale = await getLocale();
+export default async function CreatorRewardsPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const schema = [
         {
             "@context": "https://schema.org",

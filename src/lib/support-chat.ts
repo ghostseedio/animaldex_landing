@@ -3,6 +3,8 @@ import "server-only";
 import {getCurrentUserId} from "@/data/direct-messages";
 import {getSystemSupportProfile} from "@/lib/in-app-support";
 
+export const PUBLIC_SUPPORT_CHAT_HREF = "/app/messages";
+
 export async function getSupportChatHref(draft?: string) {
     const [currentUserId, supportProfile] = await Promise.all([
         getCurrentUserId(),

@@ -1,13 +1,12 @@
 import type {Metadata} from "next";
 import Image from "next/image";
-import {getLocale} from "next-intl/server";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 const path = "/branding";
 
-export async function generateMetadata(): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
+    const locale = params.locale;
     const title = "AnimalDex Logo, Brand Assets & Usage Guidelines";
     const description = "Download the official AnimalDex logo and review brand colors, typography, spacing, accessibility, and logo usage guidelines.";
 
@@ -51,8 +50,8 @@ function CheckIcon() {
     return <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-0.5 h-5 w-5 shrink-0 fill-none stroke-current stroke-2"><path d="m5 12 4 4L19 6" /></svg>;
 }
 
-export default async function BrandingPage() {
-    const locale = await getLocale();
+export default async function BrandingPage({params}: {params: {locale: string}}) {
+    const locale = params.locale;
     const schema = {
         "@context": "https://schema.org",
         "@type": "WebPage",

@@ -11,6 +11,8 @@ import {
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
+export const revalidate = 3600;
+
 const title = "Pokemon Animal Counterparts";
 const description = "A generation-by-generation directory showing the real animal each Pokemon most closely resembles, with direct answers for search queries like what animal is Pikachu based on.";
 

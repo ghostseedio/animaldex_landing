@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
-import {usePathname, useRouter} from "next/navigation";
+import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
@@ -72,6 +72,36 @@ type DirectoryPageResponse = {
     total: number;
     hasMore: boolean;
 };
+
+function parseDirectorySearch(search: string) {
+    const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    const query = params.get("q")?.trim() ?? "";
+    const letter = params.get("letter")?.trim() || "all";
+    const region = (params.get("region")?.trim() || "all") as NativeRangeRegionKey | "all";
+    const location = params.get("location")?.trim() || "all";
+    const status = (params.get("status")?.trim() || "all") as SpeciesRarityStatusKey | "all";
+    const sort = (params.get("sort")?.trim() || "number") as SpeciesDirectorySort;
+    const orderParam = params.get("order")?.trim().toLowerCase();
+    const order = (orderParam === "asc" || orderParam === "desc"
+        ? orderParam
+        : getDefaultSpeciesDirectorySortOrder(sort)) as SpeciesDirectorySortOrder;
+    const tier = (params.get("tier")?.trim().toUpperCase() || "all") as SpeciesDirectoryTierFilter;
+    return {query, letter, region, location, status, sort, order, tier};
+}
+
+function directoryHasQueryFilters(search: string) {
+    const filters = parseDirectorySearch(search);
+    return Boolean(
+        filters.query
+        || filters.letter !== "all"
+        || filters.region !== "all"
+        || filters.location !== "all"
+        || filters.status !== "all"
+        || filters.sort !== "number"
+        || filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)
+        || filters.tier !== "all"
+    );
+}
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const rarityOrder: SpeciesRarityStatusKey[] = ["relatively-common", "uncommon", "rare", "very-rare"];
@@ -371,7 +401,6 @@ export default function SpeciesDirectory({
     currentTier,
     copy
 }: SpeciesDirectoryProps) {
-    const router = useRouter();
     const pathname = usePathname();
     const defaultOrder = getDefaultSpeciesDirectorySortOrder(currentSort);
     const [locationFilterOpen, setLocationFilterOpen] = useState(currentRegion !== "all");
@@ -393,8 +422,17 @@ export default function SpeciesDirectory({
     const [totalCount, setTotalCount] = useState(total);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [overrideFilters, setOverrideFilters] = useState<ReturnType<typeof parseDirectorySearch> | null>(null);
     const loadMoreLockRef = useRef(false);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const activeQuery = overrideFilters?.query ?? currentQuery;
+    const activeLetter = overrideFilters?.letter ?? currentLetter;
+    const activeRegion = overrideFilters?.region ?? currentRegion;
+    const activeLocation = overrideFilters?.location ?? currentLocation;
+    const activeStatus = overrideFilters?.status ?? currentStatus;
+    const activeSort = overrideFilters?.sort ?? currentSort;
+    const activeOrder = overrideFilters?.order ?? currentOrder;
+    const activeTier = overrideFilters?.tier ?? currentTier;
     const filterKey = [
         currentQuery,
         currentLetter,
@@ -424,6 +462,46 @@ export default function SpeciesDirectory({
         loadMoreLockRef.current = false;
     }, [filterKey, speciesEntries, capturedSpecies, speciesImages, publicCaptureSpecies, currentPage, totalPages, total]);
 
+    const applyDirectoryFilters = useCallback(async (filters: ReturnType<typeof parseDirectorySearch>) => {
+        const params = new URLSearchParams();
+        if (filters.query.trim()) params.set("q", filters.query.trim());
+        if (filters.letter !== "all") params.set("letter", filters.letter);
+        if (filters.region !== "all") params.set("region", filters.region);
+        if (filters.location !== "all") params.set("location", filters.location);
+        if (filters.status !== "all") params.set("status", filters.status);
+        if (filters.sort !== "number") params.set("sort", filters.sort);
+        if (filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)) params.set("order", filters.order);
+        if (filters.tier !== "all") params.set("tier", filters.tier);
+        params.set("page", "1");
+
+        const response = await fetch(`/api/animals/directory?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`Failed to load animals (${response.status})`);
+        }
+
+        const payload = await response.json() as DirectoryPageResponse;
+        setEntries(payload.entries);
+        setCapturedState(payload.capturedSpecies);
+        setSpeciesImageState(payload.speciesImages);
+        setPublicCaptureState(payload.publicCaptureSpecies);
+        setPage(payload.currentPage);
+        setPageCount(payload.totalPages);
+        setTotalCount(payload.total);
+        setLoadError(null);
+        loadMoreLockRef.current = false;
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || !directoryHasQueryFilters(window.location.search)) {
+            return;
+        }
+        const filters = parseDirectorySearch(window.location.search);
+        setOverrideFilters(filters);
+        void applyDirectoryFilters(filters).catch((error) => {
+            setLoadError(error instanceof Error ? error.message : "Failed to load animals");
+        });
+    }, [applyDirectoryFilters]);
+
     const hasMore = page < pageCount;
 
     const loadMore = useCallback(async () => {
@@ -435,14 +513,14 @@ export default function SpeciesDirectory({
 
         try {
             const params = new URLSearchParams();
-            if (currentQuery.trim()) params.set("q", currentQuery.trim());
-            if (currentLetter !== "all") params.set("letter", currentLetter);
-            if (currentRegion !== "all") params.set("region", currentRegion);
-            if (currentLocation !== "all") params.set("location", currentLocation);
-            if (currentStatus !== "all") params.set("status", currentStatus);
-            if (currentSort !== "number") params.set("sort", currentSort);
-            if (currentOrder !== getDefaultSpeciesDirectorySortOrder(currentSort)) params.set("order", currentOrder);
-            if (currentTier !== "all") params.set("tier", currentTier);
+            if (activeQuery.trim()) params.set("q", activeQuery.trim());
+            if (activeLetter !== "all") params.set("letter", activeLetter);
+            if (activeRegion !== "all") params.set("region", activeRegion);
+            if (activeLocation !== "all") params.set("location", activeLocation);
+            if (activeStatus !== "all") params.set("status", activeStatus);
+            if (activeSort !== "number") params.set("sort", activeSort);
+            if (activeOrder !== getDefaultSpeciesDirectorySortOrder(activeSort)) params.set("order", activeOrder);
+            if (activeTier !== "all") params.set("tier", activeTier);
             params.set("page", String(page + 1));
 
             const response = await fetch(`/api/animals/directory?${params.toString()}`);
@@ -468,14 +546,14 @@ export default function SpeciesDirectory({
             loadMoreLockRef.current = false;
         }
     }, [
-        currentLetter,
-        currentLocation,
-        currentQuery,
-        currentRegion,
-        currentSort,
-        currentOrder,
-        currentStatus,
-        currentTier,
+        activeLetter,
+        activeLocation,
+        activeQuery,
+        activeRegion,
+        activeSort,
+        activeOrder,
+        activeStatus,
+        activeTier,
         hasMore,
         isLoadingMore,
         page
@@ -497,14 +575,14 @@ export default function SpeciesDirectory({
     }, [hasMore, loadMore, entries.length]);
 
     function pushFilters({
-        nextQuery = currentQuery,
-        nextLetter = currentLetter,
-        nextRegion = currentRegion,
-        nextLocation = currentLocation,
-        nextStatus = currentStatus,
-        nextSort = currentSort,
-        nextOrder = currentOrder,
-        nextTier = currentTier
+        nextQuery = activeQuery,
+        nextLetter = activeLetter,
+        nextRegion = activeRegion,
+        nextLocation = activeLocation,
+        nextStatus = activeStatus,
+        nextSort = activeSort,
+        nextOrder = activeOrder,
+        nextTier = activeTier
     }: {
         nextQuery?: string;
         nextLetter?: string;
@@ -551,60 +629,74 @@ export default function SpeciesDirectory({
 
         const queryString = params.toString();
         const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
-        router.push(nextUrl);
+        const nextFilters = {
+            query: nextQuery,
+            letter: nextLetter,
+            region: nextRegion,
+            location: nextLocation,
+            status: nextStatus,
+            sort: nextSort,
+            order: nextOrder,
+            tier: nextTier
+        };
+        setOverrideFilters(nextFilters);
+        window.history.replaceState(null, "", nextUrl);
+        void applyDirectoryFilters(nextFilters).catch((error) => {
+            setLoadError(error instanceof Error ? error.message : "Failed to load animals");
+        });
     }
 
     const hasActiveFilters = Boolean(
-        currentQuery
-            || currentLetter !== "all"
-            || currentRegion !== "all"
-            || currentLocation !== "all"
-            || currentStatus !== "all"
-            || currentSort !== "number"
-            || currentOrder !== getDefaultSpeciesDirectorySortOrder(currentSort)
-            || currentTier !== "all"
+        activeQuery
+            || activeLetter !== "all"
+            || activeRegion !== "all"
+            || activeLocation !== "all"
+            || activeStatus !== "all"
+            || activeSort !== "number"
+            || activeOrder !== getDefaultSpeciesDirectorySortOrder(activeSort)
+            || activeTier !== "all"
     );
 
-    const thumbnailStatKey = resolveThumbnailStatKey(currentSort, currentStatus);
+    const thumbnailStatKey = resolveThumbnailStatKey(activeSort, activeStatus);
 
     const resultsSummary = copy.resultsSummary
         .replace("{count}", String(entries.length))
         .replace("{total}", String(totalCount));
 
-    const sortDirectionLabel = currentSort === "name"
-        ? (currentOrder === "asc" ? "A → Z" : "Z → A")
-        : currentOrder === "asc"
+    const sortDirectionLabel = activeSort === "name"
+        ? (activeOrder === "asc" ? "A → Z" : "Z → A")
+        : activeOrder === "asc"
             ? copy.sortAscendingLabel
             : copy.sortDescendingLabel;
 
     const activeFilterChips: Array<{key: string; label: string; clear: () => void}> = [];
 
-    if (currentQuery.trim()) {
+    if (activeQuery.trim()) {
         activeFilterChips.push({
             key: "query",
-            label: currentQuery.trim(),
+            label: activeQuery.trim(),
             clear: () => pushFilters({nextQuery: ""})
         });
     }
 
-    if (currentLetter !== "all") {
+    if (activeLetter !== "all") {
         activeFilterChips.push({
             key: "letter",
-            label: `${copy.alphabetLabel} ${currentLetter}`,
+            label: `${copy.alphabetLabel} ${activeLetter}`,
             clear: () => pushFilters({nextLetter: "all"})
         });
     }
 
-    if (currentRegion !== "all") {
+    if (activeRegion !== "all") {
         activeFilterChips.push({
             key: "region",
-            label: `${copy.locationLabel}: ${getNativeRangeRegionLabel(currentRegion)}`,
+            label: `${copy.locationLabel}: ${getNativeRangeRegionLabel(activeRegion)}`,
             clear: () => pushFilters({nextRegion: "all"})
         });
     }
 
-    if (currentLocation !== "all") {
-        const locationTitle = getLocationPage(currentLocation)?.name ?? currentLocation;
+    if (activeLocation !== "all") {
+        const locationTitle = getLocationPage(activeLocation)?.name ?? activeLocation;
         activeFilterChips.push({
             key: "location",
             label: locationTitle,
@@ -612,26 +704,26 @@ export default function SpeciesDirectory({
         });
     }
 
-    if (currentStatus !== "all") {
+    if (activeStatus !== "all") {
         activeFilterChips.push({
             key: "status",
-            label: `${copy.statusLabel}: ${copy.rarityStatuses[currentStatus]}`,
+            label: `${copy.statusLabel}: ${copy.rarityStatuses[activeStatus]}`,
             clear: () => pushFilters({nextStatus: "all"})
         });
     }
 
-    if (currentSort !== "number" || currentOrder !== getDefaultSpeciesDirectorySortOrder(currentSort)) {
+    if (activeSort !== "number" || activeOrder !== getDefaultSpeciesDirectorySortOrder(activeSort)) {
         activeFilterChips.push({
             key: "sort",
-            label: `${copy.sortOptions[currentSort].title} · ${sortDirectionLabel}`,
+            label: `${copy.sortOptions[activeSort].title} · ${sortDirectionLabel}`,
             clear: () => pushFilters({nextSort: "number", nextOrder: "asc"})
         });
     }
 
-    if (currentTier !== "all") {
+    if (activeTier !== "all") {
         activeFilterChips.push({
             key: "tier",
-            label: currentTier === "S" ? "Tier S · Legendary" : `Tier ${currentTier}`,
+            label: activeTier === "S" ? "Tier S · Legendary" : `Tier ${activeTier}`,
             clear: () => pushFilters({nextTier: "all"})
         });
     }
@@ -713,7 +805,7 @@ export default function SpeciesDirectory({
                                     {locationFilterOpen ? copy.closeLocationFilter : copy.openLocationFilter}
                                 </span>
                                 <span className="text-sm text-ink-300">
-                                    {currentRegion === "all" ? copy.allRegions : getNativeRangeRegionLabel(currentRegion)}
+                                    {activeRegion === "all" ? copy.allRegions : getNativeRangeRegionLabel(activeRegion)}
                                 </span>
                             </button>
                         </div>
@@ -725,7 +817,7 @@ export default function SpeciesDirectory({
                                     type="button"
                                     onClick={() => pushFilters({nextStatus: "all"})}
                                     className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                                        currentStatus === "all"
+                                        activeStatus === "all"
                                             ? "border-primary-400 bg-primary-500/20 text-white"
                                             : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
                                     }`}
@@ -738,7 +830,7 @@ export default function SpeciesDirectory({
                                         type="button"
                                         onClick={() => pushFilters({nextStatus: statusKey})}
                                         className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                                            currentStatus === statusKey
+                                            activeStatus === statusKey
                                                 ? "border-primary-400 bg-primary-500/20 text-white"
                                                 : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
                                         }`}
@@ -752,7 +844,7 @@ export default function SpeciesDirectory({
 
                     {locationFilterOpen ? (
                         <SpeciesRegionMap
-                            currentRegion={currentRegion}
+                            currentRegion={activeRegion}
                             onSelectRegion={(region) => pushFilters({nextRegion: region})}
                             allLabel={copy.allRegions}
                             mapAriaLabel={copy.mapAriaLabel}
@@ -765,11 +857,11 @@ export default function SpeciesDirectory({
                         <div className="space-y-2">
                             {SPECIES_DIRECTORY_SORT_OPTIONS.map((option) => {
                                 const labels = copy.sortOptions[option.id];
-                                const selected = currentSort === option.id;
+                                const selected = activeSort === option.id;
                                 const meta = SORT_OPTION_ICONS[option.id];
                                 const directionLabel = option.id === "name"
-                                    ? (currentOrder === "asc" ? "A → Z" : "Z → A")
-                                    : currentOrder === "asc"
+                                    ? (activeOrder === "asc" ? "A → Z" : "Z → A")
+                                    : activeOrder === "asc"
                                         ? copy.sortAscendingLabel
                                         : copy.sortDescendingLabel;
 
@@ -781,7 +873,7 @@ export default function SpeciesDirectory({
                                             if (selected) {
                                                 pushFilters({
                                                     nextSort: option.id,
-                                                    nextOrder: currentOrder === "asc" ? "desc" : "asc"
+                                                    nextOrder: activeOrder === "asc" ? "desc" : "asc"
                                                 });
                                                 return;
                                             }
@@ -830,7 +922,7 @@ export default function SpeciesDirectory({
                                         </span>
                                         {selected ? (
                                             <span className="mt-1 shrink-0 text-primary-200" aria-hidden="true">
-                                                {currentOrder === "asc" ? "↑" : "↓"}
+                                                {activeOrder === "asc" ? "↑" : "↓"}
                                             </span>
                                         ) : null}
                                     </button>
@@ -846,7 +938,7 @@ export default function SpeciesDirectory({
                                 type="button"
                                 onClick={() => pushFilters({nextLetter: "all"})}
                                 className={`shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                                    currentLetter === "all"
+                                    activeLetter === "all"
                                         ? "border-primary-400 bg-primary-500/20 text-white"
                                         : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
                                 }`}
@@ -859,7 +951,7 @@ export default function SpeciesDirectory({
                                     type="button"
                                     onClick={() => pushFilters({nextLetter: letter})}
                                     className={`h-9 min-w-9 shrink-0 rounded-full border px-3 text-sm transition-colors ${
-                                        currentLetter === letter
+                                        activeLetter === letter
                                             ? "border-primary-400 bg-primary-500/20 text-white"
                                             : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
                                     }`}
@@ -891,7 +983,7 @@ export default function SpeciesDirectory({
                                 hasPublicCapture={publicCaptureState[entry.slug] ?? false}
                                 priority={index < 12}
                                 statKey={thumbnailStatKey}
-                                showBattleTier={currentTier !== "all"}
+                                showBattleTier={activeTier !== "all"}
                             />
                         </Link>
                     ))}

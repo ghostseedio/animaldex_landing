@@ -7,7 +7,7 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getScopedTranslator} from "@/loaders/translation";
 import LocationPlacesPage, {LocationPlacesKind, LocationPlacesLabels} from "./location-places-page";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
-import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
+import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesTier} from "@/lib/species-tier";
 
@@ -63,14 +63,13 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
             await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug)
         ))
     )).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-    const artworkFiles = await resolveSpeciesArtworkFiles(placeSpecies.map((entry) => entry.slug));
     const species = placeSpecies
         .map((entry) => ({
             slug: entry.slug,
             name: entry.name,
             scientificName: entry.analysis.scientificName,
             tier: getSpeciesTier(entry),
-            artworkSrc: buildSpeciesArtworkSrc(entry.slug, artworkFiles.get(entry.slug))
+            artworkSrc: buildSpeciesArtworkSrc(entry.slug, null)
         }));
     const t = await getScopedTranslator(params.locale, "locationPlaces");
     const isZooPage = kind === "zoos";

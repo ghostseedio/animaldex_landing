@@ -1,18 +1,21 @@
-import {getLocale, getTranslations} from "next-intl/server";
 import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getManagedBlogPosts, getManagedPageSummaries} from "@/lib/admin-content";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {answerPages} from "@/data/answer-pages";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
+export const revalidate = 3600;
+
 const POSTS_PER_PAGE = 12;
 
 type BlogIndexPageProps = {
+    params: {locale: string};
     searchParams?: {
         page?: string | string[];
     };
@@ -52,8 +55,8 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-export async function generateMetadata({searchParams}: BlogIndexPageProps): Promise<Metadata> {
-    const locale = await getLocale();
+export async function generateMetadata({params, searchParams}: BlogIndexPageProps): Promise<Metadata> {
+    const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const indexedBlogPosts = await getManagedBlogPosts();
@@ -103,9 +106,9 @@ export async function generateMetadata({searchParams}: BlogIndexPageProps): Prom
     };
 }
 
-export default async function BlogIndexPage({searchParams}: BlogIndexPageProps) {
-    const t = await getTranslations("blog");
-    const locale = await getLocale();
+export default async function BlogIndexPage({params, searchParams}: BlogIndexPageProps) {
+    const locale = params.locale;
+    const t = await getScopedTranslator(locale, "blog");
     const indexedBlogPosts = await getManagedBlogPosts();
     const managedPageSummaries = await getManagedPageSummaries();
     const pageSummaryBySlug = new Map(managedPageSummaries.map((page) => [page.slug, page]));

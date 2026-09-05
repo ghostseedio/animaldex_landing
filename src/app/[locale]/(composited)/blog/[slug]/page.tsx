@@ -19,6 +19,16 @@ import {getManagedBlogPost} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
 import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "axolotl-symbolism"},
+        {locale: "id", slug: "axolotl-symbolism"}
+    ];
+}
+
 type BlogPostPageProps = {
     params: {
         locale: string;
