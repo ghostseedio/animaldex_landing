@@ -119,6 +119,12 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.doesNotMatch(animalsIndex, /getAppCaptures/);
     assert.doesNotMatch(animalsIndex, /searchParams/);
     assert.match(animalsIndex, /export const revalidate = 3600/);
+    assert.match(animalsIndex, /generateStaticParams/);
+    assert.match(readFileSync(join(root, "app/[locale]/(composited)/pokemon-animals/page.tsx"), "utf8"), /generateStaticParams/);
+    assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/pokemon-animals/page.tsx"), "utf8"), /searchParams/);
+    assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/blog/page.tsx"), "utf8"), /searchParams/);
+    assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/comparisons/page.tsx"), "utf8"), /searchParams/);
+    assert.doesNotMatch(readFileSync(join(root, "app/[locale]/(composited)/(answers)/best-animal-identification-app/page.tsx"), "utf8"), /searchParams/);
     assert.doesNotMatch(post, /getAuthenticatedAppShellData|getDiscoverTimelineBundle/);
     assert.match(comparison, /publishedStaticComparisonRedirectSlug/);
     assert.match(pokemon, /generateStaticParams/);

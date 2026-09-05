@@ -12,13 +12,14 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 const POSTS_PER_PAGE = 12;
 
 type BlogIndexPageProps = {
     params: {locale: string};
-    searchParams?: {
-        page?: string | string[];
-    };
 };
 
 function getSingleParam(value?: string | string[]) {
@@ -55,7 +56,7 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-export async function generateMetadata({params, searchParams}: BlogIndexPageProps): Promise<Metadata> {
+export async function generateMetadata({params}: BlogIndexPageProps): Promise<Metadata> {
     const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
@@ -63,7 +64,7 @@ export async function generateMetadata({params, searchParams}: BlogIndexPageProp
     const postKeywords = Array.from(new Set(indexedBlogPosts.flatMap((post) => post.searchIntents)));
     const title = messages.blog?.metaTitle || "AnimalDex Blog";
     const description = messages.blog?.metaDescription || messages.meta?.description || "";
-    const currentPage = getRequestedPage(searchParams?.page);
+    const currentPage = 1;
     const pagePath = getBlogPagePath(currentPage);
     const pageTitle = currentPage === 1
         ? title
@@ -106,13 +107,13 @@ export async function generateMetadata({params, searchParams}: BlogIndexPageProp
     };
 }
 
-export default async function BlogIndexPage({params, searchParams}: BlogIndexPageProps) {
+export default async function BlogIndexPage({params}: BlogIndexPageProps) {
     const locale = params.locale;
     const t = await getScopedTranslator(locale, "blog");
     const indexedBlogPosts = await getManagedBlogPosts();
     const managedPageSummaries = await getManagedPageSummaries();
     const pageSummaryBySlug = new Map(managedPageSummaries.map((page) => [page.slug, page]));
-    const currentPage = getRequestedPage(searchParams?.page);
+    const currentPage = 1;
     const totalPages = Math.max(1, Math.ceil(indexedBlogPosts.length / POSTS_PER_PAGE));
 
     if (currentPage > totalPages) {

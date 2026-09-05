@@ -54,6 +54,10 @@ const animalBackgroundImages = [
 
 export const revalidate = 300;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 type HomePageProps = {
     params: {locale: string};
 };
@@ -411,12 +415,12 @@ export default async function Home({params}: HomePageProps) {
                             data={
                                 phone.elements.map((item) => ({
                                     ...item,
-                                    src: localisePath(item.src),
+                                    src: localisePath(item.src, locale),
                                     alt: t('phone.' + item.id)
                                 }))
                             }
                             phone={{
-                                src: localisePath(phone.phone),
+                                src: localisePath(phone.phone, locale),
                                 alt: t('phone.phone'),
                                 width: phone.phoneWidth,
                                 height: phone.phoneHeight,
@@ -491,7 +495,7 @@ export default async function Home({params}: HomePageProps) {
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center">
                                         <Image
-                                            src={localisePath(img.src)}
+                                            src={localisePath(img.src, locale)}
                                             width={img.width}
                                             height={img.height}
                                             alt={t("features." + id)}
@@ -528,7 +532,7 @@ export default async function Home({params}: HomePageProps) {
             <section className="relative mb-16 w-full-no-offset overflow-hidden bg-[#071B0F] mx-offset o-4 md:o-16">
                 <div className="relative">
                     {moreFeatures.slice(0, 2).map(({img, id, icon}, i) => {
-                        const iconMarkup = unsafelyLoadSVG(localisePath(icon));
+                        const iconMarkup = unsafelyLoadSVG(localisePath(icon, locale));
                         const reversed = i % 2 === 1;
 
                         return (
@@ -555,7 +559,7 @@ export default async function Home({params}: HomePageProps) {
                                     <div className="relative w-full min-w-0 lg:justify-self-stretch">
                                         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[78%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(167,244,50,0.16)_0%,rgba(7,27,15,0)_70%)] blur-3xl" />
                                         <Image
-                                            src={localisePath(img.src)}
+                                            src={localisePath(img.src, locale)}
                                             alt={t(`more.${id}.alt`)}
                                             width={img.width}
                                             height={img.height}

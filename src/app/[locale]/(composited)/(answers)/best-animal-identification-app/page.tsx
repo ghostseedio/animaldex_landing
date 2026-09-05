@@ -8,6 +8,10 @@ import ManagedSectionInteractions from "./managed-section-interactions";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 export async function generateMetadata({params}: {params: {locale: string}}) {
     return generateAnswerPageMetadata("best-animal-identification-app", params.locale);
 }
@@ -169,16 +173,12 @@ function featuredFigureStyle(image: ManagedDisplayImage) {
     };
 }
 
-export default async function BestAnimalIdentificationAppPage({params, searchParams}: {params: {locale: string}; searchParams?: {cmsSource?: string}}) {
+export default async function BestAnimalIdentificationAppPage({params}: {params: {locale: string}}) {
     const managed = await getManagedPage("best-animal-identification-app");
-    const managedQuickAnswer = searchParams?.cmsSource !== "1"
-        ? managed?.sections.find(isManagedQuickAnswerSection)
-        : undefined;
-    const managedWorkflow = searchParams?.cmsSource !== "1"
-        ? managed?.sections.find(isManagedWorkflowSection)
-        : undefined;
-    const managedSections = searchParams?.cmsSource !== "1" ? managed?.sections : undefined;
-    const managedHeaderHtml = searchParams?.cmsSource !== "1" ? managed?.headerHtml : undefined;
+    const managedQuickAnswer = managed?.sections.find(isManagedQuickAnswerSection);
+    const managedWorkflow = managed?.sections.find(isManagedWorkflowSection);
+    const managedSections = managed?.sections;
+    const managedHeaderHtml = managed?.headerHtml;
     const managedComparison = sectionByTitle(managedSections, "Compare features at a glance");
     const managedReviews = sectionByTitle(managedSections, "Where each app wins—and where it doesn’t");
     const managedChooser = sectionByTitle(managedSections, "Which app is right for you?");

@@ -8,6 +8,10 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 const title = "Animal Hybrid Lab";
 const description = "Speculative animal hybrid pages that answer how a cross like zebra + rhino might look, behave, and use an ultimate ability.";
 

@@ -25,16 +25,12 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 type ComparisonsIndexPageProps = {
     params: {locale: string};
-    searchParams?: {
-        q?: string | string[];
-        type?: string | string[];
-        animal?: string | string[];
-        sort?: string | string[];
-        quick?: string | string[];
-        page?: string | string[];
-    };
 };
 
 type DirectoryState = {
@@ -210,24 +206,18 @@ export async function generateMetadata({params}: ComparisonsIndexPageProps): Pro
     };
 }
 
-export default async function ComparisonsIndexPage({params, searchParams}: ComparisonsIndexPageProps) {
+export default async function ComparisonsIndexPage({params}: ComparisonsIndexPageProps) {
     const locale = params.locale;
     const t = await getScopedTranslator(locale, "comparisons");
     const allEntries = await listMergedChallengeEntries().catch(() => challengeEntries);
     const animalOptions = animalOptionsFromChallengeEntries(allEntries);
-    const query = getSingleParam(searchParams?.q) ?? "";
-    const typeParam = getSingleParam(searchParams?.type);
-    const animalParam = getSingleParam(searchParams?.animal);
-    const sortParam = getSingleParam(searchParams?.sort);
-    const quickParam = getSingleParam(searchParams?.quick);
-    const pageParam = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
     const state: DirectoryState = {
-        query,
-        comparisonType: typeParam && isChallengeComparisonType(typeParam) ? typeParam : "all",
-        animal: animalParam && animalOptions.includes(animalParam) ? animalParam : "all",
-        sort: isComparisonSort(sortParam) ? sortParam : "popular",
-        quick: isQuickCategory(quickParam) ? quickParam : "popular",
-        page: Number.isFinite(pageParam) ? pageParam : 1
+        query: "",
+        comparisonType: "all",
+        animal: "all",
+        sort: "popular",
+        quick: "popular",
+        page: 1
     };
     const directory = getDirectoryEntries(state, allEntries);
     state.page = directory.currentPage;

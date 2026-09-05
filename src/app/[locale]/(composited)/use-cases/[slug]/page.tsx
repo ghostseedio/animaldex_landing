@@ -11,13 +11,17 @@ import {getSupportArticleBySlugs, getSupportArticlePath} from "@/lib/support-art
 import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
 import InstagramImportIntro from "@/app/[locale]/(composited)/use-cases/_components/instagram-import-intro";
 
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "ai-animal-scanner-identification-app"},
+        {locale: "id", slug: "ai-animal-scanner-identification-app"}
+    ];
+}
+
 type UseCasePageProps = {
     params: {
         locale: string;
         slug: string;
-    };
-    searchParams?: {
-        intent?: string;
     };
 };
 
@@ -75,7 +79,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
     };
 }
 
-export default async function UseCasePage({params, searchParams}: UseCasePageProps) {
+export default async function UseCasePage({params}: UseCasePageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "useCases");
     const entry = getUseCase(slug);
@@ -241,7 +245,7 @@ export default async function UseCasePage({params, searchParams}: UseCasePagePro
             {entry.steps?.length ? (
                 <section className="mx-auto mt-10 max-w-5xl md:mt-14">
                     {isImportPage && productHref ? (
-                        <InstagramImportIntro productHref={productHref} intent={searchParams?.intent} />
+                        <InstagramImportIntro productHref={productHref} />
                     ) : null}
                     {isImportPage && INSTAGRAM_WEB_IMPORT_LIVE ? (
                         <section aria-labelledby="web-first-heading" className="mb-8 rounded-[1.35rem] border border-primary-400/20 bg-primary-400/[0.06] p-5">

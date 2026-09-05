@@ -1916,7 +1916,7 @@ function recentCaptureFeedLimit(limit: number) {
 }
 
 async function loadRecentPublicCaptures(limit: number): Promise<DiscoverCaptureItem[]> {
-    const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
+    const supabase = createSupabasePublicClient();
     if (!supabase) return [];
 
     const feedLimit = recentCaptureFeedLimit(limit);

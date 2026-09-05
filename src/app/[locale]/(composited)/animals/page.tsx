@@ -176,6 +176,10 @@ function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 type AnimalsIndexPageProps = {
     params: {locale: string};
 };

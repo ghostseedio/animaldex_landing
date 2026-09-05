@@ -8,6 +8,10 @@ import {contactSupportEmail, getContactContent} from "@/data/contact-content";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 const contactPath = "/contact";
 
 export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {

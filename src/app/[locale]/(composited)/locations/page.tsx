@@ -16,6 +16,10 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 const locationRegions: Record<string, LocationHubRegion> = {
     indonesia: "asia", bali: "asia", jakarta: "asia", "west-java": "asia", "komodo-national-park": "asia", "ujung-kulon": "asia", borneo: "asia",
     "singapore-zoo": "asia", china: "asia", india: "asia", japan: "asia", thailand: "asia", "sri-lanka": "asia", singapore: "asia",

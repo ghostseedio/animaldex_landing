@@ -8,6 +8,10 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }

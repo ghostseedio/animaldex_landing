@@ -11,13 +11,12 @@ import {getScopedTranslator} from "@/loaders/translation";
 
 type LessonTag = "popular" | "leadership" | "wisdom" | "teamwork" | "adaptation" | "survival" | "focus" | "intelligence" | "engineering" | "cooperation" | "patience";
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 type AnimalLessonsPageProps = {
     params: {locale: string};
-    searchParams?: {
-        q?: string | string[];
-        tag?: string | string[];
-        page?: string | string[];
-    };
 };
 
 type LessonCollection = {
@@ -202,22 +201,17 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
     };
 }
 
-export default async function AnimalLessonsPage({params, searchParams}: AnimalLessonsPageProps) {
+export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const lessons = await getBehaviorLessonIndex();
-    const query = getSingleParam(searchParams?.q) ?? "";
-    const tagParam = getSingleParam(searchParams?.tag);
-    const activeTag: LessonTag = isLessonTag(tagParam) ? tagParam : "popular";
-    const requestedPage = Number.parseInt(getSingleParam(searchParams?.page) ?? "1", 10);
+    const query = "";
+    const activeTag: LessonTag = "popular";
+    const requestedPage = 1;
     const isFiltering = Boolean(query.trim()) || activeTag !== "popular";
     const normalizedQuery = query.trim().toLowerCase();
     const filteredLessons = lessons
         .filter((lesson) => !normalizedQuery || lessonText(lesson).includes(normalizedQuery))
-        .filter((lesson) => activeTag === "popular" || TAG_PATTERNS[activeTag].test(lessonText(lesson)))
-        .sort((left, right) => {
-            if (activeTag !== "popular") return scoreLesson(right, TAG_PATTERNS[activeTag]) - scoreLesson(left, TAG_PATTERNS[activeTag]) || left.displayName.localeCompare(right.displayName);
-            return left.displayName.localeCompare(right.displayName);
-        });
+        .sort((left, right) => left.displayName.localeCompare(right.displayName));
     const totalPages = Math.max(1, Math.ceil(filteredLessons.length / PAGE_SIZE));
     const currentPage = Math.min(Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1), totalPages);
     const paginatedLessons = filteredLessons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);

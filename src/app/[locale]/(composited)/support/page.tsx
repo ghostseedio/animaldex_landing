@@ -10,6 +10,10 @@ import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 const supportEmail = "support@animaldex.app";
 const supportPath = "/support";
 

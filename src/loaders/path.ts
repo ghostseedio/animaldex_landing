@@ -1,8 +1,5 @@
-import 'server-only';
-import {useLocale} from "next-intl";
+import "server-only";
 
-export function localisePath(path: string) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const locale = useLocale()
-    return path.replaceAll('{locale}', locale);
+export function localisePath(path: string, locale: string) {
+    return path.replaceAll("{locale}", locale);
 }

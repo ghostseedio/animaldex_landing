@@ -15,6 +15,10 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+    return [{locale: "en"}, {locale: "id"}];
+}
+
 export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
     const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
