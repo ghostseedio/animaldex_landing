@@ -684,7 +684,7 @@ export function getLocalPrincipleSlugs() {
             slugs.add(principleSlug);
         }
     }
-    return [...slugs].sort((left, right) => left.localeCompare(right));
+    return Array.from(slugs).sort((left, right) => left.localeCompare(right));
 }
 
 const PUBLIC_PRINCIPLE_HUB_TTL_MS = 15_000;
