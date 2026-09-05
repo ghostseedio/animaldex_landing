@@ -119,7 +119,7 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.doesNotMatch(animalsIndex, /getUnifiedSpeciesEntries/);
     assert.doesNotMatch(animalsIndex, /fetchTrendingSearches|buildSpeciesDirectoryImageState|createSignedStorageUrl|cache:\s*["']no-store["']/);
     assert.doesNotMatch(animalsIndex, /searchParams/);
-    assert.match(animalsIndex, /export const revalidate = 3600/);
+    assert.match(animalsIndex, /export const revalidate = 86400/);
     assert.match(animalsIndex, /generateStaticParams/);
     assert.match(animalsIndex, /return \[\];/);
     assert.doesNotMatch(localeLayout, /generateStaticParams/);
@@ -137,10 +137,10 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.doesNotMatch(support, /getSupportChatHref|cookies\(/);
     assert.match(support, /PUBLIC_SUPPORT_CHAT_HREF/);
     assert.doesNotMatch(sitemap, /force-dynamic/);
-    assert.match(sitemap, /export const revalidate = 3600/);
+    assert.match(sitemap, /export const revalidate = 86400/);
     assert.match(layout, /export const revalidate = false/);
     assert.doesNotMatch(layout, /next-intl\/server/);
-    assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /export const revalidate = 3600/);
+    assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /export const revalidate = 86400/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /return \[\];/);
 
     const home = readFileSync(join(root, "app/[locale]/(composited)/(home)/page.tsx"), "utf8");
@@ -152,6 +152,6 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.match(home, /export const revalidate = 86400/);
     assert.doesNotMatch(comparisonsHub, /listMergedChallengeEntries|getUnifiedSpeciesEntries|countComparableAnimals|getStarterComparableAnimals|findComparableAnimal|resolveSpeciesArtworkFiles/);
     assert.match(comparisonsHub, /export const revalidate = 86400/);
-    assert.match(lessonsHub, /export const revalidate = 3600/);
+    assert.match(lessonsHub, /export const revalidate = 86400/);
     assert.match(powersHub, /export const revalidate = 86400/);
 });

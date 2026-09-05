@@ -6,7 +6,7 @@ import {GuidePageView} from "@/components/guides/guide-analytics";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {categoryLabel, guideAreaServedName, isLocationPageIndexable, locationInventory, type GuideCategory} from "@/lib/guide-marketplace-core";
 
-export const revalidate = 300;
+export const revalidate = 86400;
 type Props = {params: {locale: string; location: string}};
 
 async function resolve(location: string) {

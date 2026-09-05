@@ -81,7 +81,7 @@ test("canonical /tier-list wrappers export static segment config", () => {
     const hub = readRepo("src/app/[locale]/(composited)/tier-list/page.tsx");
     const detail = readRepo("src/app/[locale]/(composited)/tier-list/[slug]/page.tsx");
 
-    assert.match(hub, /export const revalidate = 3600/);
+    assert.match(hub, /export const revalidate = 86400/);
     assert.match(hub, /generateStaticParams/);
     assert.match(hub, /return \[\];/);
     assert.match(detail, /export const revalidate = false/);
@@ -109,5 +109,5 @@ test("hub metadata drops the double AnimalDex suffix and surfaces GSC winners fi
     assert.match(detail, /ranking\.immediateQuestion/);
     assert.match(detail, /ranking\.introduction/);
     assert.match(detail, /fastestByEnvironmentTitle/);
-    assert.match(detail, /export const revalidate = 3600/);
+    assert.match(detail, /export const revalidate = 86400/);
 });

@@ -8,7 +8,7 @@ import {GuidePageView} from "@/components/guides/guide-analytics";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {categoryLabel, guideAreaServedName, guideLocationSlug, isLocationPageIndexable, type GuideCategory} from "@/lib/guide-marketplace-core";
 
-export const revalidate = 300;
+export const revalidate = 86400;
 
 type WildlifeGuidesPageProps = {
     params: {locale: string};

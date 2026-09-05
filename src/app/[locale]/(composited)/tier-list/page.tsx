@@ -1,6 +1,6 @@
 import RankingsIndexPage, {generateMetadata as generateRankingsMetadata} from "../rankings/page";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [];

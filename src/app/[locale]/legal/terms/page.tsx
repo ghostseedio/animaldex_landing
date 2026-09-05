@@ -10,7 +10,7 @@ import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];

@@ -13,7 +13,7 @@ import {GUIDE_CATEGORIES, guidePath, type GuideCategory, type PublicGuideListing
 import {buildEarnPageMetadata, earnBreadcrumbList, earnFaqSchema} from "@/lib/earn-page-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 
-export const revalidate = 300;
+export const revalidate = 86400;
 
 const path = earnPaths.wildlifeExperiences;
 

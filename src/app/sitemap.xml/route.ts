@@ -1,6 +1,6 @@
 import {buildSitemapEntries, serializeSitemapXml} from "@/lib/build-sitemap";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export async function GET() {
     const entries = await buildSitemapEntries();

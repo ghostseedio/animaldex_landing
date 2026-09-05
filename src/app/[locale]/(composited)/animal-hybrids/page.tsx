@@ -6,7 +6,7 @@ import {getSpeciesBySlug} from "@/data/species";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];

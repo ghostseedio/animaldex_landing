@@ -6,7 +6,7 @@ import {getAbsoluteUrl} from "@/lib/site";
 import {getManagedPage} from "@/lib/admin-content";
 import ManagedSectionInteractions from "./managed-section-interactions";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];

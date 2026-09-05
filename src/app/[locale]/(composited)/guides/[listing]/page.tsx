@@ -26,7 +26,7 @@ import {earnBreadcrumbList} from "@/lib/earn-page-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getViewerUserId} from "@/lib/viewer";
 
-export const revalidate = 300;
+export const revalidate = 86400;
 
 type Props = {params: {locale: string; listing: string}};
 

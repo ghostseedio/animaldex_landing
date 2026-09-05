@@ -18,7 +18,7 @@ import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureFo
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 export const runtime = "nodejs";
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 function getSingleParam(value: string | null) {
     return value?.trim() || "";

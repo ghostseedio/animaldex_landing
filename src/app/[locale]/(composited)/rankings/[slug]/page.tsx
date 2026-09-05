@@ -33,7 +33,7 @@ type RankingPageProps = {
     };
 };
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 type RelatedChallengeCard = {
     slug: string;

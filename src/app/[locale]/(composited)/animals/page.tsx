@@ -182,7 +182,7 @@ function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
     }
 }
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [];
