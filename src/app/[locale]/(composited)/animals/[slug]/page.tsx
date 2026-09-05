@@ -64,6 +64,16 @@ import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
+
+// Empty paths would keep this a request-dynamic λ route. One seed slug opts
+// the segment into on-demand ISR; other animals generate on first anonymous GET.
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "tiger"},
+        {locale: "id", slug: "tiger"}
+    ];
+}
 
 type SpeciesPageProps = {
     params: {

@@ -38,7 +38,7 @@ export default async function ManagedContentPage({params}: ManagedPageProps) {
     const page = await resolvePage(params);
     if (!page) notFound();
 
-    return <ManagedContentRenderer locale={params.locale} page={page} />;
+    return ManagedContentRenderer({locale: params.locale, page});
 }
 
 export const revalidate = 300;

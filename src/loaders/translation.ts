@@ -24,7 +24,9 @@ function interpolateMessage(template: string, values?: TranslationValues) {
     });
 }
 
-export async function getScopedTranslator(locale: string, namespace: string) {
+export type ScopedTranslator = (key: string, values?: TranslationValues) => string;
+
+export async function getScopedTranslator(locale: string, namespace: string): Promise<ScopedTranslator> {
     const messages = await loadLocaleMessages(locale);
     const namespaceMessages = (messages?.[namespace] || {}) as Record<string, unknown>;
 

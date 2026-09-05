@@ -5,19 +5,21 @@ import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-
 import {getManagedPage} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
 import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
+import {getScopedTranslator} from "@/loaders/translation";
 
 type ManagedContentRendererProps = {
     locale: string;
     page: NonNullable<Awaited<ReturnType<typeof getManagedPage>>>;
 };
 
-export default function ManagedContentRenderer({locale, page}: ManagedContentRendererProps) {
+export default async function ManagedContentRenderer({locale, page}: ManagedContentRendererProps) {
     if (!page) notFound();
     const sourceMigrated = typeof (page as typeof page & {cmsSourceMigrated?: unknown}).cmsSourceMigrated === "string";
+    const t = await getScopedTranslator(locale, "nav");
 
     return (
         <>
-            <Header locale={locale} />
+            <Header locale={locale} t={t} />
             <main className="mx-auto w-full max-w-[86rem] px-4 pb-20 sm:px-8">
                 <article className={sourceMigrated ? "mx-auto flex w-full max-w-[88rem] flex-col gap-10 py-12 md:py-20" : "mx-auto max-w-5xl"}>
                     {page.headerHtml ? (
@@ -68,7 +70,7 @@ export default function ManagedContentRenderer({locale, page}: ManagedContentRen
                     </div>
                 </article>
             </main>
-            <Footer />
+            <Footer t={t} />
         </>
     );
 }

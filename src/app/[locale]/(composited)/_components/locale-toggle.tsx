@@ -1,6 +1,6 @@
 "use client";
 
-import {Link} from "next-intl";
+import Link from "@/app/[locale]/_components/link";
 import {usePathname} from "next/navigation";
 import {localeConfig} from "@/i18n";
 

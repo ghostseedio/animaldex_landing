@@ -1,30 +1,11 @@
-import {useTranslations} from "next-intl";
-import {checkedIcons} from "@/loaders/icons";
-import IconCanvas from "@/app/[locale]/_components/icon-canvas";
-import Link from "@/app/[locale]/_components/link";
-import Button from "@/app/[locale]/_components/button";
 import {Metadata} from "next";
-
-export default function ErrorNotFound() {
-    const t = useTranslations("errors.notFound");
-
-    return (
-        <>
-            <IconCanvas probability={0.02} paths={checkedIcons} color="#21C05E" />
-            <div className="flex flex-col items-center justify-center h-screen w-full gap-8 px-4 text-center">
-                <h1 className="font-display font-bold text-8xl md:text-9xl text-primary-200">404</h1>
-                <p className="text-xl md:text-3xl max-w-md md:max-w-xl text-ink-200">{t("description")}</p>
-                <Link href="/" className="text-primary-400 font-bold text-3xl">
-                    <Button as="span">
-                        {t("button")}
-                    </Button>
-                </Link>
-            </div>
-        </>
-    )
-}
+import NotFoundBody from "@/app/[locale]/_components/not-found-body";
 
 export const metadata: Metadata = {
     title: "404",
     robots: {index: false, follow: false}
 };
+
+export default function ErrorNotFound() {
+    return <NotFoundBody />;
+}

@@ -33,7 +33,7 @@ export default async function ManagedRoutePage({params}: ManagedPageProps) {
     const page = await getManagedPage(params.slug);
     if (!page) notFound();
 
-    return <ManagedContentRenderer locale={params.locale} page={page} />;
+    return ManagedContentRenderer({locale: params.locale, page});
 }
 
 export const revalidate = 300;

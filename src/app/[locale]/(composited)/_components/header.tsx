@@ -1,7 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import Image from "next/image";
-import {useLocale, useTranslations} from "next-intl";
 import LocaleToggle from "@/app/[locale]/(composited)/_components/locale-toggle";
+import type {ScopedTranslator} from "@/loaders/translation";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import HeaderMenu from "@/app/[locale]/(composited)/_components/header-menu";
 import HeaderAuthLink from "@/app/[locale]/(composited)/_components/header-auth-link";
@@ -24,10 +24,7 @@ function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
     }));
 }
 
-export default function Header({locale}: {locale?: string}) {
-    const currentLocale = useLocale();
-    const resolvedLocale = locale ?? currentLocale;
-    const t = useTranslations("nav");
+export default function Header({locale, t}: {locale: string; t: ScopedTranslator}) {
     const startCollectionLabel = t("startYourCollection");
     const desktopDropdowns = headerDropdowns.map((section) => ({
         ...section,
@@ -59,7 +56,7 @@ export default function Header({locale}: {locale?: string}) {
                             className="h-7 w-auto max-w-[7.5rem] md:h-8 md:max-w-[9rem]"
                         />
                     </Link>
-                    <LocaleToggle currentLocale={resolvedLocale} />
+                    <LocaleToggle currentLocale={locale} />
                 </div>
                 <HeaderMenu
                     logoLabel={t("logo")}

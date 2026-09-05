@@ -2,13 +2,12 @@ import Image from "next/image";
 import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import FooterLink from "@/app/[locale]/(composited)/_components/footer-link";
 import Link from "@/app/[locale]/_components/link";
-import { useTranslations } from "next-intl";
 import {ArrowSquareUpIcon, FacebookIcon, InstagramIcon, RedditIcon, SubstackIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
+import type {ScopedTranslator} from "@/loaders/translation";
 import {socialProfileUrls} from "@/lib/social-links";
 import {footerColumns, type PublicNavLink} from "@/data/public-navigation";
 
-export default function Footer() {
-    const t = useTranslations("nav");
+export default function Footer({t}: {t: ScopedTranslator}) {
     const socialLinks = [
         {
             href: socialProfileUrls.facebook,

@@ -27,6 +27,25 @@ test("middleware no longer does uncached CMS lookups or unconditional auth", () 
     assert.match(supabaseMiddleware, /auth\.getUser\(\)/);
 });
 
+test("public header and footer do not call next-intl request APIs", () => {
+    const header = read("app/[locale]/(composited)/_components/header.tsx");
+    const footer = read("app/[locale]/(composited)/_components/footer.tsx");
+    const layout = read("app/[locale]/(composited)/layout.tsx");
+    const tracker = read("components/analytics/google-analytics-route-tracker.tsx");
+    const notFound = read("app/[locale]/not-found.tsx");
+    const notFoundBody = read("app/[locale]/_components/not-found-body.tsx");
+
+    assert.doesNotMatch(header, /next-intl/);
+    assert.doesNotMatch(footer, /next-intl/);
+    assert.match(header, /ScopedTranslator/);
+    assert.match(footer, /ScopedTranslator/);
+    assert.match(layout, /getScopedTranslator\(params\.locale, "nav"\)/);
+    assert.match(layout, /<Footer t=\{t\}/);
+    assert.doesNotMatch(tracker, /useSearchParams/);
+    assert.doesNotMatch(notFound, /next-intl/);
+    assert.doesNotMatch(notFoundBody, /next-intl/);
+});
+
 test("header auth is shared and skips anonymous session fetches", () => {
     const provider = read("app/[locale]/(composited)/_components/header-auth-provider.tsx");
     const link = read("app/[locale]/(composited)/_components/header-auth-link.tsx");
@@ -71,6 +90,8 @@ test("species slug pages resolve identity once and do not load the full catalog"
     const growth = read("data/species-growth.ts");
 
     assert.match(speciesPage, /export const revalidate = 3600/);
+    assert.match(speciesPage, /generateStaticParams/);
+    assert.match(speciesPage, /dynamicParams = true/);
     assert.doesNotMatch(speciesPage, /force-dynamic/);
     assert.match(speciesPage, /getSpeciesPageData/);
     assert.doesNotMatch(speciesPage, /getUnifiedSpeciesEntries/);

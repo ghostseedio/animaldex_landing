@@ -18,6 +18,14 @@ import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "hippopotamus"},
+        {locale: "id", slug: "hippopotamus"}
+    ];
+}
 
 type AnimalLessonPageProps = {
     params: {
