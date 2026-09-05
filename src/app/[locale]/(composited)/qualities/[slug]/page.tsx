@@ -13,7 +13,10 @@ export const revalidate = false;
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return getLocalPrincipleSlugs().map((slug) => ({locale: "en", slug}));
+    return getLocalPrincipleSlugs().flatMap((slug) => [
+        {locale: "en", slug},
+        {locale: "id", slug}
+    ]);
 }
 
 type PrinciplePageProps = {

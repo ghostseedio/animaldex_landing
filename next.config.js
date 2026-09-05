@@ -144,11 +144,6 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/id/powers/:slug",
-                destination: "/powers/:slug",
-                permanent: true
-            },
-            {
                 source: "/journal",
                 destination: "/blog",
                 permanent: true

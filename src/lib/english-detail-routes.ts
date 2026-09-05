@@ -3,11 +3,10 @@ const COLLAPSED_DETAIL_PREFIXES = [
     "/animal-lessons/",
     "/pokemon-animals/",
     "/animal-hybrids/",
-    "/comparisons/",
-    "/powers/"
+    "/comparisons/"
 ] as const;
 
-const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|powers)\/[a-z0-9-]+\/?$/i;
+const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/[a-z0-9-]+\/?$/i;
 
 export const CLOSED_SEO_NAMESPACE_FAMILIES = [
     "animals",
@@ -17,8 +16,13 @@ export const CLOSED_SEO_NAMESPACE_FAMILIES = [
     "powers"
 ] as const;
 
+// Only untranslated article bodies may 308 to English. /powers keeps /id
+// because title, meta, and cluster intro are genuinely localized.
 export const COLLAPSED_ID_DETAIL_FAMILIES = [
-    ...CLOSED_SEO_NAMESPACE_FAMILIES,
+    "animals",
+    "animal-lessons",
+    "pokemon-animals",
+    "animal-hybrids",
     "comparisons"
 ] as const;
 
@@ -39,7 +43,7 @@ export function isCollapsedEnglishDetailPath(path: string) {
 
 export function matchCollapsedIdDetailPath(path: string): {family: CollapsedIdDetailFamily; englishPath: string} | null {
     const normalized = pathnameOnly(path);
-    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|powers)\/([a-z0-9-]+)\/?$/i);
+    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/([a-z0-9-]+)\/?$/i);
     if (!match) {
         return null;
     }
