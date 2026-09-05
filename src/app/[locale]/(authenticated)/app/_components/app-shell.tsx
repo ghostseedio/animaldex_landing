@@ -5,6 +5,7 @@ import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 type AppShellProps = {
     children: React.ReactNode;
@@ -12,6 +13,7 @@ type AppShellProps = {
     isAuthenticated: boolean;
     unreadCount: number;
     unreadMessageCount: number;
+    hydrateFromSession?: boolean;
 };
 
 const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
@@ -58,28 +60,62 @@ function NavBadge({count}: {count: number}) {
     return <span className="ml-auto rounded-full bg-primary-400 px-2 py-0.5 text-[0.65rem] font-black tabular-nums text-black">{count > 99 ? "99+" : count}</span>;
 }
 
-export default function AppShell({children, profile, isAuthenticated, unreadCount, unreadMessageCount}: AppShellProps) {
+export default function AppShell({
+    children,
+    profile,
+    isAuthenticated,
+    unreadCount,
+    unreadMessageCount,
+    hydrateFromSession = false
+}: AppShellProps) {
     const pathname = normalizedPath(usePathname() || "/app");
     const router = useRouter();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [sessionProfile, setSessionProfile] = useState<AppShellProps["profile"]>(null);
+    const [sessionAuthenticated, setSessionAuthenticated] = useState(false);
     const accountHref = "/account";
+    const resolvedProfile = sessionProfile ?? profile;
+    const resolvedAuthenticated = isAuthenticated || sessionAuthenticated;
     const isActive = (href: string) => {
         if (href === "/app") return pathname === href || pathname.startsWith("/p/");
         if (href === "/app/arena") return isArenaRoute(pathname);
         return pathname.startsWith(href);
     };
-    const navHref = (href: string) => isAuthenticated || href === "/app" ? href : accountHref;
+    const navHref = (href: string) => resolvedAuthenticated || href === "/app" ? href : accountHref;
 
     useEffect(() => {
         setMenuOpen(false);
     }, [pathname]);
 
     useEffect(() => {
+        if (!hydrateFromSession || typeof document === "undefined") return;
+        if (!requestHasSupabaseAuthCookie(document.cookie)) return;
+
+        let cancelled = false;
+        void fetch("/api/auth/session", {cache: "no-store"})
+            .then((response) => response.ok ? response.json() : null)
+            .then((payload: {user?: {id: string} | null; username?: string | null; displayName?: string | null} | null) => {
+                if (cancelled || !payload?.user) return;
+                setSessionAuthenticated(true);
+                setSessionProfile({
+                    displayName: payload.displayName?.trim() || payload.username?.trim() || "Collector",
+                    username: payload.username?.trim() || null,
+                    avatarUrl: null
+                });
+            })
+            .catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [hydrateFromSession]);
+
+    useEffect(() => {
         const prefix = localePrefix(pathname);
-        for (const route of isAuthenticated ? PREFETCH_ROUTES : ["/app", "/account"]) {
+        for (const route of resolvedAuthenticated ? PREFETCH_ROUTES : ["/app", "/account"]) {
             router.prefetch(`${prefix}${route}`);
         }
-    }, [isAuthenticated, pathname, router]);
+    }, [resolvedAuthenticated, pathname, router]);
 
     async function signOut() {
         await fetch("/api/auth/logout", {method: "POST"});
@@ -107,7 +143,7 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
         <Link key={href} href={navHref(href)} prefetch className={navClass(isActive(href))}>
             <AppIcon name={icon} />
             {label}
-            {isAuthenticated ? <NavBadge count={badge} /> : null}
+            {resolvedAuthenticated ? <NavBadge count={badge} /> : null}
         </Link>
     );
 
@@ -132,20 +168,20 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
                 </nav>
 
                 <div className="mt-auto space-y-4">
-                    {isAuthenticated ? <CreditBalanceChip className="w-full justify-center px-4 py-2.5" /> : null}
+                    {resolvedAuthenticated ? <CreditBalanceChip className="w-full justify-center px-4 py-2.5" /> : null}
                     <Link href={navHref("/app/capture")} className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-400 to-violet-500 px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_40px_-24px_rgba(139,92,246,0.9)] transition hover:brightness-105">
                         <AppIcon name="camera" />
                         Add capture
                     </Link>
-                    {isAuthenticated && profile ? (
+                    {resolvedAuthenticated && resolvedProfile ? (
                     <div className="flex items-center gap-2 border-t border-white/[0.08] px-1 pt-4">
                         <Link href="/app/profile" aria-label="Open profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
-                            {profile.avatarUrl
-                                ? <img src={profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" />
+                            {resolvedProfile.avatarUrl
+                                ? <img src={resolvedProfile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" />
                                 : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}
                             <div className="min-w-0">
-                                <p className="truncate text-sm font-bold">{profile.displayName}</p>
-                                <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "Collector"}</p>
+                                <p className="truncate text-sm font-bold">{resolvedProfile.displayName}</p>
+                                <p className="truncate text-xs text-white/35">{resolvedProfile.username ? `@${resolvedProfile.username}` : "Collector"}</p>
                             </div>
                         </Link>
                         <button onClick={signOut} className="ml-auto text-xs font-bold text-white/35 transition hover:text-white">Exit</button>
@@ -167,14 +203,14 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
                         <img src="/images/logo.webp" alt="" className="h-9 w-9 rounded-xl ring-1 ring-white/10" />
                     </Link>
                     <div className="flex items-center gap-2">
-                        {isAuthenticated ? <CreditBalanceChip /> : null}
+                        {resolvedAuthenticated ? <CreditBalanceChip /> : null}
                         <Link href={navHref("/app/messages")} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name="message" />
-                            {isAuthenticated && unreadMessageCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
+                            {resolvedAuthenticated && unreadMessageCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
                         </Link>
                         <Link href={navHref("/app/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name="bell" />
-                            {isAuthenticated && unreadCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
+                            {resolvedAuthenticated && unreadCount ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400" /> : null}
                         </Link>
                         <button onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close menu" : "Open menu"} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70">
                             <AppIcon name={menuOpen ? "close" : "menu"} />
@@ -187,14 +223,14 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
                 <>
                     <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setMenuOpen(false)} />
                     <div className="fixed inset-x-4 top-[4.75rem] z-50 max-h-[70vh] overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#141414]/95 p-3 shadow-2xl backdrop-blur-xl lg:hidden">
-                        {isAuthenticated && profile ? (
+                        {resolvedAuthenticated && resolvedProfile ? (
                         <Link href="/app/profile" className="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 transition hover:bg-white/[0.07]">
-                            {profile.avatarUrl
-                                ? <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+                            {resolvedProfile.avatarUrl
+                                ? <img src={resolvedProfile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
                                 : <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}
                             <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-white">{profile.displayName}</p>
-                                <p className="truncate text-xs text-white/35">{profile.username ? `@${profile.username}` : "View profile"}</p>
+                                <p className="truncate text-sm font-bold text-white">{resolvedProfile.displayName}</p>
+                                <p className="truncate text-xs text-white/35">{resolvedProfile.username ? `@${resolvedProfile.username}` : "View profile"}</p>
                             </div>
                         </Link>
                         ) : (
@@ -207,7 +243,7 @@ export default function AppShell({children, profile, isAuthenticated, unreadCoun
                         {utilityLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                         {utilityLink("/app/messages", "Messages", "message", unreadMessageCount)}
                         {utilityLink("/app/notifications", "Notifications", "bell", unreadCount)}
-                        {isAuthenticated ? (
+                        {resolvedAuthenticated ? (
                             <button onClick={signOut} className="mt-2 w-full rounded-2xl border border-white/10 px-3 py-3 text-left text-sm font-bold text-white/50 transition hover:text-white">Sign out</button>
                         ) : null}
                     </div>

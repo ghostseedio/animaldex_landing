@@ -3,15 +3,7 @@ import {notFound, redirect} from "next/navigation";
 import AppShell from "@/app/[locale]/(authenticated)/app/_components/app-shell";
 import {AppCreditsProvider} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
-import {getAuthenticatedAppContext, getAppCreditBalance, getAppNotifications} from "@/data/authenticated-app";
-import {getDiscoverCollectors} from "@/data/discover-collectors";
-import {
-    getDiscoverPostById,
-    getDiscoverTimelineBundle,
-    seedTimelineWithFocusPost,
-    type DiscoverTimelineItem
-} from "@/data/discover-timeline";
-import {getDirectMessageUnreadCount} from "@/data/direct-messages";
+import {getDiscoverPostById, type DiscoverTimelineItem} from "@/data/discover-timeline";
 import {
     discoverPostPath,
     discoverPostShareDescription,
@@ -21,10 +13,12 @@ import {
 } from "@/lib/discover-post";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+export const dynamicParams = true;
 
-const INITIAL_DISCOVER_TIMELINE_LIMIT = 4;
-const INITIAL_COLLECTOR_LIMIT = 24;
+export function generateStaticParams() {
+    return [];
+}
 
 type DiscoverPostPageProps = {
     params: {locale: string; postId: string};
@@ -192,21 +186,10 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
     const post = await getDiscoverPostById(parsed.postId);
     if (!post) notFound();
 
-    // Canonicalize bare UUID or mismatched encoding to `/p/capture-…`.
     if (rawPostId !== post.id) {
         redirect(getLocalePath(params.locale, discoverPostPath(post.id)));
     }
 
-    const context = await getAuthenticatedAppContext();
-    const [notifications, unreadMessageCount, creditBalance, timelineBundle, collectors] = await Promise.all([
-        context ? getAppNotifications() : Promise.resolve([]),
-        context ? getDirectMessageUnreadCount() : Promise.resolve(0),
-        context ? getAppCreditBalance() : Promise.resolve(null),
-        getDiscoverTimelineBundle(INITIAL_DISCOVER_TIMELINE_LIMIT),
-        getDiscoverCollectors(INITIAL_COLLECTOR_LIMIT)
-    ]);
-
-    const timeline = seedTimelineWithFocusPost(timelineBundle.timeline, post);
     const seo = postSeoFields(post);
     const pageUrl = getAbsoluteUrl(params.locale, discoverPostPath(post.id));
     const imageUrl = getAbsoluteAssetUrl(seo.imageSrc);
@@ -257,18 +240,13 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
     ].filter(Boolean);
 
     return (
-        <AppCreditsProvider initialBalance={creditBalance}>
+        <AppCreditsProvider initialBalance={null}>
             <AppShell
-                profile={context
-                    ? {
-                        displayName: context.profile.displayName ?? context.profile.username ?? "Collector",
-                        username: context.profile.username,
-                        avatarUrl: context.profile.avatarUrl
-                    }
-                    : null}
-                isAuthenticated={Boolean(context)}
-                unreadCount={notifications.filter((item) => !item.readAt).length}
-                unreadMessageCount={unreadMessageCount}
+                profile={null}
+                isAuthenticated={false}
+                unreadCount={0}
+                unreadMessageCount={0}
+                hydrateFromSession
             >
                 <script
                     type="application/ld+json"
@@ -276,13 +254,14 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
                 />
                 <DiscoverHome
                     locale={params.locale}
-                    timeline={timeline}
-                    timelineCursor={timelineBundle.nextCursor}
-                    featured={timelineBundle.featured}
-                    collectors={collectors}
+                    timeline={[post]}
+                    timelineCursor={null}
+                    featured={[]}
+                    collectors={[]}
                     initialFocusPostId={post.id}
                     syncPostUrls
-                    viewerUserId={context?.profile.id ?? null}
+                    viewerUserId={null}
+                    hydrateSignedInFeed
                 />
             </AppShell>
         </AppCreditsProvider>

@@ -1689,34 +1689,49 @@ async function fetchDiscoverFeedRowByCaptureId(
     return hydrated[0] ?? null;
 }
 
+async function mapCaptureRowsForKeys(rows: QueryRow[]): Promise<DiscoverCaptureItem[]> {
+    if (!rows.length) return [];
+
+    const speciesProfileIds = Array.from(new Set(
+        rows
+            .map((row) => readString(row, "species_profile_id"))
+            .filter((id): id is string => Boolean(id))
+    ));
+    const identityKeys = Array.from(new Set(
+        rows
+            .map((row) => readString(row, "normalized_identity_key"))
+            .filter((key): key is string => Boolean(key))
+    ));
+    const {animalDexNumbers, behaviorPrinciples} = await getCaptureCardCatalogEnrichment({
+        speciesProfileIds,
+        identityKeys
+    });
+    return rows.map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
+}
+
 export async function getDiscoverCaptureById(captureId: string): Promise<DiscoverCaptureItem | null> {
     const normalizedCaptureId = captureId.trim();
     if (!normalizedCaptureId) return null;
 
-    const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
+    const supabase = createSupabasePublicClient();
     if (!supabase) return null;
 
     const row = await fetchDiscoverFeedRowByCaptureId(supabase, normalizedCaptureId);
     if (!row) return null;
-
-    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-        buildAnimalDexNumberIndex(),
-        getCatalogBehaviorPrincipleIndex()
-    ]);
-
-    return mapCaptureRow(row, animalDexNumbers, behaviorPrinciples);
+    const [item] = await mapCaptureRowsForKeys([row]);
+    return item ?? null;
 }
 
-export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTimelineItem | null> {
-    const parsed = parseDiscoverPostId(rawPostId);
-    if (!parsed) return null;
+const DISCOVER_POST_TTL_MS = 15_000;
+const discoverPostByIdCache = new Map<string, {expiresAt: number; value: Promise<DiscoverTimelineItem | null>}>();
 
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return null;
-
+async function resolveDiscoverPostByIdOnce(parsed: ParsedDiscoverPostId): Promise<DiscoverTimelineItem | null> {
     if (parsed.kind === "capture") {
         return getDiscoverCaptureById(parsed.entityId);
     }
+
+    const supabase = createSupabasePublicClient();
+    if (!supabase) return null;
 
     if (parsed.kind === "alignment") {
         const {data, error} = await supabase
@@ -1771,6 +1786,26 @@ export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTi
         .limit(1);
     if (error || !data?.length) return null;
     return mapTradeRow(data[0] as unknown as QueryRow);
+}
+
+export async function getDiscoverPostById(rawPostId: string): Promise<DiscoverTimelineItem | null> {
+    const parsed = parseDiscoverPostId(rawPostId);
+    if (!parsed) return null;
+
+    const now = Date.now();
+    const existing = discoverPostByIdCache.get(parsed.postId);
+    if (existing && existing.expiresAt > now) {
+        return existing.value;
+    }
+
+    const value = resolveDiscoverPostByIdOnce(parsed);
+    discoverPostByIdCache.set(parsed.postId, {expiresAt: now + DISCOVER_POST_TTL_MS, value});
+    if (discoverPostByIdCache.size > 64) {
+        discoverPostByIdCache.forEach((entry, key) => {
+            if (entry.expiresAt <= now) discoverPostByIdCache.delete(key);
+        });
+    }
+    return value;
 }
 
 export function seedTimelineWithFocusPost(

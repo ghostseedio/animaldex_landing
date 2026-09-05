@@ -74,6 +74,35 @@ test("protected app layout and admin gate still authenticate on the server", () 
     assert.doesNotMatch(routing, /getSession\(\)/);
 });
 
+test("public /p pages load one post and do not boot the authenticated discover shell", () => {
+    const page = read("app/[locale]/p/[postId]/page.tsx");
+    const timeline = read("data/discover-timeline.ts");
+    const captureFn = timeline.slice(
+        timeline.indexOf("async function mapCaptureRowsForKeys"),
+        timeline.indexOf("const DISCOVER_POST_TTL_MS")
+    );
+    const postFn = timeline.slice(
+        timeline.indexOf("async function resolveDiscoverPostByIdOnce"),
+        timeline.indexOf("export async function getDiscoverPostById")
+    );
+
+    assert.match(page, /export const revalidate = 300/);
+    assert.match(page, /generateStaticParams/);
+    assert.doesNotMatch(page, /force-dynamic/);
+    assert.doesNotMatch(page, /getAuthenticatedAppContext/);
+    assert.doesNotMatch(page, /getDiscoverTimelineBundle/);
+    assert.doesNotMatch(page, /getDiscoverCollectors/);
+    assert.doesNotMatch(page, /getAppNotifications/);
+    assert.doesNotMatch(page, /getAppCreditBalance/);
+    assert.doesNotMatch(page, /getDirectMessageUnreadCount/);
+    assert.match(page, /hydrateSignedInFeed/);
+    assert.match(page, /hydrateFromSession/);
+    assert.match(captureFn, /getCaptureCardCatalogEnrichment/);
+    assert.doesNotMatch(captureFn, /getUnifiedSpeciesEntries|buildAnimalDexNumberIndex|createSupabaseServerClient/);
+    assert.doesNotMatch(postFn, /createSupabaseServerClient/);
+    assert.match(postFn, /createSupabasePublicClient/);
+});
+
 test("catchall slug routing skips scanner database lookups", () => {
     const catchall = read("app/[locale]/[...catchall]/page.tsx");
     assert.match(catchall, /shouldLookupPublishedManagedPage/);

@@ -6,6 +6,7 @@ import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getLocalePath} from "@/lib/site";
 import {type TouchEvent, useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
@@ -166,7 +167,8 @@ export default function DiscoverHome({
     initialSegment = "discover",
     initialFocusPostId = null,
     syncPostUrls = true,
-    viewerUserId = null
+    viewerUserId = null,
+    hydrateSignedInFeed = false
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
@@ -177,6 +179,7 @@ export default function DiscoverHome({
     initialFocusPostId?: string | null;
     syncPostUrls?: boolean;
     viewerUserId?: string | null;
+    hydrateSignedInFeed?: boolean;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
@@ -228,16 +231,22 @@ export default function DiscoverHome({
         seedTimelineKeyRef.current = seedTimelineKey;
         hasPaginatedTimelineRef.current = false;
         didFocusScrollRef.current = false;
+        const signedIn = hydrateSignedInFeed
+            && typeof document !== "undefined"
+            && requestHasSupabaseAuthCookie(document.cookie);
         setTimelineItems(timeline);
         setNextTimelineCursor(timelineCursor);
-        setHasMoreTimeline(Boolean(timelineCursor));
+        setHasMoreTimeline(Boolean(timelineCursor) || signedIn);
         activePostIdRef.current = initialFocusPostId ?? timeline[0]?.id ?? null;
-    }, [seedTimelineKey, timeline, timelineCursor, initialFocusPostId]);
+    }, [hydrateSignedInFeed, seedTimelineKey, timeline, timelineCursor, initialFocusPostId]);
 
     useEffect(() => {
+        const signedIn = hydrateSignedInFeed
+            && typeof document !== "undefined"
+            && requestHasSupabaseAuthCookie(document.cookie);
         setCollectorItems(collectors);
-        setHasMoreCollectors(collectors.length >= COLLECTOR_PAGE_SIZE);
-    }, [collectors]);
+        setHasMoreCollectors(collectors.length >= COLLECTOR_PAGE_SIZE || signedIn);
+    }, [collectors, hydrateSignedInFeed]);
 
     const loadNextCollectorPage = useCallback(async () => {
         if (isLoadingCollectors || !hasMoreCollectors) return;
