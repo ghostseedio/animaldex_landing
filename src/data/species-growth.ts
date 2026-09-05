@@ -599,6 +599,30 @@ async function fetchCreditBalance(userId: string) {
     return data?.balance == null ? null : Number(data.balance);
 }
 
+export function createEmptyPublicSpeciesGrowthContext(): SpeciesGrowthContext {
+    return {
+        isAuthenticated: false,
+        hasCapture: false,
+        speciesCaptures: [],
+        primaryCaptureId: null,
+        primaryCaptureImageSrc: null,
+        principle: null,
+        wildProfile: null,
+        hasWildProfile: false,
+        wildProfileHref: "/app/train/wild-profile",
+        match: null,
+        challenge: null,
+        learnedPrinciples: [],
+        learnedPrincipleCount: 0,
+        fusionDonors: [],
+        fusionCost: 2,
+        creditBalance: null,
+        comparison: null,
+        progress: null,
+        challengeRequest: null
+    };
+}
+
 function canGenerateApexChallenge(match: ApexGrowthMatch | null) {
     return match?.strength === "strong" || match?.strength === "partial";
 }

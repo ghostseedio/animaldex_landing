@@ -454,6 +454,24 @@ function getCatalogCanonicalStats(entry: SpeciesEntry) {
     return parseSpeciesStats(entry.databaseSource?.canonicalGameStats);
 }
 
+export function resolveLocalSpeciesStats(entry: SpeciesEntry): SpeciesStatsResolution {
+    const catalogStats = getCatalogCanonicalStats(entry);
+
+    if (catalogStats) {
+        return {
+            stats: catalogStats,
+            statsSource: "species_profile",
+            ...getResolvedIdentity(entry, null)
+        };
+    }
+
+    return {
+        stats: buildDeterministicCanonicalStats(entry),
+        statsSource: "generated",
+        ...getResolvedIdentity(entry, null)
+    };
+}
+
 export async function resolveSpeciesStats(slug: string, entryOverride?: SpeciesEntry | null): Promise<SpeciesStatsResolution> {
     const entry = entryOverride ?? getSpeciesBySlug(slug) ?? await getResolvedSpeciesBySlug(slug);
 

@@ -6,18 +6,17 @@ import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-art
 import {getBlogPost} from "@/data/blog";
 import {
     getBehaviorLessonBySlug,
-    getBehaviorLessonIndex,
-    getPrincipleHubBySlug,
-    getRelatedBehaviorLessons,
-    resolveSpeciesBehaviorProfile
+    getLocalRelatedBehaviorLessons,
+    resolveLocalSpeciesBehaviorProfile
 } from "@/data/species-behavior-lessons";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
+import {getNextPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 export function generateStaticParams() {
@@ -89,25 +88,24 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
         notFound();
     }
 
-    const [relatedLessons, behaviorProfile, lessonIndex] = await Promise.all([
-        getRelatedBehaviorLessons(params.slug, 3),
-        resolveSpeciesBehaviorProfile(params.slug),
-        getBehaviorLessonIndex()
-    ]);
-    const orderedLessons = [...lessonIndex].sort((left, right) => left.displayName.localeCompare(right.displayName));
-    const currentLessonIndex = orderedLessons.findIndex((item) => item.slug === lesson.slug);
-    const nextLesson = orderedLessons.length > 1
-        ? currentLessonIndex >= 0
-            ? orderedLessons[(currentLessonIndex + 1) % orderedLessons.length]
-            : orderedLessons.find((item) => item.slug !== lesson.slug) ?? null
+    const relatedLessons = getLocalRelatedBehaviorLessons(params.slug, 3, lesson);
+    const behaviorProfile = resolveLocalSpeciesBehaviorProfile(params.slug);
+    const nextLessonSlug = getNextPublishedLessonSlug(lesson.slug);
+    const nextLesson = nextLessonSlug
+        ? {
+            slug: nextLessonSlug,
+            displayName: nextLessonSlug.split("-").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
+            principleName: lesson.principleName,
+            shortMotto: "",
+            coreLesson: "",
+            imageFile: null
+        }
         : null;
     const preferredPrincipleSlug = toPrincipleSlug(
         lesson.bestUseCases[0]
         ?? behaviorProfile?.bestFor[0]
         ?? lesson.principleName
     );
-    const principleHub = await getPrincipleHubBySlug(preferredPrincipleSlug)
-        ?? await getPrincipleHubBySlug(toPrincipleSlug(lesson.principleName));
     const symbolismPost = getBlogPost(`${lesson.slug}-symbolism`);
     const pageUrl = getAbsoluteUrl(params.locale, `/animal-lessons/${lesson.slug}`);
     const faqItems = [
@@ -378,10 +376,10 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                             <p className="mt-2 text-lg font-semibold text-white">{t("relatedSymbolism", {animal: lesson.displayName})}</p>
                         </Link>
                     ) : null}
-                    {principleHub ? (
-                        <Link href={`/powers/${principleHub.principleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
+                    {preferredPrincipleSlug ? (
+                        <Link href={`/powers/${preferredPrincipleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">{t("relatedPrinciples", {principle: lesson.principleName})}</p>
-                            <p className="mt-2 text-lg font-semibold text-white">{t("lessonCount", {count: principleHub.speciesCount})}</p>
+                            <p className="mt-2 text-lg font-semibold text-white">{lesson.principleName}</p>
                         </Link>
                     ) : null}
                     <Link href="/animal-wisdom" className="rounded-3xl bg-white/[0.055] p-5 transition-transform hover:-translate-y-1">

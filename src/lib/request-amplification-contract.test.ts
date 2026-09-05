@@ -118,7 +118,7 @@ test("species slug pages resolve identity once and do not load the full catalog"
     const rankings = read("data/species-rankings.ts");
     const growth = read("data/species-growth.ts");
 
-    assert.match(speciesPage, /export const revalidate = 3600/);
+    assert.match(speciesPage, /export const revalidate = 86400/);
     assert.match(speciesPage, /generateStaticParams/);
     assert.match(speciesPage, /dynamicParams = true/);
     assert.doesNotMatch(speciesPage, /force-dynamic/);
@@ -128,12 +128,26 @@ test("species slug pages resolve identity once and do not load the full catalog"
     assert.doesNotMatch(speciesPage, /getPrincipleHubBySlug/);
     assert.doesNotMatch(speciesPage, /getDiscoverCaptureById/);
     assert.doesNotMatch(speciesPage, /getAutomaticRelatedSpecies/);
+    assert.doesNotMatch(speciesPage, /getSpeciesImageReferences/);
+    assert.doesNotMatch(speciesPage, /getMergedChallengesForSpecies/);
+    assert.doesNotMatch(speciesPage, /getEnhancedAnimalPowerProfile/);
+    assert.doesNotMatch(speciesPage, /getSpeciesRankings/);
+    assert.doesNotMatch(speciesPage, /getSpeciesGrowthContext/);
+    assert.doesNotMatch(speciesPage, /from ["']@\/data\/species-subtitles["']/);
+    assert.doesNotMatch(speciesPage, /resolveSpeciesStats\(/);
+    assert.doesNotMatch(speciesPage, /getDatabaseSpeciesBySlug/);
     assert.match(catalog, /getSpeciesPageData/);
     assert.match(catalog, /fetchSingleSpeciesFromCatalog/);
     assert.match(catalog, /catalog_status === "hidden"/);
     assert.match(catalog, /animalDexNumber < 1/);
-    assert.match(catalog, /fetchCanonicalIdentityAlias/);
-    assert.match(catalog, /depth < 3/);
+    assert.match(catalog, /isPublishedAnimalSlug/);
+    assert.doesNotMatch(
+        catalog.slice(
+            catalog.indexOf("async function resolveSpeciesBySlugOnce"),
+            catalog.indexOf("export async function getResolvedSpeciesBySlug")
+        ),
+        /fetchCanonicalIdentityAlias|depth < 3/
+    );
     assert.match(catalog, /MAX_FETCH_PAGES = 40/);
     assert.doesNotMatch(catalog, /getDatabaseSpeciesEntries\(\);\s*\n\s*return cached/);
     assert.match(images, /primarySpeciesCaptureMatchCandidate/);
@@ -147,7 +161,7 @@ test("public species pages do not read the authenticated viewer on the server", 
     const growth = read("data/species-growth.ts");
     const comparisonPage = read("app/[locale]/(composited)/comparisons/[slug]/page.tsx");
 
-    assert.match(speciesPage, /includeAuthenticatedViewer: false/);
+    assert.match(speciesPage, /createEmptyPublicSpeciesGrowthContext/);
     assert.doesNotMatch(speciesPage, /generate-applied-insight/);
     assert.doesNotMatch(speciesPage, /getViewerUserId/);
     assert.match(speciesPage, /SpeciesAskAnimalDex/);

@@ -10,9 +10,10 @@ import {
 } from "@/data/species-behavioral-principles";
 import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {buildUsefulApplicationSentence} from "@/data/species-useful-application";
+import {isPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
-const BEHAVIOR_LESSONS_REVALIDATE_SECONDS = 3600;
+const BEHAVIOR_LESSONS_REVALIDATE_SECONDS = 86400;
 
 export type SpeciesBehaviorLesson = {
     slug: string;
@@ -248,8 +249,7 @@ async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLe
             return null;
         }
 
-        const applicationExamples = await fetchApplicationExamplesFromSupabase(config, slug);
-        return normalizeLessonRow(row, applicationExamples);
+        return normalizeLessonRow(row);
     } catch {
         return null;
     }
@@ -420,6 +420,8 @@ async function fetchBehaviorLessonsFromSupabase(): Promise<SpeciesBehaviorLesson
 }
 
 let behaviorLessonIndexPromise: Promise<SpeciesBehaviorLesson[]> | null = null;
+const BEHAVIOR_LESSON_TTL_MS = 15_000;
+const behaviorLessonBySlug = new Map<string, {expiresAt: number; value: Promise<SpeciesBehaviorLesson | null>}>();
 
 export async function getBehaviorLessonIndex(): Promise<SpeciesBehaviorLesson[]> {
     if (!behaviorLessonIndexPromise) {
@@ -431,12 +433,7 @@ export async function getBehaviorLessonIndex(): Promise<SpeciesBehaviorLesson[]>
     return behaviorLessonIndexPromise;
 }
 
-export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
-    const catalogLesson = await fetchCatalogLessonBySlug(slug);
-    if (catalogLesson) {
-        return catalogLesson;
-    }
-
+function buildLocalLessonForSlug(slug: string): SpeciesBehaviorLesson | null {
     const entry = getSpeciesBySlug(slug);
     if (!entry) {
         return null;
@@ -444,8 +441,50 @@ export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBeha
 
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(slug);
     const profile = getBehavioralPrincipleProfile(slug, systemsEntry, speciesSystemsIntelligence);
-
     return profile ? buildLocalBehaviorLesson(entry, profile) : null;
+}
+
+async function resolveBehaviorLessonBySlugOnce(slug: string): Promise<SpeciesBehaviorLesson | null> {
+    const legendarySeed = getLegendaryCatalogSeedByBeastSlug(slug) ?? getLegendaryCatalogSeedByBiologyLandingSlug(slug);
+    const legendaryLesson = buildLegendarySeedBehaviorLesson(legendarySeed);
+    if (legendaryLesson) {
+        return legendaryLesson;
+    }
+
+    const localLesson = buildLocalLessonForSlug(slug);
+    if (localLesson) {
+        return localLesson;
+    }
+
+    if (!isPublishedLessonSlug(slug)) {
+        return null;
+    }
+
+    return fetchCatalogLessonBySlug(slug);
+}
+
+export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    const now = Date.now();
+    const existing = behaviorLessonBySlug.get(normalized);
+    if (existing && existing.expiresAt > now) {
+        return existing.value;
+    }
+
+    const promise = resolveBehaviorLessonBySlugOnce(normalized);
+    behaviorLessonBySlug.set(normalized, {expiresAt: now + BEHAVIOR_LESSON_TTL_MS, value: promise});
+    if (behaviorLessonBySlug.size > 64) {
+        behaviorLessonBySlug.forEach((entry, key) => {
+            if (entry.expiresAt <= now) {
+                behaviorLessonBySlug.delete(key);
+            }
+        });
+    }
+    return promise;
 }
 
 async function fetchCatalogLessonsByPrinciple(principleName: string, excludeSlug: string, limit: number): Promise<SpeciesBehaviorLesson[]> {
@@ -495,8 +534,17 @@ export async function getRelatedBehaviorLessons(
         return catalogRelated.slice(0, limit);
     }
 
+    return getLocalRelatedBehaviorLessons(slug, limit, current);
+}
+
+export function getLocalRelatedBehaviorLessons(
+    slug: string,
+    limit = 3,
+    currentLesson?: SpeciesBehaviorLesson | null
+): SpeciesBehaviorLesson[] {
+    const principleName = currentLesson?.principleName;
     return buildLocalBehaviorLessonsForWebsite()
-        .filter((lesson) => lesson.slug !== slug && lesson.principleName === current.principleName)
+        .filter((lesson) => lesson.slug !== slug && (!principleName || lesson.principleName === principleName))
         .slice(0, limit);
 }
 
@@ -570,6 +618,24 @@ export async function getPrincipleHubIndex(): Promise<PrincipleHub[]> {
 export async function getPrincipleHubBySlug(slug: string): Promise<PrincipleHub | null> {
     const hubs = await getPrincipleHubIndex();
     return hubs.find((hub) => hub.principleSlug === slug) ?? null;
+}
+
+export function resolveLocalSpeciesBehaviorProfile(slug: string): ResolvedSpeciesBehaviorProfile | null {
+    const systemsEntry = getSystemsIntelligenceBySpeciesSlug(slug);
+    const localProfile = getBehavioralPrincipleProfile(slug, systemsEntry, speciesSystemsIntelligence);
+    const clusterProfile = getClusterProfile(localProfile);
+
+    if (!localProfile) {
+        return null;
+    }
+
+    return {
+        ...localProfile,
+        hasCatalogLesson: false,
+        hasLessonPage: true,
+        clusterPrinciple: clusterProfile.clusterPrinciple,
+        clusterPrincipleSlug: clusterProfile.clusterPrincipleSlug
+    };
 }
 
 export async function resolveSpeciesBehaviorProfile(slug: string): Promise<ResolvedSpeciesBehaviorProfile | null> {

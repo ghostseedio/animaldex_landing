@@ -6,7 +6,6 @@ import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
-import FeaturedSpeciesImageCarousel from "@/app/[locale]/(composited)/animals/[slug]/featured-species-image-carousel";
 import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/species-detail-tabs";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import SpeciesEncyclopediaNav from "@/app/[locale]/(composited)/animals/[slug]/species-encyclopedia-nav";
@@ -18,7 +17,7 @@ import SpeciesAskAnimalDex from "@/app/[locale]/(composited)/animals/[slug]/spec
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
-import {getEnhancedAnimalPowerProfile, type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
+import {type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
 import {buildSpeciesAskSuggestions, SPECIES_ASK_DAILY_LIMITS, type SpeciesAskGrounding} from "@/lib/species-ask";
 import {buildSpeciesAtAGlance, speciesHasSubstantiveFieldGuide} from "@/lib/species-field-guide";
@@ -29,26 +28,25 @@ import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
-import {getMergedChallengesForSpecies} from "@/data/species-comparisons";
+import {getChallengesForSpecies} from "@/data/challenges";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
-import {getDatabaseSpeciesBySlug, getSpeciesPageData} from "@/data/database-species-pages";
+import {getSpeciesPageData} from "@/data/database-species-pages";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {
     getSpeciesImageAltText,
-    getSpeciesImageAttribution,
-    getSpeciesImageRoute,
-    getSpeciesImageReferences
+    getSpeciesImageRoute
 } from "@/data/species-images";
 import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
-import {getBattleTier, resolveSpeciesStats, type SpeciesStats} from "@/data/species-stats";
+import {getBattleTier, resolveLocalSpeciesStats, type SpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
 import type {SpeciesEntry} from "@/data/species";
-import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
-import {getSpeciesRankings} from "@/data/species-rankings";
-import {getSpeciesGrowthContext} from "@/data/species-growth";
-import {getSpeciesSubtitle} from "@/data/species-subtitles";
+import {resolveLocalSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {createEmptyPublicSpeciesGrowthContext} from "@/data/species-growth";
+import {getSpeciesDescriptorBySlug} from "@/data/species-descriptors";
+import {getSpeciesSubtitleStoryBySlug} from "@/data/species-subtitle-stories";
+import {getLegendaryEarthBeastSubtitle} from "@/data/legendary-earth-beasts-species";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {shouldNoindexLifeStageAliasSlug} from "@/lib/species-life-stage-policy";
@@ -63,7 +61,7 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 // Empty paths would keep this a request-dynamic λ route. One seed slug opts
@@ -357,12 +355,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
     const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
-    const relatedChallenges = await getMergedChallengesForSpecies(entry.slug, 4);
+    const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
-    const [principleProfile, enhancedPower] = await Promise.all([
-        resolveSpeciesBehaviorProfile(entry.slug),
-        getEnhancedAnimalPowerProfile(entry.speciesProfileId)
-    ]);
+    const principleProfile = resolveLocalSpeciesBehaviorProfile(entry.slug);
+    const enhancedPower = null;
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
     const relatedSlugs = Array.from(new Set([
@@ -371,28 +367,20 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             : getRelatedSpecies(entry.slug, 3).map((item) => item.slug)),
         ...(principleProfile?.relatedSpeciesSlugs ?? [])
     ])).filter((relatedSlug) => relatedSlug !== entry.slug).slice(0, 3);
-    const related = (await Promise.all(
-        relatedSlugs.map(async (relatedSlug) => getSpeciesBySlug(relatedSlug) ?? await getDatabaseSpeciesBySlug(relatedSlug))
-    )).filter((item): item is SpeciesEntry => Boolean(item));
+    const related = relatedSlugs
+        .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
+        .filter((item): item is SpeciesEntry => Boolean(item));
     const relatedPowerSpecies = related.slice(0, 3);
     const dietContent = getSpeciesDietContent(entry);
     const databaseFieldGuide = entry.databaseSource?.fieldGuide;
     const spottingContent = getSpeciesSpottingContent(entry);
-    const {subtitleStory} = await getSpeciesSubtitle(entry.slug, locale);
+    const subtitleStory = getLegendaryEarthBeastSubtitle(entry.slug)?.subtitleStory
+        ?? getSpeciesSubtitleStoryBySlug(entry.slug)
+        ?? getSpeciesDescriptorBySlug(entry.slug)
+        ?? null;
     const miniSystemsSummary = getMiniSystemsBySpeciesSlug(entry.slug);
-    const statsResult = await resolveSpeciesStats(entry.slug, entry);
-    const rankingItems = await getSpeciesRankings(entry);
-    const featuredMediaList = await getSpeciesImageReferences(entry.slug, 8, entry);
-    const featuredMedia = featuredMediaList[0] ?? null;
-    const growthContext = await getSpeciesGrowthContext(entry, featuredMedia?.captureId ?? null, {
-        includeAuthenticatedViewer: false,
-        principle: principleProfile
-    });
-    const heroFeaturedMedia = featuredMediaList.length > 0
-        ? featuredMediaList
-        : featuredMedia?.imagePath
-            ? [featuredMedia]
-            : [];
+    const statsResult = resolveLocalSpeciesStats(entry);
+    const growthContext = createEmptyPublicSpeciesGrowthContext();
     const resolvedRarityScore = statsResult.stats
         ? statsResult.stats.rarity
         : entry.analysis.rarityScore;
@@ -401,22 +389,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ? getBattleTier(statsResult.stats)
         : null;
     const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
-    const formatCaptureGradeLabel = (grade: string | null | undefined) => {
-        const normalizedGrade = grade?.trim();
-        return normalizedGrade ? `Grade ${normalizedGrade}` : null;
-    };
-
-    const parseCaptureGrade = (grade: string | null | undefined) => {
-        const normalizedGrade = grade?.trim();
-        if (!normalizedGrade || !/^\d+$/.test(normalizedGrade)) return null;
-        return Number(normalizedGrade);
-    };
-    const featuredCaptureId = featuredMedia?.captureId ?? null;
-    const featuredCaptureGrade = featuredMedia?.gradeBreakdown?.grade
-        ?? parseCaptureGrade(featuredMedia?.imageGrade);
-    const featuredCaptureLocation = featuredMedia?.locationDisplayLabel?.trim() || null;
+    const featuredCaptureId = null;
+    const featuredCaptureGrade = null;
+    const featuredCaptureLocation = null;
     const featuredCaptureSetting = null;
-    const featuredStorySetting = featuredMedia?.contextLabel?.trim() || null;
+    const featuredStorySetting = null;
     const featuredBaseStats = captureStatsOrFallback(undefined, statsResult.stats);
     const featuredEffectiveStats = featuredBaseStats;
     const featuredIsZooComparisonBanned = false;
@@ -866,23 +843,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
 
                     <div className="order-1 lg:order-2">
-                        {heroFeaturedMedia.length > 0 ? (
-                            <FeaturedSpeciesImageCarousel
-                                slides={heroFeaturedMedia.map((item) => ({
-                                    captureId: item.captureId,
-                                    src: getSpeciesImageRoute(entry.slug, item.captureId),
-                                    alt: getSpeciesImageAltText(entry, "featured"),
-                                    gradeLabel: formatCaptureGradeLabel(item.imageGrade),
-                                    grade: item.gradeBreakdown?.grade ?? parseCaptureGrade(item.imageGrade),
-                                    gradeBreakdown: item.gradeBreakdown,
-                                    attribution: getSpeciesImageAttribution(item),
-                                    username: item.username,
-                                    contextLabel: item.contextLabel,
-                                    locationDisplayLabel: item.locationDisplayLabel
-                                }))}
-                                rarityLabel={resolvedRarityLabel}
-                            />
-                        ) : (
                             <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
                                 <div className="relative mb-6 h-28 w-28 overflow-hidden rounded-[1.5rem] border border-amber-200/20 bg-amber-200/[0.06] p-3">
                                     <Image
@@ -891,11 +851,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                         fill
                                         unoptimized
                                         sizes="112px"
-                                        className={
-                                            growthContext.hasCapture
-                                                ? "object-contain p-2"
-                                                : "object-contain p-2 brightness-0 invert opacity-80"
-                                        }
+                                        className="object-contain p-2 brightness-0 invert opacity-80"
                                     />
                                 </div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
@@ -905,7 +861,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     {t("getAnimalDex")}
                                 </Link>
                             </div>
-                        )}
                     </div>
                 </div>
             </section>
@@ -1133,7 +1088,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 layout="wide"
                                 speciesSlug={entry.slug}
                                 speciesName={entry.name}
-                                items={rankingItems}
+                                items={[]}
                                 currentCaptureId={featuredCaptureId}
                                 currentCaptureGrade={featuredCaptureGrade}
                                 labels={{
