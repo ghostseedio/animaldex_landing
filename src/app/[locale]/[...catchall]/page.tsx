@@ -1,6 +1,7 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {getManagedPage} from "@/lib/admin-content";
+import {COLLAPSED_ID_DETAIL_FAMILIES} from "@/lib/english-detail-routes";
 import {shouldLookupPublishedManagedPage} from "@/lib/managed-page-slugs";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import ManagedContentRenderer from "@/app/[locale]/_components/managed-content-renderer";
@@ -10,6 +11,11 @@ type ManagedPageProps = {
 };
 
 async function resolvePage(params: ManagedPageProps["params"]) {
+    // Closed SEO namespaces must never become CMS vanity lookups, even if
+    // middleware is skipped. Unknown /animals/foo is a cheap 404, not catchall.
+    if ((COLLAPSED_ID_DETAIL_FAMILIES as readonly string[]).includes(params.catchall[0] ?? "")) {
+        return null;
+    }
     if (params.catchall.length !== 1) return null;
     const slug = params.catchall[0];
     if (!shouldLookupPublishedManagedPage(slug)) return null;

@@ -109,6 +109,10 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.match(nextConfig, /source: "\/id\/animal-hybrids\/:slug"/);
     assert.match(middleware, /matchCollapsedIdDetailPath/);
     assert.match(middleware, /NextResponse.redirect\(destination, 308\)/);
+    assert.match(middleware, /resolveClosedSeoNamespacePath/);
+    assert.match(middleware, /closedSeoNamespaceNotFoundResponse/);
+    assert.match(middleware, /applyEnglishOnlyDetailLinkHeader/);
+    assert.match(read("i18n.ts"), /alternateLinks: false/);
     assert.match(metadata, /isCollapsedEnglishDetailPath/);
     assert.match(metadata, /hreflangLocales/);
     assert.match(site, /isCollapsedEnglishDetailPath/);

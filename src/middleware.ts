@@ -10,6 +10,11 @@ import {
 } from "@/lib/request-routing";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {traceRequestAmplification} from "@/lib/request-trace";
+import {
+    applyEnglishOnlyDetailLinkHeader,
+    closedSeoNamespaceNotFoundResponse,
+    resolveClosedSeoNamespacePath
+} from "@/lib/closed-seo-namespaces";
 import {matchCollapsedIdDetailPath} from "@/lib/english-detail-routes";
 
 const intlMiddleware = createIntlMiddleware(localeConfig);
@@ -51,7 +56,12 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(destination, 308);
         }
 
-        const response = intlMiddleware(request);
+        const closedNamespace = resolveClosedSeoNamespacePath(request.nextUrl.pathname);
+        if (closedNamespace?.action === "block") {
+            return closedSeoNamespaceNotFoundResponse();
+        }
+
+        const response = applyEnglishOnlyDetailLinkHeader(intlMiddleware(request), request);
         const {locale} = splitLocalePath(request.nextUrl.pathname);
         const hasAuthCookie = requestHasSupabaseAuthCookie(request.cookies.getAll());
         const isProtected = isProtectedAppPath(request.nextUrl.pathname);
@@ -77,7 +87,7 @@ export async function middleware(request: NextRequest) {
             return redirectToAccount(request, locale, session.response);
         }
 
-        return session.response;
+        return applyEnglishOnlyDetailLinkHeader(session.response, request);
     } finally {
         finishDevRequestTimer(timer, {path: request.nextUrl.pathname});
     }

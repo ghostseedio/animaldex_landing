@@ -107,6 +107,7 @@ test("catchall slug routing skips scanner database lookups", () => {
     const catchall = read("app/[locale]/[...catchall]/page.tsx");
     assert.match(catchall, /shouldLookupPublishedManagedPage/);
     assert.match(catchall, /getManagedPage/);
+    assert.match(catchall, /COLLAPSED_ID_DETAIL_FAMILIES/);
     assert.match(catchall, /export const revalidate = 300/);
     assert.doesNotMatch(catchall, /force-dynamic/);
 });
