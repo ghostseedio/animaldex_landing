@@ -138,7 +138,7 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.match(support, /PUBLIC_SUPPORT_CHAT_HREF/);
     assert.doesNotMatch(sitemap, /force-dynamic/);
     assert.match(sitemap, /export const revalidate = 3600/);
-    assert.match(layout, /export const revalidate = 3600/);
+    assert.match(layout, /export const revalidate = false/);
     assert.doesNotMatch(layout, /next-intl\/server/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /export const revalidate = 3600/);
     assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /return \[\];/);
@@ -149,9 +149,9 @@ test("known disaster paths stay bounded and cacheable", () => {
     const powersHub = readFileSync(join(root, "app/[locale]/(composited)/qualities/page.tsx"), "utf8");
 
     assert.doesNotMatch(home, /signHomeFeatureCaptureImages|createSignedStorageUrl|cache:\s*["']no-store["']/);
-    assert.match(home, /export const revalidate = 300/);
+    assert.match(home, /export const revalidate = 86400/);
     assert.doesNotMatch(comparisonsHub, /listMergedChallengeEntries|getUnifiedSpeciesEntries|countComparableAnimals|getStarterComparableAnimals|findComparableAnimal|resolveSpeciesArtworkFiles/);
-    assert.match(comparisonsHub, /export const revalidate = 3600/);
+    assert.match(comparisonsHub, /export const revalidate = 86400/);
     assert.match(lessonsHub, /export const revalidate = 3600/);
     assert.match(powersHub, /export const revalidate = 3600/);
 });

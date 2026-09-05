@@ -95,7 +95,7 @@ module.exports = withNextIntl({
             },
             {
                 source: "/id/comparisons/lion-vs-tiger",
-                destination: "/id/comparisons/tiger-vs-lion",
+                destination: "/comparisons/tiger-vs-lion",
                 permanent: true
             },
             {
@@ -136,6 +136,11 @@ module.exports = withNextIntl({
             {
                 source: "/id/animal-hybrids/:slug",
                 destination: "/animal-hybrids/:slug",
+                permanent: true
+            },
+            {
+                source: "/id/comparisons/:slug",
+                destination: "/comparisons/:slug",
                 permanent: true
             },
             {

@@ -4,7 +4,7 @@ import {timeDevAsync} from "@/lib/dev-request-timing";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {devCacheTtlMs, withServerMemoryCache} from "@/lib/server-memory-cache";
 
-const statRevalidateSeconds = 60 * 30;
+const statRevalidateSeconds = 86400;
 
 export type HomeDownloadStatCounts = {
     captures: number | null;

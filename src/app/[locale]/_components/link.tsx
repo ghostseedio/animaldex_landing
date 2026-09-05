@@ -42,6 +42,11 @@ function stripLocalePrefix(href: string) {
     return href;
 }
 
+function isDynamicPublicSeoDetailHref(href: string) {
+    const path = stripLocalePrefix(href).split("?")[0]?.split("#")[0] ?? href;
+    return /^\/(comparisons|powers|p)\/[a-z0-9-]+\/?$/i.test(path);
+}
+
 function localizeHref(href: string, locale: string) {
     if (!isInternalPath(href) || isHashOnlyPath(href)) {
         return href;
@@ -137,7 +142,7 @@ export default function Link(
     return (
         <NextLink
             href={localizedHref}
-            prefetch={prefetch}
+            prefetch={prefetch ?? (isDynamicPublicSeoDetailHref(localizedHref) ? false : prefetch)}
             target={target}
             onClick={handleClick}
             className={(underline ? (className || "") + " group" : className)}

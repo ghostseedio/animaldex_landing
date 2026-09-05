@@ -287,7 +287,7 @@ export async function fetchSpeciesComparisonBySlug(slug: string): Promise<Challe
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 300, tags: [SPECIES_COMPARISON_CACHE_TAG, speciesComparisonSlugCacheTag(slug)]}
+        next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG, speciesComparisonSlugCacheTag(slug)]}
     });
     if (!response.ok) return null;
     const rows = (await response.json()) as SpeciesComparisonRow[];
@@ -349,7 +349,7 @@ export async function fetchSpeciesComparisonSummaries(limit = 12): Promise<Speci
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+        next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -368,7 +368,7 @@ export async function fetchRecentSpeciesComparisons(limit = 24): Promise<Challen
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+        next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -395,7 +395,7 @@ export async function fetchAllSpeciesComparisons(): Promise<ChallengeEntry[]> {
 
         const response = await fetch(url, {
             headers: getSupabaseHeaders(config.key),
-            next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+            next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG]}
         });
         if (!response.ok) break;
 
@@ -430,7 +430,7 @@ export async function fetchSpeciesComparisonsForAnimal(
 
     const response = await fetch(url, {
         headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+        next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG]}
     });
     if (!response.ok) return [];
     const rows = (await response.json()) as SpeciesComparisonFeedRow[];
@@ -624,7 +624,7 @@ async function fetchChallengeSitemapRows(): Promise<ChallengeSitemapEntry[]> {
 
         const response = await fetch(url, {
             headers: getSupabaseHeaders(config.key),
-            next: {revalidate: 180, tags: [SPECIES_COMPARISON_CACHE_TAG]}
+            next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG]}
         });
         if (!response.ok) break;
 

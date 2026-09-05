@@ -6,7 +6,7 @@ import {HeaderAuthProvider} from "@/app/[locale]/(composited)/_components/header
 import {answerPages} from "@/data/answer-pages";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 3600;
+export const revalidate = false;
 
 export default async function CompositedLayout(
     {children, params}: { children: React.ReactNode; params: {locale: string} },

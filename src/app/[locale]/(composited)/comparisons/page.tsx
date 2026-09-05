@@ -25,7 +25,7 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [];

@@ -22,6 +22,7 @@ test("middleware no longer does uncached CMS lookups or unconditional auth", () 
     assert.doesNotMatch(middleware, /managed-content/);
     assert.match(middleware, /middlewareShouldRefreshSession/);
     assert.match(middleware, /headers.delete\("set-cookie"\)/);
+    assert.match(read("app/[locale]/_components/link.tsx"), /isDynamicPublicSeoDetailHref/);
     assert.match(read("i18n.ts"), /localeDetection: false/);
     assert.match(supabaseMiddleware, /requestHasSupabaseAuthCookie/);
     assert.match(supabaseMiddleware, /auth\.getUser\(\)/);
@@ -107,8 +108,8 @@ test("catchall slug routing skips scanner database lookups", () => {
     const catchall = read("app/[locale]/[...catchall]/page.tsx");
     assert.match(catchall, /shouldLookupPublishedManagedPage/);
     assert.match(catchall, /getManagedPage/);
-    assert.match(catchall, /COLLAPSED_ID_DETAIL_FAMILIES/);
-    assert.match(catchall, /export const revalidate = 300/);
+    assert.match(catchall, /CLOSED_SEO_NAMESPACE_FAMILIES/);
+    assert.match(catchall, /export const revalidate = 86400/);
     assert.doesNotMatch(catchall, /force-dynamic/);
 });
 
@@ -169,7 +170,7 @@ test("public species pages do not read the authenticated viewer on the server", 
     assert.match(growth, /includeAuthenticatedViewer/);
     assert.doesNotMatch(comparisonPage, /getViewerUserId/);
     assert.doesNotMatch(comparisonPage, /readGuestKey/);
-    assert.match(comparisonPage, /export const revalidate = 300/);
+    assert.match(comparisonPage, /export const revalidate = 86400/);
     assert.match(comparisonPage, /generateStaticParams/);
     assert.match(comparisonPage, /getComparisonPageData/);
     assert.match(comparisonPage, /publishedStaticComparisonRedirectSlug/);

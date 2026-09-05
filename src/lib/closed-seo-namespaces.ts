@@ -1,9 +1,8 @@
 import {NextRequest, NextResponse} from "next/server";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {
-    COLLAPSED_ID_DETAIL_FAMILIES,
-    isCollapsedEnglishDetailPath,
-    type CollapsedIdDetailFamily
+    CLOSED_SEO_NAMESPACE_FAMILIES,
+    isCollapsedEnglishDetailPath
 } from "@/lib/english-detail-routes";
 import {
     isPublishedAnimalSlug,
@@ -12,10 +11,12 @@ import {
 } from "@/lib/published-seo-slugs";
 import {splitLocalePath} from "@/lib/request-routing";
 
-const CLOSED_FAMILIES = new Set<string>(COLLAPSED_ID_DETAIL_FAMILIES);
+type ClosedSeoFamily = typeof CLOSED_SEO_NAMESPACE_FAMILIES[number];
+
+const CLOSED_FAMILIES = new Set<string>(CLOSED_SEO_NAMESPACE_FAMILIES);
 const POKEMON_SLUGS = new Set(closedSeoNamespaceSlugs.pokemon);
 const HYBRID_SLUGS = new Set(closedSeoNamespaceSlugs.hybrids);
-const RESERVED_SLUGS: Partial<Record<CollapsedIdDetailFamily, ReadonlySet<string>>> = {
+const RESERVED_SLUGS: Partial<Record<ClosedSeoFamily, ReadonlySet<string>>> = {
     animals: new Set(["search"])
 };
 
@@ -34,11 +35,11 @@ const CLOSED_SEO_404_HTML = `<!doctype html>
 </html>
 `;
 
-export function isClosedSeoNamespaceFamily(segment: string | undefined): segment is CollapsedIdDetailFamily {
+export function isClosedSeoNamespaceFamily(segment: string | undefined): segment is ClosedSeoFamily {
     return Boolean(segment && CLOSED_FAMILIES.has(segment));
 }
 
-export function isPublishedClosedSeoSlug(family: CollapsedIdDetailFamily, slug: string) {
+export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) {
     const normalized = normalizePublishedSeoSlug(slug);
     if (!normalized) {
         return false;
@@ -56,8 +57,8 @@ export function isPublishedClosedSeoSlug(family: CollapsedIdDetailFamily, slug: 
 }
 
 export type ClosedSeoNamespaceResolution =
-    | {action: "allow"; reason: "hub" | "reserved" | "published"; family: CollapsedIdDetailFamily; slug?: string}
-    | {action: "block"; reason: "unknown-slug" | "nested"; family: CollapsedIdDetailFamily; slug?: string};
+    | {action: "allow"; reason: "hub" | "reserved" | "published"; family: ClosedSeoFamily; slug?: string}
+    | {action: "block"; reason: "unknown-slug" | "nested"; family: ClosedSeoFamily; slug?: string};
 
 export function resolveClosedSeoNamespacePath(pathname: string): ClosedSeoNamespaceResolution | null {
     const {appPath} = splitLocalePath(pathname);
@@ -67,7 +68,7 @@ export function resolveClosedSeoNamespacePath(pathname: string): ClosedSeoNamesp
         return null;
     }
 
-    const closedFamily = family as CollapsedIdDetailFamily;
+    const closedFamily = family as ClosedSeoFamily;
     if (parts.length === 1) {
         return {action: "allow", reason: "hub", family: closedFamily};
     }

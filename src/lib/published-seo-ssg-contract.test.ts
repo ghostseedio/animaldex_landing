@@ -107,6 +107,8 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.match(nextConfig, /source: "\/id\/animal-lessons\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/pokemon-animals\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/animal-hybrids\/:slug"/);
+    assert.match(nextConfig, /source: "\/id\/comparisons\/:slug"/);
+    assert.match(nextConfig, /destination: "\/comparisons\/:slug"/);
     assert.match(middleware, /matchCollapsedIdDetailPath/);
     assert.match(middleware, /NextResponse.redirect\(destination, 308\)/);
     assert.match(middleware, /resolveClosedSeoNamespacePath/);
@@ -126,6 +128,11 @@ test("collapsed /id detail families redirect to English and are not advertised",
         family: "animals",
         englishPath: "/animals/tiger"
     });
+    assert.deepEqual(matchCollapsedIdDetailPath("/id/comparisons/aardwolf-vs-nurse-shark"), {
+        family: "comparisons",
+        englishPath: "/comparisons/aardwolf-vs-nurse-shark"
+    });
+    assert.equal(isCollapsedEnglishDetailPath("/comparisons/aardwolf-vs-nurse-shark"), true);
     assert.equal(matchCollapsedIdDetailPath("/id/animals"), null);
 });
 

@@ -51,7 +51,7 @@ const animalBackgroundImages = [
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/swamp-harrier.webp"
 ];
 
-export const revalidate = 300;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return [];

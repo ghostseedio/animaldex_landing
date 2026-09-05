@@ -61,6 +61,7 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
     });
     assert.equal(resolveClosedSeoNamespacePath("/animals")?.action, "allow");
     assert.equal(resolveClosedSeoNamespacePath("/powers/strength") , null);
+    assert.equal(resolveClosedSeoNamespacePath("/comparisons/aardwolf-vs-nurse-shark"), null);
     assert.equal(resolveClosedSeoNamespacePath("/animals/tiger/extra")?.action, "block");
 });
 

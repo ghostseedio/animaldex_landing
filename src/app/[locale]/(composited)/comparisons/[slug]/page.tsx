@@ -43,13 +43,12 @@ function redirectPublishedReverse(locale: string, slug: string) {
 
 type Props = {params: {locale: string; slug: string}};
 
-export const revalidate = 300;
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 export function generateStaticParams() {
     return [
-        {locale: "en", slug: "tiger-vs-lion"},
-        {locale: "id", slug: "tiger-vs-lion"}
+        {locale: "en", slug: "tiger-vs-lion"}
     ];
 }
 
