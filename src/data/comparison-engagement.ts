@@ -82,7 +82,7 @@ export async function fetchVoteTally(slug: string): Promise<ComparisonVoteTally>
     url.searchParams.set("comparison_slug", `eq.${slug}`);
     url.searchParams.set("limit", "1");
 
-    const response = await fetch(url, {headers: getSupabaseHeaders(config.key), next: {revalidate: 60}});
+    const response = await fetch(url, {headers: getSupabaseHeaders(config.key), next: {revalidate: 300}});
     if (!response.ok) return EMPTY_VOTE_TALLY;
 
     const rows = (await response.json()) as VoteTallyRow[];
@@ -137,7 +137,7 @@ export async function fetchComparisonComments(
     url.searchParams.set("order", "created_at.desc");
     url.searchParams.set("limit", String(Math.max(1, Math.min(COMMENT_PAGE_SIZE, limit))));
 
-    const response = await fetch(url, {headers: getSupabaseHeaders(config.key), next: {revalidate: 60}});
+    const response = await fetch(url, {headers: getSupabaseHeaders(config.key), next: {revalidate: 300}});
     if (!response.ok) return [];
 
     const rows = (await response.json()) as CommentRow[];

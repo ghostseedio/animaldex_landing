@@ -86,6 +86,16 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
+                source: "/comparisons/lion-vs-tiger",
+                destination: "/comparisons/tiger-vs-lion",
+                permanent: true
+            },
+            {
+                source: "/id/comparisons/lion-vs-tiger",
+                destination: "/id/comparisons/tiger-vs-lion",
+                permanent: true
+            },
+            {
                 source: "/rankings",
                 destination: "/tier-list",
                 permanent: true

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {existsSync, readFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
@@ -157,8 +157,12 @@ test("public species pages do not read the authenticated viewer on the server", 
     assert.match(comparisonPage, /export const revalidate = 300/);
     assert.match(comparisonPage, /generateStaticParams/);
     assert.match(comparisonPage, /getComparisonPageData/);
+    assert.match(comparisonPage, /publishedStaticComparisonRedirectSlug/);
+    assert.match(comparisonPage, /redirectPublishedReverse/);
+    assert.doesNotMatch(comparisonPage, /resolveSpeciesArtworkFiles/);
     assert.doesNotMatch(comparisonPage, /getUnifiedSpeciesEntries/);
     assert.doesNotMatch(comparisonPage, /listMergedChallengeEntries/);
+    assert.equal(existsSync(join(root, "app/[locale]/(composited)/comparisons/[slug]/loading.tsx")), false);
     assert.match(read("data/comparison-animals.ts"), /getResolvedSpeciesBySlug/);
     assert.doesNotMatch(
         read("data/comparison-animals.ts").slice(

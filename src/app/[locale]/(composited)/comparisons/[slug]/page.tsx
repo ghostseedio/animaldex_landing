@@ -24,14 +24,22 @@ import {
     getComparisonPageData,
     getRelatedMergedChallenges
 } from "@/data/species-comparisons";
-import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
+import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
 import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
+import {publishedStaticComparisonRedirectSlug} from "@/lib/comparison-redirect";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+
+function redirectPublishedReverse(locale: string, slug: string) {
+    const target = publishedStaticComparisonRedirectSlug(slug);
+    if (target) {
+        redirect(getLocalePath(locale, `/comparisons/${target}`));
+    }
+}
 
 type Props = {params: {locale: string; slug: string}};
 
@@ -51,7 +59,7 @@ async function resolveComparisonSpecies(
     slug: string,
     displayName?: string | null
 ): Promise<ComparisonSpecies> {
-    const resolved = (await getResolvedSpeciesBySlug(slug)) ?? getSpeciesBySlug(slug) ?? null;
+    const resolved = getSpeciesBySlug(slug) ?? await getResolvedSpeciesBySlug(slug);
     if (resolved) {
         return {...resolved, hasCatalogPage: true};
     }
@@ -71,6 +79,7 @@ function getReadMinutes(parts: string[]) {
 }
 
 export async function generateMetadata({params}: Props): Promise<Metadata> {
+    redirectPublishedReverse(params.locale, params.slug);
     const data = await getComparisonPageData(params.slug);
 
     if (data.status === "pending") {
@@ -78,6 +87,9 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
             title: `${data.animalA.name} vs ${data.animalB.name}`,
             robots: {index: false, follow: true}
         };
+    }
+    if (data.status === "redirect") {
+        redirect(getLocalePath(params.locale, `/comparisons/${data.slug}`));
     }
     if (data.status !== "ready") {
         return {};
@@ -103,6 +115,7 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 export default async function ComparisonDetailPage({params}: Props) {
     const {locale, slug} = params;
+    redirectPublishedReverse(locale, slug);
     const t = await getScopedTranslator(locale, "comparisons");
     const data = await getComparisonPageData(slug);
 
@@ -197,10 +210,9 @@ export default async function ComparisonDetailPage({params}: Props) {
             entry
         }));
 
-    const [voteTally, comments, artworkFiles] = await Promise.all([
+    const [voteTally, comments] = await Promise.all([
         fetchVoteTally(challenge.slug).catch(() => ({animalAVotes: 0, animalBVotes: 0, totalVotes: 0})),
-        fetchComparisonComments(challenge.slug).catch(() => []),
-        resolveSpeciesArtworkFiles([animalA.slug, animalB.slug]).catch(() => new Map<string, string | null>())
+        fetchComparisonComments(challenge.slug).catch(() => [])
     ]);
 
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
@@ -271,8 +283,8 @@ export default async function ComparisonDetailPage({params}: Props) {
                 slug={challenge.slug}
                 animalAName={animalA.name}
                 animalBName={animalB.name}
-                animalAArtwork={buildSpeciesArtworkSrc(animalA.slug, artworkFiles.get(animalA.slug))}
-                animalBArtwork={buildSpeciesArtworkSrc(animalB.slug, artworkFiles.get(animalB.slug))}
+                animalAArtwork={buildSpeciesArtworkSrc(animalA.slug, null)}
+                animalBArtwork={buildSpeciesArtworkSrc(animalB.slug, null)}
                 initialTally={voteTally}
                 initialVote={null}
                 copy={{
