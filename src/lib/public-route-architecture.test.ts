@@ -153,5 +153,5 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.doesNotMatch(comparisonsHub, /listMergedChallengeEntries|getUnifiedSpeciesEntries|countComparableAnimals|getStarterComparableAnimals|findComparableAnimal|resolveSpeciesArtworkFiles/);
     assert.match(comparisonsHub, /export const revalidate = 86400/);
     assert.match(lessonsHub, /export const revalidate = 3600/);
-    assert.match(powersHub, /export const revalidate = 3600/);
+    assert.match(powersHub, /export const revalidate = 86400/);
 });

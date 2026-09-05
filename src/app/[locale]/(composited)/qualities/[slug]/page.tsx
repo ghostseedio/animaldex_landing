@@ -4,19 +4,16 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {getPublicPrincipleHubBySlug} from "@/data/species-behavior-lessons";
+import {getLocalPrincipleSlugs, getPublicPrincipleHubBySlug} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 86400;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "resilience"},
-        {locale: "id", slug: "resilience"}
-    ];
+    return getLocalPrincipleSlugs().map((slug) => ({locale: "en", slug}));
 }
 
 type PrinciplePageProps = {

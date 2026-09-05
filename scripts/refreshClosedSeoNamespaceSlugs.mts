@@ -14,6 +14,7 @@ import {
     pokemonAnimalEntries,
     pokemonAnimalGenerations
 } from "../src/data/pokemon-animal-counterparts.ts";
+import {getLocalPrincipleSlugs} from "../src/data/species-behavior-lessons.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outputPath = join(here, "..", "src/data/closed-seo-namespace-slugs.json");
@@ -29,14 +30,18 @@ const hybrids = animalHybridEntries
     .map((entry) => entry.slug)
     .sort((left, right) => left.localeCompare(right));
 
+const powers = getLocalPrincipleSlugs();
+
 writeFileSync(outputPath, `${JSON.stringify({
     generatedAt: new Date().toISOString().slice(0, 10),
-    source: "local pokemon-animal-counterparts + animal-hybrids",
+    source: "local pokemon-animal-counterparts + animal-hybrids + species-behavior-lessons",
     note: "Used by Edge middleware to close static SEO namespaces. Refresh with yarn refresh:published-seo.",
     pokemon,
-    hybrids
+    hybrids,
+    powers
 }, null, 2)}\n`);
 
 console.log(`wrote ${outputPath}`);
 console.log(`pokemon ${pokemon.length}`);
 console.log(`hybrids ${hybrids.length}`);
+console.log(`powers ${powers.length}`);

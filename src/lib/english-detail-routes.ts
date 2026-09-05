@@ -3,16 +3,18 @@ const COLLAPSED_DETAIL_PREFIXES = [
     "/animal-lessons/",
     "/pokemon-animals/",
     "/animal-hybrids/",
-    "/comparisons/"
+    "/comparisons/",
+    "/powers/"
 ] as const;
 
-const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/[a-z0-9-]+\/?$/i;
+const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|powers)\/[a-z0-9-]+\/?$/i;
 
 export const CLOSED_SEO_NAMESPACE_FAMILIES = [
     "animals",
     "animal-lessons",
     "pokemon-animals",
-    "animal-hybrids"
+    "animal-hybrids",
+    "powers"
 ] as const;
 
 export const COLLAPSED_ID_DETAIL_FAMILIES = [
@@ -37,7 +39,7 @@ export function isCollapsedEnglishDetailPath(path: string) {
 
 export function matchCollapsedIdDetailPath(path: string): {family: CollapsedIdDetailFamily; englishPath: string} | null {
     const normalized = pathnameOnly(path);
-    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/([a-z0-9-]+)\/?$/i);
+    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|powers)\/([a-z0-9-]+)\/?$/i);
     if (!match) {
         return null;
     }

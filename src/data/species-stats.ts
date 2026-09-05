@@ -14,7 +14,7 @@ import {
 
 const SPECIES_STATS_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 const PLACEHOLDER_SCIENTIFIC_NAME = "Scientific classification under review";
-const SPECIES_STATS_REVALIDATE_SECONDS = 3600;
+const SPECIES_STATS_REVALIDATE_SECONDS = 86400;
 
 type SpeciesStatsKey = (typeof SPECIES_STATS_KEYS)[number];
 

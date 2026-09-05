@@ -98,7 +98,9 @@ test("remaining public crawler paths stay off the full catalog and artwork bucke
     assert.doesNotMatch(rankings, /resolveSpeciesArtworkFiles/);
     assert.match(rankings, /const rankingSpeciesEntries = speciesEntries/);
     assert.match(powers, /getPublicPrincipleHubBySlug/);
-    assert.match(powers, /export const revalidate = 86400/);
+    assert.match(powers, /export const revalidate = false/);
+    assert.match(powers, /export const dynamicParams = false/);
+    assert.match(powers, /getLocalPrincipleSlugs/);
     assert.doesNotMatch(powers, /getPrincipleHubBySlug/);
     assert.doesNotMatch(powers, /resolveSpeciesBehaviorProfile/);
     assert.doesNotMatch(powers, /getBehaviorLessonIndex/);

@@ -670,6 +670,23 @@ export function getLocalPrincipleHubBySlug(slug: string): PrincipleHub | null {
     };
 }
 
+export function getLocalPrincipleSlugs() {
+    const slugs = new Set<string>();
+    for (const lesson of buildLocalBehaviorLessonsForWebsite()) {
+        for (const quality of getLessonHubQualities(lesson)) {
+            const slug = toPrincipleSlug(quality);
+            if (slug) {
+                slugs.add(slug);
+            }
+        }
+        const principleSlug = toPrincipleSlug(lesson.principleName);
+        if (principleSlug) {
+            slugs.add(principleSlug);
+        }
+    }
+    return [...slugs].sort((left, right) => left.localeCompare(right));
+}
+
 const PUBLIC_PRINCIPLE_HUB_TTL_MS = 15_000;
 const publicPrincipleHubBySlug = new Map<string, {expiresAt: number; value: Promise<PrincipleHub | null>}>();
 
@@ -707,27 +724,8 @@ async function resolvePublicPrincipleHubBySlugOnce(slug: string): Promise<Princi
 }
 
 export async function getPublicPrincipleHubBySlug(slug: string): Promise<PrincipleHub | null> {
-    const normalized = slug.trim().toLowerCase();
-    if (!normalized) {
-        return null;
-    }
-
-    const now = Date.now();
-    const existing = publicPrincipleHubBySlug.get(normalized);
-    if (existing && existing.expiresAt > now) {
-        return existing.value;
-    }
-
-    const promise = resolvePublicPrincipleHubBySlugOnce(normalized);
-    publicPrincipleHubBySlug.set(normalized, {expiresAt: now + PUBLIC_PRINCIPLE_HUB_TTL_MS, value: promise});
-    if (publicPrincipleHubBySlug.size > 64) {
-        publicPrincipleHubBySlug.forEach((entry, key) => {
-            if (entry.expiresAt <= now) {
-                publicPrincipleHubBySlug.delete(key);
-            }
-        });
-    }
-    return promise;
+    // Public SEO must not fetch catalog lessons per crawler URL.
+    return getLocalPrincipleHubBySlug(slug);
 }
 
 export function resolveLocalSpeciesBehaviorProfile(slug: string): ResolvedSpeciesBehaviorProfile | null {

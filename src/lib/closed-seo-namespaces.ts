@@ -16,6 +16,7 @@ type ClosedSeoFamily = typeof CLOSED_SEO_NAMESPACE_FAMILIES[number];
 const CLOSED_FAMILIES = new Set<string>(CLOSED_SEO_NAMESPACE_FAMILIES);
 const POKEMON_SLUGS = new Set(closedSeoNamespaceSlugs.pokemon);
 const HYBRID_SLUGS = new Set(closedSeoNamespaceSlugs.hybrids);
+const POWER_SLUGS = new Set(closedSeoNamespaceSlugs.powers ?? []);
 const RESERVED_SLUGS: Partial<Record<ClosedSeoFamily, ReadonlySet<string>>> = {
     animals: new Set(["search"])
 };
@@ -53,7 +54,10 @@ export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) 
     if (family === "pokemon-animals") {
         return POKEMON_SLUGS.has(normalized);
     }
-    return HYBRID_SLUGS.has(normalized);
+    if (family === "animal-hybrids") {
+        return HYBRID_SLUGS.has(normalized);
+    }
+    return POWER_SLUGS.has(normalized);
 }
 
 export type ClosedSeoNamespaceResolution =
