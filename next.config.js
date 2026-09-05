@@ -1,11 +1,14 @@
 const path = require("path");
 const withNextIntl = require('next-intl/plugin')();
 
+if (process.env.NEXT_PHASE === "phase-production-build" || process.argv.includes("build")) {
+    process.env.ADEX_SEO_SSG_NO_REMOTE = "1";
+}
+
 module.exports = withNextIntl({
-    // Catalog pages still load the unified species catalog at build time.
-    // Sitemap generation is served dynamically via /sitemap.xml so it no longer
-    // blocks static page generation during deploys.
-    staticPageGenerationTimeout: 180,
+    // Stable SEO pages SSG from checked-in snapshots. Sitemap stays a
+    // request-time route so it does not block static generation.
+    staticPageGenerationTimeout: 600,
     experimental: {
         // Keep sharp as a native Node dependency so /api/admin/assets can boot on Vercel.
         serverComponentsExternalPackages: ["sharp"]
@@ -113,6 +116,26 @@ module.exports = withNextIntl({
             {
                 source: "/id/rankings/:path*",
                 destination: "/id/tier-list/:path*",
+                permanent: true
+            },
+            {
+                source: "/id/animals/:slug",
+                destination: "/animals/:slug",
+                permanent: true
+            },
+            {
+                source: "/id/animal-lessons/:slug",
+                destination: "/animal-lessons/:slug",
+                permanent: true
+            },
+            {
+                source: "/id/pokemon-animals/:slug",
+                destination: "/pokemon-animals/:slug",
+                permanent: true
+            },
+            {
+                source: "/id/animal-hybrids/:slug",
+                destination: "/animal-hybrids/:slug",
                 permanent: true
             },
             {

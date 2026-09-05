@@ -4,6 +4,7 @@ import NextLink from "next/link";
 import {usePathname} from "next/navigation";
 import React, {ComponentProps, MouseEvent, ReactNode} from "react";
 import {localeConfig} from "@/i18n";
+import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 
 const navigationStartEvent = "animaldex:navigation-start";
 
@@ -48,7 +49,7 @@ function localizeHref(href: string, locale: string) {
 
     const unprefixedHref = stripLocalePrefix(href);
 
-    if (locale === localeConfig.defaultLocale) {
+    if (locale === localeConfig.defaultLocale || isCollapsedEnglishDetailPath(unprefixedHref)) {
         return unprefixedHref;
     }
 

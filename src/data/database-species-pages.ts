@@ -14,6 +14,8 @@ import {resolveCollectionIdentityToken, setRuntimeSpeciesIdentityAliases} from "
 import {isNonCanonicalLifeStageCatalogIdentity, resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {logDevPerfEvent} from "@/lib/dev-request-timing";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
+import {getSnapshotSpeciesBySlug} from "@/lib/published-seo-page-data";
+import {assertNoRemoteDuringSeoSsg} from "@/lib/seo-ssg-remote-guard";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type CatalogRow = {
@@ -954,6 +956,7 @@ const SINGLE_SPECIES_GUIDE_SELECT = [
 ].join(",");
 
 async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry | null> {
+    assertNoRemoteDuringSeoSsg(`species_catalog_v1:${slug}`);
     const normalized = slug.trim().toLowerCase();
     const identity = normalized.replace(/-/g, "_");
     const url = getSupabaseUrl();
@@ -1040,6 +1043,7 @@ export async function getDatabaseSpeciesBySlug(slug: string) {
         }) ?? null;
     }
 
+    assertNoRemoteDuringSeoSsg(`getDatabaseSpeciesBySlug:${slug}`);
     return fetchSingleSpeciesFromCatalog(slug);
 }
 
@@ -1053,17 +1057,18 @@ function resolveLegendaryCatalogEntry(staticEntry: SpeciesEntry, databaseEntries
     return enrichLegendaryEarthBeastSpeciesEntry(staticEntry, biologyCatalogEntry);
 }
 
-async function resolveLegendaryCatalogEntryBySlug(staticEntry: SpeciesEntry) {
+function resolveLegendaryCatalogEntryFromSnapshot(staticEntry: SpeciesEntry) {
     const seed = getLegendaryCatalogSeedByBeastSlug(staticEntry.slug);
     if (!seed) {
         return staticEntry;
     }
 
-    const biologyCatalogEntry = await getDatabaseSpeciesBySlug(seed.biologyLandingSlug);
+    const biologyCatalogEntry = getSnapshotSpeciesBySlug(seed.biologyLandingSlug);
     return enrichLegendaryEarthBeastSpeciesEntry(staticEntry, biologyCatalogEntry);
 }
 
 async function fetchCanonicalIdentityAlias(identityKey: string): Promise<string | null> {
+    assertNoRemoteDuringSeoSsg(`species_identity_aliases:${identityKey}`);
     const url = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
     if (!url || !key) return null;
@@ -1100,7 +1105,7 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
     for (const candidate of slugCandidates) {
         const staticEntry = speciesEntries.find((entry) => entry.slug === candidate) ?? null;
         if (staticEntry && legendaryEarthBeastSpeciesSlugs.has(staticEntry.slug)) {
-            return resolveLegendaryCatalogEntryBySlug(staticEntry);
+            return resolveLegendaryCatalogEntryFromSnapshot(staticEntry);
         }
         if (staticEntry) {
             return staticEntry;
@@ -1110,7 +1115,7 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
         if (biologySeed) {
             const beastStaticEntry = speciesEntries.find((entry) => entry.slug === biologySeed.beastSlug) ?? null;
             if (beastStaticEntry) {
-                return resolveLegendaryCatalogEntryBySlug(beastStaticEntry);
+                return resolveLegendaryCatalogEntryFromSnapshot(beastStaticEntry);
             }
         }
     }
@@ -1120,9 +1125,9 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
     }
 
     for (const candidate of slugCandidates) {
-        const databaseEntry = await getDatabaseSpeciesBySlug(candidate);
-        if (databaseEntry) {
-            return databaseEntry;
+        const snapshotEntry = getSnapshotSpeciesBySlug(candidate);
+        if (snapshotEntry) {
+            return snapshotEntry;
         }
     }
 

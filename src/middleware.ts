@@ -10,6 +10,7 @@ import {
 } from "@/lib/request-routing";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {traceRequestAmplification} from "@/lib/request-trace";
+import {matchCollapsedIdDetailPath} from "@/lib/english-detail-routes";
 
 const intlMiddleware = createIntlMiddleware(localeConfig);
 
@@ -43,6 +44,13 @@ function redirectToAccount(request: NextRequest, locale: string, sessionResponse
 export async function middleware(request: NextRequest) {
     const timer = createDevRequestTimer("middleware", {path: request.nextUrl.pathname});
     try {
+        const collapsed = matchCollapsedIdDetailPath(request.nextUrl.pathname);
+        if (collapsed) {
+            const destination = request.nextUrl.clone();
+            destination.pathname = collapsed.englishPath;
+            return NextResponse.redirect(destination, 308);
+        }
+
         const response = intlMiddleware(request);
         const {locale} = splitLocalePath(request.nextUrl.pathname);
         const hasAuthCookie = requestHasSupabaseAuthCookie(request.cookies.getAll());

@@ -6,8 +6,11 @@ import {
     POKEMON_ANIMAL_CANONICAL_BASE_PATH,
     getPokemonAnimalEntriesByGeneration,
     getPokemonAnimalEntry,
-    getPokemonAnimalGeneration
+    getPokemonAnimalGeneration,
+    pokemonAnimalEntries,
+    pokemonAnimalGenerations
 } from "@/data/pokemon-animal-counterparts";
+import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 type PokemonAnimalDetailPageProps = {
@@ -17,13 +20,13 @@ type PokemonAnimalDetailPageProps = {
     };
 };
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
     return [
-        {locale: "en", slug: "generation-i"},
-        {locale: "id", slug: "generation-i"}
+        ...pokemonAnimalGenerations.map((generation) => ({locale: "en", slug: generation.slug})),
+        ...pokemonAnimalEntries.map((entry) => ({locale: "en", slug: entry.slug}))
     ];
 }
 
@@ -40,9 +43,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             title,
             description,
             keywords: [`${generation.label} Pokemon animals`, "what animal is each Pokemon based on", "Pokemon animal counterparts"],
-            alternates: {
-                canonical: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`)
-            },
+            alternates: englishOnlyLanguageAlternates(`${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`),
             openGraph: {
                 type: "website",
                 locale: getMetadataLocale(locale),
@@ -78,9 +79,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             `${entry.name} animal counterpart`,
             `${entry.name} based on`
         ],
-        alternates: {
-            canonical: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`)
-        },
+        alternates: englishOnlyLanguageAlternates(`${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`),
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),

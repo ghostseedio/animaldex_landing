@@ -77,14 +77,17 @@ test("editorial related rankings follow the GSC clusters", () => {
     assert.match(rankingBlock(rankings, "animals-with-strongest-armor"), /relatedRankingSlugs: \["strongest-animals", "most-resilient-animals"\]/);
 });
 
-test("canonical /tier-list wrappers export ISR segment config", () => {
+test("canonical /tier-list wrappers export static segment config", () => {
     const hub = readRepo("src/app/[locale]/(composited)/tier-list/page.tsx");
     const detail = readRepo("src/app/[locale]/(composited)/tier-list/[slug]/page.tsx");
 
+    assert.match(hub, /export const revalidate = 3600/);
+    assert.match(hub, /generateStaticParams/);
+    assert.match(hub, /return \[\];/);
+    assert.match(detail, /export const revalidate = false/);
+    assert.match(detail, /export const dynamicParams = false/);
+    assert.match(detail, /rankingPages\.flatMap/);
     for (const source of [hub, detail]) {
-        assert.match(source, /export const revalidate = 3600/);
-        assert.match(source, /generateStaticParams/);
-        assert.match(source, /return \[\];/);
         assert.doesNotMatch(source, /searchParams/);
         assert.doesNotMatch(source, /force-dynamic/);
         assert.doesNotMatch(source, /cookies\(|headers\(|draftMode\(|noStore\(/);

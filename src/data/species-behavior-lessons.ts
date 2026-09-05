@@ -11,6 +11,8 @@ import {
 import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {buildUsefulApplicationSentence} from "@/data/species-useful-application";
 import {isPublishedLessonSlug} from "@/lib/published-seo-slugs";
+import {getSnapshotLessonBySlug} from "@/lib/published-seo-page-data";
+import {assertNoRemoteDuringSeoSsg} from "@/lib/seo-ssg-remote-guard";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 const BEHAVIOR_LESSONS_REVALIDATE_SECONDS = 86400;
@@ -214,6 +216,7 @@ function buildLegendarySeedBehaviorLesson(seed: ReturnType<typeof getLegendaryCa
 }
 
 async function fetchCatalogLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
+    assertNoRemoteDuringSeoSsg(`species_catalog_v1.lesson:${slug}`);
     const legendarySeed = getLegendaryCatalogSeedByBeastSlug(slug) ?? getLegendaryCatalogSeedByBiologyLandingSlug(slug);
     const legendaryLesson = buildLegendarySeedBehaviorLesson(legendarySeed);
 
@@ -460,7 +463,7 @@ async function resolveBehaviorLessonBySlugOnce(slug: string): Promise<SpeciesBeh
         return null;
     }
 
-    return fetchCatalogLessonBySlug(slug);
+    return getSnapshotLessonBySlug(slug);
 }
 
 export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBehaviorLesson | null> {
@@ -488,6 +491,7 @@ export async function getBehaviorLessonBySlug(slug: string): Promise<SpeciesBeha
 }
 
 async function fetchCatalogLessonsByPrinciple(principleName: string, excludeSlug: string, limit: number): Promise<SpeciesBehaviorLesson[]> {
+    assertNoRemoteDuringSeoSsg(`species_catalog_v1.principle:${principleName}`);
     const config = getSupabaseConfig();
     if (!config || !principleName.trim()) {
         return [];

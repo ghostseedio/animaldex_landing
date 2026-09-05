@@ -1,4 +1,5 @@
 import {localeConfig} from "@/i18n";
+import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 
 const productionSiteUrl = "https://animaldex.app";
 
@@ -17,7 +18,7 @@ export function getSiteUrl() {
 export function getLocalePath(locale: string, path = "") {
     const normalisedPath = path === "/" ? "" : path;
 
-    if (locale === localeConfig.defaultLocale) {
+    if (locale === localeConfig.defaultLocale || isCollapsedEnglishDetailPath(normalisedPath || "/")) {
         return normalisedPath || "/";
     }
 

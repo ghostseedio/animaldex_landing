@@ -113,7 +113,8 @@ test("known disaster paths stay bounded and cacheable", () => {
     const localeLayout = readFileSync(join(root, "app/[locale]/layout.tsx"), "utf8");
 
     assert.doesNotMatch(animals, /getUnifiedSpeciesEntries/);
-    assert.match(animals, /export const revalidate = 86400/);
+    assert.match(animals, /export const revalidate = false/);
+    assert.match(animals, /export const dynamicParams = false/);
     assert.doesNotMatch(animalsIndex, /getAppCaptures/);
     assert.doesNotMatch(animalsIndex, /getUnifiedSpeciesEntries/);
     assert.doesNotMatch(animalsIndex, /fetchTrendingSearches|buildSpeciesDirectoryImageState|createSignedStorageUrl|cache:\s*["']no-store["']/);

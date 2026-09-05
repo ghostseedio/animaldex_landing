@@ -58,19 +58,15 @@ import {
 import {getLegendaryCatalogSeedByBeastSlug} from "@/data/legendary-earth-beasts-catalog-seed";
 import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast-capture";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getPublishedEnglishAnimalStaticParams} from "@/lib/published-seo-page-data";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
-export const revalidate = 86400;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
-// Empty paths would keep this a request-dynamic λ route. One seed slug opts
-// the segment into on-demand ISR; other animals generate on first anonymous GET.
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "tiger"},
-        {locale: "id", slug: "tiger"}
-    ];
+    return getPublishedEnglishAnimalStaticParams();
 }
 
 type SpeciesPageProps = {

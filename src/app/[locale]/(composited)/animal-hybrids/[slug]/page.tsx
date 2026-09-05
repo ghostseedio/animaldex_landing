@@ -4,10 +4,12 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {
     ANIMAL_HYBRID_CANONICAL_BASE_PATH,
+    animalHybridEntries,
     getAnimalHybrid,
     getRelatedAnimalHybrids
 } from "@/data/animal-hybrids";
 import {getSpeciesBySlug} from "@/data/species";
+import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 
 type AnimalHybridDetailPageProps = {
@@ -17,14 +19,11 @@ type AnimalHybridDetailPageProps = {
     };
 };
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "zebra-rhino-hybrid"},
-        {locale: "id", slug: "zebra-rhino-hybrid"}
-    ];
+    return animalHybridEntries.map((entry) => ({locale: "en", slug: entry.slug}));
 }
 
 export async function generateMetadata({params}: AnimalHybridDetailPageProps): Promise<Metadata> {
@@ -39,9 +38,7 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
         title: `${entry.title}: How It Might Look and Behave`,
         description: entry.quickAnswer,
         keywords: entry.searchIntents,
-        alternates: {
-            canonical: getLocalePath(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`)
-        },
+        alternates: englishOnlyLanguageAlternates(`${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),

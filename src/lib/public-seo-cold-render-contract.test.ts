@@ -35,7 +35,8 @@ test("public animal and lesson detail pages do not fan out remote SEO work", () 
     const catalog = read("data/database-species-pages.ts");
     const behavior = read("data/species-behavior-lessons.ts");
 
-    assert.match(animals, /export const revalidate = 86400/);
+    assert.match(animals, /export const revalidate = false/);
+    assert.match(animals, /export const dynamicParams = false/);
     assert.match(animals, /resolveLocalSpeciesStats/);
     assert.match(animals, /resolveLocalSpeciesBehaviorProfile/);
     assert.match(animals, /getChallengesForSpecies/);
@@ -49,7 +50,8 @@ test("public animal and lesson detail pages do not fan out remote SEO work", () 
     assert.doesNotMatch(animals, /resolveSpeciesStats\(/);
     assert.doesNotMatch(animals, /getDatabaseSpeciesBySlug/);
 
-    assert.match(lessons, /export const revalidate = 86400/);
+    assert.match(lessons, /export const revalidate = false/);
+    assert.match(lessons, /export const dynamicParams = false/);
     assert.match(lessons, /getBehaviorLessonBySlug/);
     assert.match(lessons, /getLocalRelatedBehaviorLessons/);
     assert.match(lessons, /getNextPublishedLessonSlug/);

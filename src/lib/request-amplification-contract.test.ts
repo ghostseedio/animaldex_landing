@@ -118,9 +118,9 @@ test("species slug pages resolve identity once and do not load the full catalog"
     const rankings = read("data/species-rankings.ts");
     const growth = read("data/species-growth.ts");
 
-    assert.match(speciesPage, /export const revalidate = 86400/);
+    assert.match(speciesPage, /export const revalidate = false/);
     assert.match(speciesPage, /generateStaticParams/);
-    assert.match(speciesPage, /dynamicParams = true/);
+    assert.match(speciesPage, /dynamicParams = false/);
     assert.doesNotMatch(speciesPage, /force-dynamic/);
     assert.match(speciesPage, /getSpeciesPageData/);
     assert.doesNotMatch(speciesPage, /getUnifiedSpeciesEntries/);

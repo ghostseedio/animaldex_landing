@@ -9,6 +9,7 @@ import {getLegendaryCatalogSeedByBeastSlug} from "@/data/legendary-earth-beasts-
 import {
     getLegendaryEarthBeast,
     getRelatedLegendaryEarthBeasts,
+    legendaryEarthBeastEntries,
     LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH,
     LEGENDARY_EARTH_BEASTS_PILLAR_PATH
 } from "@/data/legendary-earth-beasts";
@@ -28,14 +29,14 @@ function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
 }
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "sinai-dragon"},
-        {locale: "id", slug: "sinai-dragon"}
-    ];
+    return legendaryEarthBeastEntries.flatMap((entry) => [
+        {locale: "en", slug: entry.slug},
+        {locale: "id", slug: entry.slug}
+    ]);
 }
 
 export async function generateMetadata({params}: LegendaryEarthBeastPageProps): Promise<Metadata> {

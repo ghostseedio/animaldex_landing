@@ -68,9 +68,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     const guideListingsByPath = new Map(guideListings.map((item) => [guidePath(item), item]));
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
         // Keep /id in the sitemap as a real Indonesian homepage. Do not request
-        // indexing of /id copies of English article bodies; those URLs still
-        // exist for the language toggle and hreflang, but they compete with
-        // the successful English canonicals in GSC.
+        // indexing of /id copies of English article bodies; those detail URLs
+        // 308 to English and must not appear in hreflang.
         if (locale !== localeConfig.defaultLocale) {
             return [{url: getAbsoluteUrl(locale)}];
         }

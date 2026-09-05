@@ -28,14 +28,14 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "indonesia"},
-        {locale: "id", slug: "indonesia"}
-    ];
+    return locationPages.flatMap((page) => [
+        {locale: "en", slug: page.slug},
+        {locale: "id", slug: page.slug}
+    ]);
 }
 
 type LocationPageProps = {

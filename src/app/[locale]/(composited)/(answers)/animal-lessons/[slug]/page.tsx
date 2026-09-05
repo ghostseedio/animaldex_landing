@@ -13,17 +13,15 @@ import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
+import {getPublishedEnglishLessonStaticParams} from "@/lib/published-seo-page-data";
 import {getNextPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 86400;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "hippopotamus"},
-        {locale: "id", slug: "hippopotamus"}
-    ];
+    return getPublishedEnglishLessonStaticParams();
 }
 
 type AnimalLessonPageProps = {

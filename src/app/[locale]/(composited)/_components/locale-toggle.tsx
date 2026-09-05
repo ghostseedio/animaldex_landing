@@ -3,6 +3,7 @@
 import Link from "@/app/[locale]/_components/link";
 import {usePathname} from "next/navigation";
 import {localeConfig} from "@/i18n";
+import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 
 const localeFlags: Record<string, string> = {
     en: "🇺🇸",
@@ -30,6 +31,7 @@ function getPathnameWithoutLocale(pathname: string) {
 export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
     const pathname = usePathname();
     const unprefixedPath = getPathnameWithoutLocale(pathname || "/");
+    const collapsedEnglishDetail = isCollapsedEnglishDetailPath(unprefixedPath);
     const currentFlag = localeFlags[currentLocale] ?? currentLocale.toUpperCase();
 
     return (
@@ -46,7 +48,7 @@ export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
                 {localeConfig.locales.map((locale) => (
                     <Link
                         key={locale}
-                        href={unprefixedPath}
+                        href={collapsedEnglishDetail && locale !== localeConfig.defaultLocale ? "/" : unprefixedPath}
                         locale={locale}
                         className={"flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-surface-800 " +
                             (locale === currentLocale ? "text-primary-500" : "text-ink-200")}
