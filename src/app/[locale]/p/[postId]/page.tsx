@@ -13,7 +13,7 @@ import {
 } from "@/lib/discover-post";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
-export const revalidate = 300;
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 export function generateStaticParams() {

@@ -4,12 +4,12 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {getPrincipleHubBySlug, resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {getPublicPrincipleHubBySlug} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 export function generateStaticParams() {
@@ -30,7 +30,7 @@ const PRINCIPLE_SPECIES_PAGE_SIZE = 18;
 
 export async function generateMetadata({params}: PrinciplePageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "qualities");
-    const principle = await getPrincipleHubBySlug(params.slug);
+    const principle = await getPublicPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         return {};
@@ -60,7 +60,7 @@ export async function generateMetadata({params}: PrinciplePageProps): Promise<Me
 
 export default async function PrincipleDetailPage({params}: PrinciplePageProps) {
     const t = await getScopedTranslator(params.locale, "qualities");
-    const principle = await getPrincipleHubBySlug(params.slug);
+    const principle = await getPublicPrincipleHubBySlug(params.slug);
 
     if (!principle) {
         notFound();
@@ -70,17 +70,11 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
     const currentPage = 1;
     const pageStart = (currentPage - 1) * PRINCIPLE_SPECIES_PAGE_SIZE;
     const pageLessons = principle.lessons.slice(pageStart, pageStart + PRINCIPLE_SPECIES_PAGE_SIZE);
-    const speciesItems = (
-        await Promise.all(
-            pageLessons.map(async (lesson) => {
-                const entry = getSpeciesBySlug(lesson.slug);
-                const profile = await resolveSpeciesBehaviorProfile(lesson.slug);
-                return {entry, lesson, profile};
-            })
-        )
-    );
-
-    const sampleProfile = speciesItems[0]?.profile;
+    const speciesItems = pageLessons.map((lesson) => ({
+        entry: getSpeciesBySlug(lesson.slug),
+        lesson
+    }));
+    const sampleMotto = speciesItems[0]?.lesson.shortMotto || principle.sampleMotto;
     const breadcrumbSchema = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -119,22 +113,22 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
             <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 font-medium uppercase tracking-[0.18em] text-sm">{t("eyebrow")}</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{principle.principle}</h1>
-                <p className="text-ink-200 text-lg md:text-xl">{sampleProfile?.motto ?? principle.sampleMotto}</p>
+                <p className="text-ink-200 text-lg md:text-xl">{sampleMotto}</p>
                 <p className="text-ink-300">{t("clusterIntro")}</p>
                 <p className="text-ink-300">{t("speciesCount", {count: principle.speciesCount})}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {speciesItems.map(({entry, lesson, profile}, index) => {
+                {speciesItems.map(({entry, lesson}, index) => {
                     const detailHref = entry ? `/animals/${entry.slug}` : `/animal-lessons/${lesson.slug}`;
                     const displayName = entry?.name ?? lesson.displayName;
                     const imageAlt = entry
                         ? getSpeciesImageAltText(entry, "thumbnail")
                         : `${lesson.displayName} animal lesson image on AnimalDex`;
-                    const principleName = profile?.principle ?? lesson.principleName;
-                    const motto = profile?.motto ?? lesson.shortMotto;
-                    const coreLesson = profile?.coreLesson ?? lesson.coreLesson;
-                    const biologicalBasis = profile?.biologicalBasis ?? lesson.biologicalBasis;
+                    const principleName = lesson.principleName;
+                    const motto = lesson.shortMotto;
+                    const coreLesson = lesson.coreLesson;
+                    const biologicalBasis = lesson.biologicalBasis;
 
                     return (
                         <article

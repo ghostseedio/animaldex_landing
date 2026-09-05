@@ -20,9 +20,7 @@ const DYNAMIC_ALLOWLIST = [
     "app/blog/feed.xml/route.ts"
 ];
 
-const CATALOG_WALK_ALLOWLIST = [
-    "app/[locale]/(composited)/rankings/[slug]/page.tsx"
-];
+const CATALOG_WALK_ALLOWLIST: string[] = [];
 
 const PROHIBITED = [
     {name: "force-dynamic", pattern: /export const dynamic\s*=\s*["']force-dynamic["']/},

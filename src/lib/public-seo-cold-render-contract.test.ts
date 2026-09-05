@@ -71,6 +71,7 @@ test("public animal and lesson detail pages do not fan out remote SEO work", () 
     assert.match(behavior, /isPublishedLessonSlug/);
     assert.match(behavior, /resolveLocalSpeciesBehaviorProfile/);
     assert.match(behavior, /BEHAVIOR_LESSONS_REVALIDATE_SECONDS = 86400/);
+    assert.match(behavior, /getPublicPrincipleHubBySlug/);
     assert.doesNotMatch(
         behavior.slice(
             behavior.indexOf("async function fetchCatalogLessonBySlug"),
@@ -78,4 +79,28 @@ test("public animal and lesson detail pages do not fan out remote SEO work", () 
         ),
         /fetchApplicationExamplesFromSupabase/
     );
+});
+
+test("remaining public crawler paths stay off the full catalog and artwork bucket list", () => {
+    const search = read("app/[locale]/(composited)/animals/search/page.tsx");
+    const comparisonAnimals = read("data/comparison-animals.ts");
+    const rankings = read("app/[locale]/(composited)/rankings/[slug]/page.tsx");
+    const powers = read("app/[locale]/(composited)/qualities/[slug]/page.tsx");
+    const post = read("app/[locale]/p/[postId]/page.tsx");
+
+    assert.doesNotMatch(search, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(search, /resolveSpeciesArtworkFiles/);
+    assert.doesNotMatch(comparisonAnimals, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(comparisonAnimals, /resolveSpeciesArtworkFiles/);
+    assert.doesNotMatch(rankings, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(rankings, /resolveSpeciesArtworkFiles/);
+    assert.match(rankings, /const rankingSpeciesEntries = speciesEntries/);
+    assert.match(powers, /getPublicPrincipleHubBySlug/);
+    assert.match(powers, /export const revalidate = 86400/);
+    assert.doesNotMatch(powers, /getPrincipleHubBySlug/);
+    assert.doesNotMatch(powers, /resolveSpeciesBehaviorProfile/);
+    assert.doesNotMatch(powers, /getBehaviorLessonIndex/);
+    assert.match(post, /export const revalidate = 86400/);
+    assert.match(readFileSync(join(root, "..", "scripts/refreshPublishedSeoSlugs.mjs"), "utf8"), /Do NOT add this to Next prebuild/);
+    assert.doesNotMatch(readFileSync(join(root, "..", "package.json"), "utf8"), /prebuild.*refresh:published-seo-slugs/);
 });

@@ -12,7 +12,6 @@ import TierLegend from "@/app/[locale]/(composited)/rankings/_components/tier-le
 import TierListSummary from "@/app/[locale]/(composited)/rankings/_components/tier-list-summary";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import {getChallenge} from "@/data/challenges";
-import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {
     getExpandedRankingEntries,
     getRankingHeadline,
@@ -89,15 +88,6 @@ function estimateReadingMinutes(entriesCount: number, paragraphs: string[]) {
     return Math.max(4, Math.ceil(words / 225));
 }
 
-async function getRankingSpeciesEntries() {
-    try {
-        return await getUnifiedSpeciesEntries();
-    } catch (error) {
-        console.error("Unable to load unified species catalog for ranking page. Falling back to static species entries.", error);
-        return speciesEntries;
-    }
-}
-
 export async function generateMetadata({params}: RankingPageProps): Promise<Metadata> {
     const {locale, slug} = params;
     const ranking = getRankingPage(slug);
@@ -134,7 +124,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         notFound();
     }
 
-    const rankingSpeciesEntries = ranking.statRankingKey ? await getRankingSpeciesEntries() : speciesEntries;
+    const rankingSpeciesEntries = speciesEntries;
     const rankingSpeciesBySlug = new Map(rankingSpeciesEntries.map((entry) => [entry.slug, entry]));
     const resolvedEntries = getExpandedRankingEntries(ranking, undefined, rankingSpeciesEntries).map((entry) => {
         const species = rankingSpeciesBySlug.get(entry.speciesSlug) ?? getSpeciesBySlug(entry.speciesSlug);

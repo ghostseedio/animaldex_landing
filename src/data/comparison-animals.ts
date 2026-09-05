@@ -1,8 +1,8 @@
 import "server-only";
 
-import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
-import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
+import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
+import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 
 /** Lightweight species shape used by the public comparison builder. */
@@ -67,12 +67,12 @@ function toComparableAnimal(
     };
 }
 
-async function getIndex(): Promise<ComparisonAnimalIndex> {
+function getIndex(): ComparisonAnimalIndex {
     if (indexCache && indexCache.expiresAt > Date.now()) return indexCache;
 
-    const entries = (await getUnifiedSpeciesEntries()).filter((entry) => Boolean(entry.slug && entry.name));
-    const artworkFiles = await resolveSpeciesArtworkFiles(entries.map((entry) => entry.slug));
-    const animals = entries.map((entry) => toComparableAnimal(entry, artworkFiles.get(entry.slug) ?? null));
+    const animals = speciesEntries
+        .filter((entry) => Boolean(entry.slug && entry.name))
+        .map((entry) => toComparableAnimal(entry, null));
 
     indexCache = {
         animals,
@@ -84,21 +84,22 @@ async function getIndex(): Promise<ComparisonAnimalIndex> {
 }
 
 export async function countComparableAnimals() {
-    return (await getIndex()).animals.length;
+    return getIndex().animals.length;
 }
 
 export async function findComparableAnimal(slug: string): Promise<ComparableAnimal | null> {
     const normalized = slug.trim().toLowerCase();
     if (!normalized) return null;
 
-    const cached = indexCache?.bySlug.get(normalized);
-    if (cached) return cached;
+    const localEntry = getSpeciesBySlug(normalized);
+    if (localEntry?.slug && localEntry.name) {
+        return toComparableAnimal(localEntry, null);
+    }
 
-    const entry = getSpeciesBySlug(normalized) ?? await getResolvedSpeciesBySlug(normalized);
+    const entry = await getResolvedSpeciesBySlug(normalized);
     if (!entry?.slug || !entry.name) return null;
 
-    const artworkFiles = await resolveSpeciesArtworkFiles([entry.slug]);
-    return toComparableAnimal(entry, artworkFiles.get(entry.slug) ?? null);
+    return toComparableAnimal(entry, null);
 }
 
 export async function isComparableAnimalSlug(slug: string) {
@@ -126,7 +127,7 @@ export async function searchComparableAnimals(query: string, limit = 10): Promis
     const capped = Math.max(1, Math.min(MAX_SEARCH_RESULTS, limit));
     if (!normalized) return getStarterComparableAnimals(capped);
 
-    const {animals} = await getIndex();
+    const {animals} = getIndex();
     const scored: Array<{animal: ComparableAnimal; score: number}> = [];
 
     for (const animal of animals) {
@@ -141,7 +142,7 @@ export async function searchComparableAnimals(query: string, limit = 10): Promis
 }
 
 export async function getStarterComparableAnimals(limit = 12): Promise<ComparableAnimal[]> {
-    const {animals, bySlug} = await getIndex();
+    const {animals, bySlug} = getIndex();
     const picked: ComparableAnimal[] = [];
     const seen = new Set<string>();
 

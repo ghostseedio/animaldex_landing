@@ -86,7 +86,7 @@ test("public /p pages load one post and do not boot the authenticated discover s
         timeline.indexOf("export async function getDiscoverPostById")
     );
 
-    assert.match(page, /export const revalidate = 300/);
+    assert.match(page, /export const revalidate = 86400/);
     assert.match(page, /generateStaticParams/);
     assert.doesNotMatch(page, /force-dynamic/);
     assert.doesNotMatch(page, /getAuthenticatedAppContext/);
@@ -178,6 +178,8 @@ test("public species pages do not read the authenticated viewer on the server", 
     assert.doesNotMatch(comparisonPage, /listMergedChallengeEntries/);
     assert.equal(existsSync(join(root, "app/[locale]/(composited)/comparisons/[slug]/loading.tsx")), false);
     assert.match(read("data/comparison-animals.ts"), /getResolvedSpeciesBySlug/);
+    assert.doesNotMatch(read("data/comparison-animals.ts"), /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(read("data/comparison-animals.ts"), /resolveSpeciesArtworkFiles/);
     assert.doesNotMatch(
         read("data/comparison-animals.ts").slice(
             read("data/comparison-animals.ts").indexOf("export async function findComparableAnimal"),

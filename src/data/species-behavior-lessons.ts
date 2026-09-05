@@ -497,9 +497,11 @@ async function fetchCatalogLessonsByPrinciple(principleName: string, excludeSlug
         select: "landing_page_slug,display_name,normalized_identity_key,principle_name,principle_expression,core_lesson,biological_basis,short_motto,best_use_cases",
         principle_name: `eq.${principleName}`,
         core_lesson: "not.is.null",
-        landing_page_slug: `neq.${excludeSlug}`,
-        limit: String(Math.max(1, Math.min(8, limit)))
+        limit: String(Math.max(1, Math.min(18, limit)))
     });
+    if (excludeSlug.trim()) {
+        searchParams.set("landing_page_slug", `neq.${excludeSlug}`);
+    }
 
     try {
         const response = await fetch(`${config.supabaseUrl}/rest/v1/species_catalog_v1?${searchParams.toString()}`, {
@@ -618,6 +620,110 @@ export async function getPrincipleHubIndex(): Promise<PrincipleHub[]> {
 export async function getPrincipleHubBySlug(slug: string): Promise<PrincipleHub | null> {
     const hubs = await getPrincipleHubIndex();
     return hubs.find((hub) => hub.principleSlug === slug) ?? null;
+}
+
+function titleCaseFromSlug(slug: string) {
+    return slug
+        .split("-")
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+}
+
+export function getLocalPrincipleHubBySlug(slug: string): PrincipleHub | null {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    const matching: SpeciesBehaviorLesson[] = [];
+    let principleName = "";
+
+    for (const lesson of buildLocalBehaviorLessonsForWebsite()) {
+        const qualities = getLessonHubQualities(lesson);
+        const matchedQuality = qualities.find((quality) => toPrincipleSlug(quality) === normalized);
+        if (!matchedQuality && toPrincipleSlug(lesson.principleName) !== normalized) {
+            continue;
+        }
+        matching.push(lesson);
+        if (!principleName) {
+            principleName = matchedQuality || lesson.principleName;
+        }
+    }
+
+    if (matching.length === 0) {
+        return null;
+    }
+
+    return {
+        principle: principleName,
+        principleSlug: normalized,
+        speciesCount: matching.length,
+        speciesSlugs: matching.map((lesson) => lesson.slug),
+        sampleMotto: pickHubMotto(matching),
+        lessons: matching.sort((left, right) => left.displayName.localeCompare(right.displayName)),
+        catalogLessonCount: 0
+    };
+}
+
+const PUBLIC_PRINCIPLE_HUB_TTL_MS = 15_000;
+const publicPrincipleHubBySlug = new Map<string, {expiresAt: number; value: Promise<PrincipleHub | null>}>();
+
+async function resolvePublicPrincipleHubBySlugOnce(slug: string): Promise<PrincipleHub | null> {
+    const local = getLocalPrincipleHubBySlug(slug);
+    const principleName = local?.principle || titleCaseFromSlug(slug);
+    const catalogLessons = local && local.lessons.length >= 8
+        ? []
+        : await fetchCatalogLessonsByPrinciple(principleName, "", 18);
+
+    if (!local && catalogLessons.length === 0) {
+        return null;
+    }
+
+    const bySlug = new Map<string, SpeciesBehaviorLesson>();
+    for (const lesson of local?.lessons ?? []) {
+        bySlug.set(lesson.slug, lesson);
+    }
+    for (const lesson of catalogLessons) {
+        if (!bySlug.has(lesson.slug)) {
+            bySlug.set(lesson.slug, lesson);
+        }
+    }
+
+    const lessons = Array.from(bySlug.values()).sort((left, right) => left.displayName.localeCompare(right.displayName));
+    return {
+        principle: principleName,
+        principleSlug: slug,
+        speciesCount: lessons.length,
+        speciesSlugs: lessons.map((lesson) => lesson.slug),
+        sampleMotto: pickHubMotto(lessons),
+        lessons,
+        catalogLessonCount: catalogLessons.length
+    };
+}
+
+export async function getPublicPrincipleHubBySlug(slug: string): Promise<PrincipleHub | null> {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    const now = Date.now();
+    const existing = publicPrincipleHubBySlug.get(normalized);
+    if (existing && existing.expiresAt > now) {
+        return existing.value;
+    }
+
+    const promise = resolvePublicPrincipleHubBySlugOnce(normalized);
+    publicPrincipleHubBySlug.set(normalized, {expiresAt: now + PUBLIC_PRINCIPLE_HUB_TTL_MS, value: promise});
+    if (publicPrincipleHubBySlug.size > 64) {
+        publicPrincipleHubBySlug.forEach((entry, key) => {
+            if (entry.expiresAt <= now) {
+                publicPrincipleHubBySlug.delete(key);
+            }
+        });
+    }
+    return promise;
 }
 
 export function resolveLocalSpeciesBehaviorProfile(slug: string): ResolvedSpeciesBehaviorProfile | null {
