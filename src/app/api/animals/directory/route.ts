@@ -9,14 +9,16 @@ import {
     isSpeciesDirectorySort,
     isSpeciesDirectorySortOrder,
     isSpeciesDirectoryTierFilter,
+    speciesEntries,
     type SpeciesRarityStatusKey
 } from "@/data/species";
 import {getAppCaptures} from "@/data/authenticated-app";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 function getSingleParam(value: string | null) {
     return value?.trim() || "";
@@ -27,6 +29,7 @@ function isSpeciesRarityStatusKey(value: string): value is SpeciesRarityStatusKe
 }
 
 export async function GET(request: Request) {
+    const signedIn = requestHasSupabaseAuthCookie(request.headers.get("cookie"));
     const url = new URL(request.url);
     const query = getSingleParam(url.searchParams.get("q"));
     const letter = getSingleParam(url.searchParams.get("letter")) || "all";
@@ -46,7 +49,7 @@ export async function GET(request: Request) {
     const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const page = Number.parseInt(getSingleParam(url.searchParams.get("page")) || "1", 10);
 
-    const unifiedSpeciesEntries = await getUnifiedSpeciesEntries();
+    const catalogEntries = signedIn ? await getUnifiedSpeciesEntries() : speciesEntries;
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
@@ -57,11 +60,13 @@ export async function GET(request: Request) {
         order,
         tier,
         page: Number.isFinite(page) ? page : 1,
-        entries: unifiedSpeciesEntries
+        entries: catalogEntries
     });
     const [captures, directoryImageState] = await Promise.all([
-        getAppCaptures(),
-        buildSpeciesDirectoryImageState(directoryPage.entries)
+        signedIn ? getAppCaptures() : Promise.resolve([]),
+        signedIn
+            ? buildSpeciesDirectoryImageState(directoryPage.entries)
+            : Promise.resolve(new Map(directoryPage.entries.map((entry) => [entry.slug, {hasPublicCapture: false, captureId: null}])))
     ]);
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
@@ -93,5 +98,9 @@ export async function GET(request: Request) {
         totalPages: directoryPage.totalPages,
         total: directoryPage.total,
         hasMore: directoryPage.currentPage < directoryPage.totalPages
+    }, {
+        headers: signedIn
+            ? {"Cache-Control": "private, no-store"}
+            : {"Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"}
     });
 }

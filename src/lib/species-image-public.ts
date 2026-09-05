@@ -1,4 +1,5 @@
 import type {SpeciesEntry} from "@/data/species";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
 
 export const SPECIES_NO_IMAGE_SRC = "/images/placeholders/species-no-image.svg";
@@ -28,7 +29,7 @@ type SpeciesImageAltVariant = "featured" | "thumbnail" | "metadata";
 
 export function getSpeciesImageRoute(slug: string, captureId?: string | null) {
     if (!captureId) {
-        return `/api/species-images/${slug}`;
+        return getSpeciesArtworkRoute(slug);
     }
 
     const searchParams = new URLSearchParams({captureId});
