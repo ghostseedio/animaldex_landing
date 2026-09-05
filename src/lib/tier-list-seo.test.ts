@@ -77,6 +77,21 @@ test("editorial related rankings follow the GSC clusters", () => {
     assert.match(rankingBlock(rankings, "animals-with-strongest-armor"), /relatedRankingSlugs: \["strongest-animals", "most-resilient-animals"\]/);
 });
 
+test("canonical /tier-list wrappers export ISR segment config", () => {
+    const hub = readRepo("src/app/[locale]/(composited)/tier-list/page.tsx");
+    const detail = readRepo("src/app/[locale]/(composited)/tier-list/[slug]/page.tsx");
+
+    for (const source of [hub, detail]) {
+        assert.match(source, /export const revalidate = 3600/);
+        assert.match(source, /generateStaticParams/);
+        assert.match(source, /return \[\];/);
+        assert.doesNotMatch(source, /searchParams/);
+        assert.doesNotMatch(source, /force-dynamic/);
+        assert.doesNotMatch(source, /cookies\(|headers\(|draftMode\(|noStore\(/);
+        assert.doesNotMatch(source, /getUnifiedSpeciesEntries/);
+    }
+});
+
 test("hub metadata drops the double AnimalDex suffix and surfaces GSC winners first", () => {
     const en = readRepo("src/data/locales/en.json");
     const hub = readRepo("src/app/[locale]/(composited)/rankings/page.tsx");

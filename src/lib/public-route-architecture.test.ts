@@ -140,4 +140,6 @@ test("known disaster paths stay bounded and cacheable", () => {
     assert.match(sitemap, /export const revalidate = 3600/);
     assert.match(layout, /export const revalidate = 3600/);
     assert.doesNotMatch(layout, /next-intl\/server/);
+    assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /export const revalidate = 3600/);
+    assert.match(readFileSync(join(root, "app/[locale]/(composited)/tier-list/page.tsx"), "utf8"), /return \[\];/);
 });
