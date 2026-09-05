@@ -14,8 +14,6 @@ import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/
 import ComparisonGenerating from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-generating";
 import ComparisonVotePanel from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-vote-panel";
 import ComparisonComments from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-comments";
-import {getChallenge} from "@/data/challenges";
-import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-animals";
 import {
     COMMENT_MAX_LENGTH,
     fetchComparisonComments,
@@ -23,12 +21,8 @@ import {
 } from "@/data/comparison-engagement";
 import {
     buildComparisonSpeciesFallback,
-    fetchSpeciesComparisonBySlug,
-    getRelatedMergedChallenges,
-    canonicalUnpublishedComparisonSlug,
-    parseComparisonSlug,
-    resolveReadyChallengeEntry,
-    reversedComparisonSlug
+    getComparisonPageData,
+    getRelatedMergedChallenges
 } from "@/data/species-comparisons";
 import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
@@ -42,6 +36,14 @@ import {getScopedTranslator} from "@/loaders/translation";
 type Props = {params: {locale: string; slug: string}};
 
 export const revalidate = 300;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+    return [
+        {locale: "en", slug: "tiger-vs-lion"},
+        {locale: "id", slug: "tiger-vs-lion"}
+    ];
+}
 
 type ComparisonSpecies = SpeciesEntry & {hasCatalogPage: boolean};
 
@@ -68,39 +70,20 @@ function getReadMinutes(parts: string[]) {
     return Math.max(4, Math.ceil(parts.join(" ").trim().split(/\s+/).length / 210));
 }
 
-/**
- * A slug that is not published yet but names two catalog species — the page is
- * generated on demand from the client instead of blocking the render.
- */
-async function resolvePendingPair(slug: string): Promise<{
-    animalA: ComparableAnimal;
-    animalB: ComparableAnimal;
-    comparisonType: string;
-} | null> {
-    const parsed = parseComparisonSlug(slug);
-    if (!parsed) return null;
-
-    const [animalA, animalB] = await Promise.all([
-        findComparableAnimal(parsed.animalASlug),
-        findComparableAnimal(parsed.animalBSlug)
-    ]);
-
-    if (!animalA || !animalB || animalA.slug === animalB.slug) return null;
-    return {animalA, animalB, comparisonType: parsed.comparisonType};
-}
-
 export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const challenge = await resolveReadyChallengeEntry(params.slug);
+    const data = await getComparisonPageData(params.slug);
 
-    if (!challenge) {
-        const pending = await resolvePendingPair(params.slug);
-        if (!pending) return {};
-        // Keep the loading state out of the index; the finished page is indexable.
+    if (data.status === "pending") {
         return {
-            title: `${pending.animalA.name} vs ${pending.animalB.name}`,
+            title: `${data.animalA.name} vs ${data.animalB.name}`,
             robots: {index: false, follow: true}
         };
     }
+    if (data.status !== "ready") {
+        return {};
+    }
+
+    const challenge = data.challenge;
     const [animalA, animalB] = await Promise.all([
         resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
         resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
@@ -121,33 +104,28 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 export default async function ComparisonDetailPage({params}: Props) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "comparisons");
-    const challenge = await resolveReadyChallengeEntry(slug);
+    const data = await getComparisonPageData(slug);
 
-    if (!challenge) {
-        const pending = await resolvePendingPair(slug);
-        if (!pending) notFound();
+    if (data.status === "missing") {
+        notFound();
+    }
 
-        const reversedSlug = reversedComparisonSlug(slug);
-        if (reversedSlug && await resolveReadyChallengeEntry(reversedSlug)) {
-            redirect(getLocalePath(locale, `/comparisons/${reversedSlug}`));
-        }
+    if (data.status === "redirect") {
+        redirect(getLocalePath(locale, `/comparisons/${data.slug}`));
+    }
 
-        const unpublishedCanonicalSlug = canonicalUnpublishedComparisonSlug(slug);
-        if (unpublishedCanonicalSlug && unpublishedCanonicalSlug !== slug) {
-            redirect(getLocalePath(locale, `/comparisons/${unpublishedCanonicalSlug}`));
-        }
-
+    if (data.status === "pending") {
         return (
             <ComparisonGenerating
                 basePath={getLocalePath(locale, "/comparisons")}
                 slug={slug}
-                animalAName={pending.animalA.name}
-                animalBName={pending.animalB.name}
-                animalAArtwork={pending.animalA.artworkUrl}
-                animalBArtwork={pending.animalB.artworkUrl}
+                animalAName={data.animalA.name}
+                animalBName={data.animalB.name}
+                animalAArtwork={data.animalA.artworkUrl}
+                animalBArtwork={data.animalB.artworkUrl}
                 copy={{
                     eyebrow: t("generating.eyebrow"),
-                    title: t("generating.title", {animalA: pending.animalA.name, animalB: pending.animalB.name}),
+                    title: t("generating.title", {animalA: data.animalA.name, animalB: data.animalB.name}),
                     description: t("generating.description"),
                     steps: [
                         t("generating.stepOne"),
@@ -167,6 +145,7 @@ export default async function ComparisonDetailPage({params}: Props) {
         );
     }
 
+    const challenge = data.challenge;
     const [animalA, animalB] = await Promise.all([
         resolveComparisonSpecies(challenge.animalASlug, challenge.animalADisplayName),
         resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
@@ -188,14 +167,7 @@ export default async function ComparisonDetailPage({params}: Props) {
     const confidence = winner ? Math.min(94, 66 + Math.round((Math.max(aWins, bWins) / Math.max(1, decisiveScenarios.length)) * 26)) : 55;
     const readMinutes = getReadMinutes([challenge.description, challenge.quickVerdict, ...challenge.shortAnswer, ...challenge.whyThisMatchupIsInteresting, ...challenge.statCategories.flatMap((item) => [item.animalAValue, item.animalBValue, item.takeaway]), ...challenge.scenarioBreakdown.flatMap((item) => [item.verdict, item.explanation]), ...challenge.finalTake, ...challenge.faq.flatMap((item) => [item.question, item.answer])]);
 
-    const relatedEntries = [];
-    for (const relatedSlug of challenge.relatedChallengeSlugs || []) {
-        const entry = getChallenge(relatedSlug) ?? (await fetchSpeciesComparisonBySlug(relatedSlug));
-        if (entry) relatedEntries.push(entry);
-    }
-    const relatedSource = relatedEntries.length > 0
-        ? relatedEntries.slice(0, 4)
-        : await getRelatedMergedChallenges(challenge.slug, 4);
+    const relatedSource = await getRelatedMergedChallenges(challenge.slug, 4);
     const relatedChallenges = relatedSource.flatMap((entry) => {
         const relatedA = getSpeciesBySlug(entry.animalASlug);
         const relatedB = getSpeciesBySlug(entry.animalBSlug);

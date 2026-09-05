@@ -126,4 +126,25 @@ test("public species pages do not read the authenticated viewer on the server", 
     assert.doesNotMatch(comparisonPage, /getViewerUserId/);
     assert.doesNotMatch(comparisonPage, /readGuestKey/);
     assert.match(comparisonPage, /export const revalidate = 300/);
+    assert.match(comparisonPage, /generateStaticParams/);
+    assert.match(comparisonPage, /getComparisonPageData/);
+    assert.doesNotMatch(comparisonPage, /getUnifiedSpeciesEntries/);
+    assert.doesNotMatch(comparisonPage, /listMergedChallengeEntries/);
+    assert.match(read("data/comparison-animals.ts"), /getResolvedSpeciesBySlug/);
+    assert.doesNotMatch(
+        read("data/comparison-animals.ts").slice(
+            read("data/comparison-animals.ts").indexOf("export async function findComparableAnimal"),
+            read("data/comparison-animals.ts").indexOf("export async function isComparableAnimalSlug")
+        ),
+        /getUnifiedSpeciesEntries|getIndex\(/
+    );
+    assert.match(read("data/species-comparisons.ts"), /export async function getComparisonPageData/);
+    assert.match(read("data/species-comparisons.ts"), /reversedStatic/);
+    assert.doesNotMatch(
+        read("data/species-comparisons.ts").slice(
+            read("data/species-comparisons.ts").indexOf("export async function getRelatedMergedChallenges"),
+            read("data/species-comparisons.ts").indexOf("export async function getMergedChallengesForSpecies")
+        ),
+        /listMergedChallengeEntries|fetchAllSpeciesComparisons/
+    );
 });

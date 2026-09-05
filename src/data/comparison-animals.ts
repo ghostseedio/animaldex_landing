@@ -1,6 +1,7 @@
 import "server-only";
 
-import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getResolvedSpeciesBySlug, getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {buildSpeciesArtworkSrc, resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 
@@ -53,7 +54,7 @@ const STARTER_SLUGS = [
 let indexCache: ComparisonAnimalIndex | null = null;
 
 function toComparableAnimal(
-    entry: Awaited<ReturnType<typeof getUnifiedSpeciesEntries>>[number],
+    entry: SpeciesEntry,
     artworkFile: string | null
 ): ComparableAnimal {
     return {
@@ -89,7 +90,15 @@ export async function countComparableAnimals() {
 export async function findComparableAnimal(slug: string): Promise<ComparableAnimal | null> {
     const normalized = slug.trim().toLowerCase();
     if (!normalized) return null;
-    return (await getIndex()).bySlug.get(normalized) ?? null;
+
+    const cached = indexCache?.bySlug.get(normalized);
+    if (cached) return cached;
+
+    const entry = getSpeciesBySlug(normalized) ?? await getResolvedSpeciesBySlug(normalized);
+    if (!entry?.slug || !entry.name) return null;
+
+    const artworkFiles = await resolveSpeciesArtworkFiles([entry.slug]);
+    return toComparableAnimal(entry, artworkFiles.get(entry.slug) ?? null);
 }
 
 export async function isComparableAnimalSlug(slug: string) {

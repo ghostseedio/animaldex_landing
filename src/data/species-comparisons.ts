@@ -10,7 +10,12 @@ import type {
 import {getChallenge as getStaticChallenge, isChallengeComparisonType} from "@/data/challenges";
 import type {SystemsIntelligenceEntry} from "@/data/content-schema";
 import type {SpeciesEntry} from "@/data/species";
-import {parseComparisonSlug} from "@/lib/comparison-slug";
+import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-animals";
+import {
+    canonicalUnpublishedComparisonSlug,
+    parseComparisonSlug,
+    reversedComparisonSlug
+} from "@/lib/comparison-slug";
 import {
     getSupabaseHeaders,
     getSupabasePublicKey,
@@ -483,6 +488,88 @@ export async function resolveReadyChallengeEntry(slug: string): Promise<Challeng
     return getStaticChallenge(slug) ?? (await fetchSpeciesComparisonBySlug(slug));
 }
 
+export type ComparisonPageData =
+    | {status: "ready"; challenge: ChallengeEntry}
+    | {status: "redirect"; slug: string}
+    | {status: "pending"; animalA: ComparableAnimal; animalB: ComparableAnimal; comparisonType: ChallengeComparisonType}
+    | {status: "missing"};
+
+const COMPARISON_PAGE_TTL_MS = 15_000;
+const comparisonPageBySlug = new Map<string, {expiresAt: number; value: Promise<ComparisonPageData>}>();
+
+async function resolveComparisonPageDataOnce(slug: string): Promise<ComparisonPageData> {
+    const staticReady = getStaticChallenge(slug);
+    if (staticReady) {
+        return {status: "ready", challenge: staticReady};
+    }
+
+    const reversedSlug = reversedComparisonSlug(slug);
+    if (reversedSlug) {
+        const reversedStatic = getStaticChallenge(reversedSlug);
+        if (reversedStatic) {
+            return {status: "redirect", slug: reversedSlug};
+        }
+    }
+
+    const ready = await fetchSpeciesComparisonBySlug(slug);
+    if (ready) {
+        return {status: "ready", challenge: ready};
+    }
+
+    if (reversedSlug) {
+        const reversedReady = await fetchSpeciesComparisonBySlug(reversedSlug);
+        if (reversedReady) {
+            return {status: "redirect", slug: reversedSlug};
+        }
+    }
+
+    const parsed = parseComparisonSlug(slug);
+    if (!parsed || parsed.animalASlug === parsed.animalBSlug) {
+        return {status: "missing"};
+    }
+
+    const [animalA, animalB] = await Promise.all([
+        findComparableAnimal(parsed.animalASlug),
+        findComparableAnimal(parsed.animalBSlug)
+    ]);
+    if (!animalA || !animalB || animalA.slug === animalB.slug) {
+        return {status: "missing"};
+    }
+
+    const unpublishedCanonicalSlug = canonicalUnpublishedComparisonSlug(slug);
+    if (unpublishedCanonicalSlug && unpublishedCanonicalSlug !== slug) {
+        return {status: "redirect", slug: unpublishedCanonicalSlug};
+    }
+
+    return {
+        status: "pending",
+        animalA,
+        animalB,
+        comparisonType: parsed.comparisonType
+    };
+}
+
+/** Shared by generateMetadata + page so reversed/unpublished slugs resolve once. */
+export async function getComparisonPageData(slug: string): Promise<ComparisonPageData> {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) return {status: "missing"};
+
+    const now = Date.now();
+    const existing = comparisonPageBySlug.get(normalized);
+    if (existing && existing.expiresAt > now) {
+        return existing.value;
+    }
+
+    const value = resolveComparisonPageDataOnce(normalized);
+    comparisonPageBySlug.set(normalized, {expiresAt: now + COMPARISON_PAGE_TTL_MS, value});
+    if (comparisonPageBySlug.size > 64) {
+        comparisonPageBySlug.forEach((entry, key) => {
+            if (entry.expiresAt <= now) comparisonPageBySlug.delete(key);
+        });
+    }
+    return value;
+}
+
 /**
  * Resolve a comparison page:
  * 1) static editorial (keeps existing SEO pages stable)
@@ -611,23 +698,34 @@ function scoreRelatedChallenge(current: ChallengeEntry, candidate: ChallengeEntr
     return sharedSpecies * 4 + sameComparisonType * 2 + sharedSystemsSpecies;
 }
 
-/** Related matchups across static + generated comparisons. */
+/** Related matchups without paging the entire comparison feed. */
 export async function getRelatedMergedChallenges(slug: string, limit = 4): Promise<ChallengeEntry[]> {
-    const allEntries = await listMergedChallengeEntries();
-    const current = allEntries.find((entry) => entry.slug === slug);
+    const current = await resolveReadyChallengeEntry(slug);
     if (!current) return [];
 
     const explicit: ChallengeEntry[] = [];
-    for (const relatedSlug of current.relatedChallengeSlugs || []) {
-        const hit = allEntries.find((entry) => entry.slug === relatedSlug)
-            ?? await fetchSpeciesComparisonBySlug(relatedSlug);
+    for (const relatedSlug of (current.relatedChallengeSlugs || []).slice(0, limit)) {
+        const hit = await resolveReadyChallengeEntry(relatedSlug);
         if (hit) explicit.push(hit);
     }
-    const explicitSlugs = new Set(explicit.map((entry) => entry.slug));
+    if (explicit.length >= limit) {
+        return explicit.slice(0, limit);
+    }
 
-    const scored = allEntries
-        .filter((entry) => entry.slug !== slug && !explicitSlugs.has(entry.slug))
-        .map((entry) => ({entry, score: scoreRelatedChallenge(current, entry)}))
+    const seen = new Set(explicit.map((entry) => entry.slug));
+    seen.add(current.slug);
+
+    const neighbors = await Promise.all([
+        fetchSpeciesComparisonsForAnimal(current.animalASlug, limit + 4),
+        fetchSpeciesComparisonsForAnimal(current.animalBSlug, limit + 4)
+    ]);
+    const scored = neighbors
+        .flat()
+        .filter((entry) => !seen.has(entry.slug))
+        .map((entry) => {
+            seen.add(entry.slug);
+            return {entry, score: scoreRelatedChallenge(current, entry)};
+        })
         .filter((item) => item.score > 0)
         .sort((left, right) =>
             right.score - left.score
