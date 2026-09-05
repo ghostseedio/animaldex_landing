@@ -7,6 +7,8 @@ import {fileURLToPath} from "node:url";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import animalSnapshot from "@/data/published-seo-animal-pages.json";
 import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
+import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
+import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {
     isCollapsedEnglishDetailPath,
     matchCollapsedIdDetailPath
@@ -39,6 +41,16 @@ test("published EN animal and lesson static params cover the slug index", () => 
     assert.match(pageData, /publishedSeoSlugs\.animals\.map/);
     assert.match(pageData, /getPublishedEnglishLessonStaticParams/);
     assert.match(pageData, /publishedSeoSlugs\.lessons\.map/);
+    assert.match(pageData, /getPublishedEnglishComparisonStaticParams/);
+    assert.ok((closedSeoNamespaceSlugs.comparisons ?? []).length >= 100);
+    assert.ok(
+        (closedSeoNamespaceSlugs.comparisons ?? []).includes("tiger-vs-lion"),
+        "editorial comparison slugs stay in the closed namespace"
+    );
+    assert.deepEqual(
+        comparisonSnapshot.entries.map((entry) => entry.slug),
+        [...comparisonSnapshot.entries.map((entry) => entry.slug)].sort((a, b) => a.localeCompare(b))
+    );
     assert.equal(isPublishedAnimalSlug("mata-mata"), true);
     assert.equal(isPublishedAnimalSlug("definitely-not-a-real-animaldex-slug"), false);
     assert.equal(isPublishedLessonSlug("osprey"), true);
@@ -53,8 +65,10 @@ test("stable SEO detail pages are static English SSG with dynamicParams=false", 
     const tierList = read("app/[locale]/(composited)/tier-list/[slug]/page.tsx");
     const legendary = read("app/[locale]/(composited)/legendary-earth-beasts/[slug]/page.tsx");
     const locations = read("app/[locale]/(composited)/locations/[slug]/page.tsx");
+    const comparisons = read("app/[locale]/(composited)/comparisons/[slug]/page.tsx");
+    const powers = read("app/[locale]/(composited)/qualities/[slug]/page.tsx");
 
-    for (const source of [animals, lessons, pokemon, hybrids, tierList, legendary, locations]) {
+    for (const source of [animals, lessons, pokemon, hybrids, tierList, legendary, locations, comparisons, powers]) {
         assert.match(source, /export const dynamicParams = false/);
         assert.match(source, /export const revalidate = false/);
         assert.match(source, /export function generateStaticParams/);
@@ -67,6 +81,8 @@ test("stable SEO detail pages are static English SSG with dynamicParams=false", 
     assert.match(tierList, /rankingPages\.flatMap/);
     assert.match(legendary, /legendaryEarthBeastEntries\.flatMap/);
     assert.match(locations, /locationPages\.flatMap/);
+    assert.match(comparisons, /getPublishedEnglishComparisonStaticParams/);
+    assert.match(powers, /getLocalPrincipleSlugs/);
 });
 
 test("unknown published-SEO slugs cannot invoke Supabase from the resolve path", () => {
@@ -122,6 +138,9 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.match(toggle, /collapsedEnglishDetail/);
     assert.match(link, /isCollapsedEnglishDetailPath/);
     assert.match(sitemap, /308 to English/);
+    assert.match(sitemap, /getLocalPrincipleSlugs/);
+    assert.match(sitemap, /published-seo-comparison-pages/);
+    assert.doesNotMatch(sitemap, /listMergedChallengeSitemapEntries/);
     assert.equal(isCollapsedEnglishDetailPath("/animals/tiger"), true);
     assert.equal(isCollapsedEnglishDetailPath("/animals"), false);
     assert.equal(isCollapsedEnglishDetailPath("/id/animals/tiger"), false);

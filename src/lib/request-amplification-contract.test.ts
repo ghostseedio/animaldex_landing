@@ -170,14 +170,24 @@ test("public species pages do not read the authenticated viewer on the server", 
     assert.match(growth, /includeAuthenticatedViewer/);
     assert.doesNotMatch(comparisonPage, /getViewerUserId/);
     assert.doesNotMatch(comparisonPage, /readGuestKey/);
-    assert.match(comparisonPage, /export const revalidate = 86400/);
+    assert.match(comparisonPage, /export const revalidate = false/);
+    assert.match(comparisonPage, /export const dynamicParams = false/);
     assert.match(comparisonPage, /generateStaticParams/);
+    assert.match(comparisonPage, /getPublishedEnglishComparisonStaticParams/);
     assert.match(comparisonPage, /getComparisonPageData/);
     assert.match(comparisonPage, /publishedStaticComparisonRedirectSlug/);
     assert.match(comparisonPage, /redirectPublishedReverse/);
+    assert.match(comparisonPage, /resolveLocalSpeciesStats/);
+    assert.match(comparisonPage, /getRelatedLocalChallenges/);
+    assert.match(comparisonPage, /EMPTY_VOTE_TALLY/);
     assert.doesNotMatch(comparisonPage, /resolveSpeciesArtworkFiles/);
     assert.doesNotMatch(comparisonPage, /getUnifiedSpeciesEntries/);
     assert.doesNotMatch(comparisonPage, /listMergedChallengeEntries/);
+    assert.doesNotMatch(comparisonPage, /fetchVoteTally/);
+    assert.doesNotMatch(comparisonPage, /fetchComparisonComments/);
+    assert.doesNotMatch(comparisonPage, /resolveSpeciesStats\(/);
+    assert.doesNotMatch(comparisonPage, /getResolvedSpeciesBySlug/);
+    assert.doesNotMatch(comparisonPage, /getRelatedMergedChallenges/);
     assert.equal(existsSync(join(root, "app/[locale]/(composited)/comparisons/[slug]/loading.tsx")), false);
     assert.match(read("data/comparison-animals.ts"), /getResolvedSpeciesBySlug/);
     assert.doesNotMatch(read("data/comparison-animals.ts"), /getUnifiedSpeciesEntries/);
@@ -190,7 +200,15 @@ test("public species pages do not read the authenticated viewer on the server", 
         /getUnifiedSpeciesEntries|getIndex\(/
     );
     assert.match(read("data/species-comparisons.ts"), /export async function getComparisonPageData/);
-    assert.match(read("data/species-comparisons.ts"), /reversedStatic/);
+    assert.match(read("data/species-comparisons.ts"), /getLocalReadyChallenge/);
+    assert.match(read("data/species-comparisons.ts"), /getSnapshotComparisonBySlug/);
+    assert.doesNotMatch(
+        read("data/species-comparisons.ts").slice(
+            read("data/species-comparisons.ts").indexOf("async function resolveComparisonPageDataOnce"),
+            read("data/species-comparisons.ts").indexOf("export async function getComparisonPageData")
+        ),
+        /fetchSpeciesComparisonBySlug|findComparableAnimal|status: "pending"/
+    );
     assert.doesNotMatch(
         read("data/species-comparisons.ts").slice(
             read("data/species-comparisons.ts").indexOf("export async function getRelatedMergedChallenges"),

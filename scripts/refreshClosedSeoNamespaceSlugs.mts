@@ -6,7 +6,7 @@
  * Hooked from `yarn refresh:published-seo`. Do NOT add to Next prebuild.
  */
 
-import {writeFileSync} from "node:fs";
+import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {animalHybridEntries} from "../src/data/animal-hybrids.ts";
@@ -31,14 +31,18 @@ const hybrids = animalHybridEntries
     .sort((left, right) => left.localeCompare(right));
 
 const powers = getLocalPrincipleSlugs();
+const existingComparisons = existsSync(outputPath)
+    ? (JSON.parse(readFileSync(outputPath, "utf8")).comparisons ?? [])
+    : [];
 
 writeFileSync(outputPath, `${JSON.stringify({
     generatedAt: new Date().toISOString().slice(0, 10),
-    source: "local pokemon-animal-counterparts + animal-hybrids + species-behavior-lessons",
+    source: "local pokemon-animal-counterparts + animal-hybrids + species-behavior-lessons + comparison snapshot",
     note: "Used by Edge middleware to close static SEO namespaces. Refresh with yarn refresh:published-seo.",
     pokemon,
     hybrids,
-    powers
+    powers,
+    comparisons: existingComparisons
 }, null, 2)}\n`);
 
 console.log(`wrote ${outputPath}`);

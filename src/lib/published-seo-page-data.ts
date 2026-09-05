@@ -1,8 +1,11 @@
+import type {ChallengeEntry} from "@/data/challenges";
 import type {SpeciesBehaviorLesson} from "@/data/species-behavior-lessons";
 import type {SpeciesEntry} from "@/data/species";
 import animalSnapshot from "@/data/published-seo-animal-pages.json";
 import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
+import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
+import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 
 type SnapshotFile<T> = {
     generatedAt: string;
@@ -19,6 +22,10 @@ const snapshotAnimalsBySlug = new Map(
 );
 const snapshotLessonsBySlug = new Map(
     lessonPages.entries.map((entry) => [entry.slug, entry] as const)
+);
+const comparisonPages = comparisonSnapshot as SnapshotFile<ChallengeEntry>;
+const snapshotComparisonsBySlug = new Map(
+    comparisonPages.entries.map((entry) => [entry.slug, entry] as const)
 );
 
 export function getSnapshotSpeciesBySlug(slug: string) {
@@ -47,6 +54,16 @@ export function getPublishedEnglishLessonStaticParams() {
     return publishedSeoSlugs.lessons.map((slug) => ({locale: "en", slug}));
 }
 
+export function getSnapshotComparisonBySlug(slug: string) {
+    const normalized = slug.trim().toLowerCase();
+    return snapshotComparisonsBySlug.get(normalized) ?? null;
+}
+
+export function getPublishedEnglishComparisonStaticParams() {
+    const slugs = closedSeoNamespaceSlugs.comparisons ?? [];
+    return slugs.map((slug) => ({locale: "en", slug}));
+}
+
 export function getPublishedSeoSnapshotMeta() {
     return {
         animals: {
@@ -58,6 +75,11 @@ export function getPublishedSeoSnapshotMeta() {
             generatedAt: lessonPages.generatedAt,
             source: lessonPages.source,
             count: lessonPages.entries.length
+        },
+        comparisons: {
+            generatedAt: comparisonPages.generatedAt,
+            source: comparisonPages.source,
+            count: comparisonPages.entries.length
         }
     };
 }

@@ -16,7 +16,7 @@
     "test": "tsx --test src/lib/**/*.test.ts",
     "audit:public-cache": "node scripts/audit-public-cache.mjs",
     "refresh:published-seo-slugs": "node scripts/refreshPublishedSeoSlugs.mjs",
-    "refresh:published-seo": "node scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts",
+    "refresh:published-seo": "node scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts && tsx scripts/refreshPublishedSeoComparisons.mts",
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",

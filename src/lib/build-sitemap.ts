@@ -7,13 +7,14 @@ import {collectorPages} from "@/data/collector-pages";
 import {getManagedBlogPosts, getManagedPages} from "@/lib/admin-content";
 import {answerPages} from "@/data/answer-pages";
 import {challengeEntries} from "@/data/challenges";
-import {listMergedChallengeSitemapEntries} from "@/data/species-comparisons";
+import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
+import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
 import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalGenerations} from "@/data/pokemon-animal-counterparts";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
-import {getBehaviorLessonIndex, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
+import {getBehaviorLessonIndex, getLocalPrincipleSlugs, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getSitemapSpeciesEntries} from "@/data/database-species-pages";
 import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
@@ -23,16 +24,33 @@ import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 
-async function getSitemapChallengeEntries() {
-    try {
-        return await listMergedChallengeSitemapEntries();
-    } catch (error) {
-        console.error("Unable to load generated species comparisons for sitemap. Falling back to static entries.", error);
-        return challengeEntries.map((entry) => ({
+function getSitemapChallengeEntries() {
+    const allow = new Set(closedSeoNamespaceSlugs.comparisons ?? []);
+    const bySlug = new Map<string, {slug: string; updatedAt: string}>();
+
+    for (const entry of challengeEntries) {
+        if (allow.size > 0 && !allow.has(entry.slug)) {
+            continue;
+        }
+        bySlug.set(entry.slug, {
             slug: entry.slug,
             updatedAt: entry.updatedAt || entry.publishedAt
-        }));
+        });
     }
+
+    for (const entry of comparisonSnapshot.entries as Array<{slug: string; updatedAt?: string; publishedAt?: string}>) {
+        if (allow.size > 0 && !allow.has(entry.slug)) {
+            continue;
+        }
+        if (!bySlug.has(entry.slug)) {
+            bySlug.set(entry.slug, {
+                slug: entry.slug,
+                updatedAt: entry.updatedAt || entry.publishedAt || "2026-09-06"
+            });
+        }
+    }
+
+    return Array.from(bySlug.values());
 }
 
 export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
@@ -71,7 +89,13 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         // indexing of /id copies of English article bodies; those detail URLs
         // 308 to English and must not appear in hreflang.
         if (locale !== localeConfig.defaultLocale) {
-            return [{url: getAbsoluteUrl(locale)}];
+            return [
+                {url: getAbsoluteUrl(locale)},
+                {url: getAbsoluteUrl(locale, "/powers")},
+                ...getLocalPrincipleSlugs().map((slug) => ({
+                    url: getAbsoluteUrl(locale, `/powers/${slug}`)
+                }))
+            ];
         }
 
         const staticEntries: MetadataRoute.Sitemap = [

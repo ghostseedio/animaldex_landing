@@ -44,7 +44,7 @@ function stripLocalePrefix(href: string) {
 
 function isDynamicPublicSeoDetailHref(href: string) {
     const path = stripLocalePrefix(href).split("?")[0]?.split("#")[0] ?? href;
-    return /^\/(comparisons|powers|p)\/[a-z0-9-]+\/?$/i.test(path);
+    return /^\/p\/[a-z0-9-]+\/?$/i.test(path);
 }
 
 function localizeHref(href: string, locale: string) {

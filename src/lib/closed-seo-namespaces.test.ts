@@ -21,6 +21,7 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
     assert.equal(isClosedSeoNamespaceFamily("pokemon-animals"), true);
     assert.equal(isClosedSeoNamespaceFamily("animal-hybrids"), true);
     assert.equal(isClosedSeoNamespaceFamily("powers"), true);
+    assert.equal(isClosedSeoNamespaceFamily("comparisons"), true);
     assert.equal(isClosedSeoNamespaceFamily("blog"), false);
 
     assert.deepEqual(resolveClosedSeoNamespacePath("/animals/mata-mata"), {
@@ -73,7 +74,19 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
         slug: "resilience"
     });
     assert.equal(resolveClosedSeoNamespacePath("/blog/animal-symbolism"), null);
-    assert.equal(resolveClosedSeoNamespacePath("/comparisons/aardwolf-vs-nurse-shark"), null);
+    assert.deepEqual(resolveClosedSeoNamespacePath("/comparisons/tiger-vs-lion"), {
+        action: "allow",
+        reason: "published",
+        family: "comparisons",
+        slug: "tiger-vs-lion"
+    });
+    assert.deepEqual(resolveClosedSeoNamespacePath("/comparisons/definitely-not-real-928341"), {
+        action: "block",
+        reason: "unknown-slug",
+        family: "comparisons",
+        slug: "definitely-not-real-928341"
+    });
+    assert.equal(resolveClosedSeoNamespacePath("/comparisons")?.action, "allow");
     assert.equal(resolveClosedSeoNamespacePath("/animals/tiger/extra")?.action, "block");
 });
 
@@ -82,6 +95,8 @@ test("closed SEO slug index covers local Pokemon and hybrid catalogs", () => {
     assert.ok(closedSeoNamespaceSlugs.hybrids.length >= 500);
     assert.equal(isPublishedClosedSeoSlug("powers", "resilience"), true);
     assert.equal(isPublishedClosedSeoSlug("powers", "definitely-not-real-928341"), false);
+    assert.equal(isPublishedClosedSeoSlug("comparisons", "tiger-vs-lion"), true);
+    assert.equal(isPublishedClosedSeoSlug("comparisons", "definitely-not-real-928341"), false);
     assert.equal(isPublishedClosedSeoSlug("pokemon-animals", "naganadel"), true);
     assert.equal(isPublishedClosedSeoSlug("animal-hybrids", "zebra-rhino-hybrid"), true);
     assert.equal(isPublishedClosedSeoSlug("pokemon-animals", "definitely-not-real-928341"), false);

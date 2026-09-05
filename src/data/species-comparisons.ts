@@ -8,6 +8,7 @@ import type {
     ChallengeStatCategory
 } from "@/data/challenges";
 import {getChallenge as getStaticChallenge, isChallengeComparisonType} from "@/data/challenges";
+import {getSnapshotComparisonBySlug} from "@/lib/published-seo-page-data";
 import type {SystemsIntelligenceEntry} from "@/data/content-schema";
 import type {SpeciesEntry} from "@/data/species";
 import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-animals";
@@ -298,6 +299,37 @@ export async function fetchSpeciesComparisonBySlug(slug: string): Promise<Challe
 const FEED_PAGE_SIZE = 100;
 const FEED_HARD_CAP = 2000;
 
+/** Operator snapshot refresh only. Do not call from crawler SEO render. */
+export async function fetchAllReadySpeciesComparisonEntries(): Promise<ChallengeEntry[]> {
+    const config = getReadConfig();
+    if (!config) return [];
+
+    const collected: ChallengeEntry[] = [];
+    let offset = 0;
+
+    while (offset < FEED_HARD_CAP) {
+        const url = new URL(`${config.supabaseUrl}/rest/v1/species_comparisons`);
+        url.searchParams.set("select", "*");
+        url.searchParams.set("generation_status", "eq.ready");
+        url.searchParams.set("order", "published_at.desc");
+        url.searchParams.set("limit", String(FEED_PAGE_SIZE));
+        url.searchParams.set("offset", String(offset));
+
+        const response = await fetch(url, {
+            headers: getSupabaseHeaders(config.key)
+        });
+        if (!response.ok) break;
+
+        const rows = (await response.json()) as SpeciesComparisonRow[];
+        if (!rows.length) break;
+        collected.push(...rows.map(mapSpeciesComparisonRowToChallengeEntry));
+        if (rows.length < FEED_PAGE_SIZE) break;
+        offset += FEED_PAGE_SIZE;
+    }
+
+    return collected;
+}
+
 export type SpeciesComparisonSummary = {
     id: string;
     slug: string;
@@ -485,7 +517,7 @@ export function isGeneratedComparisonHeroImage(src: string | null | undefined) {
  * `/api/comparisons/generate` instead.
  */
 export async function resolveReadyChallengeEntry(slug: string): Promise<ChallengeEntry | null> {
-    return getStaticChallenge(slug) ?? (await fetchSpeciesComparisonBySlug(slug));
+    return getStaticChallenge(slug) ?? getSnapshotComparisonBySlug(slug);
 }
 
 export type ComparisonPageData =
@@ -497,56 +529,22 @@ export type ComparisonPageData =
 const COMPARISON_PAGE_TTL_MS = 15_000;
 const comparisonPageBySlug = new Map<string, {expiresAt: number; value: Promise<ComparisonPageData>}>();
 
+function getLocalReadyChallenge(slug: string) {
+    return getStaticChallenge(slug) ?? getSnapshotComparisonBySlug(slug);
+}
+
 async function resolveComparisonPageDataOnce(slug: string): Promise<ComparisonPageData> {
-    const staticReady = getStaticChallenge(slug);
-    if (staticReady) {
-        return {status: "ready", challenge: staticReady};
-    }
-
-    const reversedSlug = reversedComparisonSlug(slug);
-    if (reversedSlug) {
-        const reversedStatic = getStaticChallenge(reversedSlug);
-        if (reversedStatic) {
-            return {status: "redirect", slug: reversedSlug};
-        }
-    }
-
-    const ready = await fetchSpeciesComparisonBySlug(slug);
+    const ready = getLocalReadyChallenge(slug);
     if (ready) {
         return {status: "ready", challenge: ready};
     }
 
-    if (reversedSlug) {
-        const reversedReady = await fetchSpeciesComparisonBySlug(reversedSlug);
-        if (reversedReady) {
-            return {status: "redirect", slug: reversedSlug};
-        }
+    const reversedSlug = reversedComparisonSlug(slug);
+    if (reversedSlug && getLocalReadyChallenge(reversedSlug)) {
+        return {status: "redirect", slug: reversedSlug};
     }
 
-    const parsed = parseComparisonSlug(slug);
-    if (!parsed || parsed.animalASlug === parsed.animalBSlug) {
-        return {status: "missing"};
-    }
-
-    const [animalA, animalB] = await Promise.all([
-        findComparableAnimal(parsed.animalASlug),
-        findComparableAnimal(parsed.animalBSlug)
-    ]);
-    if (!animalA || !animalB || animalA.slug === animalB.slug) {
-        return {status: "missing"};
-    }
-
-    const unpublishedCanonicalSlug = canonicalUnpublishedComparisonSlug(slug);
-    if (unpublishedCanonicalSlug && unpublishedCanonicalSlug !== slug) {
-        return {status: "redirect", slug: unpublishedCanonicalSlug};
-    }
-
-    return {
-        status: "pending",
-        animalA,
-        animalB,
-        comparisonType: parsed.comparisonType
-    };
+    return {status: "missing"};
 }
 
 /** Shared by generateMetadata + page so reversed/unpublished slugs resolve once. */
@@ -696,6 +694,18 @@ function scoreRelatedChallenge(current: ChallengeEntry, candidate: ChallengeEntr
         ).length;
 
     return sharedSpecies * 4 + sameComparisonType * 2 + sharedSystemsSpecies;
+}
+
+export function getRelatedLocalChallenges(slug: string, limit = 4): ChallengeEntry[] {
+    const current = getLocalReadyChallenge(slug);
+    if (!current) return [];
+
+    const related: ChallengeEntry[] = [];
+    for (const relatedSlug of (current.relatedChallengeSlugs || []).slice(0, limit)) {
+        const hit = getLocalReadyChallenge(relatedSlug);
+        if (hit) related.push(hit);
+    }
+    return related;
 }
 
 /** Related matchups without paging the entire comparison feed. */

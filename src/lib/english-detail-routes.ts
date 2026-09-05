@@ -13,7 +13,8 @@ export const CLOSED_SEO_NAMESPACE_FAMILIES = [
     "animal-lessons",
     "pokemon-animals",
     "animal-hybrids",
-    "powers"
+    "powers",
+    "comparisons"
 ] as const;
 
 // Only untranslated article bodies may 308 to English. /powers keeps /id

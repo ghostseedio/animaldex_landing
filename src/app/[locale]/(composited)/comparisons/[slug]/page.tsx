@@ -16,20 +16,20 @@ import ComparisonVotePanel from "@/app/[locale]/(composited)/comparisons/[slug]/
 import ComparisonComments from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-comments";
 import {
     COMMENT_MAX_LENGTH,
-    fetchComparisonComments,
-    fetchVoteTally
+    EMPTY_VOTE_TALLY,
+    type ComparisonComment
 } from "@/data/comparison-engagement";
 import {
     buildComparisonSpeciesFallback,
     getComparisonPageData,
-    getRelatedMergedChallenges
+    getRelatedLocalChallenges
 } from "@/data/species-comparisons";
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
-import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
-import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
+import {getBattleTier, resolveLocalSpeciesStats} from "@/data/species-stats";
 import {publishedStaticComparisonRedirectSlug} from "@/lib/comparison-redirect";
+import {getPublishedEnglishComparisonStaticParams} from "@/lib/published-seo-page-data";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
@@ -43,13 +43,11 @@ function redirectPublishedReverse(locale: string, slug: string) {
 
 type Props = {params: {locale: string; slug: string}};
 
-export const revalidate = 86400;
-export const dynamicParams = true;
+export const revalidate = false;
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return [
-        {locale: "en", slug: "tiger-vs-lion"}
-    ];
+    return getPublishedEnglishComparisonStaticParams();
 }
 
 type ComparisonSpecies = SpeciesEntry & {hasCatalogPage: boolean};
@@ -58,7 +56,7 @@ async function resolveComparisonSpecies(
     slug: string,
     displayName?: string | null
 ): Promise<ComparisonSpecies> {
-    const resolved = getSpeciesBySlug(slug) ?? await getResolvedSpeciesBySlug(slug);
+    const resolved = getSpeciesBySlug(slug);
     if (resolved) {
         return {...resolved, hasCatalogPage: true};
     }
@@ -163,10 +161,8 @@ export default async function ComparisonDetailPage({params}: Props) {
         resolveComparisonSpecies(challenge.animalBSlug, challenge.animalBDisplayName)
     ]);
 
-    const [animalAStatsResult, animalBStatsResult] = await Promise.all([
-        resolveSpeciesStats(animalA.slug, animalA),
-        resolveSpeciesStats(animalB.slug, animalB)
-    ]);
+    const animalAStatsResult = resolveLocalSpeciesStats(animalA);
+    const animalBStatsResult = resolveLocalSpeciesStats(animalB);
     const animalABattleTier = animalAStatsResult.stats ? getBattleTier(animalAStatsResult.stats) : null;
     const animalBBattleTier = animalBStatsResult.stats ? getBattleTier(animalBStatsResult.stats) : null;
 
@@ -179,7 +175,7 @@ export default async function ComparisonDetailPage({params}: Props) {
     const confidence = winner ? Math.min(94, 66 + Math.round((Math.max(aWins, bWins) / Math.max(1, decisiveScenarios.length)) * 26)) : 55;
     const readMinutes = getReadMinutes([challenge.description, challenge.quickVerdict, ...challenge.shortAnswer, ...challenge.whyThisMatchupIsInteresting, ...challenge.statCategories.flatMap((item) => [item.animalAValue, item.animalBValue, item.takeaway]), ...challenge.scenarioBreakdown.flatMap((item) => [item.verdict, item.explanation]), ...challenge.finalTake, ...challenge.faq.flatMap((item) => [item.question, item.answer])]);
 
-    const relatedSource = await getRelatedMergedChallenges(challenge.slug, 4);
+    const relatedSource = getRelatedLocalChallenges(challenge.slug, 4);
     const relatedChallenges = relatedSource.flatMap((entry) => {
         const relatedA = getSpeciesBySlug(entry.animalASlug);
         const relatedB = getSpeciesBySlug(entry.animalBSlug);
@@ -209,10 +205,8 @@ export default async function ComparisonDetailPage({params}: Props) {
             entry
         }));
 
-    const [voteTally, comments] = await Promise.all([
-        fetchVoteTally(challenge.slug).catch(() => ({animalAVotes: 0, animalBVotes: 0, totalVotes: 0})),
-        fetchComparisonComments(challenge.slug).catch(() => [])
-    ]);
+    const voteTally = EMPTY_VOTE_TALLY;
+    const comments: ComparisonComment[] = [];
 
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
     const schemas = [

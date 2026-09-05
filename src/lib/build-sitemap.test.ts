@@ -29,9 +29,19 @@ test("serializeSitemapXml escapes loc values", () => {
     assert.doesNotMatch(xml, /q=bird&tier/);
 });
 
-test("sitemap asks Google to index the Indonesian homepage only, not English /id copies", () => {
+test("sitemap indexes the Indonesian homepage and localized powers, not English /id copies", () => {
     const source = readFileSync(join(repoRoot, "src/lib/build-sitemap.ts"), "utf8");
+    const idBranch = source.slice(
+        source.indexOf("if (locale !== localeConfig.defaultLocale)"),
+        source.indexOf("const staticEntries")
+    );
 
-    assert.match(source, /locale !== localeConfig\.defaultLocale/);
-    assert.match(source, /return \[\{url: getAbsoluteUrl\(locale\)\}\]/);
+    assert.match(idBranch, /getAbsoluteUrl\(locale\)/);
+    assert.match(idBranch, /getAbsoluteUrl\(locale, "\/powers"\)/);
+    assert.match(idBranch, /getLocalPrincipleSlugs/);
+    assert.doesNotMatch(idBranch, /\/comparisons\//);
+    assert.doesNotMatch(idBranch, /\/animals\//);
+    assert.doesNotMatch(idBranch, /\/animal-lessons\//);
+    assert.match(source, /published-seo-comparison-pages/);
+    assert.doesNotMatch(source, /listMergedChallengeSitemapEntries/);
 });
