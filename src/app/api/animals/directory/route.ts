@@ -9,7 +9,6 @@ import {
     isSpeciesDirectorySort,
     isSpeciesDirectorySortOrder,
     isSpeciesDirectoryTierFilter,
-    speciesEntries,
     type SpeciesRarityStatusKey
 } from "@/data/species";
 import {getAppCaptures} from "@/data/authenticated-app";
@@ -49,7 +48,7 @@ export async function GET(request: Request) {
     const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const page = Number.parseInt(getSingleParam(url.searchParams.get("page")) || "1", 10);
 
-    const catalogEntries = signedIn ? await getUnifiedSpeciesEntries() : speciesEntries;
+    const catalogEntries = await getUnifiedSpeciesEntries();
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
@@ -64,9 +63,7 @@ export async function GET(request: Request) {
     });
     const [captures, directoryImageState] = await Promise.all([
         signedIn ? getAppCaptures() : Promise.resolve([]),
-        signedIn
-            ? buildSpeciesDirectoryImageState(directoryPage.entries)
-            : Promise.resolve(new Map(directoryPage.entries.map((entry) => [entry.slug, {hasPublicCapture: false, captureId: null}])))
+        buildSpeciesDirectoryImageState(directoryPage.entries)
     ]);
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [

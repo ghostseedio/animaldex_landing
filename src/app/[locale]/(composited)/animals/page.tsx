@@ -296,11 +296,14 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                     locale={locale}
                     initialQuery={query}
                     directoryFilterPath={getLocalePath(locale, "/animals")}
-                    catalogEntries={speciesEntries.slice(0, 400).map((entry) => ({
-                        slug: entry.slug,
-                        name: entry.name,
-                        animalDexNumber: getAnimalDexNumberFromEntry(entry)
-                    }))}
+                    catalogEntries={speciesEntries
+                        .filter((entry) => !getLegendaryEarthBeast(entry.slug))
+                        .slice(0, 400)
+                        .map((entry) => ({
+                            slug: entry.slug,
+                            name: entry.name,
+                            animalDexNumber: getAnimalDexNumberFromEntry(entry)
+                        }))}
                     trending={hubTrendingSearches}
                     copy={{
                         placeholder: ts("placeholder"),

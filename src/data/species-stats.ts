@@ -281,8 +281,22 @@ export function buildDeterministicCanonicalStats(entry: SpeciesEntry): SpeciesSt
         intelligence -= 4;
     }
 
-    if (hasKeyword(/apex|predator|hunter|ambush|venom|fang|claw|talon|stalk|kills/)) {
+    const isDiggingClaw = hasKeyword(/digging claw|burrowing claw|digging foreclaw|root-snuff|leaf-litter root/);
+    const isGentleProfile = hasKeyword(/herbivore|insectivore|gentle|shy|timid|docile|burrow|browser|grazer|filter feed|flightless|glider|pangolin|bilby|kakapo|anteater|aardvark|bandicoot|quenda|tortoise|basking|manatee|sloth|koala|fruit-and-insect|root-snuff|insect-eating drill|armored curling|floating tree-shadow|bamboo-feed|bamboo stem|bamboo shoot|panda|peafowl|peacock|swan|pelican|condor|stork|butterfly|moth|dragonfly|whip scorpion|wheel bug|praying mantis|water bug|flying frog|sea turtle|domestic worldwide|felis catus|home, garden|companion|peaceful simple|slow deliberate|soft-footed ambush pouncer/);
+
+    if (hasKeyword(/apex|predator|hunter|ambush|venom|fang|talon|stalk|kills/) && !isDiggingClaw && !isGentleProfile) {
         dominance += 18;
+    } else if (hasKeyword(/claw|talon/) && !isDiggingClaw && !isGentleProfile) {
+        dominance += 8;
+    }
+
+    if (isGentleProfile) {
+        dominance -= 18;
+        size -= 6;
+    }
+
+    if (isDiggingClaw) {
+        dominance -= 10;
     }
 
     if (hasKeyword(/fast|swift|speed|quick|sprint|dart|dive|leap|glide|soar|arrow|torpedo/)) {

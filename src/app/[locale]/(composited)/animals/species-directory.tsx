@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
-import {usePathname} from "next/navigation";
+import {usePathname, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
@@ -87,20 +87,6 @@ function parseDirectorySearch(search: string) {
         : getDefaultSpeciesDirectorySortOrder(sort)) as SpeciesDirectorySortOrder;
     const tier = (params.get("tier")?.trim().toUpperCase() || "all") as SpeciesDirectoryTierFilter;
     return {query, letter, region, location, status, sort, order, tier};
-}
-
-function directoryHasQueryFilters(search: string) {
-    const filters = parseDirectorySearch(search);
-    return Boolean(
-        filters.query
-        || filters.letter !== "all"
-        || filters.region !== "all"
-        || filters.location !== "all"
-        || filters.status !== "all"
-        || filters.sort !== "number"
-        || filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)
-        || filters.tier !== "all"
-    );
 }
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -402,6 +388,8 @@ export default function SpeciesDirectory({
     copy
 }: SpeciesDirectoryProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const directorySearchKey = searchParams.toString();
     const defaultOrder = getDefaultSpeciesDirectorySortOrder(currentSort);
     const [locationFilterOpen, setLocationFilterOpen] = useState(currentRegion !== "all");
     const [filtersOpen, setFiltersOpen] = useState(
@@ -424,6 +412,7 @@ export default function SpeciesDirectory({
     const [loadError, setLoadError] = useState<string | null>(null);
     const [overrideFilters, setOverrideFilters] = useState<ReturnType<typeof parseDirectorySearch> | null>(null);
     const loadMoreLockRef = useRef(false);
+    const directoryRequestIdRef = useRef(0);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const activeQuery = overrideFilters?.query ?? currentQuery;
     const activeLetter = overrideFilters?.letter ?? currentLetter;
@@ -460,9 +449,13 @@ export default function SpeciesDirectory({
         setTotalCount(total);
         setLoadError(null);
         loadMoreLockRef.current = false;
+        directoryRequestIdRef.current += 1;
     }, [filterKey, speciesEntries, capturedSpecies, speciesImages, publicCaptureSpecies, currentPage, totalPages, total]);
 
     const applyDirectoryFilters = useCallback(async (filters: ReturnType<typeof parseDirectorySearch>) => {
+        const requestId = directoryRequestIdRef.current + 1;
+        directoryRequestIdRef.current = requestId;
+        loadMoreLockRef.current = true;
         const params = new URLSearchParams();
         if (filters.query.trim()) params.set("q", filters.query.trim());
         if (filters.letter !== "all") params.set("letter", filters.letter);
@@ -474,39 +467,45 @@ export default function SpeciesDirectory({
         if (filters.tier !== "all") params.set("tier", filters.tier);
         params.set("page", "1");
 
-        const response = await fetch(`/api/animals/directory?${params.toString()}`);
-        if (!response.ok) {
-            throw new Error(`Failed to load animals (${response.status})`);
-        }
+        try {
+            const response = await fetch(`/api/animals/directory?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load animals (${response.status})`);
+            }
 
-        const payload = await response.json() as DirectoryPageResponse;
-        setEntries(payload.entries);
-        setCapturedState(payload.capturedSpecies);
-        setSpeciesImageState(payload.speciesImages);
-        setPublicCaptureState(payload.publicCaptureSpecies);
-        setPage(payload.currentPage);
-        setPageCount(payload.totalPages);
-        setTotalCount(payload.total);
-        setLoadError(null);
-        loadMoreLockRef.current = false;
+            const payload = await response.json() as DirectoryPageResponse;
+            if (requestId !== directoryRequestIdRef.current) {
+                return;
+            }
+            setEntries(payload.entries);
+            setCapturedState(payload.capturedSpecies);
+            setSpeciesImageState(payload.speciesImages);
+            setPublicCaptureState(payload.publicCaptureSpecies);
+            setPage(payload.currentPage);
+            setPageCount(payload.totalPages);
+            setTotalCount(payload.total);
+            setLoadError(null);
+        } finally {
+            if (requestId === directoryRequestIdRef.current) {
+                loadMoreLockRef.current = false;
+            }
+        }
     }, []);
 
     useEffect(() => {
-        if (typeof window === "undefined" || !directoryHasQueryFilters(window.location.search)) {
-            return;
-        }
-        const filters = parseDirectorySearch(window.location.search);
+        const filters = parseDirectorySearch(directorySearchKey ? `?${directorySearchKey}` : "");
         setOverrideFilters(filters);
         void applyDirectoryFilters(filters).catch((error) => {
             setLoadError(error instanceof Error ? error.message : "Failed to load animals");
         });
-    }, [applyDirectoryFilters]);
+    }, [applyDirectoryFilters, directorySearchKey]);
 
     const hasMore = page < pageCount;
 
     const loadMore = useCallback(async () => {
         if (loadMoreLockRef.current || isLoadingMore || !hasMore) return;
 
+        const requestId = directoryRequestIdRef.current;
         loadMoreLockRef.current = true;
         setIsLoadingMore(true);
         setLoadError(null);
@@ -529,6 +528,9 @@ export default function SpeciesDirectory({
             }
 
             const payload = await response.json() as DirectoryPageResponse;
+            if (requestId !== directoryRequestIdRef.current) {
+                return;
+            }
             setEntries((current) => {
                 const seen = new Set(current.map((entry) => entry.slug));
                 return [...current, ...payload.entries.filter((entry) => !seen.has(entry.slug))];
@@ -540,10 +542,15 @@ export default function SpeciesDirectory({
             setPageCount(payload.totalPages);
             setTotalCount(payload.total);
         } catch (error) {
+            if (requestId !== directoryRequestIdRef.current) {
+                return;
+            }
             setLoadError(error instanceof Error ? error.message : "Failed to load more animals");
         } finally {
-            setIsLoadingMore(false);
-            loadMoreLockRef.current = false;
+            if (requestId === directoryRequestIdRef.current) {
+                setIsLoadingMore(false);
+                loadMoreLockRef.current = false;
+            }
         }
     }, [
         activeLetter,

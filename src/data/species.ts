@@ -4163,10 +4163,14 @@ export function getSpeciesDirectoryPage({
             return false;
         }
 
+        const isLegendary = Boolean(getLegendaryEarthBeast(entry.slug));
+
         if (normalizedTier === "S") {
-            if (!getLegendaryEarthBeast(entry.slug)) {
+            if (!isLegendary) {
                 return false;
             }
+        } else if (isLegendary) {
+            return false;
         } else if (normalizedTier !== "all") {
             if (getDirectoryBattleTier(entry) !== normalizedTier) {
                 return false;

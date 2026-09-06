@@ -23,11 +23,12 @@ test("anonymous species images use public artwork instead of a Function per card
     assert.doesNotMatch(images, /getDatabaseSpeciesBySlug|getSpeciesRepresentativeImageReference/);
 });
 
-test("anonymous animals directory does not walk the live catalog or cookies", () => {
+test("anonymous animals directory enriches tiles from cached catalog without cookies", () => {
     const directory = read("app/api/animals/directory/route.ts");
 
     assert.match(directory, /requestHasSupabaseAuthCookie/);
-    assert.match(directory, /speciesEntries/);
+    assert.match(directory, /getUnifiedSpeciesEntries/);
+    assert.match(directory, /buildSpeciesDirectoryImageState/);
     assert.match(directory, /s-maxage=3600/);
     assert.doesNotMatch(directory, /force-dynamic/);
     assert.doesNotMatch(directory, /cookies\(/);

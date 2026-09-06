@@ -1,4 +1,5 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
+import {isLegendaryEarthBeastSpeciesSlug} from "@/data/legendary-earth-beasts";
 import {buildDeterministicCanonicalStats, SpeciesStats} from "@/data/species-stats";
 import {speciesEntries, SpeciesEntry} from "@/data/species";
 
@@ -1636,6 +1637,64 @@ function keywordBoost(entry: SpeciesEntry, pattern: RegExp, amount: number) {
     return textMatches(entry, pattern) ? amount : 0;
 }
 
+function isGentleOrLowThreatSpecies(entry: SpeciesEntry) {
+    return textMatches(entry, /herbivore|insectivore|frugivore|granivore|folivore|gentle|shy|timid|docile|peaceful|harmless|filter feed|plankton|browser|browsing|grazer|burrower|flightless parrot|glider|pangolin|bilby|kakapo|anteater|tamandua|aardvark|bandicoot|quenda|muntjac|duiker|tortoise|manatee|dugong|basking shark|whale shark|sloth|koala|deer|antelope|gazelle|rabbit|hare|rodent|squirrel|pigeon|dove|finch|warbler|tarpon|anglerfish|water scorpion|cannibalfly|assassin bug|softshell turtle|mata mata|tiny hunter|lion tamarin|marmoset|tamarin|fruit-and-insect|root-snuff|leaf-litter root|insect-eating drill|armored curling|floating tree-shadow|seed eat|leaf eat|nocturnal forag|bamboo-feed|bamboo stem|bamboo shoot|panda|peafowl|peacock|swan|pelican|condor|stork|butterfly|moth|dragonfly|songbird|whip scorpion|wheel bug|praying mantis|water bug|atlas moth|owl butterfly|flying frog|sea turtle|hawksbill|domestic worldwide|felis catus|home, garden|farmyard|companion|wetland signal|seed-eating|fruit-eating|nectar|pollinat|filter-feed|plankton-feed|algae-feed|herb-feed|plant-feed|low-energy diet|slow deliberate|peaceful simple|soft-footed ambush pouncer|guineafowl|curassow|bird-of-paradise|display bird|ground runner|ground-running|hornbill|basilisk lizard|drill monkey|argus pheasant|leaf-litter camouflage|forest-floor courtship|shape-changing dance|display plumage|ornamental flank|lek behavior/);
+}
+
+function hasLethalThreatSignal(entry: SpeciesEntry) {
+    return textMatches(entry, /venom|venomous|fatal|deadly|mamba|cobra|viper|rattlesnake|taipan|box jelly|stonefish|lionfish|pufferfish|cone snail|scorpion|stingray|poison|toxic|man-eater|man-eating|apex predator|top predator|ambush predator|saltwater crocodile|nile crocod|komodo|hippopotamus|great white|bull shark|tiger shark|polar bear|grizzly|black bear|brown bear|sloth bear|lion|tiger|leopard|jaguar|hyena|wolverine|orca|gila monster|pit viper|boomslang|bushmaster|anaconda|python|monitor lizard|caiman|alligator|crocodile|rhinoceros|buffalo|bison|charging|gore|crushing bite|ambush hunt|stalks prey|kills prey|predatory attack|snapping turtle/);
+}
+
+function getDangerCategoryScore(stats: SpeciesStats, entry: SpeciesEntry) {
+    const lethalBoost = keywordBoost(entry, /venom|venomous|fatal|deadly|mamba|cobra|viper|rattlesnake|taipan|box jelly|stonefish|lionfish|pufferfish|scorpion|stingray|poison dart|cone snail|gila monster|boomslang|bushmaster|pit viper/, 20);
+    const apexBoost = keywordBoost(entry, /apex|man-eater|man-eating|top predator|ambush predator|great white|saltwater crocodile|nile crocod|komodo dragon|king cobra|black mamba|polar bear|grizzly bear|brown bear|sloth bear|hippopotamus/, 16);
+    const largePredatorBoost = keywordBoost(entry, /crocodile|alligator|caiman|gharial|\blion\b|\btiger\b|\bleopard\b|\bjaguar\b|\bcheetah\b|\bhyena\b|\bwolf\b|\bwolverine\b|\bbear\b|\bshark\b|\borca\b|\bkomodo|\bpython\b|\banaconda\b|\bmonitor\b|\beagle\b|\bcondor\b|\bfalcon\b|\bhawk\b|\bviper\b|\bmamba\b|\bcobra\b|boa constrictor|alligator gar|longnose gar|snapping turtle/, 12);
+    const aggressionBoost = keywordBoost(entry, /aggressive|attack|charge|gore|ambush|stalk|predator|hunter|kills|bite force|crushing|powerful jaws|deadly strike/, 10);
+    const gentlePenalty = isGentleOrLowThreatSpecies(entry) ? -28 : 0;
+    const diggingClawPenalty = textMatches(entry, /digging claw|burrowing claw|digging foreclaw|root-snuff|leaf-litter root/) ? -15 : 0;
+    const smallPreyPenalty = textMatches(entry, /tiny|small body|pocket-sized|miniature|flightless parrot|insect-eating drill|armored curling/) ? -12 : 0;
+
+    let score = clampScore(
+        stats.dominance * 0.30
+        + stats.size * 0.26
+        + stats.speed * 0.12
+        + stats.rarity * 0.04
+        + lethalBoost
+        + apexBoost
+        + largePredatorBoost
+        + aggressionBoost
+        + gentlePenalty
+        + diggingClawPenalty
+        + smallPreyPenalty
+    );
+
+    if (isGentleOrLowThreatSpecies(entry) && !hasLethalThreatSignal(entry)) {
+        score = Math.min(score, 44);
+    }
+
+    return score;
+}
+
+function matchesDangerTaxon(entry: SpeciesEntry) {
+    return textMatches(entry, /\bcrocodile(?! skink)|\balligator|\bcaiman(?! lizard)|\bgharial|\bhippopotamus|\brhinoceros|\blion\b(?!\s*fish|\s*seal)|\btiger\b|\bleopard\b|\bjaguar\b|\bcheetah\b|\bbear\b|\bwolf\b(?! eel|\s*spider|\s*fish)|\bhyena\b|\bwolverine\b|\bshark\b(?! whale|\s*zebra)|\borca\b|\bkomodo|\bpython\b|\banaconda\b|\bboa constrictor|\bviper\b|\bmamba\b|\bcobra\b|\bmonitor\b|\bsnapping turtle|\bbadger\b|\bfossa\b|\bcougar\b|\bpuma\b|\balligator gar|\blongnose gar|\bmantis shrimp|\bstingray\b|\blionfish\b|\bgila monster|\belectric eel|\bbox jelly|\bstonefish\b|\bpufferfish\b|\bscorpion\b|\bbaboon\b|\bgorilla\b|\bkangaroo\b|\bbison\b|\bbuffalo\b|\belephant\b(?! beetle|\s*seal|\s*shrew)|\beagle\b|\bcondor\b|\bfalcon\b|\bhawk\b|\bvulture\b|\bpiranha\b|\bdeath adder|\btaipan\b|\brattlesnake|\bsea snake|\bbull shark|\btiger shark|\bhammerhead|\bmoray\b|\bbarracuda|\bfishing cat|\bclouded leopard|\bsnow leopard|\blynx\b|\bbobcat\b|\bocelot\b|\bserval\b|\bcaracal\b|\bblack mamba|\bking cobra|\bsaltwater crocodile|\bnile crocod/);
+}
+
+function qualifiesForDangerRanking(entry: SpeciesEntry, score: number) {
+    if (textMatches(entry, /domestic worldwide|felis catus|home, garden, farmyard|house cat|pet cat|wolf eel|sea lion|elephant beetle|crocodile skink|caiman lizard|maned wolf|zebra shark|\bwahoo\b|\bzander\b|guitarfish|fruit-eating canid|rock-crevice pair|wrinkled eel-like/)) {
+        return false;
+    }
+
+    if (isGentleOrLowThreatSpecies(entry)) {
+        return hasLethalThreatSignal(entry);
+    }
+
+    if (hasLethalThreatSignal(entry)) {
+        return true;
+    }
+
+    return matchesDangerTaxon(entry) && score >= 48;
+}
+
 function getRankingTier(score: number): RankingTier {
     if (score >= 90) {
         return "S";
@@ -1688,6 +1747,10 @@ function buildStatRankingReason(entry: SpeciesEntry, statKey: RankingStatKey, sc
     return `${score}/100 ${label} profile. ${context || `${entry.name} is a strong fit for this category`}, which places it in ${tier} tier for this list.`;
 }
 
+function getRankableSpeciesEntries(entries: SpeciesEntry[]) {
+    return entries.filter((entry) => !isLegendaryEarthBeastSpeciesSlug(entry.slug));
+}
+
 function getStatRankingEntries(page: RankingPage, entries: SpeciesEntry[]): ResolvedRankingEntry[] {
     const statKey = page.statRankingKey;
 
@@ -1736,7 +1799,7 @@ function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry:
         case "intelligence":
             return clampScore(stats.intelligence * 0.78 + stats.dominance * 0.08 + stats.rarity * 0.06 + socialBoost);
         case "danger":
-            return clampScore(stats.dominance * 0.45 + stats.size * 0.22 + stats.speed * 0.15 + stats.rarity * 0.08 + predatorBoost);
+            return getDangerCategoryScore(stats, entry);
         case "agility":
             return clampScore(stats.speed * 0.52 + stats.intelligence * 0.18 + stats.dominance * 0.12 + fastBoost);
         case "bite_force":
@@ -1788,13 +1851,15 @@ function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tie
 }
 
 export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES, entries = speciesEntries): ResolvedRankingEntry[] {
+    const rankableEntries = getRankableSpeciesEntries(entries);
+
     if (page.statRankingKey) {
-        return getStatRankingEntries(page, entries);
+        return getStatRankingEntries(page, rankableEntries);
     }
 
     const pinnedSlugs = new Set(page.entries.map((entry) => entry.speciesSlug));
-    const targetCount = Math.min(Math.max(page.entries.length, minEntries), entries.length);
-    const scoredSpecies = entries
+    const targetCount = Math.min(Math.max(page.entries.length, minEntries), rankableEntries.length);
+    const scoredSpecies = rankableEntries
         .map((entry) => {
             const stats = readRankingStats(entry);
             const score = getCategoryScore(page.category, stats, entry);
@@ -1804,7 +1869,8 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
                 score,
                 tier: getRankingTier(score)
             };
-        });
+        })
+        .filter((item) => page.category !== "danger" || qualifiesForDangerRanking(item.entry, item.score));
     const scoredBySlug = new Map(scoredSpecies.map((item) => [item.entry.slug, item]));
     const pinnedEntries = page.entries
         .map((entry): ResolvedRankingEntry | null => {
