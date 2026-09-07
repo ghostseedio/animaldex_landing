@@ -160,7 +160,7 @@ function bucketize(values: string[], limit = 12): Bucket[] {
         const key = value || "unknown";
         counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return [...counts.entries()]
+    return Array.from(counts.entries())
         .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
         .slice(0, limit)
         .map(([key, count]) => ({key, label: key, count}));

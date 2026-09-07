@@ -219,7 +219,7 @@ function commonFailure(results: RunResult[]) {
         const key = result.error?.trim() || "unknown failure";
         counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return [...counts.entries()].sort((left, right) => right[1] - left[1])[0] ?? null;
+    return Array.from(counts.entries()).sort((left, right) => right[1] - left[1])[0] ?? null;
 }
 
 function shortId(value: string) {
