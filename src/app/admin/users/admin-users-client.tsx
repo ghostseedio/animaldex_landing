@@ -127,7 +127,7 @@ export default function AdminUsersClient() {
         <div className="mx-auto max-w-[100rem]">
             <header className="flex flex-col justify-between gap-4 border-b border-line-300 pb-6 sm:flex-row sm:items-end">
                 <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Customer intelligence</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Users & LTV</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Understand who purchases, how they use AnimalDex, and which customers stay active.</p></div>
-                <div className="flex gap-2"><Link href="/admin/metrics" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Aggregate metrics</Link><button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button></div>
+                <div className="flex gap-2"><Link href="/admin/segments" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Segments</Link><Link href="/admin/metrics" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Aggregate metrics</Link><button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button></div>
             </header>
             {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
             {notice && <div className="mt-5 rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</div>}
@@ -150,13 +150,13 @@ export default function AdminUsersClient() {
                     <button onClick={() => setExpanded(expanded === user.id ? null : user.id)} className="grid w-full gap-4 p-4 text-left sm:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(90px,.65fr))_auto] sm:items-center">
                         <div className="flex min-w-0 items-center gap-3"><Avatar user={user} /><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate font-bold text-white">{user.displayName || user.username || user.email || "Unnamed user"}</p>{user.isPro && <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[9px] font-black text-amber-200">PRO</span>}</div><p className="truncate text-xs text-ink-500">{user.email || `@${user.username || user.id}`}</p></div></div>
                         <div><p className="text-[10px] uppercase text-ink-500">Est. LTV</p><p className="mt-1 font-bold text-white">{money(user.estimatedLtvUsd)}</p></div>
-                        <div><p className="text-[10px] uppercase text-ink-500">Credits</p><p className="mt-1 font-bold text-white">{user.creditsPurchased.toLocaleString()}</p></div>
+                        <div><p className="text-[10px] uppercase text-ink-500">Balance</p><p className="mt-1 font-bold text-white">{user.creditBalance.toLocaleString()}</p></div>
                         <div><p className="text-[10px] uppercase text-ink-500">Captures</p><p className="mt-1 font-bold text-white">{user.captures.toLocaleString()}</p></div>
                         <div><p className="text-[10px] uppercase text-ink-500">Last active</p><p className="mt-1 text-sm font-bold text-white">{relative(user.lastActiveAt)}</p></div>
                         <span className="text-ink-400">{expanded === user.id ? "−" : "+"}</span>
                     </button>
                     {expanded === user.id && <div className="border-t border-line-300 bg-canvas-900/60 p-4 sm:p-5"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">{[
-                        ["Balance", user.creditBalance], ["Credits spent", user.creditsSpent], ["Alignments", user.alignments], ["Fusions", user.fusions],
+                        ["Balance", user.creditBalance], ["Bought", user.creditsPurchased], ["Credits spent", user.creditsSpent], ["Alignments", user.alignments], ["Fusions", user.fusions],
                         ["Challenges", user.challenges], ["Trades", user.trades], ["Prod. purchases", user.productionPurchaseCount], ["Sandbox", user.sandboxPurchaseCount]
                     ].map(([label, value]) => <div key={label} className="rounded-xl border border-line-300 bg-surface-900 p-3"><p className="text-[10px] text-ink-500">{label}</p><p className="mt-1 font-bold text-white">{Number(value).toLocaleString()}</p></div>)}</div>
                     <div className="mt-4 flex flex-wrap gap-2">{Object.entries(user.products).map(([product, count]) => <span key={product} className="rounded-full border border-line-300 px-3 py-1.5 text-xs text-ink-300">{product.replace(/_/g, " ")} × {count}</span>)}{!Object.keys(user.products).length && <span className="text-xs text-ink-500">No StoreKit purchases</span>}</div>

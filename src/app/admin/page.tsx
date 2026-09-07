@@ -13,6 +13,15 @@ const tools = [
         status: "Customer insights"
     },
     {
+        href: "/admin/segments",
+        icon: "▦",
+        eyebrow: "Customer intelligence",
+        title: "User segments",
+        description: "Cohort counts, country mix, and notify a segment with the same push + in-app pipeline.",
+        accent: "from-teal-400/20 to-transparent",
+        status: "Notify by cohort"
+    },
+    {
         href: "/admin/metrics",
         icon: "↗",
         eyebrow: "Growth intelligence",
@@ -67,6 +76,15 @@ const tools = [
         status: "Catalog ready"
     },
     {
+        href: "/admin/indexing",
+        icon: "◌",
+        eyebrow: "Catalog cleanup",
+        title: "Unindexed captures",
+        description: "Watch the daily cron that re-analyses captures whose species still has no AnimalDex number.",
+        accent: "from-lime-400/20 to-transparent",
+        status: "Daily at 04:00 UTC"
+    },
+    {
         href: "/admin/maintenance",
         icon: "↻",
         eyebrow: "Post operations",
@@ -117,11 +135,13 @@ const navigation = [
     {href: "/admin", label: "Overview", icon: "⌂"},
     {href: "/admin/metrics", label: "Metrics", icon: "↗"},
     {href: "/admin/users", label: "Users & LTV", icon: "◎"},
+    {href: "/admin/segments", label: "Segments", icon: "▦"},
     {href: "/admin/support", label: "Support", icon: "✦"},
     {href: "/admin/seo", label: "Content", icon: "✎"},
     {href: "/admin/assets", label: "Assets", icon: "▧"},
     {href: "/admin/notifications", label: "Notifications", icon: "◈"},
     {href: "/admin/catalog", label: "Index", icon: "№"},
+    {href: "/admin/indexing", label: "Unindexed", icon: "◌"},
     {href: "/admin/maintenance", label: "Maintenance", icon: "↻"},
     {href: "/admin/creator-rewards", label: "Creator Rewards", icon: "¤"},
     {href: "/admin/payouts", label: "Payouts", icon: "⇄"},

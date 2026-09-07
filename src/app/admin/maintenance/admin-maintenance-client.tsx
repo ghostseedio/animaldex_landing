@@ -433,6 +433,7 @@ export default function AdminMaintenanceClient() {
                     <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
                     <div className="flex flex-wrap gap-2">
                         <button onClick={() => void findBrokenCaptures()} disabled={checkingBroken} className="w-fit rounded-xl border border-amber-400/40 px-4 py-2.5 text-sm font-black text-amber-200 disabled:opacity-40">{checkingBroken ? "Checking…" : "Find stuck captures"}</button>
+                        <Link href="/admin/indexing" className="w-fit rounded-xl border border-lime-400/40 px-4 py-2.5 text-sm font-black text-lime-100">Unindexed cron</Link>
                         <Link href="/admin/catalog" className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</Link>
                         <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
                     </div>

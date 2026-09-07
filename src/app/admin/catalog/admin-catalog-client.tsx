@@ -326,6 +326,9 @@ export default function AdminCatalogClient() {
                                 className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">
                             Index a new animal
                         </button>
+                        <Link href="/admin/indexing" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">
+                            Cron progress
+                        </Link>
                         <Link href="/admin/maintenance" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white hover:border-primary-300">
                             Post maintenance →
                         </Link>

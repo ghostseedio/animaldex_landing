@@ -205,7 +205,10 @@ export default function AdminNotificationsClient() {
                         notifications list; accounts with a registered device also get a push banner on top.
                     </p>
                 </div>
-                <button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
+                <div className="flex gap-2">
+                    <Link href="/admin/segments" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Notify a segment</Link>
+                    <button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
+                </div>
             </header>
 
             {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
@@ -358,7 +361,7 @@ export default function AdminNotificationsClient() {
                                 {data.history.map((row) => <li key={row.id} className="border-b border-line-300 pb-3 last:border-b-0 last:pb-0">
                                     <p className="text-sm font-bold text-white">{row.title}</p>
                                     <p className="text-xs text-ink-400">
-                                        {row.mode === "broadcast" ? "Everyone" : "One person"} · {row.devices_delivered}/{row.devices_targeted} pushed · {new Date(row.created_at).toLocaleString()}
+                                        {row.mode === "broadcast" ? "Everyone" : row.mode === "segment" ? "Segment" : "One person"} · {row.devices_delivered}/{row.devices_targeted} pushed · {new Date(row.created_at).toLocaleString()}
                                     </p>
                                 </li>)}
                             </ul>

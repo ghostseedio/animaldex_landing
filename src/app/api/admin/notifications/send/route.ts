@@ -13,14 +13,19 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
  */
 
 type SendBody = {
-    mode?: "user" | "broadcast";
+    mode?: "user" | "broadcast" | "segment";
     userId?: string;
+    userIds?: string[];
     title?: string;
     body?: string;
     captureId?: string;
     dryRun?: boolean;
     expectedRecipients?: number;
 };
+
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SEGMENT_USER_CAP = 500;
 
 export async function POST(request: NextRequest) {
     if (!await isSupportAdminRequestAuthorized(request)) {
@@ -43,12 +48,27 @@ export async function POST(request: NextRequest) {
     const payload = await request.json().catch(() => ({})) as SendBody;
     const title = payload.title?.trim() ?? "";
     const body = payload.body?.trim() ?? "";
+    const mode = payload.mode ?? "user";
 
     if (!title || !body) {
         return NextResponse.json({ok: false, error: "Title and message are both required"}, {status: 400});
     }
-    if (payload.mode === "user" && !payload.userId) {
+    if (mode === "user" && !payload.userId) {
         return NextResponse.json({ok: false, error: "Choose a recipient first"}, {status: 400});
+    }
+    if (mode === "segment") {
+        if (!Array.isArray(payload.userIds) || payload.userIds.length === 0) {
+            return NextResponse.json({ok: false, error: "Choose a segment with at least one recipient"}, {status: 400});
+        }
+        if (payload.userIds.length > SEGMENT_USER_CAP) {
+            return NextResponse.json({
+                ok: false,
+                error: `Segment sends are capped at ${SEGMENT_USER_CAP} people per send`
+            }, {status: 400});
+        }
+        if (!payload.userIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id))) {
+            return NextResponse.json({ok: false, error: "Segment recipient list contains an invalid user id"}, {status: 400});
+        }
     }
 
     try {
@@ -60,8 +80,9 @@ export async function POST(request: NextRequest) {
             }),
             cache: "no-store",
             body: JSON.stringify({
-                mode: payload.mode ?? "user",
+                mode,
                 user_id: payload.userId,
+                user_ids: mode === "segment" ? payload.userIds : undefined,
                 title,
                 body,
                 capture_id: payload.captureId,
