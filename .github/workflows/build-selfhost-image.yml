@@ -144,37 +144,66 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE="${{ steps.meta.outputs.sha_tag }}"
-          NAME="animaldex-smoke-${GITHUB_RUN_ID}"
+          NAME="animaldex-smoke"
+          HOST_PORT=3000
+
+          # Ensure we talk to the local Docker Engine (not a Buildx builder endpoint).
+          docker context use default >/dev/null 2>&1 || true
+
+          docker rm -f "$NAME" >/dev/null 2>&1 || true
 
           docker run -d --name "$NAME" \
-            -p 3000:3000 \
+            --platform linux/amd64 \
+            -p "127.0.0.1:${HOST_PORT}:3000" \
             -e NODE_ENV=production \
             -e PORT=3000 \
-            -e HOSTNAME=0.0.0.0 \
+            -e HOSTNAME=localhost \
             -e CANONICAL_URL="${{ steps.buildargs.outputs.canonical_url }}" \
             -e NEXT_PUBLIC_SITE_URL="${{ steps.buildargs.outputs.next_public_site_url }}" \
             -e SITE_URL="${{ steps.buildargs.outputs.site_url }}" \
             "$IMAGE"
 
           cleanup() {
-            docker logs "$NAME" || true
+            local ec=$?
+            if [ "$ec" -ne 0 ]; then
+              echo "::group::docker ps -a"
+              docker ps -a || true
+              echo "::endgroup::"
+              echo "::group::docker logs ${NAME}"
+              docker logs "$NAME" || true
+              echo "::endgroup::"
+              echo "::group::docker port ${NAME}"
+              docker port "$NAME" || true
+              echo "::endgroup::"
+            fi
             docker rm -f "$NAME" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
 
+          echo "Published ports:"
+          docker port "$NAME"
+
+          # Readiness: require a real TCP/HTTP response on the deterministic host port.
+          # Do not follow redirects here — a bad Location must not send curl to a random port.
+          ready=0
           for i in $(seq 1 60); do
-            if curl -sf -o /dev/null "http://127.0.0.1:3000/" \
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 --max-redirs 0 \
               -H 'Host: animaldex.app' \
               -H 'X-Forwarded-Host: animaldex.app' \
-              -H 'X-Forwarded-Proto: https'; then
+              -H 'X-Forwarded-Proto: https' \
+              "http://127.0.0.1:${HOST_PORT}/" || true)"
+            echo "readiness attempt ${i}: http_code=${code:-none}"
+            if [ -n "$code" ] && [ "$code" != "000" ]; then
+              ready=1
               break
             fi
             sleep 2
-            if [ "$i" -eq 60 ]; then
-              echo "::error::Server did not become ready"
-              exit 1
-            fi
           done
+
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Server did not become ready on 127.0.0.1:${HOST_PORT}"
+            exit 1
+          fi
 
           PROXY=(-H 'Host: animaldex.app' -H 'X-Forwarded-Host: animaldex.app' -H 'X-Forwarded-Proto: https')
 
@@ -183,8 +212,8 @@ jobs:
             local want="$2"
             local loc_expect="${3:-}"
             local code loc
-            code="$(curl -s -o /dev/null -w '%{http_code}' --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:3000${path}")"
-            loc="$(curl -sI --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:3000${path}" | awk 'tolower($1)=="location:" {print $2}' | tr -d '\r')"
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}${path}")"
+            loc="$(curl -sSI --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}${path}" | awk 'tolower($1)=="location:" {print $2}' | tr -d '\r')"
             echo "${path} -> ${code} Location=${loc:-}"
             if [ "$code" != "$want" ]; then
               echo "::error::Expected ${want} for ${path}, got ${code}"
