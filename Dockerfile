@@ -8,7 +8,7 @@ ARG NODE_VERSION=20.19.5
 # -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
-FROM --platform=linux/amd64 node:${NODE_VERSION}-bookworm-slim AS deps
+FROM node:${NODE_VERSION}-bookworm-slim AS deps
 WORKDIR /app
 
 RUN apt-get update \
@@ -22,7 +22,7 @@ RUN npm ci
 # -----------------------------------------------------------------------------
 # Builder
 # -----------------------------------------------------------------------------
-FROM --platform=linux/amd64 node:${NODE_VERSION}-bookworm-slim AS builder
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
@@ -70,7 +70,7 @@ RUN npm run build \
 # -----------------------------------------------------------------------------
 # Runner (minimal standalone)
 # -----------------------------------------------------------------------------
-FROM --platform=linux/amd64 node:${NODE_VERSION}-bookworm-slim AS runner
+FROM node:${NODE_VERSION}-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
