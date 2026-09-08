@@ -13,7 +13,8 @@ env:
   REGISTRY: ghcr.io
   # ghcr.io/<owner>/<repo>  e.g. ghcr.io/ghostseedio/animaldex_landing
   IMAGE_NAME: ${{ github.repository }}
-  NODE_VERSION: "20.19.5"
+  NODE_VERSION: "22.13.0"
+  NPM_VERSION: "10.9.2"
 
 jobs:
   build-and-push:
@@ -101,6 +102,7 @@ jobs:
             ${{ steps.meta.outputs.staging_tag }}
           build-args: |
             NODE_VERSION=${{ env.NODE_VERSION }}
+            NPM_VERSION=${{ env.NPM_VERSION }}
             CANONICAL_URL=${{ steps.buildargs.outputs.canonical_url }}
             NEXT_PUBLIC_SITE_URL=${{ steps.buildargs.outputs.next_public_site_url }}
             SITE_URL=${{ steps.buildargs.outputs.site_url }}
