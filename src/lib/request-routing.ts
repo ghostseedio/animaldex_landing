@@ -2,6 +2,23 @@
 const locales = ["en", "id"] as const;
 const defaultLocale = "en";
 
+/**
+ * External `/en` and `/en/...` URLs must 308 to the unprefixed canonical.
+ * Do **not** put that redirect in `next.config.js`: next-intl `as-needed`
+ * rewrites unprefixed English to `/en/...` internally, and a config redirect
+ * then fires on the rewritten path → self-308 loop on standalone/`next start`.
+ */
+export function matchDefaultLocalePrefixedPath(pathname: string): string | null {
+    if (pathname === "/en" || pathname === "/en/") {
+        return "/";
+    }
+    if (pathname.startsWith("/en/")) {
+        const rest = pathname.slice("/en".length);
+        return rest.length > 0 ? rest : "/";
+    }
+    return null;
+}
+
 export const protectedAppPrefixes = [
     "/app/arena",
     "/app/capture",

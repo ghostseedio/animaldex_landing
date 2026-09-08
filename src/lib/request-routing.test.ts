@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     isProtectedAppPath,
+    matchDefaultLocalePrefixedPath,
     middlewareShouldRefreshSession,
     splitLocalePath
 } from "./request-routing";
@@ -12,6 +13,34 @@ test("splitLocalePath handles default and prefixed locales", () => {
     assert.deepEqual(splitLocalePath("/"), {locale: "en", appPath: "/"});
     assert.deepEqual(splitLocalePath("/id"), {locale: "id", appPath: "/"});
     assert.deepEqual(splitLocalePath("/id/"), {locale: "id", appPath: "/"});
+});
+
+test("matchDefaultLocalePrefixedPath collapses /en to unprefixed canonicals", () => {
+    assert.equal(matchDefaultLocalePrefixedPath("/en"), "/");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/"), "/");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/animals/aardvark"), "/animals/aardvark");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/animal-lessons/aardvark"), "/animal-lessons/aardvark");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/pokemon-animals/generation-i"), "/pokemon-animals/generation-i");
+    assert.equal(matchDefaultLocalePrefixedPath("/animals/aardvark"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/animal-lessons/aardvark"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/pokemon-animals/generation-i"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/id/animals/tiger"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/english"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/"), null);
+});
+
+test("unprefixed English SEO paths must never be treated as /en collapse targets", () => {
+    // Regression: next.config /en/:path* + next-intl rewrite caused self-308s.
+    for (const path of [
+        "/animals/aardvark",
+        "/animal-lessons/aardvark",
+        "/pokemon-animals/generation-i",
+        "/animals/mata-mata"
+    ]) {
+        assert.equal(matchDefaultLocalePrefixedPath(path), null);
+        assert.equal(splitLocalePath(path).locale, "en");
+        assert.equal(splitLocalePath(path).appPath, path);
+    }
 });
 
 test("protected app paths include nested routes and both locales", () => {

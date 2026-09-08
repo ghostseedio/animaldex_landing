@@ -10,18 +10,24 @@ function readRepo(...parts: string[]) {
     return readFileSync(join(repoRoot, ...parts), "utf8");
 }
 
-test("default-locale /en URLs permanently redirect to unprefixed canonicals", () => {
-    const redirectsBlock = readRepo("next.config.js").slice(
-        readRepo("next.config.js").indexOf("async redirects()"),
-        readRepo("next.config.js").indexOf("async rewrites()")
+test("default-locale /en URLs permanently redirect via middleware, not next.config", () => {
+    const config = readRepo("next.config.js");
+    const redirectsBlock = config.slice(
+        config.indexOf("async redirects()"),
+        config.indexOf("async rewrites()")
     );
+    const middleware = readRepo("src/middleware.ts");
+    const routing = readRepo("src/lib/request-routing.ts");
 
-    assert.match(redirectsBlock, /source: "\/en"/);
-    assert.match(redirectsBlock, /destination: "\/"/);
-    assert.match(redirectsBlock, /source: "\/en\/:path\*"/);
-    assert.match(redirectsBlock, /destination: "\/:path\*"/);
-    assert.match(redirectsBlock, /permanent: true/);
-    assert.doesNotMatch(redirectsBlock, /destination: "\/en/);
+    // Config redirects on /en would catch next-intl's internal as-needed rewrite
+    // and 308 unprefixed English URLs back onto themselves.
+    assert.doesNotMatch(redirectsBlock, /source:\s*["']\/en["']/);
+    assert.doesNotMatch(redirectsBlock, /source:\s*["']\/en\/:path\*/);
+    assert.match(redirectsBlock, /Do NOT add \/en/);
+
+    assert.match(routing, /matchDefaultLocalePrefixedPath/);
+    assert.match(middleware, /matchDefaultLocalePrefixedPath/);
+    assert.match(middleware, /NextResponse\.redirect\(destination,\s*308\)/);
 });
 
 test("ranking aliases preserve /tier-list as the successful canonical", () => {

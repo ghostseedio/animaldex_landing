@@ -5,6 +5,7 @@ import {updateSupabaseSession} from "@/lib/supabase/middleware";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {
     isProtectedAppPath,
+    matchDefaultLocalePrefixedPath,
     middlewareShouldRefreshSession,
     splitLocalePath
 } from "@/lib/request-routing";
@@ -49,6 +50,15 @@ function redirectToAccount(request: NextRequest, locale: string, sessionResponse
 export async function middleware(request: NextRequest) {
     const timer = createDevRequestTimer("middleware", {path: request.nextUrl.pathname});
     try {
+        // Collapse external /en URLs here (not next.config) so next-intl's
+        // internal /en rewrite for as-needed English cannot self-redirect.
+        const defaultLocalePrefixed = matchDefaultLocalePrefixedPath(request.nextUrl.pathname);
+        if (defaultLocalePrefixed != null) {
+            const destination = request.nextUrl.clone();
+            destination.pathname = defaultLocalePrefixed;
+            return NextResponse.redirect(destination, 308);
+        }
+
         const collapsed = matchCollapsedIdDetailPath(request.nextUrl.pathname);
         if (collapsed) {
             const destination = request.nextUrl.clone();

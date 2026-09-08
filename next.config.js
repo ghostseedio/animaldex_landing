@@ -6,6 +6,7 @@ if (process.env.NEXT_PHASE === "phase-production-build" || process.argv.includes
 }
 
 module.exports = withNextIntl({
+    output: 'standalone',
     // Stable SEO pages SSG from checked-in snapshots. Sitemap stays a
     // request-time route so it does not block static generation.
     staticPageGenerationTimeout: 600,
@@ -15,19 +16,11 @@ module.exports = withNextIntl({
     },
     async redirects() {
         return [
-            // next-intl `as-needed` uses 307 for /en → unprefixed English. Google can
-            // keep ranking those URLs. Permanent redirects collapse them to the
-            // canonical unprefixed paths before locale middleware runs.
-            {
-                source: "/en",
-                destination: "/",
-                permanent: true
-            },
-            {
-                source: "/en/:path*",
-                destination: "/:path*",
-                permanent: true
-            },
+            // Do NOT add /en → unprefixed redirects here. next-intl `as-needed`
+            // rewrites unprefixed English to /en/... internally; a config
+            // redirect on /en/:path* then 308s back to the same public URL
+            // (self-redirect loop on standalone / next start). Middleware
+            // collapses external /en URLs with 308 instead.
             {
                 source: "/privacy",
                 destination: "/legal/privacy",

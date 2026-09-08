@@ -11,6 +11,18 @@ import {
 } from "@/lib/published-seo-slugs";
 import {splitLocalePath} from "@/lib/request-routing";
 
+// Keep aligned with getSiteUrl() in site.ts, but do not import that module
+// here: site.ts pulls next-intl via i18n and breaks node:test loading.
+function publicSiteOrigin() {
+    const configured =
+        process.env.CANONICAL_URL
+        || process.env.NEXT_PUBLIC_SITE_URL
+        || process.env.SITE_URL
+        || process.env.NEXT_PUBLIC_APP_URL
+        || "https://animaldex.app";
+    return configured.replace(/\/$/, "");
+}
+
 type ClosedSeoFamily = typeof CLOSED_SEO_NAMESPACE_FAMILIES[number];
 
 const CLOSED_FAMILIES = new Set<string>(CLOSED_SEO_NAMESPACE_FAMILIES);
@@ -121,6 +133,9 @@ export function applyEnglishOnlyDetailLinkHeader(response: NextResponse, request
     }
 
     const englishPath = appPath.replace(/\/+$/, "") || "/";
-    response.headers.set("Link", englishOnlyDetailLinkHeader(request.nextUrl.origin, englishPath));
+    // Prefer the configured public origin over the listen-host init URL.
+    // Standalone/`next start` otherwise advertises localhost in SEO Link
+    // headers when Nginx forwards Host: animaldex.app.
+    response.headers.set("Link", englishOnlyDetailLinkHeader(publicSiteOrigin(), englishPath));
     return response;
 }

@@ -110,7 +110,10 @@ test("collapsed detail Link headers never advertise redirected /id URLs", () => 
     assert.doesNotMatch(header, /\/id\/animals\//);
 
     const middleware = readFileSync(join(root, "middleware.ts"), "utf8");
+    const closed = readFileSync(join(here, "closed-seo-namespaces.ts"), "utf8");
     const i18n = readFileSync(join(root, "i18n.ts"), "utf8");
     assert.match(middleware, /applyEnglishOnlyDetailLinkHeader/);
+    assert.match(closed, /englishOnlyDetailLinkHeader\(publicSiteOrigin\(\)/);
+    assert.doesNotMatch(closed, /englishOnlyDetailLinkHeader\(request\.nextUrl\.origin/);
     assert.match(i18n, /alternateLinks: false/);
 });
