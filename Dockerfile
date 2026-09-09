@@ -26,7 +26,9 @@ RUN apt-get update \
 COPY package.json package-lock.json .npmrc ./
 # postinstall strips nested @types from solar-icon-set
 RUN npm ci
-RUN npm install --include=optional --os=linux --cpu=x64 sharp
+RUN rm -rf node_modules/sharp node_modules/@img \
+  && npm install --no-save --include=optional --os=linux --cpu=x64 sharp \
+  && node -e "const sharp=require('sharp'); console.log(sharp.versions)"
 # -----------------------------------------------------------------------------
 # Builder
 # -----------------------------------------------------------------------------
