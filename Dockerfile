@@ -84,10 +84,16 @@ RUN npm run build \
 FROM node:${NODE_VERSION}-bookworm-slim AS runner
 WORKDIR /app
 
+# HOSTNAME=localhost: Next standalone workers + outer server share this name.
+# Node 22 on Linux resolves localhost to IPv6 (::1) first for listen(), while the
+# parent http-proxy connects to 127.0.0.1 → ECONNREFUSED on the worker port.
+# Force IPv4 so listen + connect agree (do not use HOSTNAME=127.0.0.1: Next then
+# 308s non-matching Host headers to http://localhost:3000/).
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=localhost
+    HOSTNAME=localhost \
+    NODE_OPTIONS=--dns-result-order=ipv4first
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
