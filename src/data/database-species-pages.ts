@@ -656,7 +656,7 @@ export async function getDatabaseSpeciesEntries() {
 function resolveDatabaseEntryForStatic(
     staticEntry: SpeciesEntry,
     databaseBySlug: Map<string, SpeciesEntry>,
-    databaseEntries: SpeciesEntry[]
+    databaseByIdentityKey: Map<string, SpeciesEntry>
 ) {
     const directMatch = databaseBySlug.get(staticEntry.slug);
     if (directMatch) {
@@ -664,7 +664,7 @@ function resolveDatabaseEntryForStatic(
     }
 
     const canonicalKey = speciesCatalogIdentityKey(staticEntry);
-    return databaseEntries.find((entry) => speciesCatalogIdentityKey(entry) === canonicalKey) ?? null;
+    return databaseByIdentityKey.get(canonicalKey) ?? null;
 }
 
 export async function getCatalogBehaviorPrincipleIndex() {
@@ -1242,6 +1242,13 @@ export async function getSitemapSpeciesEntries(): Promise<SitemapSpeciesEntry[]>
 export async function getUnifiedSpeciesEntries() {
     const databaseEntries = await getDatabaseSpeciesEntries();
     const databaseBySlug = new Map(databaseEntries.map((entry) => [entry.slug, entry]));
+    const databaseByIdentityKey = new Map<string, SpeciesEntry>();
+    for (const entry of databaseEntries) {
+        const identityKey = speciesCatalogIdentityKey(entry);
+        if (!databaseByIdentityKey.has(identityKey)) {
+            databaseByIdentityKey.set(identityKey, entry);
+        }
+    }
     const staticSlugs = new Set(speciesEntries.map((entry) => entry.slug));
     const biologyAnchorSlugs = getBiologyAnchorSlugsToExclude();
     const enrichedStatic = speciesEntries.map((entry) => {
@@ -1251,7 +1258,7 @@ export async function getUnifiedSpeciesEntries() {
             return enrichLegendaryEarthBeastSpeciesEntry(entry, biologyCatalogEntry);
         }
 
-        return mergeCatalogMetadata(entry, resolveDatabaseEntryForStatic(entry, databaseBySlug, databaseEntries));
+        return mergeCatalogMetadata(entry, resolveDatabaseEntryForStatic(entry, databaseBySlug, databaseByIdentityKey));
     });
 
     return dedupeCatalogSpeciesEntries(
