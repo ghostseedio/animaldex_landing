@@ -33,7 +33,7 @@ RUN rm -rf node_modules/sharp node_modules/@img \
 # Builder
 # -----------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-bookworm-slim AS builder
-ARG NPM_VERSION
+	ARG NPM_VERSION
 WORKDIR /app
 
 RUN npm install -g "npm@${NPM_VERSION}"
@@ -105,6 +105,12 @@ RUN apt-get update \
 
 # Standalone server + traced deps
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+# Next standalone tracing can omit Sharp native runtime packages.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/sharp ./node_modules/sharp
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@img ./node_modules/@img
+
+# Fail the image build if Sharp cannot load in the final runtime stage.
+RUN node -e "const sharp=require('sharp'); console.log('runtime sharp', sharp.versions.sharp, 'vips', sharp.versions.vips)"
 # Static assets and public files required beside standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
