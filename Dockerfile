@@ -26,7 +26,7 @@ RUN apt-get update \
 COPY package.json package-lock.json .npmrc ./
 # postinstall strips nested @types from solar-icon-set
 RUN npm ci
-
+RUN npm install --include=optional --os=linux --cpu=x64 sharp
 # -----------------------------------------------------------------------------
 # Builder
 # -----------------------------------------------------------------------------
@@ -108,7 +108,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Belt-and-suspenders: never ship dotenv files into the final image
-RUN rm -f .env .env.local .env.production .env.development \
+	RUN rm -f .env .env.local .env.production .env.development \
   && find /app -name '.env*' -type f -delete \
   && chown -R nextjs:nodejs /app
 
