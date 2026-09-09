@@ -1,5 +1,5 @@
 import {
-    getMergedIdentityAliases,
+    collectionAliasTokensForCanonical,
     resolveCollectionIdentityToken
 } from "@/lib/collection-identity-aliases";
 
@@ -251,8 +251,7 @@ export type SpeciesDirectorySearchMatch = {
     matchedQuery: string;
 };
 
-function entrySearchHaystack(entry: {name: string; analysis: {scientificName: string; category: string; summary: string; habitat: string; nativeRange: string}; normalizedIdentityKey?: string | null; slug: string}) {
-    const aliasKeys = collectionAliasLabelsForCanonical(entry.normalizedIdentityKey ?? entry.slug);
+function entrySearchHaystack(entry: {name: string; analysis: {scientificName: string; category: string; summary: string; habitat: string; nativeRange: string}; normalizedIdentityKey?: string | null; slug: string}, aliasKeys: readonly string[]) {
     return [
         entry.name,
         entry.analysis.scientificName,
@@ -268,18 +267,7 @@ function entrySearchHaystack(entry: {name: string; analysis: {scientificName: st
 }
 
 function collectionAliasLabelsForCanonical(canonicalToken: string) {
-    const normalized = normalizeIdentityToken(canonicalToken);
-    const resolved = resolveSpeciesIdentityToken(normalized);
-    const merged = getMergedIdentityAliases();
-    const aliases: string[] = [];
-
-    for (const [alias, canonical] of Object.entries(merged)) {
-        if (canonical === resolved) {
-            aliases.push(alias);
-        }
-    }
-
-    return aliases;
+    return collectionAliasTokensForCanonical(normalizeIdentityToken(canonicalToken));
 }
 
 export function speciesDirectorySearchMatch(
@@ -302,14 +290,13 @@ export function speciesDirectorySearchMatch(
         };
     }
 
-    const haystack = entrySearchHaystack(entry);
-    const directMatch = haystack.includes(normalizedQuery);
     const canonicalKey = resolveSpeciesIdentityToken(entry.normalizedIdentityKey ?? entry.slug);
-    const merged = getMergedIdentityAliases();
+    const aliasKeys = collectionAliasLabelsForCanonical(canonicalKey);
+    const haystack = entrySearchHaystack(entry, aliasKeys);
+    const directMatch = haystack.includes(normalizedQuery);
     let aliasKey: string | null = null;
 
-    for (const [alias, canonical] of Object.entries(merged)) {
-        if (canonical !== canonicalKey) continue;
+    for (const alias of aliasKeys) {
         const aliasHaystack = alias.replace(/_/g, " ");
         if (aliasHaystack.includes(normalizedQuery) || normalizedQuery.includes(aliasHaystack)) {
             aliasKey = alias;

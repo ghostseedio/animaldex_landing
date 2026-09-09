@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import {describe, it} from "node:test";
 import type {SpeciesEntry} from "@/data/species";
 import {
+    collectionAliasTokensForCanonical,
+    getMergedIdentityAliases,
+    resolveCollectionIdentityToken,
+    setRuntimeSpeciesIdentityAliases
+} from "@/lib/collection-identity-aliases";
+import {
     dedupeCatalogSpeciesEntries,
     filterCanonicalCatalogSpeciesEntries
 } from "@/lib/catalog-species-dedupe";
@@ -69,6 +75,56 @@ describe("canonical life-stage catalog policy", () => {
             1
         );
     });
+
+    it("keeps canonical selection unchanged when canonical and alias rows coexist", () => {
+        const deduped = dedupeCatalogSpeciesEntries([
+            makeEntry({slug: "african-lion", name: "African Lion", normalizedIdentityKey: "african_lion"}),
+            makeEntry({slug: "lion", name: "Lion", normalizedIdentityKey: "lion"})
+        ]);
+
+        assert.deepEqual(deduped.map((entry) => entry.slug), ["lion"]);
+    });
+});
+
+describe("collection identity alias indexes", () => {
+    it("preserves canonical, alias, and one-hop chained resolution semantics", () => {
+        assert.equal(resolveCollectionIdentityToken("lion"), "lion");
+        assert.equal(resolveCollectionIdentityToken("African-Lion"), "lion");
+
+        setRuntimeSpeciesIdentityAliases({first_alias: "second_alias", second_alias: "lion"});
+        try {
+            assert.equal(resolveCollectionIdentityToken("first_alias"), "second_alias");
+            assert.equal(resolveCollectionIdentityToken("second_alias"), "lion");
+        } finally {
+            setRuntimeSpeciesIdentityAliases(null);
+        }
+    });
+
+    it("returns the same ordered aliases as filtering the merged table", () => {
+        const expected = Object.entries(getMergedIdentityAliases())
+            .filter(([, canonical]) => canonical === "lion")
+            .map(([alias]) => alias);
+
+        assert.deepEqual(collectionAliasTokensForCanonical("lion"), expected);
+    });
+
+    it("reuses merged alias data across lookups and rebuilds it only on runtime updates", () => {
+        const before = getMergedIdentityAliases();
+        resolveCollectionIdentityToken("african_lion");
+        collectionAliasTokensForCanonical("lion");
+        assert.equal(getMergedIdentityAliases(), before);
+
+        setRuntimeSpeciesIdentityAliases({test_lion_alias: "lion"});
+        try {
+            const updated = getMergedIdentityAliases();
+            assert.notEqual(updated, before);
+            assert.equal(getMergedIdentityAliases(), updated);
+            const aliases = collectionAliasTokensForCanonical("lion");
+            assert.equal(aliases[aliases.length - 1], "test_lion_alias");
+        } finally {
+            setRuntimeSpeciesIdentityAliases(null);
+        }
+    });
 });
 
 describe("capture variant display", () => {
@@ -114,9 +170,34 @@ describe("species directory search", () => {
         assert.equal(match?.helperText, "Caterpillar captures count here");
     });
 
+    it("preserves direct-name search without alias helper text", () => {
+        const match = speciesDirectorySearchMatch(monarch, "monarch butterfly");
+
+        assert.ok(match);
+        assert.equal(match.aliasMatchLabel, null);
+        assert.equal(match.helperText, null);
+    });
+
     it("matches Kea Juvenile queries to Kea", () => {
         const kea = makeEntry({slug: "kea", name: "Kea", normalizedIdentityKey: "kea"});
         assert.equal(speciesDirectoryMatchesQuery(kea, "kea juvenile"), true);
+    });
+
+    it("does not enumerate the merged alias table while matching an entry", () => {
+        const originalEntries = Object.entries;
+        let entriesCalls = 0;
+        Object.entries = ((value: object) => {
+            entriesCalls += 1;
+            return originalEntries(value);
+        }) as typeof Object.entries;
+
+        try {
+            assert.ok(speciesDirectorySearchMatch(monarch, "monarch caterpillar"));
+        } finally {
+            Object.entries = originalEntries;
+        }
+
+        assert.equal(entriesCalls, 0);
     });
 });
 

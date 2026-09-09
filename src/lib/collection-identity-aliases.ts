@@ -2,7 +2,7 @@
  * Maps alternate capture / display tokens to canonical catalog identity keys.
  * Tokens must already be normalized via catalogLookupToken.
  */
-export const COLLECTION_IDENTITY_ALIASES: Record<string, string> = {
+export const COLLECTION_IDENTITY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
     // Lion (Panthera leo)
     african_lion: "lion",
     asiatic_lion: "lion",
@@ -71,45 +71,56 @@ export const COLLECTION_IDENTITY_ALIASES: Record<string, string> = {
     leatherback_hatchling: "leatherback_sea_turtle",
     eastern_tiger_swallowtail_caterpillar: "eastern_tiger_swallowtail",
     ratel_cub: "honey_badger"
-};
+});
 
 let runtimeIdentityAliases: Record<string, string> | null = null;
 
-export function setRuntimeSpeciesIdentityAliases(aliases: Record<string, string> | null) {
-    runtimeIdentityAliases = aliases;
-    refreshCollectionIdentityAliasLookup();
-}
+let mergedIdentityAliases: Readonly<Record<string, string>> = COLLECTION_IDENTITY_ALIASES;
+const CANONICAL_ALIAS_LOOKUP = new Map<string, readonly string[]>();
 
-export function getMergedIdentityAliases() {
-    return {
+function rebuildIdentityAliasIndexes() {
+    mergedIdentityAliases = Object.freeze({
         ...COLLECTION_IDENTITY_ALIASES,
         ...(runtimeIdentityAliases ?? {})
-    };
-}
-
-const CANONICAL_ALIAS_LOOKUP = new Map<string, Set<string>>();
-
-function rebuildCanonicalAliasLookup() {
+    });
     CANONICAL_ALIAS_LOOKUP.clear();
 
-    for (const [alias, canonical] of Object.entries(getMergedIdentityAliases())) {
-        if (!CANONICAL_ALIAS_LOOKUP.has(canonical)) {
-            CANONICAL_ALIAS_LOOKUP.set(canonical, new Set());
-        }
+    const aliasesByCanonical = new Map<string, string[]>();
+    for (const [alias, canonical] of Object.entries(mergedIdentityAliases)) {
+        const aliases = aliasesByCanonical.get(canonical) ?? [];
+        aliases.push(alias);
+        aliasesByCanonical.set(canonical, aliases);
+    }
 
-        CANONICAL_ALIAS_LOOKUP.get(canonical)!.add(alias);
+    for (const [canonical, aliases] of Array.from(aliasesByCanonical.entries())) {
+        CANONICAL_ALIAS_LOOKUP.set(canonical, Object.freeze(aliases));
     }
 }
 
-rebuildCanonicalAliasLookup();
+export function setRuntimeSpeciesIdentityAliases(aliases: Record<string, string> | null) {
+    runtimeIdentityAliases = aliases;
+    rebuildIdentityAliasIndexes();
+}
+
+export function getMergedIdentityAliases() {
+    return mergedIdentityAliases;
+}
+
+rebuildIdentityAliasIndexes();
 
 export function refreshCollectionIdentityAliasLookup() {
-    rebuildCanonicalAliasLookup();
+    rebuildIdentityAliasIndexes();
 }
 
 export function resolveCollectionIdentityToken(token: string) {
     const normalized = token.trim().toLowerCase().replace(/-/g, "_");
-    return getMergedIdentityAliases()[normalized] ?? normalized;
+    return mergedIdentityAliases[normalized] ?? normalized;
+}
+
+/** All aliases whose configured canonical value exactly matches this resolved identity. */
+export function collectionAliasTokensForCanonical(token: string): readonly string[] {
+    const canonical = resolveCollectionIdentityToken(token);
+    return CANONICAL_ALIAS_LOOKUP.get(canonical) ?? [];
 }
 
 /** All normalized tokens that should match the same catalog / collection identity. */
@@ -118,7 +129,7 @@ export function collectionIdentityMatchKeys(token: string) {
     const canonical = resolveCollectionIdentityToken(normalized);
     const keys = new Set([normalized, canonical]);
 
-    for (const alias of Array.from(CANONICAL_ALIAS_LOOKUP.get(canonical) ?? [])) {
+    for (const alias of collectionAliasTokensForCanonical(canonical)) {
         keys.add(alias);
     }
 
