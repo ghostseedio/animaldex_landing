@@ -4,6 +4,9 @@ import Link from "@/app/[locale]/_components/link";
 import {useEffect, useState} from "react";
 import {giftDisplayName, type GiftCatalog, type GiftDefinition} from "@/lib/capture-gifts";
 
+/** Mirrors `FEED_RAIL_BUTTON_CLASS` in discover-timeline-cards (kept local to avoid an import cycle). */
+const FEED_RAIL_BUTTON_CLASS = "pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] [@media(max-height:760px)]:h-9 [@media(max-height:760px)]:w-9 [&_svg]:h-5 [&_svg]:w-5 [@media(max-height:760px)]:[&_svg]:h-[1.1rem] [@media(max-height:760px)]:[&_svg]:w-[1.1rem]";
+
 const ENDORSEMENT_STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 type EndorsementStat = (typeof ENDORSEMENT_STATS)[number];
 
@@ -195,7 +198,7 @@ export default function DiscoverCaptureActions({
             aria-modal="true"
             aria-label="Send a Gift"
         >
-            <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 shadow-2xl">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-semibold text-white">Send a Gift</h3>
@@ -232,7 +235,7 @@ export default function DiscoverCaptureActions({
             aria-modal="true"
             aria-label="Endorse this animal"
         >
-            <div className="w-full max-w-md rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 shadow-2xl">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-semibold text-white">Endorse this animal</h3>
@@ -281,7 +284,7 @@ export default function DiscoverCaptureActions({
                     onClick={() => setOpen(true)}
                     aria-label={showsGift ? "Gift" : endorseLabel}
                     title={showsGift ? "Gift" : endorseLabel}
-                    className={`pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] ${
+                    className={`${FEED_RAIL_BUTTON_CLASS} ${
                         showsGift || localStat ? "text-primary-300" : "text-white"
                     }`}
                 >

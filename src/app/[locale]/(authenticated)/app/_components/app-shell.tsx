@@ -5,6 +5,7 @@ import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
+import {AppShellChromeContext, isDiscoverShellRoute} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 type AppShellProps = {
@@ -76,6 +77,10 @@ export default function AppShell({
     const accountHref = "/account";
     const resolvedProfile = sessionProfile ?? profile;
     const resolvedAuthenticated = isAuthenticated || sessionAuthenticated;
+    // The Discover tab owns its top bar on phones (iOS DiscoverTopBar) and the
+    // snap feed must fill the space between it and the tab bar without the
+    // document scrolling underneath — so the shell becomes a fixed column.
+    const isDiscoverRoute = isDiscoverShellRoute(pathname);
     const isActive = (href: string) => {
         if (href === "/app") return pathname === href || pathname.startsWith("/p/");
         if (href === "/app/arena") return isArenaRoute(pathname);
@@ -148,7 +153,16 @@ export default function AppShell({
     );
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <AppShellChromeContext.Provider
+            value={{
+                isAuthenticated: resolvedAuthenticated,
+                unreadCount: resolvedAuthenticated ? unreadCount : 0,
+                unreadMessageCount: resolvedAuthenticated ? unreadMessageCount : 0,
+                menuOpen,
+                toggleMenu: () => setMenuOpen((open) => !open)
+            }}
+        >
+        <div className={`bg-black text-white ${isDiscoverRoute ? "flex h-[100dvh] flex-col overflow-hidden lg:block lg:h-auto lg:min-h-screen lg:overflow-visible" : "min-h-screen"}`}>
             <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-white/[0.08] bg-[#0b0b0b]/95 p-5 backdrop-blur-xl lg:flex">
                 <Link href="/app" className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
                     <img src="/images/logo.webp" alt="" className="h-11 w-11 rounded-xl ring-1 ring-white/10" />
@@ -197,7 +211,7 @@ export default function AppShell({
                 </div>
             </aside>
 
-            <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl lg:hidden">
+            <header className={`sticky top-0 z-30 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl lg:hidden ${isDiscoverRoute ? "hidden" : ""}`}>
                 <div className="flex h-16 items-center justify-between px-4">
                     <Link href="/app" aria-label="AnimalDex" className="flex items-center">
                         <img src="/images/logo.webp" alt="" className="h-9 w-9 rounded-xl ring-1 ring-white/10" />
@@ -221,7 +235,8 @@ export default function AppShell({
 
             {menuOpen ? (
                 <>
-                    <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setMenuOpen(false)} />
+                    {/* Above the z-40 tab bar so a tap on it closes the menu instead of navigating. */}
+                    <button type="button" aria-label="Close menu" className="fixed inset-0 z-[45] bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setMenuOpen(false)} />
                     <div className="fixed inset-x-4 top-[4.75rem] z-50 max-h-[70vh] overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#141414]/95 p-3 shadow-2xl backdrop-blur-xl lg:hidden">
                         {resolvedAuthenticated && resolvedProfile ? (
                         <Link href="/app/profile" className="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 transition hover:bg-white/[0.07]">
@@ -250,8 +265,16 @@ export default function AppShell({
                 </>
             ) : null}
 
-            <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_rgba(26,26,26,0.55)_0%,_rgba(0,0,0,0)_45%)] pb-28 lg:ml-[17rem] lg:pb-0">
-                <div className="mx-auto w-full max-w-[92rem] px-4 py-7 sm:px-7 lg:px-10 lg:py-10">{children}</div>
+            <main
+                className={`bg-[radial-gradient(ellipse_at_top,_rgba(26,26,26,0.55)_0%,_rgba(0,0,0,0)_45%)] lg:ml-[17rem] lg:pb-0 ${
+                    isDiscoverRoute
+                        // Bottom padding = floating tab bar (bottom-3 + ~4.2rem) so the last
+                        // snap slot ends above it, like iOS's safe-area inset.
+                        ? "min-h-0 flex-1 pb-[5rem] lg:min-h-screen"
+                        : "min-h-screen pb-28"
+                }`}
+            >
+                <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
             </main>
 
             <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center rounded-[1.75rem] border border-white/10 bg-[#141414]/95 p-1.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl lg:hidden">
@@ -262,5 +285,6 @@ export default function AppShell({
                 {mainLinks.slice(2).map((item) => navLink(item, true))}
             </nav>
         </div>
+        </AppShellChromeContext.Provider>
     );
 }

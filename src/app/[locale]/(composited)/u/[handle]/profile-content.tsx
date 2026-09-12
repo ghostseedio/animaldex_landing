@@ -522,7 +522,7 @@ export default function ProfileContent({
             ) : null}
 
             {viewer.isOwner && surface === "app" ? (
-                <div className="sticky top-0 z-30 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-[#07100B]/95 px-[18px] py-2.5 backdrop-blur-xl md:-mx-8">
+                <div className="sticky top-16 z-20 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-[#07100B]/95 px-[18px] py-2.5 backdrop-blur-xl sm:-mx-7 lg:top-0 lg:-mx-10">
                     <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
                         <ProfileMessagesIcon />
                     </ProfileChromeButton>
@@ -680,7 +680,11 @@ export default function ProfileContent({
             </div>
             </div>
 
-            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-[#07100B]/95 backdrop-blur-xl md:-mx-8 ${viewer.isOwner && surface === "app" ? "top-[2.65rem]" : "top-0"}`}>
+            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-[#07100B]/95 backdrop-blur-xl md:-mx-8 ${
+                surface === "app"
+                    ? viewer.isOwner ? "top-[6.65rem] lg:top-[2.65rem]" : "top-16 lg:top-0"
+                    : "top-0"
+            }`}>
                 <div className="grid px-[18px]" style={{gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`}}>
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab;

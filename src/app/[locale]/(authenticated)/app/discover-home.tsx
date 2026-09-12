@@ -1,27 +1,123 @@
 "use client";
 
 import Link from "@/app/[locale]/_components/link";
-import {AppEmpty, AppPage, AppPrimaryLink, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {AppEmpty, AppPrimaryLink, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getLocalePath} from "@/lib/site";
-import {type TouchEvent, useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent} from "react";
+import {useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
 
-const DISCOVER_PAGE_SIZE = 4;
+const DISCOVER_PAGE_SIZE = 8;
 const COLLECTOR_PAGE_SIZE = 24;
-const TIMELINE_PREFETCH_REMAINING = 2;
+const TIMELINE_PREFETCH_REMAINING = 3;
+/** Same asset iOS `DiscoverTopBar.wordmark` loads. */
+const DISCOVER_WORDMARK_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-text.webp";
+
+type DiscoverHydrationPayload = {
+    timeline?: DiscoverTimelineItem[];
+    nextCursor?: DiscoverTimelineCursor | null;
+    hasMore?: boolean;
+    featured?: DiscoverFeaturedItem[];
+    viewerUserId?: string | null;
+};
 
 function scrollScrollerToPost(scroller: HTMLElement, postId: string, behavior: ScrollBehavior = "auto") {
     const target = scroller.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(postId)}"]`);
     if (!target) return false;
     scroller.scrollTo({top: target.offsetTop, behavior});
     return true;
+}
+
+/** Mirrors `seedTimelineWithFocusPost` so a static /p shell keeps its post first when it is not in page one. */
+function seedTimelineWithFocus(timeline: DiscoverTimelineItem[], focus: DiscoverTimelineItem | null) {
+    if (!focus) return timeline;
+    if (timeline.some((item) => item.id === focus.id)) return timeline;
+    return [focus, ...timeline];
+}
+
+function CountBadge({count}: {count: number}) {
+    if (!count) return null;
+    return (
+        <span className="absolute -right-1.5 -top-1 rounded-full bg-primary-400 px-[5px] py-[2px] font-mono text-[9px] font-black leading-none text-black">
+            {count > 99 ? "99+" : count}
+        </span>
+    );
+}
+
+/**
+ * iOS `DiscoverTopBar`: collectors toggle + challenges on the left, wordmark in
+ * the middle, notifications on the right. Sits in the flow above the snap feed
+ * so nothing floats over the first post's collector chrome.
+ */
+function DiscoverTopBar({
+    segment,
+    onToggleCollectors
+}: {
+    segment: DiscoverSegment;
+    onToggleCollectors: () => void;
+}) {
+    const chrome = useAppShellChrome();
+    const showsCollectors = segment === "collectors";
+
+    return (
+        <div className="relative flex h-14 shrink-0 items-center justify-between px-3 lg:hidden">
+            <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={onToggleCollectors}
+                    aria-label={showsCollectors ? "Back to timeline" : "Collectors"}
+                    className="grid h-11 w-11 place-items-center text-white"
+                >
+                    {showsCollectors ? (
+                        <AppIcon name="back" className="h-[1.35rem] w-[1.35rem]" />
+                    ) : (
+                        <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+                            <path d="M7 6H4.5a1 1 0 0 0-1 1 4 4 0 0 0 3.7 4M17 6h2.5a1 1 0 0 1 1 1 4 4 0 0 1-3.7 4" />
+                            <path d="M12 14v3m-3 3h6m-3-3v3" />
+                        </svg>
+                    )}
+                </button>
+                <Link href="/challenges" aria-label="Challenges" className="grid h-11 w-11 place-items-center text-white">
+                    <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 21V4" />
+                        <path d="M5 4h13l-2.5 4L18 12H5" />
+                    </svg>
+                </Link>
+            </div>
+
+            <Link href="/app" aria-label="AnimalDex" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto max-w-[9.5rem] object-contain" />
+            </Link>
+
+            <div className="flex items-center gap-1">
+                <Link
+                    href={chrome.isAuthenticated ? "/app/notifications" : "/account"}
+                    aria-label="Notifications"
+                    className="relative grid h-11 w-11 place-items-center text-white"
+                >
+                    <AppIcon name="bell" className="h-[1.35rem] w-[1.35rem]" />
+                    {chrome.isAuthenticated ? <CountBadge count={chrome.unreadCount} /> : null}
+                </Link>
+                <button
+                    type="button"
+                    onClick={chrome.toggleMenu}
+                    aria-label={chrome.menuOpen ? "Close menu" : "Open menu"}
+                    className="grid h-11 w-11 place-items-center text-white"
+                >
+                    <AppIcon name={chrome.menuOpen ? "close" : "menu"} className="h-[1.35rem] w-[1.35rem]" />
+                </button>
+            </div>
+        </div>
+    );
 }
 
 function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
@@ -69,12 +165,17 @@ function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
     );
 }
 
-function TimelineLoadingPreview() {
+/**
+ * iOS gives an in-flight page a real snap slot ("paginationLoadingSnap") so an
+ * upward swipe lands on a loading post instead of feeling frozen at the end.
+ */
+function TimelineLoadingSnap() {
     return (
         <div
+            data-timeline-snap-item
             aria-live="polite"
             aria-label="Loading more posts"
-            className="flex shrink-0 items-center justify-center gap-2 py-5"
+            className="flex h-full min-h-0 shrink-0 snap-start snap-always items-center justify-center gap-2 bg-black"
         >
             <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25" />
             <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/25 [animation-delay:120ms]" />
@@ -167,7 +268,7 @@ export default function DiscoverHome({
     initialSegment = "discover",
     initialFocusPostId = null,
     syncPostUrls = true,
-    viewerUserId = null,
+    viewerUserId: initialViewerUserId = null,
     hydrateSignedInFeed = false
 }: {
     locale: string;
@@ -179,12 +280,21 @@ export default function DiscoverHome({
     initialFocusPostId?: string | null;
     syncPostUrls?: boolean;
     viewerUserId?: string | null;
+    /**
+     * Set by the static /p/[postId] shell. That page is cached for crawlers
+     * with exactly one post and no viewer, so a browser session has to turn
+     * it into the live feed itself: immediately when a Supabase auth cookie
+     * is present, otherwise on the first scroll intent (never for a bot that
+     * only renders the page).
+     */
     hydrateSignedInFeed?: boolean;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
     const [timelineItems, setTimelineItems] = useState(timeline);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
+    const [featuredItems, setFeaturedItems] = useState(featured);
+    const [viewerUserId, setViewerUserId] = useState(initialViewerUserId);
     const [collectorItems, setCollectorItems] = useState(collectors);
     const [hasMoreTimeline, setHasMoreTimeline] = useState(Boolean(timelineCursor));
     const [hasMoreCollectors, setHasMoreCollectors] = useState(collectors.length >= COLLECTOR_PAGE_SIZE);
@@ -194,11 +304,12 @@ export default function DiscoverHome({
     const timelineSentinelRef = useRef<HTMLDivElement | null>(null);
     const collectorSentinelRef = useRef<HTMLDivElement | null>(null);
     const timelineSnapLockUntilRef = useRef(0);
-    const timelineTouchStartYRef = useRef<number | null>(null);
     const activePostIdRef = useRef<string | null>(initialFocusPostId ?? timeline[0]?.id ?? null);
     const didFocusScrollRef = useRef(false);
     const timelineRequestIdRef = useRef(0);
     const hasPaginatedTimelineRef = useRef(false);
+    /** "pending" = static shell waiting for a reason to fetch the live feed. */
+    const feedHydrationRef = useRef<"idle" | "pending" | "loading" | "done">(hydrateSignedInFeed ? "pending" : "idle");
     const seedTimelineKey = `${timeline.map((item) => item.id).join("|")}|${timelineCursor?.id ?? ""}`;
     const seedTimelineKeyRef = useRef(seedTimelineKey);
 
@@ -231,14 +342,17 @@ export default function DiscoverHome({
         seedTimelineKeyRef.current = seedTimelineKey;
         hasPaginatedTimelineRef.current = false;
         didFocusScrollRef.current = false;
+        feedHydrationRef.current = hydrateSignedInFeed ? "pending" : "idle";
         const signedIn = hydrateSignedInFeed
             && typeof document !== "undefined"
             && requestHasSupabaseAuthCookie(document.cookie);
         setTimelineItems(timeline);
         setNextTimelineCursor(timelineCursor);
+        setFeaturedItems(featured);
+        setViewerUserId(initialViewerUserId);
         setHasMoreTimeline(Boolean(timelineCursor) || signedIn);
         activePostIdRef.current = initialFocusPostId ?? timeline[0]?.id ?? null;
-    }, [hydrateSignedInFeed, seedTimelineKey, timeline, timelineCursor, initialFocusPostId]);
+    }, [hydrateSignedInFeed, seedTimelineKey, timeline, timelineCursor, featured, initialViewerUserId, initialFocusPostId]);
 
     useEffect(() => {
         const signedIn = hydrateSignedInFeed
@@ -281,7 +395,54 @@ export default function DiscoverHome({
         }
     }, [collectorItems.length, hasMoreCollectors, isLoadingCollectors]);
 
+    /**
+     * Turn the one-post static shell into the live feed positioned on that
+     * post — the web equivalent of iOS `pendingDiscoverPostDeepLink`, which
+     * loads the normal timeline and scrolls it to the linked post.
+     */
+    const hydrateLiveFeed = useCallback(async () => {
+        if (feedHydrationRef.current !== "pending") return;
+        feedHydrationRef.current = "loading";
+        const requestId = ++timelineRequestIdRef.current;
+        const focusId = initialFocusPostId ?? timeline[0]?.id ?? null;
+        setIsLoadingTimeline(true);
+        try {
+            const params = new URLSearchParams({limit: String(DISCOVER_PAGE_SIZE), hydrate: "1"});
+            if (focusId) params.set("focusPostId", focusId);
+            const response = await fetch(`/api/app/discover?${params.toString()}`, {
+                headers: {Accept: "application/json"}
+            });
+            if (requestId !== timelineRequestIdRef.current) return;
+            if (!response.ok) {
+                feedHydrationRef.current = "pending";
+                setHasMoreTimeline(false);
+                return;
+            }
+            const payload = await response.json() as DiscoverHydrationPayload;
+            const focusPost = timeline.find((item) => item.id === focusId) ?? null;
+            const page = seedTimelineWithFocus(payload.timeline ?? [], focusPost);
+            feedHydrationRef.current = "done";
+            hasPaginatedTimelineRef.current = true;
+            if (page.length) setTimelineItems(page);
+            setNextTimelineCursor(payload.nextCursor ?? null);
+            setHasMoreTimeline(Boolean(payload.nextCursor));
+            if (payload.featured?.length) setFeaturedItems(payload.featured);
+            if (payload.viewerUserId) setViewerUserId(payload.viewerUserId);
+        } catch {
+            if (requestId === timelineRequestIdRef.current) feedHydrationRef.current = "pending";
+        } finally {
+            if (requestId === timelineRequestIdRef.current) {
+                setIsLoadingTimeline(false);
+            }
+        }
+    }, [initialFocusPostId, timeline]);
+
     const loadNextTimelinePage = useCallback(async () => {
+        if (feedHydrationRef.current === "pending") {
+            await hydrateLiveFeed();
+            return;
+        }
+        if (feedHydrationRef.current === "loading") return;
         if (isLoadingTimeline || !hasMoreTimeline) return;
         const requestId = ++timelineRequestIdRef.current;
         const cursor = nextTimelineCursor;
@@ -323,7 +484,33 @@ export default function DiscoverHome({
                 setIsLoadingTimeline(false);
             }
         }
-    }, [hasMoreTimeline, isLoadingTimeline, nextTimelineCursor]);
+    }, [hasMoreTimeline, hydrateLiveFeed, isLoadingTimeline, nextTimelineCursor]);
+
+    // Signed-in readers get the live feed straight away; anonymous readers on
+    // the first swipe/scroll. Both keep the shared post in view.
+    useEffect(() => {
+        if (segment !== "discover" || feedHydrationRef.current !== "pending") return undefined;
+        if (typeof document !== "undefined" && requestHasSupabaseAuthCookie(document.cookie)) {
+            void hydrateLiveFeed();
+            return undefined;
+        }
+        const scroller = timelineScrollerRef.current;
+        if (!scroller) return undefined;
+        const onIntent = () => {
+            void hydrateLiveFeed();
+        };
+        const options: AddEventListenerOptions = {passive: true, once: true};
+        scroller.addEventListener("touchstart", onIntent, options);
+        scroller.addEventListener("wheel", onIntent, options);
+        scroller.addEventListener("pointerdown", onIntent, options);
+        window.addEventListener("keydown", onIntent, options);
+        return () => {
+            scroller.removeEventListener("touchstart", onIntent);
+            scroller.removeEventListener("wheel", onIntent);
+            scroller.removeEventListener("pointerdown", onIntent);
+            window.removeEventListener("keydown", onIntent);
+        };
+    }, [segment, hydrateLiveFeed, seedTimelineKey]);
 
     const snapTimeline = useCallback((direction: 1 | -1) => {
         const scroller = timelineScrollerRef.current;
@@ -361,6 +548,10 @@ export default function DiscoverHome({
         return true;
     }, [loadNextTimelinePage, syncUrlToPost]);
 
+    // Mouse wheels / trackpads: one notch = one post, like a swipe. Touch is
+    // left to native scroll-snap (snap-mandatory + snap-always), which already
+    // behaves like iOS `.viewAligned(limitBehavior: .always)`; fighting it with
+    // scrollTo() on touchend is what made the feed feel stuck on phones.
     const handleTimelineWheel = useCallback((event: WheelEvent<HTMLElement>) => {
         const verticalDelta = event.deltaY;
         if (Math.abs(verticalDelta) < Math.max(6, Math.abs(event.deltaX))) return;
@@ -378,30 +569,6 @@ export default function DiscoverHome({
         }
     }, [hasMoreTimeline, loadNextTimelinePage, snapTimeline]);
 
-    const handleTimelineTouchStart = useCallback((event: TouchEvent<HTMLElement>) => {
-        timelineTouchStartYRef.current = event.touches[0]?.clientY ?? null;
-    }, []);
-
-    const handleTimelineTouchEnd = useCallback((event: TouchEvent<HTMLElement>) => {
-        const startY = timelineTouchStartYRef.current;
-        timelineTouchStartYRef.current = null;
-        const endY = event.changedTouches[0]?.clientY;
-        if (startY == null || endY == null) return;
-
-        const delta = startY - endY;
-        if (Math.abs(delta) < 18) return;
-
-        const now = Date.now();
-        if (now < timelineSnapLockUntilRef.current) return;
-
-        timelineSnapLockUntilRef.current = now + 420;
-        const direction = delta > 0 ? 1 : -1;
-        const didMove = snapTimeline(direction);
-        if (!didMove && direction > 0 && hasMoreTimeline) {
-            void loadNextTimelinePage();
-        }
-    }, [hasMoreTimeline, loadNextTimelinePage, snapTimeline]);
-
     useEffect(() => {
         if (segment !== "discover" || !hasMoreTimeline) return undefined;
         const scroller = timelineScrollerRef.current;
@@ -411,7 +578,8 @@ export default function DiscoverHome({
             if (entries.some((entry) => entry.isIntersecting)) {
                 void loadNextTimelinePage();
             }
-        }, {root: scroller, rootMargin: "240px 0px"});
+        // Two viewports of runway so fast swipes never land on a loading slot.
+        }, {root: scroller, rootMargin: "200% 0px"});
         observer.observe(node);
         return () => observer.disconnect();
     }, [segment, hasMoreTimeline, loadNextTimelinePage, timelineItems.length]);
@@ -482,75 +650,85 @@ export default function DiscoverHome({
     }, [segment, syncPostUrls, timelineItems, syncUrlToPost]);
 
     return (
-        <AppPage>
-            <div className="relative">
-                <div className="pointer-events-none fixed left-1/2 top-[4.75rem] z-40 -translate-x-1/2 lg:left-[calc(17rem+2.5rem)] lg:top-6 lg:translate-x-0">
-                    <div className="pointer-events-auto rounded-[1.25rem] border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                        <AppSegmentedControl
-                            value={segment}
-                            options={[
-                                {id: "discover", label: "Discover"},
-                                {id: "collectors", label: "Collectors"}
-                            ]}
-                            onChange={handleSegmentChange}
-                        />
-                    </div>
-                </div>
+        <div className="flex h-full min-h-0 flex-col lg:block lg:h-auto lg:space-y-8">
+            <DiscoverTopBar
+                segment={segment}
+                onToggleCollectors={() => handleSegmentChange(segment === "collectors" ? "discover" : "collectors")}
+            />
 
-                {segment === "discover" ? (
-                    <div className="grid w-full gap-4 lg:grid-cols-[10rem_minmax(0,42rem)_20rem] lg:items-start lg:justify-between xl:grid-cols-[12rem_minmax(0,42rem)_20rem]">
-                        <div aria-hidden="true" className="hidden lg:block" />
-                        <div className="min-w-0">
-                            {timelineItems.length ? (
-                                <section
-                                    ref={timelineScrollerRef}
-                                    onWheel={handleTimelineWheel}
-                                    onTouchStart={handleTimelineTouchStart}
-                                    onTouchEnd={handleTimelineTouchEnd}
-                                    className="-mx-4 h-[calc(100svh-7.5rem)] min-h-[34rem] snap-y snap-mandatory overflow-y-auto overscroll-contain scroll-smooth [scrollbar-width:none] sm:mx-0 md:h-[90svh] md:min-h-[42rem] md:rounded-[1.35rem] md:border md:border-white/[0.08] [&::-webkit-scrollbar]:hidden"
-                                >
-                                    {/* Flush stacking: iOS uses VStack(spacing: 0) so one
-                                        swipe always lands on exactly one post. */}
-                                    {timelineItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            data-timeline-snap-item
-                                            data-post-id={item.id}
-                                            className="h-full min-h-0 snap-start snap-always"
-                                        >
-                                            <DiscoverTimelineCard item={item} locale={locale} viewerUserId={viewerUserId} />
-                                        </div>
-                                    ))}
-                                    {isLoadingTimeline ? <TimelineLoadingPreview /> : null}
-                                    {hasMoreTimeline ? (
-                                        <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
-                                    ) : null}
-                                </section>
-                            ) : (
+            {/* Desktop keeps the floating segment toggle beside the feed column. */}
+            <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:block">
+                <div className="pointer-events-auto rounded-[1.25rem] border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+                    <AppSegmentedControl
+                        value={segment}
+                        options={[
+                            {id: "discover", label: "Discover"},
+                            {id: "collectors", label: "Collectors"}
+                        ]}
+                        onChange={handleSegmentChange}
+                    />
+                </div>
+            </div>
+
+            {segment === "discover" ? (
+                <div className="min-h-0 flex-1 lg:grid lg:w-full lg:grid-cols-[10rem_minmax(0,42rem)_20rem] lg:items-start lg:justify-between lg:gap-4 xl:grid-cols-[12rem_minmax(0,42rem)_20rem]">
+                    <div aria-hidden="true" className="hidden lg:block" />
+                    <div className="h-full min-h-0 min-w-0">
+                        {timelineItems.length ? (
+                            <section
+                                ref={timelineScrollerRef}
+                                onWheel={handleTimelineWheel}
+                                // Phones: the feed is the whole area between the top bar and the tab
+                                // bar (iOS `feedViewportHeight`), one post per snap slot.
+                                className="h-full min-h-0 snap-y snap-mandatory overflow-y-auto overscroll-contain bg-black [scrollbar-width:none] lg:h-[90svh] lg:min-h-[42rem] lg:rounded-[1.35rem] lg:border lg:border-white/[0.08] [&::-webkit-scrollbar]:hidden"
+                            >
+                                {/* Flush stacking: iOS uses VStack(spacing: 0) so one
+                                    swipe always lands on exactly one post. */}
+                                {timelineItems.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        data-timeline-snap-item
+                                        data-post-id={item.id}
+                                        className="h-full min-h-0 snap-start snap-always"
+                                    >
+                                        <DiscoverTimelineCard item={item} locale={locale} viewerUserId={viewerUserId} />
+                                    </div>
+                                ))}
+                                {isLoadingTimeline ? <TimelineLoadingSnap /> : null}
+                                {hasMoreTimeline ? (
+                                    <div ref={timelineSentinelRef} aria-hidden="true" className="h-px" />
+                                ) : null}
+                            </section>
+                        ) : (
+                            <div className="px-4 py-6 lg:p-0">
                                 <AppEmpty
                                     icon="home"
                                     title="Timeline is quiet"
                                     detail="Check back soon, or make one of your animals public and comparison-ready."
                                     action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
                                 />
-                            )}
-                        </div>
-                        <FeaturedPanel items={featured} />
+                            </div>
+                        )}
                     </div>
-                ) : collectorItems.length ? (
-                    <section className="mx-auto max-w-3xl space-y-3">
-                        {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
-                        {isLoadingCollectors ? (
-                            <CollectorLoadingSkeleton />
-                        ) : null}
-                        {hasMoreCollectors ? (
-                            <div ref={collectorSentinelRef} aria-hidden="true" className="h-px" />
-                        ) : null}
-                    </section>
-                ) : (
+                    <FeaturedPanel items={featuredItems} />
+                </div>
+            ) : collectorItems.length ? (
+                // iOS keeps the last collector row and pagination spinner above
+                // the floating tab bar (padding.bottom 124) — same here.
+                <section className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-8 pt-2 [scrollbar-width:none] lg:mx-auto lg:h-auto lg:max-w-3xl lg:overflow-visible lg:px-0 lg:pb-0 lg:pt-0 [&::-webkit-scrollbar]:hidden">
+                    {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {isLoadingCollectors ? (
+                        <CollectorLoadingSkeleton />
+                    ) : null}
+                    {hasMoreCollectors ? (
+                        <div ref={collectorSentinelRef} aria-hidden="true" className="h-px" />
+                    ) : null}
+                </section>
+            ) : (
+                <div className="px-4 py-6 lg:p-0">
                     <AppEmpty icon="collection" title="No collectors yet" detail="Public collector profiles will appear here as the community grows." />
-                )}
-            </div>
-        </AppPage>
+                </div>
+            )}
+        </div>
     );
 }

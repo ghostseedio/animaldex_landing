@@ -2,13 +2,14 @@ import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
 import {getAuthenticatedAppContext} from "@/data/authenticated-app";
 import {getDiscoverCollectors} from "@/data/discover-collectors";
 import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
-import {redirect} from "next/navigation";
-import {discoverPostPath} from "@/lib/discover-post";
-import {getLocalePath} from "@/lib/site";
 
-const INITIAL_DISCOVER_TIMELINE_LIMIT = 4;
+const INITIAL_DISCOVER_TIMELINE_LIMIT = 8;
 const INITIAL_COLLECTOR_LIMIT = 24;
 
+// /app is the live Discover tab, exactly like the iOS Home tab: it renders the
+// full signed-in feed here. The URL is synced to /p/<post> as the user scrolls
+// so refresh/share keep the active post, but we never redirect into the static
+// /p shell — that shell only knows one post and no viewer.
 export default async function AppHomePage({
     searchParams,
     params
@@ -22,11 +23,6 @@ export default async function AppHomePage({
         getDiscoverCollectors(INITIAL_COLLECTOR_LIMIT),
         getAuthenticatedAppContext()
     ]);
-
-    // Canonicalize the live feed onto shareable post URLs so refresh/share keep the active post.
-    if (initialSegment === "discover" && timeline[0]) {
-        redirect(getLocalePath(params.locale, discoverPostPath(timeline[0].id)));
-    }
 
     return (
         <DiscoverHome

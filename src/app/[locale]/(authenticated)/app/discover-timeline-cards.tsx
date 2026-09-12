@@ -711,21 +711,12 @@ function CaptureChip({
   );
 }
 
+/** iOS `capturePostChipRow`: one HStack of Level · Tier · Grade — never wraps. */
 function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
   const levelLabel = item.level >= 100 ? "Lvl 100 MAX" : `Lvl ${item.level}`;
   return (
-    <div className="-mx-0.5 flex max-h-7 flex-wrap gap-1.5 overflow-visible">
+    <div className="flex flex-nowrap items-center gap-2">
       <CaptureChip tone="green">{levelLabel}</CaptureChip>
-      {item.identityKindLabel ? (
-        <IdentityKindChip
-          identityKind={item.identityKind}
-          label={item.identityKindLabel}
-          animalName={item.animalName}
-          explanation={item.identityExplanation}
-          retakeGuidance={item.identityEvidenceGuidance}
-          compact
-        />
-      ) : null}
       <CaptureChip tone="cyan">Tier {item.battleTier}</CaptureChip>
       <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} compact />
     </div>
@@ -737,7 +728,12 @@ function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
  * Feed overlay chrome — iOS `DiscoverCaptureTimelineCardView.overlayChrome`
  * ------------------------------------------------------------------ */
 
-/** iOS `overlayActionButton`: 44pt hit area, 20pt bold glyph, no chrome behind it. */
+/**
+ * iOS `overlayActionButton`: 44pt hit area, 20pt bold glyph, no chrome behind
+ * it; 36pt / 17pt when the post slot is shorter than 620pt (`usesCompactOverlay`).
+ */
+export const FEED_RAIL_BUTTON_CLASS = "pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] [@media(max-height:760px)]:h-9 [@media(max-height:760px)]:w-9 [&_svg]:h-5 [&_svg]:w-5 [@media(max-height:760px)]:[&_svg]:h-[1.1rem] [@media(max-height:760px)]:[&_svg]:w-[1.1rem]";
+
 function FeedRailButton({
   label,
   href,
@@ -758,7 +754,7 @@ function FeedRailButton({
     : tone === "dim"
       ? "text-white/[0.34]"
       : "text-white";
-  const className = `pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] ${toneClass}`;
+  const className = `${FEED_RAIL_BUTTON_CLASS} ${toneClass}`;
 
   if (href && !disabled) {
     return (
@@ -1158,7 +1154,9 @@ function CaptureCard({
         </span>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-3.5">
+      {/* iOS `overlayChrome`: 16/14pt insets, 10/8pt when compact; the chrome
+          never sits under the tab bar because the snap slot already ends above it. */}
+      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-3.5 [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-2">
         <FeedTopOverlay
           collector={activeItem.collector}
           activityLabel={activityLabel}
@@ -1166,35 +1164,12 @@ function CaptureCard({
           showsSoundToggle={Boolean(activeAssetIsVideo)}
         />
 
-        <div className="min-h-5 flex-1" />
+        <div className="min-h-5 flex-1 [@media(max-height:760px)]:min-h-2" />
 
-        <div className="flex items-end gap-3.5">
+        <div className="flex items-end gap-3.5 [@media(max-height:760px)]:gap-2">
           <FeedBottomOverlay item={activeItem} />
-          <div className="flex w-[46px] shrink-0 flex-col items-center gap-1">
-            {canOffer ? (
-              <FeedRailButton label="Offer" href={`/app/trades?theirCapture=${encodeURIComponent(activeItem.captureId)}`}>
-                <OfferIcon />
-              </FeedRailButton>
-            ) : null}
-            <FeedRailButton
-              label="Compare"
-              href={`/app/matchups?target=${encodeURIComponent(activeItem.captureId)}`}
-              tone={canChallenge ? "cyan" : "dim"}
-              disabled={!canChallenge}
-            >
-              <CompareIcon />
-            </FeedRailButton>
-            <span className="pointer-events-auto grid h-11 w-11 place-items-center text-white [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))]">
-              <ShareDiscoverPostButton
-                url={shareForActive.url}
-                title={shareForActive.title}
-                text={shareForActive.text}
-                compact
-              />
-            </span>
-            <FeedRailButton label="Post information" onClick={() => setShowsInfo(true)}>
-              <InfoIcon />
-            </FeedRailButton>
+          {/* iOS `actionRail` order: Gift, Offer, Compare, Share, Info. */}
+          <div className="flex w-[46px] shrink-0 flex-col items-center gap-1 [@media(max-height:760px)]:w-10 [@media(max-height:760px)]:gap-0.5">
             {viewerUserId ? (
               <DiscoverCaptureActions
                 variant="rail"
@@ -1211,6 +1186,30 @@ function CaptureCard({
                 }}
               />
             ) : null}
+            {canOffer ? (
+              <FeedRailButton label="Offer" href={`/app/trades?theirCapture=${encodeURIComponent(activeItem.captureId)}`}>
+                <OfferIcon />
+              </FeedRailButton>
+            ) : null}
+            <FeedRailButton
+              label="Compare"
+              href={`/app/matchups?target=${encodeURIComponent(activeItem.captureId)}`}
+              tone={canChallenge ? "cyan" : "dim"}
+              disabled={!canChallenge}
+            >
+              <CompareIcon />
+            </FeedRailButton>
+            <span className={`${FEED_RAIL_BUTTON_CLASS} text-white [&>button]:grid [&>button]:h-full [&>button]:w-full [&>button]:place-items-center [&>button]:p-0 [&>button]:text-white`}>
+              <ShareDiscoverPostButton
+                url={shareForActive.url}
+                title={shareForActive.title}
+                text={shareForActive.text}
+                compact
+              />
+            </span>
+            <FeedRailButton label="Post information" onClick={() => setShowsInfo(true)}>
+              <InfoIcon />
+            </FeedRailButton>
           </div>
         </div>
       </div>

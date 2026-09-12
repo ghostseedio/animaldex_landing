@@ -1,5 +1,12 @@
 import {NextRequest, NextResponse} from "next/server";
-import {getDiscoverTimelineBundle, type DiscoverTimelineCursor} from "@/data/discover-timeline";
+import {
+    getDiscoverPostById,
+    getDiscoverTimelineBundle,
+    seedTimelineWithFocusPost,
+    type DiscoverTimelineCursor
+} from "@/data/discover-timeline";
+import {parseDiscoverPostId} from "@/lib/discover-post";
+import {getViewerUserId} from "@/lib/viewer";
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 24;
@@ -20,13 +27,29 @@ function readCursor(request: NextRequest): DiscoverTimelineCursor | null {
 }
 
 export async function GET(request: NextRequest) {
-    const limit = normalizedPositiveInteger(request.nextUrl.searchParams.get("limit"), DEFAULT_LIMIT, MAX_LIMIT);
-    const {timeline, nextCursor} = await getDiscoverTimelineBundle(limit, readCursor(request));
+    const params = request.nextUrl.searchParams;
+    const limit = normalizedPositiveInteger(params.get("limit"), DEFAULT_LIMIT, MAX_LIMIT);
+    const cursor = readCursor(request);
+    // `hydrate=1` is sent once by the static /p/[postId] shell (and only from a
+    // real browser session) to turn a single shared post into the live feed —
+    // the same thing the iOS deep link does when it scrolls the timeline to a
+    // post. It also carries the viewer id so the action rail can light up.
+    const hydrate = params.get("hydrate") === "1" && !cursor;
+    const focusPostId = hydrate ? parseDiscoverPostId(params.get("focusPostId"))?.postId ?? null : null;
+
+    const [bundle, focusPost, viewerUserId] = await Promise.all([
+        getDiscoverTimelineBundle(limit, cursor),
+        focusPostId ? getDiscoverPostById(focusPostId) : Promise.resolve(null),
+        hydrate ? getViewerUserId() : Promise.resolve(null)
+    ]);
+
+    const timeline = hydrate ? seedTimelineWithFocusPost(bundle.timeline, focusPost) : bundle.timeline;
 
     return NextResponse.json({
         timeline,
-        nextCursor,
-        hasMore: Boolean(nextCursor)
+        nextCursor: bundle.nextCursor,
+        hasMore: Boolean(bundle.nextCursor),
+        ...(hydrate ? {featured: bundle.featured, viewerUserId} : {})
     });
 }
 
