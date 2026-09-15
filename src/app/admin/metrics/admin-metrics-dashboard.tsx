@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, FormEvent, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import AdminShell from "@/app/admin/_components/admin-shell";
 import { Badge, Button, Card, CardContent, CardHeader, InfoTip, Segmented, Stat, TD, TH, Table } from "@/components/admin/ui";
 import {
+  daysInMonth,
   formatMoney,
   growthMonthState,
   monthLabel,
@@ -31,6 +32,7 @@ import {
   type SpendOs,
   type StoreSummary,
 } from "@/lib/growth-attribution";
+import { convertAmount, displayCurrencies, fxDate, fxKey, isDisplayCurrency, type DisplayCurrency, type FxRates } from "@/lib/fx-convert";
 import { format, GrowthCommandCenter, type GrowthData } from "./growth-plan-panel";
 
 // ---------------------------------------------------------------------------
@@ -149,6 +151,52 @@ function PlatformBadge({ platform }: { platform: GrowthPlatform | SpendOs }) {
   const tone = platform === "ios" ? "ios" : platform === "android" ? "android" : platform === "web" ? "web" : "neutral";
   const label = platform in growthPlatformLabels ? growthPlatformLabels[platform as GrowthPlatform] : osLabels[platform as SpendOs];
   return <Badge tone={tone}>{label}</Badge>;
+}
+
+// ---------------------------------------------------------------------------
+// Currency conversion (Wise rates, per amount date)
+// ---------------------------------------------------------------------------
+
+type FxState = { display: DisplayCurrency; rates: FxRates | null; referenceDate: string };
+const FxContext = createContext<FxState>({ display: "USD", rates: null, referenceDate: new Date().toISOString().slice(0, 10) });
+const CURRENCY_STORAGE_KEY = "animaldex.admin.metrics.currency";
+
+function useFx() {
+  const state = useContext(FxContext);
+  const convert = (amount: number, currency: string, date?: string) =>
+    convertAmount(amount, currency, date ?? state.referenceDate, state.display, state.rates);
+  const text = (amount: number | null | undefined, currency: string | null | undefined, date?: string) => {
+    if (amount == null || !currency) return "—";
+    const converted = convert(amount, currency, date);
+    return converted == null ? formatMoney(amount, currency) : formatMoney(converted, state.display);
+  };
+  /** One converted total, or the per-currency list when any rate is missing. */
+  const total = (values: Record<string, number> | null | undefined, date?: string) => {
+    const entries = Object.entries(values ?? {}).filter(([, amount]) => amount > 0);
+    if (!entries.length) return "—";
+    const converted = entries.map(([currency, amount]) => convert(amount, currency, date));
+    if (converted.some((value) => value == null)) return moneyByCurrency(values);
+    return formatMoney(converted.reduce<number>((sum, value) => sum + (value ?? 0), 0), state.display);
+  };
+  return { ...state, convert, text, total };
+}
+
+/** Converted amount with the original underneath, so nothing is hidden by the conversion. */
+function Money({ amount, currency, date }: { amount: number | null | undefined; currency: string | null | undefined; date?: string }) {
+  const fx = useFx();
+  if (amount == null || !currency) return <>—</>;
+  const converted = fx.convert(amount, currency, date);
+  if (converted == null || currency.toUpperCase() === fx.display) return <>{formatMoney(amount, currency)}</>;
+  return (
+    <span title={`${formatMoney(amount, currency)} at the Wise rate for ${fxDate(date ?? fx.referenceDate)}`}>
+      {formatMoney(converted, fx.display)}
+      <span className="block text-[10px] font-normal text-ink-500">{formatMoney(amount, currency)}</span>
+    </span>
+  );
+}
+
+function MoneyTotal({ values, date }: { values: Record<string, number> | null | undefined; date?: string }) {
+  return <>{useFx().total(values, date)}</>;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +325,7 @@ function AttributionPending() {
 }
 
 function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: PaidLogRow[] }) {
+  const fx = useFx();
   const unallocated = log.filter((row) => row.os !== "ios" && row.os !== "android");
   return (
     <div className="space-y-3">
@@ -310,11 +359,11 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
                 </div>
                 <div>
                   <dt className="text-ink-500">Spend</dt>
-                  <dd className="text-ink-200">{moneyByCurrency(item.spendByCurrency)}</dd>
+                  <dd className="text-ink-200"><MoneyTotal values={item.spendByCurrency} /></dd>
                 </div>
                 <div>
                   <dt className="text-ink-500">Cost per paid signup</dt>
-                  <dd className="text-ink-200">{moneyByCurrency(item.costPerPaidSignupByCurrency)}</dd>
+                  <dd className="text-ink-200"><MoneyTotal values={item.costPerPaidSignupByCurrency} /></dd>
                 </div>
               </dl>
               {item.reportedInstalls === 0 && Object.keys(item.spendByCurrency).length ? (
@@ -326,7 +375,7 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
       </div>
       {unallocated.length ? (
         <p className="text-xs text-ink-400">
-          Not split by app: {unallocated.map((row) => `${paidNetworkLabels[row.network] ?? row.network} (${osLabels[row.os]}) ${formatMoney(row.spend, row.currencyCode)}`).join(" · ")}. Set the app on those log rows to include them.
+          Not split by app: {unallocated.map((row) => `${paidNetworkLabels[row.network] ?? row.network} (${osLabels[row.os]}) ${fx.text(row.spend, row.currencyCode)}`).join(" · ")}. Set the app on those log rows to include them.
         </p>
       ) : null}
     </div>
@@ -374,7 +423,7 @@ function ChannelTable({ channels, filter, limit }: { channels: ChannelRow[]; fil
               {pct(row.d7Rate)}
             </TD>
             <TD numeric>{format(row.payers)}</TD>
-            <TD numeric>{moneyByCurrency(row.costPerUser)}</TD>
+            <TD numeric><MoneyTotal values={row.costPerUser} /></TD>
           </tr>
         ))}
       </tbody>
@@ -383,6 +432,16 @@ function ChannelTable({ channels, filter, limit }: { channels: ChannelRow[]; fil
 }
 
 function PaidLogTable({ rows }: { rows: PaidLogRow[] }) {
+  const fx = useFx();
+  const converted = rows.map((row) => ({
+    spend: fx.convert(row.spend, row.currencyCode),
+    installSpend: row.costPerInstall != null && row.installs > 0 ? fx.convert(row.costPerInstall * row.installs, row.currencyCode) : null,
+    installs: row.costPerInstall != null ? row.installs : 0,
+  }));
+  const allConverted = converted.every((row) => row.spend != null);
+  const totalSpend = converted.reduce((sum, row) => sum + (row.spend ?? 0), 0);
+  const totalInstalls = converted.reduce((sum, row) => sum + row.installs, 0);
+  const installSpend = converted.reduce((sum, row) => sum + (row.installSpend ?? 0), 0);
   if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No spend or installs logged this month.</p>;
   return (
     <Table minWidth={640}>
@@ -403,18 +462,41 @@ function PaidLogTable({ rows }: { rows: PaidLogRow[] }) {
             <TD>
               <PlatformBadge platform={row.os} />
             </TD>
-            <TD numeric>{formatMoney(row.spend, row.currencyCode)}</TD>
+            <TD numeric>
+              <Money amount={row.spend} currency={row.currencyCode} />
+            </TD>
             <TD numeric>{row.daysWithInstalls ? format(row.installs) : "—"}</TD>
-            <TD numeric>{row.costPerInstall == null ? "—" : formatMoney(row.costPerInstall, row.currencyCode)}</TD>
+            <TD numeric>
+              <Money amount={row.costPerInstall} currency={row.currencyCode} />
+            </TD>
             <TD numeric>{row.daysLogged}</TD>
           </tr>
         ))}
       </tbody>
+      {rows.length > 1 && allConverted ? (
+        <tfoot>
+          <tr className="font-bold text-white">
+            <TD colSpan={2}>Total ({fx.display})</TD>
+            <TD numeric className="text-white">{formatMoney(totalSpend, fx.display)}</TD>
+            <TD numeric className="text-white">{totalInstalls ? format(totalInstalls) : "—"}</TD>
+            <TD numeric className="text-white">{totalInstalls ? formatMoney(installSpend / totalInstalls, fx.display) : "—"}</TD>
+            <TD />
+          </tr>
+        </tfoot>
+      ) : null}
     </Table>
   );
 }
 
 function HistoricalTable({ rows }: { rows: HistoricalChannelRow[] }) {
+  const fx = useFx();
+  const paid = rows.filter((row) => row.spend != null && row.currency);
+  const paidConverted = paid.map((row) => ({ row, spend: fx.convert(row.spend ?? 0, row.currency ?? "", row.periodEnd) }));
+  const allConverted = paidConverted.every((item) => item.spend != null);
+  const totalSpend = paidConverted.reduce((sum, item) => sum + (item.spend ?? 0), 0);
+  const withInstalls = paidConverted.filter((item) => (item.row.installs ?? 0) > 0);
+  const totalInstalls = withInstalls.reduce((sum, item) => sum + (item.row.installs ?? 0), 0);
+  const installSpend = withInstalls.reduce((sum, item) => sum + (item.spend ?? 0), 0);
   if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No imported channel reports yet.</p>;
   return (
     <Table minWidth={860}>
@@ -443,14 +525,33 @@ function HistoricalTable({ rows }: { rows: HistoricalChannelRow[] }) {
             <TD className="whitespace-nowrap">
               {dateLabel(row.periodStart)} – {dateLabel(row.periodEnd)}
             </TD>
-            <TD numeric>{row.spend == null ? "—" : formatMoney(row.spend, row.currency)}</TD>
+            <TD numeric>
+              <Money amount={row.spend} currency={row.currency} date={row.periodEnd} />
+            </TD>
             <TD numeric>{format(row.installs)}</TD>
-            <TD numeric>{row.costPerInstall == null ? "—" : formatMoney(row.costPerInstall, row.currency)}</TD>
+            <TD numeric>
+              <Money amount={row.costPerInstall} currency={row.currency} date={row.periodEnd} />
+            </TD>
             <TD numeric>{format(row.clicks)}</TD>
             <TD numeric>{format(row.impressions ?? row.views)}</TD>
           </tr>
         ))}
       </tbody>
+      {paid.length > 1 && allConverted ? (
+        <tfoot>
+          <tr className="font-bold text-white">
+            <TD colSpan={3}>
+              Paid total ({fx.display})
+              <span className="block text-[10px] font-normal text-ink-500">Each report converted at the rate on its end date</span>
+            </TD>
+            <TD numeric className="text-white">{formatMoney(totalSpend, fx.display)}</TD>
+            <TD numeric className="text-white">{totalInstalls ? format(totalInstalls) : "—"}</TD>
+            <TD numeric className="text-white">{totalInstalls ? formatMoney(installSpend / totalInstalls, fx.display) : "—"}</TD>
+            <TD />
+            <TD />
+          </tr>
+        </tfoot>
+      ) : null}
     </Table>
   );
 }
@@ -490,7 +591,7 @@ function StoreTable({ revenue }: { revenue: NonNullable<Insights["revenue"]> }) 
                 <TD numeric>{format(month?.pro ?? 0)}</TD>
                 <TD numeric>{format(month?.credits ?? 0)}</TD>
                 <TD numeric>{format(month?.buyers ?? 0)}</TD>
-                <TD numeric>{store === "test" ? "—" : formatMoney(month?.estimatedUsd ?? 0, "USD")}</TD>
+                <TD numeric>{store === "test" ? "—" : <Money amount={month?.estimatedUsd ?? 0} currency="USD" />}</TD>
                 <TD numeric>{format(allTime?.purchases ?? 0)}</TD>
               </tr>
             );
@@ -644,6 +745,9 @@ export default function AdminMetricsDashboard() {
         ? requestedTab
         : "overview";
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("USD");
+  const [fx, setFx] = useState<FxRates | null>(null);
+  const [fxError, setFxError] = useState<string | null>(null);
   const [data, setData] = useState<Metrics | null>(null);
   const [growth, setGrowth] = useState<Growth | null>(null);
   const [social, setSocial] = useState<SocialMetric[]>([]);
@@ -745,6 +849,66 @@ export default function AdminMetricsDashboard() {
     void syncSocial(false);
   }, [syncSocial]);
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+      if (isDisplayCurrency(saved)) setDisplayCurrency(saved);
+    } catch {
+      // Storage can be unavailable; USD stays the default.
+    }
+  }, []);
+
+  function chooseCurrency(next: DisplayCurrency) {
+    setDisplayCurrency(next);
+    try {
+      window.localStorage.setItem(CURRENCY_STORAGE_KEY, next);
+    } catch {
+      // Not persisted this time.
+    }
+  }
+
+  // Month totals convert at month end (or today for the current month);
+  // imported reports at the end of their own period.
+  const referenceDate = fxDate(`${growthMonth}-${String(daysInMonth(growthMonth)).padStart(2, "0")}`);
+
+  useEffect(() => {
+    if (!growth) return undefined;
+    const pairs = new Set<string>();
+    const add = (currency: string | null | undefined, date: string) => {
+      if (currency && currency.toUpperCase() !== displayCurrency) pairs.add(fxKey(currency, fxDate(date)));
+    };
+    for (const row of growth.historicalChannels ?? []) add(row.currency, row.periodEnd);
+    for (const row of growth.paid?.log ?? []) add(row.currencyCode, referenceDate);
+    for (const item of growth.paid?.split ?? []) for (const currency of Object.keys(item.spendByCurrency)) add(currency, referenceDate);
+    if (growth.attribution?.available) {
+      for (const channel of growth.attribution.month.channels) for (const currency of Object.keys(channel.costPerUser ?? {})) add(currency, referenceDate);
+    }
+    add("USD", referenceDate);
+    if (!pairs.size) {
+      setFx({ base: displayCurrency, rates: {}, failed: [], provider: "Wise", fetchedAt: new Date().toISOString() });
+      return undefined;
+    }
+    let cancelled = false;
+    void fetch(`/api/admin/fx?base=${displayCurrency}&q=${encodeURIComponent(Array.from(pairs).join(","))}`, { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => null);
+        if (cancelled) return;
+        if (response.ok && body?.ok) {
+          setFx(body as FxRates);
+          setFxError(body.failed?.length ? `No Wise rate for ${body.failed.join(", ")}; those amounts stay in their original currency.` : null);
+        } else {
+          setFx(null);
+          setFxError(body?.error ?? "Exchange rates are unavailable; amounts stay in their original currencies.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFxError("Exchange rates are unavailable; amounts stay in their original currencies.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [growth, displayCurrency, referenceDate]);
+
   if (authorized === false) {
     return (
       <main className="grid min-h-screen place-items-center bg-canvas-950 px-4">
@@ -803,8 +967,13 @@ export default function AdminMetricsDashboard() {
   ].filter((item): item is string => Boolean(item));
 
   const upcoming = monthState === "upcoming";
+  const fxText = (amount: number, currency: string) => {
+    const converted = convertAmount(amount, currency, referenceDate, displayCurrency, fx);
+    return converted == null ? formatMoney(amount, currency) : formatMoney(converted, displayCurrency);
+  };
 
   return (
+    <FxContext.Provider value={{ display: displayCurrency, rates: fx, referenceDate }}>
     <AdminShell>
       <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-line-300 pb-4">
@@ -841,7 +1010,16 @@ export default function AdminMetricsDashboard() {
                 ]}
               />
             ) : null}
+            {tab !== "plan" && tab !== "product" ? (
+              <Segmented
+                label="Currency"
+                value={displayCurrency}
+                onChange={chooseCurrency}
+                options={displayCurrencies.map((currency) => ({ value: currency, label: currency }))}
+              />
+            ) : null}
           </div>
+          {fxError && tab !== "plan" && tab !== "product" ? <p className="text-xs text-amber-200">{fxError}</p> : null}
         </header>
 
         {error ? <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
@@ -882,7 +1060,7 @@ export default function AdminMetricsDashboard() {
                   <Stat
                     label="Purchases"
                     value={format(purchaseCount)}
-                    hint={`≈ ${formatMoney(purchaseUsd, "USD")} at list price · excludes test purchases`}
+                    hint={`≈ ${fxText(purchaseUsd, "USD")} at list price · excludes test purchases`}
                   />
                 </div>
 
@@ -1110,7 +1288,7 @@ export default function AdminMetricsDashboard() {
             <>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Stat label="Purchases" value={format(purchaseCount)} hint="All stores, excluding test purchases" />
-                <Stat label="Estimated revenue" value={formatMoney(purchaseUsd, "USD")} info={growth?.revenue?.note} />
+                <Stat label="Estimated revenue" value={fxText(purchaseUsd, "USD")} info={growth?.revenue?.note} />
                 <Stat label="First-time purchasers" value={format(growth?.funnel?.firstTimePurchasers ?? null)} hint={`First production purchase happened in ${monthName}`} />
                 <Stat
                   label="Signup-to-payer conversion"
@@ -1140,5 +1318,6 @@ export default function AdminMetricsDashboard() {
         </div>
       </main>
     </AdminShell>
+    </FxContext.Provider>
   );
 }
