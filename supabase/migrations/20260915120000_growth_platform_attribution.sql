@@ -199,6 +199,25 @@ grant execute on function public.record_user_acquisition(text, text, text, text,
 -- ---------------------------------------------------------------------------
 -- Paid log: OS + platform-reported installs per spend row
 -- ---------------------------------------------------------------------------
+-- Some environments never received the spend table from
+-- 20260826090000_growth_command_center.sql; create it here in its final shape.
+create table if not exists public.growth_marketing_daily_spend (
+    id uuid primary key default gen_random_uuid(),
+    date date not null references public.growth_marketing_daily(date) on delete cascade,
+    platform text not null check (platform in ('google_ads', 'tiktok_ads', 'apple_search_ads', 'meta_ads', 'other')),
+    amount numeric(18,2) not null check (amount >= 0),
+    currency_code text not null check (currency_code ~ '^[A-Z]{3}$'),
+    os text not null default 'unknown',
+    reported_installs integer,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create index if not exists growth_marketing_daily_spend_date_idx
+    on public.growth_marketing_daily_spend (date);
+
+alter table public.growth_marketing_daily_spend enable row level security;
+
 alter table public.growth_marketing_daily_spend
     add column if not exists os text not null default 'unknown',
     add column if not exists reported_installs integer;
