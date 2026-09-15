@@ -23,6 +23,7 @@ type Health = {
         serverFailed?: number;
         clientMediaFailed?: number;
         serverFailureRate?: number;
+        mergedShellFailures?: number;
     };
     errorsByKind: KindRow[];
     serverErrorsByKind?: KindRow[];
@@ -36,6 +37,9 @@ type Health = {
     serverQueued?: number;
     serverRunning?: number;
     unlinkedDomesticAnalyses?: number;
+    burstDuplicateHolds?: number;
+    oldestBurstHoldHours?: number | null;
+    analysedButNotReady?: number;
     minutesSinceSuccess: number | null;
     import?: {
         active_operations?: number;
@@ -157,6 +161,21 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
                         {(health.abandonedClientVideo ?? 0) > 0 && `${health.abandonedClientVideo} stale client video(s).`}
                     </p>
                     <KindList rows={health.clientMediaErrorsByKind ?? []} />
+                    {(health.analyses.mergedShellFailures ?? 0) > 0 ? (
+                        <p className="mt-1 text-[11px] text-ink-500">
+                            {health.analyses.mergedShellFailures} merged burst shell(s) not counted. Their photos live on the primary capture.
+                        </p>
+                    ) : null}
+                </section>
+                <section>
+                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Waiting on an owner decision</h3>
+                    <p className="mt-1 text-xs text-ink-400">
+                        {(health.burstDuplicateHolds ?? 0) === 0 && (health.analysedButNotReady ?? 0) === 0
+                            ? "Nothing held."
+                            : null}
+                        {(health.burstDuplicateHolds ?? 0) > 0 && `${health.burstDuplicateHolds} held as a possible burst duplicate${health.oldestBurstHoldHours != null ? ` (oldest ${ago(health.oldestBurstHoldHours * 60)})` : ""}. The apps have no release or attach action yet. `}
+                        {(health.analysedButNotReady ?? 0) > 0 && `${health.analysedButNotReady} analysed but still marked uploading.`}
+                    </p>
                 </section>
                 <section>
                     <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Credits</h3>
