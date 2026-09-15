@@ -10,10 +10,29 @@ type SocialMetric = {
     posts: number | null;
     followerChange?: number | null;
     viewChange?: number | null;
+    recordedAt?: string | null;
     error?: string;
 };
 
+type SnapshotRow = {
+    platform: string;
+    followers: number | null;
+    views: number | null;
+    posts: number | null;
+    recorded_at: string;
+};
+
+const PROVIDERS = ["YouTube", "Instagram", "Facebook", "X", "TikTok"] as const;
 const number = (value: unknown) => value == null ? null : Number(value);
+
+function isConfigured(platform: (typeof PROVIDERS)[number]) {
+    const env = (name: string) => Boolean(process.env[name]?.trim());
+    if (platform === "YouTube") return env("YOUTUBE_API_KEY");
+    if (platform === "Instagram") return env("META_ACCESS_TOKEN") && env("INSTAGRAM_BUSINESS_ID");
+    if (platform === "Facebook") return env("META_ACCESS_TOKEN") && env("FACEBOOK_PAGE_ID");
+    if (platform === "X") return env("X_BEARER_TOKEN");
+    return env("TIKTOK_RESEARCH_ACCESS_TOKEN");
+}
 
 async function youtube(): Promise<SocialMetric> {
     const key = process.env.YOUTUBE_API_KEY?.trim();
@@ -34,13 +53,7 @@ async function meta(platform: "Facebook" | "Instagram"): Promise<SocialMetric> {
     const response = await fetch(`https://graph.facebook.com/v23.0/${encodeURIComponent(id)}?fields=${fields}&access_token=${encodeURIComponent(token)}`, {cache: "no-store"});
     if (!response.ok) throw new Error(`${platform} returned ${response.status}`);
     const data = await response.json();
-    return {
-        platform,
-        configured: true,
-        followers: number(data.followers_count ?? data.fan_count),
-        views: null,
-        posts: number(data.media_count)
-    };
+    return {platform, configured: true, followers: number(data.followers_count ?? data.fan_count), views: null, posts: number(data.media_count)};
 }
 
 async function xMetrics(): Promise<SocialMetric> {
@@ -79,65 +92,78 @@ async function safe(provider: string, load: () => Promise<SocialMetric>): Promis
     }
 }
 
-async function storeSnapshots(metrics: SocialMetric[]) {
+async function loadSnapshots(): Promise<SnapshotRow[]> {
     const url = getSupabaseUrl();
     const key = getSupabaseServiceKey();
-    const rows = metrics.filter((item) => item.configured && !item.error).map((item) => ({
+    if (!url || !key) return [];
+    try {
+        const response = await fetch(`${url}/rest/v1/admin_social_metric_snapshots?select=platform,followers,views,posts,recorded_at&order=recorded_at.desc&limit=200`, {
+            headers: getSupabaseHeaders(key, {Accept: "application/json"}),
+            cache: "no-store"
+        });
+        return response.ok ? await response.json() as SnapshotRow[] : [];
+    } catch {
+        return [];
+    }
+}
+
+/** Latest stored value per platform, with change against the previous distinct sync. */
+function summarize(rows: SnapshotRow[]) {
+    const byPlatform = new Map<string, SnapshotRow[]>();
+    for (const row of rows) byPlatform.set(row.platform, [...(byPlatform.get(row.platform) ?? []), row]);
+    const metrics: SocialMetric[] = PROVIDERS.map((platform) => {
+        const [latest, previous] = byPlatform.get(platform.toLowerCase()) ?? [];
+        return {
+            platform,
+            configured: isConfigured(platform),
+            followers: latest?.followers ?? null,
+            views: latest?.views ?? null,
+            posts: latest?.posts ?? null,
+            followerChange: latest?.followers != null && previous?.followers != null ? latest.followers - previous.followers : null,
+            viewChange: latest?.views != null && previous?.views != null ? latest.views - previous.views : null,
+            recordedAt: latest?.recorded_at ?? null
+        };
+    });
+    const lastSyncedAt = rows[0]?.recorded_at ?? null;
+    return {metrics, lastSyncedAt};
+}
+
+/** Reads stored snapshots only — no external API calls on page load. */
+export async function GET(request: NextRequest) {
+    if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
+    return NextResponse.json({ok: true, ...summarize(await loadSnapshots())});
+}
+
+/** Calls each configured provider once and stores one snapshot row per platform. */
+export async function POST(request: NextRequest) {
+    if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
+    const results = await Promise.all([
+        safe("YouTube", youtube),
+        safe("Instagram", () => meta("Instagram")),
+        safe("Facebook", () => meta("Facebook")),
+        safe("X", xMetrics),
+        safe("TikTok", tiktok)
+    ]);
+    const url = getSupabaseUrl();
+    const key = getSupabaseServiceKey();
+    const rows = results.filter((item) => item.configured && !item.error).map((item) => ({
         platform: item.platform.toLowerCase(),
         followers: item.followers,
         views: item.views,
         posts: item.posts,
         raw_metrics: item
     }));
-    if (!url || !key || !rows.length) return;
-    await fetch(`${url}/rest/v1/admin_social_metric_snapshots`, {
-        method: "POST",
-        headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
-        body: JSON.stringify(rows),
-        cache: "no-store"
-    });
-}
-
-async function loadPreviousSnapshots() {
-    const url = getSupabaseUrl();
-    const key = getSupabaseServiceKey();
-    const result = new Map<string, {followers: number | null; views: number | null}>();
-    if (!url || !key) return result;
-    try {
-        const response = await fetch(`${url}/rest/v1/admin_social_metric_snapshots?select=platform,followers,views,recorded_at&order=recorded_at.desc&limit=100`, {
-            headers: getSupabaseHeaders(key, {Accept: "application/json"}),
+    if (url && key && rows.length) {
+        await fetch(`${url}/rest/v1/admin_social_metric_snapshots`, {
+            method: "POST",
+            headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+            body: JSON.stringify(rows),
             cache: "no-store"
-        });
-        if (!response.ok) return result;
-        const rows = await response.json() as Array<{platform: string; followers: number | null; views: number | null}>;
-        rows.forEach((row) => {
-            if (!result.has(row.platform)) result.set(row.platform, {followers: row.followers, views: row.views});
-        });
-    } catch {
-        // Social syncing still works before the snapshot migration is applied.
+        }).catch(() => undefined);
     }
-    return result;
-}
-
-export async function GET(request: NextRequest) {
-    if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({ok: false, error: "Unauthorized"}, {status: 401});
-    const [metrics, previous] = await Promise.all([Promise.all([
-        safe("YouTube", youtube),
-        safe("Instagram", () => meta("Instagram")),
-        safe("Facebook", () => meta("Facebook")),
-        safe("X", xMetrics),
-        safe("TikTok", tiktok)
-    ]), loadPreviousSnapshots()]);
-    const withChanges = metrics.map((item) => {
-        const prior = previous.get(item.platform.toLowerCase());
-        return {
-            ...item,
-            followerChange: item.followers != null && prior?.followers != null ? item.followers - prior.followers : null,
-            viewChange: item.views != null && prior?.views != null ? item.views - prior.views : null
-        };
-    });
-    await storeSnapshots(withChanges);
-    return NextResponse.json({ok: true, metrics: withChanges, syncedAt: new Date().toISOString()});
+    const summary = summarize(await loadSnapshots());
+    const errors = results.filter((item) => item.error).map((item) => `${item.platform}: ${item.error}`);
+    return NextResponse.json({ok: true, ...summary, errors});
 }
 
 export const dynamic = "force-dynamic";

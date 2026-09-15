@@ -61,7 +61,10 @@ describe("growth command center route contract", () => {
     assert.match(routeSource, /seo_pages/);
     assert.match(routeSource, /growth_marketing_daily_spend/);
     assert.match(routeSource, /currency_code/);
-    assert.match(routeSource, /on_conflict=date,platform,currency_code/);
+    // Spend rows now carry an OS, so the day's rows are deleted and re-inserted
+    // instead of upserted on the old (date, platform, currency) key.
+    assert.match(routeSource, /os: entry\.os \?\? defaultOsForNetwork\(entry\.platform\)/);
+    assert.match(routeSource, /reported_installs: entry\.reportedInstalls \?\? null/);
     assert.match(routeSource, /deleteSpendRows\(body\.date\)/);
     assert.match(routeSource, /spendEntries/);
     assert.match(routeSource, /updated_by: actor.email \?\? actor.kind/);
@@ -160,12 +163,9 @@ describe("growth command center route contract", () => {
     assert.match(routeSource, /async function loadSnapshotRows/);
     assert.match(
       routeSource,
-      /select=source,period_start,period_end,metric,value,currency,aggregation_role,metadata,captured_at,notes/,
+      /"source,period_start,period_end,metric,value,currency,metadata,captured_at,notes"/,
     );
-    assert.match(
-      routeSource,
-      /select=source,period_start,period_end,metric,value,currency,metadata,captured_at,notes/,
-    );
+    assert.match(routeSource, /\[",aggregation_role,os", ",aggregation_role", ""\]/);
     assert.match(routeSource, /primarySnapshots = snapshots\.filter/);
     assert.match(
       routeSource,

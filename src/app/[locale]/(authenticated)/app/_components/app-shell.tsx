@@ -116,6 +116,28 @@ export default function AppShell({
     }, [hydrateFromSession]);
 
     useEffect(() => {
+        // Lets /admin/metrics count web users by platform; at most once a day.
+        if (!resolvedAuthenticated || typeof window === "undefined") return;
+        const key = "animaldex.web-device-recorded-at";
+        try {
+            if (Date.now() - Number(window.localStorage.getItem(key) ?? 0) < 24 * 60 * 60 * 1000) return;
+        } catch {
+            return;
+        }
+        void fetch("/api/app/device", {method: "POST"})
+            .then((response) => response.ok ? response.json() : null)
+            .then((payload: {recorded?: boolean} | null) => {
+                if (!payload?.recorded) return;
+                try {
+                    window.localStorage.setItem(key, String(Date.now()));
+                } catch {
+                    // Storage can be unavailable in private windows.
+                }
+            })
+            .catch(() => undefined);
+    }, [resolvedAuthenticated]);
+
+    useEffect(() => {
         const prefix = localePrefix(pathname);
         for (const route of resolvedAuthenticated ? PREFETCH_ROUTES : ["/app", "/account"]) {
             router.prefetch(`${prefix}${route}`);

@@ -42,12 +42,35 @@ export type GrowthDailyMarketing = {
   notes: string;
 };
 
+export type SpendNetwork =
+  "google_ads" | "tiktok_ads" | "apple_search_ads" | "meta_ads" | "other";
+export type SpendOs = "ios" | "android" | "web" | "mixed" | "unknown";
+
 export type SpendEntry = {
-  platform:
-    "google_ads" | "tiktok_ads" | "apple_search_ads" | "meta_ads" | "other";
+  platform: SpendNetwork;
   amount: number;
   currencyCode: string;
+  /** Which app the spend bought installs for. */
+  os?: SpendOs;
+  /** Installs reported by the ad platform for this row, if logged. */
+  reportedInstalls?: number | null;
 };
+
+export const spendNetworks: SpendNetwork[] = [
+  "google_ads",
+  "apple_search_ads",
+  "tiktok_ads",
+  "meta_ads",
+  "other",
+];
+export const spendOsOptions: SpendOs[] = ["android", "ios", "mixed", "web", "unknown"];
+
+/** Apple Search Ads only serves iOS; AnimalDex Google Ads are Android app campaigns. */
+export function defaultOsForNetwork(network: SpendNetwork): SpendOs {
+  if (network === "apple_search_ads") return "ios";
+  if (network === "google_ads") return "android";
+  return "mixed";
+}
 
 export const emptyGrowthTargets: GrowthTargets = {
   users: 0,

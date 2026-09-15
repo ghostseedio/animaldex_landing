@@ -11,6 +11,15 @@ import {
   GrowthDailyMarketing,
   GrowthWeeklyTarget,
   buildCollectorAnalytics,
+  defaultOsForNetwork,
+  jakartaMonthBounds,
+  shiftMonth,
+  spendNetworks,
+  spendOsOptions,
+  type CollectorCapture,
+  type CollectorProfile,
+  type SpendNetwork,
+  type SpendOs,
   OrganicEntry,
   SpendEntry,
   dailyPaceTarget,
@@ -42,6 +51,23 @@ import {
   type NorthStarGoal,
   type UsersTargetSource,
 } from "@/lib/growth-command-center";
+import {
+  buildHistoricalChannelRows,
+  buildPaidOrganicSplit,
+  buildPlatformDaily,
+  classifyAcquisition,
+  classifyPurchaseStore,
+  countBy,
+  growthPlatforms,
+  inferUserPlatform,
+  summarizePaidLog,
+  summarizePurchasesByStore,
+  type AcquisitionChannel,
+  type GrowthPlatform,
+  type PaidLogEntry,
+  type PurchaseLedgerRow,
+  type UserGrowthRow,
+} from "@/lib/growth-attribution";
 
 type PlanRow = {
   month: string;
@@ -68,6 +94,8 @@ type SpendRow = {
   platform: SpendEntry["platform"];
   amount: number | string;
   currency_code: string;
+  os?: string | null;
+  reported_installs?: number | string | null;
 };
 type OrganicRow = {
   date: string;
@@ -119,6 +147,7 @@ type SnapshotRow = {
   value: number | string;
   currency: string | null;
   aggregation_role?: "primary" | "supporting" | null;
+  os?: string | null;
   metadata: unknown;
   captured_at: string;
   notes: string;
@@ -354,14 +383,23 @@ async function loadSocialIdeaHistory(limit = 200) {
 }
 
 async function loadSpendRows(startDate: string, endDate: string) {
+  const filters = `date=gte.${startDate}&date=lte.${endDate}&order=date.asc`;
   try {
     return await fetchRows<SpendRow>(
       "growth_marketing_daily_spend",
-      `select=date,platform,amount,currency_code&date=gte.${startDate}&date=lte.${endDate}&order=date.asc`,
+      `select=date,platform,amount,currency_code,os,reported_installs&${filters}`,
     );
   } catch (error) {
     if (isMissingTableError(error, "growth_marketing_daily_spend")) return [];
-    throw error;
+    if (
+      !isMissingColumnError(error, "os") &&
+      !isMissingColumnError(error, "reported_installs")
+    )
+      throw error;
+    return await fetchRows<SpendRow>(
+      "growth_marketing_daily_spend",
+      `select=date,platform,amount,currency_code&${filters}`,
+    );
   }
 }
 
@@ -397,20 +435,32 @@ async function loadNorthStar(): Promise<NorthStarGoal | null> {
   }
 }
 
-async function loadSnapshotRows(startDate: string, endDate: string) {
-  const filters = `period_start=lte.${endDate}&period_end=gte.${startDate}&order=period_start.asc`;
-  try {
-    return await fetchRows<SnapshotRow>(
-      "growth_marketing_snapshots",
-      `select=source,period_start,period_end,metric,value,currency,aggregation_role,metadata,captured_at,notes&${filters}`,
-    );
-  } catch (error) {
-    if (!isMissingColumnError(error, "aggregation_role")) throw error;
-    return await fetchRows<SnapshotRow>(
-      "growth_marketing_snapshots",
-      `select=source,period_start,period_end,metric,value,currency,metadata,captured_at,notes&${filters}`,
-    );
+async function loadSnapshotRows(startDate: string | null, endDate: string | null) {
+  const filters = [
+    endDate ? `period_start=lte.${endDate}` : "",
+    startDate ? `period_end=gte.${startDate}` : "",
+    "order=period_start.asc",
+  ]
+    .filter(Boolean)
+    .join("&");
+  const base = "source,period_start,period_end,metric,value,currency,metadata,captured_at,notes";
+  let lastError: unknown = null;
+  for (const extra of [",aggregation_role,os", ",aggregation_role", ""]) {
+    try {
+      return await fetchRows<SnapshotRow>(
+        "growth_marketing_snapshots",
+        `select=${base}${extra}&${filters}`,
+      );
+    } catch (error) {
+      if (
+        !isMissingColumnError(error, "os") &&
+        !isMissingColumnError(error, "aggregation_role")
+      )
+        throw error;
+      lastError = error;
+    }
   }
+  throw lastError;
 }
 
 async function writeMarketingRow(body: unknown) {
@@ -441,21 +491,30 @@ async function writeMarketingRow(body: unknown) {
 
 async function writeSpendRows(date: string, entries: SpendEntry[]) {
   if (!entries.length) return [];
+  // The day's rows are deleted first, so a plain insert works with both the old
+  // (date, platform, currency) and the new (date, platform, os, currency) keys.
+  const rows = entries.map((entry) => ({
+    date,
+    platform: entry.platform,
+    amount: Math.max(0, Number(entry.amount)).toFixed(2),
+    currency_code: entry.currencyCode,
+    os: entry.os ?? defaultOsForNetwork(entry.platform),
+    reported_installs: entry.reportedInstalls ?? null,
+    updated_at: new Date().toISOString(),
+  }));
   try {
-    return await writeRows<SpendRow>(
-      "growth_marketing_daily_spend",
-      entries.map((entry) => ({
-        date,
-        platform: entry.platform,
-        amount: Math.max(0, Number(entry.amount)).toFixed(2),
-        currency_code: entry.currencyCode,
-        updated_at: new Date().toISOString(),
-      })),
-      "on_conflict=date,platform,currency_code",
-    );
+    return await writeRows<SpendRow>("growth_marketing_daily_spend", rows);
   } catch (error) {
     if (isMissingTableError(error, "growth_marketing_daily_spend")) return [];
-    throw error;
+    if (
+      !isMissingColumnError(error, "os") &&
+      !isMissingColumnError(error, "reported_installs")
+    )
+      throw error;
+    return await writeRows<SpendRow>(
+      "growth_marketing_daily_spend",
+      rows.map(({ os: _os, reported_installs: _installs, ...legacy }) => legacy),
+    );
   }
 }
 
@@ -560,6 +619,11 @@ function toSpendEntry(row: SpendRow): SpendEntry {
     platform: row.platform,
     amount: Number(row.amount ?? 0),
     currencyCode: row.currency_code,
+    os: spendOsOptions.includes(row.os as SpendOs)
+      ? (row.os as SpendOs)
+      : defaultOsForNetwork(row.platform),
+    reportedInstalls:
+      row.reported_installs == null ? null : Number(row.reported_installs),
   };
 }
 
@@ -1255,6 +1319,15 @@ async function loadMonthActuals(
     shortVideoDaily,
     seoDaily,
     actuals,
+    profileRows: profiles,
+    captureRows: captures,
+    collectorPeriod: {
+      start: startIso,
+      end:
+        selectedMonth === todayKey().slice(0, 7)
+          ? new Date().toISOString()
+          : cutoffIso,
+    },
     collectorAnalytics,
     funnel: {
       activatedUsers: collectorAnalytics.activation.users,
@@ -1270,6 +1343,252 @@ async function loadMonthActuals(
       cohortFirstTimePurchasers,
       payerConversionRate: rate(cohortFirstTimePurchasers, actuals.users),
     },
+  };
+}
+
+type MonthActuals = Awaited<ReturnType<typeof loadMonthActuals>>;
+
+async function loadUserGrowthRows(): Promise<UserGrowthRow[] | null> {
+  try {
+    return await fetchRows<UserGrowthRow>(
+      "admin_user_growth_v1",
+      "select=user_id,created_at,first_reported_platform,first_reported_at,reported_platforms,has_apns_token,has_app_store_purchase,has_play_purchase,auth_providers,self_reported_source,utm_source,utm_medium,utm_campaign,gclid,apple_ads_attributed&order=created_at.asc",
+    );
+  } catch (error) {
+    if (isMissingTableError(error, "admin_user_growth_v1")) return null;
+    throw error;
+  }
+}
+
+/** Every purchase from the credit ledger, plus fulfilled web purchases the ledger doesn't cover. */
+async function loadPurchaseLedger(): Promise<PurchaseLedgerRow[]> {
+  const ledger = await fetchRows<{
+    user_id: string;
+    created_at: string;
+    metadata: Record<string, unknown> | null;
+  }>(
+    "credit_transactions",
+    "select=user_id,created_at,metadata&reason=eq.purchase&order=created_at.asc",
+  );
+  const text = (value: unknown) => (typeof value === "string" ? value : null);
+  const rows: PurchaseLedgerRow[] = ledger.map((row) => ({
+    userId: String(row.user_id),
+    createdAt: row.created_at,
+    source: text(row.metadata?.source),
+    productCode: text(row.metadata?.product_code),
+    environment: text(row.metadata?.environment),
+    testPurchase: row.metadata?.test_purchase === true,
+  }));
+  if (rows.some((row) => classifyPurchaseStore(row) === "web")) return rows;
+  let web: Array<{
+    user_id: string;
+    created_at: string;
+    provider: string;
+    product_code: string;
+    fulfilled_at: string | null;
+  }> = [];
+  try {
+    web = await fetchRows(
+      "web_purchases",
+      "select=user_id,created_at,provider,product_code,fulfilled_at&purchase_state=eq.fulfilled",
+    );
+  } catch {
+    web = [];
+  }
+  return [
+    ...rows,
+    ...web.map((row) => ({
+      userId: String(row.user_id),
+      createdAt: row.fulfilled_at ?? row.created_at,
+      source: row.provider,
+      productCode: row.product_code,
+      environment: null,
+      testPurchase: false,
+    })),
+  ];
+}
+
+async function buildGrowthInsights({
+  selectedMonth,
+  dates,
+  actualMonth,
+}: {
+  selectedMonth: string;
+  dates: string[];
+  actualMonth: MonthActuals;
+}) {
+  const monthBounds = jakartaMonthBounds(selectedMonth);
+  const previousBounds = jakartaMonthBounds(shiftMonth(selectedMonth, -1));
+  const startMs = Date.parse(monthBounds.startIso);
+  const endMs = Date.parse(monthBounds.endExclusiveIso);
+  const [userRows, ledger, allSnapshots, previousMonthUsers] = await Promise.all([
+    loadUserGrowthRows(),
+    loadPurchaseLedger(),
+    loadSnapshotRows(null, null),
+    countRows(
+      "profiles",
+      `select=id&created_at=gte.${encodeURIComponent(previousBounds.startIso)}&created_at=lt.${encodeURIComponent(previousBounds.endExclusiveIso)}`,
+    ).catch(() => null),
+  ]);
+
+  const paidEntries: PaidLogEntry[] = Object.entries(actualMonth.spendByDate).flatMap(
+    ([date, entries]) =>
+      entries.map((entry) => ({
+        date,
+        network: entry.platform,
+        os: entry.os ?? defaultOsForNetwork(entry.platform),
+        currencyCode: entry.currencyCode,
+        amount: entry.amount,
+        reportedInstalls: entry.reportedInstalls ?? null,
+      })),
+  );
+  const paidLog = summarizePaidLog(paidEntries);
+  const revenue = {
+    month: summarizePurchasesByStore(ledger, startMs, endMs),
+    allTime: summarizePurchasesByStore(ledger, 0, Number.MAX_SAFE_INTEGER),
+    note: "Counts come from the purchase ledger. Revenue is estimated at list price ($2.99 / $7.99 / $9.99/month); store fees, tax, refunds and local prices are not recorded.",
+  };
+  const historicalChannels = buildHistoricalChannelRows(
+    allSnapshots
+      .filter((row) => (row.aggregation_role ?? "primary") === "primary")
+      .map((row) => ({
+        source: row.source,
+        periodStart: row.period_start,
+        periodEnd: row.period_end,
+        metric: row.metric,
+        value: Number(row.value),
+        currency: row.currency,
+        os: row.os ?? null,
+      })),
+  );
+
+  if (!userRows) {
+    return {
+      attribution: { available: false as const },
+      paid: { log: paidLog, split: [] },
+      historicalChannels,
+      revenue,
+      previousMonthUsers,
+    };
+  }
+
+  const payerIds = new Set(
+    ledger.filter((row) => classifyPurchaseStore(row) !== "test").map((row) => row.userId),
+  );
+  const inferred = userRows.map((row) => ({
+    row,
+    ...inferUserPlatform(row),
+    channel: classifyAcquisition(row),
+  }));
+  const monthUsers = inferred.filter((item) => {
+    const time = Date.parse(item.row.created_at);
+    return time >= startMs && time < endMs;
+  });
+  const signupsByPlatform: Record<GrowthPlatform, number> = { ios: 0, android: 0, web: 0, unknown: 0 };
+  for (const item of monthUsers) signupsByPlatform[item.platform] += 1;
+
+  const collectorProfiles: CollectorProfile[] = actualMonth.profileRows.flatMap((profile) =>
+    profile.id && profile.created_at ? [{ id: String(profile.id), createdAt: profile.created_at }] : [],
+  );
+  const profileById = new Map(collectorProfiles.map((profile) => [profile.id, profile]));
+  const capturesByUser = new Map<string, CollectorCapture[]>();
+  for (const capture of actualMonth.captureRows) {
+    if (!capture.user_id || !capture.created_at) continue;
+    const userId = String(capture.user_id);
+    capturesByUser.set(userId, [
+      ...(capturesByUser.get(userId) ?? []),
+      { userId, createdAt: capture.created_at, status: String(capture.status ?? "") },
+    ]);
+  }
+  const observationCutoff = new Date().toISOString();
+  const analyticsFor = (ids: string[]) => {
+    const profiles = ids.flatMap((id) => {
+      const profile = profileById.get(id);
+      return profile ? [profile] : [];
+    });
+    const analytics = buildCollectorAnalytics({
+      profiles,
+      captures: ids.flatMap((id) => capturesByUser.get(id) ?? []),
+      periodStart: actualMonth.collectorPeriod.start,
+      periodEnd: actualMonth.collectorPeriod.end,
+      observationCutoff,
+    });
+    return {
+      users: ids.length,
+      activationRate: analytics.activation.rate,
+      activationEligible: analytics.activation.eligible,
+      d7Rate: analytics.d7.rate,
+      d7Eligible: analytics.d7.eligible,
+      capturesPerCollector: analytics.summary.capturesPerCollector,
+      payers: ids.filter((id) => payerIds.has(id)).length,
+    };
+  };
+
+  const byPlatform = Object.fromEntries(
+    growthPlatforms.map((platform) => [
+      platform,
+      analyticsFor(monthUsers.filter((item) => item.platform === platform).map((item) => item.row.user_id)),
+    ]),
+  ) as Record<GrowthPlatform, ReturnType<typeof analyticsFor>>;
+
+  const groups = new Map<string, { channel: AcquisitionChannel; platform: GrowthPlatform; ids: string[] }>();
+  for (const item of monthUsers) {
+    const key = `${item.channel.key}|${item.platform}`;
+    const group = groups.get(key) ?? { channel: item.channel, platform: item.platform, ids: [] };
+    group.ids.push(item.row.user_id);
+    groups.set(key, group);
+  }
+  const channels = Array.from(groups.values())
+    .map(({ channel, platform, ids }) => {
+      const stats = analyticsFor(ids);
+      const spendRows =
+        channel.network && (platform === "ios" || platform === "android")
+          ? paidLog.filter((row) => row.network === channel.network && row.os === platform)
+          : [];
+      const spendByCurrency: Record<string, number> = {};
+      for (const row of spendRows) spendByCurrency[row.currencyCode] = (spendByCurrency[row.currencyCode] ?? 0) + row.spend;
+      const costPerUser =
+        stats.users > 0 && Object.keys(spendByCurrency).length
+          ? Object.fromEntries(Object.entries(spendByCurrency).map(([currency, amount]) => [currency, amount / stats.users]))
+          : null;
+      return { ...channel, platform, ...stats, costPerUser };
+    })
+    .sort((left, right) => right.users - left.users);
+
+  const answered = (items: typeof inferred) =>
+    items.filter((item) => item.row.self_reported_source && item.row.self_reported_source !== "skipped").length;
+  const storeAttributed = (items: typeof inferred) =>
+    items.filter((item) => item.channel.evidence === "store").length;
+
+  return {
+    attribution: {
+      available: true as const,
+      month: {
+        users: monthUsers.length,
+        signupsByPlatform,
+        evidenceCounts: countBy(monthUsers, (item) => item.evidence),
+        reportedAtSignup: monthUsers.filter((item) => item.atSignup).length,
+        selfReported: answered(monthUsers),
+        storeAttributed: storeAttributed(monthUsers),
+        platformDaily: buildPlatformDaily(
+          monthUsers.map((item) => ({ createdAt: item.row.created_at, platform: item.platform })),
+          dates,
+        ),
+        byPlatform,
+        channels,
+      },
+      allTime: {
+        users: inferred.length,
+        byPlatform: countBy(inferred, (item) => item.platform),
+        evidenceCounts: countBy(inferred, (item) => item.evidence),
+        selfReported: answered(inferred),
+        storeAttributed: storeAttributed(inferred),
+      },
+    },
+    paid: { log: paidLog, split: buildPaidOrganicSplit(signupsByPlatform, paidLog) },
+    historicalChannels,
+    revenue,
+    previousMonthUsers,
   };
 }
 
@@ -1349,6 +1668,11 @@ export async function GET(request: NextRequest) {
     const primarySnapshots = snapshots.filter(
       (row) => (row.aggregation_role ?? "primary") === "primary",
     );
+    const growthInsights = await buildGrowthInsights({
+      selectedMonth,
+      dates,
+      actualMonth,
+    });
     const weeklyTargets = plan
       ? plan.weeklyTargets.length
         ? plan.weeklyTargets
@@ -1474,6 +1798,7 @@ export async function GET(request: NextRequest) {
         capturedAt: row.captured_at,
         notes: row.notes,
       })),
+      ...growthInsights,
       collectorAnalytics: actualMonth.collectorAnalytics,
       socialPages,
       socialIdeaHistory,
@@ -1777,31 +2102,33 @@ export async function POST(request: NextRequest) {
       if (!body.date || !/^\d{4}-\d{2}-\d{2}$/.test(body.date))
         throw new Error("Invalid date");
       const marketing = body.marketing ?? {};
-      const spendEntries = Array.isArray(marketing.spendEntries)
+      const spendEntries: SpendEntry[] = Array.isArray(marketing.spendEntries)
         ? marketing.spendEntries.flatMap((entry) => {
             const currencyCode = normalizeCurrency(entry.currencyCode);
-            const platform = String(entry.platform);
-            const amount = Number(entry.amount);
+            const platform = String(entry.platform) as SpendNetwork;
+            const amount = Number(entry.amount ?? 0);
+            const rawInstalls = entry.reportedInstalls;
+            const reportedInstalls =
+              rawInstalls == null || String(rawInstalls).trim() === ""
+                ? null
+                : Math.round(Number(rawInstalls));
             if (
               !currencyCode ||
-              ![
-                "google_ads",
-                "tiktok_ads",
-                "apple_search_ads",
-                "meta_ads",
-                "other",
-              ].includes(platform) ||
+              !spendNetworks.includes(platform) ||
               !Number.isFinite(amount) ||
               amount < 0
             )
               return [];
-            return [
-              {
-                platform: platform as SpendEntry["platform"],
-                currencyCode,
-                amount,
-              },
-            ];
+            if (
+              reportedInstalls != null &&
+              (!Number.isFinite(reportedInstalls) || reportedInstalls < 0)
+            )
+              return [];
+            if (amount <= 0 && reportedInstalls == null) return [];
+            const os = spendOsOptions.includes(entry.os as SpendOs)
+              ? (entry.os as SpendOs)
+              : defaultOsForNetwork(platform);
+            return [{ platform, currencyCode, amount, os, reportedInstalls }];
           })
         : [];
       const organicEntries = normalizeOrganicEntries(marketing.organicEntries);

@@ -31,7 +31,11 @@ import {
   type NorthStarTrajectory,
   type OrganicEntry,
   type SpendEntry,
+  type SpendOs,
   type UsersTargetSource,
+  defaultOsForNetwork,
+  spendNetworks,
+  spendOsOptions,
 } from "@/lib/growth-command-center";
 
 type GrowthChartMetric = "users" | "captures" | "socialViews" | "searchClicks";
@@ -327,13 +331,29 @@ export function formatSpendByCurrency(
         .join(" · ")
     : "Not entered";
 }
+const spendNetworkLabels: Record<SpendEntry["platform"], string> = {
+  google_ads: "Google Ads",
+  apple_search_ads: "Apple Search Ads",
+  tiktok_ads: "TikTok Ads",
+  meta_ads: "Meta Ads",
+  other: "Other ads",
+};
+const spendOsLabels: Record<SpendOs, string> = {
+  android: "Android",
+  ios: "iOS",
+  mixed: "iOS + Android",
+  web: "Web",
+  unknown: "App not set",
+};
 function formatSpendEntries(entries: SpendEntry[] | undefined) {
   if (!entries?.length) return "Not entered";
   return entries
-    .map(
-      (entry) =>
-        `${entry.platform.replace(/_/g, " ")} ${formatMoney(entry.amount, entry.currencyCode)}`,
-    )
+    .map((entry) => {
+      const os = entry.os && entry.os !== "unknown" ? ` (${spendOsLabels[entry.os]})` : "";
+      const installs =
+        entry.reportedInstalls != null ? ` · ${format(entry.reportedInstalls)} installs` : "";
+      return `${spendNetworkLabels[entry.platform]}${os} ${formatMoney(entry.amount, entry.currencyCode)}${installs}`;
+    })
     .join(" · ");
 }
 function statusLabel(status: string) {
@@ -2427,17 +2447,29 @@ export function GrowthCommandCenter({
     : plan?.weeklyActionPlans?.length
       ? []
       : defaultJobs;
-  const spendFormRows = editingDate
+  const blankSpendNetworks: SpendEntry["platform"][] = [
+    "google_ads",
+    "apple_search_ads",
+    "tiktok_ads",
+    "meta_ads",
+  ];
+  const spendFormRows: SpendEntry[] = editingDate
     ? [
-        ...(editingDate.spendEntries?.length ? editingDate.spendEntries : []),
-        ...Array.from(
-          { length: Math.max(1, 3 - (editingDate.spendEntries?.length ?? 0)) },
-          () => ({
-            platform: "google_ads" as const,
-            currencyCode: plan?.adSpendCurrency ?? "IDR",
+        ...(editingDate.spendEntries ?? []),
+        ...blankSpendNetworks
+          .filter(
+            (network) =>
+              !(editingDate.spendEntries ?? []).some(
+                (entry) => entry.platform === network,
+              ),
+          )
+          .map((network) => ({
+            platform: network,
+            currencyCode: network === "google_ads" ? "IDR" : "GBP",
             amount: 0,
-          }),
-        ),
+            os: defaultOsForNetwork(network),
+            reportedInstalls: null,
+          })),
       ]
     : [];
   const organicFormRows = organicPlatforms.map(
@@ -2455,14 +2487,22 @@ export function GrowthCommandCenter({
       .getAll("spendAmount")
       .flatMap((rawAmount, index) => {
         const amount = Number(rawAmount || 0);
-        if (!Number.isFinite(amount) || amount <= 0) return [];
+        const rawInstalls = String(form.getAll("spendInstalls")[index] ?? "").trim();
+        const reportedInstalls = rawInstalls === "" ? null : Number(rawInstalls);
+        if (!Number.isFinite(amount) || amount < 0) return [];
+        if (
+          reportedInstalls != null &&
+          (!Number.isFinite(reportedInstalls) || reportedInstalls < 0)
+        )
+          return [];
+        if (amount <= 0 && reportedInstalls == null) return [];
         return [
           {
-            platform: String(
-              form.getAll("spendPlatform")[index] || "google_ads",
-            ),
+            platform: String(form.getAll("spendPlatform")[index] || "google_ads"),
+            os: String(form.getAll("spendOs")[index] || "unknown"),
             currencyCode: String(form.getAll("spendCurrency")[index] || "IDR"),
             amount,
+            reportedInstalls,
           },
         ];
       });
@@ -2491,7 +2531,7 @@ export function GrowthCommandCenter({
           marketing: {
             socialViews: form.get("socialViews"),
             searchClicks: form.get("searchClicks"),
-            paidUsers: form.get("paidUsers"),
+            paidUsers: editingDate.marketing.paidUsers,
             shortVideos: organicEntries.length
               ? derivedShortVideos
               : editingDate.marketing.shortVideos,
@@ -2722,21 +2762,10 @@ export function GrowthCommandCenter({
             </div>
           ) : null}
           {recovery.blockers.length ? (
-            <div className="mt-4 rounded-lg border border-amber-300/25 bg-amber-400/[.07] p-3">
-              <p className="text-xs font-black uppercase tracking-[.12em] text-amber-200">
-                Insufficient attribution data
-              </p>
-              {recovery.blockers.map((blocker) => (
-                <p key={blocker} className="mt-1 text-xs text-amber-100/80">
-                  {blocker}
-                </p>
-              ))}
-              <p className="mt-2 text-xs text-ink-400">
-                Reported installs and clicks remain channel evidence only. Add
-                attributed registered-user snapshots to unlock paid, organic and
-                mixed recovery options.
-              </p>
-            </div>
+            <p className="mt-4 text-xs text-ink-400">
+              Budget and reach estimates need attributed users. Paid vs
+              organic by platform is on the Channels tab.
+            </p>
           ) : null}
         </section>
       ) : null}
@@ -2782,87 +2811,8 @@ export function GrowthCommandCenter({
         />
       ) : null}
 
-      <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-        <h3 className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
-          Manual boundary
-        </h3>
-        <p className="mt-2 text-sm text-white">
-          Update today is the canonical source for{" "}
-          <span className="font-black text-primary-100">
-            platform posts/views · Google clicks · Ad spend · Shorts · SEO
-          </span>
-          .
-        </p>
-        <p className="mt-1 text-xs text-ink-500">
-          Users, captures, Active Pro, retention and production purchases are
-          AUTO. Planned pace and required/day are DERIVED. Missing manual data
-          is never scored as zero.
-        </p>
-      </div>
-
       {plan ? (
         <>
-          <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-            <h3 className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
-              Core funnel
-            </h3>
-            <div className="mt-3 grid gap-2 md:grid-cols-4">
-              {[
-                {
-                  label: "New users",
-                  value: isUpcoming ? null : actuals.users,
-                  sub: isUpcoming ? "UPCOMING" : "AUTO · cohort",
-                },
-                {
-                  label: "Activated",
-                  value: isUpcoming
-                    ? null
-                    : (growth?.funnel?.activatedUsers ?? 0),
-                  sub:
-                    (growth?.funnel?.activationEligibleUsers ?? 0) > 0
-                      ? `${growth?.funnel?.activationRate ?? "-"}% · ${format(growth?.funnel?.activatedUsers ?? null)} / ${format(growth?.funnel?.activationEligibleUsers ?? null)} eligible`
-                      : "Not enough data yet",
-                },
-                {
-                  label: "Retained D7",
-                  value: isUpcoming
-                    ? null
-                    : (growth?.funnel?.d7RetainedUsers ?? 0),
-                  sub:
-                    (growth?.funnel?.d7EligibleUsers ?? 0) > 0
-                      ? `${growth?.funnel?.d7RetentionRate ?? "-"}% · ${format(growth?.funnel?.d7RetainedUsers ?? null)} / ${format(growth?.funnel?.d7EligibleUsers ?? null)} mature`
-                      : "Not enough mature users yet",
-                },
-                {
-                  label: "Paying",
-                  value: isUpcoming
-                    ? null
-                    : (growth?.funnel?.cohortFirstTimePurchasers ?? 0),
-                  sub: isUpcoming
-                    ? "UPCOMING"
-                    : `${growth?.funnel?.payerConversionRate ?? 0}% of signup cohort paid`,
-                },
-              ].map((item, index) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-2 rounded-lg border border-line-300 bg-canvas-900 p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">
-                      {item.label}
-                    </p>
-                    <p className="font-display text-2xl text-white">
-                      {item.value == null ? "—" : format(item.value)}
-                    </p>
-                    <p className="text-[11px] text-ink-400">{item.sub}</p>
-                  </div>
-                  {index < 3 ? (
-                    <span className="hidden text-ink-500 md:block">→</span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
           <div className="grid gap-4 xl:grid-cols-[.9fr_1fr_.8fr]">
             <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
               <h3 className="font-display text-2xl text-white">This week</h3>
@@ -3208,30 +3158,55 @@ export function GrowthCommandCenter({
             <p className="mt-4 text-xs font-black uppercase tracking-[.16em] text-primary-200">
               Paid
             </p>
-            <label className="mt-3 block text-sm font-bold text-ink-300">
-              Ad spend
-              <span className="mt-1 block text-[11px] text-ink-500">
-                One row per ad platform/currency. Leave amount empty to skip.
-              </span>
-              <div className="mt-2 space-y-2">
+            <div className="mt-3">
+              <p className="text-sm font-bold text-ink-300">
+                Ad spend &amp; reported installs
+              </p>
+              <p className="mt-1 text-[11px] text-ink-500">
+                One row per ad network and app. Installs are what the ad
+                platform reports for the day. Leave a field empty if you don&apos;t
+                have it.
+              </p>
+              <div className="mt-2 hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_4.5rem_minmax(0,1fr)_minmax(0,.8fr)] gap-2 px-1 text-[10px] font-black uppercase tracking-[.12em] text-ink-500 sm:grid">
+                <span>Network</span>
+                <span>App</span>
+                <span>Cur.</span>
+                <span>Spend</span>
+                <span>Installs</span>
+              </div>
+              <div className="mt-1 space-y-2">
                 {spendFormRows.map((entry, index) => (
                   <div
-                    key={index}
-                    className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)]"
+                    key={`${entry.platform}-${index}`}
+                    className="grid grid-cols-2 gap-2 rounded-xl border border-line-300/60 p-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_4.5rem_minmax(0,1fr)_minmax(0,.8fr)] sm:border-0 sm:p-0"
                   >
                     <select
                       name="spendPlatform"
+                      aria-label="Ad network"
                       defaultValue={entry.platform}
                       className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
                     >
-                      <option value="google_ads">Google Ads</option>
-                      <option value="tiktok_ads">TikTok Ads</option>
-                      <option value="apple_search_ads">Apple Search Ads</option>
-                      <option value="meta_ads">Meta Ads</option>
-                      <option value="other">Other</option>
+                      {spendNetworks.map((network) => (
+                        <option key={network} value={network}>
+                          {spendNetworkLabels[network]}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="spendOs"
+                      aria-label="App the spend was for"
+                      defaultValue={entry.os ?? defaultOsForNetwork(entry.platform)}
+                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                    >
+                      {spendOsOptions.map((os) => (
+                        <option key={os} value={os}>
+                          {spendOsLabels[os]}
+                        </option>
+                      ))}
                     </select>
                     <select
                       name="spendCurrency"
+                      aria-label="Currency"
                       defaultValue={entry.currencyCode}
                       className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
                     >
@@ -3242,25 +3217,27 @@ export function GrowthCommandCenter({
                     <input
                       name="spendAmount"
                       type="number"
+                      min="0"
                       step="0.01"
+                      aria-label="Spend"
                       defaultValue={entry.amount > 0 ? entry.amount : ""}
-                      placeholder="not entered"
-                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                      placeholder="spend"
+                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                    />
+                    <input
+                      name="spendInstalls"
+                      type="number"
+                      min="0"
+                      step="1"
+                      aria-label="Reported installs"
+                      defaultValue={entry.reportedInstalls ?? ""}
+                      placeholder="installs"
+                      className="col-span-2 sm:col-span-1 min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
                     />
                   </div>
                 ))}
               </div>
-            </label>
-            <label className="mt-3 block text-sm font-bold text-ink-300">
-              Paid installs/users
-              <input
-                name="paidUsers"
-                type="number"
-                step="1"
-                defaultValue={editingDate.marketing.paidUsers || ""}
-                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
-              />
-            </label>
+            </div>
             {marketingError ? (
               <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-sm text-red-200">
                 {marketingError}

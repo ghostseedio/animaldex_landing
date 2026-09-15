@@ -2,61 +2,48 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import AdminShell from "@/app/admin/_components/admin-shell";
+import { Badge, Button, Card, CardContent, CardHeader, InfoTip, Segmented, Stat, TD, TH, Table } from "@/components/admin/ui";
 import {
   formatMoney,
   growthMonthState,
   monthLabel,
+  organicPlatformLabels,
+  organicPlatforms,
   parseGrowthMonth,
   shiftMonth,
 } from "@/lib/growth-command-center";
 import {
-  format,
-  formatSpendByCurrency,
-  GrowthCommandCenter,
-  type GrowthData,
-  type GrowthSnapshot,
-} from "./growth-plan-panel";
+  growthPlatformLabels,
+  growthPlatforms,
+  paidNetworkLabels,
+  platformEvidenceLabels,
+  purchaseStoreLabels,
+  type AcquisitionChannel,
+  type GrowthPlatform,
+  type HistoricalChannelRow,
+  type PaidLogRow,
+  type PaidOrganicSplit,
+  type PlatformDailyRow,
+  type PlatformEvidence,
+  type PurchaseStore,
+  type SpendOs,
+  type StoreSummary,
+} from "@/lib/growth-attribution";
+import { format, GrowthCommandCenter, type GrowthData } from "./growth-plan-panel";
 
-type Period = "hour" | "day" | "week" | "month";
-type SeriesRow = {
-  date: string;
-  users: number;
-  captures: number;
-  subscriptions: number;
-  credits: number;
-};
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 type PostType = "captures" | "alignments" | "fusions" | "challenges" | "trades";
 type PostSeriesRow = { date: string } & Record<PostType, number>;
 type Metrics = {
-  period: Period;
   month: string;
-  periodStart: string;
-  periodEndExclusive: string;
-  generatedAt: string;
-  totals: {
-    users: number | null;
-    captures: number | null;
-    activePro: number | null;
-    productionPurchases: number | null;
-  };
-  kpis: Record<
-    "users" | "captures" | "subscriptions" | "credits",
-    { value: number; change: number }
-  >;
+  kpis: Record<"users" | "captures" | "subscriptions" | "credits", { value: number; change: number }>;
   purchaseBreakdown: { production: number; sandbox: number };
-  signIn: {
-    total: number;
-    providers: Record<string, number>;
-    appleDeviceSignals: number;
-    note: string;
-  } | null;
-  postActivity: {
-    total: number;
-    types: Record<PostType, { value: number; change: number }>;
-    series: PostSeriesRow[];
-  };
-  series: SeriesRow[];
+  postActivity: { total: number; types: Record<PostType, { value: number; change: number }>; series: PostSeriesRow[] };
 };
 type SocialMetric = {
   platform: string;
@@ -65,350 +52,161 @@ type SocialMetric = {
   views: number | null;
   posts: number | null;
   followerChange?: number | null;
-  viewChange?: number | null;
-  error?: string;
+  recordedAt?: string | null;
 };
-type ChartMetric = "users" | "captures" | "subscriptions" | "credits";
-type MetricsTab = "plan" | "acquisition" | "product" | "revenue";
-type ChannelScorecard = {
-  source: string;
-  channel: "ORGANIC" | "PAID";
-  reach: string;
-  traffic: string;
-  installs: string;
-  spend: string;
-  efficiency: string;
-  range: string;
-  badges: string[];
-  rows: GrowthSnapshot[];
+type GroupStats = {
+  users: number;
+  activationRate: number | null;
+  activationEligible: number;
+  d7Rate: number | null;
+  d7Eligible: number;
+  capturesPerCollector: number | null;
+  payers: number;
 };
+type ChannelRow = AcquisitionChannel & GroupStats & { platform: GrowthPlatform; costPerUser: Record<string, number> | null };
+type Insights = {
+  attribution?:
+    | { available: false }
+    | {
+        available: true;
+        month: {
+          users: number;
+          signupsByPlatform: Record<GrowthPlatform, number>;
+          evidenceCounts: Partial<Record<PlatformEvidence, number>>;
+          reportedAtSignup: number;
+          selfReported: number;
+          storeAttributed: number;
+          platformDaily: PlatformDailyRow[];
+          byPlatform: Record<GrowthPlatform, GroupStats>;
+          channels: ChannelRow[];
+        };
+        allTime: {
+          users: number;
+          byPlatform: Partial<Record<GrowthPlatform, number>>;
+          evidenceCounts: Partial<Record<PlatformEvidence, number>>;
+          selfReported: number;
+          storeAttributed: number;
+        };
+      };
+  paid?: { log: PaidLogRow[]; split: PaidOrganicSplit[] };
+  historicalChannels?: HistoricalChannelRow[];
+  revenue?: {
+    month: Partial<Record<PurchaseStore, StoreSummary>>;
+    allTime: Partial<Record<PurchaseStore, StoreSummary>>;
+    note: string;
+  };
+  previousMonthUsers?: number | null;
+};
+type Growth = GrowthData & Insights;
+type MetricsTab = "overview" | "channels" | "product" | "revenue" | "plan";
+type PlatformFilter = "all" | GrowthPlatform;
 
-const tabs: Array<{ key: MetricsTab; label: string; description: string }> = [
-  {
-    key: "plan",
-    label: "Growth Plan",
-    description: "North Star, today’s required pace and Update today",
-  },
-  {
-    key: "acquisition",
-    label: "Acquisition",
-    description: "Users, search, social and paid inputs",
-  },
-  {
-    key: "product",
-    label: "Product",
-    description: "Captures and Discover activity",
-  },
-  {
-    key: "revenue",
-    label: "Revenue & Users",
-    description: "Pro, purchases, accounts and LTV",
-  },
+const tabs: Array<{ value: MetricsTab; label: string }> = [
+  { value: "overview", label: "Overview" },
+  { value: "channels", label: "Channels" },
+  { value: "product", label: "Product" },
+  { value: "revenue", label: "Revenue" },
+  { value: "plan", label: "Plan & log" },
 ];
 
-const metricMeta: Record<
-  ChartMetric,
-  { label: string; color: string; description: string }
-> = {
-  users: {
-    label: "New users",
-    color: "#59f176",
-    description: "Profiles created",
-  },
-  captures: {
-    label: "Captures",
-    color: "#57b8ff",
-    description: "Animals captured",
-  },
-  subscriptions: {
-    label: "New Pro",
-    color: "#f6bd55",
-    description: "Production Pro purchases",
-  },
-  credits: {
-    label: "Credits bought",
-    color: "#b997ff",
-    description: "Purchased credit units",
-  },
+const platformColors: Record<GrowthPlatform, string> = {
+  ios: "#7cc4ff",
+  android: "#5fd08f",
+  web: "#b997ff",
+  unknown: "#46544b",
+};
+const osLabels: Record<SpendOs, string> = { ios: "iOS", android: "Android", web: "Web", mixed: "iOS + Android", unknown: "App not set" };
+
+const postTypeMeta: Record<PostType, { label: string; color: string }> = {
+  captures: { label: "Captures", color: "#59f176" },
+  alignments: { label: "Alignments", color: "#57b8ff" },
+  fusions: { label: "Fusions", color: "#b997ff" },
+  challenges: { label: "Challenges", color: "#f6bd55" },
+  trades: { label: "Trades", color: "#ff7f8f" },
 };
 
-const postTypeMeta: Record<
-  PostType,
-  { shortLabel: string; color: string; description: string }
-> = {
-  captures: {
-    shortLabel: "Captures",
-    color: "#59f176",
-    description: "Discoverable animal posts",
-  },
-  alignments: {
-    shortLabel: "Alignments",
-    color: "#57b8ff",
-    description: "Shared accepted journal proofs",
-  },
-  fusions: {
-    shortLabel: "Fusions",
-    color: "#b997ff",
-    description: "Learned principle events",
-  },
-  challenges: {
-    shortLabel: "Challenges",
-    color: "#f6bd55",
-    description: "Completed animal matchups",
-  },
-  trades: {
-    shortLabel: "Trades",
-    color: "#ff7f8f",
-    description: "Completed capture trades",
-  },
-};
+// ---------------------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------------------
 
+function pct(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${Math.round(value * 10) / 10}%`;
+}
+function share(part: number, total: number) {
+  return total > 0 ? Math.round((part / total) * 100) : 0;
+}
+function moneyByCurrency(values: Record<string, number> | null | undefined) {
+  const entries = Object.entries(values ?? {}).filter(([, amount]) => amount > 0);
+  return entries.length ? entries.map(([currency, amount]) => formatMoney(amount, currency)).join(" · ") : "—";
+}
 function dateLabel(date: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T00:00:00Z`));
-}
-function sourceLabel(source: string) {
-  return source
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-function metricLabel(metric: string) {
-  return metric
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-function formatCurrency(value: number | null, currency: string | null) {
-  return formatMoney(value, currency);
-}
-function snapshotValue(rows: GrowthSnapshot[], source: string, metric: string) {
-  return rows.find((row) => row.source === source && row.metric === metric);
-}
-function metadataNumber(row: GrowthSnapshot | undefined, key: string) {
-  if (!row || !row.metadata || typeof row.metadata !== "object") return null;
-  const value = (row.metadata as Record<string, unknown>)[key];
-  return typeof value === "number" ? value : null;
-}
-function googleAndroidCpi(row: GrowthSnapshot | undefined) {
-  if (!row || !row.metadata || typeof row.metadata !== "object") return null;
-  const direct = metadataNumber(row, "reported_cost_per_install_idr");
-  if (direct != null) return direct;
-  const campaigns = (row.metadata as Record<string, unknown>).campaigns;
-  if (!Array.isArray(campaigns)) return null;
-  for (const campaign of campaigns) {
-    if (!campaign || typeof campaign !== "object") continue;
-    const value = (campaign as Record<string, unknown>)
-      .reported_cost_per_install_idr;
-    if (typeof value === "number") return value;
-  }
-  return null;
-}
-function snapshotSummary(rows: GrowthSnapshot[], source: string) {
-  const sourceRows = rows.filter((row) => row.source === source);
-  const first = sourceRows[0];
-  return {
-    rows: sourceRows,
-    range: first
-      ? `${dateLabel(first.periodStart)} – ${dateLabel(first.periodEnd)}`
-      : "",
-    primary: sourceRows.some((row) => row.aggregationRole === "primary"),
-    supporting: sourceRows.some((row) => row.aggregationRole === "supporting"),
-  };
-}
-function buildChannelScorecards(rows: GrowthSnapshot[]): ChannelScorecard[] {
-  const tiktokOrganic = snapshotSummary(rows, "tiktok_organic");
-  const googleSearch = snapshotSummary(rows, "google_search_console");
-  const googleAds = snapshotSummary(rows, "google_ads");
-  const tiktokAds = snapshotSummary(rows, "tiktok_ads");
-  const appleSearchAds = snapshotSummary(rows, "apple_search_ads");
-  const googleAdsSpend = snapshotValue(rows, "google_ads", "spend");
-  const tiktokAdsSpend = snapshotValue(rows, "tiktok_ads", "spend");
-  const appleSearchSpend = snapshotValue(rows, "apple_search_ads", "spend");
-  const tiktokDestinationClicks = snapshotValue(
-    rows,
-    "tiktok_ads",
-    "destination_clicks",
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${date}T00:00:00Z`),
   );
-  const gscClicks = snapshotValue(rows, "google_search_console", "clicks");
-  const gscImpressions = snapshotValue(
-    rows,
-    "google_search_console",
-    "impressions",
-  );
-  const appleInstalls = snapshotValue(rows, "apple_search_ads", "installs");
-  const androidCpi = googleAndroidCpi(googleAdsSpend);
-  const tiktokCpc =
-    tiktokAdsSpend && tiktokDestinationClicks?.value
-      ? tiktokAdsSpend.value / tiktokDestinationClicks.value
-      : null;
-  const gscCtr =
-    gscClicks && gscImpressions?.value
-      ? (gscClicks.value / gscImpressions.value) * 100
-      : null;
-  const appleCpa =
-    appleSearchSpend && appleInstalls?.value
-      ? appleSearchSpend.value / appleInstalls.value
-      : null;
-  return [
-    {
-      source: "TikTok Organic",
-      channel: "ORGANIC" as const,
-      reach: `${format(snapshotValue(rows, "tiktok_organic", "video_views")?.value ?? null)} views`,
-      traffic: `${format(snapshotValue(rows, "tiktok_organic", "profile_views")?.value ?? null)} profile views`,
-      installs: "—",
-      spend: "Organic",
-      efficiency: "engagement evidence only",
-      range: tiktokOrganic.range,
-      badges: ["IMPORTED"],
-      rows: tiktokOrganic.rows,
-    },
-    {
-      source: "TikTok Ads",
-      channel: "PAID" as const,
-      reach: `${format(snapshotValue(rows, "tiktok_ads", "impressions")?.value ?? null)} impressions`,
-      traffic: `${format(tiktokDestinationClicks?.value ?? null)} destination clicks`,
-      installs: "—",
-      spend: formatCurrency(
-        tiktokAdsSpend?.value ?? null,
-        tiktokAdsSpend?.currency ?? null,
-      ),
-      efficiency:
-        tiktokCpc == null
-          ? "—"
-          : `${formatCurrency(tiktokCpc, tiktokAdsSpend?.currency ?? null)}/destination click`,
-      range: tiktokAds.range,
-      badges: ["IMPORTED", "DERIVED"],
-      rows: tiktokAds.rows,
-    },
-    {
-      source: "Google Ads",
-      channel: "PAID" as const,
-      reach: `${format(snapshotValue(rows, "google_ads", "impressions")?.value ?? null)} impressions`,
-      traffic: `~${format(snapshotValue(rows, "google_ads", "clicks")?.value ?? null)} clicks`,
-      installs: `${format(snapshotValue(rows, "google_ads", "installs")?.value ?? null)} reported installs`,
-      spend: `${formatCurrency(googleAdsSpend?.value ?? null, googleAdsSpend?.currency ?? null)} account spend`,
-      efficiency:
-        androidCpi == null
-          ? "Reported Android CPI unavailable"
-          : `Reported Android CPI: ${formatCurrency(androidCpi, "IDR")}`,
-      range: googleAds.range,
-      badges: ["IMPORTED"],
-      rows: googleAds.rows,
-    },
-    {
-      source: "Google Search",
-      channel: "ORGANIC" as const,
-      reach: `${format(gscImpressions?.value ?? null)} impressions`,
-      traffic: `${format(gscClicks?.value ?? null)} clicks`,
-      installs: "—",
-      spend: "Organic",
-      efficiency: gscCtr == null ? "—" : `CTR ${gscCtr.toFixed(2)}%`,
-      range: googleSearch.range,
-      badges: ["IMPORTED", "DERIVED"],
-      rows: googleSearch.rows,
-    },
-    {
-      source: "Apple Search Ads",
-      channel: "PAID" as const,
-      reach: `${format(snapshotValue(rows, "apple_search_ads", "impressions")?.value ?? null)} impressions`,
-      traffic: `${format(snapshotValue(rows, "apple_search_ads", "taps")?.value ?? null)} taps`,
-      installs: `${format(appleInstalls?.value ?? null)} reported installs`,
-      spend: formatCurrency(
-        appleSearchSpend?.value ?? null,
-        appleSearchSpend?.currency ?? null,
-      ),
-      efficiency:
-        appleCpa == null
-          ? "—"
-          : `~${formatCurrency(appleCpa, appleSearchSpend?.currency ?? null)}/install`,
-      range: appleSearchAds.range,
-      badges: ["IMPORTED", "DERIVED"],
-      rows: appleSearchAds.rows,
-    },
-  ].filter((card) => card.rows.length);
 }
-function buildAcquisitionInsights(rows: GrowthSnapshot[]) {
-  const tiktokViews = snapshotValue(rows, "tiktok_organic", "video_views");
-  const googleInstalls = snapshotValue(rows, "google_ads", "installs");
-  const googleSpend = snapshotValue(rows, "google_ads", "spend");
-  const gscClicks = snapshotValue(rows, "google_search_console", "clicks");
-  const gscImpressions = snapshotValue(
-    rows,
-    "google_search_console",
-    "impressions",
-  );
-  const androidCpi = googleAndroidCpi(googleSpend);
-  return [
-    tiktokViews
-      ? `TikTok Organic generated ${format(tiktokViews.value)} video views without recorded ad spend.`
-      : null,
-    googleInstalls && androidCpi != null
-      ? `Google Ads reported ${format(googleInstalls.value)} Android installs at reported ${formatCurrency(androidCpi, "IDR")} campaign CPI.`
-      : null,
-    gscClicks && gscImpressions
-      ? `Search generated ${format(gscClicks.value)} organic clicks from ${format(gscImpressions.value)} impressions.`
-      : null,
-  ]
-    .filter(Boolean)
-    .slice(0, 3) as string[];
+function PlatformBadge({ platform }: { platform: GrowthPlatform | SpendOs }) {
+  const tone = platform === "ios" ? "ios" : platform === "android" ? "android" : platform === "web" ? "web" : "neutral";
+  const label = platform in growthPlatformLabels ? growthPlatformLabels[platform as GrowthPlatform] : osLabels[platform as SpendOs];
+  return <Badge tone={tone}>{label}</Badge>;
 }
-function TrendChart({
-  rows,
-  metric,
-  period,
-}: {
-  rows: SeriesRow[];
-  metric: ChartMetric;
-  period: Period;
-}) {
-  const max = Math.max(1, ...rows.map((row) => row[metric]));
-  const gap = 900 / Math.max(rows.length, 1);
+
+// ---------------------------------------------------------------------------
+// Charts
+// ---------------------------------------------------------------------------
+
+/** A chart ceiling of four equal, whole-number steps (e.g. 40 → ticks 0/10/20/30/40). */
+function niceMax(value: number) {
+  const rough = Math.max(1, value) / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((candidate) => candidate >= rough) ?? magnitude * 10;
+  return Math.max(4, Math.ceil(step) * 4);
+}
+
+function PlatformDailyChart({ rows, filter }: { rows: PlatformDailyRow[]; filter: PlatformFilter }) {
+  const visible: GrowthPlatform[] = filter === "all" ? growthPlatforms : [filter];
+  const totals = rows.map((row) => visible.reduce((sum, platform) => sum + row[platform], 0));
+  const max = niceMax(Math.max(1, ...totals));
+  const width = 900;
+  const height = 240;
+  const left = 34;
+  const bottom = 24;
+  const top = 8;
+  const plot = height - bottom - top;
+  const slot = (width - left) / Math.max(rows.length, 1);
+  const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
   return (
     <div className="overflow-x-auto">
-      <svg viewBox="0 0 900 230" className="min-w-[520px] w-full" role="img">
-        <line
-          x1="0"
-          x2="900"
-          y1="205"
-          y2="205"
-          stroke="rgba(255,255,255,.08)"
-        />
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px]" role="img" aria-label="New users per day by platform">
+        {ticks.map((tick) => {
+          const y = top + plot - (tick / max) * plot;
+          return (
+            <g key={tick}>
+              <line x1={left} x2={width} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
+              <text x={left - 6} y={y + 3} textAnchor="end" fontSize="10" fill="#84958b">
+                {Math.round(tick)}
+              </text>
+            </g>
+          );
+        })}
         {rows.map((row, index) => {
-          const barHeight = (row[metric] / max) * 180;
+          let y = top + plot;
           return (
             <g key={row.date}>
-              <rect
-                x={index * gap + gap * 0.19}
-                y={205 - barHeight}
-                width={Math.max(3, gap * 0.62)}
-                height={barHeight}
-                rx="4"
-                fill={metricMeta[metric].color}
-                opacity=".88"
-              />
-              <text
-                x={index * gap + gap / 2}
-                y="224"
-                textAnchor="middle"
-                fill="#84958b"
-                fontSize="10"
-              >
-                {rows.length <= 12 || index % Math.ceil(rows.length / 8) === 0
-                  ? new Intl.DateTimeFormat(
-                      "en",
-                      period === "hour"
-                        ? { hour: "2-digit" }
-                        : period === "month"
-                          ? { month: "short" }
-                          : { month: "short", day: "numeric" },
-                    ).format(new Date(row.date))
-                  : ""}
-              </text>
+              {visible.map((platform) => {
+                const h = (row[platform] / max) * plot;
+                y -= h;
+                return h > 0 ? (
+                  <rect key={platform} x={left + index * slot + slot * 0.18} y={y} width={Math.max(3, slot * 0.64)} height={h} fill={platformColors[platform]}>
+                    <title>{`${row.date} · ${growthPlatformLabels[platform]} ${row[platform]}`}</title>
+                  </rect>
+                ) : null;
+              })}
+              {rows.length <= 16 || index % 2 === 0 ? (
+                <text x={left + index * slot + slot / 2} y={height - 8} textAnchor="middle" fontSize="10" fill="#84958b">
+                  {Number(row.date.slice(8))}
+                </text>
+              ) : null}
             </g>
           );
         })}
@@ -416,60 +214,28 @@ function TrendChart({
     </div>
   );
 }
-function PostTypeChart({
-  rows,
-  period,
-}: {
-  rows: PostSeriesRow[];
-  period: Period;
-}) {
+
+function PostTypeChart({ rows }: { rows: PostSeriesRow[] }) {
   const keys = Object.keys(postTypeMeta) as PostType[];
-  const max = Math.max(
-    1,
-    ...rows.map((row) => keys.reduce((sum, key) => sum + row[key], 0)),
-  );
-  const gap = 900 / Math.max(rows.length, 1);
+  const max = niceMax(Math.max(1, ...rows.map((row) => keys.reduce((sum, key) => sum + row[key], 0))));
+  const slot = 900 / Math.max(rows.length, 1);
   return (
     <div className="overflow-x-auto">
-      <svg viewBox="0 0 900 240" className="min-w-[560px] w-full" role="img">
+      <svg viewBox="0 0 900 230" className="w-full min-w-[560px]" role="img" aria-label="Discover posts per day by type">
         {rows.map((row, index) => {
-          let accumulated = 0;
+          let y = 200;
           return (
             <g key={row.date}>
               {keys.map((key) => {
-                const barHeight = (row[key] / max) * 190;
-                const y = 205 - accumulated - barHeight;
-                accumulated += barHeight;
-                return (
-                  <rect
-                    key={key}
-                    x={index * gap + gap * 0.16}
-                    y={y}
-                    width={Math.max(5, gap * 0.68)}
-                    height={barHeight}
-                    rx="2"
-                    fill={postTypeMeta[key].color}
-                  />
-                );
+                const h = (row[key] / max) * 190;
+                y -= h;
+                return <rect key={key} x={index * slot + slot * 0.16} y={y} width={Math.max(4, slot * 0.68)} height={h} fill={postTypeMeta[key].color} />;
               })}
-              <text
-                x={index * gap + gap / 2}
-                y="228"
-                textAnchor="middle"
-                fill="#84958b"
-                fontSize="10"
-              >
-                {rows.length <= 12 || index % Math.ceil(rows.length / 8) === 0
-                  ? new Intl.DateTimeFormat(
-                      "en",
-                      period === "hour"
-                        ? { hour: "2-digit" }
-                        : period === "month"
-                          ? { month: "short" }
-                          : { month: "short", day: "numeric" },
-                    ).format(new Date(row.date))
-                  : ""}
-              </text>
+              {rows.length <= 16 || index % 2 === 0 ? (
+                <text x={index * slot + slot / 2} y="222" textAnchor="middle" fontSize="10" fill="#84958b">
+                  {new Date(row.date).getUTCDate()}
+                </text>
+              ) : null}
             </g>
           );
         })}
@@ -478,475 +244,483 @@ function PostTypeChart({
   );
 }
 
-function CollectorDepth({
-  data,
-}: {
-  data: NonNullable<GrowthData["collectorAnalytics"]>;
-}) {
+function Legend({ items }: { items: Array<{ label: string; color: string; value?: ReactNode }> }) {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-400">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: item.color }} aria-hidden="true" />
+          {item.label}
+          {item.value != null ? <span className="font-bold text-white tabular-nums">{item.value}</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sections
+// ---------------------------------------------------------------------------
+
+function AttributionPending() {
+  return (
+    <Card className="border-amber-300/30 bg-amber-400/[.05]">
+      <CardContent className="text-sm text-amber-100">
+        <p className="font-black text-white">Platform and channel data is not switched on yet</p>
+        <p className="mt-1 text-xs leading-5 text-amber-100/80">
+          Apply <code className="break-all rounded bg-black/30 px-1">supabase/migrations/20260915120000_growth_platform_attribution.sql</code>. Existing
+          accounts are then split by device evidence straight away, and new signups are tagged once the iOS and Android updates ship.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: PaidLogRow[] }) {
+  const unallocated = log.filter((row) => row.os !== "ios" && row.os !== "android");
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        {split.map((item) => (
+          <Card key={item.platform}>
+            <CardContent>
+              <div className="flex items-center justify-between gap-2">
+                <PlatformBadge platform={item.platform} />
+                <span className="text-xs text-ink-400">{format(item.signups)} new users</span>
+              </div>
+              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/[.07]" aria-hidden="true">
+                <div className="flex h-full">
+                  <div style={{ width: `${100 - (item.organicShare ?? 100)}%`, background: "#f6bd55" }} />
+                  <div style={{ width: `${item.organicShare ?? 0}%`, background: platformColors[item.platform] }} />
+                </div>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div>
+                  <dt className="text-ink-500">Paid (ad platform installs)</dt>
+                  <dd className="font-display text-xl text-white tabular-nums">{format(item.paidEstimate)}</dd>
+                </div>
+                <div>
+                  <dt className="flex items-center gap-1 text-ink-500">
+                    Organic, at least
+                    <InfoTip>Signups minus installs the ad platforms reported. It assumes every paid install signed up, so the real organic number can only be higher.</InfoTip>
+                  </dt>
+                  <dd className="font-display text-xl text-white tabular-nums">
+                    {format(item.organicFloor)} <span className="text-sm text-ink-400">{pct(item.organicShare)}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-ink-500">Spend</dt>
+                  <dd className="text-ink-200">{moneyByCurrency(item.spendByCurrency)}</dd>
+                </div>
+                <div>
+                  <dt className="text-ink-500">Cost per paid signup</dt>
+                  <dd className="text-ink-200">{moneyByCurrency(item.costPerPaidSignupByCurrency)}</dd>
+                </div>
+              </dl>
+              {item.reportedInstalls === 0 && Object.keys(item.spendByCurrency).length ? (
+                <p className="mt-2 text-[11px] text-amber-200">Spend logged without installs. Add the installs to see cost per signup.</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {unallocated.length ? (
+        <p className="text-xs text-ink-400">
+          Not split by app: {unallocated.map((row) => `${paidNetworkLabels[row.network] ?? row.network} (${osLabels[row.os]}) ${formatMoney(row.spend, row.currencyCode)}`).join(" · ")}. Set the app on those log rows to include them.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ChannelTable({ channels, filter, limit }: { channels: ChannelRow[]; filter: PlatformFilter; limit?: number }) {
+  const rows = channels.filter((row) => filter === "all" || row.platform === filter).slice(0, limit ?? Infinity);
+  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No users for this filter yet.</p>;
+  return (
+    <Table minWidth={760}>
+      <thead>
+        <tr>
+          <TH>Channel</TH>
+          <TH>Platform</TH>
+          <TH numeric>Users</TH>
+          <TH numeric>Activated</TH>
+          <TH numeric>D7</TH>
+          <TH numeric>Payers</TH>
+          <TH numeric>Cost / user</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={`${row.key}-${row.platform}`} className="hover:bg-white/[.02]">
+            <TD>
+              <span className="font-bold text-white">{row.label}</span>{" "}
+              {row.kind === "paid" ? <Badge tone="warn">Paid</Badge> : row.kind === "organic" ? <Badge tone="good">Organic</Badge> : null}
+              {row.evidence === "self_reported" ? (
+                <span className="ml-1 text-[11px] text-ink-500">said in app</span>
+              ) : row.evidence === "store" ? (
+                <span className="ml-1 text-[11px] text-ink-500">store verified</span>
+              ) : null}
+            </TD>
+            <TD>
+              <PlatformBadge platform={row.platform} />
+            </TD>
+            <TD numeric className="font-bold text-white">
+              {format(row.users)}
+            </TD>
+            <TD numeric title={`${row.activationEligible} users old enough to count`}>
+              {pct(row.activationRate)}
+            </TD>
+            <TD numeric title={`${row.d7Eligible} activated users old enough to count`}>
+              {pct(row.d7Rate)}
+            </TD>
+            <TD numeric>{format(row.payers)}</TD>
+            <TD numeric>{moneyByCurrency(row.costPerUser)}</TD>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+function PaidLogTable({ rows }: { rows: PaidLogRow[] }) {
+  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No spend or installs logged this month.</p>;
+  return (
+    <Table minWidth={640}>
+      <thead>
+        <tr>
+          <TH>Network</TH>
+          <TH>App</TH>
+          <TH numeric>Spend</TH>
+          <TH numeric>Installs</TH>
+          <TH numeric>Cost / install</TH>
+          <TH numeric>Days logged</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={`${row.network}-${row.os}-${row.currencyCode}`}>
+            <TD className="font-bold text-white">{paidNetworkLabels[row.network] ?? row.network}</TD>
+            <TD>
+              <PlatformBadge platform={row.os} />
+            </TD>
+            <TD numeric>{formatMoney(row.spend, row.currencyCode)}</TD>
+            <TD numeric>{row.daysWithInstalls ? format(row.installs) : "—"}</TD>
+            <TD numeric>{row.costPerInstall == null ? "—" : formatMoney(row.costPerInstall, row.currencyCode)}</TD>
+            <TD numeric>{row.daysLogged}</TD>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+function HistoricalTable({ rows }: { rows: HistoricalChannelRow[] }) {
+  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No imported channel reports yet.</p>;
+  return (
+    <Table minWidth={860}>
+      <thead>
+        <tr>
+          <TH>Source</TH>
+          <TH>App</TH>
+          <TH>Period</TH>
+          <TH numeric>Spend</TH>
+          <TH numeric>Installs</TH>
+          <TH numeric>Cost / install</TH>
+          <TH numeric>Clicks</TH>
+          <TH numeric>Impr. / views</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={`${row.source}-${row.periodStart}-${row.periodEnd}`}>
+            <TD>
+              <span className="font-bold text-white">{row.label}</span>{" "}
+              {row.kind === "paid" ? <Badge tone="warn">Paid</Badge> : <Badge tone="good">Organic</Badge>}
+            </TD>
+            <TD>
+              <PlatformBadge platform={row.os} />
+            </TD>
+            <TD className="whitespace-nowrap">
+              {dateLabel(row.periodStart)} – {dateLabel(row.periodEnd)}
+            </TD>
+            <TD numeric>{row.spend == null ? "—" : formatMoney(row.spend, row.currency)}</TD>
+            <TD numeric>{format(row.installs)}</TD>
+            <TD numeric>{row.costPerInstall == null ? "—" : formatMoney(row.costPerInstall, row.currency)}</TD>
+            <TD numeric>{format(row.clicks)}</TD>
+            <TD numeric>{format(row.impressions ?? row.views)}</TD>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+function StoreTable({ revenue }: { revenue: NonNullable<Insights["revenue"]> }) {
+  const stores: PurchaseStore[] = ["app_store", "google_play", "web", "unknown", "test"];
+  return (
+    <Table minWidth={700}>
+      <thead>
+        <tr>
+          <TH>Store</TH>
+          <TH numeric>Purchases</TH>
+          <TH numeric>Pro</TH>
+          <TH numeric>Credits</TH>
+          <TH numeric>Buyers</TH>
+          <TH numeric>Est. revenue</TH>
+          <TH numeric>All-time purchases</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {stores
+          .filter((store) => revenue.month[store] || revenue.allTime[store] || store === "google_play")
+          .map((store) => {
+            const month = revenue.month[store];
+            const allTime = revenue.allTime[store];
+            return (
+              <tr key={store}>
+                <TD className="font-bold text-white">
+                  {purchaseStoreLabels[store]}
+                  {store === "google_play" && !allTime ? (
+                    <span className="ml-2">
+                      <Badge tone="bad">Never recorded</Badge>
+                    </span>
+                  ) : null}
+                </TD>
+                <TD numeric>{format(month?.purchases ?? 0)}</TD>
+                <TD numeric>{format(month?.pro ?? 0)}</TD>
+                <TD numeric>{format(month?.credits ?? 0)}</TD>
+                <TD numeric>{format(month?.buyers ?? 0)}</TD>
+                <TD numeric>{store === "test" ? "—" : formatMoney(month?.estimatedUsd ?? 0, "USD")}</TD>
+                <TD numeric>{format(allTime?.purchases ?? 0)}</TD>
+              </tr>
+            );
+          })}
+      </tbody>
+    </Table>
+  );
+}
+
+function CollectorDepth({ data }: { data: NonNullable<GrowthData["collectorAnalytics"]> }) {
   const max = Math.max(1, ...data.depth.map((row) => row.users));
   return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <h2 className="font-display text-xl text-white">Collector depth</h2>
-      <p className="mt-1 text-xs text-ink-500">
-        How broadly qualifying captures are distributed across collectors in the
-        selected month.
-      </p>
-      <div className="mt-4 space-y-3">
+    <Card>
+      <CardHeader title="Collector depth" description="How many qualifying captures each collector made this month." />
+      <CardContent className="space-y-2.5">
         {data.depth.map((row) => (
-          <div
-            key={row.label}
-            className="grid grid-cols-[72px_1fr_92px] items-center gap-3"
-          >
+          <div key={row.label} className="grid grid-cols-[84px_1fr_92px] items-center gap-3">
             <p className="text-xs font-black text-white">
               {row.label} {row.label === "1" ? "capture" : "captures"}
             </p>
-            <div className="h-5 overflow-hidden rounded bg-white/[.06]">
-              <div
-                className="h-full rounded bg-primary-400/80"
-                style={{ width: `${(row.users / max) * 100}%` }}
-              />
+            <div className="h-4 overflow-hidden rounded bg-white/[.06]">
+              <div className="h-full rounded bg-primary-400/80" style={{ width: `${(row.users / max) * 100}%` }} />
             </div>
-            <p className="text-right text-xs text-ink-300">
+            <p className="text-right text-xs text-ink-300 tabular-nums">
               {format(row.users)} · {row.percent}%
             </p>
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
-function CaptureRetention({
-  data,
-}: {
-  data: NonNullable<GrowthData["collectorAnalytics"]>;
-}) {
+function CaptureRetention({ data }: { data: NonNullable<GrowthData["collectorAnalytics"]> }) {
   const rows = data.retention.slice(-8);
   return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <h2 className="font-display text-xl text-white">Capture retention</h2>
-      <p className="mt-1 text-xs text-ink-500">
-        Activation-date cohorts · Asia/Jakarta calendar days · immature cells
-        are excluded.
-      </p>
+    <Card>
+      <CardHeader title="Capture retention by activation day" description="Share of each day's new collectors who captured again on day N. Blank cells are too recent to count." />
       {rows.length ? (
-        <div className="mt-3 overflow-x-auto">
-          <table className="min-w-[700px] w-full text-center text-xs">
-            <thead className="text-[10px] uppercase text-ink-500">
-              <tr>
-                <th className="px-2 py-2 text-left">D0 cohort</th>
-                <th className="px-2 py-2">Collectors</th>
-                {Array.from({ length: 8 }, (_, day) => (
-                  <th key={day} className="px-2 py-2">
-                    D{day}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.cohort} className="border-t border-line-300">
-                  <td className="px-2 py-2 text-left font-bold text-white">
-                    {row.cohort.slice(5)}
-                  </td>
-                  <td className="px-2 py-2 text-ink-300">{row.size}</td>
-                  {row.days.map((value, day) => (
-                    <td key={day} className="px-1 py-1">
-                      <span
-                        className={`block rounded px-2 py-2 ${value == null ? "bg-white/[.03] text-ink-600" : "text-white"}`}
-                        style={
-                          value == null
-                            ? undefined
-                            : {
-                                backgroundColor: `rgba(89,241,118,${Math.max(0.08, (value / 100) * 0.75)})`,
-                              }
-                        }
-                      >
-                        {value == null ? "—" : `${value}%`}
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-ink-400">
-          Not enough activated collectors yet.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function CollectorActivity({
-  data,
-}: {
-  data: NonNullable<GrowthData["collectorAnalytics"]>;
-}) {
-  const maxCaptures = Math.max(1, ...data.activity.map((row) => row.captures));
-  const maxCollectors = Math.max(
-    1,
-    ...data.activity.map((row) => row.collectors),
-  );
-  const width = 900 / Math.max(1, data.activity.length);
-  const points = data.activity
-    .map(
-      (row, index) =>
-        `${index * width + width / 2},${190 - (row.collectors / maxCollectors) * 160}`,
-    )
-    .join(" ");
-  return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="font-display text-xl text-white">Capture activity</h2>
-          <p className="mt-1 text-xs text-ink-500">
-            Daily qualifying captures and unique collectors · selected month.
-          </p>
-        </div>
-        <p className="text-[10px] text-ink-400">
-          <span className="text-primary-300">■</span> captures ·{" "}
-          <span className="text-sky-300">●</span> collectors
-        </p>
-      </div>
-      {data.activity.length ? (
-        <div className="mt-3 overflow-x-auto">
-          <svg
-            viewBox="0 0 900 225"
-            className="min-w-[680px] w-full"
-            role="img"
-            aria-label="Qualifying captures and unique collectors by day"
-          >
-            {data.activity.map((row, index) => {
-              const height = (row.captures / maxCaptures) * 160;
-              return (
-                <g key={row.date}>
-                  <rect
-                    x={index * width + width * 0.2}
-                    y={190 - height}
-                    width={Math.max(4, width * 0.6)}
-                    height={height}
-                    rx="3"
-                    fill="#59f176"
-                    opacity=".7"
-                  />
-                  <text
-                    x={index * width + width / 2}
-                    y="213"
-                    textAnchor="middle"
-                    fill="#84958b"
-                    fontSize="9"
-                  >
-                    {data.activity.length <= 12 ||
-                    index % Math.ceil(data.activity.length / 10) === 0
-                      ? row.date.slice(8)
-                      : ""}
-                  </text>
-                </g>
-              );
-            })}
-            <polyline
-              points={points}
-              fill="none"
-              stroke="#57b8ff"
-              strokeWidth="4"
-            />
-            <g>
-              {data.activity.map((row, index) => (
-                <circle
-                  key={row.date}
-                  cx={index * width + width / 2}
-                  cy={190 - (row.collectors / maxCollectors) * 160}
-                  r="3"
-                  fill="#57b8ff"
-                />
-              ))}
-            </g>
-          </svg>
-          <p className="text-[11px] text-ink-500">
-            Each series uses its own clearly labelled scale: captures max{" "}
-            {format(maxCaptures)} · collectors max {format(maxCollectors)}.
-          </p>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-ink-400">
-          No qualifying captures in this period.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function ChannelScoreboard({
-  cards,
-  insights,
-  supportingSnapshots,
-  rule,
-}: {
-  cards: ChannelScorecard[];
-  insights: string[];
-  supportingSnapshots: GrowthSnapshot[];
-  rule?: string;
-}) {
-  return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-        <div>
-          <h2 className="font-display text-xl text-white">
-            Channel scoreboard
-          </h2>
-          <p className="mt-1 text-xs text-ink-500">
-            Primary historical snapshots only. Date ranges stay intact; no fake
-            daily distribution.
-          </p>
-        </div>
-        <span className="rounded-full border border-primary-400/30 bg-primary-500/10 px-2 py-1 text-[10px] font-black text-primary-100">
-          AUTO-SAFE
-        </span>
-      </div>
-      <div className="mt-3 overflow-x-auto">
-        <table className="min-w-[980px] w-full text-left text-xs">
-          <thead className="text-[10px] uppercase tracking-[.14em] text-ink-500">
+        <Table minWidth={700}>
+          <thead>
             <tr>
-              {[
-                "Channel",
-                "Reach",
-                "Traffic",
-                "Installs",
-                "Spend",
-                "Efficiency",
-              ].map((head) => (
-                <th key={head} className="px-3 py-2">
-                  {head}
-                </th>
+              <TH>Cohort</TH>
+              <TH numeric>Collectors</TH>
+              {Array.from({ length: 8 }, (_, day) => (
+                <TH key={day} numeric>
+                  D{day}
+                </TH>
               ))}
             </tr>
           </thead>
           <tbody>
-            {cards.map((card) => (
-              <tr
-                key={card.source}
-                className="border-t border-line-300 odd:bg-white/[.02]"
-              >
-                <td className="px-3 py-3">
-                  <p className="font-black text-white">{card.source}</p>
-                  <p className="mt-1 text-[11px] text-ink-500">{card.range}</p>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {[card.channel, ...card.badges].map((badge) => (
-                      <span
-                        key={badge}
-                        className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black ${badge === "PAID" ? "border-amber-300/30 bg-amber-400/10 text-amber-200" : badge === "ORGANIC" ? "border-primary-400/30 bg-primary-500/10 text-primary-100" : "border-line-300 text-ink-400"}`}
-                      >
-                        {badge}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-3 py-3 font-display text-lg text-white">
-                  {card.reach}
-                </td>
-                <td className="px-3 py-3 font-display text-lg text-white">
-                  {card.traffic}
-                </td>
-                <td className="px-3 py-3 text-ink-200">{card.installs}</td>
-                <td className="px-3 py-3 text-ink-200">{card.spend}</td>
-                <td className="px-3 py-3 text-ink-300">{card.efficiency}</td>
+            {rows.map((row) => (
+              <tr key={row.cohort}>
+                <TD className="font-bold text-white">{row.cohort.slice(5)}</TD>
+                <TD numeric>{row.size}</TD>
+                {row.days.map((value, day) => (
+                  <TD key={day} numeric className="p-1">
+                    <span
+                      className={`block rounded px-2 py-1.5 ${value == null ? "text-ink-600" : "text-white"}`}
+                      style={value == null ? undefined : { backgroundColor: `rgba(89,241,118,${Math.max(0.08, (value / 100) * 0.75)})` }}
+                    >
+                      {value == null ? "—" : `${value}%`}
+                    </span>
+                  </TD>
+                ))}
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
-      {insights.length ? (
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {insights.map((insight) => (
-            <p
-              key={insight}
-              className="rounded-lg border border-line-300 bg-canvas-900 p-3 text-xs text-ink-300"
-            >
-              {insight}
-            </p>
-          ))}
-        </div>
-      ) : null}
-      {supportingSnapshots.length ? (
-        <details className="mt-3 rounded-lg border border-line-300 bg-canvas-900 p-3">
-          <summary className="cursor-pointer text-xs font-black text-ink-300">
-            Supporting evidence excluded from totals (
-            {supportingSnapshots.length})
-          </summary>
-          <div className="mt-2 overflow-x-auto">
-            <table className="min-w-[720px] w-full text-left text-xs">
-              <tbody>
-                {supportingSnapshots.map((row) => (
-                  <tr
-                    key={`${row.source}-${row.periodStart}-${row.periodEnd}-${row.metric}`}
-                    className="odd:bg-white/[.02]"
-                  >
-                    <td className="px-2 py-1.5 font-bold text-white">
-                      {sourceLabel(row.source)}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {dateLabel(row.periodStart)} – {dateLabel(row.periodEnd)}
-                    </td>
-                    <td className="px-2 py-1.5">{metricLabel(row.metric)}</td>
-                    <td className="px-2 py-1.5">
-                      {formatCurrency(row.value, row.currency)}
-                    </td>
-                    <td className="px-2 py-1.5 text-amber-200">SUPPORTING</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      ) : null}
-      {rule ? <p className="mt-3 text-[11px] text-ink-500">{rule}</p> : null}
-      {!cards.length ? (
-        <p className="mt-3 text-sm text-ink-400">
-          No primary historical marketing imports overlap this selected month.
-        </p>
-      ) : null}
-    </section>
+        </Table>
+      ) : (
+        <CardContent className="text-sm text-ink-400">Not enough activated collectors yet.</CardContent>
+      )}
+    </Card>
   );
 }
+
+function SocialAccounts({
+  social,
+  lastSyncedAt,
+  syncing,
+  onSync,
+  organicViews,
+}: {
+  social: SocialMetric[];
+  lastSyncedAt: string | null;
+  syncing: boolean;
+  onSync: () => void;
+  organicViews: Array<{ platform: string; views: number; posts: number }>;
+}) {
+  const configured = social.filter((item) => item.configured);
+  return (
+    <Card>
+      <CardHeader
+        title="Organic social"
+        description={`Views and posts from the daily log this month. Account totals synced ${lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("en") : "never"}.`}
+        action={
+          configured.length ? (
+            <Button size="sm" onClick={onSync} disabled={syncing}>
+              {syncing ? "Syncing…" : "Sync accounts"}
+            </Button>
+          ) : null
+        }
+      />
+      <CardContent className="space-y-4">
+        <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
+          {organicViews.map((item) => (
+            <div key={item.platform} className="rounded-lg border border-line-300 bg-canvas-900 p-3">
+              <p className="text-[11px] text-ink-500">{item.platform}</p>
+              <p className="font-display text-xl text-white tabular-nums">{format(item.views)}</p>
+              <p className="text-[11px] text-ink-500">{format(item.posts)} posts</p>
+            </div>
+          ))}
+        </div>
+        {configured.length ? (
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {configured.map((item) => (
+              <div key={item.platform} className="rounded-lg border border-line-300 p-3">
+                <p className="text-[11px] text-ink-500">{item.platform} followers</p>
+                <p className="font-display text-xl text-white tabular-nums">{format(item.followers)}</p>
+                {item.followerChange != null ? (
+                  <p className={`text-[11px] tabular-nums ${item.followerChange >= 0 ? "text-primary-200" : "text-red-300"}`}>
+                    {item.followerChange >= 0 ? "+" : ""}
+                    {format(item.followerChange)} since previous sync
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-ink-500">No social API keys configured, so follower counts aren&apos;t synced.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function AdminMetricsDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [period, setPeriod] = useState<Period>("day");
-  const [metric, setMetric] = useState<ChartMetric>("users");
-  const [data, setData] = useState<Metrics | null>(null);
   const growthMonth = parseGrowthMonth(searchParams.get("month"));
-  const [growth, setGrowth] = useState<GrowthData | null>(null);
+  const requestedTab = searchParams.get("tab");
+  const tab: MetricsTab =
+    requestedTab === "channels" || requestedTab === "acquisition"
+      ? "channels"
+      : requestedTab === "product" || requestedTab === "revenue" || requestedTab === "plan"
+        ? requestedTab
+        : "overview";
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const [data, setData] = useState<Metrics | null>(null);
+  const [growth, setGrowth] = useState<Growth | null>(null);
   const [social, setSocial] = useState<SocialMetric[]>([]);
+  const [socialSyncedAt, setSocialSyncedAt] = useState<string | null>(null);
+  const [socialSyncing, setSocialSyncing] = useState(false);
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingMonth, setPendingMonth] = useState<string | null>(null);
-  const [socialLoading, setSocialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadRequestId = useRef(0);
-  const rangeLabel = monthLabel(growthMonth);
-  const requestedTab = searchParams.get("tab");
-  const tab: MetricsTab =
-    requestedTab === "acquisition" ||
-    requestedTab === "product" ||
-    requestedTab === "revenue"
-      ? requestedTab
-      : "plan";
-  const paidUsers =
-    growth?.daily?.reduce((sum, row) => sum + row.marketing.paidUsers, 0) ?? 0;
-  const primarySnapshots = growth?.primaryMarketingSnapshots ?? [];
-  const allSnapshots = growth?.marketingSnapshots ?? [];
-  const historicalCards = buildChannelScorecards(primarySnapshots);
-  const acquisitionInsights = buildAcquisitionInsights(primarySnapshots);
-  const supportingSnapshots = allSnapshots.filter(
-    (row) => row.aggregationRole === "supporting",
-  );
-  const selectedMonthState = growthMonthState(growthMonth);
+  const monthName = monthLabel(growthMonth);
+  const monthState = growthMonthState(growthMonth);
 
-  function setTab(nextTab: MetricsTab) {
+  function navigate(next: { tab?: MetricsTab; month?: string }) {
     const params = new URLSearchParams(searchParams.toString());
-    if (nextTab === "plan") params.delete("tab");
+    const nextTab = next.tab ?? tab;
+    if (nextTab === "overview") params.delete("tab");
     else params.set("tab", nextTab);
-    params.set("month", growthMonth);
-    router.push(
-      `/admin/metrics${params.toString() ? `?${params.toString()}` : ""}`,
-    );
-  }
-
-  function setGrowthMonth(nextMonth: string) {
-    const normalizedMonth = parseGrowthMonth(nextMonth);
-    if (normalizedMonth === growthMonth || pendingMonth) return;
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("month", normalizedMonth);
-    setPendingMonth(normalizedMonth);
+    params.set("month", next.month ? parseGrowthMonth(next.month) : growthMonth);
     router.push(`/admin/metrics?${params.toString()}`);
   }
 
-  function KpiCard({
-    name,
-    value,
-    caption,
-    selected,
-    onClick,
-  }: {
-    name: string;
-    value: number | null;
-    caption: string;
-    selected?: boolean;
-    onClick?: () => void;
-  }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`rounded-xl border p-4 text-left ${selected ? "border-primary-300 bg-primary-500/[.08]" : "border-line-300 bg-surface-900"}`}
-      >
-        <p className="text-xs font-black uppercase tracking-[.14em] text-ink-400">
-          {name}
-        </p>
-        <p className="mt-2 font-display text-3xl text-white">{format(value)}</p>
-        <p className="mt-1 text-xs text-ink-500">{caption}</p>
-      </button>
-    );
-  }
-
   const loadGrowth = useCallback(async (month: string) => {
-    const response = await fetch(`/api/admin/growth?month=${month}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(`/api/admin/growth?month=${month}`, { cache: "no-store" });
     if (response.status === 401) {
       setAuthorized(false);
       return;
     }
     const body = await response.json();
     if (response.ok && body.ok) setGrowth(body);
+    else throw new Error(body.error || "Unable to load growth data");
   }, []);
-  const loadMetrics = useCallback(async (nextPeriod: Period, month: string) => {
-    const requestId = ++loadRequestId.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/admin/metrics?period=${nextPeriod}&month=${month}`,
-        { cache: "no-store" },
-      );
-      if (response.status === 401) {
-        setAuthorized(false);
-        return;
+
+  const load = useCallback(
+    async (month: string) => {
+      const requestId = ++loadRequestId.current;
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/admin/metrics?month=${month}`, { cache: "no-store" });
+        if (response.status === 401) {
+          setAuthorized(false);
+          return;
+        }
+        const body = await response.json();
+        if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load metrics");
+        if (requestId !== loadRequestId.current) return;
+        setData(body);
+        setAuthorized(true);
+        await loadGrowth(month);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Unable to load metrics");
+      } finally {
+        if (requestId === loadRequestId.current) setLoading(false);
       }
-      const body = await response.json();
-      if (!response.ok || !body.ok)
-        throw new Error(body.error || "Unable to load metrics");
-      setData(body);
-      setAuthorized(true);
-      await loadGrowth(month);
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Unable to load metrics",
-      );
-    } finally {
-      if (requestId === loadRequestId.current) {
-        setLoading(false);
-        setPendingMonth(null);
-      }
-    }
-  }, [loadGrowth]);
-  const syncSocial = useCallback(async () => {
-    setSocialLoading(true);
+    },
+    [loadGrowth],
+  );
+
+  const syncSocial = useCallback(async (force: boolean) => {
+    if (force) setSocialSyncing(true);
     try {
-      const response = await fetch("/api/admin/social-metrics", {
-        cache: "no-store",
-      });
+      const response = await fetch("/api/admin/social-metrics", { method: force ? "POST" : "GET", cache: "no-store" });
       const body = await response.json();
-      if (response.ok && body.ok) setSocial(body.metrics);
+      if (!response.ok || !body.ok) return;
+      setSocial(body.metrics ?? []);
+      setSocialSyncedAt(body.lastSyncedAt ?? null);
+      // Sync from the providers at most once a day without being asked.
+      const stale = !body.lastSyncedAt || Date.now() - Date.parse(body.lastSyncedAt) > 24 * 60 * 60 * 1000;
+      if (!force && stale && (body.metrics ?? []).some((item: SocialMetric) => item.configured)) {
+        void syncSocial(true);
+      }
     } finally {
-      setSocialLoading(false);
+      if (force) setSocialSyncing(false);
     }
   }, []);
+
   async function login(event: FormEvent) {
     event.preventDefault();
     const response = await fetch("/api/admin/support/login", {
@@ -960,704 +734,411 @@ export default function AdminMetricsDashboard() {
       return;
     }
     setPassword("");
-    await loadMetrics(period, growthMonth);
-    await syncSocial();
+    await load(growthMonth);
+    await syncSocial(false);
   }
 
   useEffect(() => {
-    void loadMetrics(period, growthMonth);
-  }, [growthMonth, loadMetrics, period]);
+    void load(growthMonth);
+  }, [growthMonth, load]);
   useEffect(() => {
-    void syncSocial();
+    void syncSocial(false);
   }, [syncSocial]);
 
   if (authorized === false) {
     return (
       <main className="grid min-h-screen place-items-center bg-canvas-950 px-4">
-        <form
-          onSubmit={login}
-          className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"
-        >
-          <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">
-            AnimalDex admin
-          </p>
+        <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
+          <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
           <h1 className="mt-2 font-display text-3xl text-white">Metrics</h1>
+          <label htmlFor="admin-metrics-password" className="sr-only">
+            Admin password
+          </label>
           <input
+            id="admin-metrics-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Admin password"
             className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300"
           />
-          <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">
-            Sign in
-          </button>
+          <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>
           {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
         </form>
       </main>
     );
   }
 
+  const attribution = growth?.attribution;
+  const attributionMonth = attribution?.available ? attribution.month : null;
+  const collector = growth?.collectorAnalytics;
+  const monthUsers = data?.kpis.users.value ?? growth?.actuals?.users ?? 0;
+  const knownUsers = attributionMonth ? attributionMonth.users - (attributionMonth.signupsByPlatform.unknown ?? 0) : 0;
+  const knownShare = attributionMonth ? share(knownUsers, attributionMonth.users) : 0;
+  const filteredStats = attributionMonth && platformFilter !== "all" ? attributionMonth.byPlatform[platformFilter] : null;
+  const monthPurchases = Object.entries(growth?.revenue?.month ?? {}).filter(([store]) => store !== "test");
+  const purchaseCount = monthPurchases.reduce((sum, [, summary]) => sum + (summary?.purchases ?? 0), 0);
+  const purchaseUsd = monthPurchases.reduce((sum, [, summary]) => sum + (summary?.estimatedUsd ?? 0), 0);
+  const organicViews = [...organicPlatforms].map((platform) => {
+    const entries = (growth?.daily ?? []).flatMap((row) => row.organicEntries ?? []).filter((entry) => entry.platform === platform);
+    return {
+      platform: organicPlatformLabels[platform],
+      views: entries.reduce((sum, entry) => sum + entry.views, 0),
+      posts: entries.reduce((sum, entry) => sum + entry.posts, 0),
+    };
+  });
+
+  const attention: string[] = [
+    ...(growth?.funnel?.needsAttention ?? []),
+    attribution && !attribution.available ? "Apply the platform attribution migration to split users by platform and channel." : null,
+    attributionMonth && attributionMonth.users > 0 && knownShare < 60
+      ? `${100 - knownShare}% of this month's users have no platform signal yet. The next iOS and Android releases fix this for new signups.`
+      : null,
+    (growth?.paid?.log ?? []).some((row) => row.os === "unknown")
+      ? "Some ad spend rows have no app set, so they're left out of the Android vs iOS split."
+      : null,
+    growth?.revenue && !growth.revenue.allTime.google_play
+      ? "No Google Play purchase has ever reached the backend. Check the Android purchase sync."
+      : null,
+  ].filter((item): item is string => Boolean(item));
+
+  const upcoming = monthState === "upcoming";
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(33,192,94,.1),transparent_28%)] p-4 text-ink-100 sm:p-7">
-      <div className="mx-auto max-w-[96rem]">
-        <header className="border-b border-line-300 pb-5">
-          <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
-            ← Admin
-          </Link>
-          <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">
-            Growth metrics
-          </h1>
-          <div className="mt-5 grid gap-2 md:grid-cols-4">
-            {tabs.map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setTab(item.key)}
-                className={`rounded-xl border p-3 text-left ${tab === item.key ? "border-primary-300 bg-primary-500/[.10]" : "border-line-300 bg-surface-900"}`}
-              >
-                <p className="text-sm font-black text-white">{item.label}</p>
-                <p className="mt-1 text-xs text-ink-500">{item.description}</p>
-              </button>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-line-300 bg-surface-900 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              onClick={() => setGrowthMonth(shiftMonth(growthMonth, -1))}
-              disabled={Boolean(pendingMonth)}
-              className="rounded-lg border border-line-300 px-3 py-2 text-xs font-black text-ink-300 disabled:cursor-wait disabled:opacity-50"
-            >
-              ← {monthLabel(shiftMonth(growthMonth, -1))}
-            </button>
-            <div className="text-center">
-              <p className="font-display text-2xl text-white">
-                {monthLabel(growthMonth)}
-              </p>
-              <span
-                className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black ${selectedMonthState === "current" ? "border-primary-400/30 bg-primary-500/10 text-primary-100" : selectedMonthState === "past" ? "border-line-300 text-ink-400" : "border-amber-300/30 bg-amber-400/10 text-amber-200"}`}
-              >
-                {selectedMonthState.toUpperCase()}
-              </span>
+    <AdminShell>
+      <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-4 border-b border-line-300 pb-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Growth</p>
+              <h1 className="font-display text-3xl text-white sm:text-4xl">{monthName}</h1>
             </div>
-            <button
-              onClick={() => setGrowthMonth(shiftMonth(growthMonth, 1))}
-              disabled={Boolean(pendingMonth)}
-              className="rounded-lg border border-line-300 px-3 py-2 text-xs font-black text-ink-300 disabled:cursor-wait disabled:opacity-50"
-            >
-              {monthLabel(shiftMonth(growthMonth, 1))} →
-            </button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, -1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, -1))}`}>
+                ←
+              </Button>
+              <Badge tone={monthState === "current" ? "good" : monthState === "upcoming" ? "warn" : "neutral"}>{monthState}</Badge>
+              <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, 1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, 1))}`}>
+                →
+              </Button>
+              {loading && data ? <span className="text-xs text-ink-400" role="status">Loading…</span> : null}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Segmented label="Metrics section" value={tab} options={tabs} onChange={(value) => navigate({ tab: value })} />
+            {tab !== "plan" && tab !== "revenue" ? (
+              <Segmented
+                label="Platform filter"
+                value={platformFilter}
+                onChange={setPlatformFilter}
+                options={[
+                  { value: "all" as PlatformFilter, label: "All" },
+                  ...growthPlatforms.map((platform) => ({
+                    value: platform as PlatformFilter,
+                    label: growthPlatformLabels[platform],
+                    count: attributionMonth ? attributionMonth.signupsByPlatform[platform] : null,
+                  })),
+                ]}
+              />
+            ) : null}
           </div>
         </header>
 
-        {error && (
-          <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
-            {error}
-          </div>
-        )}
-        {loading && !data ? (
-          <div className="py-20 text-center text-ink-400">
-            Loading growth data...
-          </div>
-        ) : null}
-        {pendingMonth || (loading && data) ? (
-          <div
-            className="fixed inset-0 z-50 grid place-items-center bg-canvas-950/80 px-4 backdrop-blur-sm"
-            role="status"
-            aria-live="polite"
-            aria-label={`Loading ${monthLabel(pendingMonth ?? growthMonth)} metrics`}
-          >
-            <div className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-7 text-center shadow-2xl">
-              <div
-                className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-line-300 border-t-primary-400"
-                aria-hidden="true"
-              />
-              <p className="mt-5 font-display text-2xl text-white">
-                Loading {monthLabel(pendingMonth ?? growthMonth)}
-              </p>
-              <p className="mt-2 text-sm text-ink-400">
-                Refreshing Growth Plan, Acquisition, Product, and Revenue data…
-              </p>
-            </div>
-          </div>
-        ) : null}
-        {data && tab === "plan" ? (
-          <GrowthCommandCenter
-            growth={growth}
-            month={growthMonth}
-            reload={() => loadGrowth(growthMonth)}
-          />
-        ) : null}
+        {error ? <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
+        {loading && !data ? <div className="py-20 text-center text-ink-400">Loading growth data…</div> : null}
 
-        {data && tab === "acquisition" ? (
-          <section className="mt-6 space-y-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
-                Acquisition
-              </p>
-              <p className="mt-1 text-sm text-ink-400">
-                {rangeLabel} calendar month · Update today feeds this month’s
-                social, search and spend. Historical snapshots stay separate.
-              </p>
-            </div>
-            {selectedMonthState === "upcoming" ? (
-              <div className="rounded-xl border border-amber-300/30 bg-amber-400/[.06] p-5">
-                <p className="font-display text-3xl text-white">UPCOMING</p>
-                <p className="mt-1 text-sm text-ink-400">
-                  Future acquisition actuals are not represented as zero.
-                </p>
-              </div>
+        <div className={`mt-5 space-y-4 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
+          {data && tab === "overview" ? (
+            upcoming ? (
+              <Card>
+                <CardContent className="text-sm text-ink-400">{monthName} hasn&apos;t started. Targets for it are on the Plan &amp; log tab.</CardContent>
+              </Card>
             ) : (
               <>
-                <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                  <div className="flex items-end justify-between gap-3">
-                    <div>
-                      <h2 className="font-display text-xl text-white">
-                        Acquisition intelligence
-                      </h2>
-                      <p className="mt-1 text-xs text-ink-500">
-                        Registered-user truth first. Platform cells stay
-                        unavailable until AnimalDex records device platform.
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-1 text-[10px] font-black text-amber-200">
-                      ATTRIBUTION LIMITED
-                    </span>
+                {attribution && !attribution.available ? <AttributionPending /> : null}
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <Stat
+                    label="New users"
+                    value={format(filteredStats ? filteredStats.users : monthUsers)}
+                    hint={
+                      platformFilter !== "all"
+                        ? `${growthPlatformLabels[platformFilter]} of ${format(monthUsers)} total`
+                        : growth?.previousMonthUsers != null
+                          ? `${monthLabel(shiftMonth(growthMonth, -1))}: ${format(growth.previousMonthUsers)}`
+                          : undefined
+                    }
+                    info="Profiles created this month (Asia/Jakarta calendar)."
+                  />
+                  <Stat
+                    label="Activated"
+                    value={pct(filteredStats ? filteredStats.activationRate : collector?.activation.rate)}
+                    hint={`Captured within 24h of signup · ${format(filteredStats ? filteredStats.activationEligible : collector?.activation.eligible ?? null)} users old enough to count`}
+                  />
+                  <Stat
+                    label="Captured again, days 6–8"
+                    value={pct(filteredStats ? filteredStats.d7Rate : collector?.d7.rate)}
+                    hint={`D7 capture retention · ${format(filteredStats ? filteredStats.d7Eligible : collector?.d7.eligible ?? null)} activated users old enough`}
+                  />
+                  <Stat
+                    label="Purchases"
+                    value={format(purchaseCount)}
+                    hint={`≈ ${formatMoney(purchaseUsd, "USD")} at list price · excludes test purchases`}
+                  />
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                  <Card>
+                    <CardHeader
+                      title="New users per day"
+                      description={
+                        attributionMonth
+                          ? `${knownShare}% have a known platform · ${format(attributionMonth.reportedAtSignup)} reported by the app at signup, the rest inferred from device evidence.`
+                          : "Split by platform appears once the attribution migration is applied."
+                      }
+                    />
+                    <CardContent className="space-y-3">
+                      {attributionMonth ? (
+                        <>
+                          <PlatformDailyChart rows={attributionMonth.platformDaily} filter={platformFilter} />
+                          <Legend
+                            items={growthPlatforms.map((platform) => ({
+                              label: growthPlatformLabels[platform],
+                              color: platformColors[platform],
+                              value: format(attributionMonth.signupsByPlatform[platform]),
+                            }))}
+                          />
+                        </>
+                      ) : (
+                        <PlatformDailyChart
+                          rows={(growth?.daily ?? []).map((row) => ({ date: row.date, ios: 0, android: 0, web: 0, unknown: row.users }))}
+                          filter="all"
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader title="Needs attention" />
+                    <CardContent>
+                      {attention.length ? (
+                        <ul className="space-y-2.5 text-sm text-ink-200">
+                          {attention.slice(0, 6).map((item) => (
+                            <li key={item} className="flex gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" aria-hidden="true" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-ink-400">Nothing flagged for {monthName}.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {growth?.paid?.split.length ? (
+                  <section className="space-y-2">
+                    <h2 className="font-display text-lg text-white">Paid vs organic</h2>
+                    <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
+                  </section>
+                ) : null}
+
+                {attributionMonth ? (
+                  <Card>
+                    <CardHeader
+                      title="Top channels"
+                      description="Where this month's users came from, ranked by users. Activation and D7 show which channels bring collectors who stay."
+                      action={
+                        <Button size="sm" variant="ghost" onClick={() => navigate({ tab: "channels" })}>
+                          All channels →
+                        </Button>
+                      }
+                    />
+                    <ChannelTable channels={attributionMonth.channels} filter={platformFilter} limit={6} />
+                  </Card>
+                ) : null}
+              </>
+            )
+          ) : null}
+
+          {data && tab === "channels" ? (
+            <>
+              {attribution && !attribution.available ? <AttributionPending /> : null}
+              {!upcoming && growth?.paid?.split.length ? (
+                <section className="space-y-2">
+                  <div>
+                    <h2 className="font-display text-lg text-white">Paid vs organic by platform</h2>
+                    <p className="text-xs text-ink-400">Signups on each platform against installs the ad platforms reported in the daily log.</p>
                   </div>
-                  <div className="mt-3 overflow-x-auto">
-                    <table className="min-w-[680px] w-full text-left text-xs">
-                      <thead className="text-[10px] uppercase tracking-[.14em] text-ink-500">
+                  <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
+                </section>
+              ) : null}
+
+              {attributionMonth ? (
+                <Card>
+                  <CardHeader
+                    title="Where users came from"
+                    description={`${format(attributionMonth.storeAttributed)} store-verified · ${format(attributionMonth.selfReported)} answered "Where did you hear about AnimalDex?" · ${format(
+                      attributionMonth.users - attributionMonth.storeAttributed - attributionMonth.selfReported,
+                    )} not attributed yet. People who saw an ad may still answer "TikTok" or "Instagram".`}
+                  />
+                  <ChannelTable channels={attributionMonth.channels} filter={platformFilter} />
+                </Card>
+              ) : null}
+
+              <Card>
+                <CardHeader
+                  title={`Paid log · ${monthName}`}
+                  description="Spend and platform-reported installs from Plan & log, by network and app."
+                  action={
+                    <Button size="sm" variant="primary" onClick={() => navigate({ tab: "plan" })}>
+                      Log spend
+                    </Button>
+                  }
+                />
+                <PaidLogTable rows={growth?.paid?.log ?? []} />
+              </Card>
+
+              <Card>
+                <CardHeader
+                  title="Imported channel reports · all time"
+                  description="Every report imported from ad and search platforms, whatever month it covers. Periods are shown as reported, not spread across days."
+                />
+                <HistoricalTable rows={growth?.historicalChannels ?? []} />
+              </Card>
+
+              <SocialAccounts social={social} lastSyncedAt={socialSyncedAt} syncing={socialSyncing} onSync={() => void syncSocial(true)} organicViews={organicViews} />
+
+              {attribution?.available ? (
+                <Card>
+                  <CardHeader title="Platform signal, all accounts" description="How each account's platform is known. App reports replace inferences as people update." />
+                  <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    {(Object.keys(platformEvidenceLabels) as PlatformEvidence[]).map((evidence) => (
+                      <div key={evidence} className="rounded-lg border border-line-300 p-3">
+                        <p className="text-[11px] text-ink-500">{platformEvidenceLabels[evidence]}</p>
+                        <p className="font-display text-xl text-white tabular-nums">{format(attribution.allTime.evidenceCounts[evidence] ?? 0)}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+            </>
+          ) : null}
+
+          {data && tab === "product" ? (
+            upcoming ? (
+              <Card>
+                <CardContent className="text-sm text-ink-400">{monthName} hasn&apos;t started.</CardContent>
+              </Card>
+            ) : (
+              <>
+                {attributionMonth ? (
+                  <Card>
+                    <CardHeader title="Collector quality by platform" description="Users who signed up this month, split by platform." />
+                    <Table minWidth={640}>
+                      <thead>
                         <tr>
-                          <th className="px-3 py-2">Metric</th>
-                          <th className="px-3 py-2">Overall</th>
-                          <th className="px-3 py-2">Android</th>
-                          <th className="px-3 py-2">iOS</th>
+                          <TH>Platform</TH>
+                          <TH numeric>Users</TH>
+                          <TH numeric>Activated</TH>
+                          <TH numeric>D7</TH>
+                          <TH numeric>Captures / collector</TH>
+                          <TH numeric>Payers</TH>
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          [
-                            "New users",
-                            format(growth?.actuals?.users ?? null),
-                            "Unavailable",
-                            "Unavailable",
-                          ],
-                          [
-                            "Paid attributed",
-                            format(paidUsers),
-                            "Not recorded",
-                            "Not recorded",
-                          ],
-                          [
-                            "Organic / direct",
-                            paidUsers <= (growth?.actuals?.users ?? 0)
-                              ? format(
-                                  (growth?.actuals?.users ?? 0) - paidUsers,
-                                )
-                              : "Unresolved",
-                            "Not recorded",
-                            "Not recorded",
-                          ],
-                          [
-                            "Avg registered-user CPA",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                          ],
-                          [
-                            "Click → registered",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                          ],
-                          [
-                            "Install → registered",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                            "Insufficient attribution",
-                          ],
-                        ].map((row) => (
-                          <tr
-                            key={row[0]}
-                            className="border-t border-line-300 odd:bg-white/[.02]"
-                          >
-                            {row.map((cell, index) => (
-                              <td
-                                key={`${row[0]}-${index}`}
-                                className={`px-3 py-2.5 ${index === 0 ? "font-black text-white" : cell === "Unavailable" || cell === "Not recorded" || cell === "Insufficient attribution" ? "text-amber-200" : "text-ink-200"}`}
-                              >
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
+                        {growthPlatforms
+                          .filter((platform) => platformFilter === "all" || platform === platformFilter)
+                          .map((platform) => {
+                            const stats = attributionMonth.byPlatform[platform];
+                            return (
+                              <tr key={platform}>
+                                <TD>
+                                  <PlatformBadge platform={platform} />
+                                </TD>
+                                <TD numeric className="font-bold text-white">
+                                  {format(stats.users)}
+                                </TD>
+                                <TD numeric>{pct(stats.activationRate)}</TD>
+                                <TD numeric>{pct(stats.d7Rate)}</TD>
+                                <TD numeric>{stats.capturesPerCollector?.toFixed(1) ?? "—"}</TD>
+                                <TD numeric>{format(stats.payers)}</TD>
+                              </tr>
+                            );
+                          })}
                       </tbody>
-                    </table>
-                  </div>
-                </section>
-                <div className="grid gap-3 lg:grid-cols-[.8fr_1.2fr]">
-                  <KpiCard
-                    name="AnimalDex users"
-                    value={data.kpis.users.value}
-                    caption={`AUTO · registered AnimalDex profiles · ${rangeLabel}`}
-                  />
-                  <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-ink-400">
-                      {(growth?.manualDailyEntryCount ?? 0) > 0
-                        ? "Daily/manual tracking"
-                        : "Daily tracking entries"}
-                    </p>
-                    {(growth?.manualDailyEntryCount ?? 0) > 0 ? (
-                      <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                        <div>
-                          <p className="text-[10px] text-ink-500">
-                            MANUAL social
-                          </p>
-                          <p className="font-display text-2xl text-white">
-                            {format(growth?.actuals?.socialViews ?? 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-ink-500">
-                            MANUAL search
-                          </p>
-                          <p className="font-display text-2xl text-white">
-                            {format(growth?.actuals?.searchClicks ?? 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-ink-500">
-                            MANUAL spend
-                          </p>
-                          <p className="font-display text-2xl text-white">
-                            {formatSpendByCurrency(growth?.adSpendByCurrency)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-ink-500">
-                            MANUAL attributed
-                          </p>
-                          <p className="font-display text-2xl text-white">
-                            {format(paidUsers)}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-3 rounded-lg border border-line-300 bg-canvas-900 p-3 text-sm text-ink-300">
-                        <p className="font-bold text-white">
-                          No daily marketing entries were recorded for this
-                          month.
-                        </p>
-                        <p className="mt-1 text-xs text-ink-500">
-                          Historical platform results are shown below. Spend
-                          snapshots keep their original currencies and are not
-                          combined without FX conversion.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {(growth?.daily ?? []).some(
-                  (row) => (row.organicEntries?.length ?? 0) > 0,
-                ) ? (
-                  <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-ink-400">
-                      Platform reach from Update today
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                      {[
-                        "tiktok",
-                        "instagram",
-                        "youtube",
-                        "facebook",
-                        "reddit",
-                        "other",
-                      ].map((platform) => {
-                        const entries = (growth?.daily ?? [])
-                          .flatMap((row) => row.organicEntries ?? [])
-                          .filter((entry) => entry.platform === platform);
-                        const views = entries.reduce(
-                          (sum, entry) => sum + entry.views,
-                          0,
-                        );
-                        const posts = entries.reduce(
-                          (sum, entry) => sum + entry.posts,
-                          0,
-                        );
-                        return (
-                          <div key={platform}>
-                            <p className="text-[10px] capitalize text-ink-500">
-                              {platform}
-                            </p>
-                            <p className="font-display text-xl text-white">
-                              {format(views)}
-                            </p>
-                            <p className="text-[11px] text-ink-500">
-                              {format(posts)} posts
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    </Table>
+                  </Card>
                 ) : null}
-                <ChannelScoreboard
-                  cards={historicalCards}
-                  insights={acquisitionInsights}
-                  supportingSnapshots={supportingSnapshots}
-                  rule={growth?.marketingSnapshotAggregationRule}
-                />
-                {data.signIn ? (
-                  <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                    <h2 className="font-display text-xl text-white">
-                      Platform & sign-in evidence
-                    </h2>
-                    <p className="mt-1 text-xs text-ink-500">
-                      Current all-account evidence, not a historical month
-                      split. Auth method is not device platform. Google sign-in
-                      works on iOS; Apple device evidence is shown separately.
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                      {Object.entries(data.signIn.providers)
-                        .sort((left, right) => right[1] - left[1])
-                        .map(([provider, count]) => (
-                          <div
-                            key={provider}
-                            className="rounded-lg border border-line-300 bg-canvas-900 p-3"
-                          >
-                            <p className="text-[10px] capitalize text-ink-500">
-                              {provider} sign-in
-                            </p>
-                            <p className="font-display text-2xl text-white">
-                              {format(count)}
-                            </p>
-                            <p className="text-[11px] text-ink-500">
-                              {data.signIn!.total
-                                ? Math.round((count / data.signIn!.total) * 100)
-                                : 0}
-                              % of accounts
-                            </p>
-                          </div>
-                        ))}
+                {collector ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <Stat label="Activated" value={pct(collector.activation.rate)} hint={`${format(collector.activation.users)} of ${format(collector.activation.eligible)} users captured within 24h`} />
+                      <Stat label="Repeat collectors" value={pct(collector.repeat.rate)} hint={`${format(collector.repeat.users)} of ${format(collector.repeat.activated)} activated captured again`} />
+                      <Stat label="D1 capture retention" value={pct(collector.d1.rate)} hint={`${format(collector.d1.users)} of ${format(collector.d1.eligible)} captured again 24–48h later`} />
+                      <Stat label="D7 capture retention" value={pct(collector.d7.rate)} hint={`${format(collector.d7.users)} of ${format(collector.d7.eligible)} captured again on days 6–8`} />
                     </div>
-                    <div className="mt-2 rounded-lg border border-amber-300/25 bg-amber-400/[.06] p-3">
-                      <p className="text-sm font-black text-white">
-                        Confirmed Apple device signals:{" "}
-                        {format(data.signIn.appleDeviceSignals)}
-                      </p>
-                      <p className="mt-1 text-xs text-amber-100/80">
-                        All other accounts remain platform unknown—not
-                        Android—until first-party platform capture exists.{" "}
-                        {data.signIn.note}
-                      </p>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <Stat label="Qualifying captures" value={format(collector.summary.captures)} />
+                      <Stat label="Unique collectors" value={format(collector.summary.collectors)} />
+                      <Stat label="Captures per collector" value={collector.summary.capturesPerCollector?.toFixed(1) ?? "—"} />
+                      <Stat label="Median captures" value={collector.summary.medianCaptures?.toFixed(1).replace(".0", "") ?? "—"} />
                     </div>
-                  </section>
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <CollectorDepth data={collector} />
+                      <CaptureRetention data={collector} />
+                    </div>
+                  </>
                 ) : null}
-                <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                  <h2 className="font-display text-xl text-white">
-                    First-party user trend
-                  </h2>
-                  <p className="text-xs text-ink-500">
-                    {rangeLabel} · registered AnimalDex profiles, not attributed
-                    to ad platforms.
-                  </p>
-                  <div className="mt-3">
-                    <TrendChart
-                      rows={data.series}
-                      metric="users"
-                      period={period}
+                <Card>
+                  <CardHeader title="Discover activity" description={`${format(data.postActivity.total)} posts in ${monthName}.`} />
+                  <CardContent className="space-y-3">
+                    <PostTypeChart rows={data.postActivity.series} />
+                    <Legend
+                      items={(Object.keys(postTypeMeta) as PostType[]).map((key) => ({
+                        label: postTypeMeta[key].label,
+                        color: postTypeMeta[key].color,
+                        value: format(data.postActivity.types[key].value),
+                      }))}
                     />
-                  </div>
-                </section>
+                  </CardContent>
+                </Card>
               </>
-            )}
-          </section>
-        ) : null}
+            )
+          ) : null}
 
-        {data && tab === "product" ? (
-          <section className="mt-6 space-y-4">
-            <div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
-                  Product
-                </p>
-                <h2 className="mt-1 font-display text-3xl text-white">
-                  Collector health
-                </h2>
-                <p className="mt-1 text-sm text-ink-400">
-                  Cohort: users acquired in {rangeLabel}, including mature
-                  follow-up after month-end. Activity: events occurring inside
-                  {rangeLabel}.
-                </p>
-              </div>
-            </div>
-            {selectedMonthState === "upcoming" ? (
-              <div className="rounded-xl border border-amber-300/30 bg-amber-400/[.06] p-5">
-                <p className="font-display text-3xl text-white">UPCOMING</p>
-                <p className="mt-1 text-sm text-ink-400">
-                  Future collector actuals are not represented as zero.
-                </p>
-              </div>
-            ) : growth?.collectorAnalytics ? (
-              <>
-                <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <h2 className="font-display text-xl text-white">
-                        Collector funnel
-                      </h2>
-                      <p className="mt-1 text-xs text-ink-500">
-                        Are acquired users becoming real collectors?
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-black text-primary-100">
-                      QUALIFYING CAPTURES ONLY
-                    </span>
-                  </div>
-                  <div className="mt-4 grid gap-2 md:grid-cols-4">
-                    {[
-                      {
-                        name: "New users",
-                        value: format(growth.collectorAnalytics.newUsers),
-                        sub: "Profiles created in cohort period",
-                      },
-                      {
-                        name: "Activation",
-                        value:
-                          growth.collectorAnalytics.activation.rate == null
-                            ? "—"
-                            : `${Math.round(growth.collectorAnalytics.activation.rate)}%`,
-                        sub: growth.collectorAnalytics.activation.eligible
-                          ? `${format(growth.collectorAnalytics.activation.users)} of ${format(growth.collectorAnalytics.activation.eligible)} eligible users`
-                          : "Not enough mature users yet",
-                      },
-                      {
-                        name: "Repeat collectors",
-                        value:
-                          growth.collectorAnalytics.repeat.rate == null
-                            ? "—"
-                            : `${Math.round(growth.collectorAnalytics.repeat.rate)}%`,
-                        sub: growth.collectorAnalytics.repeat.activated
-                          ? `${format(growth.collectorAnalytics.repeat.users)} of ${format(growth.collectorAnalytics.repeat.activated)} activated`
-                          : "No activated collectors yet",
-                      },
-                      {
-                        name: "7-day retained",
-                        value:
-                          growth.collectorAnalytics.retained7Day.rate == null
-                            ? "—"
-                            : `${growth.collectorAnalytics.retained7Day.rate}%`,
-                        sub: growth.collectorAnalytics.retained7Day.eligible
-                          ? `${format(growth.collectorAnalytics.retained7Day.users)} of ${format(growth.collectorAnalytics.retained7Day.eligible)} mature collectors`
-                          : "Not enough mature users yet",
-                      },
-                    ].map((step, index) => (
-                      <div
-                        key={step.name}
-                        className="relative rounded-lg border border-line-300 bg-canvas-900 p-3"
-                      >
-                        <p className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">
-                          {step.name}
-                        </p>
-                        <p className="mt-1 font-display text-3xl text-white">
-                          {step.value}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-400">
-                          {step.sub}
-                        </p>
-                        {index < 3 ? (
-                          <span className="absolute -right-3 top-1/2 z-10 hidden text-primary-300 md:block">
-                            →
-                          </span>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <div className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-                      <p className="text-xs font-black text-white">
-                        D1 capture retention ·{" "}
-                        {growth.collectorAnalytics.d1.rate == null
-                          ? "—"
-                          : `${growth.collectorAnalytics.d1.rate}%`}
-                      </p>
-                      <p className="mt-1 text-[11px] text-ink-400">
-                        {growth.collectorAnalytics.d1.eligible
-                          ? `${format(growth.collectorAnalytics.d1.users)} of ${format(growth.collectorAnalytics.d1.eligible)} mature activated collectors captured again 24–48h later`
-                          : "Not enough mature users yet"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-                      <p className="text-xs font-black text-white">
-                        D7 capture retention ·{" "}
-                        {growth.collectorAnalytics.d7.rate == null
-                          ? "—"
-                          : `${growth.collectorAnalytics.d7.rate}%`}
-                      </p>
-                      <p className="mt-1 text-[11px] text-ink-400">
-                        {growth.collectorAnalytics.d7.eligible
-                          ? `${format(growth.collectorAnalytics.d7.users)} of ${format(growth.collectorAnalytics.d7.eligible)} mature activated collectors captured again during days 6–8`
-                          : "Not enough mature users yet"}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-                <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    [
-                      "Qualifying captures",
-                      format(growth.collectorAnalytics.summary.captures),
-                    ],
-                    [
-                      "Unique collectors",
-                      format(growth.collectorAnalytics.summary.collectors),
-                    ],
-                    [
-                      "Captures / collector",
-                      growth.collectorAnalytics.summary.capturesPerCollector?.toFixed(
-                        1,
-                      ) ?? "—",
-                    ],
-                    [
-                      "Median captures",
-                      growth.collectorAnalytics.summary.medianCaptures
-                        ?.toFixed(1)
-                        .replace(".0", "") ?? "—",
-                    ],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-xl border border-line-300 bg-surface-900 p-3"
-                    >
-                      <p className="text-[10px] font-black uppercase text-ink-500">
-                        {label}
-                      </p>
-                      <p className="mt-1 font-display text-2xl text-white">
-                        {value}
-                      </p>
-                    </div>
-                  ))}
-                </section>
-                <CollectorDepth data={growth.collectorAnalytics} />
-                <CaptureRetention data={growth.collectorAnalytics} />
-                <CollectorActivity data={growth.collectorAnalytics} />
-                <section className="rounded-xl border border-amber-300/20 bg-amber-400/[.05] p-3 text-xs text-amber-100/80">
-                  Platform filtering is unavailable: confirmed Apple signals do
-                  not provide complete Android/iOS classification.
-                  Acquisition-source product quality is also unavailable because
-                  aggregate marketing snapshots do not attribute individual
-                  users.
-                </section>
-              </>
-            ) : (
-              <p className="rounded-xl border border-line-300 bg-surface-900 p-4 text-sm text-ink-400">
-                Collector analytics are unavailable until the updated growth API
-                is loaded.
-              </p>
-            )}
-            <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-              <div className="flex items-end justify-between">
-                <div>
-                  <h2 className="font-display text-xl text-white">
-                    Discover / social activity
-                  </h2>
-                  <p className="mt-1 text-xs text-ink-500">
-                    Secondary community engagement · {rangeLabel}.
-                  </p>
-                </div>
-                <p className="text-xs text-ink-400">
-                  {format(data.postActivity.total)} total posts
-                </p>
-              </div>
-              <div className="mt-3">
-                <PostTypeChart
-                  rows={data.postActivity.series}
-                  period={period}
+          {data && tab === "revenue" ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Stat label="Purchases" value={format(purchaseCount)} hint="All stores, excluding test purchases" />
+                <Stat label="Estimated revenue" value={formatMoney(purchaseUsd, "USD")} info={growth?.revenue?.note} />
+                <Stat label="First-time purchasers" value={format(growth?.funnel?.firstTimePurchasers ?? null)} hint={`First production purchase happened in ${monthName}`} />
+                <Stat
+                  label="Signup-to-payer conversion"
+                  value={pct(growth?.funnel?.payerConversionRate)}
+                  hint={`${format(growth?.funnel?.cohortFirstTimePurchasers ?? null)} of ${format(monthUsers)} ${monthName} signups have paid`}
                 />
               </div>
-            </section>
-          </section>
-        ) : null}
+              {growth?.revenue ? (
+                <Card>
+                  <CardHeader
+                    title="Purchases by store"
+                    description={growth.revenue.note}
+                    action={
+                      <Link href="/admin/users" className="text-xs font-black text-primary-100 hover:text-primary-200">
+                        Users & LTV →
+                      </Link>
+                    }
+                  />
+                  <StoreTable revenue={growth.revenue} />
+                </Card>
+              ) : null}
+              {growth?.payingProDefinition ? <p className="text-xs text-ink-500">Active Pro: {growth.payingProDefinition}</p> : null}
+            </>
+          ) : null}
 
-        {data && tab === "revenue" ? (
-          <section className="mt-6 space-y-4">
-            <div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
-                  Revenue & users
-                </p>
-                <p className="mt-1 text-sm text-ink-400">
-                  Transactions occurring during the {rangeLabel} calendar month.
-                  Cohort conversion is shown separately.
-                </p>
-              </div>
-            </div>
-            {selectedMonthState === "upcoming" ? (
-              <div className="rounded-xl border border-amber-300/30 bg-amber-400/[.06] p-5">
-                <p className="font-display text-3xl text-white">UPCOMING</p>
-                <p className="mt-1 text-sm text-ink-400">
-                  Future purchases and conversion are not represented as zero.
-                </p>
-              </div>
-            ) : (
-              <>
-                <Link
-                  href="/admin/users"
-                  className="inline-flex text-sm font-bold text-primary-100 hover:text-primary-200"
-                >
-                  View users, buyers & LTV →
-                </Link>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <KpiCard
-                    name="New users"
-                    value={data.kpis.users.value}
-                    caption={`${rangeLabel} profile creations`}
-                  />
-                  <KpiCard
-                    name="Qualifying captures"
-                    value={growth?.collectorAnalytics?.summary.captures ?? null}
-                    caption={`${rangeLabel} ready captures`}
-                  />
-                  <KpiCard
-                    name="Production purchases"
-                    value={data.purchaseBreakdown.production}
-                    caption={`transactions during ${rangeLabel}`}
-                  />
-                  <KpiCard
-                    name="First-time purchasers"
-                    value={growth?.funnel?.firstTimePurchasers ?? null}
-                    caption={`first production purchase occurred during ${rangeLabel}`}
-                  />
-                  <KpiCard
-                    name="Signup-cohort purchasers"
-                    value={growth?.funnel?.cohortFirstTimePurchasers ?? null}
-                    caption={`${rangeLabel} signups that later made a first production purchase`}
-                  />
-                  <KpiCard
-                    name="Signup-cohort payer conversion"
-                    value={growth?.funnel?.payerConversionRate ?? null}
-                    caption="signup-cohort purchasers / new users"
-                  />
-                  <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-ink-400">
-                      Historical Active Pro
-                    </p>
-                    <p className="mt-2 font-display text-2xl text-white">
-                      NOT AVAILABLE
-                    </p>
-                    <p className="mt-1 text-xs text-ink-500">
-                      Current profiles.is_pro state cannot be back-projected.
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-            {growth?.payingProDefinition ? (
-              <p className="text-xs text-amber-200">
-                Pro note: {growth.payingProDefinition}
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-      </div>
-    </main>
+          {data && tab === "plan" ? <GrowthCommandCenter growth={growth} month={growthMonth} reload={() => loadGrowth(growthMonth)} /> : null}
+        </div>
+      </main>
+    </AdminShell>
   );
 }
