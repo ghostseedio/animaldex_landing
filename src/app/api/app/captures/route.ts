@@ -31,28 +31,51 @@ export async function POST(request: Request) {
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
         return NextResponse.json({error: "Location permission is required for live scans."}, {status: 400});
     }
-    const location = {location_lat: latitude, location_lng: longitude};
-    const {error: insertError} = await supabase.from("captures").insert({id: captureId, user_id: user.id, status: "pending", ...location});
-    if (insertError) return NextResponse.json({error: insertError.message}, {status: 400});
+    // The capture row, its media and its status are created through the
+    // capture-authority RPCs rather than written here. This route runs as the
+    // signed-in person, not the service role, so before the RPCs existed it
+    // could set user_id, status and analysis_credit_cost directly — the same
+    // authority a tampered mobile client had. The server now decides all three.
+    const {data: createdId, error: insertError} = await supabase.rpc("create_capture_v1", {
+        p_capture_mode: "photo",
+        p_client_capture_id: captureId,
+        p_location_lat: latitude,
+        p_location_lng: longitude
+    });
+    if (insertError || typeof createdId !== "string") {
+        return NextResponse.json({error: insertError?.message ?? "The capture could not be created."}, {status: 400});
+    }
+    const serverCaptureId: string = createdId;
 
     try {
-        await supabase.from("captures").update({status: "uploading"}).eq("id", captureId);
+        await supabase.from("captures").update({status: "uploading"}).eq("id", serverCaptureId);
         const bytes = Buffer.from(await file.arrayBuffer());
-        const path = `${user.id.toLowerCase()}/${captureId.toLowerCase()}/primary.jpg`;
+        const path = `${user.id.toLowerCase()}/${serverCaptureId.toLowerCase()}/primary.jpg`;
         const {error: uploadError} = await supabase.storage.from("captures").upload(path, bytes, {contentType: file.type || "image/jpeg", cacheControl: "3600", upsert: true});
         if (uploadError) throw uploadError;
-        const {error: imageError} = await supabase.from("capture_images").insert({capture_id: captureId, storage_bucket: "captures", storage_path: path, mime_type: file.type || "image/jpeg", byte_size: file.size, media_kind: "photo", sort_order: 0});
+        const {error: imageError} = await supabase.rpc("attach_capture_image_v1", {
+            p_capture_id: serverCaptureId,
+            p_storage_bucket: "captures",
+            p_storage_path: path,
+            p_mime_type: file.type || "image/jpeg",
+            p_byte_size: file.size,
+            p_media_kind: "photo",
+            p_sort_order: 0
+        });
         if (imageError) throw imageError;
-        const {data: finalized, error: finalizeError} = await supabase.rpc("finalize_capture_upload", {p_capture_id: captureId});
+        const {data: finalized, error: finalizeError} = await supabase.rpc("finalize_capture_upload", {p_capture_id: serverCaptureId});
         if (finalizeError) throw finalizeError;
         const finalizeRow = Array.isArray(finalized) ? finalized[0] : finalized;
         if (!finalizeRow?.ok) {
             throw new Error(String(finalizeRow?.error ?? "source_media_unavailable"));
         }
-        await invokeAuthenticatedSupabaseFunction("analyze-capture", {capture_id: captureId, identity_correction_requested: false});
-        return NextResponse.json({captureId}, {status: 202});
+        await invokeAuthenticatedSupabaseFunction("analyze-capture", {capture_id: serverCaptureId, identity_correction_requested: false});
+        return NextResponse.json({captureId: serverCaptureId}, {status: 202});
     } catch (error) {
-        await supabase.from("captures").update({status: "failed"}).eq("id", captureId);
+        // 'failed' is a pipeline-owned state and is deliberately not written
+        // from here. A capture abandoned mid-upload stays 'pending' and is
+        // reclaimed by the capture_pipeline_heal cron, which is the component
+        // that actually knows whether the work can still succeed.
         return NextResponse.json({error: error instanceof Error ? error.message : "Capture analysis failed."}, {status: 400});
     }
 }
