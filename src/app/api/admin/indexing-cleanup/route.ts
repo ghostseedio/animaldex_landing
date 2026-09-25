@@ -1,4 +1,11 @@
 import {NextRequest, NextResponse} from "next/server";
+import {
+    eligibleCountPath,
+    eligiblePoolPath,
+    ELIGIBLE_SOURCES,
+    isIndexedNumber,
+    mergeEligiblePoolRows
+} from "@/lib/capture-indexing-cleanup-queue";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
@@ -99,14 +106,6 @@ async function count(table: string, params: string) {
     return Number.isFinite(total) ? total : 0;
 }
 
-const READY_CAPTURE_WHERE = [
-    "completed_at=not.is.null",
-    "error_message=is.null",
-    "captures.status=eq.ready",
-    "captures.is_discoverable=eq.true",
-    "captures.merged_into_capture_id=is.null"
-].join("&");
-
 function asInt(value: unknown) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -150,10 +149,6 @@ function nextCronAt(now = new Date()) {
     return next.toISOString();
 }
 
-function isIndexedNumber(value: unknown) {
-    return typeof value === "number" && Number.isFinite(value) && value >= 1;
-}
-
 function bucketize(values: string[], limit = 12): Bucket[] {
     const counts = new Map<string, number>();
     for (const value of values) {
@@ -175,20 +170,29 @@ export async function GET(request: NextRequest) {
         const [
             runRows,
             totalRuns,
-            poolRows,
+            sourcePools,
+            sourceCounts,
             attemptRows,
             unindexedProfiles,
             hiddenUnindexedProfiles
         ] = await Promise.all([
             rows(`capture_indexing_cleanup_runs?select=id,started_at,finished_at,candidates,queued,indexed,merged,skipped_forever,results,error&order=started_at.desc&limit=${RUN_LIMIT}`),
             count("capture_indexing_cleanup_runs", "select=id"),
-            rows(
-                `analysis_results?select=capture_id,animal_name,scientific_name,identity_kind,normalized_identity_key,completed_at,captures!inner(id,capture_mode),species_profiles(display_name,animaldex_number,normalized_identity_key,identity_kind)&${READY_CAPTURE_WHERE}&order=completed_at.asc&limit=${POOL_LIMIT}`
-            ),
+            // Same two eligibility sources the worker scans, filtered in Postgres
+            // rather than after the fetch — see capture-indexing-cleanup-queue.ts.
+            Promise.all(ELIGIBLE_SOURCES.map((source) => rows(eligiblePoolPath(source, POOL_LIMIT)))),
+            // Exact backlog, so the headline number is never a window sample.
+            Promise.all(ELIGIBLE_SOURCES.map((source) => count("analysis_results", eligibleCountPath(source)))),
             rows("capture_indexing_cleanup_attempts?select=capture_id,attempts,last_attempted_at,skipped_at,permanently_skipped&limit=2000"),
             count("species_profiles", "select=id&or=(animaldex_number.is.null,animaldex_number.lt.1)"),
             count("species_profiles", "select=id&or=(animaldex_number.is.null,animaldex_number.lt.1)&catalog_status=eq.hidden").catch(() => 0)
         ]);
+
+        const mergedPool = mergeEligiblePoolRows(sourcePools);
+        const poolRows = mergedPool.slice(0, POOL_LIMIT);
+        const backlogTotal = sourceCounts.reduce((total, value) => total + value, 0);
+        const poolCapped = mergedPool.length > POOL_LIMIT ||
+            sourcePools.some((source) => source.length >= POOL_LIMIT);
 
         const attemptsByCapture = new Map<string, {
             attempts: number;
@@ -244,6 +248,12 @@ export async function GET(request: NextRequest) {
         const skipped = captures.filter((row) => row.retryState === "skipped").length;
         const eligibleNames = eligible.map((row) => row.animalName);
         const eligibleKinds = eligible.map((row) => row.identityKind ?? "unspecified");
+
+        // The backlog the worker will actually chew through: every eligible row in
+        // the database, less the ones it has given up on. Permanently skipped rows
+        // still match the query, so they have to come off the total. When the pool
+        // is capped this undercounts the skips it cannot see — `poolCapped` says so.
+        const backlogEligible = Math.max(0, backlogTotal - skipped);
 
         const runs = runRows.map((row) => {
             const startedAt = asText(row.started_at);
@@ -357,17 +367,18 @@ export async function GET(request: NextRequest) {
                 timezone: "UTC",
                 dailyBudget: INVOCATION_BUDGET,
                 nextRunAt: nextCronAt(),
-                estimatedDaysRemaining: eligible.length > 0 ? Math.ceil(eligible.length / DAILY_BUDGET) : 0
+                estimatedDaysRemaining: backlogEligible > 0 ? Math.ceil(backlogEligible / DAILY_BUDGET) : 0
             },
             queue: {
-                eligibleCaptures: eligible.length,
+                eligibleCaptures: backlogEligible,
                 untouched,
                 waiting,
                 permanentlySkipped: skipped,
                 unindexedCaptures: captures.length,
                 unindexedProfiles,
                 hiddenUnindexedProfiles,
-                poolCapped: poolRows.length >= POOL_LIMIT
+                backlogTotal,
+                poolCapped
             },
             breakdown: {
                 byRetryState: [
