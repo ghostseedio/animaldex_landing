@@ -310,7 +310,7 @@ export default function AdminCatalogClient() {
     );
 
     return (
-        <main className="min-h-screen p-4 sm:p-7">
+        <main className="p-4 sm:p-7">
             <div className="mx-auto max-w-[110rem]">
                 <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
                     <div>

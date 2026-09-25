@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {withAdminGate} from "@/app/admin/_components/admin-auth-gate";
 import PipelineHealth from "@/app/admin/_components/pipeline-health";
-import AdminShell from "@/app/admin/_components/admin-shell";
 
 const tools = [
     {
@@ -134,18 +133,20 @@ const tools = [
 
 export default async function AdminDashboardPage() {
     return withAdminGate(
-        <AdminShell sidebarFooter={<div className="rounded-2xl border border-primary-400/20 bg-primary-500/[.06] p-4"><PipelineHealth /></div>}>
-            <div className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
+        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
                 <section className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
                     <div>
-                        <PipelineHealth compact />
-                        <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.02] text-white sm:text-5xl">Run AnimalDex.</h1>
+                        <h1 className="max-w-3xl font-display text-4xl leading-[1.02] text-white sm:text-5xl">Run AnimalDex.</h1>
                         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300 sm:text-base">Growth, customers, content and capture health in one place.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:flex">
                         <Link href="/admin/metrics" className="rounded-xl bg-primary-400 px-4 py-3 text-center text-sm font-black text-canvas-950">Open metrics</Link>
                         <Link href="/admin/support" className="rounded-xl border border-line-300 px-4 py-3 text-center text-sm font-bold text-white">Open inbox</Link>
                     </div>
+                </section>
+
+                <section className="mt-8" aria-label="Capture pipeline health">
+                    <PipelineHealth />
                 </section>
 
                 <section className="mt-8 grid gap-4 md:grid-cols-2" aria-label="Admin tools">
@@ -160,8 +161,7 @@ export default async function AdminDashboardPage() {
                         </Link>
                     ))}
                 </section>
-            </div>
-        </AdminShell>
+        </main>
     );
 }
 

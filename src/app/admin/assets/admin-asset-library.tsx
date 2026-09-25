@@ -185,7 +185,7 @@ export default function AdminAssetLibrary() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
+        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
             <div className="mx-auto w-full max-w-[100rem]">
                 <header className="flex flex-col gap-5 border-b border-line-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
                     <div>

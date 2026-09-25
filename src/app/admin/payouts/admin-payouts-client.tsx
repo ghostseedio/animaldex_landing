@@ -304,7 +304,7 @@ export function AdminPayoutsClient() {
     const hasPendingRewards = rows.some((r) => Number(r.pending_amount_minor || 0) > 0);
 
     return (
-        <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
+        <main className="px-6 py-8 text-ink-100">
             <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
                 ← Admin
             </Link>

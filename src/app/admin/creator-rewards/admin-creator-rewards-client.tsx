@@ -208,7 +208,7 @@ export function AdminCreatorRewardsClient() {
     }
 
     return (
-        <main className="min-h-screen bg-canvas-950 px-6 py-8 text-ink-100">
+        <main className="px-6 py-8 text-ink-100">
             <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
                 ← Admin
             </Link>

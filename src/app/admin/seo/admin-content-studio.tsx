@@ -612,7 +612,7 @@ export default function AdminContentStudio() {
 
     if (authorized === false) {
         return (
-            <main className="grid min-h-screen place-items-center bg-canvas-950 px-4">
+            <main className="grid min-h-[70vh] place-items-center px-4">
                 <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-200">AnimalDex admin</p>
                     <h1 className="mt-2 font-display text-3xl text-white">Content studio</h1>

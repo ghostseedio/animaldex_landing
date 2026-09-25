@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, FormEvent, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import AdminShell from "@/app/admin/_components/admin-shell";
 import { Badge, Button, Card, CardContent, CardHeader, InfoTip, Segmented, Stat, TD, TH, Table } from "@/components/admin/ui";
 import {
   daysInMonth,
@@ -911,7 +910,7 @@ export default function AdminMetricsDashboard() {
 
   if (authorized === false) {
     return (
-      <main className="grid min-h-screen place-items-center bg-canvas-950 px-4">
+      <main className="grid min-h-[70vh] place-items-center px-4">
         <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
           <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
           <h1 className="mt-2 font-display text-3xl text-white">Metrics</h1>
@@ -974,7 +973,6 @@ export default function AdminMetricsDashboard() {
 
   return (
     <FxContext.Provider value={{ display: displayCurrency, rates: fx, referenceDate }}>
-    <AdminShell>
       <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-line-300 pb-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -1317,7 +1315,6 @@ export default function AdminMetricsDashboard() {
           {data && tab === "plan" ? <GrowthCommandCenter growth={growth} month={growthMonth} reload={() => loadGrowth(growthMonth)} /> : null}
         </div>
       </main>
-    </AdminShell>
     </FxContext.Provider>
   );
 }

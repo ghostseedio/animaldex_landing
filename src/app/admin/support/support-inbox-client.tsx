@@ -599,7 +599,7 @@ export default function SupportInboxClient() {
 
     if (authorized === false) {
         return (
-            <main className="grid min-h-screen place-items-center bg-canvas-950 px-4 text-ink-100">
+            <main className="grid min-h-[70vh] place-items-center px-4 text-ink-100">
                 <form onSubmit={submitLogin} className="flex w-full max-w-sm flex-col gap-5 rounded-2xl border border-line-300 bg-surface-900 p-6 shadow-2xl">
                     <div>
                         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">AnimalDex operations</p>

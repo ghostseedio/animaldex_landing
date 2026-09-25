@@ -212,7 +212,7 @@ export default function AdminSegmentsClient() {
 
     if (authorized === false) {
         return (
-            <main className="grid min-h-screen place-items-center px-4">
+            <main className="grid min-h-[70vh] place-items-center px-4">
                 <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
                     <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
                     <h1 className="mt-2 font-display text-3xl text-white">User segments</h1>
@@ -233,7 +233,7 @@ export default function AdminSegmentsClient() {
     const maxActivity = Math.max(1, ...(data?.overview.activityBuckets.map((bucket) => bucket.count) ?? [1]));
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(33,192,94,.1),transparent_28%)] p-4 sm:p-7">
+        <main className="bg-[radial-gradient(circle_at_top_left,rgba(33,192,94,.1),transparent_28%)] p-4 sm:p-7">
             <div className="mx-auto max-w-[100rem]">
                 <header className="flex flex-col justify-between gap-4 border-b border-line-300 pb-6 sm:flex-row sm:items-end">
                     <div>

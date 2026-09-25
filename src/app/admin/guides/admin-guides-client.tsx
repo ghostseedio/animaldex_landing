@@ -144,7 +144,7 @@ export default function AdminGuidesClient() {
     const counts = payload?.counts;
 
     return (
-        <main className="min-h-screen bg-canvas-950 px-4 py-8 text-ink-100 sm:px-6 lg:px-8">
+        <main className="px-4 py-8 text-ink-100 sm:px-6 lg:px-8">
             <div className="mx-auto w-full max-w-6xl">
                 <Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link>
                 <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Guide marketplace</p>
