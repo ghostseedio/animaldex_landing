@@ -2,6 +2,7 @@ import {createServerClient} from "@supabase/ssr";
 import {cookies} from "next/headers";
 import {NextRequest, NextResponse} from "next/server";
 import {getSupabaseAuthKey, getSupabasePublicKey, getSupabaseUrl, isSupabaseJwtKey} from "@/lib/supabase-http";
+import {getSiteUrl} from "@/lib/site";
 
 type OAuthProvider = "google" | "apple";
 
@@ -66,7 +67,12 @@ export async function GET(request: NextRequest) {
         }
     });
 
-    const callbackUrl = new URL("/auth/callback", requestUrl.origin);
+    // Behind a proxy, `request.url`'s origin can be the internal host rather
+    // than the public one. Supabase silently drops a `redirect_to` that is not
+    // on the project's allow-list and sends the user to the Site URL instead —
+    // which is how sign-in came back as `https://animaldex.app/?code=…` with
+    // nothing to exchange it. Always ask for the canonical origin.
+    const callbackUrl = new URL("/auth/callback", getSiteUrl());
     callbackUrl.searchParams.set("next", nextPath);
 
     const {data, error} = await supabase.auth.signInWithOAuth({

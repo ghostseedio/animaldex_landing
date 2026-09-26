@@ -197,6 +197,10 @@ export type DiscoverChallengeItem = {
     roundsWonAttacker: number;
     roundsWonDefender: number;
     speciesComparisonSlug: string | null;
+    votingDeadlineAt: string | null;
+    settlementReason: string | null;
+    winnerExplanation: string | null;
+    strategicInsight: string | null;
     outcomeLine: string;
     winningsLine: string | null;
     activitySummary: string;
@@ -1138,6 +1142,10 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
         roundsWonAttacker: readNumber(row, "rounds_won_attacker"),
         roundsWonDefender: readNumber(row, "rounds_won_defender"),
         speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
+        votingDeadlineAt: readString(row, "voting_deadline_at"),
+        settlementReason: readString(row, "settlement_reason"),
+        winnerExplanation: readString(row, "winner_explanation"),
+        strategicInsight: readString(row, "strategic_insight"),
         outcomeLine: challengeOutcomeLine({
             scenarioTitle,
             chosenStat,
@@ -1334,7 +1342,7 @@ const discoverChallengeSelect = [
     "challenge_format", "battle_status", "required_votes", "votes_count",
     "round1_winner_capture_id", "round2_winner_capture_id", "round3_winner_capture_id",
     "overall_winner_capture_id", "rounds_won_attacker", "rounds_won_defender",
-    "round3_species_comparison_slug",
+    "round3_species_comparison_slug", "voting_deadline_at", "settlement_reason",
     "attacker_profile_display_name", "attacker_profile_username", "attacker_profile_avatar_url", "attacker_profile_instagram_url",
     "defender_profile_display_name", "defender_profile_username", "defender_profile_avatar_url", "defender_profile_instagram_url",
     "attacker_animal_name", "attacker_scientific_name", "attacker_breed_guess", "attacker_breed_confidence",

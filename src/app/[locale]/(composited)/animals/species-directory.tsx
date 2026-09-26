@@ -34,7 +34,10 @@ type SpeciesDirectoryCopy = {
     filterAll: string;
     resultsSummary: string;
     loadingMore: string;
-    loadMore: string;
+    paginationLabel: string;
+    paginationPrevious: string;
+    paginationNext: string;
+    paginationPage: string;
     noResultsTitle: string;
     noResultsDescription: string;
     clearFilters: string;
@@ -87,7 +90,9 @@ function parseDirectorySearch(search: string) {
         ? orderParam
         : getDefaultSpeciesDirectorySortOrder(sort)) as SpeciesDirectorySortOrder;
     const tier = (params.get("tier")?.trim().toUpperCase() || "all") as SpeciesDirectoryTierFilter;
-    return {query, letter, region, location, status, sort, order, tier};
+    const parsedPage = Number.parseInt(params.get("page") ?? "1", 10);
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    return {query, letter, region, location, status, sort, order, tier, page};
 }
 
 type DirectoryFilters = ReturnType<typeof parseDirectorySearch>;
@@ -131,6 +136,62 @@ function fetchDirectoryPage(url: string) {
 
     inFlightDirectoryRequests.set(url, request);
     return request;
+}
+
+/**
+ * Page numbers to show: always the first and last, and a window around the
+ * current page, with gaps marked by null. Fifty pages of species will not fit on
+ * a phone, and a bare "next" gives no sense of where you are in the catalogue.
+ */
+function buildPageWindow(page: number, pageCount: number): Array<number | null> {
+    if (pageCount <= 7) {
+        return Array.from({length: pageCount}, (_, index) => index + 1);
+    }
+
+    const pages = new Set<number>([1, pageCount, page]);
+    for (const offset of [-1, 1]) {
+        const candidate = page + offset;
+        if (candidate > 1 && candidate < pageCount) pages.add(candidate);
+    }
+    // Keep the window a constant width so the control does not resize as you page.
+    if (page <= 3) [2, 3, 4].forEach((value) => pages.add(value));
+    if (page >= pageCount - 2) [pageCount - 3, pageCount - 2, pageCount - 1].forEach((value) => pages.add(value));
+
+    const ordered = Array.from(pages).filter((value) => value >= 1 && value <= pageCount).sort((a, b) => a - b);
+    const withGaps: Array<number | null> = [];
+    let previous: number | null = null;
+    for (const value of ordered) {
+        if (previous !== null && value - previous > 1) withGaps.push(null);
+        withGaps.push(value);
+        previous = value;
+    }
+    return withGaps;
+}
+
+function PageChevron({
+    direction,
+    label,
+    disabled,
+    onClick
+}: {
+    direction: "previous" | "next";
+    label: string;
+    disabled: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={label}
+            className="inline-flex h-10 w-10 items-center justify-center border border-line-300 text-ink-200 transition-colors hover:border-primary-500/45 hover:text-white disabled:pointer-events-none disabled:opacity-35"
+        >
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d={direction === "previous" ? "M12.5 4 6.5 10l6 6" : "M7.5 4l6 6-6 6"} />
+            </svg>
+        </button>
+    );
 }
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -479,14 +540,22 @@ function CatalogGlyphThumbnail({
                 {statKey && statValue != null ? (
                     <SortStatChip sort={statKey} value={statValue} />
                 ) : null}
+            </div>
+            {/* Name plate. `truncate` keeps it to a single line and clips with an
+                ellipsis at the tile edge rather than breaking a species name across
+                two lines or mid-word; the gradient stops it sitting on busy photos. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-1.5 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-1.5 pb-1.5 pt-6">
+                <span className="min-w-0 flex-1 truncate text-[10px] font-bold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
+                    {entry.name}
+                </span>
                 {animalDexNumber && animalDexNumber > 0 ? (
-                    <span className="ml-auto shrink-0 rounded-full bg-black/80 px-1.5 py-1 text-[9px] font-black leading-none tabular-nums text-primary-200">
-                        #{String(animalDexNumber).padStart(3, "0")}
+                    <span className="shrink-0 font-mono text-[9px] font-bold leading-none tabular-nums text-primary-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                        {String(animalDexNumber).padStart(3, "0")}
                     </span>
                 ) : null}
             </div>
             {battleTier ? (
-                <div className="pointer-events-none absolute bottom-1.5 left-1.5">
+                <div className="pointer-events-none absolute bottom-8 left-1.5">
                     <BattleTierChip tier={battleTier} compact />
                 </div>
             ) : null}
@@ -535,23 +604,17 @@ export default function SpeciesDirectory({
     const [page, setPage] = useState(currentPage);
     const [pageCount, setPageCount] = useState(totalPages);
     const [totalCount, setTotalCount] = useState(total);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isApplyingFilters, setIsApplyingFilters] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     // One-slot cache for the next page, warmed as soon as the current one settles.
     const prefetchRef = useRef<{url: string; payload: Promise<DirectoryPageResponse>} | null>(null);
     const [overrideFilters, setOverrideFilters] = useState<ReturnType<typeof parseDirectorySearch> | null>(null);
-    const loadMoreLockRef = useRef(false);
+    /** Guards against a second page request while one is already in flight. */
+    const requestLockRef = useRef(false);
     /** Last server-rendered page adopted, so re-renders do not reset client state. */
     const serverPageRef = useRef<string | null>(null);
-    /** Re-armed once the sentinel leaves range, so one approach loads one page. */
-    const loadMoreArmedRef = useRef(true);
-    /** No page is auto-loaded until the reader actually scrolls. */
-    const hasScrolledRef = useRef(false);
-    /** Requires a scroll between automatic loads, so parking cannot run away. */
-    const scrolledSinceLoadRef = useRef(false);
     const directoryRequestIdRef = useRef(0);
-    const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const gridRef = useRef<HTMLDivElement | null>(null);
     const activeQuery = overrideFilters?.query ?? currentQuery;
     const activeLetter = overrideFilters?.letter ?? currentLetter;
     const activeRegion = overrideFilters?.region ?? currentRegion;
@@ -560,8 +623,8 @@ export default function SpeciesDirectory({
     const activeSort = overrideFilters?.sort ?? currentSort;
     const activeOrder = overrideFilters?.order ?? currentOrder;
     const activeTier = overrideFilters?.tier ?? currentTier;
-    // Memoised so the request URL it produces is referentially stable; loadMore and
-    // the prefetch both depend on it and would otherwise re-run every render.
+    // Memoised so the request URL it produces is referentially stable; the page
+    // switch and the prefetch both depend on it.
     const activeFilters = useMemo<DirectoryFilters>(() => ({
         query: activeQuery,
         letter: activeLetter,
@@ -570,8 +633,9 @@ export default function SpeciesDirectory({
         status: activeStatus,
         sort: activeSort,
         order: activeOrder,
-        tier: activeTier
-    }), [activeQuery, activeLetter, activeRegion, activeLocation, activeStatus, activeSort, activeOrder, activeTier]);
+        tier: activeTier,
+        page
+    }), [activeQuery, activeLetter, activeRegion, activeLocation, activeStatus, activeSort, activeOrder, activeTier, page]);
     const filterKey = [
         currentQuery,
         currentLetter,
@@ -607,19 +671,19 @@ export default function SpeciesDirectory({
         setPageCount(totalPages);
         setTotalCount(total);
         setLoadError(null);
-        loadMoreLockRef.current = false;
+        requestLockRef.current = false;
         directoryRequestIdRef.current += 1;
     }, [filterKey, speciesEntries, capturedSpecies, speciesImages, publicCaptureSpecies, currentPage, totalPages, total]);
 
     const applyDirectoryFilters = useCallback(async (filters: DirectoryFilters) => {
         const requestId = directoryRequestIdRef.current + 1;
         directoryRequestIdRef.current = requestId;
-        loadMoreLockRef.current = true;
+        requestLockRef.current = true;
         prefetchRef.current = null;
         setIsApplyingFilters(true);
 
         try {
-            const payload = await fetchDirectoryPage(buildDirectoryRequestUrl(filters, 1));
+            const payload = await fetchDirectoryPage(buildDirectoryRequestUrl(filters, filters.page));
             if (requestId !== directoryRequestIdRef.current) {
                 return;
             }
@@ -632,8 +696,8 @@ export default function SpeciesDirectory({
             setTotalCount(payload.total);
             setLoadError(null);
         } finally {
-            // Same reasoning as loadMore: never leave the lock or the pending flag set.
-            loadMoreLockRef.current = false;
+            // Never leave the lock or the pending flag set.
+            requestLockRef.current = false;
             setIsApplyingFilters(false);
         }
     }, []);
@@ -647,65 +711,39 @@ export default function SpeciesDirectory({
         });
     }, [applyDirectoryFilters, directorySearchKey]);
 
-    const hasMore = page < pageCount;
 
-    const loadMore = useCallback(async () => {
-        if (loadMoreLockRef.current || isLoadingMore || !hasMore) return;
+    /**
+     * Discrete pages rather than an endless append.
+     *
+     * The previous model relied on a sentinel that, with a ~2400px footer below
+     * the grid, sat permanently inside its own trigger zone — so the grid could
+     * dead-end with no way forward, and a reader had no idea where they were in
+     * 2385 species. A page lives in the URL now, so it is shareable and the back
+     * button works.
+     */
+    const goToPage = useCallback((nextPage: number) => {
+        const target = Math.min(Math.max(1, nextPage), Math.max(1, pageCount));
+        if (target === page || isApplyingFilters) return;
 
-        const requestId = directoryRequestIdRef.current;
-        loadMoreLockRef.current = true;
-        setIsLoadingMore(true);
-        setLoadError(null);
+        const nextFilters = {...activeFilters, page: target};
+        setOverrideFilters(nextFilters);
 
-        try {
-            const url = buildDirectoryRequestUrl(activeFilters, page + 1);
-            // The prefetch fired when this page settled, so scrolling usually just
-            // awaits an already-resolved promise instead of a fresh round trip. A
-            // failed prefetch falls back to a live request rather than surfacing.
-            const prefetched = prefetchRef.current;
-            prefetchRef.current = null;
-            const payload = prefetched?.url === url
-                ? await prefetched.payload.catch(() => fetchDirectoryPage(url))
-                : await fetchDirectoryPage(url);
-            if (requestId !== directoryRequestIdRef.current) {
-                return;
-            }
-            setEntries((current) => {
-                const seen = new Set(current.map((entry) => entry.slug));
-                return [...current, ...payload.entries.filter((entry) => !seen.has(entry.slug))];
-            });
-            setCapturedState((current) => ({...current, ...payload.capturedSpecies}));
-            setSpeciesImageState((current) => ({...current, ...payload.speciesImages}));
-            setPublicCaptureState((current) => ({...current, ...payload.publicCaptureSpecies}));
-            setPage(payload.currentPage);
-            setPageCount(payload.totalPages);
-            setTotalCount(payload.total);
-        } catch (error) {
-            if (requestId !== directoryRequestIdRef.current) {
-                return;
-            }
-            setLoadError(error instanceof Error ? error.message : "Failed to load more animals");
-        } finally {
-            // Cleanup must not be conditional on the request still being current.
-            // Anything that bumps the request id mid-flight — a filter change, or the
-            // server-page sync — used to strand `isLoadingMore` at true, which left
-            // "Loading more animals…" on screen forever and, because the lock stayed
-            // held, killed infinite scroll for the rest of the session.
-            setIsLoadingMore(false);
-            loadMoreLockRef.current = false;
-            loadMoreArmedRef.current = true;
-        }
-    }, [
-        activeFilters,
-        hasMore,
-        isLoadingMore,
-        page
-    ]);
+        const params = new URLSearchParams(buildDirectoryRequestUrl(nextFilters, target).split("?")[1]);
+        params.delete("page");
+        if (target > 1) params.set("page", String(target));
+        const queryString = params.toString();
+        window.history.pushState(null, "", queryString ? `${pathname}?${queryString}` : pathname);
 
-    // Warm the next page once the current one has settled, so "load more" is
-    // usually a cache read rather than a round trip.
+        gridRef.current?.scrollIntoView({block: "start"});
+
+        void applyDirectoryFilters(nextFilters).catch((error) => {
+            setLoadError(error instanceof Error ? error.message : "Failed to load animals");
+        });
+    }, [activeFilters, applyDirectoryFilters, isApplyingFilters, page, pageCount, pathname]);
+
+    // Warm the next page so the forward chevron feels instant.
     useEffect(() => {
-        if (!hasMore || isLoadingMore || isApplyingFilters) return undefined;
+        if (page >= pageCount || isApplyingFilters) return undefined;
 
         const url = buildDirectoryRequestUrl(activeFilters, page + 1);
         if (prefetchRef.current?.url === url) return undefined;
@@ -720,81 +758,14 @@ export default function SpeciesDirectory({
                 fetchDirectoryPage(url).then(resolve, reject);
             }, 150);
         });
-        // Claim the slot synchronously, so a second run of this effect (React strict
-        // mode double-invokes them in development) cannot start the same prefetch.
         prefetchRef.current = {url, payload};
-        // Nothing awaits it yet; loadMore reports failures when it does.
         void payload.catch(() => undefined);
 
         return () => {
             cancelled = true;
-            if (prefetchRef.current?.payload === payload) {
-                prefetchRef.current = null;
-            }
+            if (prefetchRef.current?.payload === payload) prefetchRef.current = null;
         };
-    }, [activeFilters, hasMore, isApplyingFilters, isLoadingMore, page]);
-
-    useEffect(() => {
-        if (!hasMore) return undefined;
-        const node = sentinelRef.current;
-        if (!node) return undefined;
-
-        // An IntersectionObserver alone was not enough here. The footer below the grid
-        // is ~2400px tall on desktop, so the sentinel ends up far above the viewport
-        // once you reach the bottom of the page, and a jump — End key, dragging the
-        // scrollbar, following an anchor — can cross the whole observation zone
-        // between two frames without ever reporting a threshold change. The result
-        // was that the grid simply stopped growing. Measuring the sentinel on scroll
-        // covers both the smooth case and the jump.
-        let frame = 0;
-
-        const check = () => {
-            frame = 0;
-            const rect = node.getBoundingClientRect();
-
-            if (rect.top > window.innerHeight + 800) return;
-
-            // Before the reader has scrolled at all, never load. On first paint the
-            // images have no height yet, so the sentinel briefly sits inside the
-            // trigger zone and the second page would load on every visit.
-            if (!hasScrolledRef.current) return;
-
-            // The footer below this grid is ~2400px tall, so once the reader is past
-            // the tiles the sentinel is inside the trigger zone and simply stays
-            // there. Re-arming only when it leaves that zone therefore never fired
-            // again and the grid dead-ended. Instead each completed load re-arms, and
-            // a scroll must happen in between — so scrolling keeps pulling pages in,
-            // while parking at the bottom does not walk the whole catalogue.
-            if (!loadMoreArmedRef.current || !scrolledSinceLoadRef.current) return;
-            loadMoreArmedRef.current = false;
-            scrolledSinceLoadRef.current = false;
-            void loadMore();
-        };
-
-        const schedule = () => {
-            if (frame) return;
-            frame = window.requestAnimationFrame(check);
-        };
-
-        const onScroll = () => {
-            hasScrolledRef.current = true;
-            scrolledSinceLoadRef.current = true;
-            schedule();
-        };
-
-        const observer = new IntersectionObserver(schedule, {rootMargin: "800px 0px"});
-        observer.observe(node);
-        window.addEventListener("scroll", onScroll, {passive: true});
-        window.addEventListener("resize", schedule, {passive: true});
-        schedule();
-
-        return () => {
-            if (frame) window.cancelAnimationFrame(frame);
-            observer.disconnect();
-            window.removeEventListener("scroll", onScroll);
-            window.removeEventListener("resize", schedule);
-        };
-    }, [hasMore, loadMore, entries.length]);
+    }, [activeFilters, isApplyingFilters, page, pageCount]);
 
     function pushFilters({
         nextQuery = activeQuery,
@@ -859,7 +830,10 @@ export default function SpeciesDirectory({
             status: nextStatus,
             sort: nextSort,
             order: nextOrder,
-            tier: nextTier
+            tier: nextTier,
+            // Any filter change starts again at the first page: page 7 of the old
+            // result set means nothing in the new one.
+            page: 1
         };
         setOverrideFilters(nextFilters);
         window.history.replaceState(null, "", nextUrl);
@@ -1191,8 +1165,11 @@ export default function SpeciesDirectory({
 
             {entries.length > 0 ? (
                 <div
-                    aria-busy={isApplyingFilters || isLoadingMore}
-                    className="grid grid-cols-4 gap-0 overflow-hidden bg-black sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8"
+                    ref={gridRef}
+                    aria-busy={isApplyingFilters}
+                    // Three across on a phone rather than four: at four columns a tile is ~95px
+                    // wide and almost every species name truncates to two words.
+                    className="grid grid-cols-3 gap-0 overflow-hidden bg-black sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
                 >
                     {entries.map((entry, index) => (
                         <Link
@@ -1216,7 +1193,7 @@ export default function SpeciesDirectory({
                             />
                         </Link>
                     ))}
-                    {isLoadingMore || isApplyingFilters
+                    {isApplyingFilters
                         ? Array.from({length: 16}, (_, index) => <CatalogSkeletonTile key={`pending-${index}`} />)
                         : null}
                 </div>
@@ -1238,43 +1215,54 @@ export default function SpeciesDirectory({
                 </div>
             )}
 
-            {entries.length > 0 ? (
-                <div ref={sentinelRef} className="flex min-h-12 flex-col items-center justify-center gap-2 py-2" aria-live="polite">
-                    {isLoadingMore ? (
-                        <div className="inline-flex items-center gap-2.5 text-sm font-semibold text-ink-300">
-                            <span
-                                aria-hidden="true"
-                                className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary-400/25 border-t-primary-300"
-                            />
-                            {copy.loadingMore}
-                        </div>
-                    ) : null}
-                    {!isLoadingMore && !loadError && hasMore ? (
-                        // Automatic loading is a convenience; this is the guarantee.
-                        // It also gives keyboard and screen-reader users a way to page
-                        // through a 2000-entry catalogue at all.
-                        <button
-                            type="button"
-                            onClick={() => {
-                                loadMoreArmedRef.current = true;
-                                scrolledSinceLoadRef.current = true;
-                                void loadMore();
-                            }}
-                            className="inline-flex min-h-11 items-center border border-line-200 bg-surface-900 px-6 text-sm font-semibold text-white transition-colors hover:border-primary-500/45 hover:bg-surface-800/70"
-                        >
-                            {copy.loadMore}
-                        </button>
-                    ) : null}
-                    {loadError ? (
-                        <button
-                            type="button"
-                            onClick={() => void loadMore()}
-                            className="text-sm font-semibold text-primary-200 hover:text-primary-100"
-                        >
-                            {loadError} · Retry
-                        </button>
-                    ) : null}
-                </div>
+            {entries.length > 0 && pageCount > 1 ? (
+                <nav aria-label={copy.paginationLabel} className="flex items-center justify-center gap-1 border-t border-line-300 pt-6">
+                    <PageChevron
+                        direction="previous"
+                        label={copy.paginationPrevious}
+                        disabled={page <= 1 || isApplyingFilters}
+                        onClick={() => goToPage(page - 1)}
+                    />
+
+                    <ol className="flex items-center gap-1">
+                        {buildPageWindow(page, pageCount).map((entryPage, index) => (
+                            entryPage === null ? (
+                                <li key={`gap-${index}`} aria-hidden="true" className="px-1.5 text-sm text-ink-400">…</li>
+                            ) : (
+                                <li key={entryPage}>
+                                    <button
+                                        type="button"
+                                        onClick={() => goToPage(entryPage)}
+                                        aria-current={entryPage === page ? "page" : undefined}
+                                        disabled={isApplyingFilters}
+                                        className={`inline-flex h-10 min-w-10 items-center justify-center px-3 font-mono text-sm tabular-nums transition-colors disabled:cursor-not-allowed ${
+                                            entryPage === page
+                                                ? "border border-primary-400 bg-primary-400/12 font-bold text-white"
+                                                : "border border-line-300 text-ink-200 hover:border-primary-500/45 hover:text-white"
+                                        }`}
+                                    >
+                                        {entryPage}
+                                    </button>
+                                </li>
+                            )
+                        ))}
+                    </ol>
+
+                    <PageChevron
+                        direction="next"
+                        label={copy.paginationNext}
+                        disabled={page >= pageCount || isApplyingFilters}
+                        onClick={() => goToPage(page + 1)}
+                    />
+
+                    <p aria-live="polite" className="sr-only">
+                        {copy.paginationPage.replace("{page}", String(page)).replace("{total}", String(pageCount))}
+                    </p>
+                </nav>
+            ) : null}
+
+            {loadError ? (
+                <p className="text-center text-sm font-semibold text-primary-200">{loadError}</p>
             ) : null}
         </div>
     );

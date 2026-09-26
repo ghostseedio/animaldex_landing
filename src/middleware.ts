@@ -35,6 +35,32 @@ function redirectToAccount(request: NextRequest, locale: string, sessionResponse
 }
 
 /**
+ * Supabase drops the `redirect_to` we send when it is not on the project's
+ * allow-list and falls back to the Site URL, so a Google sign-in can land on
+ * `/?code=…` instead of `/auth/callback?code=…`. Nothing on the marketing root
+ * exchanges that code, so the visitor lands back signed out. Forward any auth
+ * code that arrives on a site root to the callback, which owns the exchange.
+ */
+function matchMisroutedAuthCallback(request: NextRequest) {
+    const path = request.nextUrl.pathname.replace(/\/$/, "");
+    const isSiteRoot = path === "" || localeConfig.locales.includes(path.slice(1));
+    if (!isSiteRoot) return null;
+
+    const params = request.nextUrl.searchParams;
+    const code = params.get("code");
+    const error = params.get("error") ?? params.get("error_description");
+    if (!code && !error) return null;
+
+    const callbackUrl = new URL("/auth/callback", request.nextUrl.origin);
+    if (code) callbackUrl.searchParams.set("code", code);
+    if (params.get("error")) callbackUrl.searchParams.set("error", params.get("error")!);
+    if (params.get("error_description")) {
+        callbackUrl.searchParams.set("error_description", params.get("error_description")!);
+    }
+    return callbackUrl;
+}
+
+/**
  * Middleware stays broad so next-intl can handle `as-needed` locale routing
  * and legacy public URLs keep working. That does **not** mean every public
  * request may contact Supabase.
@@ -50,6 +76,11 @@ function redirectToAccount(request: NextRequest, locale: string, sessionResponse
 export async function middleware(request: NextRequest) {
     const timer = createDevRequestTimer("middleware", {path: request.nextUrl.pathname});
     try {
+        const misroutedAuthCallback = matchMisroutedAuthCallback(request);
+        if (misroutedAuthCallback) {
+            return NextResponse.redirect(misroutedAuthCallback);
+        }
+
         // Collapse external /en URLs here (not next.config) so next-intl's
         // internal /en rewrite for as-needed English cannot self-redirect.
         const defaultLocalePrefixed = matchDefaultLocalePrefixedPath(request.nextUrl.pathname);

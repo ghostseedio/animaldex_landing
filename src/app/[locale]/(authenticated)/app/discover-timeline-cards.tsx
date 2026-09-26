@@ -10,6 +10,7 @@ import type {
   DiscoverAlignmentItem,
   DiscoverCaptureItem,
   DiscoverChallengeItem,
+  DiscoverChallengeParticipant,
   DiscoverCollectorRef,
   DiscoverFusionItem,
   DiscoverMediaAsset,
@@ -1332,131 +1333,387 @@ function FusionCard({
   );
 }
 
-function ChallengeParticipantBlock({
+/* ------------------------------------------------------------------ *
+ * Scenario arena — iOS `DiscoverChallengeHistoryCardView`
+ *
+ * The post owns the whole snap slot: attacker photo on the top half,
+ * defender photo on the bottom half, each identity row pinned to the seam
+ * between them, and every panel (chrome, battle status, backstory) layered
+ * over the media. It is not a text card with thumbnails.
+ * ------------------------------------------------------------------ */
+
+/** iOS `participantHero`. */
+function ChallengeParticipantHero({
   participant,
   highlighted,
+  pinsIdentityToTop,
 }: {
-  participant: DiscoverChallengeItem["attacker"];
+  participant: DiscoverChallengeParticipant;
   highlighted: boolean;
+  pinsIdentityToTop: boolean;
 }) {
-  const profile = participant.href ? (
-    <Link href={participant.href} className="font-bold text-white/75 hover:text-primary-100">
-      {participant.displayName}
-    </Link>
+  const badge = participant.avatarUrl ? (
+    <img
+      src={participant.avatarUrl}
+      alt=""
+      className="h-[42px] w-[42px] shrink-0 rounded-full object-cover ring-[1.5px] ring-white"
+    />
   ) : (
-    <span className="font-bold text-white/75">{participant.displayName}</span>
+    <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-white/15 text-sm font-bold text-white ring-[1.5px] ring-white">
+      {participant.displayName.slice(0, 1)}
+    </span>
   );
 
   return (
-    <div
-      className={`rounded-2xl border p-3 ${
-        highlighted
-          ? "border-primary-400/40 bg-primary-400/10"
-          : "border-white/10 bg-white/[0.03]"
-      }`}
-    >
-      <div className="mb-3 flex min-w-0 items-center gap-2.5">
-        {participant.avatarUrl ? (
-          <img
-            src={participant.avatarUrl}
-            alt=""
-            className={`h-8 w-8 rounded-full object-cover ring-2 ${
-              highlighted ? "ring-primary-400/50" : "ring-white/10"
-            }`}
-          />
+    <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
+      <img
+        src={participant.imageSrc}
+        alt={participant.animalName}
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0)_50%,rgba(0,0,0,0.74))]"
+      />
+      <div
+        className={`absolute inset-x-0 flex items-end gap-2 p-3.5 [filter:drop-shadow(0_1px_4px_rgba(0,0,0,0.65))] ${
+          pinsIdentityToTop ? "top-0" : "bottom-0"
+        }`}
+      >
+        {participant.href ? (
+          <Link href={participant.href} aria-label={participant.displayName} className="shrink-0">
+            {badge}
+          </Link>
         ) : (
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[0.65rem] font-bold text-white/50">
-            {participant.displayName.slice(0, 1)}
-          </span>
+          badge
         )}
-        <div className="min-w-0">
-          <p className="truncate text-sm">{profile}</p>
-          {participant.username ? (
-            <p className="truncate text-xs text-white/35">@{participant.username}</p>
-          ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-semibold text-white/[0.78]">
+            {participant.username ? `@${participant.username}` : participant.displayName}
+          </p>
+          <Link
+            href={`/app/capture/${encodeURIComponent(participant.captureId)}`}
+            className="block truncate text-[17px] font-semibold leading-tight text-white"
+          >
+            {participant.animalName}
+          </Link>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white/5">
-          <img
-            src={participant.imageSrc}
-            alt={participant.animalName}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="font-bold text-white">{participant.animalName}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {participant.battleTier ? (
-              <FeedPill tone="cyan">Tier {participant.battleTier}</FeedPill>
-            ) : null}
-            {participant.battlePower != null ? (
-              <FeedPill>Power {participant.battlePower}</FeedPill>
-            ) : null}
-          </div>
-        </div>
+        <span
+          className={`shrink-0 text-[11px] font-black tracking-[0.06em] ${
+            highlighted ? "text-primary-200" : "text-white/70"
+          }`}
+        >
+          {highlighted ? "WINNER" : "VS"}
+        </span>
       </div>
     </div>
   );
 }
 
-function ChallengeCard({
-  item,
-  locale,
-  onInfo,
-  share,
-}: {
-  item: DiscoverChallengeItem;
-  locale: string;
-  onInfo: () => void;
-  share: { url: string; title: string; text?: string };
-}) {
-  const attackerWon = item.winnerCaptureId === item.attacker.captureId;
-  const isV2 = item.challengeFormat === "best_of_3_v2";
-  const isComplete = item.battleStatus === "completed";
-  const roundLabel = isComplete ? "Battle complete" : "Round 2 of 3 · Community vote";
+/** iOS `votingCountdown`: minute ticks, neon until the last hour, then orange. */
+function ChallengeVotingCountdown({createdAt, deadline}: {createdAt: string; deadline: string}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const deadlineMs = new Date(deadline).getTime();
+  const startMs = new Date(createdAt).getTime();
+  if (!Number.isFinite(deadlineMs) || !Number.isFinite(startMs)) return null;
+
+  const total = Math.max(1, (deadlineMs - startMs) / 1000);
+  const remaining = Math.max(0, (deadlineMs - now) / 1000);
+  const urgent = remaining <= 3600;
+  const tint = urgent ? "text-orange-400" : "text-primary-200";
+  const bar = urgent ? "bg-orange-400" : "bg-primary-200";
 
   return (
-    <TimelineShell badge="Scenario arena" date={item.date} locale={locale} onInfo={onInfo} share={share}>
-      <div className="space-y-4 p-4">
-        {isV2 ? (
-          <div className="rounded-2xl border border-primary-300/25 bg-primary-300/10 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-200">{roundLabel}</p>
-            {isComplete ? (
-              <p className="mt-1 text-sm font-bold text-white">Final score {item.roundsWonAttacker}–{item.roundsWonDefender}</p>
-            ) : (
-              <p className="mt-1 text-sm text-white/65">{item.votesCount} of {item.requiredVotes} community votes</p>
-            )}
-          </div>
-        ) : null}
-        <p className="font-display text-xl font-bold text-white">{item.outcomeLine}</p>
-        {item.winningsLine ? (
-          <p className="text-sm font-semibold text-amber-200">{item.winningsLine}</p>
-        ) : null}
-        <p className="text-sm leading-6 text-white/55">{item.activitySummary}</p>
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
-          <ChallengeParticipantBlock
-            participant={item.attacker}
-            highlighted={attackerWon}
-          />
-          <div className="flex items-center justify-center">
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-white/45">
-              VS
-            </span>
-          </div>
-          <ChallengeParticipantBlock
-            participant={item.defender}
-            highlighted={!attackerWon}
-          />
-        </div>
-        {isV2 && isComplete && item.speciesComparisonSlug ? (
-          <Link href={`/comparisons/${item.speciesComparisonSlug}`} className="block rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center text-sm font-black text-primary-200 hover:bg-white/[0.07]">
-            Round 3 of 3 · View species comparison
-          </Link>
-        ) : null}
+    <div className="space-y-1.5">
+      <div className={`flex items-center gap-1.5 ${tint}`}>
+        <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="12" cy="13" r="8" />
+          <path d="M12 9.5V13l2.2 1.6M9.4 2.6h5.2" />
+        </svg>
+        <span className="text-[11px] font-black tabular-nums">{formatVotingTimeRemaining(remaining)}</span>
+        <span className="ml-auto text-[9px] font-extrabold text-white/[0.62]">NO QUORUM → R1 WINS</span>
       </div>
-    </TimelineShell>
+      <div className="h-[5px] w-full overflow-hidden rounded-full bg-white/10">
+        <div className={`h-full rounded-full ${bar}`} style={{width: `${Math.min(100, (remaining / total) * 100)}%`}} />
+      </div>
+    </div>
+  );
+}
+
+/** iOS `votingTimeRemaining`. */
+function formatVotingTimeRemaining(seconds: number) {
+  const minutes = Math.max(0, Math.ceil(seconds / 60));
+  if (minutes <= 0) return "Closing now";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h left`;
+  if (hours > 0) return `${hours}h ${remainder}m left`;
+  return `${minutes}m left`;
+}
+
+/** iOS `battleRoundPage`, paged the way the SwiftUI TabView pages. */
+function ChallengeRoundPager({
+  item,
+  attackerCaptureId,
+}: {
+  item: DiscoverChallengeItem;
+  attackerCaptureId: string;
+}) {
+  const [page, setPage] = useState(0);
+
+  function roundWinnerText(round: 2 | 3) {
+    const winnerId = round === 2 ? item.round2WinnerCaptureId : item.round3WinnerCaptureId;
+    const name = winnerId === attackerCaptureId ? item.attacker.animalName : item.defender.animalName;
+    return round === 2 ? `The community backed ${name}.` : `Species comparison favored ${name}.`;
+  }
+
+  return (
+    <div>
+      <div
+        onScroll={(event) => {
+          const node = event.currentTarget;
+          setPage(node.clientWidth > 0 ? Math.round(node.scrollLeft / node.clientWidth) : 0);
+        }}
+        className="flex h-[92px] snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="w-full shrink-0 snap-center space-y-1.5 pr-2">
+          <p className="text-[10px] font-black text-primary-200">ROUND 2 OF 3 · COMMUNITY</p>
+          <p className="text-[11px] font-medium text-white/[0.86]">{roundWinnerText(2)}</p>
+        </div>
+        <div className="w-full shrink-0 snap-center space-y-1.5 pr-2">
+          <p className="text-[10px] font-black text-primary-200">ROUND 3 OF 3 · SPECIES</p>
+          <p className="text-[11px] font-medium text-white/[0.86]">{roundWinnerText(3)}</p>
+          {item.speciesComparisonSlug ? (
+            <Link
+              href={`/comparisons/${item.speciesComparisonSlug}`}
+              className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-primary-200"
+            >
+              <AppIcon name="spark" className="h-3 w-3" />
+              View species comparison
+            </Link>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex justify-center gap-1.5 pt-1">
+        {[0, 1].map((index) => (
+          <span
+            key={index}
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${index === page ? "bg-white" : "bg-white/30"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** iOS `backstoryPanel`: 10-word preview over a scrim, expanding in place. */
+function ChallengeBackstoryPanel({text}: {text: string}) {
+  const [expanded, setExpanded] = useState(false);
+  const words = text.split(/\s+/).filter(Boolean);
+  const preview = words.length > 10 ? `${words.slice(0, 10).join(" ")}…` : words.join(" ");
+
+  return (
+    <div className="pointer-events-auto -mx-3.5 bg-[linear-gradient(to_bottom,rgba(0,0,0,0)_0%,rgba(0,0,0,0.42)_28%,rgba(0,0,0,0.78)_62%,rgba(0,0,0,0.92)_100%)] px-3.5 pb-4 pt-10">
+      {expanded ? (
+        <div className="space-y-1.5">
+          <div className="max-h-[220px] overflow-y-auto whitespace-pre-line text-xs leading-5 text-white/90">
+            {text}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="ml-auto block text-xs font-bold text-white"
+          >
+            Less
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-baseline gap-1.5">
+          <p className="min-w-0 flex-1 truncate text-xs text-white/90">{preview}</p>
+          <button type="button" onClick={() => setExpanded(true)} className="shrink-0 text-xs font-bold text-white">
+            More
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** iOS `backstoryText`: scenario context, winner explanation, strategic insight. */
+function challengeBackstoryText(item: DiscoverChallengeItem) {
+  const explanation = item.winnerExplanation?.trim() || null;
+  const fullExplanation = explanation && explanation.toLowerCase() !== item.outcomeLine.toLowerCase()
+    ? explanation
+    : null;
+  const description = item.scenarioDescription?.trim() || null;
+  const context = description
+    && description.toLowerCase() !== fullExplanation?.toLowerCase()
+    && description.toLowerCase() !== item.scenarioTitle?.toLowerCase()
+    ? description
+    : null;
+  const insight = item.strategicInsight?.trim() || null;
+
+  const sections = [context, fullExplanation, insight].filter((value): value is string => Boolean(value));
+  return sections.length ? sections.join("\n\n") : null;
+}
+
+function ChallengeCard({
+  item,
+  onInfo,
+  share,
+  viewerUserId,
+}: {
+  item: DiscoverChallengeItem;
+  onInfo: () => void;
+  share: { url: string; title: string; text?: string };
+  viewerUserId: string | null;
+}) {
+  const [votedCaptureId, setVotedCaptureId] = useState<string | null>(null);
+  const [votesCount, setVotesCount] = useState(item.votesCount);
+  const [voteError, setVoteError] = useState<string | null>(null);
+  const [votePending, setVotePending] = useState(false);
+
+  const attackerWon = item.winnerCaptureId === item.attacker.captureId;
+  const isV2 = item.challengeFormat === "best_of_3_v2";
+  const isVoting = isV2 && item.battleStatus === "round_2_voting";
+  const isComplete = !isV2 || item.battleStatus === "completed";
+  const isParticipant = viewerUserId != null
+    && (viewerUserId === item.attacker.userId || viewerUserId === item.defender.userId);
+  const backstory = challengeBackstoryText(item);
+
+  async function castVote(captureId: string) {
+    if (votePending) return;
+    setVotePending(true);
+    setVoteError(null);
+    try {
+      const response = await fetch("/api/app/discover/challenge-vote", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({challengeId: item.id.replace(/^challenge-/, ""), captureId})
+      });
+      const payload = await response.json().catch(() => ({})) as {error?: string};
+      if (!response.ok) {
+        setVoteError(payload.error ?? "Vote could not be recorded.");
+        return;
+      }
+      setVotedCaptureId(captureId);
+      setVotesCount((count) => count + 1);
+    } catch {
+      setVoteError("Vote could not be recorded.");
+    } finally {
+      setVotePending(false);
+    }
+  }
+
+  function voteButton(participant: DiscoverChallengeParticipant) {
+    return (
+      <button
+        type="button"
+        disabled={votePending}
+        onClick={() => castVote(participant.captureId)}
+        className="min-w-0 flex-1 truncate rounded-full bg-primary-200 py-2.5 text-[11px] font-extrabold text-black/90 disabled:opacity-60"
+      >
+        Vote {participant.animalName}
+      </button>
+    );
+  }
+
+  const statusPanel = isVoting ? (
+    <div className="pointer-events-auto space-y-2 rounded-[14px] bg-black/[0.72] p-3">
+      <p className="text-[11px] font-black text-primary-200">ROUND 2 OF 3 · COMMUNITY VOTE</p>
+      <p className="text-xs font-medium tabular-nums text-white">
+        {votesCount} / {item.requiredVotes} votes
+      </p>
+      {item.votingDeadlineAt ? (
+        <ChallengeVotingCountdown createdAt={item.date} deadline={item.votingDeadlineAt} />
+      ) : null}
+      {viewerUserId == null ? (
+        <Link
+          href={`/account?next=${encodeURIComponent(discoverPostPath(item.id))}`}
+          className="block text-[11px] font-extrabold text-primary-200"
+        >
+          Sign in to vote
+        </Link>
+      ) : isParticipant ? (
+        <p className="text-[11px] font-medium text-white/[0.78]">Your battle is live. The community is voting.</p>
+      ) : votedCaptureId ? (
+        <p className="flex items-center gap-1.5 py-2 text-[11px] font-extrabold text-primary-200">
+          <AppIcon name="check" className="h-3.5 w-3.5" />
+          Vote recorded ·{" "}
+          {votedCaptureId === item.attacker.captureId ? item.attacker.animalName : item.defender.animalName}
+        </p>
+      ) : (
+        <div className="flex gap-2">
+          {voteButton(item.attacker)}
+          {voteButton(item.defender)}
+        </div>
+      )}
+      {voteError ? <p className="text-[11px] font-medium text-red-400">{voteError}</p> : null}
+    </div>
+  ) : isV2 && isComplete ? (
+    <div className="pointer-events-auto space-y-1.5 rounded-[14px] bg-black/[0.72] p-3">
+      <div className="flex items-center gap-2">
+        <p className="text-[11px] font-black text-primary-200">BATTLE COMPLETE</p>
+        <p className="text-sm font-black text-white">
+          {item.roundsWonAttacker}–{item.roundsWonDefender}
+        </p>
+      </div>
+      {item.settlementReason === "voting_timeout_round1_fallback" ? (
+        <p className="text-[11px] font-medium text-white/[0.78]">
+          Voting ended before the target was reached. The Round 1 winner takes the battle.
+        </p>
+      ) : (
+        <ChallengeRoundPager item={item} attackerCaptureId={item.attacker.captureId} />
+      )}
+    </div>
+  ) : null;
+
+  return (
+    <article className="relative h-full min-h-0 w-full snap-start snap-always overflow-hidden bg-black">
+      <div className="absolute inset-0 flex flex-col">
+        <ChallengeParticipantHero
+          participant={item.attacker}
+          highlighted={attackerWon}
+          pinsIdentityToTop={false}
+        />
+        <ChallengeParticipantHero
+          participant={item.defender}
+          highlighted={!attackerWon}
+          pinsIdentityToTop
+        />
+      </div>
+
+      {/* iOS overlay stack: chrome, battle status, spacer, backstory. */}
+      <div className="pointer-events-none absolute inset-0 flex flex-col gap-2 px-3.5 pt-2.5">
+        <div className="pointer-events-auto flex items-center justify-end gap-1 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))]">
+          <span className="grid h-9 w-9 place-items-center text-white/[0.78] [&_svg]:h-[1.1rem] [&_svg]:w-[1.1rem] [&>button]:grid [&>button]:h-full [&>button]:w-full [&>button]:place-items-center [&>button]:p-0">
+            <ShareDiscoverPostButton url={share.url} title={share.title} text={share.text} compact />
+          </span>
+          <button
+            type="button"
+            onClick={onInfo}
+            aria-label="Post information"
+            className="grid h-9 w-9 place-items-center text-white/[0.78]"
+          >
+            <InfoIcon />
+          </button>
+        </div>
+
+        {statusPanel}
+
+        <div className="min-h-0 flex-1" />
+
+        {backstory ? <ChallengeBackstoryPanel text={backstory} /> : null}
+      </div>
+    </article>
   );
 }
 
@@ -1638,7 +1895,7 @@ export function DiscoverTimelineCard({
       card = <FusionCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
     case "challenge":
-      card = <ChallengeCard item={item} locale={locale} onInfo={onInfo} share={share} />;
+      card = <ChallengeCard item={item} onInfo={onInfo} share={share} viewerUserId={viewerUserId} />;
       break;
     case "trade":
       card = <TradeCard item={item} locale={locale} onInfo={onInfo} share={share} />;
