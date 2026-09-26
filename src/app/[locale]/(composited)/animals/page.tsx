@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {Suspense} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
@@ -17,6 +18,9 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
+
+/** Kept in sync with buildDirectoryRequestUrl in ./species-directory. */
+const DIRECTORY_API_PATH = "/api/animals/directory";
 
 function getSuggestionBattleTier(entry: SpeciesEntry) {
     if (getLegendaryEarthBeast(entry.slug)) return "S";
@@ -112,8 +116,8 @@ const TIER_CHIP_STYLE = {
     }
 } as const;
 
-function CatalogQuickLinkIcon({icon}: {icon: CatalogQuickLink["icon"]}) {
-    const common = "h-3.5 w-3.5 shrink-0";
+function CatalogQuickLinkIcon({icon, className}: {icon: CatalogQuickLink["icon"]; className?: string}) {
+    const common = `shrink-0 ${className ?? "h-3.5 w-3.5"}`;
     switch (icon) {
         case "bird":
             return (
@@ -237,6 +241,73 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
     };
 }
 
+function SpeciesDirectorySkeleton() {
+    return (
+        <div
+            aria-hidden="true"
+            className="grid grid-cols-4 gap-0 overflow-hidden bg-black sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8"
+        >
+            {Array.from({length: 24}, (_, index) => (
+                <div key={index} className="aspect-square w-full animate-pulse bg-surface-800/60" />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * One heading treatment for every section below the directory. The page used to
+ * mix a small `text-2xl` heading above the featured grid with `text-4xl` ones on
+ * the panels underneath, which read as three unrelated blocks rather than a page.
+ */
+function SectionHeading({
+    title,
+    description,
+    align = "left"
+}: {
+    title: string;
+    description?: string;
+    align?: "left" | "center";
+}) {
+    const centered = align === "center";
+
+    return (
+        <div className={`flex flex-col gap-3 ${centered ? "items-center text-center" : ""}`}>
+            <span
+                aria-hidden="true"
+                className={`h-[3px] w-10 rounded-full ${centered
+                    ? "bg-primary-400/70"
+                    : "bg-gradient-to-r from-primary-400 to-primary-500/20"}`}
+            />
+            <h2 className="font-display text-2xl font-bold tracking-tight text-white md:text-3xl">{title}</h2>
+            {description ? (
+                <p className={`text-sm leading-relaxed text-ink-300 md:text-base ${centered ? "max-w-2xl" : "max-w-3xl"}`}>
+                    {description}
+                </p>
+            ) : null}
+        </div>
+    );
+}
+
+/** Nudges right on hover so a whole-card link shows it is one. */
+function CardArrow() {
+    return (
+        <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-ink-400 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary-200"
+        >
+            <path
+                d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
 export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) {
     const locale = params.locale;
     const t = await getScopedTranslator(locale, "animals");
@@ -262,6 +333,8 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
         page: 1,
         entries: speciesEntries
     });
+    // The database catalog and per-user capture state are deliberately kept off this
+    // page so it stays statically generated; SpeciesDirectory fetches them on mount.
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
     const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, getSpeciesImageRoute(entry.slug)]));
     const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
@@ -283,6 +356,14 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
 
     return (
         <section className="mx-auto flex w-full max-w-[88rem] flex-col gap-10 px-4 py-6 md:gap-14 md:px-8 md:py-8">
+            {/* This page is statically rendered from the local catalog, so SpeciesDirectory
+             *  always replaces the server-rendered grid with the database catalog on mount.
+             *  Preloading that first page lets the browser start the request while it is
+             *  still parsing this document, instead of after hydration. The href has to stay
+             *  byte-identical to buildDirectoryRequestUrl(defaults, 1) and must not carry
+             *  crossorigin, or the fetch will miss this entry and request the page twice. */}
+            <link rel="preload" as="fetch" href={`${DIRECTORY_API_PATH}?page=1`} />
+
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
             {/* SEO copy stays in the document; UI leads with search. */}
@@ -368,6 +449,9 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
 
             <section id="all-animals" className="scroll-mt-28 flex flex-col gap-5">
                 <h2 className="sr-only">{t("allGuidesTitle")}</h2>
+                {/* SpeciesDirectory reads useSearchParams; without this boundary Next
+                    opts the whole route out of server rendering and ships an empty grid. */}
+                <Suspense fallback={<SpeciesDirectorySkeleton />}>
                 <SpeciesDirectory
                     locale={locale}
                     speciesEntries={directoryPage.entries}
@@ -425,51 +509,95 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         }
                     }}
                 />
+                </Suspense>
             </section>
 
-            <section className="flex flex-col gap-5">
-                <h2 className="font-display text-2xl font-bold text-white md:text-3xl">{t("featuredTitle")}</h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-5">
+            <section className="flex flex-col gap-6">
+                <SectionHeading title={t("featuredTitle")} description={t("featuredDescription")} />
+                {/* Hairline gaps over a rule-coloured bed, so these read as one tiled
+                    surface like the species grid above rather than floating cards. */}
+                <div className="grid grid-cols-2 gap-px overflow-hidden bg-line-300 lg:grid-cols-4">
                     {featuredAnimals.map((animal) => (
-                        <Link key={animal.slug} href={`/animals/${animal.slug}`} className="group overflow-hidden rounded-3xl bg-surface-800/50">
+                        <Link
+                            key={animal.slug}
+                            href={`/animals/${animal.slug}`}
+                            className="group relative flex flex-col overflow-hidden bg-surface-900 transition-colors duration-300 hover:bg-surface-800/70 focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-200"
+                        >
+                            {/* Lit plinth: the artwork is a cut-out, so it needs a light
+                                source behind it rather than a flat panel. */}
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-x-0 top-0 aspect-square bg-[radial-gradient(58%_54%_at_50%_44%,rgba(167,244,50,0.10),transparent_70%)] opacity-80 transition-opacity duration-500 group-hover:opacity-100"
+                            />
                             <SpeciesImage
                                 slug={animal.slug}
                                 alt={`${animal.name}: ${animal.lesson}`}
+                                fit="contain"
                                 sizes="(min-width: 1024px) 22vw, 46vw"
-                                className="aspect-[4/3] transition-transform duration-500 group-hover:scale-[1.03]"
+                                surfaceClassName="bg-transparent"
+                                imageClassName="p-5 transition-transform duration-500 ease-out group-hover:scale-[1.06] sm:p-7"
+                                className="aspect-square w-full"
                             />
-                            <div className="p-4 md:p-5">
-                                <h3 className="text-xl md:text-2xl font-bold text-white">{animal.name}</h3>
-                                <p className="mt-1 text-sm md:text-base text-ink-300">{animal.lesson}</p>
+                            <div className="relative flex items-center gap-2 border-t border-line-300 px-4 py-3.5 sm:px-5 sm:py-4">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-display text-base font-bold tracking-tight text-white sm:text-lg lg:text-xl">{animal.name}</h3>
+                                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-300 sm:text-sm">{animal.lesson}</p>
+                                </div>
+                                <CardArrow />
                             </div>
                         </Link>
                     ))}
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("exploreMoreTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("exploreMoreDescription")}</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                    <Link href="/pokemon-animals" className="rounded-full border border-primary-500/30 px-4 py-2 text-primary-200 hover:border-primary-400 hover:text-primary-100 transition-colors">
-                        {t("explorePokemon")}
-                    </Link>
-                    <Link href="/animal-hybrids" className="rounded-full border border-primary-500/30 px-4 py-2 text-primary-200 hover:border-primary-400 hover:text-primary-100 transition-colors">
-                        {t("exploreHybrids")}
-                    </Link>
-                    <Link href="/tier-list" className="rounded-full border border-primary-500/30 px-4 py-2 text-primary-200 hover:border-primary-400 hover:text-primary-100 transition-colors">
-                        {t("exploreTierLists")}
-                    </Link>
+            <section className="flex flex-col gap-6">
+                <SectionHeading title={t("exploreMoreTitle")} description={t("exploreMoreDescription")} />
+                <div className="grid grid-cols-1 gap-px overflow-hidden bg-line-300 sm:grid-cols-3">
+                    {[
+                        {href: "/pokemon-animals", label: t("explorePokemon"), icon: "gem" as const},
+                        {href: "/animal-hybrids", label: t("exploreHybrids"), icon: "paw" as const},
+                        {href: "/tier-list", label: t("exploreTierLists"), icon: "bolt" as const}
+                    ].map((collection) => (
+                        <Link
+                            key={collection.href}
+                            href={collection.href}
+                            className="group flex items-center gap-4 bg-surface-900 px-4 py-5 transition-colors duration-300 hover:bg-surface-800/70 focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-200 sm:px-5"
+                        >
+                            <span className="grid h-10 w-10 shrink-0 place-items-center border border-primary-500/25 bg-primary-400/10 text-primary-200 transition-colors duration-300 group-hover:border-primary-400/50 group-hover:bg-primary-400/16">
+                                <CatalogQuickLinkIcon icon={collection.icon} className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1 text-sm font-semibold text-white sm:text-base">{collection.label}</span>
+                            <CardArrow />
+                        </Link>
+                    ))}
                 </div>
             </section>
 
-            <div className="rounded-[2.5rem] bg-gradient-to-br from-primary-500/25 via-surface-800 to-violet-500/15 px-7 py-12 md:px-12 lg:px-16 lg:py-16 flex flex-col gap-4 text-center items-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-100 text-lg md:text-xl max-w-3xl">{t("ctaDescription")}</p>
-                <StoreLinks />
-            </div>
+            <section className="relative overflow-hidden border-y border-line-300 bg-surface-900 px-5 py-12 md:px-12 md:py-16">
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(95%_130%_at_50%_0%,rgba(167,244,50,0.15),transparent_62%)]"
+                />
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-400/50 to-transparent"
+                />
+                <div className="relative flex flex-col items-center gap-6">
+                    <SectionHeading align="center" title={t("ctaTitle")} description={t("ctaDescription")} />
+                    <ul className="flex flex-wrap justify-center gap-2">
+                        {[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")].map((support) => (
+                            <li
+                                key={support}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-line-200 bg-surface-800/60 px-3 py-1.5 text-xs font-medium text-ink-200"
+                            >
+                                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary-400" />
+                                {support}
+                            </li>
+                        ))}
+                    </ul>
+                    <StoreLinks className="!mt-2" />
+                </div>
+            </section>
         </section>
     );
 }

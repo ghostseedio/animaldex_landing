@@ -43,11 +43,41 @@ type BlogPost = {
     sections: BlogSection[];
     [key: string]: unknown;
 };
-type Summary = {slug: string; title: string; description: string; featuredImage: ImageValue; updatedAt: string};
+type Summary = {slug: string; title: string; description: string; featuredImage: ImageValue; updatedAt: string; views?: number};
 type ImageSlot = {label: string; path: Array<string | number>; image: ImageValue};
 type Asset = {path: string; url: string; filename: string; createdAt?: string};
 type ContentType = "blog" | "page";
 type PreviewWidth = "mobile" | "tablet" | "desktop";
+
+/** Compact totals so a five-figure count cannot push the slug out of the row. */
+function formatViews(views: number) {
+    if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(views >= 10_000_000 ? 0 : 1)}M`;
+    if (views >= 1_000) return `${(views / 1_000).toFixed(views >= 10_000 ? 0 : 1)}k`;
+    return String(views);
+}
+
+/**
+ * Parses an admin API response, or explains why it could not be parsed.
+ *
+ * These endpoints answer JSON on every path they control, including errors —
+ * but a response can still arrive as HTML when it never reached the handler: a
+ * dev-server error page mid-recompile, a proxy timeout, a platform body-size
+ * refusal. Calling `.json()` on that throws `Unexpected token '<'`, which tells
+ * the person nothing. Read the content type first and report the status.
+ */
+async function readJson(response: Response, action: string) {
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+        throw new Error(
+            response.status >= 500
+                ? `${action} failed: the server returned an error page (${response.status}). Try again in a moment.`
+                : `${action} failed (${response.status}).`
+        );
+    }
+
+    return await response.json();
+}
 
 const emptyPost = (): BlogPost => ({
     slug: "",
@@ -342,12 +372,14 @@ export default function AdminContentStudio() {
             setAuthorized(false);
             return;
         }
-        const body = await response.json();
+        const body = await readJson(response, "Loading content");
         if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load content");
         const overrideMap = new Map((body.entries ?? []).map((entry: any) => [entry.slug, entry.payload]));
+        const viewsBySlug = (body.views ?? {}) as Record<string, number>;
         const compiled = (body.compiled ?? []).map((item: Summary) => {
             const override = overrideMap.get(item.slug) as BlogPost | undefined;
-            return override ? {...item, title: override.title, description: override.description, featuredImage: override.featuredImage, updatedAt: override.updatedAt ?? override.publishedAt} : item;
+            const withViews = {...item, views: viewsBySlug[item.slug] ?? 0};
+            return override ? {...withViews, title: override.title, description: override.description, featuredImage: override.featuredImage, updatedAt: override.updatedAt ?? override.publishedAt} : withViews;
         });
         const compiledSlugs = new Set(compiled.map((item: Summary) => item.slug));
         const custom = (body.entries ?? [])
@@ -358,7 +390,8 @@ export default function AdminContentStudio() {
                 title: item.title,
                 description: item.description,
                 featuredImage: item.featuredImage,
-                updatedAt: item.updatedAt ?? item.publishedAt
+                updatedAt: item.updatedAt ?? item.publishedAt,
+                views: viewsBySlug[item.slug] ?? 0
             }));
         setSummaries([...custom, ...compiled]);
         setAuthorized(true);
@@ -368,7 +401,7 @@ export default function AdminContentStudio() {
         setMessage(null);
         setError(null);
         const response = await fetch(`/api/admin/content?type=${type}&slug=${encodeURIComponent(slug)}`, {cache: "no-store"});
-        const body = await response.json();
+        const body = await readJson(response, "Loading the article");
         if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load article");
         if (!body.content && allowTypeFallback) {
             const fallbackType: ContentType = type === "blog" ? "page" : "blog";
@@ -416,7 +449,7 @@ export default function AdminContentStudio() {
                         isPublished
                     })
                 });
-                const body = await response.json();
+                const body = await readJson(response, "Autosave");
                 if (!response.ok || !body.ok) throw new Error(body.error || "Unable to autosave");
                 lastSavedPost.current = serialized;
                 setAutosaveStatus("saved");
@@ -444,7 +477,7 @@ export default function AdminContentStudio() {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({password})
             });
-            const body = await response.json();
+            const body = await readJson(response, "Signing in");
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to sign in");
             setPassword("");
             await loadList(contentType);
@@ -471,7 +504,7 @@ export default function AdminContentStudio() {
                     isPublished: true
                 })
             });
-            const body = await response.json();
+            const body = await readJson(response, "Publishing");
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to publish article");
             const updatedPost = {...post, updatedAt: new Date().toISOString().slice(0, 10)};
             lastSavedPost.current = JSON.stringify(updatedPost);
@@ -504,9 +537,7 @@ export default function AdminContentStudio() {
             const form = new FormData();
             form.set("file", file);
             const response = await fetch("/api/admin/assets", {method: "POST", body: form});
-            const contentType = response.headers.get("content-type") || "";
-            if (!contentType.includes("application/json")) throw new Error(`Asset upload failed (${response.status})`);
-            const body = await response.json();
+            const body = await readJson(response, "Uploading the image");
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to upload image");
             setPost(replaceAtPath(post, slot.path, {
                 ...slot.image,
@@ -535,9 +566,7 @@ export default function AdminContentStudio() {
         setError(null);
         try {
             const response = await fetch("/api/admin/assets", {cache: "no-store"});
-            const contentType = response.headers.get("content-type") || "";
-            if (!contentType.includes("application/json")) throw new Error(`Asset library failed (${response.status})`);
-            const body = await response.json();
+            const body = await readJson(response, "Loading the image library");
             if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load image library");
             setAssets(body.assets ?? []);
         } catch (caught) {
@@ -654,7 +683,14 @@ export default function AdminContentStudio() {
                         {filtered.map((item) => (
                             <button key={item.slug} onClick={() => openPost(item.slug, contentType).catch((caught) => setError(caught.message))} className="flex w-full gap-3 p-3 text-left hover:bg-white/[0.035]">
                                 <NextImage src={item.featuredImage.src} alt="" width={80} height={56} unoptimized className="h-14 w-20 shrink-0 rounded-lg bg-surface-900 object-cover" />
-                                <div className="min-w-0"><p className="line-clamp-2 text-sm font-bold text-white">{item.title}</p><p className="mt-1 truncate text-[11px] text-ink-500">/{item.slug}</p></div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="line-clamp-2 text-sm font-bold text-white">{item.title}</p>
+                                    <p className="mt-1 truncate text-[11px] text-ink-500">/{item.slug}</p>
+                                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-ink-500" title={`${(item.views ?? 0).toLocaleString()} ${item.views === 1 ? "view" : "views"}`}>
+                                        <Eye size={12} aria-hidden="true" />
+                                        <span>{formatViews(item.views ?? 0)}</span>
+                                    </p>
+                                </div>
                             </button>
                         ))}
                         {!filtered.length && <div className="p-6 text-center"><p className="text-sm font-bold text-white">No {contentType === "blog" ? "articles" : "pages"} found</p><p className="mt-2 text-xs leading-5 text-ink-500">Create a new {contentType === "blog" ? "article" : "page"} to get started.</p></div>}

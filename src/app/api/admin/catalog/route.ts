@@ -4,6 +4,7 @@ import {describeSpeciesArtwork} from "@/data/species-artwork-index";
 import {getBattlePower, getBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {fetchProfileStats} from "@/lib/species-catalog-stats";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 /**
@@ -43,7 +44,6 @@ const LIST_COLUMNS = [
     "identity_explanation",
     "identity_evidence_guidance",
     "catalog_status",
-    "canonical_game_stats",
     "species_subtitle",
     "core_lesson",
     "public_capture_count",
@@ -216,16 +216,18 @@ export async function GET(request: NextRequest) {
         }
 
         const {rows, total} = await fetchRows(params, true);
-        const [landingPages, parents] = await Promise.all([
+        const [landingPages, parents, gameStats] = await Promise.all([
             getCatalogLandingPageIndex(),
-            resolveParents(rows)
+            resolveParents(rows),
+            // The view carries no stats, so they come from the profile rows behind it.
+            fetchProfileStats(rows.map((row) => row.species_profile_id as string))
         ]);
 
         const entries = await Promise.all(rows.map(async (row) => {
             const landingPage = landingPages.resolve(row);
             const slug = landingPage.slug ?? String(row.landing_page_slug ?? row.normalized_identity_key ?? "");
             const artwork = await describeSpeciesArtwork(slug);
-            const stats = readStats(row.canonical_game_stats);
+            const stats = readStats(gameStats.get(String(row.species_profile_id))?.canonical_game_stats);
             const identityKind = text(row.identity_kind);
 
             return {

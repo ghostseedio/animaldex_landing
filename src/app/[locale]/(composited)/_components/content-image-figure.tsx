@@ -14,7 +14,7 @@ export default function ContentImageFigure({
 }: ContentImageFigureProps) {
     return (
         <figure className="flex flex-col gap-3">
-            <div className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60 shadow-[0_24px_80px_-48px_rgba(8,15,26,0.95)]">
+            <div className="overflow-hidden  border border-line-300 bg-surface-800/60 shadow-[0_24px_80px_-48px_rgba(8,15,26,0.95)]">
                 <Image
                     src={image.src}
                     alt={image.alt}

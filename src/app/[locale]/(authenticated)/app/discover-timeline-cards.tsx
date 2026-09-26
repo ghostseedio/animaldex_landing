@@ -211,7 +211,7 @@ function InfoIcon() {
   );
 }
 
-function MediaCarousel({
+export function MediaCarousel({
   assets,
   animalName,
   isUncertain = false,
@@ -221,7 +221,8 @@ function MediaCarousel({
   assets: DiscoverMediaAsset[];
   animalName: string;
   isUncertain?: boolean;
-  layout?: "standard" | "feed";
+  /** `feed` and `hero` fill their parent; `standard` is a 16:10 card strip. */
+  layout?: "standard" | "feed" | "hero";
   onActiveAssetChange?: (asset: DiscoverMediaAsset | null) => void;
 }) {
   const media = useMemo(() => assets.length ? assets : [], [assets]);
@@ -433,17 +434,21 @@ function MediaCarousel({
     setActiveSlideIndex(Math.min(media.length - 1, Math.max(0, index)));
   };
 
+  // The feed hides every affordance (chrome lives in the post overlay); the
+  // detail hero keeps the sound toggle, page dots and counter like iOS's
+  // ScanResultCatalogHeroView.
   const isFeedLayout = layout === "feed";
-  const frameClass = isFeedLayout
+  const fillsParent = layout !== "standard";
+  const frameClass = fillsParent
     ? "relative h-full w-full bg-black"
     : "relative bg-white/5";
-  const scrollerClass = layout === "feed"
+  const scrollerClass = fillsParent
     ? "flex h-full min-h-0 w-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     : "flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-  const itemClass = layout === "feed"
+  const itemClass = fillsParent
     ? "relative h-full min-h-0 w-full shrink-0 snap-center overflow-hidden"
     : "relative aspect-[16/10] w-full shrink-0 snap-center overflow-hidden";
-  const mediaFitClass = isFeedLayout
+  const mediaFitClass = fillsParent
     ? "object-cover object-center"
     : "object-cover object-[50%_28%]";
 
@@ -869,7 +874,8 @@ function FeedBottomOverlay({item}: {item: DiscoverCaptureItem}) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2 [filter:drop-shadow(0_1px_4px_rgba(0,0,0,0.65))]">
       {item.isUncertain ? <span className="pointer-events-auto self-start"><UncertainBadge /></span> : null}
-      <Link href={item.href} className="pointer-events-auto flex flex-col gap-1.5">
+      {/* iOS `onOpenCapture`: the title block opens the capture detail, not the species page. */}
+      <Link href={`/app/capture/${encodeURIComponent(item.captureId)}`} className="pointer-events-auto flex flex-col gap-1.5">
         <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
         <CapturePostChipRow item={item} />
       </Link>
@@ -1234,7 +1240,7 @@ function AlignmentCard({
     <TimelineShell badge="Daily alignment" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="grid gap-4 p-4 md:grid-cols-[7.5rem_1fr]">
         <Link
-          href={item.href}
+          href={`/app/capture/${encodeURIComponent(item.rewardedCaptureId)}`}
           className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5"
         >
           <img
@@ -1253,7 +1259,7 @@ function AlignmentCard({
           <p className="text-sm text-white/45">
             <CollectorLink collector={item.collector} /> aligned with{" "}
             <Link
-              href={item.href}
+              href={`/app/capture/${encodeURIComponent(item.rewardedCaptureId)}`}
               className="font-bold text-white/75 hover:text-primary-100"
             >
               {item.rewardedAnimalName}

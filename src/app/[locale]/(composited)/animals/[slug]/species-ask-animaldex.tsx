@@ -38,7 +38,7 @@ export function AskWhyButton({
                 });
                 askAboutAnimal(question);
             }}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-300/35 bg-amber-400/[0.12] px-3 py-1.5 text-sm font-bold text-amber-100 transition hover:border-amber-200 hover:text-white"
+            className="inline-flex items-center gap-1.5 border-b border-primary-500/40 pb-0.5 text-sm font-semibold text-primary-200 transition-colors hover:border-primary-400 hover:text-white"
         >
             {label}
         </a>
@@ -171,7 +171,7 @@ export default function SpeciesAskAnimalDex({
     return (
         <section
             id="ask"
-            className="scroll-mt-28 overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(167,244,50,0.12),transparent_36%),linear-gradient(180deg,rgba(18,22,19,0.96),rgba(10,13,11,0.98))] p-5 md:p-8"
+            className="scroll-mt-28 overflow-hidden  border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(167,244,50,0.12),transparent_36%),linear-gradient(180deg,rgba(18,22,19,0.96),rgba(10,13,11,0.98))] p-5 md:p-8"
         >
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200/90">{labels.eyebrow}</p>
             <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
@@ -194,7 +194,7 @@ export default function SpeciesAskAnimalDex({
                 }}
             >
                 <label className="sr-only" htmlFor={`ask-${slug}`}>{placeholder}</label>
-                <div className="flex items-end gap-2 rounded-[1.5rem] border border-white/12 bg-black/30 p-2 pl-4 focus-within:border-primary-300/50">
+                <div className="flex items-end gap-2  border border-white/12 bg-black/30 p-2 pl-4 focus-within:border-primary-300/50">
                     <textarea
                         id={`ask-${slug}`}
                         value={question}
@@ -244,7 +244,7 @@ export default function SpeciesAskAnimalDex({
             {error ? <p className="mt-6 text-sm text-rose-200">{error}</p> : null}
 
             {limitReached ? (
-                <div className="mt-6 rounded-3xl border border-amber-300/20 bg-amber-400/[0.08] p-5">
+                <div className="mt-6  border border-amber-300/20 bg-amber-400/[0.08] p-5">
                     <p className="text-base leading-7 text-ink-100">{labels.limitReached}</p>
                     <Link
                         href={labels.collectHref}
@@ -268,7 +268,7 @@ export default function SpeciesAskAnimalDex({
                         return (
                             <article
                                 key={`${layer.kind}-${layer.title}`}
-                                className={`rounded-3xl border p-5 ${LAYER_TINT[layer.kind]}`}
+                                className={`  border p-5 ${LAYER_TINT[layer.kind]}`}
                             >
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white">{meta.title}</p>
                                 <p className="mt-1 text-sm text-white/65">{meta.caption}</p>

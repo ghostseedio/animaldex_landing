@@ -45,7 +45,7 @@ export default function SpeciesRegionMap({
     return (
         <div className="flex flex-col gap-4">
             <div
-                className="relative h-52 md:h-64 w-full rounded-[1.75rem] border border-line-300 overflow-hidden bg-gradient-to-br from-white/[0.04] to-black/[0.18] p-3 md:p-4"
+                className="relative h-52 md:h-64 w-full border border-line-300 overflow-hidden bg-gradient-to-br from-white/[0.04] to-black/[0.18] p-3 md:p-4"
                 aria-label={mapAriaLabel}
             >
                 <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgba(255,255,255,0.14)" />

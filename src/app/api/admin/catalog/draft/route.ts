@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {getBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {attachProfileStats} from "@/lib/species-catalog-stats";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 /**
@@ -39,7 +40,10 @@ async function findNeighbours(scientificName: string | null, displayName: string
     const key = getSupabaseServiceKey();
     if (!url || !key) return [] as Neighbour[];
 
-    const select = "animaldex_number,display_name,scientific_name,canonical_game_stats,species_subtitle,core_lesson,principle_name";
+    // No `canonical_game_stats` here: it is not a column of the view, and naming
+    // it failed the whole query. The stats the prompt calibrates against are
+    // merged on from `species_profiles` below.
+    const select = "species_profile_id,animaldex_number,display_name,scientific_name,species_subtitle,core_lesson,principle_name";
     const genus = scientificName?.trim().split(/\s+/)[0] ?? "";
     const word = displayName.trim().split(/\s+/).at(-1) ?? "";
     const filters: string[] = [];
@@ -60,7 +64,9 @@ async function findNeighbours(scientificName: string | null, displayName: string
         cache: "no-store"
     });
 
-    return response.ok ? await response.json() as Neighbour[] : [];
+    if (!response.ok) return [];
+
+    return await attachProfileStats(await response.json() as Array<Record<string, unknown>>) as unknown as Neighbour[];
 }
 
 function clampStat(value: unknown) {

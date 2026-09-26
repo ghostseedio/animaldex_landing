@@ -4278,11 +4278,73 @@ export function getRelatedSpecies(slug: string, limit = 3) {
         .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
         .filter((entry): entry is SpeciesEntry => Boolean(entry));
 
+    // The backfill used to be `speciesEntries.slice(0, limit)` — the alphabetically
+    // first entries in the catalogue. Every species without explicit relations showed
+    // the same three animals ("Aardvark, Aardwolf, Abyssinian Ground Hornbill"), which
+    // is worse than showing nothing. Score by what the entries actually share instead.
     const backfill = speciesEntries
         .filter((entry) => entry.slug !== slug && !current.relatedSpecies.includes(entry.slug))
+        .map((entry) => ({entry, score: relatednessScore(current, entry)}))
+        .filter((candidate) => candidate.score > 0)
+        .sort((left, right) => right.score - left.score || left.entry.name.localeCompare(right.entry.name))
+        .map((candidate) => candidate.entry)
         .slice(0, Math.max(0, limit - explicit.length));
 
     return [...explicit, ...backfill].slice(0, limit);
+}
+
+/** Words too common across the catalogue to say anything about relatedness. */
+const RELATEDNESS_STOPWORDS = new Set([
+    "and", "the", "with", "near", "from", "into", "over", "across", "other", "some",
+    "many", "most", "areas", "area", "range", "ranges", "region", "regions", "parts",
+    "where", "species", "access", "large", "small", "open", "food", "water", "their"
+]);
+
+function relatednessTokens(...values: Array<string | null | undefined>) {
+    const tokens = new Set<string>();
+
+    for (const value of values) {
+        for (const raw of (value ?? "").toLowerCase().split(/[^a-z]+/)) {
+            if (raw.length > 3 && !RELATEDNESS_STOPWORDS.has(raw)) tokens.add(raw);
+        }
+    }
+
+    return tokens;
+}
+
+function sharedTokenCount(left: Set<string>, right: Set<string>) {
+    let shared = 0;
+    for (const token of Array.from(left)) {
+        if (right.has(token)) shared += 1;
+    }
+    return shared;
+}
+
+/**
+ * How much two catalogue entries have in common: same kind of animal first, then a
+ * shared habitat or range, then a comparable rarity. Deterministic, so a statically
+ * generated page renders the same list every build.
+ */
+function relatednessScore(current: SpeciesEntry, candidate: SpeciesEntry) {
+    let score = 0;
+
+    const currentCategory = current.analysis.category.trim().toLowerCase();
+    const candidateCategory = candidate.analysis.category.trim().toLowerCase();
+    if (currentCategory && currentCategory === candidateCategory) score += 6;
+
+    score += Math.min(3, sharedTokenCount(
+        relatednessTokens(current.analysis.habitat),
+        relatednessTokens(candidate.analysis.habitat)
+    )) * 2;
+
+    score += Math.min(3, sharedTokenCount(
+        relatednessTokens(current.analysis.nativeRange),
+        relatednessTokens(candidate.analysis.nativeRange)
+    )) * 2;
+
+    if (Math.abs(current.analysis.rarityScore - candidate.analysis.rarityScore) <= 12) score += 1;
+
+    return score;
 }
 
 export function rarityLabel(score: number) {

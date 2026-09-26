@@ -59,7 +59,7 @@ export default function CaptureMetadataBand({
 
     return (
         <section className={`-mx-5 border-b border-white/10 bg-[#1f1f1f] px-5 py-3.5 font-sans ${
-            wide ? "lg:mx-0 lg:rounded-[22px] lg:border lg:px-6 lg:py-5" : ""
+            wide ? "lg:mx-0 lg:  lg:border lg:px-6 lg:py-5" : ""
         }`}>
             <div className="space-y-2">
                 {relativeDate ? (

@@ -1,9 +1,9 @@
 import {notFound} from "next/navigation";
-import CaptureDetailClient from "@/app/[locale]/(authenticated)/app/capture/[id]/capture-detail-client";
+import CaptureDetailClient, {type CaptureDetailViewer} from "@/app/[locale]/(authenticated)/app/capture/[id]/capture-detail-client";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
-import {getAppCaptureDetail} from "@/data/authenticated-app";
+import {getAppCaptureDetail, getAuthenticatedAppContext, getPublicCaptureDetail} from "@/data/authenticated-app";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {getSpeciesGrowthContext} from "@/data/species-growth";
@@ -17,11 +17,31 @@ function toQualitySlug(value: string) {
 }
 
 export default async function CaptureResultPage({params}: {params: {locale: string; id: string}}) {
-    const capture = await getAppCaptureDetail(params.id);
+    // iOS opens every card in the same ScanResultView: an owned entry
+    // (`isSavedEntry`) or a public one with a `spotter`. Try the owner read
+    // first, then the public Discover row.
+    const [owned, context] = await Promise.all([
+        getAppCaptureDetail(params.id),
+        getAuthenticatedAppContext()
+    ]);
+    const publicDetail = owned ? null : await getPublicCaptureDetail(params.id);
+    const capture = owned ?? publicDetail?.capture ?? null;
 
     if (!capture) {
         notFound();
     }
+
+    const viewer: CaptureDetailViewer = {
+        userId: context?.profile.id ?? null,
+        isOwner: Boolean(owned)
+    };
+    const spotter = publicDetail?.collector ?? null;
+    const mediaAssets = publicDetail?.mediaAssets ?? [];
+    const cohort = {
+        speciesProfileId: publicDetail?.speciesProfileId ?? null,
+        normalizedIdentityKey: publicDetail?.normalizedIdentityKey ?? capture.speciesSlug
+    };
+    const isChallengeAvailable = publicDetail?.isChallengeAvailable ?? false;
 
     const requestedSpeciesSlug = capture.speciesSlug?.trim().replace(/_/g, "-") ?? null;
     const entry = requestedSpeciesSlug ? await getResolvedSpeciesBySlug(requestedSpeciesSlug) : null;
@@ -30,6 +50,11 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         return (
             <CaptureDetailClient
                 capture={capture}
+                viewer={viewer}
+                spotter={spotter}
+                mediaAssets={mediaAssets}
+                cohort={cohort}
+                isChallengeAvailable={isChallengeAvailable}
                 speciesSlug={requestedSpeciesSlug}
                 speciesName={capture.animalName}
             />
@@ -41,7 +66,9 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         getSpeciesSubtitle(entry.slug, params.locale),
         resolveSpeciesBehaviorProfile(entry.slug),
         getSpeciesRankings(entry),
-        getSpeciesGrowthContext(entry, capture.id)
+        // The growth/compare panel is about the viewer's own animal; for a
+        // public card the Play tab shows Offer / Compare instead.
+        owned ? getSpeciesGrowthContext(entry, capture.id) : Promise.resolve(null)
     ]);
     const primaryQuality = principle?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
@@ -79,7 +106,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         />
     );
 
-    const compare = (
+    const play = growth ? (
         <SpeciesGrowthPanel
             speciesSlug={entry.slug}
             speciesName={entry.name}
@@ -126,11 +153,16 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 openPower: t("growthOpenPower", {power: "{power}"})
             }}
         />
-    );
+    ) : null;
 
     return (
         <CaptureDetailClient
             capture={capture}
+            viewer={viewer}
+            spotter={spotter}
+            mediaAssets={mediaAssets}
+            cohort={cohort}
+            isChallengeAvailable={isChallengeAvailable}
             speciesSlug={entry.slug}
             speciesName={entry.name}
             descriptor={subtitle.descriptor}
@@ -146,7 +178,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             } : null}
             rankings={rankings}
             nativeRange={nativeRange}
-            compare={compare}
+            play={play}
         />
     );
 }

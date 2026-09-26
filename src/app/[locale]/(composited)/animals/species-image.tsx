@@ -7,6 +7,12 @@ type SpeciesImageProps = {
     priority?: boolean;
     className?: string;
     sizes?: string;
+    /** `contain` keeps cut-out artwork whole; `cover` fills the frame. */
+    fit?: "cover" | "contain";
+    /** Applied to the image itself, so padding insets `contain` artwork. */
+    imageClassName?: string;
+    /** Replaces the default plinth behind the artwork. */
+    surfaceClassName?: string;
 };
 
 export default function SpeciesImage({
@@ -14,10 +20,13 @@ export default function SpeciesImage({
     alt,
     priority = false,
     className = "",
-    sizes = "(min-width: 1280px) 960px, (min-width: 768px) 80vw, 100vw"
+    sizes = "(min-width: 1280px) 960px, (min-width: 768px) 80vw, 100vw",
+    fit = "cover",
+    imageClassName = "",
+    surfaceClassName = "bg-surface-800/60"
 }: SpeciesImageProps) {
     return (
-        <div className={`relative overflow-hidden bg-surface-800/60 ${className}`}>
+        <div className={`relative overflow-hidden ${surfaceClassName} ${className}`}>
             <Image
                 src={getSpeciesImageRoute(slug)}
                 alt={alt}
@@ -25,7 +34,7 @@ export default function SpeciesImage({
                 unoptimized
                 priority={priority}
                 sizes={sizes}
-                className="object-cover"
+                className={`${fit === "contain" ? "object-contain" : "object-cover"} ${imageClassName}`}
             />
         </div>
     );

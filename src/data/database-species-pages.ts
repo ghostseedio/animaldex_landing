@@ -502,27 +502,55 @@ function mapDatabaseSpecies(row: CatalogRow, guide: FieldGuideRow | null): Speci
 }
 
 const MAX_FETCH_PAGES = 40;
+// Keep each response below Next.js 13's 2 MB incremental-fetch cache limit.
+const FETCH_PAGE_SIZE = 250;
+// PostgREST is happy to serve the catalog in one wave; this only bounds the socket pool.
+const FETCH_CONCURRENCY = 6;
 
+function perfNow() {
+    return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+/** `0-249/2514` -> 2514. Returns null for `*` (count unavailable) or a malformed header. */
+function parseContentRangeTotal(header: string | null) {
+    const total = header?.split("/")[1]?.trim();
+    if (!total || total === "*") return null;
+    const parsed = Number.parseInt(total, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Pages a catalog table into memory.
+ *
+ * The first page asks PostgREST for an exact count so the remaining offsets are
+ * known up front and can be fetched concurrently. Paging these tables serially
+ * cost one round trip per 250 rows — ~11 of them for `species_catalog_v1` alone,
+ * which is what made a cold `/animals` load take 18s. When the count header is
+ * missing we fall back to the serial walk, which is correct, just slower.
+ */
 async function fetchRows<T>(table: string, select: string, filters: Record<string, string> = {}) {
     const url = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
     if (!url || !key) return [] as T[];
-    // Keep each response below Next.js 13's 2 MB incremental-fetch cache limit.
-    const pageSize = 250;
+    // Re-bound so the narrowing survives into loadPage's closure.
+    const baseUrl: string = url;
+    const readKey: string = key;
+    const pageSize = FETCH_PAGE_SIZE;
     const params = new URLSearchParams({select, limit: String(pageSize)});
     for (const [name, value] of Object.entries(filters)) params.set(name, value);
     if (!params.has("order")) params.set("order", "species_profile_id.asc");
 
-    const rows: T[] = [];
-    const queryStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-    for (let offset = 0, page = 0; page < MAX_FETCH_PAGES; offset += pageSize, page++) {
-        params.set("offset", String(offset));
-        const pageStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-        const response = await fetch(`${url}/rest/v1/${table}?${params}`, {
-            headers: getSupabaseHeaders(key),
+    const queryStartedAt = perfNow();
+
+    async function loadPage(offset: number, withCount: boolean) {
+        const pageParams = new URLSearchParams(params);
+        pageParams.set("offset", String(offset));
+        const pageStartedAt = perfNow();
+        const response = await fetch(`${baseUrl}/rest/v1/${table}?${pageParams}`, {
+            headers: getSupabaseHeaders(readKey, withCount ? {Prefer: "count=exact"} : undefined),
             next: {revalidate: 3600}
         });
-        const pageMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - pageStartedAt;
+        const pageMs = perfNow() - pageStartedAt;
         if (process.env.NODE_ENV !== "production" && pageMs >= 250) {
             logDevPerfEvent("catalog.fetch", `SLOW ${table}`, {offset, pageMs: Math.round(pageMs), status: response.status});
         }
@@ -534,18 +562,60 @@ async function fetchRows<T>(table: string, select: string, filters: Record<strin
         if (!Array.isArray(data)) {
             throw new Error(`Invalid ${table} response at offset ${offset}`);
         }
-        rows.push(...data as T[]);
-        if (data.length < pageSize) {
-            if (process.env.NODE_ENV !== "production") {
-                const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - queryStartedAt;
-                logDevPerfEvent("catalog.fetch", `${table} complete`, {rows: rows.length, totalMs: Math.round(totalMs)});
-            }
+        return {
+            rows: data as T[],
+            total: withCount ? parseContentRangeTotal(response.headers.get("content-range")) : null
+        };
+    }
+
+    function logComplete(rows: T[]) {
+        if (process.env.NODE_ENV !== "production") {
+            logDevPerfEvent("catalog.fetch", `${table} complete`, {
+                rows: rows.length,
+                totalMs: Math.round(perfNow() - queryStartedAt)
+            });
+        }
+    }
+
+    const first = await loadPage(0, true);
+    const rows: T[] = [...first.rows];
+    if (first.rows.length < pageSize) {
+        logComplete(rows);
+        return rows;
+    }
+
+    if (first.total != null) {
+        const pageCount = Math.min(Math.ceil(first.total / pageSize), MAX_FETCH_PAGES);
+        const offsets: number[] = [];
+        for (let page = 1; page < pageCount; page++) offsets.push(page * pageSize);
+        const pages: T[][] = new Array(offsets.length);
+        let cursor = 0;
+        await Promise.all(
+            Array.from({length: Math.min(FETCH_CONCURRENCY, offsets.length)}, async () => {
+                while (cursor < offsets.length) {
+                    const index = cursor;
+                    cursor += 1;
+                    pages[index] = (await loadPage(offsets[index], false)).rows;
+                }
+            })
+        );
+        for (const page of pages) rows.push(...page);
+        if (pageCount >= MAX_FETCH_PAGES) {
+            logDevPerfEvent("catalog.fetch", `${table} page cap`, {rows: rows.length, maxPages: MAX_FETCH_PAGES});
+        }
+        logComplete(rows);
+        return rows;
+    }
+
+    for (let offset = pageSize, page = 1; page < MAX_FETCH_PAGES; offset += pageSize, page++) {
+        const next = await loadPage(offset, false);
+        rows.push(...next.rows);
+        if (next.rows.length < pageSize) {
+            logComplete(rows);
             return rows;
         }
     }
-    if (process.env.NODE_ENV !== "production") {
-        logDevPerfEvent("catalog.fetch", `${table} page cap`, {rows: rows.length, maxPages: MAX_FETCH_PAGES});
-    }
+    logDevPerfEvent("catalog.fetch", `${table} page cap`, {rows: rows.length, maxPages: MAX_FETCH_PAGES});
     return rows;
 }
 
@@ -1094,6 +1164,26 @@ async function fetchCanonicalIdentityAlias(identityKey: string): Promise<string 
     }
 }
 
+/**
+ * Attaches the catalogue identity to a static entry.
+ *
+ * Static entries carry no `speciesProfileId`, and that id is the key every
+ * app-parity feature is fetched by — system dynamics, animal trials, canonical
+ * stats. Returning the bare static entry meant those sections silently rendered
+ * nothing on every species that exists locally, which is nearly all of them.
+ *
+ * One targeted row, not a catalogue walk, and best-effort: during SEO static
+ * generation the remote guard throws, and the page still renders from local data.
+ */
+async function withCatalogIdentity(staticEntry: SpeciesEntry): Promise<SpeciesEntry> {
+    try {
+        const catalogEntry = await getDatabaseSpeciesBySlug(staticEntry.slug);
+        return mergeCatalogMetadata(staticEntry, catalogEntry);
+    } catch {
+        return staticEntry;
+    }
+}
+
 async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntry | null> {
     const identityKey = normalized.replace(/-/g, "_");
     const staticCanonical = resolveCollectionIdentityToken(identityKey);
@@ -1108,7 +1198,7 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
             return resolveLegendaryCatalogEntryFromSnapshot(staticEntry);
         }
         if (staticEntry) {
-            return staticEntry;
+            return withCatalogIdentity(staticEntry);
         }
 
         const biologySeed = getLegendaryCatalogSeedByBiologyLandingSlug(candidate);

@@ -67,7 +67,7 @@ function AnimalCardHeader() {
 function AnimalCardShell({children, wide = false}: {children: ReactNode; wide?: boolean}) {
     return (
         <div className={`flex w-full flex-col gap-[10px] border-b border-white/10 bg-[linear-gradient(135deg,rgba(167,244,50,0.08),rgba(255,255,255,0.03))] px-5 py-[18px] ${
-            wide ? "lg:gap-3 lg:rounded-[22px] lg:border lg:px-6 lg:py-6" : ""
+            wide ? "lg:gap-3 lg:border lg:px-6 lg:py-6" : ""
         }`}>
             {children}
         </div>
@@ -94,7 +94,7 @@ function SearchNearbyButton() {
 
 function WildCaptureHint() {
     return (
-        <div className="rounded-[14px] border border-white/[0.08] bg-white/[0.03] p-3">
+        <div className="border border-white/[0.08] bg-white/[0.03] p-3">
             <p className="text-[11px] font-semibold text-white/[0.42]">Wild reward hint</p>
             <p className="mt-1.5 text-[15px] font-medium leading-5 text-[#A7F432]/90">First-time wild species earn bonus rewards, including 1 free credit.</p>
         </div>
@@ -103,7 +103,7 @@ function WildCaptureHint() {
 
 function AnimalCardVectorMap({regions, wide = false}: {regions: ReturnType<typeof getAvailableNativeRangeRegions>; wide?: boolean}) {
     return (
-        <div className={`relative h-[168px] w-full overflow-hidden rounded-[18px] border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,0.03),rgba(0,0,0,0.14))] p-3 ${
+        <div className={`relative h-[168px] w-full overflow-hidden border border-white/[0.07] bg-[linear-gradient(135deg,rgba(255,255,255,0.03),rgba(0,0,0,0.14))] p-3 ${
             wide ? "lg:h-[230px]" : ""
         }`}>
             <div className="absolute inset-3">
@@ -233,7 +233,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
 
     if (presentation.kind === "textOnly") {
         return (
-            <div className="rounded-3xl border border-line-300 bg-surface-950/60 p-5 md:p-6 flex flex-col gap-4">
+            <div className="border border-line-300 bg-surface-950/60 p-5 md:p-6 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-white font-semibold tracking-[0.08em] uppercase text-sm">{labels.title}</h3>
                     <p className="text-ink-300 text-sm">{labels.description}</p>
@@ -253,7 +253,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
     const hasVectorMap = renderedRegions.length > 0;
 
     return (
-        <div className="rounded-3xl border border-line-300 bg-surface-950/60 p-5 md:p-6 flex flex-col gap-4">
+        <div className="border border-line-300 bg-surface-950/60 p-5 md:p-6 flex flex-col gap-4">
             <div className="flex flex-col gap-1">
                 <h3 className="text-white font-semibold tracking-[0.08em] uppercase text-sm">{labels.title}</h3>
                 <p className="text-ink-300 text-sm">{labels.description}</p>
@@ -271,7 +271,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
             </div>
 
             {hasVectorMap ? (
-                <div className="relative h-44 md:h-48 rounded-[1.4rem] border border-white/8 overflow-hidden bg-gradient-to-br from-white/[0.04] to-black/[0.14] p-3">
+                <div className="relative h-44 md:h-48 border border-white/8 overflow-hidden bg-gradient-to-br from-white/[0.04] to-black/[0.14] p-3">
                     <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgba(255,255,255,0.12)" />
                     {renderedRegions.map((region) => {
                         const overlayAssetPath = getNativeRangeOverlayAssetPath(region);

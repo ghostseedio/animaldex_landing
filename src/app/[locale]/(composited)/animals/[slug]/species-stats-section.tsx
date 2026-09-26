@@ -47,7 +47,7 @@ function getSourceLabel(source: SpeciesStatsResolution["statsSource"], labels: S
 export default function SpeciesStatsSection({result, battleTier = null, labels}: SpeciesStatsSectionProps) {
     if (!result.stats || result.statsSource === "none") {
         return (
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{labels.unavailableTitle}</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{labels.unavailableDescription}</p>
             </section>
@@ -64,7 +64,7 @@ export default function SpeciesStatsSection({result, battleTier = null, labels}:
     };
 
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
+        <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="flex flex-col gap-3">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{labels.title}</h2>

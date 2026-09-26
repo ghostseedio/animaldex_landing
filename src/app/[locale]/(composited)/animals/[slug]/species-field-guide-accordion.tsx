@@ -71,7 +71,7 @@ export default function SpeciesFieldGuideAccordion({
     }
 
     return (
-        <section className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-surface-900/55">
+        <section className="overflow-hidden  border border-white/10 bg-surface-900/55">
             <div className="border-b border-white/[0.08] px-5 py-6 md:px-8 md:py-7">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/85">
                     {headerTitle}

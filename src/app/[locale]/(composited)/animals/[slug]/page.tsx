@@ -15,7 +15,7 @@ import SpeciesUnderstandGuide, {type UnderstandGuideSection} from "@/app/[locale
 import SpeciesAnimalPowerGuide from "@/app/[locale]/(composited)/animals/[slug]/species-animal-power-guide";
 import SpeciesAskAnimalDex from "@/app/[locale]/(composited)/animals/[slug]/species-ask-animaldex";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
-import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
+import SpeciesRankingsSection from "@/app/[locale]/(composited)/animals/[slug]/species-rankings-section";
 import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
 import {type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
@@ -25,6 +25,9 @@ import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
 import {buildComparisonSlug} from "@/lib/comparison-slug";
 import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
+import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
+import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
+import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
@@ -357,16 +360,22 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const enhancedPower = null;
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
-    const relatedSlugs = Array.from(new Set([
-        ...(legendaryBeast
+    const relatedSlugs = Array.from(new Set(
+        legendaryBeast
             ? getRelatedLegendaryEarthBeasts(entry.slug, 3).map((beast) => beast.slug)
-            : getRelatedSpecies(entry.slug, 3).map((item) => item.slug)),
-        ...(principleProfile?.relatedSpeciesSlugs ?? [])
-    ])).filter((relatedSlug) => relatedSlug !== entry.slug).slice(0, 3);
+            : getRelatedSpecies(entry.slug, 3).map((item) => item.slug)
+    )).filter((relatedSlug) => relatedSlug !== entry.slug).slice(0, 3);
     const related = relatedSlugs
         .map((relatedSlug) => getSpeciesBySlug(relatedSlug))
         .filter((item): item is SpeciesEntry => Boolean(item));
-    const relatedPowerSpecies = related.slice(0, 3);
+    // This was `related.slice(0, 3)` — the identical list, under a heading promising
+    // animals that share the principle. Use the principle's own species, minus the
+    // ones the section above already showed, and render nothing if none are left.
+    const relatedPowerSpecies = Array.from(new Set(principleProfile?.relatedSpeciesSlugs ?? []))
+        .filter((powerSlug) => powerSlug !== entry.slug && !relatedSlugs.includes(powerSlug))
+        .map((powerSlug) => getSpeciesBySlug(powerSlug))
+        .filter((item): item is SpeciesEntry => Boolean(item))
+        .slice(0, 3);
     const dietContent = getSpeciesDietContent(entry);
     const databaseFieldGuide = entry.databaseSource?.fieldGuide;
     const spottingContent = getSpeciesSpottingContent(entry);
@@ -598,6 +607,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {id: "where", label: t("whereNav")}
     ];
 
+    const canonicalStats = statsResult.stats;
+
     const understandSections: UnderstandGuideSection[] = [
         {
             id: "overview",
@@ -628,19 +639,19 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             )
         },
-        {
+        // Previously this rendered `analysis.identification` — the same array the
+        // overview already shows under "How to identify", so the page repeated itself
+        // verbatim. The canonical stats are the distinct thing this section can say,
+        // and they are present for every catalogued species.
+        ...(canonicalStats ? [{
             id: "abilities",
             navLabel: t("understandAbilities"),
             title: t("understandAbilitiesTitle", {animal: entry.name}),
             whyQuestion: `What biological abilities make ${entry.name} successful?`,
             content: (
-                <ul className="flex list-disc flex-col gap-2 pl-5">
-                    {entry.analysis.identification.map((item) => (
-                        <li key={item}>{renderTextWithSpeciesLinks(item, linkMatcher)}</li>
-                    ))}
-                </ul>
+                <SpeciesStatMeters stats={canonicalStats} />
             )
-        },
+        }] : []),
         {
             id: "behavior",
             navLabel: t("understandBehavior"),
@@ -795,7 +806,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     {t("back")}
                 </Link>
 
-                <section className="relative overflow-hidden rounded-[2rem] border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
+                <section className="relative overflow-hidden border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
                 <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div className="flex flex-wrap gap-2">
@@ -839,8 +850,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
 
                     <div className="order-1 lg:order-2">
-                            <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-[2rem] border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
-                                <div className="relative mb-6 h-28 w-28 overflow-hidden rounded-[1.5rem] border border-amber-200/20 bg-amber-200/[0.06] p-3">
+                            <div className="flex aspect-[4/5] flex-col items-center justify-center border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
+                                <div className="relative mb-6 h-28 w-28 overflow-hidden border border-amber-200/20 bg-amber-200/[0.06] p-3">
                                     <Image
                                         src={getSpeciesArtworkRoute(entry.slug)}
                                         alt={getSpeciesImageAltText(entry, "thumbnail")}
@@ -883,7 +894,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             />
 
             {legendaryBeast ? (
-                <section className="rounded-[1.75rem] border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
+                <section className=" border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Legendary Earth Beast · Tier {legendaryBeast.tier}</p>
                     <h2 className="mt-2 font-display text-3xl font-bold text-white">
                         {legendaryCatalogSeed?.captureSite ?? legendaryBeast.captureSite}
@@ -919,7 +930,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     animalName={entry.name}
                     profile={powerProfile}
                     artwork={(
-                        <div className="relative h-44 w-44 overflow-hidden rounded-[1.5rem] border border-primary-400/20 bg-primary-400/[0.06] p-4">
+                        <div className="relative h-44 w-44 overflow-hidden border border-primary-400/20 bg-primary-400/[0.06] p-4">
                             <SpeciesArtworkImage
                                 slug={entry.slug}
                                 alt={getSpeciesImageAltText(entry, "thumbnail")}
@@ -995,7 +1006,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         <Link
                             key={item.challengeSlug}
                             href={`/comparisons/${item.challengeSlug}`}
-                            className="rounded-[1.5rem] border border-white/10 bg-surface-900/55 p-5 transition hover:-translate-y-0.5 hover:border-primary-300/40"
+                            className=" border border-white/10 bg-surface-900/55 p-5 transition hover:-translate-y-0.5 hover:border-primary-300/40"
                         >
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">VS</p>
                             <h3 className="mt-2 font-display text-2xl font-bold text-white">{item.otherName}</h3>
@@ -1005,7 +1016,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </div>
             </section>
 
-            <section id="where" className="scroll-mt-28 rounded-[1.75rem] border border-white/10 bg-surface-900/55 p-5 md:p-8">
+            <section id="where" className="scroll-mt-28 border border-white/10 bg-surface-900/55 p-5 md:p-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">{t("whereEyebrow")}</p>
                 <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
                     {t("whereTitle", {animal: entry.name})}
@@ -1054,7 +1065,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 labels={{
                     story: t("tabStory"),
                     progress: t("tabProgress"),
-                    growth: t("tabGrowth")
+                    play: t("tabPlay")
                 }}
                 learn={(
                     <div
@@ -1080,21 +1091,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 />
                             </div>
 
-                            <SpeciesRankingCarousel
-                                layout="wide"
-                                speciesSlug={entry.slug}
-                                speciesName={entry.name}
-                                items={[]}
-                                currentCaptureId={featuredCaptureId}
-                                currentCaptureGrade={featuredCaptureGrade}
-                                labels={{
-                                    title: t("rankingsTitle", {animal: entry.name}),
-                                    description: t("rankingsDescription"),
-                                    empty: t("rankingsEmpty"),
-                                    rankLabel: t("rankingsRankLabel"),
-                                    scoreLabel: t("rankingsScoreLabel"),
-                                    byPhotographer: t("rankingsByPhotographer")
-                                }}
+                            <SystemDynamicsSection
+                                speciesProfileId={entry.speciesProfileId}
+                                animalName={entry.name}
                             />
                         </div>
 
@@ -1128,22 +1127,58 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
                 )}
                 stats={(
-                    featuredBaseStats && featuredEffectiveStats ? (
-                        <AnimalStatsPanel
-                            layout="wide"
-                            speciesName={entry.name}
+                    // iOS gates the stats block, the ranking carousel and the capture
+                    // meta block on the same `shouldShowStatsDetailContent`; the web had
+                    // the rankings and capture band on Learn, and the rankings were
+                    // handed a hardcoded empty array so they never rendered at all.
+                    <div className="flex flex-col gap-5">
+                        {featuredBaseStats && featuredEffectiveStats ? (
+                            <AnimalStatsPanel
+                                layout="wide"
+                                speciesName={entry.name}
+                                speciesSlug={entry.slug}
+                                baseStats={featuredBaseStats}
+                                effectiveStats={featuredEffectiveStats}
+                                totalProgressionXP={growthContext.progress?.totalProgressionXP}
+                                recentProgressionSource={undefined}
+                                captureGrade={featuredCaptureGrade}
+                                settingTag={featuredCaptureSetting}
+                                conservationTier={undefined}
+                            />
+                        ) : null}
+
+                        <SpeciesRankingsSection
                             speciesSlug={entry.slug}
-                            baseStats={featuredBaseStats}
-                            effectiveStats={featuredEffectiveStats}
-                            totalProgressionXP={growthContext.progress?.totalProgressionXP}
-                            recentProgressionSource={undefined}
-                            captureGrade={featuredCaptureGrade}
-                            settingTag={featuredCaptureSetting}
-                            conservationTier={undefined}
+                            speciesName={entry.name}
+                            currentCaptureId={featuredCaptureId}
+                            currentCaptureGrade={featuredCaptureGrade}
+                            labels={{
+                                title: t("rankingsTitle", {animal: entry.name}),
+                                description: t("rankingsDescription"),
+                                empty: t("rankingsEmpty"),
+                                rankLabel: t("rankingsRankLabel"),
+                                scoreLabel: t("rankingsScoreLabel"),
+                                byPhotographer: t("rankingsByPhotographer")
+                            }}
                         />
-                    ) : null
+
+                        {featuredCaptureId ? (
+                            <CaptureMetadataBand
+                                layout="wide"
+                                captureId={featuredCaptureId}
+                                capturedAt={undefined}
+                                locationLabel={featuredCaptureLocation}
+                                locationHref={null}
+                                saved={growthContext.progress?.isOwnedByCurrentUser === true}
+                            />
+                        ) : null}
+                    </div>
                 )}
-                compare={(
+                play={(
+                    <div className="flex flex-col gap-5">
+                    <div className="-mx-5 lg:mx-0">
+                        <AnimalTrialsSection speciesProfileId={entry.speciesProfileId} />
+                    </div>
                     <SpeciesGrowthPanel
                         layout="wide"
                         speciesSlug={entry.slug}
@@ -1191,10 +1226,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             openPower: t("growthOpenPower", {power: "{power}"})
                         }}
                     />
+                    </div>
                 )}
             />
 
-            <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden rounded-3xl bg-surface-900/55 md:grid-cols-5">
+            <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden bg-surface-900/55 md:grid-cols-5">
                 {[
                     [t("scientificName"), entry.analysis.scientificName],
                     [t("category"), displayCategory],
@@ -1240,7 +1276,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {relatedBlogPosts.map((post) => (
                             <article
                                 key={post.slug}
-                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                                className=" border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
                             >
                                 <h3 className="font-display font-bold text-2xl text-white">{post.title}</h3>
                                 <p className="text-ink-200 text-base">{post.description}</p>
@@ -1281,7 +1317,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {relatedChallenges.map((challenge) => (
                             <article
                                 key={challenge.slug}
-                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                                className=" border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
                             >
                                 <h3 className="font-display font-bold text-2xl text-white">
                                     <Link
@@ -1320,7 +1356,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             return (
                                 <article
                                     key={ranking.slug}
-                                    className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
+                                    className=" border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
                                 >
                                     <p className="text-primary-200 text-sm md:text-base font-semibold uppercase tracking-[0.18em]">
                                         #{rankingEntry.rank} · {rankingsT(`categories.${ranking.category}`)}

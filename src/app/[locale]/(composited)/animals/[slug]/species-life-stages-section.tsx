@@ -52,7 +52,7 @@ export default function SpeciesLifeStagesSection({
     }
 
     return (
-        <section className="rounded-[1.75rem] border border-white/10 bg-surface-900/55 px-5 py-8 md:px-8">
+        <section className="  border border-white/10 bg-surface-900/55 px-5 py-8 md:px-8">
             <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{labels.title}</h2>
             <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{labels.description}</p>
 

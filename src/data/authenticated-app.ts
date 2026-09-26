@@ -4,7 +4,7 @@ import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifie
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
 import {getAuthenticatedPublicProfileCard, resolveProfileSettingCounts, resolvePublicOverallScore, type PublicProfileCapture} from "@/data/public-profiles";
-import type {DiscoverCaptureItem} from "@/data/discover-timeline";
+import {getDiscoverCaptureById, type DiscoverCaptureItem, type DiscoverCollectorRef, type DiscoverMediaAsset} from "@/data/discover-timeline";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {getSpeciesImageRoute} from "@/data/species-images";
@@ -424,6 +424,21 @@ export type AppCaptureDetail = {
     isChallengeAnalysisEligible: boolean;
     isEligibleCapture: boolean;
     hasUncertaintyFallback: boolean;
+};
+
+/**
+ * A public capture opened from Discover / a profile / a notification — the web
+ * counterpart of iOS `AnimalDetailRoute` with a `spotter` (community
+ * photographer) and `isSavedEntry == false`.
+ */
+export type PublicCaptureDetail = {
+    capture: AppCaptureDetail;
+    collector: DiscoverCollectorRef;
+    mediaAssets: DiscoverMediaAsset[];
+    speciesProfileId: string | null;
+    normalizedIdentityKey: string | null;
+    isChallengeAvailable: boolean;
+    animalDexNumber: number | null;
 };
 
 type QueryRow = Record<string, any>;
@@ -1140,6 +1155,93 @@ export async function getAppDiscoverFeed(limit = 18): Promise<AppDiscoverItem[]>
             imageSrc: species ? getSpeciesImageRoute(species.slug, row.capture_id) : "/images/placeholders/species-no-image.svg"
         };
     });
+}
+
+function gameStatsFromRecord(record: Record<string, number> | null | undefined): AppCaptureGameStats {
+    return {
+        dominance: clampGameStat(record?.dominance),
+        speed: clampGameStat(record?.speed),
+        size: clampGameStat(record?.size),
+        intelligence: clampGameStat(record?.intelligence),
+        rarity: clampGameStat(record?.rarity)
+    };
+}
+
+/**
+ * Any discoverable capture, read through the public Discover view, shaped
+ * like an owned `AppCaptureDetail` so the detail screen renders either. iOS
+ * opens every public card in the same `ScanResultView`; the web detail page
+ * was owner-only, which 404'd Discover, binder and notification taps.
+ */
+export async function getPublicCaptureDetail(id: string): Promise<PublicCaptureDetail | null> {
+    const item = await getDiscoverCaptureById(id);
+    if (!item) return null;
+
+    const baseGameStats = gameStatsFromRecord(item.gameStats);
+    const effectiveGameStats = gameStatsFromRecord(item.effectiveGameStats);
+    const statDeltas: AppCaptureGameStats = {
+        dominance: effectiveGameStats.dominance - baseGameStats.dominance,
+        speed: effectiveGameStats.speed - baseGameStats.speed,
+        size: effectiveGameStats.size - baseGameStats.size,
+        intelligence: effectiveGameStats.intelligence - baseGameStats.intelligence,
+        rarity: effectiveGameStats.rarity - baseGameStats.rarity
+    };
+
+    return {
+        capture: {
+            id: item.captureId,
+            status: "completed",
+            createdAt: item.capturedAt,
+            locationLabel: item.locationLabel,
+            locationLat: item.locationLat,
+            locationLng: item.locationLng,
+            animalName: item.animalName,
+            scientificName: item.scientificName,
+            speciesSlug: item.speciesSlug ?? item.normalizedIdentityKey,
+            breed: item.breedGuess,
+            context: item.contextLabel,
+            conservationTier: item.conservationTier,
+            confidence: item.confidence,
+            typeTags: item.typeTags,
+            gameStats: baseGameStats,
+            baseGameStats,
+            effectiveGameStats,
+            statDeltas,
+            trainingBoosts: {
+                dominance: finiteInteger(item.statBoosts.dominance),
+                speed: finiteInteger(item.statBoosts.speed),
+                intelligence: finiteInteger(item.statBoosts.intelligence)
+            },
+            comparisonStatBoosts: gameStatsFromRecord(item.comparisonBoosts),
+            endorsementBonuses: gameStatsFromRecord(item.endorsementBonuses),
+            settingTag: item.settingTag,
+            humanContext: item.humanContext,
+            captureValidity: null,
+            authenticityStatus: null,
+            signals: null,
+            premiumDetails: null,
+            imageSrc: item.imageSrc,
+            captureGrade: item.captureGrade,
+            gradeBreakdown: item.gradeBreakdown,
+            totalProgressionXP: item.totalProgressionXP,
+            challengeHealth: item.challengeHealth,
+            challengeStake: item.challengeStake,
+            isChallengeReady: item.isChallengeReady,
+            isDiscoverable: true,
+            recentProgressionSource: item.recentProgressionSource,
+            hasChallengeGameStats: item.hasChallengeGameStats,
+            isZooComparisonBanned: item.isZooComparisonBanned,
+            isChallengeAnalysisEligible: item.isChallengeAnalysisEligible,
+            isEligibleCapture: item.isEligibleCapture,
+            hasUncertaintyFallback: item.hasUncertaintyFallback
+        },
+        collector: item.collector,
+        mediaAssets: item.mediaAssets,
+        speciesProfileId: item.speciesProfileId,
+        normalizedIdentityKey: item.normalizedIdentityKey,
+        isChallengeAvailable: item.isChallengeAvailable && item.challengeHealth > 0,
+        animalDexNumber: item.animalDexNumber
+    };
 }
 
 export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail | null> {

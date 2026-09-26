@@ -129,3 +129,16 @@ export function logDevModuleReady(moduleName: string, loadedAtMs: number) {
         console.info(`[adex-perf] ${isoTimestamp()} MODULE ${moduleName} ready after ${formatMs(gapMs)} since import`);
     }
 }
+
+/**
+ * Exposes the recorded steps as a `Server-Timing` header, so a slow response can be
+ * attributed from the browser's network panel or curl instead of by reading server
+ * logs. Returns nothing in production, where the timer itself is never created.
+ */
+export function serverTimingHeader(timer: DevRequestTimer | null): Record<string, string> {
+    if (!timer) return {};
+
+    const entries = timer.steps.map((step) => `${step.name.replace(/[^a-zA-Z0-9_-]/g, "-")};dur=${step.ms.toFixed(1)}`);
+    entries.push(`total;dur=${(perfNow() - timer.startedAt).toFixed(1)}`);
+    return {"Server-Timing": entries.join(", ")};
+}

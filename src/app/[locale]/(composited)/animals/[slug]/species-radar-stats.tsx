@@ -169,7 +169,7 @@ export default function SpeciesRadarStats({
     return (
         <div className={`flex flex-col gap-2.5 ${showsChartChrome ? "" : "px-2"}`}>
             <div ref={chartHostRef} className={showsChartChrome
-                ? "overflow-hidden rounded-[24px] border border-white/[0.06] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(18,18,18,0.9),rgba(148,84,250,0.08))] px-2 py-1.5"
+                ? "overflow-hidden  border border-white/[0.06] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(18,18,18,0.9),rgba(148,84,250,0.08))] px-2 py-1.5"
                 : "overflow-visible py-1"}
             >
                 <svg

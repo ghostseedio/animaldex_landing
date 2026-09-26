@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {blogPosts} from "@/data/blog";
 import {getCompiledBlogSummaries, getCompiledPage, getCompiledPageSummaries, getContentEntry, listContentEntries, saveContentEntry} from "@/lib/admin-content";
+import {getContentViewCounts} from "@/lib/content-page-views";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {normalizePostToDocumentSections} from "@/lib/cms-section-document";
 import type {BlogPost} from "@/data/blog/types";
@@ -130,10 +131,15 @@ export async function GET(request: NextRequest) {
                 throw error;
             }
         }
+        // Totals for the list. Absent counts simply read as zero, so this keeps
+        // working before the `content_page_views` migration is applied.
+        const views = await getContentViewCounts(type);
+
         return NextResponse.json({
             ok: true,
             entries,
-            compiled: type === "blog" ? getCompiledBlogSummaries() : getCompiledPageSummaries()
+            compiled: type === "blog" ? getCompiledBlogSummaries() : getCompiledPageSummaries(),
+            views: Object.fromEntries(views)
         });
     } catch (error) {
         return NextResponse.json({

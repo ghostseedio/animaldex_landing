@@ -151,7 +151,7 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
 
     return (
         <section
-            className={`border-b px-5 py-4 font-sans ${wide ? "lg:rounded-[22px] lg:border lg:px-7 lg:py-6" : ""}`}
+            className={`border-b px-5 py-4 font-sans ${wide ? "lg:  lg:border lg:px-7 lg:py-6" : ""}`}
             style={{
                 background: `linear-gradient(135deg, rgba(${tint},${isUnknown ? 0.08 : 0.18}), rgba(${tint},${isUnknown ? 0.04 : 0.10}), #1f1f1f)`,
                 borderColor: isUnknown ? "rgba(255,255,255,.10)" : `rgba(${tint},.16)`

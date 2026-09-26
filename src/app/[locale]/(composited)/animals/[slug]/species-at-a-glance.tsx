@@ -18,7 +18,7 @@ export default function SpeciesAtAGlanceCard({animalName, glance, labels}: Speci
     return (
         <section
             aria-label={labels.title.replace("{animal}", animalName)}
-            className="rounded-[1.5rem] border border-white/[0.08] bg-surface-900/55 px-5 py-5 md:px-8 md:py-6"
+            className="  border border-white/[0.08] bg-surface-900/55 px-5 py-5 md:px-8 md:py-6"
         >
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/85">
                 {labels.title.replace("{animal}", animalName)}

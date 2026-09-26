@@ -1,12 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+// These surfaces are split across a directory of modules, so assert against the
+// whole set rather than whichever file a symbol happens to live in today.
+const readAll = (entry: string, dir: string) => {
+  const base = new URL(dir, import.meta.url);
+  return [read(entry), ...readdirSync(base).map((name) => readFileSync(new URL(name, base), "utf8"))].join("\n");
+};
 
 const dashboard = read("../app/admin/metrics/admin-metrics-dashboard.tsx");
-const plan = read("../app/admin/metrics/growth-plan-panel.tsx");
-const growthRoute = read("../app/api/admin/growth/route.ts");
+const plan = readAll("../app/admin/metrics/growth-plan-panel.tsx", "../app/admin/metrics/_growth/");
+const growthRoute = readAll("../app/api/admin/growth/route.ts", "../app/api/admin/growth/_lib/");
 const socialRoute = read("../app/api/admin/social-metrics/route.ts");
 const metricsRoute = read("../app/api/admin/metrics/route.ts");
 const migration = read("../../supabase/migrations/20260915120000_growth_platform_attribution.sql");

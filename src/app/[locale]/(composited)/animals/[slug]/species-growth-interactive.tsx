@@ -147,7 +147,7 @@ function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: 
         : match.reason;
 
     return (
-        <section className={`rounded-[20px] border bg-[#1f1f1f] p-4 font-sans ${
+        <section className={`  border bg-[#1f1f1f] p-4 font-sans ${
             match.strength === "partial"
                 ? "border-cyan-300/20"
                 : match.strength === "offPath"
@@ -312,7 +312,7 @@ function PrincipleFusionModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 font-sans md:items-center md:p-4">
-            <div className="flex max-h-[96vh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-[22px] border border-white/10 bg-black shadow-2xl md:max-h-[92vh] md:rounded-[22px]">
+            <div className="flex max-h-[96vh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-[22px] border border-white/10 bg-black shadow-2xl md:max-h-[92vh] md: ">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-white/10 px-5 py-4">
                     <button type="button" onClick={close} className="justify-self-start text-sm font-medium text-white/60">{result ? "Done" : "Cancel"}</button>
                     <h3 className="text-base font-semibold text-white">Fuse Principles</h3>
@@ -444,7 +444,7 @@ export default function SpeciesGrowthInteractive({
     const canChallenge = Boolean(growth.challengeRequest);
 
     const wide = layout === "wide";
-    const compareCardClass = `rounded-[18px] border p-3.5 ${wide ? "lg:h-full lg:rounded-[22px] lg:p-6" : ""}`;
+    const compareCardClass = `  border p-3.5 ${wide ? "lg:h-full lg:  lg:p-6" : ""}`;
     const refresh = () => router.refresh();
 
     const startChallenge = () => {
@@ -501,7 +501,7 @@ export default function SpeciesGrowthInteractive({
         });
     };
 
-    const cardClass = "rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4 font-sans";
+    const cardClass = "  border border-white/10 bg-[#1f1f1f] p-4 font-sans";
     const microClass = "text-[11px] font-semibold text-white/40";
     const capsuleButtonClass = "flex w-full items-center justify-center rounded-full bg-[#A7F432] px-4 py-3 text-[15px] font-medium text-black disabled:opacity-50";
     const targetQuality = growth.match?.matchedQualities[0]?.label ?? growth.challenge?.targetQualityTag.replace(/-/g, " ");
@@ -725,7 +725,7 @@ export default function SpeciesGrowthInteractive({
 
                     {growth.principle ? (
                         <section
-                            className="rounded-[20px] border p-4 font-sans"
+                            className="  border p-4 font-sans"
                             style={{
                                 background: `linear-gradient(145deg,rgba(${fusionTint},${fusionTintIsKnown ? ".18" : ".08"}),rgba(${fusionTint},${fusionTintIsKnown ? ".10" : ".04"}),#1f1f1f)`,
                                 borderColor: fusionTintIsKnown ? `rgba(${fusionTint},.24)` : "rgba(255,255,255,.10)"
@@ -821,7 +821,7 @@ export default function SpeciesGrowthInteractive({
                                 </div>
                             </div>
                             {comparison.challengeHealth === 0 && comparison.isOwnedByCurrentUser ? (
-                                <button type="button" onClick={() => updateComparison("restore")} disabled={isComparisonPending} className={`${capsuleButtonClass} mt-3 rounded-[18px] py-[13px] text-xs font-bold`}>
+                                <button type="button" onClick={() => updateComparison("restore")} disabled={isComparisonPending} className={`${capsuleButtonClass} mt-3  py-[13px] text-xs font-bold`}>
                                     {isComparisonPending ? (
                                         "Restoring..."
                                     ) : (
@@ -896,7 +896,7 @@ export default function SpeciesGrowthInteractive({
                 </section>
             ) : (
                 <section className="mt-1 space-y-4 font-sans">
-                    <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
+                    <div className="  border border-white/[0.07] bg-white/[0.03] p-3.5">
                         <div className="flex items-center gap-3">
                             <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-2 ${comparison.challengeHealth > 0 ? "border-[#A7F432]/20 bg-[#A7F432]/10 text-[#A7F432]" : "border-orange-400/20 bg-orange-400/10 text-orange-300"}`}>
                                 <span className="flex gap-1">
@@ -918,14 +918,14 @@ export default function SpeciesGrowthInteractive({
                             </div>
                         </div>
                         {comparison.challengeHealth === 0 && comparison.isOwnedByCurrentUser ? (
-                            <button type="button" onClick={() => updateComparison("restore")} disabled={isComparisonPending} className={`${capsuleButtonClass} mt-3 rounded-[18px]`}>
+                            <button type="button" onClick={() => updateComparison("restore")} disabled={isComparisonPending} className={`${capsuleButtonClass} mt-3 `}>
                                 {isComparisonPending ? "Restoring..." : "♡  Restore · 2 credits"}
                             </button>
                         ) : null}
                     </div>
 
                     {!comparison.isOwnedByCurrentUser ? (
-                        <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5">
+                        <div className="  border border-white/[0.07] bg-white/[0.03] p-3.5">
                             <h3 className="flex items-center gap-2 text-xs font-medium text-white"><span className="text-[#A7F432]">✦</span> Available actions</h3>
                             <p className="mt-3 text-[11px] font-semibold leading-4 text-white/60">Compare this public animal when your deck meets the current rules.</p>
                             <Link href={treatAsSignedIn ? "/app" : "/account"} className="mt-3 flex items-center gap-3 rounded-[14px] border border-white/[0.07] bg-white/[0.03] p-3.5">
@@ -943,7 +943,7 @@ export default function SpeciesGrowthInteractive({
                                 type="button"
                                 disabled={!comparisonEnabled || isComparisonPending}
                                 onClick={() => updateComparison("update", {isChallengeReady: !comparison.isChallengeReady})}
-                                className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.07] bg-white/[0.03] p-3.5 text-left disabled:opacity-70"
+                                className="flex w-full items-center gap-3  border border-white/[0.07] bg-white/[0.03] p-3.5 text-left disabled:opacity-70"
                             >
                                 <span className={comparison.isChallengeReady ? "text-[#A7F432]" : "text-white/40"}>⚡</span>
                                 <span className="min-w-0 flex-1">

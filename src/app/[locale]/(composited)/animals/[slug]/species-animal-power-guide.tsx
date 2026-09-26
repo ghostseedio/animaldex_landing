@@ -34,7 +34,7 @@ export default function SpeciesAnimalPowerGuide({
     return (
         <section
             id="animal-power"
-            className="scroll-mt-28 overflow-hidden rounded-[1.75rem] border border-primary-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(167,244,50,0.14),transparent_32%),linear-gradient(180deg,rgba(16,22,14,0.96),rgba(8,11,8,0.98))] p-5 md:p-8"
+            className="scroll-mt-28 overflow-hidden  border border-primary-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(167,244,50,0.14),transparent_32%),linear-gradient(180deg,rgba(16,22,14,0.96),rgba(8,11,8,0.98))] p-5 md:p-8"
         >
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:items-start">
                 <div>
@@ -67,7 +67,7 @@ export default function SpeciesAnimalPowerGuide({
                         <PowerBlock title={labels.natureProof}>
                             <div className="grid gap-4 md:grid-cols-2">
                                 {profile.behavioralEvidence.map((item) => (
-                                    <article key={item.title} className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-5">
+                                    <article key={item.title} className="  border border-white/[0.08] bg-white/[0.03] p-5">
                                         <h3 className="font-display text-xl font-bold text-white">{item.title}</h3>
                                         <ProofLine label={labels.observation} text={item.observation} />
                                         {item.biologicalFunction ? <ProofLine label={labels.function} text={item.biologicalFunction} /> : null}
@@ -92,7 +92,7 @@ export default function SpeciesAnimalPowerGuide({
                         <PowerBlock title={labels.practise}>
                             <div className="flex flex-col gap-4">
                                 {profile.embodimentPractices.map((practice) => (
-                                    <article key={practice.title} className="rounded-3xl border border-primary-400/15 bg-primary-400/[0.05] p-5">
+                                    <article key={practice.title} className="  border border-primary-400/15 bg-primary-400/[0.05] p-5">
                                         <h3 className="font-display text-xl font-bold text-white">{practice.title}</h3>
                                         <p className="mt-2 text-ink-100">{practice.instruction}</p>
                                         {practice.animalConnection ? (
@@ -164,7 +164,7 @@ function ContinuumCard({title, text, tone}: {title: string; text: string; tone: 
     }[tone];
 
     return (
-        <article className={`rounded-3xl border p-5 ${toneClass}`}>
+        <article className={`  border p-5 ${toneClass}`}>
             <h4 className="text-xs font-semibold uppercase tracking-[0.16em]">{title}</h4>
             <p className="mt-3 text-base leading-7 text-ink-100">{text}</p>
         </article>

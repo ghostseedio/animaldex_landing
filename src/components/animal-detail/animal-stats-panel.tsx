@@ -136,7 +136,7 @@ function ClassificationChips({settingTag, conservationTier, baseRarity}: {settin
             {showExplanation && settingLabel ? (
                 <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-label={`Why it says ${settingLabel}`}>
                     <button type="button" aria-label="Close" className="absolute inset-0" onClick={() => setShowExplanation(false)} />
-                    <div className="relative z-10 w-full max-w-sm rounded-[20px] border border-white/10 bg-[#1f1f1f] p-5">
+                    <div className="relative z-10 w-full max-w-sm  border border-white/10 bg-[#1f1f1f] p-5">
                         <h3 className="text-[17px] font-semibold text-white">Why it says {settingLabel}</h3>
                         <p className="mt-3 text-[15px] font-medium leading-6 text-white/[0.62]">
                             AnimalDex uses the visible scene and habitat cues in the capture to classify its setting as {settingLabel}.
@@ -254,7 +254,7 @@ export default function AnimalStatsPanel({
     const tier = getBattleTier(effectiveStats);
     const wide = layout === "wide";
     const columnClass = wide
-        ? "lg:flex lg:flex-col lg:gap-5 lg:rounded-[22px] lg:border lg:border-white/[0.08] lg:bg-white/[0.02] lg:p-6"
+        ? "lg:flex lg:flex-col lg:gap-5 lg:  lg:border lg:border-white/[0.08] lg:bg-white/[0.02] lg:p-6"
         : "";
 
     return (

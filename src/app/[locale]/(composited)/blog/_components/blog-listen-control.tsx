@@ -185,71 +185,68 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
             : "Listen to article";
 
     return (
-        <section className="overflow-hidden rounded-3xl border border-primary-500/25 bg-[linear-gradient(135deg,rgba(28,196,81,0.1),rgba(14,27,19,0.84))] shadow-[0_20px_70px_-48px_rgba(47,220,106,0.7)]" aria-label="Article audio">
-            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary-400/30 bg-primary-400/15 text-primary-100">
-                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M4 14h3l4 4V6L7 10H4v4Z" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" strokeLinecap="round" />
-                        </svg>
-                    </div>
-                    <div className="min-w-0">
-                        <p className="font-display text-lg font-bold text-white">Listen to this story</p>
-                        <p className="text-sm text-ink-300">
-                            {isSupported
-                                ? playbackState === "idle"
-                                    ? "Hear the full article read aloud."
-                                    : `${Math.round(progress)}% complete`
-                                : "Text-to-speech is not supported by this browser."}
-                        </p>
-                    </div>
-                </div>
+        <section
+            aria-label="Article audio"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-[color:var(--rule)] py-3"
+        >
+            <button
+                type="button"
+                onClick={togglePlayback}
+                disabled={!isSupported || chunks.length === 0}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--rule-strong)] bg-[color:var(--paper-800)] text-[color:var(--lime)] transition-colors hover:border-[color:var(--lime)] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={primaryLabel}
+            >
+                {playbackState === "playing" ? (
+                    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M5 3h3v14H5V3Zm7 0h3v14h-3V3Z" /></svg>
+                ) : (
+                    <svg viewBox="0 0 20 20" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="m5 3 12 7-12 7V3Z" /></svg>
+                )}
+            </button>
 
-                <div className="flex flex-wrap items-center gap-2">
+            <div className="order-3 w-full min-w-0 sm:order-none sm:flex-1">
+                <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--text-300)]">
+                    {isSupported ? "Listen to this story" : "Listen"}
+                </p>
+                {/* The rail doubles as the progress read-out, so an extra bar and
+                    a percentage caption are both unnecessary. */}
+                <div className="mt-2 h-px w-full bg-[color:var(--rule)]" role="presentation">
+                    <div
+                        className="h-px bg-[color:var(--lime)] transition-[width] duration-500"
+                        style={{width: `${progress}%`}}
+                    />
+                </div>
+                {!isSupported ? (
+                    <p className="mt-2 text-[12px] text-[color:var(--text-400)]">
+                        Text-to-speech is not supported by this browser.
+                    </p>
+                ) : null}
+            </div>
+
+            <div className="ml-auto flex items-center gap-1.5 sm:ml-0">
+                {playbackState !== "idle" && (
                     <button
                         type="button"
-                        onClick={togglePlayback}
-                        disabled={!isSupported || chunks.length === 0}
-                        className="inline-flex min-h-[42px] items-center gap-2 rounded-full bg-primary-300 px-5 text-sm font-bold text-canvas-950 transition-colors hover:bg-primary-200 disabled:cursor-not-allowed disabled:opacity-45"
-                        aria-label={primaryLabel}
+                        onClick={restart}
+                        className="inline-flex h-10 items-center rounded-full px-3 text-[12px] font-semibold text-[color:var(--text-300)] transition-colors hover:text-[color:var(--text-100)]"
                     >
-                        {playbackState === "playing" ? (
-                            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M5 3h3v14H5V3Zm7 0h3v14h-3V3Z" /></svg>
-                        ) : (
-                            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="m5 3 12 7-12 7V3Z" /></svg>
-                        )}
-                        {primaryLabel}
+                        Restart
                     </button>
+                )}
 
-                    {playbackState !== "idle" && (
-                        <button
-                            type="button"
-                            onClick={restart}
-                            className="inline-flex min-h-[42px] items-center justify-center rounded-full border border-line-300 bg-surface-900/70 px-4 text-sm font-semibold text-ink-100 transition-colors hover:border-primary-400 hover:text-primary-100"
-                        >
-                            Restart
-                        </button>
-                    )}
-
-                    <label className="sr-only" htmlFor="blog-narration-speed">Playback speed</label>
-                    <select
-                        id="blog-narration-speed"
-                        value={rate}
-                        onChange={(event) => changeRate(Number(event.target.value))}
-                        disabled={!isSupported}
-                        className="min-h-[42px] rounded-full border border-line-300 bg-surface-900/80 px-3 text-sm font-semibold text-ink-100 outline-none transition-colors hover:border-primary-400 focus:border-primary-400 disabled:opacity-45"
-                        aria-label="Playback speed"
-                    >
-                        <option value={0.8}>0.8×</option>
-                        <option value={1}>1×</option>
-                        <option value={1.25}>1.25×</option>
-                        <option value={1.5}>1.5×</option>
-                    </select>
-                </div>
-            </div>
-            <div className="h-1 bg-white/[0.05]" aria-hidden="true">
-                <div className="h-full bg-primary-300 transition-[width] duration-300" style={{width: `${progress}%`}} />
+                <label className="sr-only" htmlFor="blog-narration-speed">Playback speed</label>
+                <select
+                    id="blog-narration-speed"
+                    value={rate}
+                    onChange={(event) => changeRate(Number(event.target.value))}
+                    disabled={!isSupported}
+                    className="h-10 cursor-pointer rounded-full border border-[color:var(--rule-strong)] bg-transparent px-3 font-mono text-[12px] tabular-nums text-[color:var(--text-200)] outline-none transition-colors hover:border-[color:var(--lime)] focus-visible:border-[color:var(--lime)] disabled:opacity-40"
+                    aria-label="Playback speed"
+                >
+                    <option value={0.8}>0.8&#215;</option>
+                    <option value={1}>1&#215;</option>
+                    <option value={1.25}>1.25&#215;</option>
+                    <option value={1.5}>1.5&#215;</option>
+                </select>
             </div>
         </section>
     );

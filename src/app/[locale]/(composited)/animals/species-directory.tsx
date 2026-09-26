@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
+import {Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
@@ -89,7 +89,52 @@ function parseDirectorySearch(search: string) {
     return {query, letter, region, location, status, sort, order, tier};
 }
 
+type DirectoryFilters = ReturnType<typeof parseDirectorySearch>;
+
+/** One place that knows the directory query shape, so a prefetch and the real
+ *  request produce byte-identical URLs and share the browser's HTTP cache. */
+function buildDirectoryRequestUrl(filters: DirectoryFilters, page: number) {
+    const params = new URLSearchParams();
+    if (filters.query.trim()) params.set("q", filters.query.trim());
+    if (filters.letter !== "all") params.set("letter", filters.letter);
+    if (filters.region !== "all") params.set("region", filters.region);
+    if (filters.location !== "all") params.set("location", filters.location);
+    if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.sort !== "number") params.set("sort", filters.sort);
+    if (filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)) params.set("order", filters.order);
+    if (filters.tier !== "all") params.set("tier", filters.tier);
+    params.set("page", String(page));
+    return `/api/animals/directory?${params.toString()}`;
+}
+
+/**
+ * De-duplicates concurrent requests for the same page. A prefetch and the
+ * load-more it was warming can overlap, and React re-invokes effects on mount in
+ * development, so without this the directory asks for the same page twice.
+ */
+const inFlightDirectoryRequests = new Map<string, Promise<DirectoryPageResponse>>();
+
+function fetchDirectoryPage(url: string) {
+    const existing = inFlightDirectoryRequests.get(url);
+    if (existing) return existing;
+
+    const request = (async () => {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to load animals (${response.status})`);
+        }
+        return await response.json() as DirectoryPageResponse;
+    })().finally(() => {
+        inFlightDirectoryRequests.delete(url);
+    });
+
+    inFlightDirectoryRequests.set(url, request);
+    return request;
+}
+
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+/** Widest grid is 8 columns, so roughly three rows are visible on load. */
+const ABOVE_FOLD_TILES = 24;
 const rarityOrder: SpeciesRarityStatusKey[] = ["relatively-common", "uncommon", "rare", "very-rare"];
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
@@ -303,6 +348,32 @@ function CatalogPawPlaceholder({muted = false}: {muted?: boolean}) {
     );
 }
 
+/**
+ * Reports the live query string without dragging the directory out of server
+ * rendering: `useSearchParams` marks its whole subtree client-only, so it is
+ * confined to this leaf behind a Suspense boundary.
+ */
+function DirectorySearchParamsReader({onChange}: {onChange: (search: string) => void}) {
+    const searchParams = useSearchParams();
+    const search = searchParams.toString();
+
+    useEffect(() => {
+        onChange(search);
+    }, [onChange, search]);
+
+    return null;
+}
+
+/** Placeholder tile so a re-sort or a page fetch fills visible slots straight
+ *  away instead of leaving the grid looking frozen. */
+function CatalogSkeletonTile() {
+    return (
+        <div aria-hidden="true" className="relative aspect-square w-full overflow-hidden bg-surface-900">
+            <span className="absolute inset-0 animate-pulse bg-surface-800/70" />
+        </div>
+    );
+}
+
 function CatalogGlyphThumbnail({
     entry,
     animalDexNumber,
@@ -323,24 +394,77 @@ function CatalogGlyphThumbnail({
     showBattleTier: boolean;
 }) {
     const imageAlt = getSpeciesImageAltText(entry, "thumbnail");
-    const [showPlaceholder, setShowPlaceholder] = useState(false);
     const statValue = statKey ? getCanonicalSortStatValue(entry, statKey) : null;
     const battleTier = showBattleTier ? getBattleTierFromEntry(entry) : null;
-    const resolvedImageSrc = !captured && !hasPublicCapture
+    const targetImageSrc = !captured && !hasPublicCapture
         ? getSpeciesArtworkRoute(entry.slug, 240)
         : `${imageSrc}${imageSrc.includes("?") ? "&" : "?"}thumbnail=1`;
+    // The page is server-rendered from the static catalog, then the directory fetch
+    // replaces every tile's URL with a database-backed one. Pointing the live <img>
+    // at the new URL straight away empties all 48 tiles at once, which is what made
+    // the grid look stuck on black — so decode the replacement first, then swap.
+    const [displaySrc, setDisplaySrc] = useState(targetImageSrc);
+    // Kept per-src rather than as a boolean so a swap re-arms the loading state.
+    const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+    const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (targetImageSrc === displaySrc) return undefined;
+
+        let cancelled = false;
+        const preload = new window.Image();
+        // On error too: the <img> re-requests it and surfaces the paw placeholder.
+        const swap = () => {
+            if (!cancelled) setDisplaySrc(targetImageSrc);
+        };
+        preload.onload = swap;
+        preload.onerror = swap;
+        preload.src = targetImageSrc;
+
+        return () => {
+            cancelled = true;
+        };
+    }, [targetImageSrc, displaySrc]);
+
+    // A burst of tiles can momentarily overwhelm the image endpoint; latching on the
+    // first error left every affected tile showing the generic paw icon for good.
+    // One silent retry, and only then the placeholder.
+    const [retriedSrc, setRetriedSrc] = useState<string | null>(null);
+    const showPlaceholder = failedSrc === displaySrc;
+    const isLoaded = loadedSrc === displaySrc;
 
     return (
-        <div className="relative aspect-square w-full overflow-hidden bg-black">
+        <div className="relative aspect-square w-full overflow-hidden bg-surface-900">
+            {!showPlaceholder && !isLoaded ? (
+                <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-surface-800/70" />
+            ) : null}
             {showPlaceholder ? <CatalogPawPlaceholder muted={!captured} /> : (
                 <img
-                    src={resolvedImageSrc}
+                    src={displaySrc}
                     alt={imageAlt}
                     loading={priority ? "eager" : "lazy"}
                     fetchPriority={priority ? "high" : "auto"}
                     decoding="async"
-                    onError={() => setShowPlaceholder(true)}
-                    className={`h-full w-full transition duration-300 group-hover:scale-[1.02] ${captured || hasPublicCapture ? "object-cover" : "object-contain p-[40.5%] brightness-0 invert opacity-70"} ${!captured && hasPublicCapture ? "grayscale contrast-[.82] brightness-[.92]" : ""}`}
+                    ref={(node) => {
+                        // A cached image can finish before React attaches onLoad.
+                        if (node?.complete && node.naturalWidth > 0) {
+                            setLoadedSrc(displaySrc);
+                        }
+                    }}
+                    onLoad={() => setLoadedSrc(displaySrc)}
+                    onError={(event) => {
+                        if (retriedSrc === displaySrc) {
+                            setFailedSrc(displaySrc);
+                            return;
+                        }
+                        setRetriedSrc(displaySrc);
+                        const image = event.currentTarget;
+                        // Re-request past the browser's negative cache for this URL.
+                        window.setTimeout(() => {
+                            image.src = `${displaySrc}${displaySrc.includes("?") ? "&" : "?"}retry=1`;
+                        }, 400);
+                    }}
+                    className={`relative h-full w-full transition duration-300 group-hover:scale-[1.02] ${captured || hasPublicCapture ? "object-cover" : "object-contain p-[40.5%] brightness-0 invert opacity-70"} ${!captured && hasPublicCapture ? "grayscale contrast-[.82] brightness-[.92]" : ""}`}
                 />
             )}
             {!captured && hasPublicCapture ? (
@@ -388,8 +512,10 @@ export default function SpeciesDirectory({
     copy
 }: SpeciesDirectoryProps) {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
-    const directorySearchKey = searchParams.toString();
+    // Null until the browser reports the query string. Reading useSearchParams here
+    // would opt this whole subtree out of server rendering, so it lives in a child
+    // behind its own boundary and the grid renders from props on the server.
+    const [directorySearchKey, setDirectorySearchKey] = useState<string | null>(null);
     const defaultOrder = getDefaultSpeciesDirectorySortOrder(currentSort);
     const [locationFilterOpen, setLocationFilterOpen] = useState(currentRegion !== "all");
     const [filtersOpen, setFiltersOpen] = useState(
@@ -409,9 +535,18 @@ export default function SpeciesDirectory({
     const [pageCount, setPageCount] = useState(totalPages);
     const [totalCount, setTotalCount] = useState(total);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isApplyingFilters, setIsApplyingFilters] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    // One-slot cache for the next page, warmed as soon as the current one settles.
+    const prefetchRef = useRef<{url: string; payload: Promise<DirectoryPageResponse>} | null>(null);
     const [overrideFilters, setOverrideFilters] = useState<ReturnType<typeof parseDirectorySearch> | null>(null);
     const loadMoreLockRef = useRef(false);
+    /** Last server-rendered page adopted, so re-renders do not reset client state. */
+    const serverPageRef = useRef<string | null>(null);
+    /** Re-armed once the sentinel leaves range, so one approach loads one page. */
+    const loadMoreArmedRef = useRef(true);
+    /** No page is auto-loaded until the reader actually scrolls. */
+    const hasScrolledRef = useRef(false);
     const directoryRequestIdRef = useRef(0);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const activeQuery = overrideFilters?.query ?? currentQuery;
@@ -422,6 +557,18 @@ export default function SpeciesDirectory({
     const activeSort = overrideFilters?.sort ?? currentSort;
     const activeOrder = overrideFilters?.order ?? currentOrder;
     const activeTier = overrideFilters?.tier ?? currentTier;
+    // Memoised so the request URL it produces is referentially stable; loadMore and
+    // the prefetch both depend on it and would otherwise re-run every render.
+    const activeFilters = useMemo<DirectoryFilters>(() => ({
+        query: activeQuery,
+        letter: activeLetter,
+        region: activeRegion,
+        location: activeLocation,
+        status: activeStatus,
+        sort: activeSort,
+        order: activeOrder,
+        tier: activeTier
+    }), [activeQuery, activeLetter, activeRegion, activeLocation, activeStatus, activeSort, activeOrder, activeTier]);
     const filterKey = [
         currentQuery,
         currentLetter,
@@ -440,6 +587,15 @@ export default function SpeciesDirectory({
     }, [currentRegion]);
 
     useEffect(() => {
+        // These props are fresh objects on every server render, so depending on their
+        // identity meant any re-render threw away everything the client had loaded:
+        // appended pages collapsed back to the first, and every tile reverted to the
+        // artwork icon, because the server payload deliberately carries no capture
+        // state. Only adopt the server's page when it actually describes a new one.
+        const serverPage = `${filterKey}|${currentPage}|${totalPages}|${total}|${speciesEntries.length}`;
+        if (serverPageRef.current === serverPage) return;
+        serverPageRef.current = serverPage;
+
         setEntries(speciesEntries);
         setCapturedState(capturedSpecies);
         setSpeciesImageState(speciesImages);
@@ -452,28 +608,15 @@ export default function SpeciesDirectory({
         directoryRequestIdRef.current += 1;
     }, [filterKey, speciesEntries, capturedSpecies, speciesImages, publicCaptureSpecies, currentPage, totalPages, total]);
 
-    const applyDirectoryFilters = useCallback(async (filters: ReturnType<typeof parseDirectorySearch>) => {
+    const applyDirectoryFilters = useCallback(async (filters: DirectoryFilters) => {
         const requestId = directoryRequestIdRef.current + 1;
         directoryRequestIdRef.current = requestId;
         loadMoreLockRef.current = true;
-        const params = new URLSearchParams();
-        if (filters.query.trim()) params.set("q", filters.query.trim());
-        if (filters.letter !== "all") params.set("letter", filters.letter);
-        if (filters.region !== "all") params.set("region", filters.region);
-        if (filters.location !== "all") params.set("location", filters.location);
-        if (filters.status !== "all") params.set("status", filters.status);
-        if (filters.sort !== "number") params.set("sort", filters.sort);
-        if (filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)) params.set("order", filters.order);
-        if (filters.tier !== "all") params.set("tier", filters.tier);
-        params.set("page", "1");
+        prefetchRef.current = null;
+        setIsApplyingFilters(true);
 
         try {
-            const response = await fetch(`/api/animals/directory?${params.toString()}`);
-            if (!response.ok) {
-                throw new Error(`Failed to load animals (${response.status})`);
-            }
-
-            const payload = await response.json() as DirectoryPageResponse;
+            const payload = await fetchDirectoryPage(buildDirectoryRequestUrl(filters, 1));
             if (requestId !== directoryRequestIdRef.current) {
                 return;
             }
@@ -486,13 +629,14 @@ export default function SpeciesDirectory({
             setTotalCount(payload.total);
             setLoadError(null);
         } finally {
-            if (requestId === directoryRequestIdRef.current) {
-                loadMoreLockRef.current = false;
-            }
+            // Same reasoning as loadMore: never leave the lock or the pending flag set.
+            loadMoreLockRef.current = false;
+            setIsApplyingFilters(false);
         }
     }, []);
 
     useEffect(() => {
+        if (directorySearchKey === null) return;
         const filters = parseDirectorySearch(directorySearchKey ? `?${directorySearchKey}` : "");
         setOverrideFilters(filters);
         void applyDirectoryFilters(filters).catch((error) => {
@@ -511,23 +655,15 @@ export default function SpeciesDirectory({
         setLoadError(null);
 
         try {
-            const params = new URLSearchParams();
-            if (activeQuery.trim()) params.set("q", activeQuery.trim());
-            if (activeLetter !== "all") params.set("letter", activeLetter);
-            if (activeRegion !== "all") params.set("region", activeRegion);
-            if (activeLocation !== "all") params.set("location", activeLocation);
-            if (activeStatus !== "all") params.set("status", activeStatus);
-            if (activeSort !== "number") params.set("sort", activeSort);
-            if (activeOrder !== getDefaultSpeciesDirectorySortOrder(activeSort)) params.set("order", activeOrder);
-            if (activeTier !== "all") params.set("tier", activeTier);
-            params.set("page", String(page + 1));
-
-            const response = await fetch(`/api/animals/directory?${params.toString()}`);
-            if (!response.ok) {
-                throw new Error(`Failed to load more animals (${response.status})`);
-            }
-
-            const payload = await response.json() as DirectoryPageResponse;
+            const url = buildDirectoryRequestUrl(activeFilters, page + 1);
+            // The prefetch fired when this page settled, so scrolling usually just
+            // awaits an already-resolved promise instead of a fresh round trip. A
+            // failed prefetch falls back to a live request rather than surfacing.
+            const prefetched = prefetchRef.current;
+            prefetchRef.current = null;
+            const payload = prefetched?.url === url
+                ? await prefetched.payload.catch(() => fetchDirectoryPage(url))
+                : await fetchDirectoryPage(url);
             if (requestId !== directoryRequestIdRef.current) {
                 return;
             }
@@ -547,38 +683,112 @@ export default function SpeciesDirectory({
             }
             setLoadError(error instanceof Error ? error.message : "Failed to load more animals");
         } finally {
-            if (requestId === directoryRequestIdRef.current) {
-                setIsLoadingMore(false);
-                loadMoreLockRef.current = false;
-            }
+            // Cleanup must not be conditional on the request still being current.
+            // Anything that bumps the request id mid-flight — a filter change, or the
+            // server-page sync — used to strand `isLoadingMore` at true, which left
+            // "Loading more animals…" on screen forever and, because the lock stayed
+            // held, killed infinite scroll for the rest of the session.
+            setIsLoadingMore(false);
+            loadMoreLockRef.current = false;
         }
     }, [
-        activeLetter,
-        activeLocation,
-        activeQuery,
-        activeRegion,
-        activeSort,
-        activeOrder,
-        activeStatus,
-        activeTier,
+        activeFilters,
         hasMore,
         isLoadingMore,
         page
     ]);
+
+    // Warm the next page once the current one has settled, so "load more" is
+    // usually a cache read rather than a round trip.
+    useEffect(() => {
+        if (!hasMore || isLoadingMore || isApplyingFilters) return undefined;
+
+        const url = buildDirectoryRequestUrl(activeFilters, page + 1);
+        if (prefetchRef.current?.url === url) return undefined;
+
+        let cancelled = false;
+        const payload = new Promise<DirectoryPageResponse>((resolve, reject) => {
+            window.setTimeout(() => {
+                if (cancelled) {
+                    reject(new Error("prefetch cancelled"));
+                    return;
+                }
+                fetchDirectoryPage(url).then(resolve, reject);
+            }, 150);
+        });
+        // Claim the slot synchronously, so a second run of this effect (React strict
+        // mode double-invokes them in development) cannot start the same prefetch.
+        prefetchRef.current = {url, payload};
+        // Nothing awaits it yet; loadMore reports failures when it does.
+        void payload.catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+            if (prefetchRef.current?.payload === payload) {
+                prefetchRef.current = null;
+            }
+        };
+    }, [activeFilters, hasMore, isApplyingFilters, isLoadingMore, page]);
 
     useEffect(() => {
         if (!hasMore) return undefined;
         const node = sentinelRef.current;
         if (!node) return undefined;
 
-        const observer = new IntersectionObserver((observerEntries) => {
-            if (observerEntries.some((entry) => entry.isIntersecting)) {
-                void loadMore();
-            }
-        }, {rootMargin: "800px 0px"});
+        // An IntersectionObserver alone was not enough here. The footer below the grid
+        // is ~2400px tall on desktop, so the sentinel ends up far above the viewport
+        // once you reach the bottom of the page, and a jump — End key, dragging the
+        // scrollbar, following an anchor — can cross the whole observation zone
+        // between two frames without ever reporting a threshold change. The result
+        // was that the grid simply stopped growing. Measuring the sentinel on scroll
+        // covers both the smooth case and the jump.
+        let frame = 0;
 
+        const check = () => {
+            frame = 0;
+            const rect = node.getBoundingClientRect();
+
+            if (rect.top > window.innerHeight + 800) {
+                // Back out of range — the grid grew, or the reader scrolled up.
+                loadMoreArmedRef.current = true;
+                return;
+            }
+
+            // Before the reader has scrolled at all, only ever arm. On first paint the
+            // images have no height yet, so the sentinel briefly sits inside the
+            // trigger zone and the second page would load on every visit.
+            if (!hasScrolledRef.current) return;
+
+            // One page per approach. Without this latch, parking at the bottom of the
+            // page keeps the sentinel permanently in range and every scroll event
+            // queues another page, walking the whole catalogue unattended.
+            if (!loadMoreArmedRef.current) return;
+            loadMoreArmedRef.current = false;
+            void loadMore();
+        };
+
+        const schedule = () => {
+            if (frame) return;
+            frame = window.requestAnimationFrame(check);
+        };
+
+        const onScroll = () => {
+            hasScrolledRef.current = true;
+            schedule();
+        };
+
+        const observer = new IntersectionObserver(schedule, {rootMargin: "800px 0px"});
         observer.observe(node);
-        return () => observer.disconnect();
+        window.addEventListener("scroll", onScroll, {passive: true});
+        window.addEventListener("resize", schedule, {passive: true});
+        schedule();
+
+        return () => {
+            if (frame) window.cancelAnimationFrame(frame);
+            observer.disconnect();
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", schedule);
+        };
     }, [hasMore, loadMore, entries.length]);
 
     function pushFilters({
@@ -737,6 +947,9 @@ export default function SpeciesDirectory({
 
     return (
         <div className="flex flex-col gap-8">
+            <Suspense fallback={null}>
+                <DirectorySearchParamsReader onChange={setDirectorySearchKey} />
+            </Suspense>
             <div className="flex items-center justify-between gap-4 border-y border-line-300 py-4">
                 <p className="text-sm md:text-base text-ink-300">
                     {resultsSummary}
@@ -972,7 +1185,10 @@ export default function SpeciesDirectory({
             ) : null}
 
             {entries.length > 0 ? (
-                <div className="grid grid-cols-4 gap-0 overflow-hidden bg-black sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                <div
+                    aria-busy={isApplyingFilters || isLoadingMore}
+                    className="grid grid-cols-4 gap-0 overflow-hidden bg-black sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8"
+                >
                     {entries.map((entry, index) => (
                         <Link
                             key={entry.slug}
@@ -988,12 +1204,16 @@ export default function SpeciesDirectory({
                                 captured={capturedState[entry.slug] ?? false}
                                 imageSrc={speciesImageState[entry.slug]}
                                 hasPublicCapture={publicCaptureState[entry.slug] ?? false}
-                                priority={index < 12}
+                                // Eight columns on desktop means ~24 tiles sit above the fold, not 12.
+                                priority={index < ABOVE_FOLD_TILES}
                                 statKey={thumbnailStatKey}
                                 showBattleTier={activeTier !== "all"}
                             />
                         </Link>
                     ))}
+                    {isLoadingMore || isApplyingFilters
+                        ? Array.from({length: 16}, (_, index) => <CatalogSkeletonTile key={`pending-${index}`} />)
+                        : null}
                 </div>
             ) : (
                 <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-8 md:p-10 text-center flex flex-col gap-3">

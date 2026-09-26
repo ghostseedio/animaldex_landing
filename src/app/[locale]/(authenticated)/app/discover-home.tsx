@@ -135,7 +135,7 @@ function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
                     items.map((item) => (
                         <Link
                             key={`${item.kind}-${item.captureId}`}
-                            href={item.href}
+                            href={`/app/capture/${encodeURIComponent(item.captureId)}`}
                             className="group grid grid-cols-[4.5rem_1fr] gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-2 transition hover:border-primary-400/25 hover:bg-white/[0.05]"
                         >
                             <div className="aspect-square overflow-hidden rounded-xl bg-black">

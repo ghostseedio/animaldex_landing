@@ -49,7 +49,7 @@ export default function SpeciesLessonValueSection({result, locale, labels}: Spec
             : result.basisLabel;
 
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10">
+        <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10">
             <div className="flex items-center gap-2 text-ink-300 text-sm uppercase tracking-[0.18em]">
                 <span aria-hidden className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
                     $

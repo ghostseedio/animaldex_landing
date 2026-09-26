@@ -39,9 +39,9 @@ export default function FeaturedSpeciesImageCarousel({
     const activeLocationLabel = activeSlide.captureId ? activeSlide.locationDisplayLabel : null;
 
     return (
-        <section className="rounded-[2rem] border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
-            <div className="relative overflow-hidden rounded-[2rem]">
-                <div className="relative overflow-hidden bg-surface-800/60 aspect-[4/3] rounded-[2rem]">
+        <section className="  border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/30">
+            <div className="relative overflow-hidden ">
+                <div className="relative overflow-hidden bg-surface-800/60 aspect-[4/3] ">
                     <Image
                         key={activeSlide.captureId ?? activeSlide.src}
                         src={activeSlide.src}

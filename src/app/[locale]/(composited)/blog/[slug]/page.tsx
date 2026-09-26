@@ -1,10 +1,15 @@
+import {Fragment} from "react";
 import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {EarnContentLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
-import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
-import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
+import ArticleHero from "@/app/[locale]/(composited)/blog/_components/article-hero";
+import ArticleFigure, {ArticleFigurePair} from "@/app/[locale]/(composited)/blog/_components/article-figure";
+import {ArticleTocInline, ArticleTocRail} from "@/app/[locale]/(composited)/blog/_components/article-toc";
+import {MINIMUM_TOC_SECTIONS} from "@/app/[locale]/(composited)/blog/_components/article-toc-config";
+import ArticleAppCta from "@/app/[locale]/(composited)/blog/_components/article-app-cta";
+import EditorialCard, {EditorialSectionHeading} from "@/app/[locale]/(composited)/blog/_components/editorial-card";
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import {getAnswerPagesForIntents} from "@/data/answer-pages";
 import {BlogMediaBlock, ContentImage} from "@/data/content-schema";
@@ -72,33 +77,23 @@ function buildNarrationText(post: NonNullable<ReturnType<typeof getBlogPost>>) {
 }
 
 function renderImageGallery(images: ContentImage[]) {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {images.map((image) => (
-                <ContentImageFigure
-                    key={`${image.src}-${image.alt}`}
-                    image={image}
-                    sizes="(min-width: 1280px) 460px, (min-width: 768px) 40vw, 100vw"
-                />
-            ))}
-        </div>
-    );
+    return <ArticleFigurePair images={images} />;
 }
 
 function renderSectionMedia(media: BlogMediaBlock) {
     if (media.type === "image") {
-        return <ContentImageFigure image={media.image} />;
+        return <ArticleFigure image={media.image} />;
     }
 
     if (media.type === "video") {
         return (
-            <figure className="flex flex-col gap-3">
+            <figure className="span-wide my-10 flex flex-col gap-3 md:my-14">
                 {media.title && (
-                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--lime)]">
                         {media.title}
                     </p>
                 )}
-                <div className="overflow-hidden rounded-3xl border border-line-300 bg-surface-800/60 shadow-[0_24px_80px_-48px_rgba(8,15,26,0.95)]">
+                <div className="overflow-hidden rounded-sm bg-[color:var(--paper-850)]">
                     <iframe
                         src={media.embedUrl}
                         title={media.title || "AnimalDex video"}
@@ -108,7 +103,7 @@ function renderSectionMedia(media: BlogMediaBlock) {
                     />
                 </div>
                 {(media.caption || media.watchUrl) && (
-                    <figcaption className="text-sm md:text-base text-ink-300">
+                    <figcaption className="editorial-caption max-w-[52ch]">
                         {media.caption}
                         {media.watchUrl && (
                             <>
@@ -117,7 +112,7 @@ function renderSectionMedia(media: BlogMediaBlock) {
                                     href={media.watchUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
+                                    className="text-[color:var(--text-200)] underline decoration-[rgba(167,244,50,0.45)] underline-offset-4 transition-colors hover:decoration-[color:var(--lime)]"
                                 >
                                     Watch on YouTube
                                 </a>
@@ -130,9 +125,9 @@ function renderSectionMedia(media: BlogMediaBlock) {
     }
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="span-wide my-10 flex flex-col gap-3 md:my-14">
             {media.title && (
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--lime)]">
                     {media.title}
                 </p>
             )}
@@ -143,8 +138,8 @@ function renderSectionMedia(media: BlogMediaBlock) {
 
 function renderPullQuote(quote: string) {
     return (
-        <blockquote className="rounded-3xl border border-primary-500/30 bg-primary-500/10 px-5 py-4 md:px-6 md:py-5">
-            <p className="text-primary-100 text-xl md:text-2xl leading-8 font-display">
+        <blockquote className="span-wide my-10 border-l-2 border-[rgba(167,244,50,0.5)] pl-6 md:my-14 md:pl-8">
+            <p className="max-w-[26ch] font-display text-[1.75rem] font-bold leading-[1.2] tracking-[-0.02em] text-[color:var(--text-100)] [text-wrap:balance] md:text-[2.5rem]">
                 {quote}
             </p>
         </blockquote>
@@ -288,16 +283,13 @@ function renderSectionParagraphs(paragraphs: string[], links: BlogLink[]) {
 
     if (generationItems.every((item) => item.parsed)) {
         return (
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ul className="editorial-plain-list my-8 grid grid-cols-1 gap-x-8 gap-y-5 border-y border-[color:var(--rule)] py-6 sm:grid-cols-2">
                 {generationItems.map(({paragraph, parsed}) => (
-                    <li
-                        key={paragraph}
-                        className="list-none rounded-2xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-2"
-                    >
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
+                    <li key={paragraph} className="flex list-none flex-col gap-1.5 pl-0">
+                        <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--lime)]">
                             {parsed!.label}
                         </p>
-                        <p className="text-ink-200 text-base md:text-lg leading-7">
+                        <p className="text-[15px] leading-relaxed text-[color:var(--text-200)]">
                             {renderTextWithLinks(parsed!.body, links)}
                         </p>
                     </li>
@@ -309,25 +301,18 @@ function renderSectionParagraphs(paragraphs: string[], links: BlogLink[]) {
     return generationItems.map(({paragraph, parsed}) => {
         if (parsed) {
             return (
-                <div
-                    key={paragraph}
-                    className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-2"
-                >
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
+                <div key={paragraph} className="my-6 border-l-2 border-[color:var(--rule-strong)] pl-5">
+                    <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--lime)]">
                         {parsed.label}
                     </p>
-                    <p className="text-ink-200 text-base md:text-lg leading-7">
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-[color:var(--text-200)]">
                         {renderTextWithLinks(parsed.body, links)}
                     </p>
                 </div>
             );
         }
 
-        return (
-            <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">
-                {renderTextWithLinks(paragraph, links)}
-            </p>
-        );
+        return <p key={paragraph}>{renderTextWithLinks(paragraph, links)}</p>;
     });
 }
 
@@ -361,32 +346,27 @@ function renderSectionCards(cards: NonNullable<ReturnType<typeof getBlogPost>>["
     }
 
     return (
-        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ul className="editorial-plain-list my-8 grid grid-cols-1 gap-x-8 gap-y-6 border-t border-[color:var(--rule)] pt-6 sm:grid-cols-2">
             {cards.map((card) => (
-                <li
-                    key={`${card.label}-${card.body}`}
-                    className="list-none overflow-hidden rounded-2xl border border-line-300/80 bg-surface-800/60"
-                >
+                <li key={`${card.label}-${card.body}`} className="flex list-none flex-col gap-2 pl-0">
                     {card.image && (
-                        <div className="border-b border-line-300/80 bg-surface-700/60">
+                        <div className="relative mb-1 w-full overflow-hidden rounded-sm bg-[color:var(--paper-850)]" style={{aspectRatio: "3 / 2"}}>
                             <Image
                                 src={card.image.src}
                                 alt={card.image.alt}
-                                width={card.image.width}
-                                height={card.image.height}
-                                sizes="(min-width: 1024px) 420px, 100vw"
-                                className="h-auto w-full object-cover"
+                                fill
+                                loading="lazy"
+                                sizes="(min-width: 640px) 22rem, 100vw"
+                                className="object-cover"
                             />
                         </div>
                     )}
-                    <div className="flex flex-col gap-3 p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">
-                            {card.label}
-                        </p>
-                        <p className="text-ink-200 text-base md:text-lg leading-7">
-                            {renderTextWithLinks(card.body, card.links || [])}
-                        </p>
-                    </div>
+                    <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--lime)]">
+                        {card.label}
+                    </p>
+                    <p className="text-[15px] leading-relaxed text-[color:var(--text-200)]">
+                        {renderTextWithLinks(card.body, card.links || [])}
+                    </p>
                 </li>
             ))}
         </ul>
@@ -399,16 +379,16 @@ function renderSectionTable(table: NonNullable<ReturnType<typeof getBlogPost>>["
     }
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-line-300/80 bg-surface-800/60">
+        <div className="span-wide my-10 md:my-12">
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse text-left">
+                <table className="w-full min-w-[520px] border-collapse text-left">
                     <thead>
-                        <tr className="border-b border-line-300/80 bg-surface-700/70">
+                        <tr>
                             {table.columns.map((column) => (
                                 <th
                                     key={column}
                                     scope="col"
-                                    className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200"
+                                    className="border-b border-[color:var(--rule-strong)] px-0 py-3 pr-6 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-300)]"
                                 >
                                     {column}
                                 </th>
@@ -417,7 +397,7 @@ function renderSectionTable(table: NonNullable<ReturnType<typeof getBlogPost>>["
                     </thead>
                     <tbody>
                         {table.rows.map((row, rowIndex) => (
-                            <tr key={`${row.cells.join("-")}-${rowIndex}`} className="border-b border-line-300/60 last:border-b-0">
+                            <tr key={`${row.cells.join("-")}-${rowIndex}`}>
                                 {row.cells.map((cell, cellIndex) => {
                                     const CellTag = cellIndex === 0 ? "th" : "td";
 
@@ -426,8 +406,8 @@ function renderSectionTable(table: NonNullable<ReturnType<typeof getBlogPost>>["
                                             key={`${cell}-${cellIndex}`}
                                             scope={cellIndex === 0 ? "row" : undefined}
                                             className={cellIndex === 0
-                                                ? "px-5 py-4 align-top text-base font-semibold text-white"
-                                                : "px-5 py-4 align-top text-base leading-7 text-ink-200"
+                                                ? "border-b border-[color:var(--rule-soft)] px-0 py-3.5 pr-6 text-left align-top font-sans text-[15px] font-semibold normal-case tracking-normal text-[color:var(--text-100)]"
+                                                : "border-b border-[color:var(--rule-soft)] px-0 py-3.5 pr-6 align-top text-[15px] leading-relaxed text-[color:var(--text-200)]"
                                             }
                                         >
                                             {cell}
@@ -625,66 +605,64 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
         ]
     };
     const schemas = faqSchema ? [schema, faqSchema, breadcrumbSchema] : [schema, breadcrumbSchema];
-    const tableOfContentsItems = post.tableOfContents && post.tableOfContents.length > 0
+    const tableOfContentsTitles = post.tableOfContents && post.tableOfContents.length > 0
         ? post.tableOfContents
-        : post.sections.map((section) => section.title);
+        : post.sections.filter((section) => section.html === undefined).map((section) => section.title);
+    const tocItems = tableOfContentsTitles.map((title) => ({id: toAnchorId(title), title}));
+    // A short article gets no rail, and therefore no reserved column for one.
+    const showsTocRail = tocItems.length >= MINIMUM_TOC_SECTIONS;
     const narrationText = buildNarrationText(post);
 
     return (
-        <article className="w-full max-w-[88rem] mx-auto px-4 md:px-8 py-16 md:py-24 flex flex-col gap-10">
+        <article className="editorial w-full bg-[color:var(--paper-950)] pb-4">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
-            {post.headerHtml ? <RenderedCodeFrame title="Article header" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml})} minHeight={240} /> : <div className="flex flex-col gap-4 max-w-5xl">
-                <Link href="/blog" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
-                    {t("back")}
-                </Link>
-                <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{post.title}</h1>
-                <p className="text-lg md:text-xl xl:text-2xl text-ink-200">{post.description}</p>
-                <div className="text-ink-300 text-sm md:text-base flex flex-wrap gap-4">
-                    <span>{t("published")} {formatDate(locale, post.publishedAt)}</span>
-                    {post.updatedAt && <span>{t("updated")} {formatDate(locale, post.updatedAt)}</span>}
-                    <span>{post.readingMinutes} {t("minutes")}</span>
-                    {post.author && <span>{t("author")} {post.author}</span>}
+            {post.headerHtml ? (
+                <div className="editorial-grid pt-10">
+                    <div className="span-wide">
+                        <RenderedCodeFrame title="Article header" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml})} minHeight={240} />
+                    </div>
                 </div>
-                {post.originalPublicationUrl ? (
-                    <p className="text-sm md:text-base text-ink-300">
-                        Originally published on{" "}
-                        <a
-                            href={post.originalPublicationUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary-200 hover:text-primary-100 underline underline-offset-4"
-                        >
-                            {post.originalPublicationLabel ?? "AnimalDex’s Substack"}
-                        </a>
-                    </p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                    {post.tags.map((tag) => (
-                        <span key={tag} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
-            </div>}
+            ) : (
+                <ArticleHero
+                    title={post.title}
+                    description={post.description}
+                    image={post.featuredImage}
+                    tags={post.tags}
+                    author={post.author}
+                    publishedLabel={`${t("published")} ${formatDate(locale, post.publishedAt)}`}
+                    updatedLabel={post.updatedAt ? `${t("updated")} ${formatDate(locale, post.updatedAt)}` : undefined}
+                    readingLabel={`${post.readingMinutes} ${t("minutes")}`}
+                    backLabel={t("back")}
+                    originalPublication={post.originalPublicationUrl ? {
+                        href: post.originalPublicationUrl,
+                        label: post.originalPublicationLabel ?? "AnimalDex’s Substack"
+                    } : null}
+                />
+            )}
 
-            <BlogListenControl locale={locale} text={narrationText} />
+            {/* Body: reading column with a contextual rail beside it on wide
+                screens. The rail is outside the prose grid so figures inside can
+                still break the measure without fighting it for space. */}
+            <div className="mx-auto flex w-full max-w-[84rem] justify-center gap-0 px-0 xl:gap-12">
+                <div className="min-w-0 flex-1">
+                    <div className="editorial-grid">
+                        <div className="mt-8 flex flex-col md:mt-10">
+                            <BlogListenControl locale={locale} text={narrationText} />
+                            <ArticleTocInline items={tocItems} label={t("contentsLabel")} />
+                        </div>
+                    </div>
 
-            <ContentImageFigure image={post.featuredImage} priority />
-
-            {renderTableOfContents(tableOfContentsItems, "mobile")}
-
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_19rem] gap-8 items-start">
-                <div className="min-w-0 flex flex-col gap-10">
-                    <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
+                    <div className="editorial-grid editorial-prose mt-10 md:mt-14">
                         {post.sections.map((section) => {
                             if (section.html !== undefined) {
                                 return (
-                                    <section key={section.title} className="overflow-hidden rounded-2xl border border-line-300 bg-white">
+                                    <section key={section.title} className="span-wide my-10 overflow-hidden rounded-sm bg-white">
                                         <RenderedCodeFrame title={section.title || "Custom page section"} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} />
                                     </section>
                                 );
                             }
+
                             const sectionTextLinks = [
                                 ...buildSpeciesTextLinks([
                                     ...getMentionedSpeciesSlugs(post),
@@ -695,241 +673,252 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                             const sectionSpecies = (section.speciesSlugs || [])
                                 .map((speciesSlug) => getSpeciesBySlug(speciesSlug))
                                 .filter((entry): entry is NonNullable<ReturnType<typeof getSpeciesBySlug>> => Boolean(entry));
+                            const isAnswerSection = Boolean(section.kicker?.toLowerCase().includes("answer"));
+                            const leadParagraph = isAnswerSection ? section.paragraphs[0] : undefined;
+                            const bodyParagraphs = isAnswerSection ? section.paragraphs.slice(1) : section.paragraphs;
 
                             return (
-                                <section key={section.title} id={toAnchorId(section.title)} className="scroll-mt-24 flex flex-col gap-4">
-                                    {section.kicker && !section.kicker.toLowerCase().includes("answer") && (
-                                        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">
-                                            {section.kicker}
-                                        </p>
-                                    )}
-                                    {(section.headingLevel ?? 2) === 3
-                                        ? <h3 className="font-display font-bold text-2xl text-white md:text-3xl">{section.title}</h3>
-                                        : <h2 className="font-display font-bold text-3xl text-white md:text-4xl">{section.title}</h2>}
-                                    {(() => {
-                                        const isAnswerSection = Boolean(section.kicker?.toLowerCase().includes("answer"));
-                                        const leadParagraph = isAnswerSection ? section.paragraphs[0] : undefined;
-                                        const bodyParagraphs = isAnswerSection ? section.paragraphs.slice(1) : section.paragraphs;
+                                <Fragment key={section.title}>
+                                    <div id={toAnchorId(section.title)} className="scroll-mt-28">
+                                        {section.kicker && !isAnswerSection ? (
+                                            <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--lime)]">
+                                                {section.kicker}
+                                            </p>
+                                        ) : null}
+                                        {(section.headingLevel ?? 2) === 3
+                                            ? <h3>{section.title}</h3>
+                                            : <h2>{section.title}</h2>}
+                                    </div>
 
-                                        return (
-                                            <>
-                                                {leadParagraph ? (
-                                                    <div
-                                                        data-speakable="true"
-                                                        className="rounded-3xl border border-primary-500/25 bg-gradient-to-br from-primary-500/15 via-surface-800/80 to-surface-900/90 px-5 py-5 md:px-6 md:py-6"
-                                                    >
-                                                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200 mb-3">
-                                                            {section.kicker}
-                                                        </p>
-                                                        <p className="text-ink-100 text-lg md:text-xl leading-8">
-                                                            {renderTextWithLinks(leadParagraph, sectionTextLinks)}
-                                                        </p>
-                                                    </div>
-                                                ) : null}
-                                                {bodyParagraphs.length > 0 && renderSectionParagraphs(bodyParagraphs, sectionTextLinks)}
-                                            </>
-                                        );
-                                    })()}
-                                    {section.cards && renderSectionCards(section.cards)}
-                                    {section.table && renderSectionTable(section.table)}
-                                    {section.pullQuote && renderPullQuote(section.pullQuote)}
+                                    {leadParagraph ? (
+                                        <div data-speakable="true" className="border-l-2 border-[rgba(167,244,50,0.5)] pl-5 md:pl-6">
+                                            {section.kicker ? (
+                                                <p className="mb-2 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--lime)]">
+                                                    {section.kicker}
+                                                </p>
+                                            ) : null}
+                                            <p className="text-[1.0625rem] leading-relaxed text-[color:var(--text-100)] md:text-xl">
+                                                {renderTextWithLinks(leadParagraph, sectionTextLinks)}
+                                            </p>
+                                        </div>
+                                    ) : null}
+
+                                    {bodyParagraphs.length > 0 ? renderSectionParagraphs(bodyParagraphs, sectionTextLinks) : null}
+                                    {section.cards ? renderSectionCards(section.cards) : null}
+                                    {section.table ? renderSectionTable(section.table) : null}
+                                    {section.pullQuote ? renderPullQuote(section.pullQuote) : null}
                                     {renderCodeBlocks(section.codeBlocks)}
-                                    {section.media && renderSectionMedia(section.media)}
-                                    {section.subsections && section.subsections.map((subsection) => (
-                                        <section key={`${section.title}-${subsection.title}`} className="flex flex-col gap-4 rounded-3xl border border-line-300/80 bg-surface-800/50 p-5 md:p-6">
-                                            <h3 className="font-display font-bold text-2xl md:text-3xl text-white">{subsection.title}</h3>
-                                            {subsection.media && renderSectionMedia(subsection.media)}
+                                    {section.media ? renderSectionMedia(section.media) : null}
+
+                                    {section.subsections ? section.subsections.map((subsection) => (
+                                        <Fragment key={`${section.title}-${subsection.title}`}>
+                                            <h3 id={toAnchorId(subsection.title)} className="scroll-mt-28">{subsection.title}</h3>
+                                            {subsection.media ? renderSectionMedia(subsection.media) : null}
                                             {renderSectionParagraphs(subsection.paragraphs, sectionTextLinks)}
-                                            {subsection.pullQuote && renderPullQuote(subsection.pullQuote)}
-                                        </section>
-                                    ))}
+                                            {subsection.pullQuote ? renderPullQuote(subsection.pullQuote) : null}
+                                        </Fragment>
+                                    )) : null}
+
                                     {section.inlineLinks && section.inlineLinks.length > 0 ? (
-                                        <p className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                                        <p className="flex flex-wrap gap-x-5 gap-y-2 text-[14px]">
                                             {section.inlineLinks.map((link) => (
                                                 <EarnContentLink
                                                     key={`${section.title}-${link.slug}`}
                                                     href={resolveBlogLinkHref(link)}
                                                     source="blog"
-                                                    className="font-semibold text-primary-200 underline underline-offset-4 hover:text-primary-100"
+                                                    className="font-semibold"
                                                 >
                                                     {link.text}
                                                 </EarnContentLink>
                                             ))}
                                         </p>
                                     ) : null}
-                                    {sectionSpecies.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
+
+                                    {sectionSpecies.length > 0 ? (
+                                        <p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
                                             {sectionSpecies.map((species) => (
                                                 <Link
                                                     key={species.slug}
                                                     href={`/animals/${species.slug}`}
-                                                    className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm"
+                                                    className="text-[color:var(--text-300)] underline decoration-[color:var(--rule-strong)] underline-offset-4 transition-colors hover:text-[color:var(--text-100)] hover:decoration-[color:var(--lime)]"
                                                 >
                                                     {species.name}
                                                 </Link>
                                             ))}
-                                        </div>
-                                    )}
-                                </section>
+                                        </p>
+                                    ) : null}
+                                </Fragment>
                             );
                         })}
                     </div>
 
-            <SystemsIntelligenceSection
-                items={systemsItems}
-                labels={{
-                    title: t("systemsIntelligenceTitle"),
-                    description: t("systemsIntelligenceDescription"),
-                    systemRole: t("systemRoleLabel"),
-                    specializedHardware: t("specializedHardwareLabel"),
-                    systemsScript: t("systemsScriptLabel"),
-                    strategicInsight: t("strategicInsightLabel"),
-                    readSpeciesGuide: t("readSpeciesGuide")
-                }}
-            />
-
-            {post.faq && post.faq.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("faqTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("faqDescription")}</p>
-                    {post.faq.map((item) => (
-                        <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
-                            <h3 className="text-white text-xl font-semibold">{item.question}</h3>
-                            <p className="text-ink-200 text-base md:text-lg mt-2">{item.answer}</p>
+                    <div className="editorial-grid">
+                        <div className="span-wide">
+                            <SystemsIntelligenceSection
+                                items={systemsItems}
+                                labels={{
+                                    title: t("systemsIntelligenceTitle"),
+                                    description: t("systemsIntelligenceDescription"),
+                                    systemRole: t("systemRoleLabel"),
+                                    specializedHardware: t("specializedHardwareLabel"),
+                                    systemsScript: t("systemsScriptLabel"),
+                                    strategicInsight: t("strategicInsightLabel"),
+                                    readSpeciesGuide: t("readSpeciesGuide")
+                                }}
+                            />
                         </div>
-                    ))}
-                </section>
-            )}
-
-            {post.sources && post.sources.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Sources and Further Reading</h2>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {post.sources.map((source) => (
-                            <li key={source.href} className="list-none rounded-2xl border border-line-300/80 bg-surface-800/60 p-4">
-                                <a
-                                    href={source.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary-200 hover:text-primary-100 transition-colors underline underline-offset-4"
-                                >
-                                    {source.label}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            )}
-
-            {mentionedSpeciesLinks.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("animalsMentionedTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("animalsMentionedDescription")}</p>
-                    <div className="flex flex-wrap gap-2">
-                        {mentionedSpeciesLinks.map((species) => (
-                            <Link
-                                key={species.slug}
-                                href={`/animals/${species.slug}`}
-                                className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100 text-sm"
-                            >
-                                {species.name}
-                            </Link>
-                        ))}
                     </div>
-                </section>
-            )}
 
-            {relatedChallenges.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedChallengesTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("relatedChallengesDescription")}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedChallenges.map((challenge) => (
-                            <article
-                                key={challenge.slug}
-                                className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-3"
-                            >
-                                <h3 className="font-display font-bold text-2xl text-white">
-                                    <Link
-                                        href={`/comparisons/${challenge.slug}`}
-                                        className="hover:text-primary-100 transition-colors"
-                                    >
-                                        {challenge.title}
-                                    </Link>
-                                </h3>
-                                <p className="text-ink-200 text-base">{challenge.quickVerdict}</p>
-                                <Link
-                                    href={`/comparisons/${challenge.slug}`}
-                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                    underline
-                                >
-                                    {t("readChallenge")}
-                                </Link>
-                            </article>
-                        ))}
-                    </div>
-                </section>
-            )}
+                    {post.faq && post.faq.length > 0 ? (
+                        <section className="editorial-grid mt-16 md:mt-24">
+                            <div className="flex flex-col gap-6">
+                                <EditorialSectionHeading title={t("faqTitle")} description={t("faqDescription")} />
+                                <dl className="flex flex-col">
+                                    {post.faq.map((item) => (
+                                        <div key={item.question} className="border-b border-[color:var(--rule)] py-5 last:border-b-0">
+                                            <dt className="font-display text-[1.0625rem] font-bold text-[color:var(--text-100)] md:text-lg">
+                                                {item.question}
+                                            </dt>
+                                            <dd className="mt-2 text-[15px] leading-relaxed text-[color:var(--text-300)]">
+                                                {item.answer}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </div>
+                        </section>
+                    ) : null}
 
-            {relatedAnswerPages.length > 0 && (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("answerPagesTitle")}</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">{t("answerPagesDescription")}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedAnswerPages.map((page) => (
-                            <article
-                                key={page.slug}
-                                className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-5 flex flex-col gap-3"
-                            >
-                                <h3 className="font-display font-bold text-2xl text-white">{page.shortTitle}</h3>
-                                <p className="text-ink-200 text-base">{page.metaDescription}</p>
-                                <Link
+                    {mentionedSpeciesLinks.length > 0 ? (
+                        <section className="editorial-grid mt-16 md:mt-20">
+                            <div className="flex flex-col gap-5">
+                                <EditorialSectionHeading title={t("animalsMentionedTitle")} description={t("animalsMentionedDescription")} />
+                                <p className="flex flex-wrap items-center gap-x-4 gap-y-2.5 text-[14px]">
+                                    {mentionedSpeciesLinks.map((species) => (
+                                        <Link
+                                            key={species.slug}
+                                            href={`/animals/${species.slug}`}
+                                            className="text-[color:var(--text-200)] underline decoration-[color:var(--rule-strong)] underline-offset-4 transition-colors hover:text-[color:var(--text-100)] hover:decoration-[color:var(--lime)]"
+                                        >
+                                            {species.name}
+                                        </Link>
+                                    ))}
+                                </p>
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {post.sources && post.sources.length > 0 ? (
+                        <section className="editorial-grid mt-16 md:mt-20">
+                            <div className="flex flex-col gap-5">
+                                <EditorialSectionHeading title="Sources and further reading" />
+                                <ul className="flex flex-col">
+                                    {post.sources.map((source) => (
+                                        <li key={source.href} className="list-none border-b border-[color:var(--rule)] last:border-b-0">
+                                            <a
+                                                href={source.href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="group flex items-center justify-between gap-4 py-3.5 text-[14px] text-[color:var(--text-200)] transition-colors hover:text-[color:var(--text-100)]"
+                                            >
+                                                {source.label}
+                                                <span aria-hidden="true" className="shrink-0 text-[color:var(--text-400)] transition-transform group-hover:translate-x-0.5 group-hover:text-[color:var(--lime)]">↗</span>
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </section>
+                    ) : null}
+                </div>
+
+                {showsTocRail ? (
+                    <aside className="hidden w-[14rem] shrink-0 pt-14 xl:block">
+                        <ArticleTocRail items={tocItems} label={t("contentsLabel")} />
+                    </aside>
+                ) : null}
+            </div>
+
+            {relatedAnswerPages.length > 0 ? (
+                <section className="editorial-grid mt-16 md:mt-24">
+                    <div className="span-wide flex flex-col gap-6">
+                        <EditorialSectionHeading title={t("answerPagesTitle")} description={t("answerPagesDescription")} />
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-2 md:grid-cols-2">
+                            {relatedAnswerPages.map((page) => (
+                                <EditorialCard
+                                    key={page.slug}
                                     href={`/${page.slug}`}
-                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                    underline
-                                >
-                                    {t("readAnswerPage")}
-                                </Link>
-                            </article>
-                        ))}
+                                    title={page.shortTitle}
+                                    description={page.metaDescription}
+                                    variant="row"
+                                />
+                            ))}
+                        </div>
                     </div>
                 </section>
-            )}
+            ) : null}
 
-            <IntentCtaCard
+            {relatedChallenges.length > 0 ? (
+                <section className="editorial-grid mt-16 md:mt-20">
+                    <div className="span-wide flex flex-col gap-6">
+                        <EditorialSectionHeading title={t("relatedChallengesTitle")} description={t("relatedChallengesDescription")} />
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-2 md:grid-cols-2">
+                            {relatedChallenges.map((challenge) => (
+                                <EditorialCard
+                                    key={challenge.slug}
+                                    href={`/comparisons/${challenge.slug}`}
+                                    title={challenge.title}
+                                    description={challenge.quickVerdict}
+                                    variant="row"
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            ) : null}
+
+            <ArticleAppCta
                 title={t("ctaTitle")}
                 description={t("ctaDescription")}
-                buttonLabel={t("ctaButton")}
                 supportItems={ctaSupportItems}
             />
 
-            {relatedPosts.length > 0 && (
-                <section className="flex flex-col gap-4">
-                    <h2 className="font-display font-bold text-4xl text-white">{t("relatedTitle")}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {relatedPosts.map((relatedPost) => (
-                            <article
-                                key={relatedPost.slug}
-                                className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-3"
-                            >
-                                <h3 className="font-display font-bold text-2xl text-white">{relatedPost.title}</h3>
-                                <p className="text-ink-200 text-base">{relatedPost.description}</p>
-                                <Link
-                                    href={`/blog/${relatedPost.slug}`}
-                                    className="mt-auto text-primary-200 hover:text-primary-100 transition-colors"
-                                    underline
-                                >
-                                    {t("readArticle")}
-                                </Link>
-                            </article>
-                        ))}
+            {relatedPosts.length > 0 ? (
+                <section className="editorial-grid">
+                    <div className="span-wide flex flex-col gap-8 border-t border-[color:var(--rule)] pt-10">
+                        <EditorialSectionHeading title={t("relatedTitle")} />
+                        {/* One lead recommendation, then the rest: a plain
+                            three-up of identical cards is what made this read
+                            as placeholders. */}
+                        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-12">
+                            <EditorialCard
+                                href={`/blog/${relatedPosts[0].slug}`}
+                                title={relatedPosts[0].title}
+                                description={relatedPosts[0].description}
+                                kicker={relatedPosts[0].tags?.[0]}
+                                meta={`${relatedPosts[0].readingMinutes} ${t("minutes")}`}
+                                image={relatedPosts[0].featuredImage}
+                                variant="feature"
+                            />
+                            {relatedPosts.length > 1 ? (
+                                <div className="flex flex-col">
+                                    {relatedPosts.slice(1).map((relatedPost) => (
+                                        <EditorialCard
+                                            key={relatedPost.slug}
+                                            href={`/blog/${relatedPost.slug}`}
+                                            title={relatedPost.title}
+                                            description={relatedPost.description}
+                                            meta={`${relatedPost.readingMinutes} ${t("minutes")}`}
+                                            image={relatedPost.featuredImage}
+                                            variant="row"
+                                        />
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 </section>
-            )}
-                </div>
-
-                {renderTableOfContents(tableOfContentsItems, "desktop")}
-            </div>
+            ) : null}
         </article>
     );
 }

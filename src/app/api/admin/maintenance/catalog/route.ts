@@ -3,6 +3,7 @@ import {invalidateDatabaseSpeciesCache} from "@/data/database-species-pages";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {describeSpeciesArtwork} from "@/data/species-artwork-index";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {attachProfileStats} from "@/lib/species-catalog-stats";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 /**
@@ -81,14 +82,15 @@ type CatalogEntry = Record<string, unknown> & {
  * usually hidden *because* something is wrong with it, and captures can still be
  * sitting on it. Falling back to the underlying table keeps those reachable.
  */
-async function loadProfile(speciesProfileId: string) {
+async function loadProfile(speciesProfileId: string): Promise<Record<string, unknown> | null> {
     const [published] = await rows<Record<string, unknown>>(`species_catalog_v1?${new URLSearchParams({
-        select: "species_profile_id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,canonical_game_stats,size_scale_score,species_subtitle,species_subtitle_story,principle_name,principle_expression,core_lesson,biological_basis,short_motto,application_example,public_capture_count",
+        select: "species_profile_id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,species_subtitle,species_subtitle_story,principle_name,principle_expression,core_lesson,biological_basis,short_motto,application_example,public_capture_count",
         species_profile_id: `eq.${speciesProfileId}`,
         limit: "1"
     })}`);
 
-    if (published) return published;
+    // The view carries no stats, so they come from the profile row behind it.
+    if (published) return (await attachProfileStats([published]))[0];
 
     const [hidden] = await rows<Record<string, unknown>>(`species_profiles?${new URLSearchParams({
         select: "id,animaldex_number,display_name,animal_name,scientific_name,normalized_identity_key,landing_page_slug,identity_kind,identity_resolution_mode,identity_explanation,identity_evidence_guidance,catalog_status,canonical_game_stats,size_scale_score",

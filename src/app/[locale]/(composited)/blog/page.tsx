@@ -8,7 +8,9 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {answerPages} from "@/data/answer-pages";
-import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import EditorialCard from "@/app/[locale]/(composited)/blog/_components/editorial-card";
+import ArticleAppCta from "@/app/[locale]/(composited)/blog/_components/article-app-cta";
+import {hasImage, imageFit} from "@/app/[locale]/(composited)/blog/_components/article-media";
 
 export const revalidate = 86400;
 
@@ -144,135 +146,129 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
     };
 
     return (
-        <section className="relative mx-auto flex w-full max-w-[92rem] flex-col gap-10 overflow-hidden px-4 py-10 md:px-8 md:py-16 lg:gap-14">
+        <section className="editorial w-full bg-[color:var(--paper-950)] pb-16">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
-            <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[42rem] w-[72rem] -translate-x-1/2 rounded-full bg-primary-500/[0.08] blur-[140px]" />
-
-            <div className="relative overflow-hidden rounded-[2rem] border border-primary-500/20 bg-[radial-gradient(circle_at_80%_0%,rgba(81,214,132,0.14),transparent_38%),linear-gradient(145deg,rgba(17,37,25,0.98),rgba(9,18,13,0.98))] px-6 py-10 shadow-[0_35px_120px_-65px_rgba(68,219,128,0.5)] md:px-10 md:py-14 lg:px-14">
-                <div className="absolute inset-y-0 right-0 hidden w-2/5 opacity-20 [background-image:radial-gradient(circle,rgba(126,238,162,0.8)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
-                <div className="relative flex max-w-5xl flex-col gap-6">
+            {/* Masthead. A publication nameplate rather than a hero panel: no
+                radial glow, no bordered box, just type on the page. */}
+            <header className="editorial-grid pt-12 md:pt-16">
+                <div className="span-wide flex flex-col gap-5 border-b border-[color:var(--rule)] pb-10 md:pb-14">
                     <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-xs font-bold uppercase tracking-[0.26em] text-primary-200 md:text-sm">{t("eyebrow")}</p>
-                        <span className="h-px w-10 bg-primary-400/60" aria-hidden="true" />
-                        <span className="text-sm text-ink-300">{indexedBlogPosts.length} field notes and deep dives</span>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--lime)]">{t("eyebrow")}</p>
+                        <span aria-hidden="true" className="h-px w-8 bg-[color:var(--rule-strong)]" />
+                        <span className="font-mono text-[11px] tabular-nums text-[color:var(--text-400)]">
+                            {indexedBlogPosts.length} stories
+                        </span>
                     </div>
-                    <h1 className="max-w-4xl font-display text-5xl font-bold leading-[0.96] tracking-[-0.04em] text-white md:text-7xl lg:text-[5.5rem]">
-                        Stories from the <span className="text-primary-100">living world.</span>
+                    <h1 className="max-w-[14ch] font-display text-[2.75rem] font-bold leading-[0.98] tracking-[-0.035em] text-[color:var(--text-100)] [text-wrap:balance] sm:text-6xl md:text-7xl lg:text-[5rem]">
+                        Stories from the living world.
                     </h1>
-                    <p className="max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("description")}</p>
-                    <div className="flex flex-wrap gap-3">
-                        <a href="#latest-stories" className="inline-flex min-h-[46px] items-center justify-center rounded-full border border-primary-200/45 bg-canvas-950/85 px-6 text-sm font-black text-primary-100 shadow-[0_14px_45px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-100 hover:bg-primary-400 hover:text-canvas-950">
-                            Explore latest stories
+                    <p className="max-w-[52ch] text-lg leading-[1.55] text-[color:var(--text-200)] md:text-xl">{t("description")}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <a
+                            href="#latest-stories"
+                            className="group inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-100)] transition-colors hover:text-[color:var(--lime)]"
+                        >
+                            Latest stories
+                            <span aria-hidden="true" className="transition-transform group-hover:translate-y-0.5">↓</span>
                         </a>
-                        <Link href="/blog/feed.xml" className="inline-flex min-h-[46px] items-center justify-center rounded-full border border-line-200/70 bg-white/[0.03] px-6 text-sm font-semibold text-ink-100 transition-colors hover:border-primary-300 hover:text-primary-100">
+                        <Link
+                            href="/blog/feed.xml"
+                            className="text-[13px] font-semibold text-[color:var(--text-400)] transition-colors hover:text-[color:var(--text-100)]"
+                        >
                             {t("rssLabel")}
                         </Link>
                     </div>
                 </div>
-            </div>
+            </header>
 
             {featuredPost && (
-                <article id="latest-stories" className="group grid scroll-mt-28 overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900/80 shadow-[0_28px_90px_-55px_rgba(0,0,0,0.95)] lg:grid-cols-[1.15fr_0.85fr]">
-                    <Link href={`/blog/${featuredPost.slug}`} className="relative min-h-[20rem] overflow-hidden bg-surface-800 lg:min-h-[32rem]">
-                        <Image
-                            src={featuredPost.featuredImage.src}
-                            alt={featuredPost.featuredImage.alt}
-                            fill
-                            priority={currentPage === 1}
-                            sizes="(min-width: 1024px) 58vw, 100vw"
-                            className="object-cover transition duration-700 group-hover:scale-[1.035]"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-canvas-950/50 via-transparent to-transparent" />
-                        <span className="absolute left-5 top-5 rounded-full border border-white/15 bg-canvas-950/75 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-100 backdrop-blur">
-                            Featured field guide
-                        </span>
-                    </Link>
-                    <div className="flex flex-col justify-center gap-5 p-6 md:p-9 lg:p-12">
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-ink-300">
-                            <span>{formatDate(locale, featuredPost.publishedAt)}</span>
-                            <span className="h-1 w-1 rounded-full bg-primary-300" aria-hidden="true" />
-                            <span>{featuredPost.readingMinutes} {t("minutes")}</span>
-                        </div>
-                        <h2 className="font-display text-4xl font-bold leading-tight tracking-[-0.025em] text-white md:text-5xl">
-                            <Link href={`/blog/${featuredPost.slug}`} className="transition-colors hover:text-primary-100">
-                                {featuredPost.title}
-                            </Link>
-                        </h2>
-                        <p className="text-lg leading-8 text-ink-200">{featuredPost.description}</p>
-                        <div className="flex flex-wrap gap-2">
-                            {featuredPost.tags.slice(0, 3).map((tag) => (
-                                <span key={tag} className="rounded-full border border-primary-500/25 bg-primary-500/[0.06] px-3 py-1 text-xs text-primary-100">
-                                    {tag}
+                <div className="editorial-grid pt-10 md:pt-14">
+                    <article id="latest-stories" className="span-wide group scroll-mt-28">
+                        {/* Without a photograph the lead is set wide and large, so
+                            the slot reads as a deliberate typographic opener
+                            rather than a half-empty image row. */}
+                        <Link
+                            href={`/blog/${featuredPost.slug}`}
+                            className={hasImage(featuredPost.featuredImage)
+                                ? "flex flex-col gap-7 lg:flex-row lg:items-center lg:gap-12"
+                                : "flex flex-col gap-5 border-b border-[color:var(--rule)] pb-12"}
+                        >
+                            {hasImage(featuredPost.featuredImage) ? (
+                                <div className="relative w-full shrink-0 overflow-hidden rounded-sm bg-[color:var(--paper-850)] lg:w-[58%]" style={{aspectRatio: "16 / 10"}}>
+                                    <Image
+                                        src={featuredPost.featuredImage.src}
+                                        alt={featuredPost.featuredImage.alt}
+                                        fill
+                                        priority={currentPage === 1}
+                                        sizes="(min-width: 1024px) 45rem, 100vw"
+                                        className={`editorial-zoom ${imageFit(featuredPost.featuredImage)}`}
+                                    />
+                                </div>
+                            ) : null}
+                            <div className="flex min-w-0 flex-col gap-4">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[color:var(--lime)]">
+                                    Featured field guide
+                                </p>
+                                <h2 className={`font-display font-bold leading-[1.08] tracking-[-0.025em] text-[color:var(--text-100)] [text-wrap:balance] ${
+                                    hasImage(featuredPost.featuredImage)
+                                        ? "text-[2rem] md:text-[2.75rem]"
+                                        : "max-w-[20ch] text-[2.25rem] md:text-[3.5rem] lg:text-[4rem]"
+                                }`}>
+                                    {featuredPost.title}
+                                </h2>
+                                <p className="max-w-[52ch] text-base leading-relaxed text-[color:var(--text-300)] md:text-lg">
+                                    {featuredPost.description}
+                                </p>
+                                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tabular-nums text-[color:var(--text-400)]">
+                                    <span>{formatDate(locale, featuredPost.publishedAt)}</span>
+                                    <span aria-hidden="true">·</span>
+                                    <span>{featuredPost.readingMinutes} {t("minutes")}</span>
+                                </p>
+                                <span
+                                    aria-hidden="true"
+                                    className="mt-1 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-300)] transition-colors group-hover:text-[color:var(--lime)]"
+                                >
+                                    {t("readArticle")}
+                                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
                                 </span>
-                            ))}
-                        </div>
-                        <Link href={`/blog/${featuredPost.slug}`} className="mt-2 inline-flex w-fit items-center gap-2 text-base font-bold text-primary-200 transition-all hover:gap-3 hover:text-primary-100">
-                            {t("readArticle")} <span aria-hidden="true">→</span>
+                            </div>
                         </Link>
-                    </div>
-                </article>
+                    </article>
+                </div>
             )}
 
             {remainingPosts.length > 0 && (
-                <div className="flex flex-col gap-6">
-                    <div className="flex items-end justify-between gap-4">
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">The archive</p>
-                            <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">More discoveries</h2>
+                <div className="editorial-grid mt-16 md:mt-24">
+                    <div className="span-wide flex flex-col gap-8">
+                        <div className="flex items-center gap-4">
+                            <h2 className="font-display text-xl font-bold tracking-[-0.015em] text-[color:var(--text-100)] md:text-2xl">
+                                The archive
+                            </h2>
+                            <span aria-hidden="true" className="h-px flex-1 bg-[color:var(--rule)]" />
                         </div>
-                        <p className="hidden text-sm text-ink-300 sm:block">Curated for curious minds</p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
-                {remainingPosts.map((post) => (
-                    <article
-                        key={post.slug}
-                        className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-line-300 bg-surface-900/75 transition duration-300 hover:-translate-y-1 hover:border-primary-500/35 hover:shadow-[0_24px_70px_-45px_rgba(82,223,132,0.45)]"
-                    >
-                        <Link href={`/blog/${post.slug}`} className="relative block aspect-[16/10] overflow-hidden bg-surface-800/60">
-                            <Image
-                                src={post.featuredImage.src}
-                                alt={post.featuredImage.alt}
-                                width={post.featuredImage.width}
-                                height={post.featuredImage.height}
-                                sizes="(min-width: 1536px) 29vw, (min-width: 1024px) 44vw, 100vw"
-                                className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-canvas-950/45 to-transparent opacity-60" />
-                        </Link>
-                        <div className="flex flex-1 flex-col gap-4 p-6">
-                            <div className="flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-[0.1em] text-ink-300">
-                                <span>{formatDate(locale, post.publishedAt)}</span>
-                                <span className="h-1 w-1 rounded-full bg-primary-300" aria-hidden="true" />
-                                <span>{post.readingMinutes} {t("minutes")}</span>
-                            </div>
-                            <h3 className="font-display text-3xl font-bold leading-tight text-white">
-                                <Link href={`/blog/${post.slug}`} className="transition-colors hover:text-primary-100">{post.title}</Link>
-                            </h3>
-                            <p className="line-clamp-3 text-base leading-7 text-ink-200">{post.description}</p>
-                            <div className="flex flex-wrap gap-2">
-                                {post.tags.slice(0, 2).map((tag) => (
-                                    <span key={tag} className="rounded-full border border-primary-500/25 px-3 py-1 text-xs text-primary-200">
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-                            <Link
-                                href={`/blog/${post.slug}`}
-                                className="mt-auto inline-flex items-center gap-2 pt-2 text-sm font-bold text-primary-200 transition-all hover:gap-3 hover:text-primary-100"
-                            >
-                                {t("readArticle")} <span aria-hidden="true">→</span>
-                            </Link>
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                            {remainingPosts.map((post) => (
+                                <article key={post.slug}>
+                                    <EditorialCard
+                                        href={`/blog/${post.slug}`}
+                                        title={post.title}
+                                        description={post.description}
+                                        kicker={post.tags?.[0]}
+                                        meta={`${formatDate(locale, post.publishedAt)} · ${post.readingMinutes} ${t("minutes")}`}
+                                        image={post.featuredImage}
+                                    />
+                                </article>
+                            ))}
                         </div>
-                    </article>
-                ))}
                     </div>
                 </div>
             )}
 
             {totalPages > 1 && (
-                <nav className="flex flex-col items-center gap-4" aria-label={t("paginationLabel")}>
-                    <p className="text-sm text-ink-300">
+                <nav className="editorial-grid mt-16 md:mt-20" aria-label={t("paginationLabel")}>
+                  <div className="span-wide flex flex-col items-center gap-4 border-t border-[color:var(--rule)] pt-10">
+                    <p className="font-mono text-[11px] tabular-nums text-[color:var(--text-400)]">
                         {t("pageLabel", {page: currentPage, totalPages})}
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-2">
@@ -280,7 +276,7 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                             <Link
                                 href={getBlogPagePath(currentPage - 1)}
                                 rel="prev"
-                                className="rounded-full border border-line-300 px-4 py-2 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                                className="inline-flex min-h-[2.625rem] items-center rounded-full border border-[color:var(--rule-strong)] px-4 text-[13px] font-semibold text-[color:var(--text-200)] transition-colors hover:border-[color:var(--lime)] hover:text-[color:var(--text-100)]"
                             >
                                 {t("previousPage")}
                             </Link>
@@ -290,7 +286,7 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                                 <span
                                     key={item}
                                     aria-current="page"
-                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full bg-primary-400 px-3 font-bold text-canvas-950"
+                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full border border-[color:var(--lime)] px-3 font-mono text-[13px] font-bold tabular-nums text-[color:var(--lime)]"
                                 >
                                     {item}
                                 </span>
@@ -299,44 +295,46 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                                     key={item}
                                     href={getBlogPagePath(item)}
                                     aria-label={t("goToPage", {page: item})}
-                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full border border-line-300 px-3 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                                    className="flex min-h-[2.625rem] min-w-[2.625rem] items-center justify-center rounded-full px-3 font-mono text-[13px] tabular-nums text-[color:var(--text-300)] transition-colors hover:text-[color:var(--text-100)]"
                                 >
                                     {item}
                                 </Link>
                             )
                         ) : (
-                            <span key={item} className="px-1 text-ink-400" aria-hidden="true">…</span>
+                            <span key={item} className="px-1 text-[color:var(--text-400)]" aria-hidden="true">…</span>
                         ))}
                         {currentPage < totalPages && (
                             <Link
                                 href={getBlogPagePath(currentPage + 1)}
                                 rel="next"
-                                className="rounded-full border border-line-300 px-4 py-2 text-ink-100 hover:border-primary-400 hover:text-primary-100 transition-colors"
+                                className="inline-flex min-h-[2.625rem] items-center rounded-full border border-[color:var(--rule-strong)] px-4 text-[13px] font-semibold text-[color:var(--text-200)] transition-colors hover:border-[color:var(--lime)] hover:text-[color:var(--text-100)]"
                             >
                                 {t("nextPage")}
                             </Link>
                         )}
                     </div>
+                  </div>
                 </nav>
             )}
 
             {currentPage === 1 && (
-                <section className="overflow-hidden rounded-[2rem] border border-line-300 bg-[linear-gradient(145deg,rgba(16,29,21,0.96),rgba(9,17,12,0.98))] shadow-[0_28px_90px_-60px_rgba(61,210,119,0.38)]">
-                    <div className="flex flex-col gap-5 border-b border-line-300 px-6 py-7 md:flex-row md:items-end md:justify-between md:px-9 md:py-9">
+                <section className="editorial-grid mt-16 md:mt-24">
+                  <div className="span-wide">
+                    <div className="flex flex-col gap-5 border-b border-[color:var(--rule)] pb-7 md:flex-row md:items-end md:justify-between">
                         <div className="max-w-3xl">
                             <div className="flex items-center gap-3">
-                                <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">Quick answers</p>
-                                <span className="rounded-full border border-primary-500/25 bg-primary-500/10 px-2.5 py-1 text-[11px] font-bold text-primary-100">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[color:var(--lime)]">Quick answers</p>
+                                <span className="font-mono text-[11px] tabular-nums text-[color:var(--text-400)]">
                                     {answerPages.length} guides
                                 </span>
                             </div>
-                            <h2 className="mt-3 font-display text-3xl font-bold tracking-[-0.02em] text-white md:text-4xl">{t("answersHubTitle")}</h2>
-                            <p className="mt-3 max-w-2xl text-base leading-7 text-ink-300 md:text-lg">{t("answersHubDescription")}</p>
+                            <h2 className="mt-3 font-display text-2xl font-bold tracking-[-0.02em] text-[color:var(--text-100)] md:text-3xl">{t("answersHubTitle")}</h2>
+                            <p className="mt-2.5 max-w-[56ch] text-[15px] leading-relaxed text-[color:var(--text-300)]">{t("answersHubDescription")}</p>
                         </div>
-                        <p className="hidden shrink-0 text-sm font-semibold text-ink-400 md:block">Choose a topic to get started</p>
+
                     </div>
 
-                    <div className="grid grid-cols-1 gap-px bg-line-300/80 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                         {answerPages.map((page, index) => {
                             const pageSummary = pageSummaryBySlug.get(page.slug);
                             const guideImage = pageSummary?.featuredImage ?? {
@@ -346,33 +344,29 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                                 height: 630
                             };
                             return (
-                            <article key={page.slug} className="group min-w-0 bg-surface-900/95">
+                            <article key={page.slug} className="group min-w-0">
                                 <Link
                                     href={`/${page.slug}`}
                                     aria-label={`${t("readAnswerPage")}: ${page.shortTitle}`}
-                                    className="grid min-h-full grid-cols-[9rem_minmax(0,1fr)] gap-4 p-4 transition-colors hover:bg-primary-500/[0.055] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primary-300 sm:grid-cols-[12rem_minmax(0,1fr)] sm:p-5 lg:grid-cols-[14rem_minmax(0,1fr)]"
+                                    className="grid min-h-full grid-cols-[6rem_minmax(0,1fr)] gap-4 border-b border-[color:var(--rule)] py-5 sm:grid-cols-[8rem_minmax(0,1fr)]"
                                 >
-                                    <div className="relative min-h-[8rem] overflow-hidden rounded-xl bg-surface-800 sm:min-h-[9rem] lg:min-h-[9.75rem]">
+                                    <div className="relative min-h-[4.5rem] overflow-hidden rounded-sm bg-[color:var(--paper-850)] sm:min-h-[5.5rem]">
                                         <Image
                                             src={guideImage.src}
                                             alt={guideImage.alt}
                                             fill
                                             unoptimized={guideImage.src.startsWith("http")}
                                             sizes="(min-width: 640px) 128px, 104px"
-                                            className="object-cover transition duration-500 group-hover:scale-105"
+                                            className={`editorial-zoom ${imageFit(featuredPost.featuredImage)}`}
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-canvas-950/35 to-transparent" />
-                                        <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-canvas-950/75 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-primary-100 backdrop-blur">
-                                            {String(index + 1).padStart(2, "0")}
-                                        </span>
                                     </div>
                                     <div className="flex min-w-0 flex-col">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary-200">AnimalDex answer</p>
-                                        <h3 className="mt-1.5 font-display text-xl font-bold leading-tight text-white transition-colors group-hover:text-primary-100 sm:text-2xl">
+                                        <p className="font-mono text-[10px] tabular-nums text-[color:var(--text-400)]">{String(index + 1).padStart(2, "0")}</p>
+                                        <h3 className="mt-1.5 font-display text-lg font-bold leading-snug text-[color:var(--text-100)] sm:text-xl">
                                             {page.shortTitle}
                                         </h3>
-                                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-300 sm:text-[15px]">{page.metaDescription}</p>
-                                        <span className="mt-auto inline-flex items-center gap-2 pt-3 text-sm font-bold text-primary-200">
+                                        <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-[color:var(--text-300)]">{page.metaDescription}</p>
+                                        <span className="mt-auto inline-flex items-center gap-2 pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-400)] transition-colors group-hover:text-[color:var(--lime)]">
                                             {t("readAnswerPage")}
                                             <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                                         </span>
@@ -382,14 +376,11 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                             );
                         })}
                     </div>
+                  </div>
                 </section>
             )}
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
-                <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
-                <StoreLinks />
-            </div>
+            <ArticleAppCta title={t("ctaTitle")} description={t("ctaDescription")} />
         </section>
     );
 }

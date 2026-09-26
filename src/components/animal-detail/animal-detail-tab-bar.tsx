@@ -1,13 +1,13 @@
 "use client";
 
-export type AnimalDetailTab = "learn" | "stats" | "compare";
+export type AnimalDetailTab = "learn" | "stats" | "play";
 
 export type AnimalDetailLayout = "compact" | "wide";
 
 const TABS: Array<{id: AnimalDetailTab; label: string}> = [
     {id: "learn", label: "Learn"},
     {id: "stats", label: "Stats"},
-    {id: "compare", label: "Compare"}
+    {id: "play", label: "Play"}
 ];
 
 function TabIcon({tab, className}: {tab: AnimalDetailTab; className: string}) {
@@ -28,7 +28,8 @@ function TabIcon({tab, className}: {tab: AnimalDetailTab; className: string}) {
     }
     return (
         <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 19 19 5M11 5h8v8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M7.5 8h9a4.5 4.5 0 0 1 4.4 3.6l.7 3.6A2.7 2.7 0 0 1 18.9 18c-.9 0-1.7-.5-2.2-1.2L16 16H8l-.7.8C6.8 17.5 6 18 5.1 18a2.7 2.7 0 0 1-2.7-2.8l.7-3.6A4.5 4.5 0 0 1 7.5 8Z" strokeLinejoin="round" />
+            <path d="M7 11.5v2M6 12.5h2M15.5 11.5h.01M17.5 13.5h.01" strokeLinecap="round" />
         </svg>
     );
 }
@@ -50,8 +51,8 @@ export default function AnimalDetailTabBar({
         <div
             role="tablist"
             aria-label="Animal details"
-            className={`grid grid-cols-3 gap-1 rounded-[18px] border border-white/10 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent_55%),rgba(31,31,31,0.94)] p-1 ${
-                wide ? "lg:w-fit lg:gap-1.5 lg:rounded-[22px] lg:p-1.5" : ""
+            className={`grid grid-cols-3 gap-px border border-line-300 bg-line-300 ${
+                wide ? "lg:w-fit" : ""
             }`}
         >
             {TABS.map((tab) => {
@@ -63,12 +64,12 @@ export default function AnimalDetailTabBar({
                         role="tab"
                         aria-selected={active}
                         onClick={() => onChange(tab.id)}
-                        className={`flex min-w-0 items-center justify-center gap-[7px] rounded-[14px] border px-2 py-[11px] text-xs font-semibold leading-[15px] transition-[background-color,border-color,color] duration-300 ${
-                            wide ? "lg:gap-2.5 lg:rounded-[18px] lg:px-8 lg:py-3 lg:text-sm lg:leading-5" : ""
+                        className={`flex min-w-0 items-center justify-center gap-[7px] border-b-2 px-2 py-3 text-xs font-semibold leading-[15px] transition-colors duration-200 ${
+                            wide ? "lg:gap-2.5 lg:px-8 lg:py-3.5 lg:text-sm lg:leading-5" : ""
                         } ${
                             active
-                                ? "border-[#A7F432]/[0.28] bg-[linear-gradient(135deg,rgba(167,244,50,0.17),rgba(255,255,255,0.055))] text-white"
-                                : "border-transparent text-white/[0.42] hover:text-white/[0.62]"
+                                ? "border-primary-400 bg-surface-900 text-white"
+                                : "border-transparent bg-black text-white/[0.42] hover:bg-surface-900/60 hover:text-white/[0.7]"
                         }`}
                     >
                         <TabIcon tab={tab.id} className={`h-3 w-3 ${wide ? "lg:h-4 lg:w-4" : ""}`} />

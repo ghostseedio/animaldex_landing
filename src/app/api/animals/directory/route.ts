@@ -15,6 +15,7 @@ import {getAppCaptures} from "@/data/authenticated-app";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
+import {createDevRequestTimer, finishDevRequestTimer, timeDevStep, serverTimingHeader} from "@/lib/dev-request-timing";
 
 export const runtime = "nodejs";
 export const revalidate = 86400;
@@ -48,8 +49,9 @@ export async function GET(request: Request) {
     const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const page = Number.parseInt(getSingleParam(url.searchParams.get("page")) || "1", 10);
 
-    const catalogEntries = await getUnifiedSpeciesEntries();
-    const directoryPage = getSpeciesDirectoryPage({
+    const timer = createDevRequestTimer("animals.directory", {sort, page, tier, letter, status});
+    const catalogEntries = await timeDevStep(timer, "catalog", () => getUnifiedSpeciesEntries());
+    const directoryPage = await timeDevStep(timer, "filter-sort-page", () => getSpeciesDirectoryPage({
         query,
         letter,
         region,
@@ -60,10 +62,10 @@ export async function GET(request: Request) {
         tier,
         page: Number.isFinite(page) ? page : 1,
         entries: catalogEntries
-    });
+    }));
     const [captures, directoryImageState] = await Promise.all([
-        signedIn ? getAppCaptures() : Promise.resolve([]),
-        buildSpeciesDirectoryImageState(directoryPage.entries)
+        timeDevStep(timer, "captures", () => (signedIn ? getAppCaptures() : Promise.resolve([]))),
+        timeDevStep(timer, "image-state", () => buildSpeciesDirectoryImageState(directoryPage.entries))
     ]);
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
@@ -86,6 +88,8 @@ export async function GET(request: Request) {
         directoryImageState.get(entry.slug)?.hasPublicCapture ?? false
     ]));
 
+    finishDevRequestTimer(timer, {entries: directoryPage.entries.length});
+
     return NextResponse.json({
         entries: directoryPage.entries,
         capturedSpecies,
@@ -96,8 +100,11 @@ export async function GET(request: Request) {
         total: directoryPage.total,
         hasMore: directoryPage.currentPage < directoryPage.totalPages
     }, {
-        headers: signedIn
-            ? {"Cache-Control": "private, no-store"}
-            : {"Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"}
+        headers: {
+            "Cache-Control": signedIn
+                ? "private, no-store"
+                : "public, s-maxage=3600, stale-while-revalidate=86400",
+            ...serverTimingHeader(timer)
+        }
     });
 }

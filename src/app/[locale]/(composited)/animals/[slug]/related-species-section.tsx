@@ -14,10 +14,10 @@ function RelatedSpeciesTile({item, openLabel}: {item: SpeciesEntry; openLabel: s
     return (
         <Link
             href={`/animals/${item.slug}`}
-            className="group relative flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-[#121512] transition duration-200 hover:-translate-y-0.5 hover:border-primary-300/35 hover:bg-[#161b16] motion-reduce:transform-none"
+            className="group relative flex h-full flex-col overflow-hidden bg-surface-900 transition-colors duration-300 hover:bg-surface-800/70 focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-200"
         >
-            <div className="relative flex aspect-[5/4] items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(167,244,50,0.12),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent)]">
-                <span className="relative h-[72%] w-[72%]">
+            <div className="relative flex aspect-square items-center justify-center bg-[radial-gradient(58%_54%_at_50%_44%,rgba(167,244,50,0.10),transparent_70%)] transition-opacity duration-500 group-hover:opacity-100">
+                <span className="relative h-[78%] w-[78%]">
                     <SpeciesArtworkImage
                         slug={item.slug}
                         alt={getSpeciesImageAltText(item, "thumbnail")}
@@ -27,19 +27,19 @@ function RelatedSpeciesTile({item, openLabel}: {item: SpeciesEntry; openLabel: s
                     />
                 </span>
             </div>
-            <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-3">
+            <div className="flex flex-1 flex-col gap-1.5 border-t border-line-300 px-4 pb-4 pt-3.5">
                 <div className="flex items-start justify-between gap-3">
-                    <h3 className="min-w-0 font-display text-xl font-bold leading-tight text-white transition-colors group-hover:text-primary-100">
+                    <h3 className="min-w-0 font-display text-base font-bold leading-tight tracking-tight text-white sm:text-lg">
                         {item.name}
                     </h3>
                     <span
                         aria-hidden="true"
-                        className="mt-1 shrink-0 text-sm font-bold text-primary-200/80 transition group-hover:translate-x-0.5 group-hover:text-primary-100"
+                        className="mt-0.5 shrink-0 text-sm font-bold text-ink-400 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary-200"
                     >
                         →
                     </span>
                 </div>
-                <p className="line-clamp-2 text-sm leading-6 text-white/45">
+                <p className="line-clamp-2 text-xs leading-relaxed text-ink-300 sm:text-sm">
                     {truncatePlain(item.analysis.summary)}
                 </p>
                 <span className="sr-only">{openLabel}</span>
@@ -64,9 +64,12 @@ export default function RelatedSpeciesSection({
     if (items.length === 0) return null;
 
     return (
-        <section className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-                <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{title}</h2>
+        <section className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+                <div className="flex flex-col gap-3">
+                    <span aria-hidden="true" className="h-[3px] w-10 rounded-full bg-gradient-to-r from-primary-400 to-primary-500/20" />
+                    <h2 className="font-display text-2xl font-bold tracking-tight text-white md:text-3xl">{title}</h2>
+                </div>
                 {hubHref && hubLabel ? (
                     <Link
                         href={hubHref}
@@ -77,7 +80,7 @@ export default function RelatedSpeciesSection({
                     </Link>
                 ) : null}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-px overflow-hidden bg-line-300 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((item) => (
                     <RelatedSpeciesTile key={item.slug} item={item} openLabel={openLabel} />
                 ))}

@@ -8,13 +8,13 @@ export default function SpeciesEncyclopediaNav({items}: SpeciesEncyclopediaNavPr
     return (
         <nav
             aria-label="On this page"
-            className="hidden lg:flex flex-wrap gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-2"
+            className="hidden border-y border-line-300 lg:flex lg:flex-wrap"
         >
             {items.map((item) => (
                 <a
                     key={item.id}
                     href={`#${item.id}`}
-                    className="rounded-full px-3 py-1.5 text-sm font-semibold text-ink-200 transition hover:bg-white/5 hover:text-white"
+                    className="border-b-2 border-transparent px-4 py-3.5 text-sm font-semibold text-ink-300 transition-colors hover:border-primary-400/60 hover:text-white"
                 >
                     {item.label}
                 </a>

@@ -26,7 +26,10 @@ const CATALOG_COLUMNS = [
     "landing_page_slug",
     "identity_kind",
     "catalog_status",
-    "canonical_game_stats"
+    // Read below to retarget an alias onto the entry captures resolve through.
+    // `canonical_game_stats` used to sit here instead: unused by this route, and
+    // not a column of the view, so it failed every query with a 400.
+    "canonical_species_profile_id"
 ].join(",");
 
 function config() {

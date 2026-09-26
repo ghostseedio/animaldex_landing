@@ -73,7 +73,7 @@ export default function SpeciesRankingCarousel({
 
     return (
         <section className={`-mx-5 border-y border-white/10 bg-[#121212]/95 py-[18px] ${
-            wide ? "lg:mx-0 lg:rounded-[22px] lg:border lg:px-1 lg:py-6" : ""
+            wide ? "lg:mx-0 lg:border lg:px-1 lg:py-6" : ""
         }`}>
             <h2 className={`px-5 text-[17px] font-semibold leading-[1.25] text-white ${wide ? "lg:px-6 lg:text-xl" : ""}`}>
                 {summary}
@@ -93,7 +93,7 @@ export default function SpeciesRankingCarousel({
                         return (
                             <article
                                 key={item.captureId}
-                                className={`w-[136px] shrink-0 overflow-hidden rounded-2xl border bg-[#171a18] shadow-[0_8px_22px_rgba(0,0,0,0.28)] ${
+                                className={`w-[136px] shrink-0 overflow-hidden border bg-[#171a18] ${
                                     wide ? "lg:w-[164px]" : ""
                                 } ${
                                     isCurrentCapture

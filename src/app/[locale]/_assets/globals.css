@@ -117,3 +117,271 @@ button {
     color: #A7F432;
     -webkit-text-fill-color: transparent;
 }
+
+/* ==========================================================================
+   Editorial system — /blog and /blog/*
+   --------------------------------------------------------------------------
+   The article template used to stack identically-sized rounded panels in the
+   brand green (surface-900 #0D2A16 on line-300 #1C3324), so every section read
+   as the same object and nothing had hierarchy. These surfaces are near-neutral
+   with only a trace of the forest cast, which lets lime go back to being an
+   accent instead of the background of everything.
+   ========================================================================== */
+
+.editorial {
+    --paper-950: #060908;
+    --paper-900: #0A0E0C;
+    --paper-850: #0F1411;
+    --paper-800: #141A16;
+    --paper-700: #1B221D;
+    --rule-strong: #26302A;
+    --rule: #1A211D;
+    --rule-soft: #141916;
+    --lime: #A7F432;
+    --text-100: #F4F7F3;
+    --text-200: #C3CBC4;
+    --text-300: #98A29A;
+    --text-400: #6F7A72;
+
+    /* Editorial measure: wide enough to feel generous, narrow enough to read. */
+    --measure: 44rem;
+    --gutter: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    .editorial { --gutter: 2rem; }
+}
+
+/* Named-line grid so a child can opt into a wider band without wrapper soup.
+   Prose is the default column; images, quotes and modules break out. */
+.editorial-grid {
+    display: grid;
+    /* The breakout columns are zero on small screens. Left at 7rem they compete with
+       the prose track for a 390px viewport and shrink the measure to a sliver. */
+    --breakout: 0rem;
+    grid-template-columns:
+        [full-start] minmax(var(--gutter), 1fr)
+        [wide-start] minmax(0, var(--breakout))
+        [prose-start] minmax(0, var(--measure))
+        [prose-end] minmax(0, var(--breakout))
+        [wide-end] minmax(var(--gutter), 1fr)
+        [full-end];
+}
+
+@media (min-width: 1024px) {
+    .editorial-grid { --breakout: 7rem; }
+}
+
+.editorial-grid > * {
+    grid-column: prose;
+    min-width: 0;
+}
+
+.editorial-grid > .span-wide { grid-column: wide; }
+.editorial-grid > .span-full { grid-column: full; }
+
+/* ---------------------------------------------------------------- typography */
+
+.editorial-prose {
+    color: var(--text-200);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    letter-spacing: 0.003em;
+}
+
+@media (min-width: 768px) {
+    .editorial-prose { font-size: 1.1875rem; line-height: 1.8; }
+}
+
+.editorial-prose > * + * { margin-top: 1.5em; }
+
+.editorial-prose p { text-wrap: pretty; }
+
+/* Long-form reading stays in the text face. The condensed display family is
+   reserved for headings, where its tighter fit is an asset rather than a tax. */
+.editorial-prose h2,
+.editorial-prose h3,
+.editorial-prose h4 {
+    color: var(--text-100);
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+}
+
+.editorial-prose h2 {
+    margin-top: 2.75em;
+    font-size: 1.875rem;
+    line-height: 1.15;
+}
+
+.editorial-prose h3 {
+    margin-top: 2.25em;
+    font-size: 1.4375rem;
+    line-height: 1.2;
+}
+
+.editorial-prose h4 {
+    margin-top: 2em;
+    font-size: 1.125rem;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+}
+
+@media (min-width: 768px) {
+    .editorial-prose h2 { font-size: 2.25rem; }
+    .editorial-prose h3 { font-size: 1.625rem; }
+}
+
+.editorial-prose h2 + *,
+.editorial-prose h3 + *,
+.editorial-prose h4 + * { margin-top: 0.85em; }
+
+.editorial-prose strong { color: var(--text-100); font-weight: 650; }
+
+/* A link is an underline, not a colour swap: the rule thickens on hover rather
+   than the text changing hue, which keeps a link-dense paragraph calm. */
+.editorial-prose a {
+    color: var(--text-100);
+    text-decoration: underline;
+    text-decoration-color: rgba(167, 244, 50, 0.45);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color 160ms ease, text-decoration-thickness 160ms ease;
+}
+
+.editorial-prose a:hover {
+    text-decoration-color: var(--lime);
+    text-decoration-thickness: 2px;
+}
+
+.editorial-prose ul,
+.editorial-prose ol { padding-left: 0; list-style: none; }
+
+.editorial-prose li { position: relative; padding-left: 1.75rem; }
+.editorial-prose li + li { margin-top: 0.7em; }
+
+.editorial-prose ul > li::before {
+    content: "";
+    position: absolute;
+    left: 0.35rem;
+    top: 0.72em;
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 999px;
+    background: var(--lime);
+    opacity: 0.8;
+}
+
+.editorial-prose ol { counter-reset: editorial-step; }
+
+.editorial-prose ol > li::before {
+    counter-increment: editorial-step;
+    content: counter(editorial-step);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--lime);
+    font-variant-numeric: tabular-nums;
+}
+
+.editorial-prose blockquote {
+    margin-top: 2em;
+    padding-left: 1.5rem;
+    border-left: 2px solid rgba(167, 244, 50, 0.5);
+    color: var(--text-100);
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.375rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+    .editorial-prose blockquote { font-size: 1.625rem; }
+}
+
+.editorial-prose hr {
+    margin: 3em auto;
+    width: 3.5rem;
+    border: 0;
+    border-top: 1px solid var(--rule-strong);
+}
+
+.editorial-prose figcaption,
+.editorial-caption {
+    color: var(--text-400);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+}
+
+.editorial-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+}
+
+/* Column heads only: a row header is a label in the body and must not take the
+   uppercase display treatment meant for the header row. */
+.editorial-prose thead th {
+    text-align: left;
+    padding: 0.75rem 1rem 0.75rem 0;
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--text-300);
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.editorial-prose tbody th {
+    text-align: left;
+    padding: 0.85rem 1rem 0.85rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+    color: var(--text-100);
+    font-weight: 650;
+}
+
+.editorial-prose td {
+    padding: 0.85rem 1rem 0.85rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+    color: var(--text-200);
+}
+
+.editorial-prose tr:last-child td { border-bottom: 0; }
+
+/* ------------------------------------------------------------------- motion */
+
+.editorial-rise {
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), border-color 320ms ease;
+}
+
+.editorial-zoom { transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .editorial-zoom { transform: scale(1.03); }
+
+@media (prefers-reduced-motion: reduce) {
+    .editorial-rise,
+    .editorial-zoom,
+    .group:hover .editorial-zoom {
+        transition: none;
+        transform: none;
+    }
+}
+
+/* The first block in the prose column sits against the masthead rule, so it
+   must not also carry a heading's stacking margin. */
+.editorial-prose > :first-child,
+.editorial-prose > :first-child > :first-child {
+    margin-top: 0;
+}
+
+/* Structured lists (definition cards, labelled steps) are laid out as a grid
+   and supply their own labels, so the prose marker must not also draw one. */
+.editorial-plain-list > li { padding-left: 0; }
+.editorial-plain-list > li::before { content: none !important; }

@@ -1,12 +1,18 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import * as assert from "node:assert/strict";
 
-const routeSource = readFileSync(
-  join(process.cwd(), "src/app/api/admin/growth/route.ts"),
-  "utf8",
-);
+// The growth API is split across route.ts and its _lib modules, so assert
+// against the whole set rather than whichever file a symbol lives in today.
+const routeDir = join(process.cwd(), "src/app/api/admin/growth");
+const routeLibDir = join(routeDir, "_lib");
+const routeSource = [
+  readFileSync(join(routeDir, "route.ts"), "utf8"),
+  ...readdirSync(routeLibDir).map((name) =>
+    readFileSync(join(routeLibDir, name), "utf8"),
+  ),
+].join("\n");
 const metricsRouteSource = readFileSync(
   join(process.cwd(), "src/app/api/admin/metrics/route.ts"),
   "utf8",

@@ -19,7 +19,7 @@ export default function LegendaryEarthBeastSpeciesSection({
 
     return (
         <section id="legendary-earth-beast" aria-label="Legendary Earth Beast" className="scroll-mt-40">
-            <div className="overflow-hidden rounded-[1.75rem] border border-amber-300/25 bg-[linear-gradient(145deg,rgba(251,191,36,0.12),rgba(34,58,41,0.16))] p-5 md:p-8">
+            <div className="overflow-hidden  border border-amber-300/25 bg-[linear-gradient(145deg,rgba(251,191,36,0.12),rgba(34,58,41,0.16))] p-5 md:p-8">
                 <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                     <div className="flex flex-col gap-5">
                         <div className="flex flex-wrap items-center gap-2">
@@ -85,7 +85,7 @@ export default function LegendaryEarthBeastSpeciesSection({
                         </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-[1.5rem] border border-amber-200/20 shadow-2xl shadow-black/30">
+                    <div className="overflow-hidden  border border-amber-200/20 shadow-2xl shadow-black/30">
                         <ContentImageFigure image={beast.featuredImage} />
                     </div>
                 </div>
