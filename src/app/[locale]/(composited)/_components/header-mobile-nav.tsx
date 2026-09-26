@@ -1,9 +1,12 @@
 "use client";
 
 import {useLayoutEffect, useState, type ReactNode} from "react";
+import {usePathname} from "next/navigation";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import {useHeaderMenu} from "@/app/[locale]/(composited)/_components/header-menu";
+import {NavCaret} from "@/app/[locale]/(composited)/_components/header-dropdown";
 import {DEFAULT_MOBILE_ACCORDION_ID} from "@/data/public-navigation";
+import {isNavSectionActive} from "@/lib/nav-active";
 
 type MobileNavItem = {
     href: string;
@@ -23,29 +26,18 @@ type HeaderMobileNavProps = {
     moreGroups: MobileNavItem[][];
 };
 
-function AccordionChevron({open}: {open: boolean}) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            className={`h-4 w-4 shrink-0 text-ink-400 transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-180 text-primary-200" : ""}`}
-            fill="currentColor"
-            aria-hidden="true"
-        >
-            <path d="M4.2 6.2a.75.75 0 0 1 1.06 0L8 8.94l2.74-2.74a.75.75 0 1 1 1.06 1.06l-3.27 3.27a.75.75 0 0 1-1.06 0L4.2 7.26a.75.75 0 0 1 0-1.06Z" />
-        </svg>
-    );
-}
-
 function AccordionPanel({
     id,
     title,
     open,
+    active = false,
     onToggle,
     children
 }: {
     id: string;
     title: string;
     open: boolean;
+    active?: boolean;
     onToggle: () => void;
     children: ReactNode;
 }) {
@@ -53,24 +45,28 @@ function AccordionPanel({
     const panelId = `mobile-nav-panel-${id}`;
 
     return (
-        <div className="border-b border-white/[0.06]">
+        <div className="border-b border-line-300">
             <button
                 id={triggerId}
                 type="button"
-                className="flex min-h-12 w-full items-center justify-between gap-3 px-1 py-2 text-left text-[17px] font-bold leading-tight text-white transition-colors hover:text-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                className={`relative flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-1 py-2 text-left text-[17px] font-bold leading-tight transition-colors duration-150 hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-primary-300 motion-reduce:transition-none ${
+                    open || active ? "text-white" : "text-ink-100"
+                }`}
                 aria-expanded={open}
                 aria-controls={panelId}
                 onClick={onToggle}
             >
                 <span className="min-w-0 whitespace-normal text-left leading-snug">{title}</span>
-                <AccordionChevron open={open} />
+                <span className={`shrink-0 transition-colors duration-150 motion-reduce:transition-none ${open ? "text-primary-400" : "text-ink-500"}`}>
+                    <NavCaret open={open} />
+                </span>
             </button>
             <div
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
                 hidden={!open}
-                className="pb-2"
+                className="nav-panel pb-2"
             >
                 {children}
             </div>
@@ -85,13 +81,20 @@ export default function HeaderMobileNav({
     moreGroups
 }: HeaderMobileNavProps) {
     const {open: drawerOpen} = useHeaderMenu();
+    const pathname = usePathname();
     const [openSection, setOpenSection] = useState<string | null>(DEFAULT_MOBILE_ACCORDION_ID);
 
+    // A plain string, so opening the drawer realigns the accordion but a later
+    // re-render never overwrites the section the visitor just chose.
+    const moreActive = isNavSectionActive(pathname, moreGroups.flat().map((link) => link.href));
+    const activeSectionId = sections.find(
+        (section) => isNavSectionActive(pathname, section.links.map((link) => link.href))
+    )?.id ?? (moreActive ? "more" : null);
+
     useLayoutEffect(() => {
-        if (drawerOpen) {
-            setOpenSection(DEFAULT_MOBILE_ACCORDION_ID);
-        }
-    }, [drawerOpen]);
+        if (!drawerOpen) return;
+        setOpenSection(activeSectionId ?? DEFAULT_MOBILE_ACCORDION_ID);
+    }, [drawerOpen, activeSectionId]);
 
     function toggleSection(id: string) {
         setOpenSection((current) => (current === id ? null : id));
@@ -107,9 +110,10 @@ export default function HeaderMobileNav({
                         id={section.id}
                         title={section.title}
                         open={open}
+                        active={activeSectionId === section.id}
                         onToggle={() => toggleSection(section.id)}
                     >
-                        <div className="flex flex-col pl-3">
+                        <div className="ml-1 flex flex-col border-l border-line-300 pl-3">
                             {section.links.map((link) => (
                                 <HeaderLink key={`${section.id}-${link.href}`} href={link.href} mobile child>
                                     {link.label}
@@ -128,11 +132,12 @@ export default function HeaderMobileNav({
                 id="more"
                 title={moreTitle}
                 open={openSection === "more"}
+                active={moreActive}
                 onToggle={() => toggleSection("more")}
             >
-                <div className="flex flex-col pl-3">
+                <div className="ml-1 flex flex-col border-l border-line-300 pl-3">
                     {moreGroups.map((group, index) => (
-                        <div key={index} className={index > 0 ? "mt-2 border-t border-white/[0.06] pt-2" : undefined}>
+                        <div key={index} className={index > 0 ? "mt-2 border-t border-line-300 pt-2" : undefined}>
                             {group.map((link) => (
                                 <HeaderLink key={`more-${link.href}`} href={link.href} mobile child>
                                     {link.label}

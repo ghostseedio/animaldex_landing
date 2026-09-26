@@ -34,18 +34,18 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
 
     return (
         <header
-            className="sticky top-0 z-40 mb-8 border-b border-line-400 bg-canvas-900/92 px-4 py-3 font-display font-bold backdrop-blur-xl md:px-8"
+            className="sticky top-0 z-40 mb-8 border-b border-line-200 bg-canvas-950/[0.94] px-4 font-display font-bold backdrop-blur-xl md:px-6 xl:px-8"
         >
-            <div className="mx-auto flex h-14 w-full max-w-[86rem] items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3 md:gap-5">
-                    <Link href="/" className="flex shrink-0 items-center gap-3" aria-label={t("logo")}>
+            <div className="mx-auto flex h-16 w-full max-w-[86rem] items-stretch justify-between gap-3">
+                <div className="flex min-w-0 shrink-0 items-center gap-3">
+                    <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={t("logo")}>
                         <img
                             src="/images/logo.webp"
                             alt=""
                             aria-hidden="true"
                             width={44}
                             height={44}
-                            className="h-10 w-10"
+                            className="h-9 w-9"
                         />
                         <Image
                             src="/images/animaldex-logo-text.webp"
@@ -53,10 +53,12 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                             width={320}
                             height={76}
                             priority
-                            className="h-7 w-auto max-w-[7.5rem] md:h-8 md:max-w-[9rem]"
+                            className="h-[1.625rem] w-auto max-w-[7.25rem] md:h-7 md:max-w-[8.25rem]"
                         />
                     </Link>
-                    <LocaleToggle currentLocale={locale} />
+                    {/* A hairline separates identity from navigation, the way a field
+                        guide separates its masthead from the index. */}
+                    <span aria-hidden="true" className="hidden h-6 w-px shrink-0 bg-line-200 xl:block" />
                 </div>
                 <HeaderMenu
                     logoLabel={t("logo")}
@@ -65,6 +67,19 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     ctaLabel={startCollectionLabel}
                     navigationLabel={t("discover")}
                     followLabel={t("footerGroups.follow")}
+                    actions={(
+                        <>
+                            <LocaleToggle currentLocale={locale} />
+                            <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
+                            <Link
+                                href={START_COLLECTION_HREF}
+                                className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[2px] bg-primary-400 px-4 text-[0.8125rem] font-black uppercase leading-none tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                            >
+                                {startCollectionLabel}
+                            </Link>
+                        </>
+                    )}
+                    mobileLocale={<LocaleToggle currentLocale={locale} />}
                     mobileLinks={(
                         <HeaderMobileNav
                             sections={mobileAccordionSections.map((section) => ({
@@ -81,20 +96,17 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                 >
                     <HeaderDropdownProvider>
                         {desktopDropdowns.map((section) => (
-                            <HeaderDropdown key={section.id} label={section.title} items={section.items} />
+                            <HeaderDropdown
+                                key={section.id}
+                                label={section.title}
+                                items={section.items}
+                                ruleAfterHref={section.ruleAfterHref}
+                            />
                         ))}
-                        <HeaderLink href={BLOG_HREF} data-cursor-text={t("blog")}>
+                        <HeaderLink href={BLOG_HREF}>
                             {t("blog")}
                         </HeaderLink>
                     </HeaderDropdownProvider>
-                    <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
-                    <Link href={START_COLLECTION_HREF} className="hidden xl:inline-flex">
-                        <span
-                            className="inline-flex min-h-[42px] items-center justify-center whitespace-nowrap rounded-md bg-primary-400 px-5 text-sm font-bold text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:bg-primary-300"
-                        >
-                            {startCollectionLabel}
-                        </span>
-                    </Link>
                 </HeaderMenu>
             </div>
         </header>

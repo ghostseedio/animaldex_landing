@@ -1,7 +1,9 @@
 "use client";
 
 import {createContext, KeyboardEvent, ReactNode, useContext, useEffect, useId, useRef, useState} from "react";
+import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import {isNavHrefActive, isNavSectionActive} from "@/lib/nav-active";
 
 type HeaderDropdownContextValue = {
     openId: string | null;
@@ -27,13 +29,59 @@ type HeaderDropdownItem = {
     label: string;
 };
 
-export default function HeaderDropdown({label, items}: {label: string; items: HeaderDropdownItem[]}) {
+/** A 10x6 stroked caret: the old 14px filled glyph read as a form control. */
+export function NavCaret({open}: {open: boolean}) {
+    return (
+        <svg
+            viewBox="0 0 10 6"
+            className={`h-[6px] w-[10px] shrink-0 transition-transform duration-150 motion-reduce:transition-none ${open ? "-scale-y-100" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M1 1.4 5 4.6 9 1.4" />
+        </svg>
+    );
+}
+
+function RowArrow() {
+    return (
+        <svg
+            viewBox="0 0 12 10"
+            className="h-[9px] w-[11px] shrink-0 text-ink-600 transition-transform duration-150 group-hover:translate-x-[2px] group-hover:text-primary-400 group-focus-visible:translate-x-[2px] group-focus-visible:text-primary-400 motion-reduce:transition-none"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M0.75 5h9.5M7 1.5 10.5 5 7 8.5" />
+        </svg>
+    );
+}
+
+export default function HeaderDropdown({
+    label,
+    items,
+    ruleAfterHref
+}: {
+    label: string;
+    items: HeaderDropdownItem[];
+    ruleAfterHref?: string;
+}) {
     const generatedId = useId();
     const {openId, setOpenId} = useContext(HeaderDropdownContext);
     const open = openId === generatedId;
     const rootRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
     const menuId = `${generatedId}-menu`;
+    const pathname = usePathname();
+    const sectionActive = isNavSectionActive(pathname, items.map((item) => item.href));
 
     useEffect(() => {
         if (!open) return;
@@ -59,19 +107,47 @@ export default function HeaderDropdown({label, items}: {label: string; items: He
         };
     }, [open, setOpenId]);
 
+    function panelLinks() {
+        return Array.from(panelRef.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? []);
+    }
+
+    function focusPanelLink(index: number) {
+        const links = panelLinks();
+        if (!links.length) return;
+        const wrapped = (index + links.length) % links.length;
+        links[wrapped].focus();
+    }
+
     function onButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-        if (event.key !== "ArrowDown") return;
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
         event.preventDefault();
         setOpenId(generatedId);
-        window.requestAnimationFrame(() => {
-            rootRef.current?.querySelector<HTMLAnchorElement>("a[href]")?.focus();
-        });
+        window.requestAnimationFrame(() => focusPanelLink(event.key === "ArrowUp" ? -1 : 0));
+    }
+
+    function onPanelKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+        const links = panelLinks();
+        const current = links.indexOf(document.activeElement as HTMLAnchorElement);
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            focusPanelLink(current + 1);
+        } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            focusPanelLink(current - 1);
+        } else if (event.key === "Home") {
+            event.preventDefault();
+            focusPanelLink(0);
+        } else if (event.key === "End") {
+            event.preventDefault();
+            focusPanelLink(-1);
+        }
     }
 
     return (
         <div
             ref={rootRef}
-            className="relative hidden xl:block"
+            className="relative hidden xl:flex"
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node)) {
                     setOpenId(null);
@@ -81,38 +157,64 @@ export default function HeaderDropdown({label, items}: {label: string; items: He
             <button
                 ref={buttonRef}
                 type="button"
-                className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-ink-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                className="group relative inline-flex h-full items-center gap-[7px] px-3 text-[0.9375rem] leading-none tracking-[-0.005em] text-ink-200 transition-colors duration-150 hover:text-white focus-visible:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-5px] focus-visible:outline-primary-300 motion-reduce:transition-none"
                 aria-expanded={open}
                 aria-haspopup="true"
                 aria-controls={menuId}
+                aria-current={sectionActive && !open ? "true" : undefined}
                 onClick={() => setOpenId(open ? null : generatedId)}
                 onKeyDown={onButtonKeyDown}
             >
-                {label}
-                <svg
-                    viewBox="0 0 16 16"
-                    className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
-                    fill="currentColor"
+                <span className={open || sectionActive ? "text-white" : undefined}>{label}</span>
+                <NavCaret open={open} />
+                {/*
+                    The active marker: a 2px lime rule sitting on the header's bottom
+                    edge, the exact width of the item's hit area. When the panel is
+                    open it is also the seam between the nav item and the panel below,
+                    which is what makes the menu read as attached rather than floating.
+                */}
+                <span
                     aria-hidden="true"
-                >
-                    <path d="M4.2 6.2a.75.75 0 0 1 1.06 0L8 8.94l2.74-2.74a.75.75 0 1 1 1.06 1.06l-3.27 3.27a.75.75 0 0 1-1.06 0L4.2 7.26a.75.75 0 0 1 0-1.06Z" />
-                </svg>
+                    className={`pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left bg-primary-400 transition-transform duration-150 ease-out motion-reduce:transition-none ${
+                        open || sectionActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                    }`}
+                />
             </button>
             <div
                 id={menuId}
+                ref={panelRef}
                 hidden={!open}
-                className="absolute left-0 top-full z-50 mt-1 min-w-[17rem] rounded-xl border border-line-300 bg-canvas-900 p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
+                onKeyDown={onPanelKeyDown}
+                className="nav-panel absolute left-0 top-full z-50 -mt-px w-[18.5rem] max-w-[calc(100vw-2rem)] rounded-b-[2px] border border-line-200 bg-canvas-950 shadow-[0_22px_34px_-24px_rgba(0,0,0,0.95)]"
             >
-                {items.map((item) => (
-                    <Link
-                        key={`${item.href}-${item.label}`}
-                        href={item.href}
-                        className="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-ink-100 transition-colors hover:bg-white/[0.055] hover:text-primary-100 focus-visible:bg-white/[0.055] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300"
-                        onClick={() => setOpenId(null)}
-                    >
-                        {item.label}
-                    </Link>
-                ))}
+                {items.map((item) => {
+                    const itemActive = isNavHrefActive(pathname, item.href);
+                    return (
+                        <div
+                            key={`${item.href}-${item.label}`}
+                            className={ruleAfterHref === item.href ? "border-b border-line-300" : undefined}
+                        >
+                            <Link
+                                href={item.href}
+                                aria-current={itemActive ? "page" : undefined}
+                                className={`group relative flex min-h-[2.625rem] items-center justify-between gap-5 py-2 pl-3 pr-3.5 text-[0.875rem] font-semibold leading-snug transition-colors duration-150 hover:bg-white/[0.045] hover:text-white focus-visible:bg-white/[0.07] focus-visible:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-primary-300 motion-reduce:transition-none ${
+                                    itemActive ? "text-white" : "text-ink-200"
+                                }`}
+                                onClick={() => setOpenId(null)}
+                            >
+                                {/* Edge marker instead of a rounded pill around every row. */}
+                                <span
+                                    aria-hidden="true"
+                                    className={`absolute inset-y-0 left-0 w-[2px] origin-top bg-primary-400 transition-transform duration-150 ease-out motion-reduce:transition-none ${
+                                        itemActive ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100"
+                                    }`}
+                                />
+                                <span className="min-w-0">{item.label}</span>
+                                <RowArrow />
+                            </Link>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

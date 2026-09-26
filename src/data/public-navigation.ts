@@ -7,6 +7,12 @@ export type PublicNavSection = {
     id: string;
     titleKey: string;
     links: PublicNavLink[];
+    /**
+     * Presentational only: the dropdown draws a hairline after this href so a
+     * long list reads as two deliberate groups instead of one undifferentiated
+     * column. It never changes which links a section contains.
+     */
+    ruleAfterHref?: string;
 };
 
 export const START_COLLECTION_HREF = "/#download";
@@ -66,7 +72,8 @@ export const resourceLinks: PublicNavLink[] = [
 ];
 
 export const headerDropdowns: PublicNavSection[] = [
-    {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks},
+    // Catalogue and places above the rule, the playful entry points below it.
+    {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks, ruleAfterHref: LOCATIONS_HREF},
     {id: "wisdom", titleKey: "animalWisdom", links: animalWisdomLinks},
     {id: "experiences", titleKey: "experiences", links: experienceLinks},
     {id: "earn", titleKey: "earn", links: earnLinks}

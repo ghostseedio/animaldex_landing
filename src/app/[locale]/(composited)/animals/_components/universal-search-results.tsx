@@ -116,7 +116,7 @@ function getStatChips(hit: UniversalSearchSpeciesHit, presets: UniversalSearchSt
 function StatChip({label, value, tint}: {label: string; value: string; tint: string}) {
     return (
         <span
-            className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.04em]"
+            className="inline-flex items-center gap-1 border px-2 py-1 text-[10px] font-black uppercase tracking-[0.04em]"
             style={{
                 color: tint,
                 backgroundColor: `color-mix(in srgb, ${tint} 14%, transparent)`,
@@ -133,7 +133,7 @@ function SpeciesHitThumbnail({slug, name}: {slug: string | null; name: string}) 
     const [failed, setFailed] = useState(false);
 
     return (
-        <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+        <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden border border-white/10 bg-white/[0.04]">
             {slug && !failed ? (
                 <img
                     src={getSpeciesArtworkRoute(slug, 160)}
@@ -236,7 +236,7 @@ export default function UniversalSearchResults({
                                 <Link
                                     key={item.slug}
                                     href={`/animals/${item.slug}`}
-                                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-primary-400/40"
+                                    className="flex items-center gap-3 border border-white/10 bg-white/[0.03] p-4 transition hover:border-primary-400/40"
                                 >
                                     <SpeciesHitThumbnail slug={item.slug} name={item.name} />
                                     <span className="min-w-0">
@@ -254,7 +254,7 @@ export default function UniversalSearchResults({
 
     if (status === "error" || status === "rate-limited") {
         return (
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
+            <div className=" border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
                 <h2 className="font-display text-2xl font-bold text-white">{copy.errorTitle}</h2>
                 <p className="mx-auto mt-3 max-w-lg text-ink-200">
                     {status === "rate-limited" ? copy.rateLimited : copy.errorBody}
@@ -263,7 +263,7 @@ export default function UniversalSearchResults({
                     <button
                         type="button"
                         onClick={() => setAttempt((value) => value + 1)}
-                        className="mt-6 rounded-full bg-primary-400 px-6 py-2.5 text-sm font-bold text-black transition hover:bg-primary-300"
+                        className="mt-6 bg-primary-400 px-6 py-2.5 text-sm font-bold text-black transition hover:bg-primary-300"
                     >
                         {copy.retry}
                     </button>
@@ -288,7 +288,7 @@ export default function UniversalSearchResults({
 
     if (!hasAnything) {
         return (
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
+            <div className=" border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
                 <h2 className="font-display text-2xl font-bold text-white">{copy.emptyTitle}</h2>
                 <p className="mx-auto mt-3 max-w-lg text-ink-200">{copy.emptyBody}</p>
             </div>
@@ -298,7 +298,7 @@ export default function UniversalSearchResults({
     return (
         <div className="space-y-12">
             {data.brief ? (
-                <section className="rounded-3xl border border-primary-400/25 bg-primary-400/[0.06] p-6 md:p-8">
+                <section className=" border border-primary-400/25 bg-primary-400/[0.06] p-6 md:p-8">
                     <h2 className="font-display text-2xl font-bold text-white md:text-3xl">{data.brief.title}</h2>
                     <p className="mt-3 text-base leading-7 text-ink-100">{data.brief.summary}</p>
                     {data.brief.bullets.length ? (
@@ -370,14 +370,14 @@ export default function UniversalSearchResults({
                                 <Link
                                     key={`${hit.display_name}-${hit.species_profile_id ?? ""}`}
                                     href={href}
-                                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/40"
+                                    className=" border border-white/10 bg-white/[0.03] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/40"
                                 >
                                     {body}
                                 </Link>
                             ) : (
                                 <article
                                     key={`${hit.display_name}-${hit.species_profile_id ?? ""}`}
-                                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                                    className=" border border-white/10 bg-white/[0.03] p-5"
                                 >
                                     {body}
                                 </article>
@@ -400,7 +400,7 @@ export default function UniversalSearchResults({
                                 <Link
                                     key={slug}
                                     href={`/comparisons/${slug}`}
-                                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-primary-400/40"
+                                    className=" border border-white/10 bg-white/[0.03] p-5 transition hover:border-primary-400/40"
                                 >
                                     <p className="font-display text-lg font-bold text-white">
                                         {hit.animal_a_name} <span className="text-primary-300">vs</span> {hit.animal_b_name}
@@ -421,7 +421,7 @@ export default function UniversalSearchResults({
                     <SectionHeading>{copy.locationsTitle}</SectionHeading>
                     <div className="grid gap-4 md:grid-cols-2">
                         {data.locations.map((hit) => (
-                            <article key={`${hit.name}-${hit.latitude ?? 0}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                            <article key={`${hit.name}-${hit.latitude ?? 0}`} className=" border border-white/10 bg-white/[0.03] p-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <p className="font-display text-lg font-bold text-white">{hit.name}</p>
                                     {hit.approx_distance_label ? (
@@ -457,7 +457,7 @@ export default function UniversalSearchResults({
                     <SectionHeading>{copy.learnTitle}</SectionHeading>
                     <div className="grid gap-4 md:grid-cols-2">
                         {data.learn.map((hit) => (
-                            <article key={`${hit.title}-${hit.display_name}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                            <article key={`${hit.title}-${hit.display_name}`} className=" border border-white/10 bg-white/[0.03] p-5">
                                 <p className="font-display text-lg font-bold text-white">{hit.title}</p>
                                 {hit.subtitle ? <p className="mt-1 text-sm text-ink-300">{hit.subtitle}</p> : null}
                                 {hit.principle_expression ? (
@@ -477,7 +477,7 @@ export default function UniversalSearchResults({
                     <SectionHeading>{copy.factsTitle}</SectionHeading>
                     <div className="grid gap-4 md:grid-cols-2">
                         {data.facts.map((hit) => (
-                            <article key={`fact-${hit.display_name}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                            <article key={`fact-${hit.display_name}`} className=" border border-white/10 bg-white/[0.03] p-5">
                                 <p className="font-display text-lg font-bold text-white">{hit.display_name}</p>
                                 {hit.species_spotlight ? (
                                     <p className="mt-2 text-sm leading-6 text-ink-200">{hit.species_spotlight}</p>
@@ -517,7 +517,7 @@ export default function UniversalSearchResults({
                     <SectionHeading>{copy.helpTitle}</SectionHeading>
                     <div className="space-y-3">
                         {data.help.map((hit) => (
-                            <article key={hit.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                            <article key={hit.id} className=" border border-white/10 bg-white/[0.03] p-5">
                                 <p className="font-bold text-white">{hit.title}</p>
                                 <p className="mt-2 text-sm leading-6 text-ink-200">{hit.summary}</p>
                             </article>

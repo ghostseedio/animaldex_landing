@@ -412,7 +412,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                                 <Link
                                     key={item.label}
                                     href={`${item.href}#all-animals`}
-                                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.06em] transition-colors"
+                                    className="inline-flex items-center gap-1.5 border px-3 py-1.5 text-xs font-black uppercase tracking-[0.06em] transition-colors"
                                     style={{
                                         color: tone.color,
                                         backgroundColor: isActive ? tone.activeBackground : tone.background,
@@ -433,7 +433,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                             <Link
                                 key={item.label}
                                 href={`${item.href}#all-animals`}
-                                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                className={`inline-flex items-center gap-1.5 border px-3 py-1.5 text-xs font-semibold transition-colors ${
                                     isActive
                                         ? "border-primary-400/50 bg-primary-400/15 text-primary-100"
                                         : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-primary-400/40 hover:text-primary-100"
@@ -593,7 +593,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         {[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")].map((support) => (
                             <li
                                 key={support}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-line-200 bg-surface-800/60 px-3 py-1.5 text-xs font-medium text-ink-200"
+                                className="inline-flex items-center gap-1.5 border border-line-200 bg-surface-800/60 px-3 py-1.5 text-xs font-medium text-ink-200"
                             >
                                 <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary-400" />
                                 {support}

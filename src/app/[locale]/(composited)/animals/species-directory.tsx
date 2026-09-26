@@ -214,13 +214,13 @@ function ActiveFilterChip({
     onRemove: () => void;
 }) {
     return (
-        <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary-400/35 bg-primary-400/12 py-1 pl-3 pr-1 text-xs font-semibold text-primary-100">
+        <span className="inline-flex max-w-full items-center gap-1 border border-primary-400/35 bg-primary-400/12 py-1 pl-3 pr-1 text-xs font-semibold text-primary-100">
             <span className="min-w-0 truncate">{label}</span>
             <button
                 type="button"
                 onClick={onRemove}
                 aria-label={`Remove ${label}`}
-                className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary-100/80 transition-colors hover:bg-primary-400/20 hover:text-white"
+                className="grid h-6 w-6 shrink-0 place-items-center text-primary-100/80 transition-colors hover:bg-primary-400/20 hover:text-white"
             >
                 <span aria-hidden="true" className="text-sm leading-none">×</span>
             </button>
@@ -315,7 +315,7 @@ function SortStatChip({sort, value}: {sort: SortStatKey; value: number}) {
 
     return (
         <span
-            className="inline-flex max-w-full items-center gap-0.5 rounded-full border bg-black/80 px-1.5 py-1 text-[9px] font-black uppercase leading-none tracking-[0.02em]"
+            className="inline-flex max-w-full items-center gap-0.5 border bg-black/80 px-1.5 py-1 text-[9px] font-black uppercase leading-none tracking-[0.02em]"
             style={{
                 color: meta.tint,
                 borderColor: `color-mix(in srgb, ${meta.tint} 45%, transparent)`
@@ -999,7 +999,7 @@ export default function SpeciesDirectory({
                         type="button"
                         onClick={() => setFiltersOpen((open) => !open)}
                         aria-expanded={filtersOpen}
-                        className="inline-flex items-center gap-2 rounded-full border border-line-300 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400"
+                        className="inline-flex items-center gap-2 border border-line-300 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-primary-400"
                     >
                         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                             <path d="M3.5 5h13M6 10h8M8.5 15h3" strokeLinecap="round" />
@@ -1028,7 +1028,7 @@ export default function SpeciesDirectory({
             ) : null}
 
             {filtersOpen ? (
-                <div className="rounded-3xl bg-surface-900/65 p-5 md:p-6 flex flex-col gap-6">
+                <div className="border border-line-300 bg-surface-900/65 p-5 md:p-6 flex flex-col gap-6">
                     <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-6">
                         <div className="flex flex-col gap-3">
                             <div className="flex flex-col gap-1">
@@ -1038,7 +1038,7 @@ export default function SpeciesDirectory({
                             <button
                                 type="button"
                                 onClick={() => setLocationFilterOpen((open) => !open)}
-                                className="flex items-center justify-between gap-3 rounded-2xl border border-line-300 bg-surface-950 px-4 py-3 text-left transition-colors hover:border-primary-400"
+                                className="flex items-center justify-between gap-3 border border-line-300 bg-surface-950 px-4 py-3 text-left transition-colors hover:border-primary-400"
                             >
                                 <span className="text-white font-medium">
                                     {locationFilterOpen ? copy.closeLocationFilter : copy.openLocationFilter}
@@ -1055,7 +1055,7 @@ export default function SpeciesDirectory({
                                 <button
                                     type="button"
                                     onClick={() => pushFilters({nextStatus: "all"})}
-                                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                    className={`border px-3 py-1.5 text-sm transition-colors ${
                                         activeStatus === "all"
                                             ? "border-primary-400 bg-primary-500/20 text-white"
                                             : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
@@ -1068,7 +1068,7 @@ export default function SpeciesDirectory({
                                         key={statusKey}
                                         type="button"
                                         onClick={() => pushFilters({nextStatus: statusKey})}
-                                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                        className={`border px-3 py-1.5 text-sm transition-colors ${
                                             activeStatus === statusKey
                                                 ? "border-primary-400 bg-primary-500/20 text-white"
                                                 : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
@@ -1122,14 +1122,14 @@ export default function SpeciesDirectory({
                                                 nextOrder: getDefaultSpeciesDirectorySortOrder(option.id)
                                             });
                                         }}
-                                        className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+                                        className={`flex w-full items-start gap-3 border px-4 py-3 text-left transition-colors ${
                                             selected
                                                 ? "border-primary-400 bg-primary-500/15 text-white"
                                                 : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
                                         }`}
                                     >
                                         <span
-                                            className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${
+                                            className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center border ${
                                                 selected
                                                     ? "border-primary-400/40 bg-primary-400/15 text-primary-100"
                                                     : "border-white/10 bg-white/[0.04] text-white/55"
@@ -1143,7 +1143,7 @@ export default function SpeciesDirectory({
                                             <span className="flex flex-wrap items-center gap-2">
                                                 <span className="text-sm font-semibold text-white">{labels.title}</span>
                                                 <span
-                                                    className="rounded-full px-1.5 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.12em]"
+                                                    className="px-1.5 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.12em]"
                                                     style={{
                                                         color: meta.tint,
                                                         backgroundColor: `${meta.tint}22`
@@ -1152,7 +1152,7 @@ export default function SpeciesDirectory({
                                                     {meta.badge}
                                                 </span>
                                                 {selected ? (
-                                                    <span className="rounded-full border border-primary-400/30 bg-primary-400/10 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.08em] text-primary-100">
+                                                    <span className="border border-primary-400/30 bg-primary-400/10 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.08em] text-primary-100">
                                                         {directionLabel}
                                                     </span>
                                                 ) : null}
@@ -1176,7 +1176,7 @@ export default function SpeciesDirectory({
                             <button
                                 type="button"
                                 onClick={() => pushFilters({nextLetter: "all"})}
-                                className={`shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                className={`shrink-0 border px-3 py-1.5 text-sm transition-colors ${
                                     activeLetter === "all"
                                         ? "border-primary-400 bg-primary-500/20 text-white"
                                         : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
@@ -1189,7 +1189,7 @@ export default function SpeciesDirectory({
                                     key={letter}
                                     type="button"
                                     onClick={() => pushFilters({nextLetter: letter})}
-                                    className={`h-9 min-w-9 shrink-0 rounded-full border px-3 text-sm transition-colors ${
+                                    className={`h-9 min-w-9 shrink-0 border px-3 text-sm transition-colors ${
                                         activeLetter === letter
                                             ? "border-primary-400 bg-primary-500/20 text-white"
                                             : "border-line-300 text-ink-300 hover:border-primary-400 hover:text-white"
@@ -1238,7 +1238,7 @@ export default function SpeciesDirectory({
                         : null}
                 </div>
             ) : (
-                <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-8 md:p-10 text-center flex flex-col gap-3">
+                <div className="border border-line-300 bg-surface-900/80 backdrop-blur p-8 md:p-10 text-center flex flex-col gap-3">
                     <h2 className="font-display font-bold text-3xl text-white">{copy.noResultsTitle}</h2>
                     <p className="text-ink-200 text-lg">{copy.noResultsDescription}</p>
                     <div className="flex justify-center">

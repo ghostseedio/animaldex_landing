@@ -27,6 +27,8 @@ type HeaderMenuProps = {
     logoLabel: string;
     brandTitle: string;
     children: ReactNode;
+    actions: ReactNode;
+    mobileLocale: ReactNode;
     mobileLinks: ReactNode;
     mobileAuth: ReactNode;
     ctaHref: string;
@@ -40,6 +42,8 @@ export default function HeaderMenu({
     logoLabel,
     brandTitle,
     children,
+    actions,
+    mobileLocale,
     mobileLinks,
     mobileAuth,
     ctaHref,
@@ -113,25 +117,33 @@ export default function HeaderMenu({
 
     return (
         <MenuContext.Provider value={{open, setOpen}}>
-            <button
-                ref={openButtonRef}
-                type="button"
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line-300 bg-surface-900 transition hover:border-primary-300 hover:bg-surface-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:hidden"
-                onClick={() => setOpen(true)}
-                aria-label="Open menu"
-                aria-expanded={open}
-                aria-controls="mobile-navigation-drawer"
-            >
-                <Image src={OpenIcon} alt="" width={26} height={26} />
-            </button>
+            <div className="flex shrink-0 items-center gap-2 xl:hidden">
+                {mobileLocale}
+                <button
+                    ref={openButtonRef}
+                    type="button"
+                    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                    onClick={() => setOpen(true)}
+                    aria-label="Open menu"
+                    aria-expanded={open}
+                    aria-controls="mobile-navigation-drawer"
+                >
+                    <Image src={OpenIcon} alt="" width={24} height={24} />
+                </button>
+            </div>
 
-            {/* Desktop nav */}
+            {/* Desktop nav: stretched to the full header height so each item's active
+                marker lands on the header's bottom rule. */}
             <nav
                 aria-label="Primary navigation"
-                className="hidden items-center justify-end gap-3 xl:flex xl:gap-5"
+                className="hidden min-w-0 flex-1 items-stretch justify-start xl:flex"
             >
                 {children}
             </nav>
+
+            <div className="hidden shrink-0 items-center gap-2 xl:flex">
+                {actions}
+            </div>
 
             {/* Mobile drawer */}
             {mounted ? createPortal(<div
@@ -152,9 +164,9 @@ export default function HeaderMenu({
                     aria-modal="true"
                     role="dialog"
                     onKeyDown={trapFocus}
-                    className={`absolute inset-y-0 right-0 flex w-[calc(100%-0.75rem)] max-w-[26rem] flex-col overflow-hidden border-l border-line-300 bg-canvas-900 shadow-[-24px_0_80px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
+                    className={`absolute inset-y-0 right-0 flex w-[calc(100%-0.75rem)] max-w-[25rem] flex-col overflow-hidden border-l border-line-200 bg-canvas-950 shadow-[-28px_0_60px_-24px_rgba(0,0,0,0.9)] transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
                 >
-                    <div className="flex min-h-[5rem] items-center justify-between border-b border-line-400 px-5 py-4">
+                    <div className="flex min-h-16 items-center justify-between border-b border-line-200 px-4 py-3">
                         <Link
                             href={logoHref}
                             className="flex min-w-0 items-center gap-3"
@@ -167,20 +179,20 @@ export default function HeaderMenu({
                                 aria-hidden="true"
                                 width={40}
                                 height={40}
-                                className="h-10 w-10"
+                                className="h-9 w-9"
                             />
                             <Image
                                 src="/images/animaldex-logo-text.webp"
                                 alt={brandTitle}
                                 width={320}
                                 height={76}
-                                className="h-7 w-auto max-w-[7.5rem]"
+                                className="h-[1.625rem] w-auto max-w-[7.25rem]"
                             />
                         </Link>
                         <button
                             ref={closeButtonRef}
                             type="button"
-                            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line-300 bg-surface-900 transition hover:border-primary-300 hover:bg-surface-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                             onClick={closeMenu}
                             aria-label="Close menu"
                         >
@@ -189,18 +201,18 @@ export default function HeaderMenu({
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                        <div className="px-4 pb-8 pt-3">
+                        <div className="px-4 pb-6 pt-1">
                             <p className="sr-only">{navigationLabel}</p>
                             <div key={open ? "mobile-nav-open" : "mobile-nav-closed"}>
                                 {mobileLinks}
                             </div>
                         </div>
 
-                        <div className="border-t border-line-400 px-5 py-5">
-                            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-ink-500">
+                        <div className="border-t border-line-200 px-4 py-5">
+                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-ink-500">
                                 {followLabel}
                             </p>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5">
                                 {socialLinks.map((link) => (
                                     <a
                                         key={link.label}
@@ -209,7 +221,7 @@ export default function HeaderMenu({
                                         rel="noopener noreferrer"
                                         aria-label={link.label}
                                         title={link.label}
-                                        className="grid h-11 w-11 place-items-center rounded-full border border-line-300 bg-white/[0.025] text-ink-200 transition hover:border-primary-300 hover:bg-primary-500/10 hover:text-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                                        className="grid h-11 w-11 place-items-center rounded-[2px] border border-line-200 bg-white/[0.02] text-ink-300 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                                     >
                                         <link.icon size={19} />
                                     </a>
@@ -218,11 +230,11 @@ export default function HeaderMenu({
                         </div>
                     </div>
 
-                    <div className="shrink-0 space-y-2 border-t border-line-400 bg-canvas-950/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+                    <div className="shrink-0 space-y-2 border-t border-line-200 bg-canvas-950 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
                         <Link
                             href={ctaHref}
                             onClick={closeMenu}
-                            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-primary-400 px-4 text-center text-sm font-black leading-tight text-canvas-950 shadow-[0_0_28px_rgba(167,244,50,0.28)] transition hover:bg-primary-300 active:scale-[0.98] motion-reduce:active:scale-100"
+                            className="flex min-h-12 w-full items-center justify-center rounded-[2px] bg-primary-400 px-4 text-center text-sm font-black uppercase leading-tight tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                         >
                             {ctaLabel}
                         </Link>

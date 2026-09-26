@@ -37,26 +37,28 @@ export default function LocaleToggle({currentLocale}: {currentLocale: string}) {
     return (
         <details className="relative group">
             <summary
-                className="flex items-center gap-2 list-none cursor-pointer rounded-full border border-line-300 bg-canvas-900/90 px-3 py-2 text-ink-200 select-none"
+                className="flex h-9 items-center gap-2 list-none cursor-pointer rounded-[2px] border border-line-200 bg-white/[0.02] px-2.5 text-ink-200 select-none transition-colors duration-150 hover:border-line-100 hover:text-white motion-reduce:transition-none"
                 aria-label={currentLocale.toUpperCase()}
             >
-                <span aria-hidden="true" className="text-2xl leading-none">{currentFlag}</span>
-                <span className="text-xs uppercase tracking-[0.18em]">{currentLocale}</span>
-                <span aria-hidden="true" className="text-xs text-ink-400 transition-transform group-open:rotate-180">▾</span>
+                <span aria-hidden="true" className="text-base leading-none">{currentFlag}</span>
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em]">{currentLocale}</span>
+                <span aria-hidden="true" className="text-[0.5rem] leading-none text-ink-500 transition-transform group-open:rotate-180">▾</span>
             </summary>
-            <div className="absolute left-0 top-full z-50 mt-2 min-w-full overflow-hidden rounded-2xl border border-line-300 bg-canvas-900/95 shadow-lg backdrop-blur-xl">
+            <div className="absolute left-0 top-full z-50 mt-1 min-w-full overflow-hidden rounded-[2px] border border-line-200 bg-canvas-950 shadow-[0_18px_28px_-20px_rgba(0,0,0,0.95)]">
                 {localeConfig.locales.map((locale) => (
                     <Link
                         key={locale}
                         href={collapsedEnglishDetail && locale !== localeConfig.defaultLocale ? "/" : unprefixedPath}
                         locale={locale}
-                        className={"flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-surface-800 " +
-                            (locale === currentLocale ? "text-primary-500" : "text-ink-200")}
-                        data-cursor-text={locale.toUpperCase()}
+                        className={"relative flex min-h-10 items-center gap-2.5 py-2 pl-3 pr-4 text-sm transition-colors duration-150 hover:bg-white/[0.045] hover:text-white motion-reduce:transition-none " +
+                            (locale === currentLocale ? "text-white" : "text-ink-200")}
                         aria-label={locale.toUpperCase()}
                     >
-                        <span aria-hidden="true" className="text-xl leading-none">{localeFlags[locale] ?? locale.toUpperCase()}</span>
-                        <span className="uppercase tracking-[0.18em]">{locale}</span>
+                        {locale === currentLocale ? (
+                            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[2px] bg-primary-400" />
+                        ) : null}
+                        <span aria-hidden="true" className="text-base leading-none">{localeFlags[locale] ?? locale.toUpperCase()}</span>
+                        <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em]">{locale}</span>
                     </Link>
                 ))}
             </div>

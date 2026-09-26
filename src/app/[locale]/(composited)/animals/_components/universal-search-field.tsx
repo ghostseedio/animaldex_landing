@@ -265,7 +265,7 @@ export default function UniversalSearchField({
                     }}
                     placeholder={copy.placeholder}
                     aria-label={copy.searchLabel}
-                    className="h-14 w-full rounded-2xl border border-white/12 bg-black/25 pl-12 pr-28 text-base text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60"
+                    className="h-14 w-full border border-white/12 bg-black/25 pl-12 pr-28 text-base text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60"
                 />
                 <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                     {query ? (
@@ -276,7 +276,7 @@ export default function UniversalSearchField({
                                 inputRef.current?.focus();
                             }}
                             aria-label={copy.clearLabel}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-400 transition hover:bg-white/10 hover:text-white"
+                            className="flex h-9 w-9 items-center justify-center text-ink-400 transition hover:bg-white/10 hover:text-white"
                         >
                             ✕
                         </button>
@@ -287,7 +287,7 @@ export default function UniversalSearchField({
                             onClick={toggleVoice}
                             aria-label={listening ? copy.voiceListening : copy.voiceLabel}
                             aria-pressed={listening}
-                            className={`flex h-9 w-9 items-center justify-center rounded-full transition ${listening ? "animate-pulse bg-primary-400 text-black" : "text-ink-300 hover:bg-white/10 hover:text-white"}`}
+                            className={`flex h-9 w-9 items-center justify-center transition ${listening ? "animate-pulse bg-primary-400 text-black" : "text-ink-300 hover:bg-white/10 hover:text-white"}`}
                         >
                             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
                                 <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z" />
@@ -297,7 +297,7 @@ export default function UniversalSearchField({
                     ) : null}
                     <button
                         type="submit"
-                        className="h-10 rounded-xl bg-primary-400 px-4 text-sm font-bold text-black transition hover:bg-primary-300"
+                        className="h-10 bg-primary-400 px-4 text-sm font-bold text-black transition hover:bg-primary-300"
                     >
                         {copy.submit}
                     </button>
@@ -305,7 +305,7 @@ export default function UniversalSearchField({
             </form>
 
             {showPanel ? (
-                <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[28rem] overflow-y-auto rounded-2xl border border-white/12 bg-[#0e1411] p-2 shadow-2xl shadow-black/50">
+                <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[28rem] overflow-y-auto border border-white/12 bg-[#0e1411] p-2 shadow-2xl shadow-black/50">
                     {showDiscovery && recent.length ? (
                         <>
                             <div className="flex items-center justify-between px-3 pb-1 pt-2">
@@ -319,7 +319,7 @@ export default function UniversalSearchField({
                                     key={`recent:${item}`}
                                     type="button"
                                     onClick={() => submit(item)}
-                                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/5"
+                                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/5"
                                 >
                                     <span className="text-ink-500" aria-hidden="true">↺</span>
                                     <span className="min-w-0 flex-1 truncate text-sm text-white">{item}</span>
@@ -345,12 +345,12 @@ export default function UniversalSearchField({
                                     key={`trending:${item.query}`}
                                     type="button"
                                     onClick={() => submit(item.query)}
-                                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/5"
+                                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/5"
                                 >
                                     <span className="text-ink-500" aria-hidden="true">↗</span>
                                     <span className="min-w-0 flex-1 truncate text-sm text-white">{item.query}</span>
                                     {item.isPopular ? (
-                                        <span className="shrink-0 rounded-full bg-primary-400/20 px-2 py-0.5 text-[0.65rem] font-black uppercase text-primary-100">
+                                        <span className="shrink-0 bg-primary-400/20 px-2 py-0.5 text-[0.65rem] font-black uppercase text-primary-100">
                                             {copy.popularBadge}
                                         </span>
                                     ) : null}
@@ -362,7 +362,7 @@ export default function UniversalSearchField({
                     {directoryFilterPath && query.trim() ? (
                         <a
                             href={`${directoryFilterPath}?q=${encodeURIComponent(query.trim())}#all-animals`}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/5"
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/5"
                         >
                             <span className="text-ink-500" aria-hidden="true">☰</span>
                             <span className="min-w-0 flex-1 truncate text-sm text-white">
@@ -380,7 +380,7 @@ export default function UniversalSearchField({
                                     type="button"
                                     onMouseEnter={() => setActiveIndex(index)}
                                     onClick={() => submit(item.title)}
-                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${index === activeIndex ? "bg-primary-400/15" : "hover:bg-white/5"}`}
+                                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition ${index === activeIndex ? "bg-primary-400/15" : "hover:bg-white/5"}`}
                                 >
                                     <span className="text-ink-500" aria-hidden="true">⌕</span>
                                     <span className="min-w-0 flex-1 truncate text-sm text-white">{item.title}</span>
