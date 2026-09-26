@@ -1055,6 +1055,7 @@
     },
     "resultsSummary": "Menampilkan {count} dari {total} spesies",
     "loadingMore": "Memuat lebih banyak hewan…",
+    "perPageLabel": "Per halaman",
     "paginationLabel": "Halaman hewan",
     "paginationPrevious": "Halaman sebelumnya",
     "paginationNext": "Halaman berikutnya",

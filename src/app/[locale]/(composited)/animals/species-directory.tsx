@@ -8,7 +8,7 @@ import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesImageAltText} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {speciesDirectorySearchMatch} from "@/lib/species-life-stage-policy";
-import {getSpeciesRarityStatusKey, SPECIES_DIRECTORY_SORT_OPTIONS, getDefaultSpeciesDirectorySortOrder, SpeciesEntry, SpeciesDirectorySort, SpeciesDirectorySortOrder, SpeciesDirectoryTierFilter, SpeciesRarityStatusKey} from "@/data/species";
+import {getSpeciesRarityStatusKey, SPECIES_DIRECTORY_SORT_OPTIONS, SPECIES_DIRECTORY_PAGE_SIZE, SPECIES_DIRECTORY_PAGE_SIZES, isSpeciesDirectoryPageSize, getDefaultSpeciesDirectorySortOrder, SpeciesEntry, SpeciesDirectorySort, SpeciesDirectorySortOrder, SpeciesDirectoryTierFilter, SpeciesDirectoryPageSize, SpeciesRarityStatusKey} from "@/data/species";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import BattleTierChip from "./battle-tier-chip";
 import SpeciesRegionMap from "./species-region-map";
@@ -33,6 +33,7 @@ type SpeciesDirectoryCopy = {
     sortDescendingLabel: string;
     filterAll: string;
     resultsSummary: string;
+    perPageLabel: string;
     loadingMore: string;
     paginationLabel: string;
     paginationPrevious: string;
@@ -92,7 +93,11 @@ function parseDirectorySearch(search: string) {
     const tier = (params.get("tier")?.trim().toUpperCase() || "all") as SpeciesDirectoryTierFilter;
     const parsedPage = Number.parseInt(params.get("page") ?? "1", 10);
     const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-    return {query, letter, region, location, status, sort, order, tier, page};
+    const parsedPerPage = Number.parseInt(params.get("perPage") ?? "", 10);
+    const perPage: SpeciesDirectoryPageSize = Number.isFinite(parsedPerPage) && isSpeciesDirectoryPageSize(parsedPerPage)
+        ? parsedPerPage
+        : SPECIES_DIRECTORY_PAGE_SIZE;
+    return {query, letter, region, location, status, sort, order, tier, page, perPage};
 }
 
 type DirectoryFilters = ReturnType<typeof parseDirectorySearch>;
@@ -109,6 +114,7 @@ function buildDirectoryRequestUrl(filters: DirectoryFilters, page: number) {
     if (filters.sort !== "number") params.set("sort", filters.sort);
     if (filters.order !== getDefaultSpeciesDirectorySortOrder(filters.sort)) params.set("order", filters.order);
     if (filters.tier !== "all") params.set("tier", filters.tier);
+    if (filters.perPage !== SPECIES_DIRECTORY_PAGE_SIZE) params.set("perPage", String(filters.perPage));
     params.set("page", String(page));
     return `/api/animals/directory?${params.toString()}`;
 }
@@ -623,6 +629,7 @@ export default function SpeciesDirectory({
     const activeSort = overrideFilters?.sort ?? currentSort;
     const activeOrder = overrideFilters?.order ?? currentOrder;
     const activeTier = overrideFilters?.tier ?? currentTier;
+    const activePerPage = overrideFilters?.perPage ?? SPECIES_DIRECTORY_PAGE_SIZE;
     // Memoised so the request URL it produces is referentially stable; the page
     // switch and the prefetch both depend on it.
     const activeFilters = useMemo<DirectoryFilters>(() => ({
@@ -634,8 +641,9 @@ export default function SpeciesDirectory({
         sort: activeSort,
         order: activeOrder,
         tier: activeTier,
-        page
-    }), [activeQuery, activeLetter, activeRegion, activeLocation, activeStatus, activeSort, activeOrder, activeTier, page]);
+        page,
+        perPage: activePerPage
+    }), [activeQuery, activeLetter, activeRegion, activeLocation, activeStatus, activeSort, activeOrder, activeTier, page, activePerPage]);
     const filterKey = [
         currentQuery,
         currentLetter,
@@ -741,6 +749,24 @@ export default function SpeciesDirectory({
         });
     }, [activeFilters, applyDirectoryFilters, isApplyingFilters, page, pageCount, pathname]);
 
+    const setPerPage = useCallback((nextPerPage: SpeciesDirectoryPageSize) => {
+        if (nextPerPage === activePerPage) return;
+
+        // Page 4 of 50-per-page is a different slice from page 4 of 500, so changing
+        // the size returns to the first page rather than to a meaningless offset.
+        const nextFilters = {...activeFilters, perPage: nextPerPage, page: 1};
+        setOverrideFilters(nextFilters);
+
+        const params = new URLSearchParams(buildDirectoryRequestUrl(nextFilters, 1).split("?")[1]);
+        params.delete("page");
+        const queryString = params.toString();
+        window.history.pushState(null, "", queryString ? `${pathname}?${queryString}` : pathname);
+
+        void applyDirectoryFilters(nextFilters).catch((error) => {
+            setLoadError(error instanceof Error ? error.message : "Failed to load animals");
+        });
+    }, [activeFilters, activePerPage, applyDirectoryFilters, pathname]);
+
     // Warm the next page so the forward chevron feels instant.
     useEffect(() => {
         if (page >= pageCount || isApplyingFilters) return undefined;
@@ -833,7 +859,8 @@ export default function SpeciesDirectory({
             tier: nextTier,
             // Any filter change starts again at the first page: page 7 of the old
             // result set means nothing in the new one.
-            page: 1
+            page: 1,
+            perPage: activePerPage
         };
         setOverrideFilters(nextFilters);
         window.history.replaceState(null, "", nextUrl);
@@ -934,6 +961,19 @@ export default function SpeciesDirectory({
                     {resultsSummary}
                 </p>
                 <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-ink-300">
+                        <span className="hidden sm:inline">{copy.perPageLabel}</span>
+                        <select
+                            value={activePerPage}
+                            onChange={(event) => setPerPage(Number(event.target.value) as SpeciesDirectoryPageSize)}
+                            aria-label={copy.perPageLabel}
+                            className="h-9 border border-line-300 bg-surface-900 px-2 font-mono text-sm tabular-nums text-white transition-colors hover:border-primary-500/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-200"
+                        >
+                            {SPECIES_DIRECTORY_PAGE_SIZES.map((size) => (
+                                <option key={size} value={size}>{size}</option>
+                            ))}
+                        </select>
+                    </label>
                     {hasActiveFilters ? (
                         <button
                             type="button"

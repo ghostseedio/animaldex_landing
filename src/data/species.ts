@@ -100,7 +100,14 @@ export type SpeciesDirectoryPage = {
     tier: SpeciesDirectoryTierFilter;
 };
 
-export const SPECIES_DIRECTORY_PAGE_SIZE = 48;
+/** Options offered by the directory's per-page control; the first is the default. */
+export const SPECIES_DIRECTORY_PAGE_SIZES = [50, 100, 500, 1000] as const;
+export type SpeciesDirectoryPageSize = (typeof SPECIES_DIRECTORY_PAGE_SIZES)[number];
+export const SPECIES_DIRECTORY_PAGE_SIZE: SpeciesDirectoryPageSize = SPECIES_DIRECTORY_PAGE_SIZES[0];
+
+export function isSpeciesDirectoryPageSize(value: number): value is SpeciesDirectoryPageSize {
+    return (SPECIES_DIRECTORY_PAGE_SIZES as readonly number[]).includes(value);
+}
 export const SPECIES_DIRECTORY_SORT_OPTIONS: Array<{
     id: SpeciesDirectorySort;
     titleKey: string;

@@ -6,6 +6,8 @@ import {getLocationPage} from "@/data/locations";
 import {
     getDefaultSpeciesDirectorySortOrder,
     getSpeciesDirectoryPage,
+    isSpeciesDirectoryPageSize,
+    SPECIES_DIRECTORY_PAGE_SIZE,
     isSpeciesDirectorySort,
     isSpeciesDirectorySortOrder,
     isSpeciesDirectoryTierFilter,
@@ -48,6 +50,10 @@ export async function GET(request: Request) {
     const tierParam = getSingleParam(url.searchParams.get("tier")).toUpperCase();
     const tier = tierParam && isSpeciesDirectoryTierFilter(tierParam) ? tierParam : "all";
     const page = Number.parseInt(getSingleParam(url.searchParams.get("page")) || "1", 10);
+    const perPageParam = Number.parseInt(getSingleParam(url.searchParams.get("perPage")) || "", 10);
+    const perPage = Number.isFinite(perPageParam) && isSpeciesDirectoryPageSize(perPageParam)
+        ? perPageParam
+        : SPECIES_DIRECTORY_PAGE_SIZE;
 
     const timer = createDevRequestTimer("animals.directory", {sort, page, tier, letter, status});
     const catalogEntries = await timeDevStep(timer, "catalog", () => getUnifiedSpeciesEntries());
@@ -61,6 +67,7 @@ export async function GET(request: Request) {
         order,
         tier,
         page: Number.isFinite(page) ? page : 1,
+        pageSize: perPage,
         entries: catalogEntries
     }));
     const [captures, directoryImageState] = await Promise.all([

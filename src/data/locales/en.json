@@ -1071,6 +1071,7 @@
     },
     "resultsSummary": "Showing {count} of {total} species",
     "loadingMore": "Loading more animals…",
+    "perPageLabel": "Per page",
     "paginationLabel": "Animal pages",
     "paginationPrevious": "Previous page",
     "paginationNext": "Next page",

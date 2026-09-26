@@ -488,6 +488,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         filterAll: t("filterAll"),
                         resultsSummary: t("resultsSummary", {count: "{count}", total: "{total}"}),
                         loadingMore: t("loadingMore"),
+                        perPageLabel: t("perPageLabel"),
                         paginationLabel: t("paginationLabel"),
                         paginationPrevious: t("paginationPrevious"),
                         paginationNext: t("paginationNext"),
