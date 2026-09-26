@@ -1055,6 +1055,7 @@
     },
     "resultsSummary": "Menampilkan {count} dari {total} spesies",
     "loadingMore": "Memuat lebih banyak hewan…",
+    "loadMore": "Muat lebih banyak hewan",
     "noResultsTitle": "Tidak ada spesies yang cocok",
     "noResultsDescription": "Coba kata kunci yang lebih luas atau kembali ke semua huruf.",
     "clearFilters": "Hapus filter",

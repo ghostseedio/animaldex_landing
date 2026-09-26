@@ -1071,6 +1071,7 @@
     },
     "resultsSummary": "Showing {count} of {total} species",
     "loadingMore": "Loading more animals…",
+    "loadMore": "Load more animals",
     "noResultsTitle": "No species match that filter",
     "noResultsDescription": "Try a broader search term or switch back to all letters.",
     "clearFilters": "Clear filters",

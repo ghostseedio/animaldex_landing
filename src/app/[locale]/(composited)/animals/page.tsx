@@ -488,6 +488,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         filterAll: t("filterAll"),
                         resultsSummary: t("resultsSummary", {count: "{count}", total: "{total}"}),
                         loadingMore: t("loadingMore"),
+                        loadMore: t("loadMore"),
                         noResultsTitle: t("noResultsTitle"),
                         noResultsDescription: t("noResultsDescription"),
                         clearFilters: t("clearFilters"),

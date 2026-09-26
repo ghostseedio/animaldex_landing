@@ -34,6 +34,7 @@ type SpeciesDirectoryCopy = {
     filterAll: string;
     resultsSummary: string;
     loadingMore: string;
+    loadMore: string;
     noResultsTitle: string;
     noResultsDescription: string;
     clearFilters: string;
@@ -547,6 +548,8 @@ export default function SpeciesDirectory({
     const loadMoreArmedRef = useRef(true);
     /** No page is auto-loaded until the reader actually scrolls. */
     const hasScrolledRef = useRef(false);
+    /** Requires a scroll between automatic loads, so parking cannot run away. */
+    const scrolledSinceLoadRef = useRef(false);
     const directoryRequestIdRef = useRef(0);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const activeQuery = overrideFilters?.query ?? currentQuery;
@@ -690,6 +693,7 @@ export default function SpeciesDirectory({
             // held, killed infinite scroll for the rest of the session.
             setIsLoadingMore(false);
             loadMoreLockRef.current = false;
+            loadMoreArmedRef.current = true;
         }
     }, [
         activeFilters,
@@ -748,22 +752,22 @@ export default function SpeciesDirectory({
             frame = 0;
             const rect = node.getBoundingClientRect();
 
-            if (rect.top > window.innerHeight + 800) {
-                // Back out of range — the grid grew, or the reader scrolled up.
-                loadMoreArmedRef.current = true;
-                return;
-            }
+            if (rect.top > window.innerHeight + 800) return;
 
-            // Before the reader has scrolled at all, only ever arm. On first paint the
+            // Before the reader has scrolled at all, never load. On first paint the
             // images have no height yet, so the sentinel briefly sits inside the
             // trigger zone and the second page would load on every visit.
             if (!hasScrolledRef.current) return;
 
-            // One page per approach. Without this latch, parking at the bottom of the
-            // page keeps the sentinel permanently in range and every scroll event
-            // queues another page, walking the whole catalogue unattended.
-            if (!loadMoreArmedRef.current) return;
+            // The footer below this grid is ~2400px tall, so once the reader is past
+            // the tiles the sentinel is inside the trigger zone and simply stays
+            // there. Re-arming only when it leaves that zone therefore never fired
+            // again and the grid dead-ended. Instead each completed load re-arms, and
+            // a scroll must happen in between — so scrolling keeps pulling pages in,
+            // while parking at the bottom does not walk the whole catalogue.
+            if (!loadMoreArmedRef.current || !scrolledSinceLoadRef.current) return;
             loadMoreArmedRef.current = false;
+            scrolledSinceLoadRef.current = false;
             void loadMore();
         };
 
@@ -774,6 +778,7 @@ export default function SpeciesDirectory({
 
         const onScroll = () => {
             hasScrolledRef.current = true;
+            scrolledSinceLoadRef.current = true;
             schedule();
         };
 
@@ -1243,6 +1248,22 @@ export default function SpeciesDirectory({
                             />
                             {copy.loadingMore}
                         </div>
+                    ) : null}
+                    {!isLoadingMore && !loadError && hasMore ? (
+                        // Automatic loading is a convenience; this is the guarantee.
+                        // It also gives keyboard and screen-reader users a way to page
+                        // through a 2000-entry catalogue at all.
+                        <button
+                            type="button"
+                            onClick={() => {
+                                loadMoreArmedRef.current = true;
+                                scrolledSinceLoadRef.current = true;
+                                void loadMore();
+                            }}
+                            className="inline-flex min-h-11 items-center border border-line-200 bg-surface-900 px-6 text-sm font-semibold text-white transition-colors hover:border-primary-500/45 hover:bg-surface-800/70"
+                        >
+                            {copy.loadMore}
+                        </button>
                     ) : null}
                     {loadError ? (
                         <button
