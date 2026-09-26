@@ -90,7 +90,7 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{description}</p>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Fictional crosses, biology-first answers</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     These pages are speculative creature-design answers for search questions. Each one separates real-world viability from the fun design question: what would the hybrid look like, how would it behave, and what ultimate ability would emerge from both animals?
@@ -106,7 +106,7 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
                     return (
                         <article
                             key={entry.slug}
-                            className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 md:p-6 flex flex-col gap-5"
+                            className="  border border-line-300 bg-surface-900/80 backdrop-blur p-5 md:p-6 flex flex-col gap-5"
                         >
                             {showImages ? (
                                 <div className="grid grid-cols-2 gap-3">
@@ -114,7 +114,7 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
                                         <SpeciesArtworkImage
                                             slug={firstSpecies.slug}
                                             alt={`${firstSpecies.name} artwork`}
-                                            className="aspect-[4/3] rounded-3xl border border-line-300"
+                                            className="aspect-[4/3]  border border-line-300"
                                             sizes="(min-width: 1024px) 20vw, 45vw"
                                         />
                                     ) : null}
@@ -122,7 +122,7 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
                                         <SpeciesArtworkImage
                                             slug={secondSpecies.slug}
                                             alt={`${secondSpecies.name} artwork`}
-                                            className="aspect-[4/3] rounded-3xl border border-line-300"
+                                            className="aspect-[4/3]  border border-line-300"
                                             sizes="(min-width: 1024px) 20vw, 45vw"
                                         />
                                     ) : null}
@@ -145,7 +145,7 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
                                 <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">{entry.hybridName}</p>
                                 <h2 className="font-display font-bold text-3xl text-white">{entry.title}</h2>
                                 <p className="text-ink-200 text-lg leading-8">{entry.quickAnswer}</p>
-                                <div className="rounded-3xl border border-primary-500/30 bg-primary-900/10 px-4 py-4">
+                                <div className="  border border-primary-500/30 bg-primary-900/10 px-4 py-4">
                                     <p className="text-xs uppercase tracking-[0.2em] text-primary-200">Ultimate ability</p>
                                     <p className="font-display text-2xl font-bold text-white">{entry.ultimateAbility.name}</p>
                                     <p className="text-ink-200 mt-2">{entry.ultimateAbility.description}</p>

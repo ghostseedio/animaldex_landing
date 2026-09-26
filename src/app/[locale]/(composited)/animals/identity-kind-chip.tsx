@@ -76,14 +76,14 @@ function IdentityKindInfoTooltip({
         <div
             id={id}
             role="tooltip"
-            className="pointer-events-none z-[120] w-[min(18.5rem,calc(100vw-1.5rem))] rounded-2xl border border-white/12 bg-[#141814]/96 p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            className="pointer-events-none z-[120] w-[min(18.5rem,calc(100vw-1.5rem))]  border border-white/12 bg-[#141814]/96 p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
             style={style}
         >
             <p className="text-[0.7rem] font-black uppercase tracking-[0.14em] text-white/45">Identity level</p>
             <p className="mt-1.5 text-sm font-bold text-white">{title}</p>
             <p className="mt-2 whitespace-pre-line text-xs leading-5 text-white/70">{body}</p>
             {retakeGuidance ? (
-                <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                <div className="mt-3  border border-white/10 bg-white/[0.04] p-2.5">
                     <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-white/55">Capture guidance</p>
                     <p className="mt-1.5 text-xs leading-5 text-white/65">{retakeGuidance}</p>
                 </div>

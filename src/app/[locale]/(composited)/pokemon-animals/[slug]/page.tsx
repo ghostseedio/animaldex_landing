@@ -231,17 +231,17 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
             </section>
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-6 py-6">
+                <div className="  border border-line-300 bg-surface-900/80 px-6 py-6">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Closest animal</p>
                     <p className="font-display text-4xl text-white mt-2">{entry.animal}</p>
                 </div>
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-6 py-6">
+                <div className="  border border-line-300 bg-surface-900/80 px-6 py-6">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Confidence</p>
                     <p className="font-display text-4xl text-white mt-2">{confidenceCopy(entry.confidence)}</p>
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Why this comparison?</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.note}</p>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">

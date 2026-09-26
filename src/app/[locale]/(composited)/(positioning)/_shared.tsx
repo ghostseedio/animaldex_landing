@@ -107,7 +107,7 @@ export default async function CollectorLandingPage({slug, locale}: PositioningPa
                 </div>
             </div>
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
+            <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
                 {entry.sections.map((section) => (
                     <section key={section.title} className="flex flex-col gap-3">
                         <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{section.title}</h2>
@@ -120,7 +120,7 @@ export default async function CollectorLandingPage({slug, locale}: PositioningPa
                 ))}
             </div>
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
+            <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 text-center">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
                 <div className="flex justify-center flex-wrap gap-3">

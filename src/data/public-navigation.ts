@@ -19,82 +19,87 @@ export const START_COLLECTION_HREF = "/#download";
 export const BLOG_HREF = "/blog";
 export const LOCATIONS_HREF = "/locations";
 export const INSTAGRAM_WILDLIFE_ARCHIVE_HREF = "/use-cases/import-instagram-wildlife-photos";
+export const WILDLIFE_EXPERIENCES_HREF = "/wildlife-experiences";
+export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
+export const ANIMAL_BEHAVIOURS_HREF = "/animal-behaviours";
+export const CHALLENGE_YOURSELF_HREF = "/challenge-yourself";
 
-export const exploreAnimalLinks: PublicNavLink[] = [
-    {href: "/animals", labelKey: "browseAnimals"},
-    {href: "/comparisons", labelKey: "compareAnimals"},
-    {href: "/tier-list", labelKey: "animalTierLists"},
-    {href: LOCATIONS_HREF, labelKey: "locations"},
-    {href: INSTAGRAM_WILDLIFE_ARCHIVE_HREF, labelKey: "instagramWildlifeArchive"},
-    {href: "/what-animal-am-i", labelKey: "whatAnimalAmI"}
-];
-
-export const animalWisdomLinks: PublicNavLink[] = [
-    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom"},
-    {href: "/powers", labelKey: "animalAbilities"},
-    {href: "/animal-lessons", labelKey: "animalLessons"},
-    {href: "/animal-symbolism", labelKey: "animalSymbolism"}
-];
-
-export const experienceLinks: PublicNavLink[] = [
-    {href: "/wildlife-experiences", labelKey: "wildlifeExperiences"},
-    {href: "/wildlife-guides", labelKey: "findAWildlifeGuide"},
-    {href: LOCATIONS_HREF, labelKey: "locations"}
-];
-
-export const earnLinks: PublicNavLink[] = [
-    {href: "/earn-on-animaldex", labelKey: "earnOnAnimalDex"},
-    {href: "/become-a-wildlife-guide", labelKey: "becomeAWildlifeGuide"},
-    {href: "/creator-rewards", labelKey: "creatorRewards"}
-];
-
+/** 01 — AnimalDex: what the product is, and the two ways in. */
 export const productLinks: PublicNavLink[] = [
     {href: "/#more", labelKey: "howAnimalDexWorks"},
     {href: "/#features", labelKey: "appFeatures"},
     {href: "/use-cases", labelKey: "whosItFor"},
-    {href: START_COLLECTION_HREF, labelKey: "startYourCollection"}
+    {href: START_COLLECTION_HREF, labelKey: "startYourCollection"},
+    {href: INSTAGRAM_WILDLIFE_ARCHIVE_HREF, labelKey: "instagramWildlifeArchive"},
+    {href: EARN_ON_ANIMALDEX_HREF, labelKey: "earnOnAnimalDex"}
 ];
 
-export const experienceEarnFooterGroups: PublicNavLink[][] = [
-    [
-        {href: "/wildlife-experiences", labelKey: "wildlifeExperiences"},
-        {href: "/wildlife-guides", labelKey: "findAWildlifeGuide"}
-    ],
-    earnLinks
+/** 02 — Explore Animals: the catalogue and the places to use it. */
+export const exploreAnimalLinks: PublicNavLink[] = [
+    {href: "/animals", labelKey: "browseAnimals"},
+    {href: "/comparisons", labelKey: "compareAnimals"},
+    {href: "/tier-list", labelKey: "animalTierLists"},
+    {href: "/animal-hybrids", labelKey: "animalHybrids"},
+    {href: LOCATIONS_HREF, labelKey: "locations"},
+    {href: WILDLIFE_EXPERIENCES_HREF, labelKey: "wildlifeExperiences"}
 ];
 
+/**
+ * 03 — Lessons from Animals: what an animal teaches, rather than what it is.
+ *
+ * Was `animalWisdomLinks`. Renamed with the category, and `/what-animal-am-i`
+ * moved here out of Explore Animals: it answers a question about the reader,
+ * not a question about the catalogue.
+ */
+export const animalLessonLinks: PublicNavLink[] = [
+    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom"},
+    {href: "/animal-lessons", labelKey: "animalLessons"},
+    {href: "/powers", labelKey: "animalAbilities"},
+    {href: ANIMAL_BEHAVIOURS_HREF, labelKey: "animalBehaviours"},
+    {href: CHALLENGE_YOURSELF_HREF, labelKey: "challengeYourself"},
+    {href: "/what-animal-am-i", labelKey: "whatAnimalAmI"}
+];
+
+/** 04 — Resources: reading, help, and the things partners ask for. */
 export const resourceLinks: PublicNavLink[] = [
     {href: BLOG_HREF, labelKey: "blog"},
+    {href: "/animal-symbolism", labelKey: "animalSymbolism"},
     {href: "/support", labelKey: "support"},
     {href: "/contact", labelKey: "contact"},
     {href: "/sponsor-a-challenge", labelKey: "sponsorAChallenge"},
     {href: "/branding", labelKey: "brandAssets"}
 ];
 
+/**
+ * Articles keeps its own top-level slot in the header, as it always has, so the
+ * Resources dropdown must not repeat it — the mobile drawer renders both and a
+ * link appearing twice is a duplicate tap target, not a shortcut. The footer
+ * column is unfiltered, since it has no standalone Articles entry.
+ */
+export const headerResourceLinks: PublicNavLink[] = resourceLinks.filter(
+    (link) => link.href !== BLOG_HREF
+);
+
 export const headerDropdowns: PublicNavSection[] = [
-    // Catalogue and places above the rule, the playful entry points below it.
-    {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks, ruleAfterHref: LOCATIONS_HREF},
-    {id: "wisdom", titleKey: "animalWisdom", links: animalWisdomLinks},
-    {id: "experiences", titleKey: "experiences", links: experienceLinks},
-    {id: "earn", titleKey: "earn", links: earnLinks}
+    // Catalogue above the rule, the places to go and use it below.
+    {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks, ruleAfterHref: "/animal-hybrids"},
+    // Reading above the rule, the interactive pages below.
+    {id: "lessons", titleKey: "animalWisdom", links: animalLessonLinks, ruleAfterHref: "/powers"},
+    {id: "resources", titleKey: "footerGroups.resources", links: headerResourceLinks, ruleAfterHref: "/support"}
 ];
 
 export const DEFAULT_MOBILE_ACCORDION_ID = "explore";
 
-/** Desktop keeps Wildlife Locations in Experiences; mobile shows it once under Explore Animals. */
-export const mobileExperienceLinks: PublicNavLink[] = experienceLinks.filter(
-    (link) => link.href !== LOCATIONS_HREF
-);
+export const mobileAccordionSections: PublicNavSection[] = headerDropdowns;
 
-export const mobileAccordionSections: PublicNavSection[] = headerDropdowns.map((section) => (
-    section.id === "experiences"
-        ? {...section, links: mobileExperienceLinks}
-        : section
-));
-
+/**
+ * The mobile drawer's "More" group: everything the accordions do not already
+ * carry. Start Your Collection is excluded because the drawer pins it as a CTA,
+ * and the resource links are excluded because they are now an accordion of
+ * their own — leaving the product links, minus that CTA.
+ */
 export const moreNavGroups: PublicNavLink[][] = [
-    productLinks.filter((link) => link.href !== START_COLLECTION_HREF),
-    resourceLinks.filter((link) => link.href !== BLOG_HREF)
+    productLinks.filter((link) => link.href !== START_COLLECTION_HREF)
 ];
 
 export const blogNavLink: PublicNavLink = {href: BLOG_HREF, labelKey: "blog"};
@@ -106,7 +111,6 @@ export const footerColumns: Array<{
 }> = [
     {titleKey: "footerGroups.product", links: productLinks},
     {titleKey: "footerGroups.explore", links: exploreAnimalLinks},
-    {titleKey: "footerGroups.wisdom", links: animalWisdomLinks},
-    {titleKey: "footerGroups.experienceAndEarn", groups: experienceEarnFooterGroups},
+    {titleKey: "footerGroups.wisdom", links: animalLessonLinks},
     {titleKey: "footerGroups.resources", links: resourceLinks}
 ];

@@ -244,7 +244,7 @@ export default function ShareSheet({
             onClick={onClose}
         >
             <div
-                className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-black p-5 shadow-2xl md:rounded-[22px]"
+                className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-black p-5 shadow-2xl md: "
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="mb-5 flex items-center justify-between gap-4">

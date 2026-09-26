@@ -32,7 +32,7 @@ export default function InstagramImportIntro({
     const hero = archiveIntentHero(intent);
 
     return (
-        <section className="relative mx-auto mb-8 mt-10 max-w-5xl overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[#060f0a] shadow-[0_24px_80px_-40px_rgba(0,0,0,0.85)] md:mt-14">
+        <section className="relative mx-auto mb-8 mt-10 max-w-5xl overflow-hidden  border border-white/[0.08] bg-[#060f0a] shadow-[0_24px_80px_-40px_rgba(0,0,0,0.85)] md:mt-14">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(167,244,50,0.14),transparent_36%),radial-gradient(circle_at_88%_82%,rgba(34,197,94,0.08),transparent_34%)]"

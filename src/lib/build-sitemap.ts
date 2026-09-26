@@ -120,6 +120,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/powers")},
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},
             {url: getAbsoluteUrl(locale, "/animal-lessons")},
+            {url: getAbsoluteUrl(locale, "/animal-behaviours")},
+            {url: getAbsoluteUrl(locale, "/challenge-yourself")},
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, "/legal/privacy")},

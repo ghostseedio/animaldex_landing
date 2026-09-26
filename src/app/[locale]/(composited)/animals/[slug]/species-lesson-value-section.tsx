@@ -58,7 +58,7 @@ export default function SpeciesLessonValueSection({result, locale, labels}: Spec
             </div>
 
             <div className="mt-5 flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400/20 to-teal-400/15 text-emerald-300">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center  bg-gradient-to-br from-emerald-400/20 to-teal-400/15 text-emerald-300">
                     <span aria-hidden className="text-lg font-bold">#</span>
                 </div>
 

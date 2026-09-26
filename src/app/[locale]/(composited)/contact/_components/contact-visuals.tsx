@@ -106,8 +106,8 @@ export function ContactIconBadge({
     const Icon = contactRouteIcons[routeId];
     const size = featured ? 30 : 24;
     const container = featured
-        ? "h-14 w-14 sm:h-16 sm:w-16 rounded-[1.1rem]"
-        : "h-11 w-11 sm:h-12 sm:w-12 rounded-2xl";
+        ? "h-14 w-14 sm:h-16 sm:w-16 "
+        : "h-11 w-11 sm:h-12 sm:w-12 ";
 
     return (
         <div

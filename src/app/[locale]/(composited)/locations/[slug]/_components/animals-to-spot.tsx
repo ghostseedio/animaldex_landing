@@ -25,7 +25,7 @@ export default function AnimalsToSpot({species, title, description, readSpecies,
                 <h2 className="font-display text-4xl font-bold text-white md:text-5xl">{title}</h2>
                 <p className="mt-3 text-lg leading-8 text-ink-200">{description}</p>
                 {captiveNote ? (
-                    <p className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100">
+                    <p className="mt-3  border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100">
                         {captiveNote}
                     </p>
                 ) : null}

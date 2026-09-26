@@ -123,14 +123,14 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                     </div>
                 </section>
 
-                <section className="rounded-[1.35rem] border border-white/[0.07] bg-[#071B0F]/85 p-6 md:p-8">
+                <section className="  border border-white/[0.07] bg-[#071B0F]/85 p-6 md:p-8">
                     <div className="max-w-3xl">
                         <h2 className="font-display text-2xl font-bold uppercase tracking-[0.03em] text-white md:text-3xl">{content.browseTopicsLabel}</h2>
                         <p className="mt-2 text-ink-300">{content.quickHelpDescription}</p>
                     </div>
                 </section>
 
-                <aside className="rounded-[1.35rem] border border-amber-300/20 bg-amber-300/6 px-5 py-6 md:flex md:items-start md:gap-4 md:px-7 md:py-7">
+                <aside className="  border border-amber-300/20 bg-amber-300/6 px-5 py-6 md:flex md:items-start md:gap-4 md:px-7 md:py-7">
                     <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-300/12 text-amber-200 font-bold" aria-hidden="true">!</span>
                     <div className="mt-3 flex flex-col gap-2 md:mt-0">
                         <h2 className="font-display text-xl font-bold uppercase tracking-[0.03em] text-white md:text-2xl">{content.safetyTitle}</h2>
@@ -153,7 +153,7 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                                     });
 
                                     return (
-                                        <details key={item.question} className="group rounded-[1.2rem] border border-white/[0.07] bg-[#071B0F]/80 px-5 py-1 open:border-primary-200/25">
+                                        <details key={item.question} className="group  border border-white/[0.07] bg-[#071B0F]/80 px-5 py-1 open:border-primary-200/25">
                                             <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-5 text-lg font-semibold text-white md:text-xl">
                                                 <span>{item.question}</span>
                                                 <span className="text-primary-300 transition-transform group-open:rotate-45" aria-hidden="true">+</span>
@@ -179,7 +179,7 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                     ))}
                 </div>
 
-                <section id="delete-account" className="scroll-mt-28 rounded-[1.35rem] border border-red-300/20 bg-[#071B0F]/90 px-6 py-9 md:px-10 md:py-12">
+                <section id="delete-account" className="scroll-mt-28  border border-red-300/20 bg-[#071B0F]/90 px-6 py-9 md:px-10 md:py-12">
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
                         <div className="flex flex-col gap-3">
                             <p className="text-xs font-black uppercase tracking-[0.2em] text-red-200">Account control</p>
@@ -200,7 +200,7 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                     </div>
                 </section>
 
-                <section aria-labelledby="business-enquiry-title" className="rounded-[1.35rem] border border-white/[0.07] bg-[#071B0F]/85 px-6 py-7 md:flex md:items-center md:justify-between md:gap-8 md:px-8 md:py-8">
+                <section aria-labelledby="business-enquiry-title" className="  border border-white/[0.07] bg-[#071B0F]/85 px-6 py-7 md:flex md:items-center md:justify-between md:gap-8 md:px-8 md:py-8">
                     <div className="max-w-3xl flex flex-col gap-2">
                         <p className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-primary-200 sm:text-xs">{content.businessEnquiryEyebrow}</p>
                         <h2 id="business-enquiry-title" className="font-display text-2xl font-bold uppercase leading-tight tracking-[0.03em] text-white md:text-3xl">{content.businessEnquiryTitle}</h2>
@@ -211,7 +211,7 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                     </Link>
                 </section>
 
-                <section className="rounded-[1.35rem] border border-white/[0.07] bg-[#0A2112]/80 px-7 py-10 text-center md:px-10 md:py-12">
+                <section className="  border border-white/[0.07] bg-[#0A2112]/80 px-7 py-10 text-center md:px-10 md:py-12">
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{content.contactTitle}</h2>
                     <p className="mx-auto mt-3 max-w-3xl text-ink-200 leading-relaxed">{content.contactDescription}</p>
                     <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">

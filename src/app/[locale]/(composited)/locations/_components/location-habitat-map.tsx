@@ -187,7 +187,7 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                 <p className="mt-3 text-base leading-7 text-ink-300 md:text-lg">{map.description}</p>
             </div>
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-line-300 bg-canvas-900">
+            <div className="mt-6 overflow-hidden  border border-line-300 bg-canvas-900">
                 <div className="relative">
                     <svg
                         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}

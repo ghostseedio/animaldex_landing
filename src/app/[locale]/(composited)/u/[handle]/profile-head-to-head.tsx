@@ -181,7 +181,7 @@ export default function ProfileHeadToHeadSheet({
             aria-modal="true"
             aria-label="Head to Head"
         >
-            <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden bg-black md:rounded-[1.5rem] md:border md:border-white/10">
+            <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden bg-black md:  md:border md:border-white/10">
                 <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
                     <h2 className="text-[17px] font-semibold text-white">Head to Head</h2>
                     <button type="button" onClick={onClose} className="text-[15px] font-semibold" style={{color: THEME.neon}}>

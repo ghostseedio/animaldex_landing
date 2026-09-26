@@ -86,7 +86,7 @@ export default function SupportArticleFeedback({
     }
 
     return (
-        <section aria-labelledby="article-feedback-title" className="overflow-hidden rounded-[1.35rem] border border-white/[0.07] bg-[#071B0F]/85">
+        <section aria-labelledby="article-feedback-title" className="overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85">
             <div className="border-b border-white/[0.06] px-5 py-6 md:px-7 md:py-7">
                 <div className="flex items-start gap-4">
                     <span
@@ -150,7 +150,7 @@ export default function SupportArticleFeedback({
                             </div>
                         ) : (
                             <div
-                                className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-4 ${
+                                className={`mt-5 flex items-start gap-3  border px-4 py-4 ${
                                     state === "yes"
                                         ? "border-primary-200/25 bg-primary-400/8"
                                         : "border-white/[0.08] bg-white/[0.02]"
@@ -188,7 +188,7 @@ export default function SupportArticleFeedback({
                     <div className="flex items-start gap-4 sm:max-w-[62%]">
                         <span
                             aria-hidden="true"
-                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center  border ${
                                 highlightEscalation
                                     ? "border-primary-200/35 bg-primary-400/12 text-primary-200 shadow-[0_0_24px_rgba(33,192,94,0.12)]"
                                     : "border-white/[0.08] bg-[#071B0F]/80 text-primary-200/90"

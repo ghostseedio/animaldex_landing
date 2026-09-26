@@ -100,17 +100,17 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     </div>
 
                     <div className="grid gap-5 lg:grid-cols-2">
-                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-canvas-950 p-7 md:p-10">
+                        <article className="flex min-h-[25rem] flex-col justify-between  bg-canvas-950 p-7 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · dark background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={400} height={400} priority className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[25rem] flex-col justify-between rounded-[2rem] bg-white p-7 md:p-10">
+                        <article className="flex min-h-[25rem] flex-col justify-between  bg-white p-7 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · light background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a light background" width={400} height={400} className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-600 hover:text-canvas-950"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[18rem] flex-col justify-between rounded-[2rem] bg-surface-900 p-7 md:col-span-2 md:p-10">
+                        <article className="flex min-h-[18rem] flex-col justify-between  bg-surface-900 p-7 md:col-span-2 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Wordmark · preferred lockup</p>
                             <Image src="/images/animaldex-logo-text.webp" alt="Official AnimalDex wordmark logo" width={1250} height={274} className="mx-auto h-auto w-full max-w-2xl" />
                             <a href="/images/animaldex-logo-text.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
@@ -125,13 +125,13 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                         <p className="mt-5 text-lg leading-8 text-ink-200">Keep clear space around the mark equal to at least one outer paw pad. At small sizes, use the symbol rather than forcing the full wordmark into limited space.</p>
                     </div>
                     <div className="grid gap-5 sm:grid-cols-2">
-                        <article className="rounded-[2rem] bg-surface-900/70 p-7">
+                        <article className="  bg-surface-900/70 p-7">
                             <h3 className="font-display text-2xl font-bold text-white">Do</h3>
                             <ul className="mt-5 space-y-4 text-ink-200">
                                 {["Use the supplied artwork", "Maintain the original proportions", "Use a calm, high-contrast background", "Keep the mark legible and unobstructed"].map((item) => <li key={item} className="flex gap-3"><span className="text-primary-300"><CheckIcon /></span>{item}</li>)}
                             </ul>
                         </article>
-                        <article className="rounded-[2rem] bg-surface-900/70 p-7">
+                        <article className="  bg-surface-900/70 p-7">
                             <h3 className="font-display text-2xl font-bold text-white">Avoid</h3>
                             <ul className="mt-5 space-y-4 text-ink-200">
                                 {["Stretching, skewing, or rotating", "Recoloring individual parts", "Adding shadows, outlines, or effects", "Placing it over visually busy imagery"].map((item) => <li key={item} className="flex gap-3"><span className="font-bold text-red-300">×</span>{item}</li>)}
@@ -147,7 +147,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                         {colors.map((color) => (
                             <article
                                 key={color.name}
-                                className={`${color.className} ${color.text} flex min-h-[13rem] flex-col justify-end rounded-[1.75rem] p-6 ${color.value === "#FFFFFF" ? "ring-1 ring-black/10" : "ring-1 ring-white/10"}`}
+                                className={`${color.className} ${color.text} flex min-h-[13rem] flex-col justify-end  p-6 ${color.value === "#FFFFFF" ? "ring-1 ring-black/10" : "ring-1 ring-white/10"}`}
                             >
                             <h3 className="font-display text-xl font-bold">{color.name}</h3>
                             <p className="mt-1 font-mono text-sm opacity-75">{color.value}</p>
@@ -157,7 +157,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     <p className="mt-5 max-w-3xl text-base leading-7 text-ink-300">AnimalDex lime is the fill for primary buttons and accents. Use primary green for supporting states and maps, near black for canvas, and muted text for supporting copy. Pair foreground and background colors with sufficient contrast.</p>
                 </section>
 
-                <section aria-labelledby="typography" className="rounded-[2.5rem] bg-surface-900/60 p-7 md:p-12">
+                <section aria-labelledby="typography" className="  bg-surface-900/60 p-7 md:p-12">
                     <p className="text-xs font-bold uppercase tracking-[.22em] text-primary-200">04 · Typography</p>
                     <h2 id="typography" className="mt-3 font-display text-4xl font-extrabold text-white md:text-6xl">Compact headlines. Clean reading.</h2>
                     <div className="mt-10 grid gap-10 lg:grid-cols-2">
@@ -176,7 +176,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     </div>
                 </section>
 
-                <section aria-labelledby="brand-help" className="flex flex-col items-start justify-between gap-7 rounded-[2.5rem] bg-gradient-to-br from-primary-500/20 to-surface-900 p-8 md:flex-row md:items-center md:p-12">
+                <section aria-labelledby="brand-help" className="flex flex-col items-start justify-between gap-7  bg-gradient-to-br from-primary-500/20 to-surface-900 p-8 md:flex-row md:items-center md:p-12">
                     <div className="max-w-3xl">
                         <h2 id="brand-help" className="font-display text-3xl font-bold text-white md:text-5xl">Need a different format?</h2>
                         <p className="mt-3 text-lg leading-8 text-ink-200">For press, partnerships, co-branding, or a format not provided here, contact us before recreating or modifying the logo.</p>

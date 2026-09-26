@@ -32,13 +32,13 @@ function RoleCard({
     openSpeciesLabel: string;
 }) {
     return (
-        <article className="rounded-3xl border border-line-300/80 bg-surface-800/60 p-4 flex flex-col gap-3">
+        <article className="  border border-line-300/80 bg-surface-800/60 p-4 flex flex-col gap-3">
             <p className="text-primary-200 text-xs uppercase tracking-[0.18em] font-semibold">{label}</p>
             <div className="flex items-start gap-3">
                 <SpeciesArtworkImage
                     slug={match.speciesSlug}
                     alt={`${match.speciesName} artwork`}
-                    className="h-16 w-16 rounded-2xl border border-line-300 shrink-0"
+                    className="h-16 w-16  border border-line-300 shrink-0"
                     sizes="64px"
                 />
                 <div className="min-w-0 flex flex-col gap-1">
@@ -66,7 +66,7 @@ export default function CelebrityWildProfileCarousel({profiles, copy}: Celebrity
     }
 
     return (
-        <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
+        <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
             <div className="flex flex-col gap-3">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{copy.eyebrow}</p>
                 <h2 className="font-display font-bold text-3xl md:text-5xl text-white">{copy.title}</h2>
@@ -74,7 +74,7 @@ export default function CelebrityWildProfileCarousel({profiles, copy}: Celebrity
                 <p className="text-ink-300 text-sm md:text-base">{copy.disclaimer}</p>
             </div>
 
-            <div className="rounded-4xl border border-primary-500/20 bg-primary-500/5 p-5 md:p-6 flex flex-col gap-5">
+            <div className="  border border-primary-500/20 bg-primary-500/5 p-5 md:p-6 flex flex-col gap-5">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between gap-3">
                     <div className="flex flex-col gap-1">
                         <p className="text-primary-200 text-sm uppercase tracking-[0.16em]">{activeProfile.roleLabel}</p>

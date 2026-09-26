@@ -44,7 +44,7 @@ export default function PlacesSearchFilter({places, fallbackImage, labels}: {
 
     return (
         <div>
-            <div className="rounded-[1.75rem] bg-surface-900/60 p-4 md:p-6">
+            <div className="  bg-surface-900/60 p-4 md:p-6">
                 <label className="block">
                     <span className="mb-2 block text-sm font-semibold text-ink-100">{labels.searchLabel}</span>
                     <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.searchPlaceholder} className="min-h-12 w-full rounded-2xl border border-white/10 bg-canvas-950/60 px-4 text-white outline-none placeholder:text-ink-300 focus:border-primary-400/60" />
@@ -70,7 +70,7 @@ export default function PlacesSearchFilter({places, fallbackImage, labels}: {
                     {filtered.map((entry) => <PlaceCard key={`${entry.name}-${entry.locationName}`} place={entry} fallbackImage={fallbackImage} labels={labels} />)}
                 </div>
             ) : (
-                <div className="mt-5 rounded-[1.75rem] bg-surface-900/60 px-6 py-12 text-center">
+                <div className="mt-5  bg-surface-900/60 px-6 py-12 text-center">
                     <p className="text-lg text-ink-100">{labels.noResults}</p>
                     <button type="button" onClick={reset} className="mt-5 min-h-11 rounded-xl bg-primary-400 px-5 font-bold text-canvas-950">{labels.reset}</button>
                 </div>

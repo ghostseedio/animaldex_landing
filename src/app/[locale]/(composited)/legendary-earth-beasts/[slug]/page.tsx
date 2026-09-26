@@ -62,7 +62,7 @@ export async function generateMetadata({params}: LegendaryEarthBeastPageProps): 
 
 function FactCard({label, value}: {label: string; value: string}) {
     return (
-        <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-5 py-5 flex flex-col gap-2">
+        <div className="  border border-line-300 bg-surface-900/80 px-5 py-5 flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-ink-400">{label}</p>
             <p className="text-white text-lg md:text-xl font-medium leading-7">{value}</p>
         </div>
@@ -166,7 +166,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             </section>
 
             {captureRequirement ? (
-                <section className="rounded-4xl border border-primary-500/30 bg-primary-500/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-primary-500/30 bg-primary-500/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Capture site</p>
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Landmark-only capture</h2>
                     <p className="text-ink-100 text-lg md:text-xl leading-8">{captureRequirement}</p>
@@ -174,7 +174,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             ) : null}
 
             {entry.respectfulCaptureNote ? (
-                <section className="rounded-4xl border border-amber-400/30 bg-amber-500/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-amber-400/30 bg-amber-500/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-amber-200 text-sm uppercase tracking-[0.2em]">Respectful capture</p>
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Handle this place with care</h2>
                     <p className="text-ink-100 text-lg md:text-xl leading-8">{entry.respectfulCaptureNote}</p>
@@ -182,7 +182,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             ) : null}
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">The place</p>
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.captureSite}</h2>
                     {entry.placeStory.map((paragraph) => (
@@ -192,11 +192,11 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                     ))}
                 </div>
 
-                <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">The legendary animal</p>
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.legendaryFormName}</h2>
                     {species ? (
-                        <div className="overflow-hidden rounded-3xl border border-line-300">
+                        <div className="overflow-hidden  border border-line-300">
                             <SpeciesArtworkImage
                                 slug={species.slug}
                                 alt={`${species.name} artwork`}
@@ -222,7 +222,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             </section>
 
             {statsResult?.stats ? (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Canonical stats</p>
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.legendaryFormName} battle profile</h2>
                     <SpeciesStatsSection
@@ -252,7 +252,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             ) : null}
 
             {catalogSeed ? (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
+                <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-6">
                     <div className="flex flex-col gap-3">
                         <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Field guide</p>
                         <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Habitat, traits, and ecology</h2>
@@ -261,7 +261,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
+                        <div className="  border border-line-300/80 bg-surface-800/60 p-5">
                             <h3 className="text-white text-xl font-semibold">Signature traits</h3>
                             <ul className="mt-3 space-y-2 text-ink-200">
                                 {catalogSeed.signatureTraits.map((trait) => (
@@ -269,7 +269,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                                 ))}
                             </ul>
                         </div>
-                        <div className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
+                        <div className="  border border-line-300/80 bg-surface-800/60 p-5">
                             <h3 className="text-white text-xl font-semibold">Interesting facts</h3>
                             <ul className="mt-3 space-y-2 text-ink-200">
                                 {catalogSeed.interestingFacts.map((fact) => (
@@ -287,7 +287,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                 </section>
             ) : null}
 
-            <section className="rounded-4xl border border-primary-500/40 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-primary-500/40 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Legendary power</p>
                 <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{entry.power}</h2>
                 <p className="text-ink-100 text-lg md:text-xl leading-8">
@@ -301,7 +301,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                 </p>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Are these really petrified animals?</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     No. {entry.legendaryFormName} is inspired by a real place where natural rock, erosion, and human imagination overlap—not by a literal fossilized animal frozen in stone.
@@ -312,10 +312,10 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             </section>
 
             {entry.faq.length > 0 ? (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">FAQ</h2>
                     {entry.faq.map((item) => (
-                        <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
+                        <div key={item.question} className="  border border-line-300/80 bg-surface-800/60 p-5">
                             <h3 className="text-white text-xl font-semibold">{item.question}</h3>
                             <p className="text-ink-200 text-base md:text-lg mt-2 leading-7">{item.answer}</p>
                         </div>
@@ -324,11 +324,11 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             ) : null}
 
             {entry.sources.length > 0 ? (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Sources and further reading</h2>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {entry.sources.map((source) => (
-                            <li key={source.href} className="list-none rounded-2xl border border-line-300/80 bg-surface-800/60 p-4">
+                            <li key={source.href} className="list-none  border border-line-300/80 bg-surface-800/60 p-4">
                                 <a
                                     href={source.href}
                                     target="_blank"
@@ -363,7 +363,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
                 </section>
             ) : null}
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-3 text-center items-center">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-3 text-center items-center">
                 <p className="text-ink-300 text-sm uppercase tracking-[0.18em]">Updated {formatDate(locale, entry.updatedAt || entry.publishedAt)}</p>
                 <p className="text-ink-200 text-lg md:text-xl max-w-3xl leading-8">
                     Part of the AnimalDex Legendary Earth Beasts pillar guide. Explore all twenty formations, their flagship species pages, and the landmarks where they can be captured.

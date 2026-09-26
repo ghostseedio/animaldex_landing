@@ -1,11 +1,15 @@
+import type {ComponentType} from "react";
 import type {Metadata} from "next";
 import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import {ClockIcon, GroupIcon, MapPinIcon, PriceTagIcon} from "@/app/[locale]/_components/icons";
 import GuideCard from "@/components/guides/guide-card";
 import {GuideBookingRequestCta} from "@/components/guides/guide-booking-request";
 import {GuidePageView} from "@/components/guides/guide-analytics";
+import GuideAreaMap from "@/components/guides/guide-area-map";
 import {HowBookingWorks} from "@/components/guides/how-booking-works";
 import {earnPaths} from "@/data/earn-economy";
+import {getGuideAreaLocation} from "@/data/guide-area-geocode";
 import {getPublicGuideListing, getPublicGuideListings} from "@/data/guide-marketplace";
 import {isGuideListingIndexable} from "@/lib/guide-listing-quality";
 import {
@@ -102,6 +106,7 @@ export default async function GuideListingPage({params}: Props) {
     const explore = categoryExplore[listing.service_category];
     const hasDescription = listing.description.trim().length > 0;
     const hasSummary = listing.public_summary.trim().length > 0;
+    const areaLocation = await getGuideAreaLocation(listing);
 
     return <>
         <GuidePageView event="guide_listing_view" dimensions={{listing_id: listing.id, service_category: listing.service_category, country: listing.country_code, region: listing.region_code || "", page_type: "listing"}} />
@@ -127,14 +132,14 @@ export default async function GuideListingPage({params}: Props) {
                     </p>
                     <h1 className="mt-4 max-w-4xl font-display text-5xl leading-[1.05] sm:text-7xl">{listing.title}</h1>
                     {hasSummary ? <p className="mt-6 max-w-3xl text-xl leading-8 text-white/70">{listing.public_summary}</p> : null}
-                    <div className="mt-10 grid gap-4 sm:grid-cols-4">
-                        <Fact label="Duration" value={formatDuration(listing.duration_minutes)} />
-                        <Fact label="Maximum group" value={`${listing.max_guests} collectors`} />
-                        <Fact label="Public area" value={guideAreaServedName(listing)} />
-                        <Fact label="Price per person" value={formatGuidePrice(listing.amount_minor, listing.currency_code, params.locale)} />
+                    <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                        <Fact icon={ClockIcon} label="Duration" value={formatDuration(listing.duration_minutes)} />
+                        <Fact icon={GroupIcon} label="Maximum group" value={`${listing.max_guests} collectors`} />
+                        <Fact icon={MapPinIcon} label="Public area" value={guideAreaServedName(listing)} />
+                        <Fact icon={PriceTagIcon} label="Price per person" value={formatGuidePrice(listing.amount_minor, listing.currency_code, params.locale)} />
                     </div>
                 </div>
-                <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/25">
+                <div className="overflow-hidden border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/25">
                     <div className="relative h-80 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
                         {listing.cover_image_url ? (
                             <img src={listing.cover_image_url} alt="" className="h-full w-full object-cover" />
@@ -180,23 +185,72 @@ export default async function GuideListingPage({params}: Props) {
                     <div>
                         <h2 className="font-display text-3xl">Duration, group size, and price</h2>
                         <dl className="mt-6 grid gap-4 sm:grid-cols-3">
-                            <Fact label="Duration" value={formatDuration(listing.duration_minutes)} />
-                            <Fact label="Group size" value={`Up to ${listing.max_guests}`} />
-                            <Fact label="Price" value={`${formatGuidePrice(listing.amount_minor, listing.currency_code, params.locale)} / person`} />
+                            <Fact icon={ClockIcon} label="Duration" value={formatDuration(listing.duration_minutes)} />
+                            <Fact icon={GroupIcon} label="Group size" value={`Up to ${listing.max_guests}`} />
+                            <Fact icon={PriceTagIcon} label="Price" value={`${formatGuidePrice(listing.amount_minor, listing.currency_code, params.locale)} / person`} />
                         </dl>
                     </div>
-                    <aside className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-white/70">
+                    {areaLocation ? (
+                        <div>
+                            <h2 className="font-display text-3xl">Where you&rsquo;ll be looking</h2>
+                            <p className="mt-4 flex items-center gap-2 text-lg leading-8 text-white/70">
+                                <MapPinIcon className="shrink-0 text-primary-300" size={18} />
+                                {guideAreaServedName(listing)}
+                            </p>
+                            <div className="mt-6">
+                                <GuideAreaMap
+                                    label={areaLocation.label}
+                                    latitude={areaLocation.latitude}
+                                    longitude={areaLocation.longitude}
+                                    radiusMeters={areaLocation.radiusMeters}
+                                />
+                            </div>
+                        </div>
+                    ) : null}
+                    <aside className="border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-white/70">
                         <h2 className="font-display text-xl text-white">Wildlife-first rules</h2>
                         <p className="mt-3"><strong className="text-white">Wildlife stays wild.</strong> Sightings are never guaranteed. The public area is approximate. Exact meeting details stay private until a request is accepted in AnimalDex. Wildlife should not be baited, lured, handled, or disturbed for a photo.</p>
                     </aside>
                 </article>
-                <aside className="h-fit rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                <aside className="h-fit border border-white/10 bg-white/[0.04] p-7">
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-300">Meet your Guide</p>
-                    <h2 className="mt-3 font-display text-2xl">Hosted by {username ? `@${username}` : host}</h2>
-                    <dl className="mt-6 space-y-4 text-white/70">
-                        <FactRow value={listing.qualifying_wild_species_count.toLocaleString(params.locale)} label="wild species" />
-                        <FactRow value={listing.qualifying_wild_capture_count.toLocaleString(params.locale)} label="qualifying wild captures" />
+                    <div className="mt-5 flex items-center gap-4">
+                        <GuideAvatar url={listing.seller_avatar_url} name={listing.seller_display_name || username || host} />
+                        <div className="min-w-0">
+                            <h2 className="truncate font-display text-2xl leading-tight">{listing.seller_display_name || host}</h2>
+                            {username ? (
+                                <Link
+                                    href={`/u/${encodeURIComponent(username)}`}
+                                    className="mt-0.5 inline-block max-w-full truncate text-sm font-semibold text-primary-300 underline-offset-4 hover:text-white hover:underline"
+                                >
+                                    @{username}
+                                </Link>
+                            ) : null}
+                        </div>
+                    </div>
+                    {/* The two counts the Guide programme actually qualifies on, read
+                        as a profile stat row rather than a definition list — they belong
+                        to the person in the avatar, not to the listing. */}
+                    <dl className="mt-6 grid grid-cols-2 border border-white/10 bg-white/[0.03]">
+                        <GuideStat
+                            value={listing.qualifying_wild_capture_count.toLocaleString(params.locale)}
+                            label="wild captures"
+                        />
+                        <GuideStat
+                            value={listing.qualifying_wild_species_count.toLocaleString(params.locale)}
+                            label="wild species"
+                            className="border-l border-white/10"
+                        />
                     </dl>
+                    {username ? (
+                        <Link
+                            href={`/u/${encodeURIComponent(username)}`}
+                            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white/60 transition-colors hover:text-primary-300"
+                        >
+                            View full collection
+                            <span aria-hidden="true">&rarr;</span>
+                        </Link>
+                    ) : null}
                     <div className="mt-8">
                         <GuideBookingRequestCta
                             listingId={listing.id}
@@ -233,20 +287,63 @@ export default async function GuideListingPage({params}: Props) {
     </>;
 }
 
-function Fact({label, value}: {label: string; value: string}) {
+/**
+ * One headline fact about the listing.
+ *
+ * The icon sits on the label row rather than beside the value: the label is the
+ * thing it restates, and keeping it out of the value row lets a long value (a
+ * multi-word area name, a five-figure rupiah price) use the full tile width
+ * instead of wrapping around a glyph.
+ */
+/**
+ * The guide's avatar, falling back to their initial.
+ *
+ * A plain `<img>`: the URL is a public Supabase storage object, and the cover
+ * image on this same page is loaded the same way, so neither needs the image
+ * optimizer's remote-pattern allowlist.
+ */
+function GuideAvatar({url, name}: {url: string | null; name: string}) {
+    if (url) {
+        return (
+            <img
+                src={url}
+                alt=""
+                width={64}
+                height={64}
+                className="h-16 w-16 shrink-0 rounded-full border border-white/15 object-cover"
+            />
+        );
+    }
+
     return (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="text-xs uppercase tracking-wider text-white/45">{label}</div>
-            <div className="mt-1 font-bold">{value}</div>
+        <span
+            aria-hidden="true"
+            className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[0.06] font-display text-2xl text-white/70"
+        >
+            {name.trim().charAt(0).toUpperCase() || "?"}
+        </span>
+    );
+}
+
+function GuideStat({value, label, className = ""}: {value: string; label: string; className?: string}) {
+    return (
+        <div className={`p-4 ${className}`}>
+            <dt className="sr-only">{label}</dt>
+            <dd className="font-display text-3xl font-bold leading-none text-white">{value}</dd>
+            <p aria-hidden="true" className="mt-1.5 text-xs uppercase tracking-wider text-white/45">{label}</p>
         </div>
     );
 }
 
-function FactRow({value, label}: {value: string | number; label: string}) {
+function Fact({icon: Icon, label, value}: {icon?: ComponentType<{className?: string; size?: number}>; label: string; value: string}) {
     return (
-        <div className="flex items-baseline justify-between border-b border-white/10 pb-3">
-            <dt>{label}</dt>
-            <dd className="text-2xl font-bold text-white">{value}</dd>
+        <div className="border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] text-white/45">
+                {Icon ? <Icon className="shrink-0 text-primary-300" size={14} /> : null}
+                <span className="min-w-0">{label}</span>
+            </div>
+            <div className="mt-1.5 font-bold">{value}</div>
         </div>
     );
 }
+

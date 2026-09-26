@@ -144,7 +144,7 @@ function RegionMap({selectedRegion, onSelect, labels}: {
     labels: Labels;
 }) {
     return (
-        <div className="relative aspect-[16/9] min-h-[15rem] overflow-hidden rounded-[1.75rem] bg-[radial-gradient(circle_at_50%_45%,rgba(56,92,65,0.32),transparent_58%),linear-gradient(145deg,rgba(9,18,12,0.96),rgba(17,28,20,0.92))] p-3 sm:p-5">
+        <div className="relative aspect-[16/9] min-h-[15rem] overflow-hidden  bg-[radial-gradient(circle_at_50%_45%,rgba(56,92,65,0.32),transparent_58%),linear-gradient(145deg,rgba(9,18,12,0.96),rgba(17,28,20,0.92))] p-3 sm:p-5">
             <span
                 className="pointer-events-none absolute inset-3 opacity-75 sm:inset-5"
                 style={{
@@ -185,7 +185,7 @@ function RegionMap({selectedRegion, onSelect, labels}: {
 
 function LocationCard({item, labels, featured = false}: {item: LocationHubItem; labels: Labels; featured?: boolean}) {
     return (
-        <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-surface-900/65 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.95)] transition duration-300 hover:-translate-y-1 hover:bg-surface-900">
+        <article className="group flex h-full flex-col overflow-hidden  bg-surface-900/65 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.95)] transition duration-300 hover:-translate-y-1 hover:bg-surface-900">
             <div className="relative block aspect-[16/10] overflow-hidden bg-surface-800">
                 <Image
                     src={item.image.src}
@@ -318,7 +318,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
 
     return (
         <div className="flex flex-col gap-20 md:gap-28">
-            <section className="relative overflow-hidden rounded-[2.25rem] bg-[radial-gradient(circle_at_10%_10%,rgba(46,255,74,0.13),transparent_34%),linear-gradient(135deg,rgba(20,34,24,0.98),rgba(8,14,10,0.98))] px-6 py-9 md:px-10 md:py-12 lg:px-14">
+            <section className="relative overflow-hidden  bg-[radial-gradient(circle_at_10%_10%,rgba(46,255,74,0.13),transparent_34%),linear-gradient(135deg,rgba(20,34,24,0.98),rgba(8,14,10,0.98))] px-6 py-9 md:px-10 md:py-12 lg:px-14">
                 <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-300/[0.07] blur-3xl" />
                 <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="flex flex-col items-start">
@@ -345,7 +345,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                                 style={{top: `${index * 25}%`, transform: `translateX(-50%) rotate(${(index - 1) * 2.2}deg)`, zIndex: 10 - index}}
                             >
                                 <div className="grid grid-cols-[7rem_1fr] items-center gap-4 p-3 sm:grid-cols-[9rem_1fr]">
-                                    <Image src={item.image.src} alt={item.image.alt} width={item.image.width} height={item.image.height} className="h-24 w-full rounded-2xl object-cover sm:h-28" />
+                                    <Image src={item.image.src} alt={item.image.alt} width={item.image.width} height={item.image.height} className="h-24 w-full  object-cover sm:h-28" />
                                     <div className="min-w-0">
                                         <p className="text-xs font-semibold text-amber-100">{labels.regions[item.region]}</p>
                                         <p className="mt-1 truncate font-display text-xl font-bold text-white">{item.name}</p>
@@ -369,9 +369,9 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                         <button key={region} type="button" aria-pressed={selectedRegion === region} onClick={() => setSelectedRegion(region)} className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold ${selectedRegion === region ? "bg-primary-400 text-canvas-950" : "bg-white/[0.06] text-ink-100 hover:bg-white/10"}`}>{labels.regions[region]}</button>
                     ))}
                 </div>
-                <div className="grid gap-5 rounded-[2rem] bg-surface-900/55 p-4 md:p-6 lg:grid-cols-[1.35fr_0.65fr] lg:p-8">
+                <div className="grid gap-5  bg-surface-900/55 p-4 md:p-6 lg:grid-cols-[1.35fr_0.65fr] lg:p-8">
                     <RegionMap selectedRegion={selectedRegion} onSelect={setSelectedRegion} labels={labels} />
-                    <div className="flex min-h-[15rem] flex-col justify-center rounded-[1.75rem] bg-black/15 p-6 md:p-8">
+                    <div className="flex min-h-[15rem] flex-col justify-center  bg-black/15 p-6 md:p-8">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{selectedRegion ? labels.regions[selectedRegion] : labels.eyebrow}</p>
                         <h3 className="mt-3 font-display text-3xl font-bold text-white">{selectedRegion ? `${labels.regions[selectedRegion]}` : labels.chooseRegion}</h3>
                         <p className="mt-3 leading-7 text-ink-200">{selectedRegion ? `${selectedRegionItems.length} ${labels.locationGuidesCount}` : labels.chooseRegionDescription}</p>
@@ -381,7 +381,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                 </div>
             </section>
 
-            <section className="relative overflow-hidden rounded-[2rem] border border-white/[0.06] bg-[radial-gradient(circle_at_0%_0%,rgba(190,166,105,0.08),transparent_34%),linear-gradient(145deg,rgba(31,45,35,0.72),rgba(18,28,22,0.76))] p-5 md:p-8 lg:p-10">
+            <section className="relative overflow-hidden  border border-white/[0.06] bg-[radial-gradient(circle_at_0%_0%,rgba(190,166,105,0.08),transparent_34%),linear-gradient(145deg,rgba(31,45,35,0.72),rgba(18,28,22,0.76))] p-5 md:p-8 lg:p-10">
                 <div className="grid gap-9 lg:grid-cols-[0.54fr_1fr] lg:gap-12">
                     <div className="lg:sticky lg:top-28 lg:self-start">
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-100/80">AnimalDex place guides</p>
@@ -444,7 +444,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                                 ) : null}
                             </>
                         ) : (
-                            <div className="mt-5 rounded-[1.35rem] border border-white/[0.06] bg-white/[0.035] px-5 py-8 text-center">
+                            <div className="mt-5  border border-white/[0.06] bg-white/[0.035] px-5 py-8 text-center">
                                 <h3 className="font-display text-2xl font-bold text-amber-50">{labels.noPlaceGuidesTitle}</h3>
                                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-200">{labels.noPlaceGuidesBody}</p>
                                 <button type="button" onClick={resetPlaceGuides} className="mt-5 min-h-11 rounded-xl bg-primary-400 px-5 text-sm font-bold text-canvas-950">{labels.showAllGuides}</button>
@@ -493,7 +493,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                         {filteredItems.map((item) => <LocationCard key={item.slug} item={item} labels={labels} />)}
                     </div>
                 ) : (
-                    <div className="mt-8 rounded-[2rem] bg-surface-900/60 px-6 py-14 text-center">
+                    <div className="mt-8  bg-surface-900/60 px-6 py-14 text-center">
                         <h3 className="font-display text-3xl font-bold text-white">{labels.noGuidesTitle}</h3>
                         <p className="mx-auto mt-3 max-w-xl text-lg text-ink-200">{labels.noGuidesDescription}</p>
                         <button type="button" onClick={resetFilters} className="mt-6 min-h-12 rounded-2xl bg-primary-400 px-6 font-bold text-canvas-950">{labels.showAll}</button>
@@ -501,7 +501,7 @@ export default function LocationsHubClient({items, placeGuideLinks, animalProfil
                 )}
             </section>
 
-            <section className="overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_10%_20%,rgba(46,255,74,0.12),transparent_35%),linear-gradient(135deg,rgba(25,43,30,0.95),rgba(10,18,13,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
+            <section className="overflow-hidden  bg-[radial-gradient(circle_at_10%_20%,rgba(46,255,74,0.12),transparent_35%),linear-gradient(135deg,rgba(25,43,30,0.95),rgba(10,18,13,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
                 <h2 className="font-display text-4xl font-bold text-white md:text-5xl">{labels.ctaTitle}</h2>
                 <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-ink-100 md:text-xl">{labels.ctaDescription}</p>
                 <StoreLinks className="mt-7" />

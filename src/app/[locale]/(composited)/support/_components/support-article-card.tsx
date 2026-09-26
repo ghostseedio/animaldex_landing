@@ -11,7 +11,7 @@ export default function SupportArticleCard({
     const article = getSupportArticleById(articleId);
     if (!article) {
         return (
-            <div className="rounded-2xl border border-white/10 bg-[#101010] px-4 py-3 text-sm text-white/60">
+            <div className="  border border-white/10 bg-[#101010] px-4 py-3 text-sm text-white/60">
                 Help article unavailable
             </div>
         );

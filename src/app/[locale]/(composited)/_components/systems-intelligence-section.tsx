@@ -66,7 +66,7 @@ function SystemsProfile({
                         slug={item.slug}
                         alt={item.name}
                         fit="contain"
-                        className="mx-auto h-40 w-40 shrink-0 rounded-2xl bg-black/20 md:mx-0 md:h-44 md:w-44"
+                        className="mx-auto h-40 w-40 shrink-0  bg-black/20 md:mx-0 md:h-44 md:w-44"
                         sizes="176px"
                     />
                     <div className="relative min-w-0 space-y-3 pb-1">

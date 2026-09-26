@@ -116,7 +116,7 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
                 </p>
             </header>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 max-w-5xl mx-auto w-full">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 max-w-5xl mx-auto w-full">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Real species. Mythic places. S-tier captures.</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     Legendary Earth Beasts are not fantasy-only monsters. Each entry pairs a real scientific species with a real-world formation or cultural site—from Naka Cave and Dragon Head Mountain to Elephant Rock, Sigiriya, Devils Tower, and Hin Sam Wan.
@@ -136,7 +136,7 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
                 <LegendaryEarthBeastsHubGrid beasts={legendaryEarthBeastEntries} />
             </section>
 
-            <section className="rounded-4xl border border-primary-500/30 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-primary-500/30 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Strongest launch picks</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {launchBeasts.map((beast, index) => (
@@ -157,7 +157,7 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Start capturing in AnimalDex</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8 max-w-4xl">
                     Legendary Earth Beasts extend the normal capture loop: identify wildlife, collect species, and learn from real places—not just pets, zoos, and backyard animals.
@@ -180,7 +180,7 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
             </section>
 
             {linkedSpecies.length > 0 ? (
-                <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Species anchors in the catalog</h2>
                     <p className="text-ink-200 text-lg md:text-xl">
                         Every Legendary Earth Beast links to a real species page where the biology, lesson, and field-guide context already live.
@@ -199,10 +199,10 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
                 </section>
             ) : null}
 
-            <section id="faq" className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section id="faq" className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">FAQ</h2>
                 {legendaryEarthBeastsHubFaq.map((item) => (
-                    <div key={item.question} className="rounded-2xl border border-line-300/80 bg-surface-800/60 p-5">
+                    <div key={item.question} className="  border border-line-300/80 bg-surface-800/60 p-5">
                         <h3 className="text-white text-xl font-semibold">{item.question}</h3>
                         <p className="text-ink-200 text-base md:text-lg mt-2 leading-7">{item.answer}</p>
                     </div>

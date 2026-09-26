@@ -48,7 +48,7 @@ function MappingCard({mapping, transition}: {mapping: CrossDomainMapping; transi
     const ladder = crossDomainTransitionLadder(mapping, transition);
 
     return (
-        <div className="rounded-2xl bg-white/[0.035] p-4">
+        <div className="  bg-white/[0.035] p-4">
             <h4 className="mb-3 text-sm font-black text-white">{domainDisplayTitle(mapping.domain)}</h4>
 
             {ladder && transition ? (

@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
@@ -300,6 +301,8 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
 
     return (
         <article className="mx-auto flex w-full max-w-[86rem] flex-col gap-8 overflow-hidden px-4 py-10 md:px-8 md:py-14">
+            {/* A guide covers many animals, so the question picks the subject. */}
+            <AskSubjectBridge title={location.name} summary={location.description} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
             <LocationBreadcrumbs

@@ -138,7 +138,7 @@ export default async function WildlifeExperiencesPage({params}: {params: {locale
                 </div>
 
                 {listings.length === 0 ? (
-                    <div className="rounded-[1.35rem] border border-primary-200/20 px-6 py-10 md:px-10">
+                    <div className="  border border-primary-200/20 px-6 py-10 md:px-10">
                         <h3 className="font-display text-3xl font-black uppercase leading-tight text-white md:text-4xl">
                             Wildlife experiences are just getting started.
                         </h3>
@@ -187,7 +187,7 @@ export default async function WildlifeExperiencesPage({params}: {params: {locale
                     ))}
                 </div>
                 {emptyCategories.length > 0 && listings.length > 0 ? (
-                    <div className="rounded-[1.2rem] border border-white/10 px-6 py-8">
+                    <div className="  border border-white/10 px-6 py-8">
                         <h3 className="font-display text-2xl font-bold uppercase text-white">
                             Looking for {emptyCategoryLabel(emptyCategories)}?
                         </h3>
@@ -221,7 +221,7 @@ export default async function WildlifeExperiencesPage({params}: {params: {locale
                     .
                 </p>
                 {herpingListings.length === 0 ? (
-                    <div className="rounded-[1.2rem] border border-white/10 px-6 py-8">
+                    <div className="  border border-white/10 px-6 py-8">
                         <h3 className="font-display text-2xl font-bold uppercase text-white">Looking for a herping experience?</h3>
                         <p className="mt-3 max-w-xl text-ink-300">We&apos;re still growing the Guide network. No herping listings are public right now.</p>
                         <div className="mt-5 flex flex-wrap gap-4">
@@ -311,7 +311,7 @@ function DirectoryFallback({listings, locale}: {listings: PublicGuideListing[]; 
     return (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {listings.slice(0, 6).map((listing) => (
-                <div key={listing.id} className="min-h-[22rem] rounded-[1.35rem] border border-white/10 bg-white/[0.03]" aria-hidden="true">
+                <div key={listing.id} className="min-h-[22rem]  border border-white/10 bg-white/[0.03]" aria-hidden="true">
                     <span className="sr-only">{listing.title} in {locale}</span>
                 </div>
             ))}

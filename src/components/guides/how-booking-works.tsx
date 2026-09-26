@@ -14,7 +14,7 @@ export function HowBookingWorks({compact = false}: {compact?: boolean}) {
             </h2>
             <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {steps.map((step, index) => (
-                    <li key={step} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                    <li key={step} className="  border border-white/10 bg-white/[0.03] px-4 py-4">
                         <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-primary-200">{index + 1}</p>
                         <p className="mt-2 text-sm font-semibold leading-6 text-white">{step}</p>
                     </li>

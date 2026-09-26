@@ -686,18 +686,18 @@ export default function SpeciesGrowthInteractive({
                                 <span className={microClass}>Animal Power</span>
                                 <span className="text-right text-xs font-medium text-white">{powerName}</span>
                             </div>
-                            <div className="mt-3 rounded-[14px] border border-[#A7F432]/15 bg-black/15 p-3">
+                            <div className="mt-3  border border-[#A7F432]/15 bg-black/15 p-3">
                                 <p className="text-[11px] font-semibold uppercase text-[#A7F432]">➜ &nbsp; Your task</p>
                                 <p className="mt-2 text-base leading-6 text-white">{growth.challenge.challengeInstruction}</p>
                             </div>
-                            <div className="mt-3 rounded-[14px] border border-cyan-300/15 bg-black/15 p-3">
+                            <div className="mt-3  border border-cyan-300/15 bg-black/15 p-3">
                                 <p className="text-[11px] font-semibold uppercase text-cyan-300">▣ &nbsp; Proof needed</p>
                                 <p className="mt-2 text-xs font-medium leading-5 text-white/60">Capture a live photo showing you did the task. Camera-roll uploads are disabled. An optional note can add context, but your photo is the main proof.</p>
                             </div>
                             {growth.challenge.proofValidationReason ? (
-                                <p className="mt-3 rounded-[14px] bg-orange-400/[0.08] p-3 text-xs font-medium leading-5 text-orange-300">{growth.challenge.proofValidationReason}</p>
+                                <p className="mt-3  bg-orange-400/[0.08] p-3 text-xs font-medium leading-5 text-orange-300">{growth.challenge.proofValidationReason}</p>
                             ) : null}
-                            <div className={`mt-3 rounded-[14px] p-3 ${growth.challenge.status === "approved" ? "bg-[#A7F432]/10" : "bg-[#A7F432]/5"}`}>
+                            <div className={`mt-3  p-3 ${growth.challenge.status === "approved" ? "bg-[#A7F432]/10" : "bg-[#A7F432]/5"}`}>
                                 <p className="text-[11px] font-semibold uppercase text-[#A7F432]">✦ &nbsp; {growth.challenge.status === "approved" ? "Rewards earned" : "Reward"}</p>
                                 {(growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP) > 0 ? (
                                     <p className="mt-2 text-xs font-medium text-white">⊕ &nbsp; +{growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP} XP</p>
@@ -850,7 +850,7 @@ export default function SpeciesGrowthInteractive({
                                     </span>
                                 </Link>
                             ) : (
-                                <div aria-disabled="true" className="mt-3 flex items-center gap-3 rounded-[16px] border border-white/[0.12] bg-white/[0.06] px-3.5 py-3">
+                                <div aria-disabled="true" className="mt-3 flex items-center gap-3  border border-white/[0.12] bg-white/[0.06] px-3.5 py-3">
                                     <span aria-hidden="true" className="w-[18px] text-center text-sm text-white/80">⚡</span>
                                     <span className="min-w-0 flex-1">
                                         <span className="block text-xs font-medium text-white">Compare</span>

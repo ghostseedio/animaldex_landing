@@ -50,7 +50,7 @@ export default function ScenarioBreakdown({title, description, items, labels}: S
                     ))}
                 </div>
 
-                <div className="relative overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900 p-6 md:p-9">
+                <div className="relative overflow-hidden  border border-line-300 bg-surface-900 p-6 md:p-9">
                     <div className="absolute right-0 top-0 h-52 w-52 rounded-full bg-violet-500/10 blur-3xl" />
                     <div className="relative space-y-6">
                         <div className="flex flex-wrap items-end justify-between gap-4">

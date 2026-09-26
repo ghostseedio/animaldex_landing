@@ -215,7 +215,7 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                     {applicationExample ? (
                         <>
                             <div className="h-px bg-white/[0.14]" />
-                            <div className="flex items-start gap-2.5 rounded-[14px] border border-[#A7F432]/[0.14] bg-white/[0.035] p-3">
+                            <div className="flex items-start gap-2.5  border border-[#A7F432]/[0.14] bg-white/[0.035] p-3">
                                 <Icon name="try" className="mt-0.5 h-4 w-4 shrink-0 text-[#A7F432]" />
                                 <div className="space-y-1.5">
                                     <p className="text-[11px] font-bold text-[#A7F432]">Try it</p>
@@ -231,7 +231,7 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                                 <PanelLabel icon="grid">Use it for</PanelLabel>
                                 <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-[9px]">
                                     {bestUseCases.map((useCase) => (
-                                        <div key={useCase} className="flex items-start gap-2 rounded-xl border border-[#A7F432]/[0.16] bg-black/[0.16] px-2.5 py-2 text-[11px] font-semibold leading-4 text-white">
+                                        <div key={useCase} className="flex items-start gap-2  border border-[#A7F432]/[0.16] bg-black/[0.16] px-2.5 py-2 text-[11px] font-semibold leading-4 text-white">
                                             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#A7F432]" />
                                             <span>{useCase}</span>
                                         </div>

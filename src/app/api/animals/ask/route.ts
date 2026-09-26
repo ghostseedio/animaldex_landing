@@ -125,7 +125,16 @@ async function generateModelAnswer(question: string, grounding: SpeciesAskGround
         })
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+        // The caller falls back to the grounded answer, which is the right
+        // behaviour for a reader — but silently returning null also hid a
+        // revoked API key behind a 200 for every question asked. A rejected
+        // request is an outage and has to be visible. The body carries the
+        // provider's reason, never the key.
+        const reason = await response.text().catch(() => "");
+        console.error("[animals-ask] model call failed", response.status, reason.slice(0, 300));
+        return null;
+    }
     const payload = await response.json() as {choices?: Array<{message?: {content?: string}}>};
     const raw = payload.choices?.[0]?.message?.content;
     if (!raw) return null;

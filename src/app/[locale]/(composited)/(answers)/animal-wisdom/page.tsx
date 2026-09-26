@@ -241,7 +241,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
             </section>
 
             {featuredEssay ? (
-                <section className="grid grid-cols-1 overflow-hidden rounded-[2.5rem] bg-[#efe8d7] text-[#182019] lg:grid-cols-[0.95fr_1.05fr]">
+                <section className="grid grid-cols-1 overflow-hidden  bg-[#efe8d7] text-[#182019] lg:grid-cols-[0.95fr_1.05fr]">
                     <div className="relative min-h-[22rem] lg:min-h-[34rem]">
                         <Image
                             src={featuredEssay.featuredImage.src}
@@ -328,7 +328,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                 </div>
             </section>
 
-            <section className="grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-[2.5rem] bg-[#e5f3df] text-[#122016]">
+            <section className="grid grid-cols-1 lg:grid-cols-2 overflow-hidden  bg-[#e5f3df] text-[#122016]">
                 <SpeciesImage
                     slug="harbor-seal"
                     alt="Harbor seal resting between periods of coastal foraging"
@@ -347,7 +347,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                 </div>
             </section>
 
-            <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary-500/25 via-surface-800 to-violet-500/15 px-7 py-12 md:px-12 lg:px-16 lg:py-16">
+            <section className="relative overflow-hidden  bg-gradient-to-br from-primary-500/25 via-surface-800 to-violet-500/15 px-7 py-12 md:px-12 lg:px-16 lg:py-16">
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_0.85fr] gap-10 items-center">
                     <div className="flex flex-col gap-5">
                         <p className="text-primary-200 text-sm font-semibold uppercase tracking-[0.2em]">From reading to discovery</p>

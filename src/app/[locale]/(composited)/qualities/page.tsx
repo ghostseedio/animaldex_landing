@@ -218,7 +218,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, faqSchema, breadcrumbSchema])}}
             />
 
-            <section className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_12%_12%,rgba(180,139,72,0.15),transparent_34%),linear-gradient(135deg,rgba(27,36,29,0.98),rgba(10,15,12,0.98))] p-6 md:p-10 lg:p-12">
+            <section className="relative overflow-hidden  bg-[radial-gradient(circle_at_12%_12%,rgba(180,139,72,0.15),transparent_34%),linear-gradient(135deg,rgba(27,36,29,0.98),rgba(10,15,12,0.98))] p-6 md:p-10 lg:p-12">
                 <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:gap-14">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/80">{t("eyebrow")}</p>
@@ -245,7 +245,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                         </div>
                     </div>
 
-                    <aside className="rounded-[1.75rem] bg-black/20 p-5 md:p-6" aria-label={t("featuredTitle")}>
+                    <aside className="  bg-black/20 p-5 md:p-6" aria-label={t("featuredTitle")}>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{t("featuredTitle")}</p>
                         <div className="mt-4 divide-y divide-white/[0.09]">
                             {featuredPrinciples.map((principle) => (
@@ -331,7 +331,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 </div>
             </section>
 
-            <section className="rounded-[2rem] bg-[radial-gradient(circle_at_50%_0%,rgba(53,181,89,0.18),transparent_42%),linear-gradient(145deg,rgba(25,41,29,0.98),rgba(10,16,12,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
+            <section className="  bg-[radial-gradient(circle_at_50%_0%,rgba(53,181,89,0.18),transparent_42%),linear-gradient(145deg,rgba(25,41,29,0.98),rgba(10,16,12,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
                 <h2 className="mx-auto max-w-3xl font-display text-3xl font-bold text-white md:text-5xl">{t("ctaTitle")}</h2>
                 <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("ctaDescription")}</p>
                 <StoreLinks className="!mt-7" />

@@ -442,3 +442,40 @@ export function RedditIcon({className, size = 24}: IconProps) {
         </svg>
     );
 }
+
+export function ClockIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 7v5.2l3.2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function GroupIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="8.5" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M3.2 19a5.8 5.8 0 0 1 11.6 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M16.2 6a3.2 3.2 0 0 1 0 6.1m1 2.2A5.2 5.2 0 0 1 20.8 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function MapPinIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 21.2c4.2-4.1 6.3-7.4 6.3-10a6.3 6.3 0 1 0-12.6 0c0 2.6 2.1 5.9 6.3 10Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <circle cx="12" cy="11" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+    );
+}
+
+export function PriceTagIcon({className, size = 24}: IconProps) {
+    return (
+        <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11.3 3.2H20a.8.8 0 0 1 .8.8v8.7a1.6 1.6 0 0 1-.47 1.13l-6.4 6.4a1.6 1.6 0 0 1-2.26 0l-7.23-7.23a1.6 1.6 0 0 1 0-2.26l6.4-6.4a1.6 1.6 0 0 1 1.13-.47Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <circle cx="16.1" cy="7.9" r="1.5" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+    );
+}

@@ -414,3 +414,97 @@ button {
 @media (prefers-reduced-motion: reduce) {
     .nav-panel { animation: none; }
 }
+
+/* ==========================================================================
+   Ask AnimalDex — chart tokens
+   --------------------------------------------------------------------------
+   The chart medium an answer can emit is drawn against the drawer's own
+   surface, so its series hues are declared here rather than inline: one place
+   to re-step them, and one place a light theme would override.
+
+   The values are not a flip of each other. Each mode's three categorical hues
+   are stepped for that mode's surface and validated on it — lightness band,
+   chroma floor, colour-vision separation, normal-vision separation and contrast
+   — in fixed slot order, never cycled. The brand lime is deliberately not a
+   series colour: at L 0.88 it sits well outside the band a mark has to hold, so
+   it stays what it already is, the accent for text and controls.
+   ========================================================================== */
+
+.ask-chart {
+    color-scheme: dark;
+    --ask-chart-surface: #0e1611;
+    --ask-chart-grid: rgba(255, 255, 255, 0.08);
+    --ask-chart-axis: rgba(255, 255, 255, 0.16);
+    --ask-chart-threshold: rgba(255, 255, 255, 0.34);
+    --ask-chart-ink-muted: #7e8781;
+    --ask-series-1: #3987e5;
+    --ask-series-2: #d95926;
+    --ask-series-3: #199e70;
+}
+
+@media (prefers-color-scheme: light) {
+    :root:where(:not([data-theme="dark"])) .ask-chart {
+        color-scheme: light;
+        --ask-chart-surface: #fcfcfb;
+        --ask-chart-grid: rgba(11, 11, 11, 0.08);
+        --ask-chart-axis: rgba(11, 11, 11, 0.18);
+        --ask-chart-threshold: rgba(11, 11, 11, 0.38);
+        --ask-chart-ink-muted: #52514e;
+        --ask-series-1: #2a78d6;
+        --ask-series-2: #eb6834;
+        --ask-series-3: #1baf7a;
+    }
+}
+
+:root[data-theme="light"] .ask-chart {
+    color-scheme: light;
+    --ask-chart-surface: #fcfcfb;
+    --ask-chart-grid: rgba(11, 11, 11, 0.08);
+    --ask-chart-axis: rgba(11, 11, 11, 0.18);
+    --ask-chart-threshold: rgba(11, 11, 11, 0.38);
+    --ask-chart-ink-muted: #52514e;
+    --ask-series-1: #2a78d6;
+    --ask-series-2: #eb6834;
+    --ask-series-3: #1baf7a;
+}
+
+/* ==========================================================================
+   Ask AnimalDex — drawer
+   --------------------------------------------------------------------------
+   The panel is a docked side panel on desktop and a bottom sheet on mobile, and
+   it does not take the page's scroll with it: the reader keeps reading while it
+   is open. Entrance is a keyframe rather than a transition for the same reason
+   the nav panel uses one — the panel is mounted only while open.
+   ========================================================================== */
+
+@keyframes askPanelInRight {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes askPanelInBottom {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ask-panel { animation: askPanelInBottom 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+@media (min-width: 1024px) {
+    .ask-panel { animation: askPanelInRight 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ask-panel { animation: none; }
+}
+
+/* The three dots under a question that has not been answered yet. */
+@keyframes askThinkingPulse {
+    0%, 100% { opacity: 0.45; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1); }
+}
+
+.ask-thinking-dot { animation: askThinkingPulse 900ms ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ask-thinking-dot { animation: none; opacity: 0.7; }
+}

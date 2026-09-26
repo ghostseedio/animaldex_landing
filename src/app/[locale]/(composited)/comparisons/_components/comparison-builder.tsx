@@ -53,7 +53,7 @@ function SearchIcon({className = "h-4 w-4"}: {className?: string}) {
 
 function AnimalThumb({animal, className = "h-11 w-11"}: {animal: ComparableAnimal; className?: string}) {
     return (
-        <span className={`relative shrink-0 overflow-hidden rounded-xl bg-white/[0.06] ${className}`}>
+        <span className={`relative shrink-0 overflow-hidden  bg-white/[0.06] ${className}`}>
             {/* Storage artwork is already thumbnail-sized; skip the optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={animal.artworkUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -163,7 +163,7 @@ function AnimalPicker({
                 {animal ? (
                     <AnimalThumb animal={animal} />
                 ) : (
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 text-ink-400">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center  border border-dashed border-white/20 text-ink-400">
                         <SearchIcon className="h-4 w-4" />
                     </span>
                 )}
@@ -193,7 +193,7 @@ function AnimalPicker({
                         aria-hidden="true"
                     />
 
-                    <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/60 sm:absolute sm:inset-x-0 sm:bottom-auto sm:top-full sm:mt-2 sm:rounded-2xl">
+                    <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/60 sm:absolute sm:inset-x-0 sm:bottom-auto sm:top-full sm:mt-2 sm: ">
                         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20 sm:hidden" aria-hidden="true" />
 
                         <div className="p-3 pb-2">
@@ -321,7 +321,7 @@ export default function ComparisonBuilder({
     }, [starterAnimals]);
 
     return (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.75)] backdrop-blur-sm sm:p-5 md:p-6">
+        <div className="  border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.75)] backdrop-blur-sm sm:p-5 md:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
                 <AnimalPicker
                     animal={animalA}

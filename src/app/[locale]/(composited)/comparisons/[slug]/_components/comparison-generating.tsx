@@ -177,7 +177,7 @@ export default function ComparisonGenerating({
         <main className="mx-auto flex w-full max-w-[52rem] flex-col items-center px-4 py-20 text-center md:py-28">
             <div className="flex w-full items-center justify-center gap-4 md:gap-8">
                 <figure className="flex flex-col items-center gap-3">
-                    <span className={`relative h-24 w-24 overflow-hidden rounded-2xl border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
+                    <span className={`relative h-24 w-24 overflow-hidden  border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={animalAArtwork} alt="" className="h-full w-full object-cover" />
                     </span>
@@ -187,7 +187,7 @@ export default function ComparisonGenerating({
                 <span className="font-display text-4xl font-black italic tracking-[-0.08em] text-primary-200 md:text-6xl" aria-hidden="true">VS</span>
 
                 <figure className="flex flex-col items-center gap-3">
-                    <span className={`relative h-24 w-24 overflow-hidden rounded-2xl border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
+                    <span className={`relative h-24 w-24 overflow-hidden  border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={animalBArtwork} alt="" className="h-full w-full object-cover" />
                     </span>

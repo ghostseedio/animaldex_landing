@@ -41,7 +41,7 @@ function ActivityRow({
     subtitle?: string;
 }) {
     const className =
-        "flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200";
+        "flex w-full items-center gap-3  px-4 py-3.5 text-left transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200";
 
     const body = (
         <>
@@ -79,7 +79,7 @@ function SettingsSection({title, children}: {title: string; children: React.Reac
     return (
         <section className="mt-3">
             <h3 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">{title}</h3>
-            <div className="overflow-hidden rounded-2xl border border-white/[0.08]" style={{backgroundColor: CHROME}}>
+            <div className="overflow-hidden  border border-white/[0.08]" style={{backgroundColor: CHROME}}>
                 {children}
             </div>
         </section>

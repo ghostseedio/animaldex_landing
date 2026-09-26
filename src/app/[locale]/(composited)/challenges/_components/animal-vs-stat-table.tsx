@@ -15,7 +15,7 @@ export default function AnimalVsStatTable({title, description, animalAName, anim
     return (
         <section className="space-y-5">
             <div className="max-w-3xl"><h2 className="font-display text-2xl font-bold text-white md:text-4xl">{title}</h2><p className="mt-2 text-base leading-7 text-ink-200">{description}</p></div>
-            <div className="overflow-x-auto rounded-[2rem] border border-line-300 bg-surface-900/70">
+            <div className="overflow-x-auto  border border-line-300 bg-surface-900/70">
                 <div className="min-w-[52rem]">
                     <div className="grid grid-cols-[1fr_10rem_1fr] border-b border-line-300 bg-surface-800/60 px-6 py-4 text-sm font-bold uppercase tracking-[0.12em] text-ink-200"><span>{animalAName}</span><span className="text-center">{labels.advantage}</span><span className="text-right">{animalBName}</span></div>
                     {items.map((item) => (

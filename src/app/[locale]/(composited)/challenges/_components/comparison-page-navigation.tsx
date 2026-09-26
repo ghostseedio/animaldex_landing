@@ -71,7 +71,7 @@ export default function ComparisonPageNavigation({title, labels}: ComparisonPage
                 </button>
             </div>
 
-            <div className="sticky top-[4.75rem] z-30 -mx-2 overflow-hidden rounded-2xl border border-line-300/80 bg-surface-950/90 shadow-2xl backdrop-blur-xl md:top-[5.25rem]">
+            <div className="sticky top-[4.75rem] z-30 -mx-2 overflow-hidden  border border-line-300/80 bg-surface-950/90 shadow-2xl backdrop-blur-xl md:top-[5.25rem]">
                 <nav aria-label={labels.overview} className="flex items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none]">
                     {navigation.map(([id, label]) => (
                         <a key={id} href={`#${id}`} className="whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold text-ink-200 transition hover:bg-surface-800 hover:text-white md:text-sm">

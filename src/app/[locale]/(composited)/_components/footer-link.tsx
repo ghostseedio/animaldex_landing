@@ -5,14 +5,19 @@ export type FooterLinkProps = {
     children: string;
 }
 
+/**
+ * One footer navigation link.
+ *
+ * Deliberately plain: colour is the only thing that changes on hover. The
+ * previous version went `font-normal` -> `font-semibold`, which reflowed the
+ * whole column under the cursor, and carried the animated underline bar, which
+ * made a five-column sitemap twitch as the eye moved across it.
+ */
 export default function FooterLink({href, children}: FooterLinkProps) {
     return (
         <Link
             href={href}
-            className="text-ink-200 hover:text-white lg:hover:font-semibold text-3xl lg:text-lg transition-all
-            w-fit text-center lg:text-left font-display font-bold lg:font-sans lg:font-normal"
-            underline
-            key={children}
+            className="w-fit py-1 text-[13px] leading-6 text-ink-200 transition-colors hover:text-primary-200 focus-visible:text-primary-200 md:py-0 md:text-sm"
         >
             {children}
         </Link>

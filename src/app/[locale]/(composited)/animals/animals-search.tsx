@@ -226,7 +226,7 @@ export default function AnimalsSearch({
                         <ul
                             id={listId}
                             role="listbox"
-                            className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-[min(24rem,70vh)] overflow-y-auto overflow-x-hidden rounded-xl border border-line-300 bg-canvas-950 shadow-2xl"
+                            className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-[min(24rem,70vh)] overflow-y-auto overflow-x-hidden  border border-line-300 bg-canvas-950 shadow-2xl"
                         >
                             {matches.map((match, index) => {
                                 const active = index === activeIndex;

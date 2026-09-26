@@ -24,7 +24,7 @@ function SizeScaleArtworkIcon({
     if (showPlaceholder) {
         return (
             <div
-                className="flex items-center justify-center rounded-[10px] bg-white/[0.06] text-white/35"
+                className="flex items-center justify-center  bg-white/[0.06] text-white/35"
                 style={{width: size, height: size}}
                 aria-hidden="true"
             >

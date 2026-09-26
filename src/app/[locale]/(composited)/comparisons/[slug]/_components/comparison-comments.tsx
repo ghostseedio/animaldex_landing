@@ -130,7 +130,7 @@ export default function ComparisonComments({
             </div>
 
             {signedIn ? (
-                <div className="rounded-3xl border border-line-300 bg-surface-900/60 p-5 md:p-6">
+                <div className="  border border-line-300 bg-surface-900/60 p-5 md:p-6">
                     <label className="block">
                         <span className="sr-only">{copy.placeholder}</span>
                         <textarea
@@ -157,7 +157,7 @@ export default function ComparisonComments({
                     {error ? <p className="mt-3 text-sm font-semibold text-amber-300">{error}</p> : null}
                 </div>
             ) : (
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-line-300 bg-surface-900/60 p-5 md:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4  border border-line-300 bg-surface-900/60 p-5 md:p-6">
                     <p className="text-base text-ink-200">{copy.signedOutPrompt}</p>
                     <Link
                         href={signInHref}
@@ -171,7 +171,7 @@ export default function ComparisonComments({
             {comments.length ? (
                 <ol className="space-y-4">
                     {comments.map((comment) => (
-                        <li key={comment.id} className="rounded-3xl border border-line-300 bg-white/[0.025] p-5">
+                        <li key={comment.id} className="  border border-line-300 bg-white/[0.025] p-5">
                             <div className="flex items-start gap-3">
                                 {comment.authorAvatarUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -230,7 +230,7 @@ export default function ComparisonComments({
                     ))}
                 </ol>
             ) : (
-                <p className="rounded-3xl border border-line-300 bg-white/[0.02] px-6 py-10 text-center text-ink-300">
+                <p className="  border border-line-300 bg-white/[0.02] px-6 py-10 text-center text-ink-300">
                     {copy.empty}
                 </p>
             )}

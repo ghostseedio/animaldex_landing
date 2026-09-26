@@ -1,6 +1,7 @@
 "use client";
 
 import {type ReactNode, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -267,6 +268,18 @@ export default function CaptureDetailClient({
             </div>
 
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)] xl:gap-8">
+                {/* The reader's own photo is on screen here, which is the one
+                    surface where the assistant may point into a picture. */}
+                <AskSubjectBridge
+                    scope="species"
+                    slug={resolvedSpeciesSlug}
+                    name={speciesName}
+                    captureId={capture.id}
+                    photoUrl={capture.imageSrc}
+                    title={capture.animalName}
+                    summary={descriptor ?? null}
+                />
+
                 <section
                     onTouchStart={handleHeroTouchStart}
                     onTouchEnd={handleHeroTouchEnd}

@@ -93,37 +93,40 @@ export default function ExperiencesDirectory({
                         </FilterChip>
                     ))}
                 </div>
-                {(locations.length > 1 || duration !== "any") && (
-                    <div className="flex flex-wrap gap-3">
-                        {locations.length > 1 ? (
-                            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs uppercase tracking-[0.16em] text-ink-400">
-                                Public area
-                                <select
-                                    value={requestedLocation}
-                                    onChange={(event) => setParam("location", event.target.value)}
-                                    className="min-h-11 rounded-full border border-white/15 bg-[#07100B] px-4 text-sm normal-case tracking-normal text-white"
-                                >
-                                    <option value="">Any listed area</option>
-                                    {locations.map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        ) : null}
+                {/* Always shown. These were previously gated on there being more than
+                    one listed area, which hid the location filter — and, because the
+                    duration control lived inside the same gate, hid that too — on any
+                    catalogue small enough to need it least obviously. A reader cannot
+                    discover a filter that only appears once the inventory is large. */}
+                <div className="flex flex-wrap gap-3">
+                    {locations.length > 0 ? (
                         <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs uppercase tracking-[0.16em] text-ink-400">
-                            Duration
+                            Public area
                             <select
-                                value={duration}
-                                onChange={(event) => setDuration(event.target.value as DurationId)}
+                                value={requestedLocation}
+                                onChange={(event) => setParam("location", event.target.value)}
                                 className="min-h-11 rounded-full border border-white/15 bg-[#07100B] px-4 text-sm normal-case tracking-normal text-white"
                             >
-                                {DURATION_FILTERS.map((item) => (
-                                    <option key={item.id} value={item.id}>{item.label}</option>
+                                <option value="">Any listed area</option>
+                                {locations.map(([key, label]) => (
+                                    <option key={key} value={key}>{label}</option>
                                 ))}
                             </select>
                         </label>
-                    </div>
-                )}
+                    ) : null}
+                    <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs uppercase tracking-[0.16em] text-ink-400">
+                        Duration
+                        <select
+                            value={duration}
+                            onChange={(event) => setDuration(event.target.value as DurationId)}
+                            className="min-h-11 rounded-full border border-white/15 bg-[#07100B] px-4 text-sm normal-case tracking-normal text-white"
+                        >
+                            {DURATION_FILTERS.map((item) => (
+                                <option key={item.id} value={item.id}>{item.label}</option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
                 <p className="text-sm text-ink-400">
                     {visible.length} published {visible.length === 1 ? "experience" : "experiences"}
                     {category ? ` in ${GUIDE_CATEGORIES[category]}` : ""}
@@ -163,7 +166,7 @@ function DirectoryEmpty({
     const label = category ? GUIDE_CATEGORIES[category] : "";
     const scarce = Boolean(category && !categoryHasInventory);
     return (
-        <div className="rounded-[1.35rem] border border-white/10 px-6 py-10">
+        <div className="border border-white/10 px-6 py-10">
             <h3 className="font-display text-3xl font-bold uppercase text-white">
                 {scarce
                     ? `Looking for a ${label.toLowerCase()} experience?`

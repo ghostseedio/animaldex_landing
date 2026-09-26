@@ -89,7 +89,7 @@ export default async function CreatorRewardsPage({params}: {params: {locale: str
 
             <section
                 aria-label="Current status"
-                className="rounded-[1.4rem] border border-white/15 px-5 py-6 md:px-8"
+                className="  border border-white/15 px-5 py-6 md:px-8"
             >
                 <p className="font-display text-2xl font-bold uppercase tracking-[0.04em] text-white">
                     Not currently open for payouts

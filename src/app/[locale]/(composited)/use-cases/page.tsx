@@ -205,8 +205,8 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
 
                     {/* Product mockup: a real dex entry, not a decorative dashboard */}
                     <div className="relative mx-auto w-full max-w-sm">
-                        <div className="absolute -inset-3 -z-10 rounded-[1.75rem] border border-line-300/60" />
-                        <div className="rounded-3xl border border-line-300 bg-surface-900 p-5 shadow-2xl shadow-black/40">
+                        <div className="absolute -inset-3 -z-10  border border-line-300/60" />
+                        <div className="  border border-line-300 bg-surface-900 p-5 shadow-2xl shadow-black/40">
                             <div className="flex items-center justify-between">
                                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary-200">
                                     Dex Entry · No. 014
@@ -217,7 +217,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                             </div>
 
                             <div className="mt-4 flex items-center gap-4">
-                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-line-300 bg-surface-950">
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center  border border-line-300 bg-surface-950">
                                     <IconBinoculars className="h-7 w-7 text-primary-200" />
                                 </div>
                                 <div>
@@ -240,7 +240,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                 </header>
 
                 {/* ---------- Trust strip ---------- */}
-                <section className="flex flex-col gap-4 rounded-2xl border border-line-300 px-6 py-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <section className="flex flex-col gap-4  border border-line-300 px-6 py-5 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <p className="font-semibold text-white">
                         {useCases.length} use-case paths, built around how people actually use AnimalDex
                     </p>
@@ -255,12 +255,12 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
 
                 {/* ---------- Featured ---------- */}
                 {featured && (
-                    <section className="grid gap-8 rounded-3xl border border-line-300 bg-surface-900/60 p-6 md:grid-cols-[0.8fr_1.2fr] md:p-10">
+                    <section className="grid gap-8  border border-line-300 bg-surface-900/60 p-6 md:grid-cols-[0.8fr_1.2fr] md:p-10">
                         <div className="flex flex-col items-start justify-between">
                             <span className="font-mono text-xs uppercase tracking-[0.2em] text-primary-200">
                                 No. {catalogNumber(0)} · Featured path
                             </span>
-                            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary-400/25 bg-primary-400/10">
+                            <div className="flex h-20 w-20 items-center justify-center  border border-primary-400/25 bg-primary-400/10">
                                 <IconPaw className="h-9 w-9 text-primary-200" />
                             </div>
                         </div>
@@ -308,13 +308,13 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                             return (
                                 <article
                                     key={entry.slug}
-                                    className="group relative flex flex-col rounded-2xl border border-line-300 bg-surface-900/40 p-6 transition hover:border-primary-400/40 hover:bg-surface-900/70"
+                                    className="group relative flex flex-col  border border-line-300 bg-surface-900/40 p-6 transition hover:border-primary-400/40 hover:bg-surface-900/70"
                                 >
                                     <div className="flex items-start justify-between">
                                         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-400">
                                             No. {catalogNumber(index + 1)}
                                         </span>
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-300 bg-surface-950 text-primary-200 transition group-hover:border-primary-400/40">
+                                        <div className="flex h-11 w-11 items-center justify-center  border border-line-300 bg-surface-950 text-primary-200 transition group-hover:border-primary-400/40">
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
@@ -327,7 +327,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                                         {entry.description}
                                     </p>
 
-                                    <div className="mt-4 rounded-xl border border-line-300 bg-surface-950/60 px-4 py-3">
+                                    <div className="mt-4  border border-line-300 bg-surface-950/60 px-4 py-3">
                                         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">
                                             Best for
                                         </p>
@@ -392,7 +392,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                 {/* ---------- CTA ---------- */}
                 <section
                     id="download"
-                    className="relative overflow-hidden rounded-3xl border border-primary-500/25 bg-surface-900/60 p-8 text-center md:p-14"
+                    className="relative overflow-hidden  border border-primary-500/25 bg-surface-900/60 p-8 text-center md:p-14"
                 >
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,197,94,0.14),transparent_60%)]" />
                     <div className="relative mx-auto max-w-2xl">

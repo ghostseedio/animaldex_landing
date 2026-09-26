@@ -115,9 +115,12 @@ test("footer and contact expose the new commercial routes", () => {
     const contactPage = readRepo("src/app/[locale]/(composited)/contact/page.tsx");
     assert.match(footer, /public-navigation/);
     assert.match(nav, /earn-on-animaldex/);
-    assert.match(nav, /become-a-wildlife-guide/);
-    assert.match(nav, /creator-rewards/);
     assert.match(nav, /sponsor-a-challenge/);
+    // Become a Wildlife Guide and Creator Rewards were deliberately retired from
+    // public navigation; they keep their routes and their in-page links, and
+    // `public-navigation.test.ts` guards that they stay out of the header and footer.
+    assert.doesNotMatch(nav, /become-a-wildlife-guide/);
+    assert.doesNotMatch(nav, /creator-rewards/);
     assert.match(contact, /\/sponsor-a-challenge/);
     assert.match(contactPage, /\/earn-on-animaldex/);
 });

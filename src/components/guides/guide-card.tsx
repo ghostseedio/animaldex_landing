@@ -3,7 +3,7 @@ import Link from "@/app/[locale]/_components/link";
 import {categoryLabel, formatDuration, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
 export default function GuideCard({listing, locale}: {listing: PublicGuideListing; locale: string}) {
-    return <article className="flex h-full overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.04] shadow-xl shadow-black/10">
+    return <article className="flex h-full overflow-hidden  border border-white/10 bg-white/[0.04] shadow-xl shadow-black/10">
         <div className="flex w-full flex-col">
         <div className="relative h-52 overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
             {listing.cover_image_url ? (

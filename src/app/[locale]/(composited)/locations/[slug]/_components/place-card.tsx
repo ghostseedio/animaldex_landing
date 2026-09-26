@@ -18,7 +18,7 @@ export default function PlaceCard({place, fallbackImage, labels}: {
     const image = place.image || fallbackImage.src;
 
     return (
-        <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-surface-900/80 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.95)]">
+        <article className="group flex h-full flex-col overflow-hidden  bg-surface-900/80 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.95)]">
             <div className="relative aspect-[16/9] overflow-hidden bg-surface-800">
                 <Image
                     src={image}

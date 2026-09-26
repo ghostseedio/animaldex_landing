@@ -267,8 +267,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                                 </Link>
                                 <Link
                                     href="/animals"
-                                    className="inline-flex min-h-[2.75rem] items-center rounded-xl px-1 text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100"
-                                    underline
+                                    className="inline-flex min-h-[2.75rem] items-center rounded-xl px-1 text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-primary-100 hover:underline focus-visible:underline"
                                 >
                                     {labels.browseAnimalsLink}
                                 </Link>

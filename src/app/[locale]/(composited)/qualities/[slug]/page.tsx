@@ -110,7 +110,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 {t("back")}
             </Link>
 
-            <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 font-medium uppercase tracking-[0.18em] text-sm">{t("eyebrow")}</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{principle.principle}</h1>
                 <p className="text-ink-200 text-lg md:text-xl">{sampleMotto}</p>
@@ -133,7 +133,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                     return (
                         <article
                             key={lesson.slug}
-                            className="rounded-3xl border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-4"
+                            className="  border border-line-300 bg-surface-900/80 backdrop-blur p-5 flex flex-col gap-4"
                         >
                             <Link href={detailHref} className="block">
                                 <SpeciesArtworkImage
@@ -141,7 +141,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                                     alt={imageAlt}
                                     imageFile={lesson.imageFile}
                                     priority={index < 3}
-                                    className="aspect-[4/3] rounded-2xl border border-line-300"
+                                    className="aspect-[4/3]  border border-line-300"
                                     sizes="(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw"
                                 />
                             </Link>
@@ -181,7 +181,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 <p className="text-center text-sm text-ink-300">{t("pageStatus", {page: currentPage, pages: pageCount})}</p>
             ) : null}
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("relatedIndexesTitle")}</h2>
                 <div className="flex flex-wrap gap-3">
                     <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">

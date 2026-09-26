@@ -96,25 +96,25 @@ export default async function PokemonAnimalsIndexPage({params}: PokemonAnimalsIn
             </section>
 
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Pokemon animal counterpart summary">
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-5 py-5">
+                <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Total</p>
                     <p className="font-display text-4xl text-white">{summary.total}</p>
                 </div>
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-5 py-5">
+                <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Strong</p>
                     <p className="font-display text-4xl text-white">{summary.strongCount}</p>
                 </div>
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-5 py-5">
+                <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Broad</p>
                     <p className="font-display text-4xl text-white">{summary.mediumCount + summary.broadCount}</p>
                 </div>
-                <div className="rounded-3xl border border-line-300 bg-surface-900/80 px-5 py-5">
+                <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">No single animal</p>
                     <p className="font-display text-4xl text-white">{summary.noSingleAnimalCount}</p>
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">How to read this directory</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     Each row gives the closest real-animal counterpart, not a claim that the Pokemon was officially designed from only that animal. Many designs mix animals with mythology, objects, plants, machines, fossils, or original fantasy traits.

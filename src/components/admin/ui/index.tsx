@@ -24,7 +24,7 @@ export function cn(...inputs: ClassValue[]) {
 export function Card({ className, ...props }: HTMLAttributes<HTMLElement>) {
   // min-w-0 so a wide table or chart scrolls inside the card instead of
   // stretching its grid column past the screen.
-  return <section className={cn("min-w-0 rounded-xl border border-line-300 bg-surface-900", className)} {...props} />;
+  return <section className={cn("min-w-0  border border-line-300 bg-surface-900", className)} {...props} />;
 }
 
 export function CardHeader({
@@ -202,7 +202,7 @@ export function Stat({
   info?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+    <div className="  border border-line-300 bg-surface-900 p-4">
       <div className="flex items-center gap-1.5 text-xs font-bold text-ink-400">
         {label}
         {info ? <InfoTip>{info}</InfoTip> : null}

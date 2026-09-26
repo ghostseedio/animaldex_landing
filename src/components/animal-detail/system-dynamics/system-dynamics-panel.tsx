@@ -169,7 +169,7 @@ export default function SystemDynamicsPanel({
             </div>
 
             {/* Hero: state relationship, waveform, explanation. */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4">
+            <div className="flex flex-col gap-4  border border-white/[0.07] bg-white/[0.035] p-4">
                 <SystemStateRow signature={signature} profile={dynamics.frequencyProfile} style="expanded" />
                 <SystemWaveform signature={signature} fallbackWaveform={dynamics.waveform} style="expanded" />
 

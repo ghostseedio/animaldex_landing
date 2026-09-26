@@ -1,4 +1,5 @@
 import {Fragment} from "react";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {Metadata} from "next";
 import Image from "next/image";
 import {notFound} from "next/navigation";
@@ -219,8 +220,8 @@ function renderTableOfContents(items: string[], variant: "mobile" | "desktop") {
     return (
         <nav
             className={isDesktop
-                ? "hidden xl:flex sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-3xl border border-line-300 bg-surface-900/85 backdrop-blur px-5 py-6 flex-col gap-4"
-                : "xl:hidden rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-7 md:px-8 flex flex-col gap-4"
+                ? "hidden xl:flex sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto  border border-line-300 bg-surface-900/85 backdrop-blur px-5 py-6 flex-col gap-4"
+                : "xl:hidden  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-7 md:px-8 flex flex-col gap-4"
             }
             aria-label="Table of contents"
         >
@@ -322,12 +323,12 @@ function renderCodeBlocks(codeBlocks: NonNullable<ReturnType<typeof getBlogPost>
     return (
         <div className="space-y-4">
             {codeBlocks.map((block, index) => block.render && canRenderCodeBlock(block.language) ? (
-                <figure key={`${block.language ?? "html"}-${index}`} className="overflow-hidden rounded-2xl border border-line-300 bg-white">
+                <figure key={`${block.language ?? "html"}-${index}`} className="overflow-hidden  border border-line-300 bg-white">
                     <RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />
                     {block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}
                 </figure>
             ) : (
-                <figure key={`${block.language ?? "text"}-${index}`} className="overflow-hidden rounded-2xl border border-line-300 bg-[#080d0a]">
+                <figure key={`${block.language ?? "text"}-${index}`} className="overflow-hidden  border border-line-300 bg-[#080d0a]">
                     <div className="flex items-center justify-between border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">
                         <span>{block.language || "Text"}</span>
                         <span>Code</span>
@@ -615,6 +616,15 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
 
     return (
         <article className="editorial w-full bg-[color:var(--paper-950)] pb-4">
+            {/* Renders nothing: it tells the site-wide assistant what this page
+                is about. Any species the article mentions leads the candidate
+                list, and the question is free to move elsewhere. */}
+            <AskSubjectBridge
+                slug={mentionedSpeciesLinks[0]?.slug ?? null}
+                name={mentionedSpeciesLinks[0]?.name ?? null}
+                title={post.title}
+                summary={post.description}
+            />
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
 
             {post.headerHtml ? (

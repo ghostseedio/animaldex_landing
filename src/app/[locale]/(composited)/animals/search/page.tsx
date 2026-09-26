@@ -127,7 +127,7 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
                         }}
                     />
                 ) : (
-                    <p className="rounded-3xl border border-white/10 bg-white/[0.02] px-6 py-14 text-center text-ink-300">
+                    <p className="  border border-white/10 bg-white/[0.02] px-6 py-14 text-center text-ink-300">
                         {t("emptyQueryPrompt")}
                     </p>
                 )}

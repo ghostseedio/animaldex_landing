@@ -125,7 +125,7 @@ export default function ComparisonVotePanel({
     const hasVotes = tally.totalVotes > 0;
 
     return (
-        <section id="vote" className="scroll-mt-28 rounded-[2rem] border border-line-300 bg-surface-900/60 p-6 md:p-8">
+        <section id="vote" className="scroll-mt-28  border border-line-300 bg-surface-900/60 p-6 md:p-8">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{copy.eyebrow}</p>
             <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">{copy.title}</h2>
             <p className="mt-3 max-w-2xl text-base leading-7 text-ink-200">
@@ -148,7 +148,7 @@ export default function ComparisonVotePanel({
                             className={`group relative overflow-hidden rounded-3xl border p-5 text-left transition disabled:cursor-wait ${selected ? "border-primary-400 bg-primary-400/10" : "border-line-300 bg-black/20 hover:border-primary-400/50"}`}
                         >
                             <div className="flex items-center gap-4">
-                                <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-surface-800/70">
+                                <span className="relative h-16 w-16 shrink-0 overflow-hidden  bg-surface-800/70">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={option.artwork} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 </span>

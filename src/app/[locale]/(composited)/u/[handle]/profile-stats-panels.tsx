@@ -358,7 +358,7 @@ export function TierDistributionCard({
     );
 
     if (!flush) {
-        return <section className="w-full rounded-[1.1rem] border border-white/10 bg-[#1F1F1F] p-4">{content}</section>;
+        return <section className="w-full  border border-white/10 bg-[#1F1F1F] p-4">{content}</section>;
     }
 
     return <StatsPanel className="p-4">{content}</StatsPanel>;
@@ -382,7 +382,7 @@ export function StatChipScroller({items}: {items: ProfileStatChip[]}) {
                 {items.map((item) => (
                     <div
                         key={item.title}
-                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between rounded-[14px] border border-white/10 bg-[#1F1F1F] px-2.5 py-[9px]"
+                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between  border border-white/10 bg-[#1F1F1F] px-2.5 py-[9px]"
                     >
                         <p className="truncate text-[8px] font-extrabold uppercase text-white/40">{item.title}</p>
                         <p className="flex items-baseline gap-px">
@@ -794,7 +794,7 @@ export function CompletedBindersSection({
                                 className="flex w-[148px] shrink-0 flex-col gap-2"
                             >
                                 <div
-                                    className="flex aspect-[3/4] flex-col justify-between rounded-[14px] border p-3"
+                                    className="flex aspect-[3/4] flex-col justify-between  border p-3"
                                     style={{
                                         borderColor: `${accent}59`,
                                         background: `linear-gradient(150deg, ${accent}2E, rgba(0,0,0,0.35))`

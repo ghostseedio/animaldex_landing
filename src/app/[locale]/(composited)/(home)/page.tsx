@@ -145,7 +145,7 @@ export default async function Home({params}: HomePageProps) {
         },
         {
             id: "owlSymbolism",
-            href: "/animal-symbolism/owl-symbolism",
+            href: "/blog/owl-symbolism",
             image: "/images/blog/owl-symbolism/owl-symbolism-hero.webp",
             layout: "medium"
         },
@@ -169,7 +169,7 @@ export default async function Home({params}: HomePageProps) {
         },
         {
             id: "octopusMind",
-            href: "/animal-symbolism/octopus-symbolism",
+            href: "/blog/octopus-symbolism",
             image: "/images/blog/octopus-symbolism/octopus-symbolism-hero.webp",
             layout: "wide"
         }

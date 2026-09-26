@@ -14,6 +14,7 @@ import SpeciesAtAGlanceCard from "@/app/[locale]/(composited)/animals/[slug]/spe
 import SpeciesUnderstandGuide, {type UnderstandGuideSection} from "@/app/[locale]/(composited)/animals/[slug]/species-understand-guide";
 import SpeciesAnimalPowerGuide from "@/app/[locale]/(composited)/animals/[slug]/species-animal-power-guide";
 import SpeciesAskAnimalDex from "@/app/[locale]/(composited)/animals/[slug]/species-ask-animaldex";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingsSection from "@/app/[locale]/(composited)/animals/[slug]/species-rankings-section";
 import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
@@ -959,6 +960,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 />
             ) : null}
 
+            {/* Tells the site-wide assistant which animal this page is about. */}
+            <AskSubjectBridge
+                scope="species"
+                slug={entry.slug}
+                name={entry.name}
+                title={entry.name}
+                summary={entry.analysis.summary}
+            />
+
             <SpeciesAskAnimalDex
                 slug={entry.slug}
                 animalName={entry.name}
@@ -969,19 +979,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     description: t("askDescription"),
                     placeholder: t("askPlaceholder"),
                     submit: t("askSubmit"),
-                    thinking: t("askThinking"),
                     quota: t("askQuota", {
                         anonymous: String(SPECIES_ASK_DAILY_LIMITS.anonymous),
                         signedIn: String(SPECIES_ASK_DAILY_LIMITS.signedIn),
                         pro: String(SPECIES_ASK_DAILY_LIMITS.pro)
                     }),
-                    remaining: t("askRemaining"),
-                    followups: t("askFollowups"),
                     noscript: t("askNoscript"),
-                    limitReached: t("askLimitReached"),
-                    collectCta: t("askCollectCta"),
-                    collectHref: "/#download",
-                    error: t("askError"),
                     layers: {
                         biology: {title: t("askLayerBiology"), caption: t("askLayerBiologyCaption")},
                         why: {title: t("askLayerWhy"), caption: t("askLayerWhyCaption")},

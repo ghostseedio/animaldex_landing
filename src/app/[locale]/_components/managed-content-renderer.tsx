@@ -57,7 +57,7 @@ export default async function ManagedContentRenderer({locale, page}: ManagedCont
                                     {section.codeBlocks?.map((block, index) => block.render && canRenderCodeBlock(block.language) ? (
                                         <RenderedCodeFrame key={index} title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />
                                     ) : (
-                                        <figure key={index} className="overflow-hidden rounded-2xl border border-line-300 bg-[#080d0a]">
+                                        <figure key={index} className="overflow-hidden  border border-line-300 bg-[#080d0a]">
                                             <div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">{block.language || "Text"}</div>
                                             <pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>
                                             {block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}

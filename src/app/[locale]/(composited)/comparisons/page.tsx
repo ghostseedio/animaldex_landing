@@ -378,7 +378,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
 
                     <ol className="mt-6 grid gap-3 sm:grid-cols-3">
                         {HOW_IT_WORKS_KEYS.map((key, index) => (
-                            <li key={key} className="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
+                            <li key={key} className="  border border-white/8 bg-white/[0.025] p-4">
                                 <span className="font-display text-sm font-black text-primary-300">0{index + 1}</span>
                                 <p className="mt-1.5 text-sm font-bold text-white">{t(`howItWorks.${key}.title`)}</p>
                                 <p className="mt-1 text-xs leading-5 text-ink-300">{t(`howItWorks.${key}.detail`)}</p>
@@ -397,7 +397,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             </div>
 
             {showFeatured ? (
-                <section className="relative mt-9 overflow-hidden rounded-[2rem] border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
+                <section className="relative mt-9 overflow-hidden  border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
                     <Image
                         src={featured.featuredImage.src}
                         alt={featured.featuredImage.alt}
@@ -441,7 +441,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                 })}
             </nav>
 
-            <div className="sticky top-3 z-30 mt-4 rounded-2xl border border-white/10 bg-[#111713]/90 p-2 shadow-xl shadow-black/20 backdrop-blur-xl md:top-5">
+            <div className="sticky top-3 z-30 mt-4  border border-white/10 bg-[#111713]/90 p-2 shadow-xl shadow-black/20 backdrop-blur-xl md:top-5">
                 <form action={getLocalePath(locale, "/comparisons")} method="get" className="grid gap-2 md:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(9rem,0.65fr))_auto_auto]">
                     {state.quick !== "popular" ? <input type="hidden" name="quick" value={state.quick} /> : null}
                     <label className="relative">
@@ -491,7 +491,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                                 const winner = getWinner(entry);
                                 const wide = index % 6 === 0;
                                 return (
-                                    <article key={entry.slug} className={`group overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.32)] ${wide ? "md:col-span-12 xl:col-span-8" : "md:col-span-6 xl:col-span-4"}`}>
+                                    <article key={entry.slug} className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.32)] ${wide ? "md:col-span-12 xl:col-span-8" : "md:col-span-6 xl:col-span-4"}`}>
                                         <Link href={`/comparisons/${entry.slug}`} className="relative block overflow-hidden">
                                             <Image src={entry.featuredImage.src} alt={entry.featuredImage.alt} width={entry.featuredImage.width} height={entry.featuredImage.height} sizes={wide ? "(min-width:1280px) 60vw, 100vw" : "(min-width:1280px) 30vw, (min-width:768px) 50vw, 100vw"} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${wide ? "h-72 md:h-96" : "h-64 md:h-72"}`} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-black/30" />
@@ -515,7 +515,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                             })}
                         </div>
                     ) : (
-                        <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.035] px-6 py-14 text-center">
+                        <div className="  border border-white/10 bg-white/[0.035] px-6 py-14 text-center">
                             <h2 className="font-display text-3xl font-bold text-white">{t("noResultsTitle")}</h2>
                             <p className="mt-3 text-ink-200">{t("noResultsDescription")}</p>
                             <Link href="/comparisons" className="mt-6 inline-flex rounded-full bg-primary-400 px-5 py-3 text-sm font-bold text-black">{t("clearFilters")}</Link>
@@ -559,7 +559,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("indexFaqTitle")}</h2>
                     <p className="mt-3 text-ink-200">{t("indexFaqDescription")}</p>
                 </div>
-                <div className="divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[0.03] px-5 md:px-7">
+                <div className="divide-y divide-white/10  border border-white/10 bg-white/[0.03] px-5 md:px-7">
                     {faqEntries.map((entry) => (
                         <details key={entry.question} className="group py-5">
                             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">
@@ -572,7 +572,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                 </div>
             </section>
 
-            <section className="mt-16 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] px-6 py-9 text-center md:px-10">
+            <section className="mt-16  border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] px-6 py-9 text-center md:px-10">
                 <h2 className="font-display text-3xl font-bold text-white">{t("ctaTitle")}</h2>
                 <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-ink-200">{t("ctaDescription")}</p>
                 <StoreLinks className="mt-6" />

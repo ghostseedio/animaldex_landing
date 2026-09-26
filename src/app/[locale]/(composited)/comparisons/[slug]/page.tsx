@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
@@ -254,6 +255,13 @@ export default async function ComparisonDetailPage({params}: Props) {
 
     return (
         <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 pb-12 pt-5 md:px-8 md:pb-20 md:pt-8">
+            {/* Two animals, so the page stays a general subject and the reader's
+                question decides which one the answer is about. */}
+            <AskSubjectBridge
+                slug={animalA.slug}
+                title={`${animalA.name} vs ${animalB.name}`}
+                summary={`A head-to-head between ${animalA.name} and ${animalB.name}.`}
+            />
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
             <Link
                 href="/comparisons"
@@ -306,7 +314,7 @@ export default async function ComparisonDetailPage({params}: Props) {
 
             <section id="faq" className="scroll-mt-28 grid gap-6 lg:grid-cols-[0.65fr_1.35fr]">
                 <div><h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2><p className="mt-3 text-ink-200">{t("faqDescription")}</p></div>
-                <div className="divide-y divide-line-300 rounded-3xl border border-line-300 bg-surface-900/55 px-5 md:px-7">{challenge.faq.map((item) => <details key={item.question} className="group py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">{item.question}<span className="text-primary-300 transition group-open:rotate-45">+</span></summary><p className="mt-3 max-w-3xl text-base leading-7 text-ink-200">{item.answer}</p></details>)}</div>
+                <div className="divide-y divide-line-300  border border-line-300 bg-surface-900/55 px-5 md:px-7">{challenge.faq.map((item) => <details key={item.question} className="group py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">{item.question}<span className="text-primary-300 transition group-open:rotate-45">+</span></summary><p className="mt-3 max-w-3xl text-base leading-7 text-ink-200">{item.answer}</p></details>)}</div>
             </section>
 
             <ChallengeSpeciesStatsComparison title={t("speciesStatsTitle")} description={t("speciesStatsDescription")} animalAName={animalA.name} animalBName={animalB.name} animalAResult={animalAStatsResult} animalBResult={animalBStatsResult} animalABattleTier={animalABattleTier} animalBBattleTier={animalBBattleTier} labels={{advantage: t("advantageLabel"), even: t("winnerLabels.even"), battleTierChip: t("battleTierChip", {tier: "{tier}"}), dominance: t("dominanceStat"), speed: t("speedStat"), size: t("sizeStat"), intelligence: t("intelligenceStat"), rarity: t("rarityStat")}} />
@@ -315,7 +323,7 @@ export default async function ComparisonDetailPage({params}: Props) {
 
             <section className="space-y-6 py-4">
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("verdictTimelineEyebrow")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("verdictTimelineTitle")}</h2></div>
-                <div className="relative grid gap-3 md:grid-cols-3 xl:grid-cols-6">{challenge.statCategories.slice(0, 6).map((item, index) => { const name = item.advantage === "animalA" ? animalA.name : item.advantage === "animalB" ? animalB.name : item.advantage === "even" ? t("winnerLabels.even") : t("winnerLabels.depends"); return <article key={item.key} className="relative rounded-2xl border border-line-300 bg-surface-900/65 p-4"><span className={`mb-4 block h-2 w-2 rounded-full ${item.advantage === "animalA" ? "bg-emerald-400" : item.advantage === "animalB" ? "bg-sky-400" : "bg-amber-300"}`} /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-300">0{index + 1} · {item.label}</p><p className="mt-2 font-bold text-white">{name}</p></article>; })}</div>
+                <div className="relative grid gap-3 md:grid-cols-3 xl:grid-cols-6">{challenge.statCategories.slice(0, 6).map((item, index) => { const name = item.advantage === "animalA" ? animalA.name : item.advantage === "animalB" ? animalB.name : item.advantage === "even" ? t("winnerLabels.even") : t("winnerLabels.depends"); return <article key={item.key} className="relative  border border-line-300 bg-surface-900/65 p-4"><span className={`mb-4 block h-2 w-2 rounded-full ${item.advantage === "animalA" ? "bg-emerald-400" : item.advantage === "animalB" ? "bg-sky-400" : "bg-amber-300"}`} /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-300">0{index + 1} · {item.label}</p><p className="mt-2 font-bold text-white">{name}</p></article>; })}</div>
             </section>
 
             <ScenarioBreakdown title={t("scenarioTitle")} description={t("scenarioDescription")} items={challenge.scenarioBreakdown} labels={{winner: t("scenarioWinnerLabel"), animalA: animalA.name, animalB: animalB.name, draw: t("winnerLabels.draw"), depends: t("winnerLabels.depends"), confidence: t("confidence"), select: t("selectScenario")}} />
@@ -323,13 +331,13 @@ export default async function ComparisonDetailPage({params}: Props) {
             <section id="meet-animals" className="scroll-mt-28 space-y-6">
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("fieldProfiles")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("exploreAnimalsTitle")}</h2></div>
                 <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => (
-                    <article key={species.slug} className="group overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900">
+                    <article key={species.slug} className="group overflow-hidden  border border-line-300 bg-surface-900">
                         <div className="h-64 p-5 md:p-6">
                             <SpeciesArtworkImage
                                 slug={species.slug}
                                 alt={species.name}
                                 fit="contain"
-                                className="h-full w-full rounded-2xl transition duration-500 group-hover:scale-[1.02]"
+                                className="h-full w-full  transition duration-500 group-hover:scale-[1.02]"
                                 sizes="(min-width: 768px) 50vw, 100vw"
                             />
                         </div>

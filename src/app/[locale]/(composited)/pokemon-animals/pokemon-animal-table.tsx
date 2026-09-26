@@ -16,7 +16,7 @@ function confidenceLabel(confidence: PokemonAnimalEntry["confidence"]) {
 
 export default function PokemonAnimalTable({entries, showGeneration}: PokemonAnimalTableProps) {
     return (
-        <div className="overflow-x-auto rounded-3xl border border-line-300 bg-surface-900/80">
+        <div className="overflow-x-auto  border border-line-300 bg-surface-900/80">
             <table className="w-full min-w-[48rem] border-collapse text-left">
                 <thead className="bg-surface-800/80 text-xs uppercase tracking-[0.2em] text-ink-300">
                     <tr>

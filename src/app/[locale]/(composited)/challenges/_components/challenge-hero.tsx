@@ -25,7 +25,7 @@ export default function ChallengeHero({
     quickVerdictLabel
 }: ChallengeHeroProps) {
     return (
-        <section id="overview" className="relative min-h-[32rem] overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900 shadow-2xl md:min-h-[38rem]">
+        <section id="overview" className="relative min-h-[32rem] overflow-hidden  border border-line-300 bg-surface-900 shadow-2xl md:min-h-[38rem]">
             <div className="absolute inset-0">
                 <Image
                     src={challenge.featuredImage.src}

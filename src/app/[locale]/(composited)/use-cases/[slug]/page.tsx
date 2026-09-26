@@ -248,7 +248,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                         <InstagramImportIntro productHref={productHref} />
                     ) : null}
                     {isImportPage && INSTAGRAM_WEB_IMPORT_LIVE ? (
-                        <section aria-labelledby="web-first-heading" className="mb-8 rounded-[1.35rem] border border-primary-400/20 bg-primary-400/[0.06] p-5">
+                        <section aria-labelledby="web-first-heading" className="mb-8  border border-primary-400/20 bg-primary-400/[0.06] p-5">
                             <h2 id="web-first-heading" className="font-display text-2xl font-bold text-white">
                                 No app download required to get started
                             </h2>
@@ -260,7 +260,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                     {isImportPage ? null : (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {entry.steps.map((step, index) => (
-                        <div key={step.title} className="rounded-[1.35rem] border border-primary-500/20 bg-primary-950/20 p-5">
+                        <div key={step.title} className="  border border-primary-500/20 bg-primary-950/20 p-5">
                             <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">
                                 {String(index + 1).padStart(2, "0")}
                             </p>
@@ -276,7 +276,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
             {entry.audiences?.length && !isImportPage ? (
                 <section className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {entry.audiences.map((audience) => (
-                        <div key={audience.title} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                        <div key={audience.title} className="  border border-white/10 bg-white/[0.03] p-5">
                             <h2 className="font-display text-xl font-bold text-white">{audience.title}</h2>
                             <p className="mt-2 text-sm leading-6 text-ink-200">{audience.body}</p>
                         </div>
@@ -292,7 +292,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
 
             <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-6 mt-8 md:mt-12">
                 <aside className="hidden lg:block">
-                    <div className="sticky top-24 rounded-3xl border border-line-300 bg-surface-900/70 backdrop-blur p-5">
+                    <div className="sticky top-24  border border-line-300 bg-surface-900/70 backdrop-blur p-5">
                         <p className="text-primary-200 text-xs uppercase tracking-[0.18em] mb-4">
                             On this page
                         </p>
@@ -324,7 +324,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                 <main className="flex flex-col gap-6">
                     <section
                         id="overview"
-                        className="rounded-4xl border border-line-300 bg-surface-900/70 backdrop-blur overflow-hidden"
+                        className="  border border-line-300 bg-surface-900/70 backdrop-blur overflow-hidden"
                     >
                         <div className="p-6 md:p-10 border-b border-line-300/70">
                             <p className="text-primary-200 text-xs uppercase tracking-[0.18em] mb-3">
@@ -367,7 +367,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             className="grid grid-cols-1 gap-3 md:grid-cols-2"
                         >
                             <h2 id="past-new-heading" className="sr-only">Past encounters and new encounters</h2>
-                            <article aria-labelledby="past-encounters-heading" className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                            <article aria-labelledby="past-encounters-heading" className="  border border-white/10 bg-white/[0.03] p-5">
                                 <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">Past</p>
                                 <h3 id="past-encounters-heading" className="mt-2 font-display text-xl font-bold text-white">
                                     Past encounters
@@ -376,7 +376,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                                     Bring eligible wildlife posts from Instagram into AnimalDex after review.
                                 </p>
                             </article>
-                            <article aria-labelledby="new-encounters-heading" className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                            <article aria-labelledby="new-encounters-heading" className="  border border-white/10 bg-white/[0.03] p-5">
                                 <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary-200">New</p>
                                 <h3 id="new-encounters-heading" className="mt-2 font-display text-xl font-bold text-white">
                                     New encounters
@@ -392,7 +392,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                         <section aria-labelledby="import-audiences-heading" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             <h2 id="import-audiences-heading" className="sr-only">Who Instagram import is for</h2>
                             {entry.audiences.map((audience) => (
-                                <article key={audience.title} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-5">
+                                <article key={audience.title} className="  border border-white/10 bg-white/[0.03] p-5">
                                     <h3 className="font-display text-xl font-bold text-white">{audience.title}</h3>
                                     <p className="mt-2 text-sm leading-6 text-ink-200">{audience.body}</p>
                                 </article>
@@ -402,14 +402,14 @@ export default async function UseCasePage({params}: UseCasePageProps) {
 
                     <section
                         id="actions"
-                        className="rounded-4xl border border-line-300 bg-surface-900/70 backdrop-blur p-6 md:p-10"
+                        className="  border border-line-300 bg-surface-900/70 backdrop-blur p-6 md:p-10"
                     >
                         <SectionHeading eyebrow="Practical use" title={t("actionsTitle")} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
                             {entry.keyActions.map((action) => (
                                 <div
                                     key={action}
-                                    className="rounded-2xl border border-line-300/80 bg-surface-800/50 p-5"
+                                    className="  border border-line-300/80 bg-surface-800/50 p-5"
                                 >
                                     <div className="w-8 h-8 rounded-full bg-primary-500/10 border border-primary-500/25 flex items-center justify-center text-primary-200 text-sm mb-4">
                                         ✓
@@ -422,14 +422,14 @@ export default async function UseCasePage({params}: UseCasePageProps) {
 
                     <section
                         id="difference"
-                        className="rounded-4xl border border-primary-500/25 bg-primary-950/20 backdrop-blur p-6 md:p-10"
+                        className="  border border-primary-500/25 bg-primary-950/20 backdrop-blur p-6 md:p-10"
                     >
                         <SectionHeading eyebrow="Why AnimalDex" title={t("differenceTitle")} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
                             {entry.whyDifferent.map((point) => (
                                 <div
                                     key={point}
-                                    className="rounded-2xl border border-primary-500/20 bg-black/20 p-5"
+                                    className="  border border-primary-500/20 bg-black/20 p-5"
                                 >
                                     <p className="text-ink-100 text-base md:text-lg leading-7">{point}</p>
                                 </div>
@@ -439,7 +439,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
 
                     <section
                         id="faq"
-                        className="rounded-4xl border border-line-300 bg-surface-900/70 backdrop-blur p-6 md:p-10"
+                        className="  border border-line-300 bg-surface-900/70 backdrop-blur p-6 md:p-10"
                     >
                         <SectionHeading eyebrow="Questions" title={t("faqTitle")} />
 
@@ -447,7 +447,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             {entry.faq.map((item) => (
                                 <details
                                     key={item.question}
-                                    className="group rounded-2xl border border-line-300/80 bg-surface-800/50 p-5"
+                                    className="group  border border-line-300/80 bg-surface-800/50 p-5"
                                 >
                                     <summary className="cursor-pointer list-none flex items-start justify-between gap-4">
                                         <h3 className="text-white text-lg md:text-xl font-semibold">
@@ -471,7 +471,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                                 {related.map((item) => (
                                     <article
                                         key={item.slug}
-                                        className="group rounded-3xl border border-line-300 bg-surface-900/70 backdrop-blur p-5 flex flex-col gap-4 hover:border-primary-500/40 transition-colors"
+                                        className="group  border border-line-300 bg-surface-900/70 backdrop-blur p-5 flex flex-col gap-4 hover:border-primary-500/40 transition-colors"
                                     >
                                         <p className="text-primary-200 text-xs uppercase tracking-[0.18em]">
                                             Related path
@@ -495,7 +495,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                         </section>
                     )}
 
-                    <section className="rounded-4xl border border-primary-500/25 bg-gradient-to-br from-primary-500/15 via-surface-900 to-surface-900 backdrop-blur p-8 md:p-12 text-center">
+                    <section className="  border border-primary-500/25 bg-gradient-to-br from-primary-500/15 via-surface-900 to-surface-900 backdrop-blur p-8 md:p-12 text-center">
                         <p className="text-primary-200 text-xs uppercase tracking-[0.18em] mb-3">
                             Start now
                         </p>
@@ -561,7 +561,7 @@ function SectionHeading({eyebrow, title}: {eyebrow: string; title: string}) {
 
 function StatCard({label, value}: {label: string; value: string}) {
     return (
-        <div className="rounded-3xl border border-line-300 bg-surface-900/70 backdrop-blur p-5">
+        <div className="  border border-line-300 bg-surface-900/70 backdrop-blur p-5">
             <p className="text-primary-200 text-xs uppercase tracking-[0.18em] mb-2">
                 {label}
             </p>

@@ -132,7 +132,7 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
                             slug={species.slug}
                             alt={`${species.name} artwork for ${entry.title}`}
                             priority={index === 0}
-                            className="aspect-[4/5] rounded-3xl border border-line-300"
+                            className="aspect-[4/5]  border border-line-300"
                             sizes="(min-width: 1024px) 20vw, 45vw"
                         />
                     ) : null)}
@@ -141,7 +141,7 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {entry.parents.map((parent) => (
-                    <div key={parent.slug} className="rounded-3xl border border-line-300 bg-surface-900/80 px-6 py-6 flex flex-col gap-3">
+                    <div key={parent.slug} className="  border border-line-300 bg-surface-900/80 px-6 py-6 flex flex-col gap-3">
                         <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Parent behavior</p>
                         <h2 className="font-display text-3xl font-bold text-white">{parent.name}</h2>
                         <p className="text-ink-200 text-lg leading-8">{parent.behavior}</p>
@@ -152,23 +152,23 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
                 ))}
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Could this hybrid really exist?</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.viability}</p>
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">How it might look</h2>
                     <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.appearance}</p>
                 </div>
-                <div className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+                <div className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <h2 className="font-display font-bold text-3xl md:text-4xl text-white">How it might behave</h2>
                     <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.behaviorBlend}</p>
                 </div>
             </section>
 
-            <section className="rounded-4xl border border-primary-500/40 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-primary-500/40 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Ultimate ability</p>
                 <h2 className="font-display font-bold text-4xl md:text-5xl text-white">{entry.ultimateAbility.name}</h2>
                 <p className="text-ink-100 text-lg md:text-xl leading-8">{entry.ultimateAbility.description}</p>
@@ -177,7 +177,7 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
                 </p>
             </section>
 
-            <section className="rounded-4xl border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
+            <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Hybrid ecological role</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.habitatRole}</p>
             </section>

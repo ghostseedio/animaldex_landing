@@ -106,7 +106,7 @@ function buildMetrics(
 
 function SpeciesRadarLegendChip({metric}: {metric: SpeciesRadarMetric}) {
     return (
-        <div className="flex min-w-[88px] items-center gap-[7px] rounded-[14px] border border-white/[0.06] bg-white/[0.025] px-[9px] py-2">
+        <div className="flex min-w-[88px] items-center gap-[7px]  border border-white/[0.06] bg-white/[0.025] px-[9px] py-2">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: metric.tint}} />
             <div className="min-w-0">
                 <p className="truncate text-[11px] font-semibold leading-tight text-white/[0.62]">{metric.title}</p>

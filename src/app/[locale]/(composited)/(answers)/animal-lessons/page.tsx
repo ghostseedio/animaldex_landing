@@ -129,7 +129,7 @@ function pickCollectionLessons(
 
 function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorLesson; wide?: boolean; readLabel: string}) {
     return (
-        <article className={`group overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${wide ? "md:col-span-2" : ""}`}>
+        <article className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${wide ? "md:col-span-2" : ""}`}>
             <Link href={`/animal-lessons/${lesson.slug}`} className="relative block overflow-hidden">
                 <SpeciesArtworkImage
                     slug={lesson.slug}
@@ -266,13 +266,13 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
             </header>
 
             <section className="mt-7 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">{lessons.length.toLocaleString(params.locale)}</strong><span className="text-sm text-ink-300">{t("stats.animals")}</span></div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">{principlesCount.toLocaleString(params.locale)}</strong><span className="text-sm text-ink-300">{t("stats.principles")}</span></div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">100%</strong><span className="text-sm text-ink-300">{t("stats.biology")}</span></div>
+                <div className="  border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">{lessons.length.toLocaleString(params.locale)}</strong><span className="text-sm text-ink-300">{t("stats.animals")}</span></div>
+                <div className="  border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">{principlesCount.toLocaleString(params.locale)}</strong><span className="text-sm text-ink-300">{t("stats.principles")}</span></div>
+                <div className="  border border-white/10 bg-white/[0.035] px-5 py-4"><strong className="block font-display text-2xl text-white">100%</strong><span className="text-sm text-ink-300">{t("stats.biology")}</span></div>
             </section>
 
             {!isFiltering && featured ? (
-                <section className="relative mt-8 overflow-hidden rounded-[2rem] border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
+                <section className="relative mt-8 overflow-hidden  border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
                     <SpeciesArtworkImage slug={featured.slug} imageFile={featured.imageFile} alt={getImageAlt(featured)} priority className="h-[24rem] w-full md:h-[34rem]" sizes="(min-width: 1280px) 1400px, 100vw" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/35 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 max-w-3xl p-6 md:p-10">
@@ -311,7 +311,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                                     {paginatedLessons.map((lesson, index) => <LessonCard key={lesson.slug} lesson={lesson} wide={index % 9 === 0} readLabel={t("openLesson")} />)}
                                 </div>
                             ) : (
-                                <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-white/[0.035] px-6 py-12 text-center">
+                                <div className="mt-6  border border-white/10 bg-white/[0.035] px-6 py-12 text-center">
                                     <h2 className="font-display text-3xl font-bold text-white">{t("noResultsTitle")}</h2>
                                     <p className="mt-3 text-ink-200">{t("noResultsDescription")}</p>
                                     <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -344,13 +344,13 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.mostViewed")}</h2>
                             <div className="mt-3 space-y-3">{popularLessons.slice(3, 6).map((lesson) => <Link key={lesson.slug} href={`/animal-lessons/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
                         </div>
-                        {featuredPrinciple ? <div className="rounded-2xl border border-primary-400/20 bg-primary-400/[0.06] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-200">{t("sidebar.featuredPrinciple")}</p><p className="mt-2 font-display text-xl font-bold text-white">{featuredPrinciple[0]}</p><p className="mt-1 text-sm text-ink-300">{t("sidebar.lessonCount", {count: featuredPrinciple[1]})}</p></div> : null}
+                        {featuredPrinciple ? <div className="  border border-primary-400/20 bg-primary-400/[0.06] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-200">{t("sidebar.featuredPrinciple")}</p><p className="mt-2 font-display text-xl font-bold text-white">{featuredPrinciple[0]}</p><p className="mt-1 text-sm text-ink-300">{t("sidebar.lessonCount", {count: featuredPrinciple[1]})}</p></div> : null}
                         {surpriseLesson ? <div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.randomAnimal")}</h2><p className="mt-3 font-display text-xl font-bold text-white">{surpriseLesson.displayName}</p><p className="mt-1 text-sm text-ink-300">{surpriseLesson.principleName}</p><Link href={`/animal-lessons/${surpriseLesson.slug}`} className="mt-4 inline-flex rounded-full bg-primary-400 px-4 py-2 text-sm font-bold text-black">{t("sidebar.surpriseMe")} →</Link></div> : null}
                     </div>
                 </aside>
             </div>
 
-            <section className="mt-16 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] p-7 md:p-10">
+            <section className="mt-16  border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] p-7 md:p-10">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">{t("strategyEyebrow")}</p>
                 <h2 className="mt-2 font-display text-3xl font-bold text-white">{t("strategyTitle")}</h2>
                 <p className="mt-3 max-w-3xl text-ink-200">{t("strategyDescription")}</p>

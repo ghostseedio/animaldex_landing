@@ -20,8 +20,8 @@ export default function UseCaseProductCta({
     variant?: "primary" | "secondary";
 }) {
     const className = variant === "secondary"
-        ? "inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-black text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
-        : "inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-6 py-3 text-sm font-black text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200";
+        ? "inline-flex min-h-11 items-center justify-center  border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-black text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+        : "inline-flex min-h-11 items-center justify-center  bg-primary-400 px-6 py-3 text-sm font-black text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200";
     const payload = {
         source: source ?? event,
         cta: label,

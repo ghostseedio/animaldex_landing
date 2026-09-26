@@ -752,6 +752,20 @@ function postgrestEqValue(value: string) {
     return `"${value.replace(/"/g, "")}"`;
 }
 
+/**
+ * A uuid filter value, unquoted.
+ *
+ * `postgrestEqValue` exists for text columns, where a scientific name or an
+ * identity key can contain a comma or a period that PostgREST would otherwise
+ * read as syntax. A uuid column rejects the same quoting outright —
+ * `id=eq."c74f…"` comes back 400 `invalid input syntax for type uuid` — and
+ * both call sites swallowed that into an empty result, so a species silently
+ * lost its profile row and its whole field guide.
+ */
+function postgrestUuidValue(value: string) {
+    return encodeURIComponent(value.replace(/[^0-9a-fA-F-]/g, ""));
+}
+
 function attachProfileOwnedCatalogFields(row: CatalogRow, profile?: IndexedProfileRow | null): CatalogRow {
     if (!profile) return row;
     return {
@@ -1064,7 +1078,7 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
         }
 
         const profileResponse = await fetch(
-            `${url}/rest/v1/species_profiles?id=eq.${postgrestEqValue(row.species_profile_id)}&select=${PROFILE_OWNED_CATALOG_SELECT}&limit=1`,
+            `${url}/rest/v1/species_profiles?id=eq.${postgrestUuidValue(row.species_profile_id)}&select=${PROFILE_OWNED_CATALOG_SELECT}&limit=1`,
             {headers: getSupabaseHeaders(key), next: {revalidate: 86400}}
         );
         const profileRows = profileResponse.ok ? await profileResponse.json() as IndexedProfileRow[] : [];
@@ -1081,7 +1095,7 @@ async function fetchSingleSpeciesFromCatalog(slug: string): Promise<SpeciesEntry
         }
 
         const guideResponse = await fetch(
-            `${url}/rest/v1/species_field_guide?species_profile_id=eq.${postgrestEqValue(row.species_profile_id)}&select=${SINGLE_SPECIES_GUIDE_SELECT}&limit=1`,
+            `${url}/rest/v1/species_field_guide?species_profile_id=eq.${postgrestUuidValue(row.species_profile_id)}&select=${SINGLE_SPECIES_GUIDE_SELECT}&limit=1`,
             {headers: getSupabaseHeaders(key), next: {revalidate: 86400}}
         );
         const guideRows = guideResponse.ok ? await guideResponse.json() as FieldGuideRow[] : [];

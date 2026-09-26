@@ -11,6 +11,9 @@ import GoogleAnalytics from "@/components/analytics/google-analytics";
 import CampaignAttribution from "@/app/[locale]/_components/campaign-attribution";
 import {getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
+import {AskAnimalDexProvider} from "@/components/ask-animaldex/ask-animaldex-provider";
+import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surface";
+import {getScopedTranslator} from "@/loaders/translation";
 
 const brandIconUrl = "/images/logo.webp";
 const socialImageUrl = "/images/og.png";
@@ -20,7 +23,7 @@ type RootLayoutProps = {
     params: { locale: string };
 };
 
-export default function RootLayout(
+export default async function RootLayout(
     {children, params: {locale: reqLocale}}: RootLayoutProps
 ) {
     if (!localeConfig.locales.includes(reqLocale)) {
@@ -28,6 +31,44 @@ export default function RootLayout(
     }
 
     const locale = reqLocale;
+    // Ask AnimalDex is mounted once for every locale route — the composited
+    // pages, the authenticated app, the journal and the legal pages — so one
+    // conversation follows the reader instead of each surface owning a copy.
+    // Its copy is resolved here because this codebase hands translations to
+    // client components as props rather than through a context.
+    const askT = await getScopedTranslator(locale, "askAnimalDex");
+    const askLabels = {
+        launcher: askT("launcher"),
+        title: askT("title"),
+        aboutAnimal: askT("aboutAnimal"),
+        aboutSite: askT("aboutSite"),
+        emptyTitleAnimal: askT("emptyTitleAnimal"),
+        emptyTitleGeneral: askT("emptyTitleGeneral"),
+        emptyHint: askT("emptyHint"),
+        placeholderAnimal: askT("placeholderAnimal"),
+        placeholderGeneral: askT("placeholderGeneral"),
+        placeholderFollowUp: askT("placeholderFollowUp"),
+        send: askT("send"),
+        stop: askT("stop"),
+        close: askT("close"),
+        newConversation: askT("newConversation"),
+        clearConfirm: askT("clearConfirm"),
+        clearConfirmAction: askT("clearConfirmAction"),
+        clearCancel: askT("clearCancel"),
+        copy: askT("copy"),
+        copied: askT("copied"),
+        share: askT("share"),
+        retry: askT("retry"),
+        tryAgain: askT("tryAgain"),
+        youAsked: askT("youAsked"),
+        thinking: askT("thinking"),
+        remaining: askT("remaining"),
+        limitTitle: askT("limitTitle"),
+        limitBody: askT("limitBody"),
+        limitCta: askT("limitCta"),
+        limitHref: askT("limitHref"),
+        disclaimer: askT("disclaimer")
+    };
 
     // noinspection HtmlRequiredTitleElement
     return (
@@ -38,7 +79,10 @@ export default function RootLayout(
             <CampaignAttribution />
             <Cursor />
             <NavigationProgress />
-            {children}
+            <AskAnimalDexProvider locale={locale}>
+                {children}
+                <AskAnimalDexSurface labels={askLabels} />
+            </AskAnimalDexProvider>
         </body>
         </html>
     )

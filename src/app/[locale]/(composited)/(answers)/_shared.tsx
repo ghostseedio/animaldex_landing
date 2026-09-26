@@ -248,15 +248,15 @@ export function ManagedAnswerPageArticle({managed}: {managed: NonNullable<Awaite
             <div className="space-y-14">
                 {managed.sections.map((section, sectionIndex) => (
                     <section key={`${section.title}-${sectionIndex}`} className="space-y-5 border-t border-line-300 pt-8">
-                        {section.html !== undefined ? <div className="overflow-hidden rounded-2xl border border-line-300"><RenderedCodeFrame title={section.title || `Custom section ${sectionIndex + 1}`} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} /></div> : <>
+                        {section.html !== undefined ? <div className="overflow-hidden  border border-line-300"><RenderedCodeFrame title={section.title || `Custom section ${sectionIndex + 1}`} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} /></div> : <>
                             {section.kicker ? <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">{section.kicker}</p> : null}
                             {(section.headingLevel ?? 2) === 3
                                 ? <h3 className="font-display text-2xl text-white sm:text-3xl">{section.title}</h3>
                                 : <h2 className="font-display text-3xl text-white sm:text-4xl">{section.title}</h2>}
                             {section.paragraphs.map((paragraph, index) => <p key={index} className="whitespace-pre-wrap text-lg leading-8 text-ink-200">{paragraph}</p>)}
                             {section.codeBlocks?.map((block, index) => block.render && canRenderCodeBlock(block.language)
-                                ? <figure key={index} className="overflow-hidden rounded-2xl border border-line-300 bg-white"><RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />{block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>
-                                : <figure key={index} className="overflow-hidden rounded-2xl border border-line-300 bg-[#080d0a]"><div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[.16em] text-ink-400">{block.language || "Text"}</div><pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>{block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>)}
+                                ? <figure key={index} className="overflow-hidden  border border-line-300 bg-white"><RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />{block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>
+                                : <figure key={index} className="overflow-hidden  border border-line-300 bg-[#080d0a]"><div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[.16em] text-ink-400">{block.language || "Text"}</div><pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>{block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>)}
                         </>}
                     </section>
                 ))}
@@ -569,7 +569,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                         </div>
                     </SectionShell>
 
-                    <div className="relative overflow-hidden rounded-[2rem] border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <div className="relative overflow-hidden  border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
                         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/50 to-transparent" />
                         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
                             <div className="relative z-10 p-6 text-center md:p-10 lg:p-12 lg:text-left">
@@ -579,7 +579,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                                 <div className="mt-7 flex flex-col items-center gap-4 lg:items-start">
                                     <StoreLinks
                                         className="!mt-0 !justify-start"
-                                        buttonClassName="!h-16 !min-w-[13.5rem] !rounded-[1.25rem] !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(167,244,50,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
+                                        buttonClassName="!h-16 !min-w-[13.5rem] !  !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(167,244,50,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
                                     />
                                     {entry.slug === "wildlife-discovery-app" ? (
                                         <>

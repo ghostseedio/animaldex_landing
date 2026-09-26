@@ -4,21 +4,23 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {
-    animalWisdomLinks,
+    ANIMAL_BEHAVIOURS_HREF,
+    animalLessonLinks,
     blogNavLink,
-    earnLinks,
-    experienceLinks,
+    CHALLENGE_YOURSELF_HREF,
+    EARN_ON_ANIMALDEX_HREF,
     exploreAnimalLinks,
     footerColumns,
     headerDropdowns,
+    headerResourceLinks,
     INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
     LOCATIONS_HREF,
     mobileAccordionSections,
-    mobileExperienceLinks,
     moreNavGroups,
     productLinks,
     resourceLinks,
-    START_COLLECTION_HREF
+    START_COLLECTION_HREF,
+    WILDLIFE_EXPERIENCES_HREF
 } from "@/data/public-navigation";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -28,36 +30,50 @@ function readRepo(...parts: string[]) {
 }
 
 test("public navigation keeps existing SEO routes", () => {
+    assert.deepEqual(productLinks.map((link) => link.href), [
+        "/#more",
+        "/#features",
+        "/use-cases",
+        START_COLLECTION_HREF,
+        INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
+        EARN_ON_ANIMALDEX_HREF
+    ]);
     assert.deepEqual(exploreAnimalLinks.map((link) => link.href), [
         "/animals",
         "/comparisons",
         "/tier-list",
-        "/locations",
-        INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
+        "/animal-hybrids",
+        LOCATIONS_HREF,
+        WILDLIFE_EXPERIENCES_HREF
+    ]);
+    assert.deepEqual(animalLessonLinks.map((link) => link.href), [
+        "/animal-wisdom",
+        "/animal-lessons",
+        "/powers",
+        ANIMAL_BEHAVIOURS_HREF,
+        CHALLENGE_YOURSELF_HREF,
         "/what-animal-am-i"
     ]);
-    assert.deepEqual(animalWisdomLinks.map((link) => link.href), [
-        "/animal-wisdom",
-        "/powers",
-        "/animal-lessons",
-        "/animal-symbolism"
-    ]);
-    assert.deepEqual(experienceLinks.map((link) => link.href), [
-        "/wildlife-experiences",
-        "/wildlife-guides",
-        "/locations"
-    ]);
-    assert.deepEqual(earnLinks.map((link) => link.href), [
-        "/earn-on-animaldex",
-        "/become-a-wildlife-guide",
-        "/creator-rewards"
+    assert.deepEqual(resourceLinks.map((link) => link.href), [
+        "/blog",
+        "/animal-symbolism",
+        "/support",
+        "/contact",
+        "/sponsor-a-challenge",
+        "/branding"
     ]);
     assert.equal(START_COLLECTION_HREF, "/#download");
     assert.equal(INSTAGRAM_WILDLIFE_ARCHIVE_HREF, "/use-cases/import-instagram-wildlife-photos");
-    assert.ok(productLinks.some((link) => link.href === "/use-cases"));
-    assert.ok(resourceLinks.some((link) => link.href === "/sponsor-a-challenge"));
-    assert.ok(!headerDropdowns.some((section) => section.links.some((link) => link.href === "/sponsor-a-challenge")));
-    assert.ok(!earnLinks.some((link) => link.href === "/sponsor-a-challenge"));
+
+    // Retired from public navigation by an explicit product decision: the Guide
+    // and Creator Rewards pages are reachable by URL and in-page links only.
+    const everyNavHref = [
+        ...productLinks, ...exploreAnimalLinks, ...animalLessonLinks, ...resourceLinks,
+        ...headerDropdowns.flatMap((section) => section.links), ...moreNavGroups.flat()
+    ].map((link) => link.href);
+    for (const retired of ["/wildlife-guides", "/become-a-wildlife-guide", "/creator-rewards"]) {
+        assert.ok(!everyNavHref.includes(retired), `${retired} should not be in public navigation`);
+    }
 });
 
 test("header and footer consume the shared public navigation data", () => {
@@ -70,31 +86,48 @@ test("header and footer consume the shared public navigation data", () => {
     assert.match(header, /moreNavGroups/);
     assert.doesNotMatch(header, /mobileNavSections/);
     assert.match(footer, /footerColumns/);
-    assert.equal(footerColumns.length, 5);
+    assert.equal(footerColumns.length, 4);
     assert.match(dropdown, /aria-expanded/);
     assert.match(dropdown, /aria-haspopup/);
     assert.doesNotMatch(dropdown, /onMouseEnter/);
 });
 
-test("nav labels no longer use retired public category names", () => {
+test("nav labels match the published category names", () => {
     const en = JSON.parse(readRepo("src/data/locales/en.json"));
-    assert.equal(en.nav.animalWisdom, "Animal Wisdom");
-    assert.equal(en.nav.blog, "Blog");
+    // The "Animal Wisdom" category is now "Lessons from Animals", and Blog is
+    // now "Articles" — both renamed deliberately, replacing an earlier guard
+    // that pinned the previous names.
+    assert.equal(en.nav.animalWisdom, "Lessons from Animals");
+    assert.equal(en.nav.footerGroups.wisdom, "Lessons from Animals");
+    assert.equal(en.nav.blog, "Articles");
+    assert.equal(en.nav.discoverAnimalWisdom, "Ask AnimalDex");
+    assert.equal(en.nav.animalLessons, "Animal Lessons");
+    assert.equal(en.nav.animalAbilities, "Animal Traits");
+    assert.equal(en.nav.animalBehaviours, "Animal Behaviours");
+    assert.equal(en.nav.challengeYourself, "Challenge Yourself");
+    assert.equal(en.nav.instagramWildlifeArchive, "Import from Instagram");
+    assert.equal(en.nav.animalSymbolism, "Animal Symbolism Articles");
+    assert.equal(en.nav.support, "Help Center");
     assert.equal(en.nav.compareAnimals, "Compare Animals");
-    assert.equal(en.nav.animalAbilities, "Animal Abilities");
     assert.equal(en.nav.startYourCollection, "Start Your Collection");
-    assert.equal(en.nav.footerGroups.wisdom, "Animal Wisdom");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
     assert.notEqual(en.nav.animalWisdom, "Animal Guide");
-    assert.notEqual(en.nav.blog, "Articles");
     assert.equal(en.nav.moreNav, "More");
-    assert.equal(en.nav.instagramWildlifeArchive, "Instagram Wildlife Archive");
+
+    // Every label key the navigation renders must exist in both locales.
+    const id = JSON.parse(readRepo("src/data/locales/id.json"));
+    const keys = [
+        ...productLinks, ...exploreAnimalLinks, ...animalLessonLinks, ...resourceLinks
+    ].map((link) => link.labelKey);
+    for (const key of Array.from(new Set(keys))) {
+        assert.equal(typeof en.nav[key], "string", `en.nav.${key} is missing`);
+        assert.equal(typeof id.nav[key], "string", `id.nav.${key} is missing`);
+    }
 });
 
-test("mobile accordion presentation filters desktop-only overlaps", () => {
+test("the mobile drawer shows every link exactly once", () => {
     const explore = mobileAccordionSections.find((section) => section.id === "explore");
-    const experiences = mobileAccordionSections.find((section) => section.id === "experiences");
-    const earn = mobileAccordionSections.find((section) => section.id === "earn");
+    const lessons = mobileAccordionSections.find((section) => section.id === "lessons");
     const moreHrefs = moreNavGroups.flat().map((link) => link.href);
     const mobileHrefs = [
         ...mobileAccordionSections.flatMap((section) => section.links.map((link) => link.href)),
@@ -103,28 +136,29 @@ test("mobile accordion presentation filters desktop-only overlaps", () => {
     ];
 
     assert.ok(explore?.links.some((link) => link.href === LOCATIONS_HREF));
-    assert.deepEqual(mobileExperienceLinks.map((link) => link.href), [
-        "/wildlife-experiences",
-        "/wildlife-guides"
-    ]);
-    assert.ok(!experiences?.links.some((link) => link.href === LOCATIONS_HREF));
-    assert.ok(experienceLinks.some((link) => link.href === LOCATIONS_HREF));
-    assert.ok(!earn?.links.some((link) => link.href === "/sponsor-a-challenge"));
-    assert.ok(!earnLinks.some((link) => link.href === "/sponsor-a-challenge"));
-    assert.ok(moreHrefs.includes("/sponsor-a-challenge"));
+    assert.ok(explore?.links.some((link) => link.href === WILDLIFE_EXPERIENCES_HREF));
+    assert.ok(lessons?.links.some((link) => link.href === ANIMAL_BEHAVIOURS_HREF));
+    assert.ok(lessons?.links.some((link) => link.href === CHALLENGE_YOURSELF_HREF));
+
+    // Articles keeps its own slot, so the Resources dropdown drops it.
+    assert.equal(blogNavLink.href, "/blog");
+    assert.ok(!headerResourceLinks.some((link) => link.href === "/blog"));
+    assert.ok(resourceLinks.some((link) => link.href === "/blog"));
     assert.ok(!moreHrefs.includes("/blog"));
     assert.ok(!moreHrefs.includes(START_COLLECTION_HREF));
-    assert.equal(blogNavLink.href, "/blog");
-    assert.ok(!mobileAccordionSections.some((section) => section.id === "blog"));
-    assert.equal(mobileHrefs.filter((href) => href === LOCATIONS_HREF).length, 1);
-    assert.equal(new Set(mobileHrefs).size, mobileHrefs.length);
+    assert.ok(moreHrefs.includes(EARN_ON_ANIMALDEX_HREF));
     assert.ok(productLinks.some((link) => link.href === START_COLLECTION_HREF));
-    assert.deepEqual(moreNavGroups[0].map((link) => link.href), ["/#more", "/#features", "/use-cases"]);
-    assert.deepEqual(moreNavGroups[1].map((link) => link.href), [
-        "/support",
-        "/contact",
-        "/sponsor-a-challenge",
-        "/branding"
+    assert.ok(!mobileAccordionSections.some((section) => section.id === "blog"));
+
+    // The drawer renders accordions, Articles and More together, so a repeat is
+    // a duplicate tap target rather than a shortcut.
+    assert.equal(new Set(mobileHrefs).size, mobileHrefs.length);
+    assert.deepEqual(moreNavGroups[0].map((link) => link.href), [
+        "/#more",
+        "/#features",
+        "/use-cases",
+        INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
+        EARN_ON_ANIMALDEX_HREF
     ]);
 });
 

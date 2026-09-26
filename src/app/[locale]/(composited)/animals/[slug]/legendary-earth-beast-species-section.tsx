@@ -42,12 +42,12 @@ export default function LegendaryEarthBeastSpeciesSection({
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-2xl border border-white/10 bg-black/15 px-4 py-4">
+                            <div className="  border border-white/10 bg-black/15 px-4 py-4">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">Capture site</p>
                                 <p className="mt-2 text-base font-medium leading-7 text-white">{captureSite}</p>
                                 <p className="mt-1 text-sm text-ink-300">{beast.region}</p>
                             </div>
-                            <div className="rounded-2xl border border-white/10 bg-black/15 px-4 py-4">
+                            <div className="  border border-white/10 bg-black/15 px-4 py-4">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">Legendary power</p>
                                 <p className="mt-2 text-base font-medium leading-7 text-white">{beast.power}</p>
                                 <p className="mt-2 text-sm leading-6 text-ink-200">{beast.lesson}</p>
@@ -59,7 +59,7 @@ export default function LegendaryEarthBeastSpeciesSection({
                                 {beast.bestFor.map((item) => (
                                     <span
                                         key={item}
-                                        className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-sm font-medium text-amber-50"
+                                        className="  border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-sm font-medium text-amber-50"
                                     >
                                         {item}
                                     </span>

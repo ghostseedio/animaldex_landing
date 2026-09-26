@@ -24,7 +24,7 @@ export default function ChallengeSpeciesStatsComparison({title, description, ani
                 <p className="mt-3 text-base leading-7 text-ink-200 md:text-lg">{description}</p>
             </div>
 
-            <div className="overflow-hidden rounded-[2rem] border border-line-300 bg-surface-900/80">
+            <div className="overflow-hidden  border border-line-300 bg-surface-900/80">
                 <div className="grid grid-cols-[1fr_6.5rem_1fr] items-center border-b border-line-300 bg-surface-800/70 px-3 py-5 text-center md:grid-cols-[1fr_11rem_1fr] md:px-6">
                     <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalAName}</p>{animalABattleTier ? <span className="text-xs font-bold text-emerald-300">{labels.battleTierChip.replace("{tier}", animalABattleTier)}</span> : null}</div>
                     <span className="text-xs font-black uppercase tracking-[0.18em] text-ink-300">VS</span>

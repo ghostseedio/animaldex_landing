@@ -129,7 +129,7 @@ export default async function ContactPage({params}: {params: {locale: string}}) 
                     <div className="relative">
                         <div
                             aria-hidden="true"
-                            className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-[2rem] bg-[radial-gradient(circle_at_50%_50%,rgba(167,244,50,0.07),transparent_68%)] max-md:hidden"
+                            className="pointer-events-none absolute -inset-x-6 -inset-y-4  bg-[radial-gradient(circle_at_50%_50%,rgba(167,244,50,0.07),transparent_68%)] max-md:hidden"
                         />
                         <ContactRouteCard routeId={supportRoute.id as "support"} {...supportRoute} featured />
                     </div>
@@ -168,7 +168,7 @@ export default async function ContactPage({params}: {params: {locale: string}}) 
 
                 <section
                     aria-labelledby="support-callout-title"
-                    className="relative overflow-hidden rounded-[1.35rem] border border-white/[0.07] bg-[#071B0F]/85 px-5 py-6 md:flex md:items-center md:justify-between md:gap-8 md:px-7 md:py-7"
+                    className="relative overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85 px-5 py-6 md:flex md:items-center md:justify-between md:gap-8 md:px-7 md:py-7"
                 >
                     <div
                         aria-hidden="true"

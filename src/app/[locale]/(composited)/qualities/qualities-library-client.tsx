@@ -93,7 +93,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
     if (featured) {
         const imageAnimal = item.previewAnimals[0];
         return (
-            <article className="group overflow-hidden rounded-[1.75rem] bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(34,58,41,0.2))] transition-transform duration-200 hover:-translate-y-1">
+            <article className="group overflow-hidden  bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(34,58,41,0.2))] transition-transform duration-200 hover:-translate-y-1">
                 {imageAnimal ? (
                     <Link href={`/powers/${item.principleSlug}`} className="block">
                         <SpeciesArtworkImage
@@ -134,7 +134,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
     }
 
     return (
-        <article className={`flex min-h-[22rem] flex-col rounded-[1.75rem] p-6 transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.075] ${surface}`}>
+        <article className={`flex min-h-[22rem] flex-col  p-6 transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.075] ${surface}`}>
             <div className="flex items-center justify-between gap-4">
                 <span className="text-sm font-semibold text-ink-300">{labels.categories[category]}</span>
                 <span className="text-sm text-ink-300">{formatTemplate(labels.linkedAnimals, {count: item.linkedAnimalCount})}</span>
@@ -209,7 +209,7 @@ export default function QualitiesLibraryClient({items, labels}: PrinciplesLibrar
 
     return (
         <div className="flex flex-col gap-16 md:gap-20">
-            <section aria-labelledby="principle-search-title" className="rounded-[1.75rem] bg-surface-900/55 p-5 md:p-7">
+            <section aria-labelledby="principle-search-title" className="  bg-surface-900/55 p-5 md:p-7">
                 <h2 id="principle-search-title" className="sr-only">{labels.searchLabel}</h2>
                 <label htmlFor="principle-search" className="text-sm font-semibold text-ink-100">{labels.searchLabel}</label>
                 <input
@@ -297,7 +297,7 @@ export default function QualitiesLibraryClient({items, labels}: PrinciplesLibrar
                         {visibleItems.map((item, index) => <PrincipleCard key={item.principleSlug} item={item} labels={labels} index={index} />)}
                     </div>
                 ) : (
-                    <div className="mt-7 rounded-[1.75rem] bg-white/[0.05] px-6 py-12 text-center">
+                    <div className="mt-7  bg-white/[0.05] px-6 py-12 text-center">
                         <h3 className="font-display text-2xl font-bold text-white">{labels.noResultsTitle}</h3>
                         <p className="mx-auto mt-3 max-w-xl text-ink-200">{labels.noResultsDescription}</p>
                         <button type="button" onClick={clearFilters} className="mt-6 rounded-2xl bg-primary-400 px-5 py-3 font-bold text-canvas-950 hover:bg-primary-300">

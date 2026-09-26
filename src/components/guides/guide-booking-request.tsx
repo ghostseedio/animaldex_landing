@@ -109,7 +109,7 @@ export function GuideBookingRequestCta({
 
     if (status === "sent") {
         return (
-            <div className="rounded-2xl border border-primary-300/25 bg-primary-300/[0.08] p-5 text-sm leading-6 text-white/75">
+            <div className="  border border-primary-300/25 bg-primary-300/[0.08] p-5 text-sm leading-6 text-white/75">
                 <p className="font-display text-lg font-bold text-white">Request sent</p>
                 <p className="mt-2">
                     The Guide still has to accept. Exact meeting details stay private until then. Payment is cash on the day — not on this website.

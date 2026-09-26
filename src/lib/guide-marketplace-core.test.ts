@@ -140,7 +140,14 @@ test("structured data matches visible service without reviews", () => {
 
 test("currency honors currency-specific minor units", () => {
     assert.equal(currencyFractionDigits("JPY", "ja-JP"), 0);
-    assert.match(formatGuidePrice(35000000, "IDR", "id-ID"), /350\.000/);
+    // IDR is zero-decimal here, matching CLDR, Apple's Foundation and the iOS
+    // price composer whose presets ("150000", "250000", "350000") are what wrote
+    // the stored amounts. Node's ICU answers 2 for IDR, so this must not be
+    // derived from the runtime: the previous expectation of 35000000 -> 350.000
+    // encoded Node's answer and disagreed with the app by a factor of 100.
+    assert.equal(currencyFractionDigits("IDR", "id-ID"), 0);
+    assert.match(formatGuidePrice(350000, "IDR", "id-ID"), /350\.000/);
+    assert.equal(currencyFractionDigits("KWD", "en"), 3);
 });
 
 test("public model and schema expose no precise or private fields", () => {

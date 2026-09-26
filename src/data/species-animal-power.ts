@@ -54,7 +54,6 @@ type PowerRow = {
     reflection_questions: unknown;
     related_powers: unknown;
     power_profile_status: string | null;
-    power_profile_enhanced?: boolean | null;
 };
 
 function text(value: unknown) {
@@ -143,8 +142,7 @@ export async function getEnhancedAnimalPowerProfile(
             "embodiment_practices",
             "reflection_questions",
             "related_powers",
-            "power_profile_status",
-            "power_profile_enhanced"
+            "power_profile_status"
         ].join(","),
         species_profile_id: `eq.${profileId}`,
         limit: "1"
@@ -178,7 +176,12 @@ export async function getEnhancedAnimalPowerProfile(
 
         return {
             ...parsed,
-            availability: isEnhanced(parsed) || row.power_profile_status === "generated" || row.power_profile_status === "approved" || row.power_profile_enhanced === true
+            // `power_profile_enhanced` used to be a third clause here. No such
+            // column exists on `species_behavior_principles`, so the clause was
+            // always dead — and naming it in the select made PostgREST reject the
+            // whole request with a 400, which this function swallowed as `null`.
+            // Every species silently had no Animal Power as a result.
+            availability: isEnhanced(parsed) || row.power_profile_status === "generated" || row.power_profile_status === "approved"
                 ? "enhanced"
                 : "legacy"
         };

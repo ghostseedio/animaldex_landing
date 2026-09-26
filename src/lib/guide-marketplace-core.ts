@@ -127,9 +127,35 @@ export function formatDuration(minutes: number) {
     return `${minutes} minutes`;
 }
 
+/**
+ * Currencies whose minor unit is not 1/100, pinned rather than asked of the
+ * runtime.
+ *
+ * `Intl` disagrees across engines: Node's ICU reports 2 fraction digits for IDR
+ * (ISO 4217's obsolete sen) while Chrome and Apple's Foundation report 0 (CLDR's
+ * modern usage). Because the digit count is also the minor-unit exponent used to
+ * divide `amount_minor`, that disagreement rendered a listing as "IDR 3,500.00"
+ * on the server and "IDR 350,000" on the client — the same price off by 100x,
+ * and a hydration mismatch that dropped the page to client rendering.
+ *
+ * iOS stores and displays these amounts, and its IDR price presets are
+ * "150000"/"250000"/"350000" formatted with Apple's 0 digits, so zero-decimal is
+ * the convention the stored data was written under. Pinning the table makes the
+ * server, the browser and the app agree by construction.
+ */
+const CURRENCY_FRACTION_DIGITS: Record<string, number> = {
+    BIF: 0, CLP: 0, DJF: 0, GNF: 0, IDR: 0, ISK: 0, JPY: 0, KMF: 0, KRW: 0,
+    PYG: 0, RWF: 0, UGX: 0, VND: 0, VUV: 0, XAF: 0, XOF: 0, XPF: 0,
+    BHD: 3, IQD: 3, JOD: 3, KWD: 3, LYD: 3, OMR: 3, TND: 3
+};
+
 export function currencyFractionDigits(currencyCode: string, locale = "en") {
+    const code = currencyCode.toUpperCase();
+    const pinned = CURRENCY_FRACTION_DIGITS[code];
+    if (pinned !== undefined) return pinned;
+
     try {
-        return new Intl.NumberFormat(locale, {style: "currency", currency: currencyCode.toUpperCase()})
+        return new Intl.NumberFormat(locale, {style: "currency", currency: code})
             .resolvedOptions().maximumFractionDigits;
     } catch {
         return 2;
@@ -140,8 +166,15 @@ export function formatGuidePrice(amountMinor: number, currencyCode: string, loca
     const code = currencyCode.toUpperCase();
     const divisor = 10 ** currencyFractionDigits(code, locale);
     try {
-        return new Intl.NumberFormat(locale, {style: "currency", currency: code, maximumFractionDigits: currencyFractionDigits(code, locale)})
-            .format(amountMinor / divisor);
+        const digits = currencyFractionDigits(code, locale);
+        return new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency: code,
+            // Both bounds, so a runtime that thinks IDR has 2 decimals does not
+            // pad "IDR 350,000" back out to "IDR 350,000.00".
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits
+        }).format(amountMinor / divisor);
     } catch {
         return `${code} ${(amountMinor / divisor).toLocaleString(locale)}`;
     }

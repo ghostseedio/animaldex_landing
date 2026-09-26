@@ -24,7 +24,7 @@ export default function ChallengeVerdictCard({
     fullAnalysisLabel
 }: ChallengeVerdictCardProps) {
     return (
-        <section id="winner" className="overflow-hidden rounded-[2rem] border border-primary-500/25 bg-gradient-to-br from-primary-500/12 via-surface-900 to-violet-500/10 shadow-xl">
+        <section id="winner" className="overflow-hidden  border border-primary-500/25 bg-gradient-to-br from-primary-500/12 via-surface-900 to-violet-500/10 shadow-xl">
             <div className={winner ? "grid lg:grid-cols-[19rem_1fr]" : "grid"}>
                 {winner ? (
                     <div className="relative min-h-64 lg:min-h-full">

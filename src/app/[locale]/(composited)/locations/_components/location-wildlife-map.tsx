@@ -3,6 +3,7 @@
 import {useEffect, useRef} from "react";
 import "leaflet/dist/leaflet.css";
 import type {Map as LeafletMap, Layer} from "leaflet";
+import {MAP_DARK_TILE_CLASS, MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL} from "@/lib/map-tiles";
 
 export type WildlifeMapPlace = {
     name: string;
@@ -66,10 +67,9 @@ export default function LocationWildlifeMap({
                     zoomControl: true,
                     scrollWheelZoom: false
                 });
-                leaflet.tileLayer("https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-                    maxZoom: 19,
-                    attribution:
-                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                leaflet.tileLayer(MAP_TILE_URL, {
+                    maxZoom: MAP_TILE_MAX_ZOOM,
+                    attribution: MAP_TILE_ATTRIBUTION
                 }).addTo(mapRef.current);
             }
 
@@ -119,7 +119,7 @@ export default function LocationWildlifeMap({
     }, []);
 
     return (
-        <div className={`overflow-hidden rounded-3xl border border-white/12 ${className}`}>
+        <div className={`overflow-hidden border border-white/12 ${MAP_DARK_TILE_CLASS} ${className}`}>
             <div ref={containerRef} className="h-full w-full" />
         </div>
     );

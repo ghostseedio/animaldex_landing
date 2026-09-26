@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 
 const NearbyRouteMap = dynamic(
     () => import("@/app/[locale]/(composited)/locations/_components/nearby-route-map"),
-    {ssr: false, loading: () => <div className="h-[22rem] w-full animate-pulse rounded-3xl border border-white/12 bg-white/[0.03]" />}
+    {ssr: false, loading: () => <div className="h-[22rem] w-full animate-pulse  border border-white/12 bg-white/[0.03]" />}
 );
 
 export type NearbyExplorerCopy = {
@@ -374,14 +374,14 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
     }, [guide]);
 
     return (
-        <section className="rounded-[2rem] border border-white/12 bg-gradient-to-br from-white/[0.06] to-primary-400/[0.04] p-5 md:p-8">
+        <section className="  border border-white/12 bg-gradient-to-br from-white/[0.06] to-primary-400/[0.04] p-5 md:p-8">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-ink-400">
                         {copy.locationLabel}
                     </label>
                     {place ? (
-                        <div className="flex items-center gap-3 rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
+                        <div className="flex items-center gap-3  border border-white/12 bg-black/25 px-4 py-3">
                             <span className="text-primary-300" aria-hidden="true">◎</span>
                             <span className="min-w-0 flex-1 truncate text-sm text-white">{place.label}</span>
                             <button
@@ -438,7 +438,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             </form>
 
                             {placeOptions.length ? (
-                                <ul className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/50">
+                                <ul className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden  border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/50">
                                     {placeOptions.map((option) => (
                                         <li key={`${option.latitude},${option.longitude}`}>
                                             <button
@@ -539,7 +539,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             <ul
                                 id={animalListboxId}
                                 role="listbox"
-                                className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-[#0d1310] p-1 shadow-2xl shadow-black/50"
+                                className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto overscroll-contain  border border-white/12 bg-[#0d1310] p-1 shadow-2xl shadow-black/50"
                             >
                                 {animalSuggestions.map((item, index) => (
                                     <li key={item.name} role="option" aria-selected={index === animalActive}>
@@ -594,8 +594,8 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                 />
 
                 {!place ? (
-                    <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center rounded-3xl bg-gradient-to-t from-black/70 via-black/30 to-transparent p-6">
-                        <div className="pointer-events-auto max-w-sm rounded-2xl border border-white/12 bg-[#0d1310]/90 p-5 text-center backdrop-blur-sm">
+                    <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center  bg-gradient-to-t from-black/70 via-black/30 to-transparent p-6">
+                        <div className="pointer-events-auto max-w-sm  border border-white/12 bg-[#0d1310]/90 p-5 text-center backdrop-blur-sm">
                             <p className="font-display text-lg font-bold text-white">{copy.mapEmptyTitle}</p>
                             <p className="mt-1.5 text-sm leading-6 text-ink-300">{copy.mapEmptyBody}</p>
                             <button
@@ -619,13 +619,13 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
             {place ? (
                 <div className="mt-7 space-y-7">
                     {lookupState === "error" || lookupState === "rate-limited" ? (
-                        <p className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200">
+                        <p className="  border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200">
                             {lookupState === "rate-limited" ? copy.rateLimited : copy.errorMessage}
                         </p>
                     ) : null}
 
                     {result ? (
-                        <article className="rounded-3xl border border-primary-400/25 bg-primary-400/[0.06] p-6">
+                        <article className="  border border-primary-400/25 bg-primary-400/[0.06] p-6">
                             <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{copy.resultTitle}</p>
                             <h3 className="mt-2 font-display text-2xl font-bold text-white md:text-3xl">{result.placeName}</h3>
 
@@ -656,7 +656,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             ) : null}
 
                             {result.safetyNote ? (
-                                <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
+                                <div className="mt-4  border border-amber-400/25 bg-amber-400/5 p-4">
                                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-300">{copy.safetyTitle}</p>
                                     <p className="mt-1.5 text-sm leading-6 text-amber-100">{result.safetyNote}</p>
                                 </div>
@@ -689,7 +689,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             <p className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-primary-200">{copy.bandsTitle}</p>
                             <div className="grid gap-4 md:grid-cols-2">
                                 {bands.map((band) => (
-                                    <article key={band.key} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                    <article key={band.key} className="  border border-white/10 bg-white/[0.03] p-5">
                                         <p className="text-sm font-bold text-white">{band.label}</p>
                                         <ul className="mt-3 space-y-2">
                                             {band.animals.slice(0, 8).map((animal) => (
@@ -711,7 +711,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             <p className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-primary-200">{copy.venuesTitle}</p>
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 {guide.venues.map((venue) => (
-                                    <article key={venue.name} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                                    <article key={venue.name} className="overflow-hidden  border border-white/10 bg-white/[0.03]">
                                         {venue.googlePhotoUri ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={venue.googlePhotoUri} alt="" loading="lazy" className="h-32 w-full object-cover" />
