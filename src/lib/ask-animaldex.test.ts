@@ -569,8 +569,10 @@ test("openers fall back to the Animal Power defaults when there are no dynamics"
         askSubjectFromPath("/animals/weaver-ant"),
         {...EMPTY_ASK_HINTS, animalName: "Weaver Ant", principleName: "Collective Leverage"}
     );
-    assert.deepEqual(prompts.map((item) => item.title), ["Why this Power?", "How can I use it?", "Shadow side"]);
+    // The chat's own empty state on iOS, not the embedded Learn card's chips.
+    assert.deepEqual(prompts.map((item) => item.title), ["Understand", "Apply", "Explore"]);
     assert.match(prompts[0].prompt, /Collective Leverage/);
+    assert.equal(prompts[2].prompt, "What happens when Collective Leverage goes too far?");
 });
 
 test("a page that is not about one animal gets openers about that page", () => {

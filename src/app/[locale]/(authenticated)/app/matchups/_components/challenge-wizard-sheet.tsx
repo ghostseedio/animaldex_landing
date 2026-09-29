@@ -6,7 +6,10 @@ import PickAnimalStep from "@/app/[locale]/(authenticated)/app/matchups/_compone
 import PreviewMatchupStep from "@/app/[locale]/(authenticated)/app/matchups/_components/steps/preview-matchup-step";
 import MatchupRevealStep from "@/app/[locale]/(authenticated)/app/matchups/_components/steps/matchup-reveal-step";
 import ResultStep from "@/app/[locale]/(authenticated)/app/matchups/_components/steps/result-step";
+import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
+import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import type {MatchupOpponent, MatchupResolveResult, MatchupRosterCapture} from "@/data/matchups-types";
+import {powerGateAnalytics} from "@/lib/animal-powers";
 import {friendlyChallengeError} from "@/lib/matchup-stats";
 import {unlockMatchupAudio} from "@/lib/matchup-sounds";
 
@@ -42,6 +45,11 @@ export default function ChallengeWizardSheet({
     const [baselineAttackerHealth, setBaselineAttackerHealth] = useState(MAX_HEARTS);
     const [baselineOpponentHealth, setBaselineOpponentHealth] = useState(clampHealth(opponent.challengeHealth));
     const [isRematching, setIsRematching] = useState(false);
+    // The capture whose Power lock was tapped. Opening the earning flow here
+    // rather than navigating keeps the picker underneath, so closing returns to
+    // the choice that was interrupted.
+    const [earningFor, setEarningFor] = useState<{animalName: string; speciesProfileId: string | null} | null>(null);
+    const play = usePlayEligibility(true);
 
     const attacker = roster.find((capture) => capture.captureId === selectedCaptureId) ?? null;
 
@@ -169,7 +177,12 @@ export default function ChallengeWizardSheet({
                             opponent={opponent}
                             roster={roster}
                             selectedCaptureId={selectedCaptureId}
+                            eligibility={play.eligibility}
                             onSelect={setSelectedCaptureId}
+                            onEarnPower={(capture, speciesProfileId) => {
+                                powerGateAnalytics.lockedComparisonEarnTap(speciesProfileId);
+                                setEarningFor({animalName: capture.animalName, speciesProfileId});
+                            }}
                         />
                     ) : null}
                     {step === "preview" && attacker ? (
@@ -239,6 +252,19 @@ export default function ChallengeWizardSheet({
                     </div>
                 ) : null}
             </div>
+
+            {earningFor ? (
+                <EarnPowerSheet
+                    speciesProfileId={earningFor.speciesProfileId}
+                    animalName={earningFor.animalName}
+                    onClose={() => {
+                        setEarningFor(null);
+                        // Re-read so a capture unlocked in the sheet becomes
+                        // selectable without leaving the picker.
+                        void play.reload();
+                    }}
+                />
+            ) : null}
         </div>
     );
 }

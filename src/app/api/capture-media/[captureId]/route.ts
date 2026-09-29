@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {SPECIES_NO_IMAGE_SRC} from "@/data/species-images";
 import {createSignedStorageUrl} from "@/lib/capture-storage-image";
+import {isServableCaptureMediaReference} from "@/lib/capture-storage-reference";
 
 function buildFallbackUrl(request: NextRequest) {
     return new URL(SPECIES_NO_IMAGE_SRC, request.url);
@@ -26,7 +27,9 @@ export async function GET(
     const path = request.nextUrl.searchParams.get("path")?.trim();
     const kind = request.nextUrl.searchParams.get("kind");
 
-    if (!captureId || !bucket || !path || !isAllowedMediaKind(kind)) {
+    // The reference comes from the query string and is signed with the service
+    // role, so it is checked here: capture buckets only, inside a capture folder.
+    if (!captureId || !bucket || !path || !isAllowedMediaKind(kind) || !isServableCaptureMediaReference(bucket, path)) {
         return redirectWithBrowserCache(buildFallbackUrl(request));
     }
 

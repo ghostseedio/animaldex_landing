@@ -5,6 +5,8 @@ import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/speci
 import SpeciesRankingCarousel from "@/app/[locale]/(composited)/animals/[slug]/species-ranking-carousel";
 import {getAppCaptureDetail, getAuthenticatedAppContext, getPublicCaptureDetail} from "@/data/authenticated-app";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
+import {getOwnedCaptureMediaAssets, getOwnedCapturePetState} from "@/data/discover-timeline";
+import {getEnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {getSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesRankings} from "@/data/species-rankings";
@@ -24,7 +26,11 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         getAppCaptureDetail(params.id),
         getAuthenticatedAppContext()
     ]);
-    const publicDetail = owned ? null : await getPublicCaptureDetail(params.id);
+    const [publicDetail, ownedMediaAssets, isMarkedAsPet] = await Promise.all([
+        owned ? null : getPublicCaptureDetail(params.id),
+        owned ? getOwnedCaptureMediaAssets(params.id) : [],
+        owned ? getOwnedCapturePetState(params.id) : false
+    ]);
     const capture = owned ?? publicDetail?.capture ?? null;
 
     if (!capture) {
@@ -36,7 +42,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         isOwner: Boolean(owned)
     };
     const spotter = publicDetail?.collector ?? null;
-    const mediaAssets = publicDetail?.mediaAssets ?? [];
+    const mediaAssets = publicDetail?.mediaAssets ?? ownedMediaAssets;
     const cohort = {
         speciesProfileId: publicDetail?.speciesProfileId ?? null,
         normalizedIdentityKey: publicDetail?.normalizedIdentityKey ?? capture.speciesSlug
@@ -45,6 +51,12 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
 
     const requestedSpeciesSlug = capture.speciesSlug?.trim().replace(/_/g, "-") ?? null;
     const entry = requestedSpeciesSlug ? await getResolvedSpeciesBySlug(requestedSpeciesSlug) : null;
+    // An owned card has no public row to read the species from, so it falls back
+    // to the catalog entry. Without this the owner's own card had no Trials, no
+    // System Dynamics and nothing to earn a Power against.
+    const speciesProfileId = publicDetail?.speciesProfileId?.trim()
+        || entry?.speciesProfileId?.trim()
+        || null;
 
     if (!entry) {
         return (
@@ -53,7 +65,9 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 viewer={viewer}
                 spotter={spotter}
                 mediaAssets={mediaAssets}
+                isMarkedAsPet={isMarkedAsPet}
                 cohort={cohort}
+                speciesProfileId={speciesProfileId}
                 isChallengeAvailable={isChallengeAvailable}
                 speciesSlug={requestedSpeciesSlug}
                 speciesName={capture.animalName}
@@ -61,10 +75,13 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         );
     }
 
-    const [t, subtitle, principle, rankingItems, growth] = await Promise.all([
+    const [t, subtitle, principle, powerProfile, rankingItems, growth] = await Promise.all([
         getScopedTranslator(params.locale, "animals"),
         getSpeciesSubtitle(entry.slug, params.locale),
         resolveSpeciesBehaviorProfile(entry.slug),
+        // Read for everyone: the Power, its explanation and its earning action
+        // are core, not Pro.
+        getEnhancedAnimalPowerProfile(speciesProfileId),
         getSpeciesRankings(entry),
         // The growth/compare panel is about the viewer's own animal; for a
         // public card the Play tab shows Offer / Compare instead.
@@ -161,7 +178,10 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             viewer={viewer}
             spotter={spotter}
             mediaAssets={mediaAssets}
+            isMarkedAsPet={isMarkedAsPet}
             cohort={cohort}
+            speciesProfileId={speciesProfileId}
+            powerProfile={powerProfile}
             isChallengeAvailable={isChallengeAvailable}
             speciesSlug={entry.slug}
             speciesName={entry.name}

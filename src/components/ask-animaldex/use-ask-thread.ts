@@ -20,12 +20,13 @@ import {
     type AskMessage
 } from "@/lib/ask-animaldex/thread";
 import type {AskSubject} from "@/lib/ask-animaldex/subject";
+import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
 
 /** Offered when the model returns none, so the thread never dead-ends. */
 export function fallbackFollowUps(principleName: string | null): string[] {
     return principleName
         ? [
-            `How do I practise ${principleName}?`,
+            "How do I practise this?",
             "What's the opposite pattern?",
             "What should I watch out for?"
         ]
@@ -83,9 +84,13 @@ type StreamEvent = {
     follow_up_prompts?: string[];
     remaining?: number;
     limit?: number;
+    signed_in?: boolean;
+    has_wild_profile?: boolean;
     error?: string;
     detail?: string;
 };
+
+type CompleteAnswer = StreamEvent & {answer?: string};
 
 /** Reads an SSE body frame by frame. The mirror of the server's own reader. */
 async function consumeAskStream(
@@ -127,6 +132,12 @@ export function useAskThread(params: {
     subject: AskSubject;
     locale: string;
     principleName: string | null;
+    /**
+     * What the drawer already knows about the reader, used until an answer
+     * reports it afresh. A Wild Profile made in another tab shows up with the
+     * next answer rather than never.
+     */
+    viewer?: {signedIn: boolean; hasWildProfile: boolean};
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
 }) {
@@ -209,26 +220,37 @@ export function useAskThread(params: {
             replace(thread.filter((message) => message.id !== placeholderId));
         };
 
+        const requestBody = {
+            question,
+            locale,
+            history,
+            subject: {
+                scope: subject.scope,
+                slug: subject.slug,
+                name: subject.name,
+                captureId: subject.captureId,
+                hasReaderPhoto: subject.hasReaderPhoto,
+                title: subject.title,
+                summary: subject.summary,
+                path: subject.path
+            }
+        };
+
+        /** The model's own offers, plus the Wild Profile offer when the reader has none. */
+        const offersFor = (raw: string[], event: StreamEvent) => decorateFollowUps(
+            raw.length ? raw : fallbackFollowUps(principleName),
+            {
+                signedIn: event.signed_in ?? callbacks.current.viewer?.signedIn ?? false,
+                hasWildProfile: event.has_wild_profile ?? callbacks.current.viewer?.hasWildProfile ?? false
+            }
+        );
+
         try {
             const response = await fetch("/api/ask/stream", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 signal: controller.signal,
-                body: JSON.stringify({
-                    question,
-                    locale,
-                    history,
-                    subject: {
-                        scope: subject.scope,
-                        slug: subject.slug,
-                        name: subject.name,
-                        captureId: subject.captureId,
-                        hasReaderPhoto: subject.hasReaderPhoto,
-                        title: subject.title,
-                        summary: subject.summary,
-                        path: subject.path
-                    }
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (response.status === 429) {
@@ -253,12 +275,11 @@ export function useAskThread(params: {
                 if (event.done) {
                     didFinish = true;
                     const split = splitStreamedReply(answer);
-                    const offers = event.follow_up_prompts?.length
-                        ? event.follow_up_prompts
-                        : split.followUps.length
-                            ? split.followUps
-                            : fallbackFollowUps(principleName);
-                    settle(split.answer, offers.slice(0, 3), false);
+                    const offers = offersFor(
+                        event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps,
+                        event
+                    );
+                    settle(split.answer, offers, false);
                     if (typeof event.remaining === "number") {
                         setQuota({
                             remaining: event.remaining,
@@ -274,15 +295,43 @@ export function useAskThread(params: {
 
             if (!didFinish) {
                 const partial = splitStreamedReply(answer);
-                if (partial.answer.trim()) {
-                    // The connection ended mid-answer. What arrived is still the
-                    // answer to the question that was asked, so it is kept
-                    // rather than replaced with an error.
-                    settle(
-                        partial.answer,
-                        partial.followUps.length ? partial.followUps : fallbackFollowUps(principleName),
-                        false
-                    );
+
+                // The connection ended before the answer did. Ask once more for
+                // the whole answer in one piece and put that in its place: half
+                // an answer that stops mid-sentence reads as the whole of one.
+                // Not attempted when the server itself reported a failure, which
+                // a second request would only repeat.
+                let whole: CompleteAnswer | null = null;
+                if (!streamError) {
+                    try {
+                        const retryResponse = await fetch("/api/ask/stream", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            signal: controller.signal,
+                            body: JSON.stringify({...requestBody, mode: "complete"})
+                        });
+                        if (retryResponse.status === 429) {
+                            setQuota((current) => ({...current, remaining: 0, reached: true}));
+                        } else if (retryResponse.ok) {
+                            whole = await retryResponse.json() as CompleteAnswer;
+                        }
+                    } catch (error) {
+                        if (controller.signal.aborted) throw error;
+                    }
+                }
+
+                if (whole?.answer?.trim()) {
+                    const offers = offersFor(whole.follow_up_prompts ?? [], whole);
+                    settle(whole.answer, offers, false);
+                    if (typeof whole.remaining === "number") {
+                        setQuota({remaining: whole.remaining, limit: whole.limit ?? null, reached: whole.remaining <= 0});
+                    }
+                    callbacks.current.onAnswered?.({question, followUps: offers.length});
+                } else if (partial.answer.trim()) {
+                    // The whole answer could not be had either. What arrived is
+                    // still an answer to the question that was asked, so it is
+                    // kept rather than replaced with an error.
+                    settle(partial.answer, offersFor(partial.followUps, {}), false);
                 } else {
                     throw streamError ? new AskUnavailableError() : new AskEmptyError();
                 }

@@ -3,7 +3,6 @@
 import {useCallback, useEffect, useState} from "react";
 import {
     type AnimalTrial,
-    collapsedAnimalHook,
     frequencyAccent,
     frequencyBadge,
     isComplete,
@@ -28,7 +27,21 @@ import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-t
  * Trials need no Pro and no capture unlock, so this sits above any premium gate.
  * A species with no Trial shows nothing at all — no empty state, no "coming soon".
  */
-export default function AnimalTrialsSection({speciesProfileId}: {speciesProfileId: string | null | undefined}) {
+export default function AnimalTrialsSection({
+    speciesProfileId,
+    showsHeader = true,
+    onTrialCompleted
+}: {
+    speciesProfileId: string | null | undefined;
+    /**
+     * False when this is mounted as the Trial arm of the earn fork, which has
+     * already said you are on the Trial path — a second heading underneath it
+     * just repeats the choice back.
+     */
+    showsHeader?: boolean;
+    /** Completing a Trial earns the animal's Power, so the caller re-reads it. */
+    onTrialCompleted?: (trial: AnimalTrial) => void;
+}) {
     const [trials, setTrials] = useState<AnimalTrial[]>([]);
     const [openTrialId, setOpenTrialId] = useState<string | null>(null);
 
@@ -62,8 +75,10 @@ export default function AnimalTrialsSection({speciesProfileId}: {speciesProfileI
     }, [load]);
 
     const applyUpdate = useCallback((updated: AnimalTrial) => {
+        const previous = trials.find((item) => trialId(item) === trialId(updated));
         setTrials((current) => current.map((item) => (trialId(item) === trialId(updated) ? updated : item)));
-    }, []);
+        if (previous && !isComplete(previous) && isComplete(updated)) onTrialCompleted?.(updated);
+    }, [onTrialCompleted, trials]);
 
     if (!trials.length) return null;
 
@@ -71,11 +86,13 @@ export default function AnimalTrialsSection({speciesProfileId}: {speciesProfileI
 
     return (
         <section className="flex flex-col">
-            <header className="flex items-center gap-2 px-5 pb-3.5 pt-5">
-                <span aria-hidden="true" className="text-[13px]" style={{color: "#A7F432"}}>◉</span>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-white">Animal Trials</h3>
-                <span className="ml-auto text-[10px] text-white/40">What this animal teaches you to do</span>
-            </header>
+            {showsHeader ? (
+                <header className="flex items-center gap-2 px-5 pb-3.5 pt-5">
+                    <span aria-hidden="true" className="text-[13px]" style={{color: "#A7F432"}}>◉</span>
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-white">Animal Trials</h3>
+                    <span className="ml-auto text-[10px] text-white/40">What this animal teaches you to do</span>
+                </header>
+            ) : null}
 
             {trials.map((trial) => (
                 <TrialCard key={trialId(trial)} trial={trial} onOpen={() => setOpenTrialId(trialId(trial))} />
@@ -107,16 +124,19 @@ function lifecycleLabel(trial: AnimalTrial) {
 /**
  * One Trial, full width, no inset.
  *
- * The reading order is deliberate and is NOT the order the data is stored in:
- * state → what you do → what you get → why this animal → reward → act. People
- * decide whether to do something from the benefit, not the biology, so the
- * benefit sits above the fold and the mechanism sits under it.
+ * Five things and nothing else: state, the action, what you get, the reward,
+ * the button. A card is a decision — "do I want this?" — and every extra
+ * sentence on it is read instead of the button being pressed.
+ *
+ * The biology used to sit here too, under the Principle name. It was the second
+ * paragraph on a surface that already lives inside that species' own detail
+ * card, so it repeated the context and pushed the CTA below the fold. It now
+ * lives behind one row in the sheet, where a reader who wants it will look.
  */
 function TrialCard({trial, onOpen}: {trial: AnimalTrial; onOpen: () => void}) {
     const accent = frequencyAccent(trial.frequency);
     const complete = isComplete(trial);
     const state = lifecycleLabel(trial);
-    const hook = collapsedAnimalHook(trial);
     const social = socialProofText(trial);
 
     return (
@@ -140,35 +160,31 @@ function TrialCard({trial, onOpen}: {trial: AnimalTrial; onOpen: () => void}) {
             </div>
 
             <div
-                className="flex w-full flex-col gap-3.5 px-5 pb-5 pt-4"
+                className="flex w-full flex-col gap-3 px-5 pb-[18px] pt-3.5"
                 style={{backgroundImage: `linear-gradient(to bottom, ${accent}${complete ? "1A" : "2E"}, transparent 60%)`}}
             >
                 <h4 className="font-display text-2xl font-black leading-tight text-white">{trial.title}</h4>
 
-                {/* The conversion line. This is why someone taps. */}
+                {/* The conversion line. Capped at two lines on purpose: the full
+                    sentence is the first thing in the sheet, and the card keeps
+                    a predictable height whatever the copy does. */}
                 {trial.userBenefit ? (
-                    <p className="text-sm leading-6 text-white/90">{trial.userBenefit}</p>
+                    <p className="line-clamp-2 text-sm leading-6 text-white/60">{trial.userBenefit}</p>
                 ) : null}
-
-                <div className="flex gap-2">
-                    <span aria-hidden="true" className="w-0.5 shrink-0 rounded" style={{backgroundColor: `${accent}CC`}} />
-                    <div className="flex min-w-0 flex-col gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.1em]" style={{color: accent}}>
-                            {trial.principleName}
-                        </span>
-                        {hook ? <p className="text-xs leading-5 text-white/55">{hook}</p> : null}
-                    </div>
-                </div>
 
                 <div className="flex flex-wrap gap-2">
                     <RewardChip accent={accent}>+{rewardXP(trial)} XP</RewardChip>
                     {rewardCreditsDisplay(trial) > 0 ? (
                         <RewardChip accent={accent}>+{rewardCreditsDisplay(trial)} Credits</RewardChip>
                     ) : null}
-                    {/* Only HIGH runs against a clock. Saying so on the calm modes is
-                        the difference between an invitation and an obligation. */}
+                    {/* How long it costs, which is the question after "what do I
+                        get". Only HIGH runs against a clock, and on the calm modes
+                        the estimate is an estimate — the difference between an
+                        invitation and an obligation. */}
                     <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2.5 py-1.5 text-[10px] font-bold text-white/60">
-                        {isTimed(trial) ? `${trial.completionWindowMinutes ?? 0} min window` : "∞ No time limit"}
+                        {isTimed(trial)
+                            ? `${trial.completionWindowMinutes ?? 0} min window`
+                            : `~${trial.estimatedMinutes} min`}
                     </span>
                 </div>
 

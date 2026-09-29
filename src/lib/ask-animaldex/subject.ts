@@ -145,19 +145,19 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
         // The Animal Power defaults, in the order iOS offers them.
         return [
             {
-                title: "Why this Power?",
+                title: "Understand",
                 prompt: principleName ? `Why is its Power ${principleName}?` : `Why does AnimalDex read ${name} this way?`
             },
             {
-                title: "How can I use it?",
+                title: "Apply",
                 prompt: principleName
                     ? `How could I use ${principleName} in my life?`
                     : `How could I use ${name}'s pattern in my life?`
             },
             {
-                title: "Shadow side",
+                title: "Explore",
                 prompt: principleName
-                    ? `What is the shadow side of ${principleName}?`
+                    ? `What happens when ${principleName} goes too far?`
                     : `Where does ${name}'s pattern go too far?`
             }
         ];

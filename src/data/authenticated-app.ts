@@ -1236,7 +1236,9 @@ export async function getPublicCaptureDetail(id: string): Promise<PublicCaptureD
             hasUncertaintyFallback: item.hasUncertaintyFallback
         },
         collector: item.collector,
-        mediaAssets: item.mediaAssets,
+        // The detail carousel keeps the persisted cover as its first page; only
+        // the timeline leads with the newest media.
+        mediaAssets: item.coverFirstMediaAssets ?? item.mediaAssets,
         speciesProfileId: item.speciesProfileId,
         normalizedIdentityKey: item.normalizedIdentityKey,
         isChallengeAvailable: item.isChallengeAvailable && item.challengeHealth > 0,

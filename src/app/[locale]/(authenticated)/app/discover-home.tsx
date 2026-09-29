@@ -8,9 +8,16 @@ import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
+import {
+    type DiscoverSeenPost,
+    DiscoverSeenOutbox,
+    LEADING_POST_SEEN_DWELL_MS,
+    discoverSeenPostForItemId,
+    itemIdsScrolledPast
+} from "@/lib/discover-seen";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getLocalePath} from "@/lib/site";
-import {useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent} from "react";
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
@@ -28,6 +35,18 @@ type DiscoverHydrationPayload = {
     featured?: DiscoverFeaturedItem[];
     viewerUserId?: string | null;
 };
+
+/** Sends one batch of marks. Resolves true only when the server recorded it. */
+async function sendSeenPosts(posts: DiscoverSeenPost[], options: {keepalive: boolean}) {
+    const response = await fetch("/api/app/discover/seen", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({posts}),
+        // Lets a mark made while the tab is closing still reach the server.
+        keepalive: options.keepalive
+    });
+    return response.ok;
+}
 
 function scrollScrollerToPost(scroller: HTMLElement, postId: string, behavior: ScrollBehavior = "auto") {
     const target = scroller.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(postId)}"]`);
@@ -291,6 +310,8 @@ export default function DiscoverHome({
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
+    const segmentRef = useRef<DiscoverSegment>(initialSegment);
+    segmentRef.current = segment;
     const [timelineItems, setTimelineItems] = useState(timeline);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
@@ -312,6 +333,115 @@ export default function DiscoverHome({
     const feedHydrationRef = useRef<"idle" | "pending" | "loading" | "done">(hydrateSignedInFeed ? "pending" : "idle");
     const seedTimelineKey = `${timeline.map((item) => item.id).join("|")}|${timelineCursor?.id ?? ""}`;
     const seedTimelineKeyRef = useRef(seedTimelineKey);
+
+    // Seen tracking is for a signed-in reader only: the ledger is theirs, shared
+    // with their phone. One outbox per reader, so signing in as somebody else
+    // never sends the first person's marks under the second person's name.
+    const seenOutbox = useMemo(() => {
+        if (!viewerUserId || typeof window === "undefined") return null;
+        let storage: Storage | null = null;
+        try {
+            storage = window.localStorage;
+        } catch {
+            storage = null;
+        }
+        return new DiscoverSeenOutbox(viewerUserId, storage, sendSeenPosts);
+    }, [viewerUserId]);
+    const leadingPostIdRef = useRef<string | null>(null);
+    const leadingDwellTimerRef = useRef<number | null>(null);
+    /**
+     * Posts that have actually been on screen. A feed opened on a shared post
+     * can start several rows down without anybody having scrolled there, and a
+     * row that was never displayed was never seen, whatever its position.
+     */
+    const displayedPostIdsRef = useRef(new Set<string>());
+    const timelineItemIdsRef = useRef<string[]>(timeline.map((item) => item.id));
+    timelineItemIdsRef.current = timelineItems.map((item) => item.id);
+
+    const markItemsSeen = useCallback((itemIds: string[], options: {keepalive?: boolean} = {}) => {
+        if (!seenOutbox) return;
+        const posts = itemIds
+            .map(discoverSeenPostForItemId)
+            .filter((post): post is DiscoverSeenPost => post !== null);
+        const queued = seenOutbox.enqueue(posts);
+        if (queued || seenOutbox.pendingCount) void seenOutbox.flush(options);
+    }, [seenOutbox]);
+
+    /**
+     * A post becomes the leading one: everything above it was scrolled past,
+     * and it counts as seen itself once it has held the screen for a moment.
+     * Flicking through the feed therefore marks what went by, never the post
+     * somebody merely landed on and left.
+     */
+    const handleLeadingPost = useCallback((postId: string) => {
+        if (!seenOutbox || leadingPostIdRef.current === postId) return;
+        leadingPostIdRef.current = postId;
+        if (leadingDwellTimerRef.current != null) window.clearTimeout(leadingDwellTimerRef.current);
+
+        markItemsSeen(
+            itemIdsScrolledPast(timelineItemIdsRef.current, postId)
+                .filter((itemId) => displayedPostIdsRef.current.has(itemId))
+        );
+        displayedPostIdsRef.current.add(postId);
+
+        if (document.visibilityState !== "visible") return;
+        leadingDwellTimerRef.current = window.setTimeout(() => {
+            leadingDwellTimerRef.current = null;
+            if (leadingPostIdRef.current === postId && document.visibilityState === "visible") {
+                markItemsSeen([postId]);
+            }
+        }, LEADING_POST_SEEN_DWELL_MS);
+    }, [markItemsSeen, seenOutbox]);
+
+    // Leaving: whatever is on screen has been seen, and whatever is queued
+    // goes now. Also sends anything a previous visit could not.
+    useEffect(() => {
+        if (!seenOutbox) return undefined;
+        void seenOutbox.flush();
+
+        const markLeadingNow = () => {
+            if (leadingDwellTimerRef.current != null) {
+                window.clearTimeout(leadingDwellTimerRef.current);
+                leadingDwellTimerRef.current = null;
+            }
+            const leading = leadingPostIdRef.current;
+            if (leading && segmentRef.current === "discover") markItemsSeen([leading], {keepalive: true});
+            else void seenOutbox.flush({keepalive: true});
+        };
+        const onLeave = () => {
+            if (document.visibilityState !== "visible") markLeadingNow();
+        };
+        const onReturn = () => {
+            if (document.visibilityState === "visible") void seenOutbox.flush();
+        };
+
+        document.addEventListener("visibilitychange", onLeave);
+        document.addEventListener("visibilitychange", onReturn);
+        window.addEventListener("pagehide", markLeadingNow);
+        return () => {
+            document.removeEventListener("visibilitychange", onLeave);
+            document.removeEventListener("visibilitychange", onReturn);
+            window.removeEventListener("pagehide", markLeadingNow);
+            if (leadingDwellTimerRef.current != null) {
+                window.clearTimeout(leadingDwellTimerRef.current);
+                leadingDwellTimerRef.current = null;
+            }
+        };
+    }, [markItemsSeen, seenOutbox]);
+
+    /**
+     * Drops posts this reader has already been shown but whose mark may not
+     * have reached the server yet, so a page fetched in that gap cannot bring
+     * them back. The post somebody opened the feed on is always kept.
+     */
+    const dropAlreadySeen = useCallback((items: DiscoverTimelineItem[], keepId: string | null = null) => {
+        if (!seenOutbox) return items;
+        return items.filter((item) => {
+            if (item.id === keepId) return true;
+            const post = discoverSeenPostForItemId(item.id);
+            return !post || !seenOutbox.has(post);
+        });
+    }, [seenOutbox]);
 
     function handleSegmentChange(next: DiscoverSegment) {
         setSegment(next);
@@ -420,7 +550,7 @@ export default function DiscoverHome({
             }
             const payload = await response.json() as DiscoverHydrationPayload;
             const focusPost = timeline.find((item) => item.id === focusId) ?? null;
-            const page = seedTimelineWithFocus(payload.timeline ?? [], focusPost);
+            const page = seedTimelineWithFocus(dropAlreadySeen(payload.timeline ?? [], focusId), focusPost);
             feedHydrationRef.current = "done";
             hasPaginatedTimelineRef.current = true;
             if (page.length) setTimelineItems(page);
@@ -435,7 +565,7 @@ export default function DiscoverHome({
                 setIsLoadingTimeline(false);
             }
         }
-    }, [initialFocusPostId, timeline]);
+    }, [dropAlreadySeen, initialFocusPostId, timeline]);
 
     const loadNextTimelinePage = useCallback(async () => {
         if (feedHydrationRef.current === "pending") {
@@ -455,6 +585,7 @@ export default function DiscoverHome({
                 params.set("cursorDate", cursor.date);
                 params.set("cursorRank", String(cursor.sortRank));
                 params.set("cursorId", cursor.id);
+                if (cursor.afterCaptureId) params.set("cursorCapture", cursor.afterCaptureId);
             }
             const response = await fetch(`/api/app/discover?${params.toString()}`, {
                 headers: {Accept: "application/json"}
@@ -465,7 +596,8 @@ export default function DiscoverHome({
                 return;
             }
             const payload = await response.json() as {timeline?: DiscoverTimelineItem[]; nextCursor?: DiscoverTimelineCursor | null; hasMore?: boolean};
-            const nextItems = payload.timeline ?? [];
+            const receivedCount = payload.timeline?.length ?? 0;
+            const nextItems = dropAlreadySeen(payload.timeline ?? []);
             hasPaginatedTimelineRef.current = true;
             setTimelineItems((current) => {
                 const seen = new Set(current.map((item) => item.id));
@@ -478,13 +610,15 @@ export default function DiscoverHome({
                 return merged;
             });
             setNextTimelineCursor(payload.nextCursor ?? null);
-            setHasMoreTimeline(Boolean(payload.nextCursor) && nextItems.length > 0);
+            // Judged on what the server sent, not on what survived the seen
+            // filter: a page of already-seen posts is not the end of the feed.
+            setHasMoreTimeline(Boolean(payload.nextCursor) && receivedCount > 0);
         } finally {
             if (requestId === timelineRequestIdRef.current) {
                 setIsLoadingTimeline(false);
             }
         }
-    }, [hasMoreTimeline, hydrateLiveFeed, isLoadingTimeline, nextTimelineCursor]);
+    }, [dropAlreadySeen, hasMoreTimeline, hydrateLiveFeed, isLoadingTimeline, nextTimelineCursor]);
 
     // Signed-in readers get the live feed straight away; anonymous readers on
     // the first swipe/scroll. Both keep the shared post in view.
@@ -622,7 +756,7 @@ export default function DiscoverHome({
     }, [segment, initialFocusPostId, timelineItems, isLoadingTimeline, syncUrlToPost]);
 
     useEffect(() => {
-        if (segment !== "discover" || !syncPostUrls) return undefined;
+        if (segment !== "discover" || (!syncPostUrls && !seenOutbox)) return undefined;
         const scroller = timelineScrollerRef.current;
         if (!scroller) return undefined;
 
@@ -634,7 +768,11 @@ export default function DiscoverHome({
                 .filter((entry) => entry.isIntersecting)
                 .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
             const postId = visible?.target.getAttribute("data-post-id");
-            if (postId) syncUrlToPost(postId);
+            if (!postId) return;
+            syncUrlToPost(postId);
+            // The same post that owns the URL owns the screen, so it is the
+            // leading one for seen tracking too.
+            handleLeadingPost(postId);
         }, {
             root: scroller,
             threshold: [0.55, 0.7, 0.85]
@@ -647,7 +785,7 @@ export default function DiscoverHome({
         }
 
         return () => observer.disconnect();
-    }, [segment, syncPostUrls, timelineItems, syncUrlToPost]);
+    }, [segment, syncPostUrls, seenOutbox, timelineItems, syncUrlToPost, handleLeadingPost]);
 
     return (
         <div className="flex h-full min-h-0 flex-col lg:block lg:h-auto lg:space-y-8">

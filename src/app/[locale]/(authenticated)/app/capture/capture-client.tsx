@@ -3,6 +3,7 @@
 import {useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import {storeCaptureReveal} from "@/lib/capture-reveal";
 
 type Phase = "permission" | "live" | "review" | "uploading" | "analyzing" | "complete" | "error";
 type Coordinates = {latitude: number; longitude: number};
@@ -101,6 +102,16 @@ export default function CaptureClient() {
             const body = await response.json();
             if (body.analysis?.error_message || body.status === "failed") throw new Error(body.analysis?.error_message || "Analysis failed.");
             if (body.analysis?.completed_at && body.status === "ready") {
+                // Settled now, before the card opens: once it is in the
+                // collection "is this the first?" can no longer be answered.
+                // Never in the way — a reveal that cannot be read is skipped.
+                try {
+                    const revealResponse = await fetch(`/api/app/captures/${id}/reveal`, {method: "POST"});
+                    const revealBody = revealResponse.ok ? await revealResponse.json() : null;
+                    if (revealBody?.reveal) storeCaptureReveal(window.sessionStorage, revealBody.reveal);
+                } catch {
+                    // The capture is saved either way.
+                }
                 setPhase("complete");
                 setMessage(`${body.analysis.animal_name || "Animal"} identified. Opening your capture…`);
                 await new Promise((resolve) => setTimeout(resolve, 700));

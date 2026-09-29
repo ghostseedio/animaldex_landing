@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {SPECIES_NO_IMAGE_SRC} from "@/data/species-images";
 import {createSignedStorageUrl, resolveCaptureImageReference} from "@/lib/capture-storage-image";
+import {isServableCaptureMediaReference} from "@/lib/capture-storage-reference";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 
 function buildFallbackUrl(request: NextRequest) {
@@ -58,8 +59,15 @@ export async function GET(
             return redirectWithBrowserCache(buildFallbackUrl(request));
         }
 
-        const imageBucket = request.nextUrl.searchParams.get("bucket");
-        const imagePath = request.nextUrl.searchParams.get("path");
+        const requestedBucket = request.nextUrl.searchParams.get("bucket");
+        const requestedPath = request.nextUrl.searchParams.get("path");
+        // The reference comes from the query string and is signed with the
+        // service role, so it is checked here: capture buckets only, inside a
+        // capture folder. One that fails is dropped rather than trusted, and
+        // the capture's own public image is looked up by id instead.
+        const isServable = isServableCaptureMediaReference(requestedBucket, requestedPath);
+        const imageBucket = isServable ? requestedBucket : null;
+        const imagePath = isServable ? requestedPath : null;
         const imageMimeType = request.nextUrl.searchParams.get("mime");
         const imageMediaKind = request.nextUrl.searchParams.get("kind");
         const hasDirectReference = Boolean(imageBucket?.trim() && imagePath?.trim());

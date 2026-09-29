@@ -119,6 +119,24 @@ export function requiresVideo(trial: AnimalTrial) {
     return trial.primaryProofType === "video";
 }
 
+/**
+ * 29 Trials are answered in words, not pictures — "Explain One Process in Ten
+ * Words" submits the ten words, and the word count IS the check. They were
+ * unsubmittable until this existed: the sheet only offered a camera, so the
+ * server refused every attempt with `proof_type_not_allowed`.
+ */
+export function requiresText(trial: AnimalTrial) {
+    return trial.primaryProofType === "text";
+}
+
+/**
+ * Written answers have their own floor. Below this there is nothing for the
+ * checker to look at, and saying so before the attempt is spent is kinder than
+ * spending it. Mirrors MIN/MAX_PROOF_TEXT_CHARS in `verify-animal-trial-proof`.
+ */
+export const MIN_TEXT_PROOF_CHARACTERS = 25;
+export const MAX_TEXT_PROOF_CHARACTERS = 1500;
+
 /** Only HIGH runs against a clock. */
 export function isTimed(trial: AnimalTrial) {
     return trial.completionWindowMinutes != null;
@@ -179,28 +197,6 @@ export function socialProofText(trial: AnimalTrial) {
         : `${trial.otherCompletionCount} others have completed this`;
 }
 
-/**
- * The one-line "why this animal" for the collapsed card.
- *
- * `whyThisAnimal` is the full mechanism paragraph, which is right on the detail
- * sheet and far too long on a card, so the collapsed surface shows its first
- * sentence. Falls back to the Principle when the mechanism is missing, and to
- * nothing at all rather than printing a truncated clause.
- */
-export function collapsedAnimalHook(trial: AnimalTrial) {
-    const mechanism = trial.whyThisAnimal.trim();
-    if (mechanism) {
-        const end = mechanism.search(/[.!?]/);
-        if (end >= 0) {
-            const sentence = mechanism.slice(0, end + 1).trim();
-            if (sentence.length >= 20) return sentence;
-        }
-        if (mechanism.length <= 140) return mechanism;
-    }
-    const principle = trial.principleName.trim();
-    return principle || null;
-}
-
 export function remainingSeconds(trial: AnimalTrial, now: number = Date.now()) {
     // `isTimed` comes from the Trial DEFINITION, which is authoritative. A row
     // started before LOW/MID became untimed still carries the deadline it was
@@ -222,6 +218,7 @@ export function primaryActionTitle(trial: AnimalTrial) {
             return "WAITING FOR ACTIVATION";
         case "active":
         case "proof_submitted":
+            if (requiresText(trial)) return "WRITE YOUR ANSWER";
             return requiresVideo(trial) ? "RECORD EVIDENCE" : "ADD EVIDENCE";
         case "completed":
             return "COMPLETED";
@@ -270,6 +267,12 @@ export type AnimalTrialVerificationResult = {
     reason: string;
     rewardXP: number;
     framesUsed: number;
+    /**
+     * True only on the completion that actually created the Animal Power. A
+     * person who already earned it by applying it completes the Trial and is
+     * not granted a second one.
+     */
+    grantedPower: boolean;
 };
 
 export function isApproved(result: AnimalTrialVerificationResult) {
@@ -296,6 +299,10 @@ export function verifierRefusalMessage(code: string, serverMessage?: string | nu
             return "That Trial's window closed. Start it again whenever you like — nothing was lost.";
         case "trial_not_active":
             return "This Trial is not open for evidence right now.";
+        case "proof_text_required":
+            return "This Trial is answered in writing. Type your answer and send it.";
+        case "proof_text_too_short":
+            return "Write a little more so we can see what you did.";
         case "video_frames_required":
             return "A video Trial needs a recording, not a still. Hold the shutter to record.";
         case "proof_type_not_allowed":

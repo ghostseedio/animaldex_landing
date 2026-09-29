@@ -14,6 +14,7 @@ import "server-only";
  * grounding the model in content AnimalDex never wrote.
  */
 
+import {getAppCaptureDetail, getPublicCaptureDetail} from "@/data/authenticated-app";
 import {getEnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSpeciesDietContent} from "@/data/species-diet";
@@ -31,11 +32,13 @@ import {
     resolveVisualSignature,
     type SpeciesSystemDynamics
 } from "@/lib/system-dynamics";
-import type {
-    AskAnimalPower,
-    AskGroundingPacket,
-    AskSpeciesGrounding,
-    AskSystemDynamics
+import {
+    mergeCaptureGrounding,
+    type AskAnimalPower,
+    type AskCaptureGrounding,
+    type AskGroundingPacket,
+    type AskSpeciesGrounding,
+    type AskSystemDynamics
 } from "@/lib/ask-animaldex/grounding";
 import {EMPTY_ASK_HINTS, type AskHints, type AskSubject} from "@/lib/ask-animaldex/subject";
 
@@ -158,6 +161,93 @@ export async function buildAskSpeciesGrounding(
     };
 }
 
+function detailText(details: Record<string, unknown> | null, ...keys: string[]): string | null {
+    for (const key of keys) {
+        const value = details?.[key];
+        if (typeof value === "string" && text(value)) return text(value);
+    }
+    return null;
+}
+
+function detailList(details: Record<string, unknown> | null, ...keys: string[]): string[] {
+    for (const key of keys) {
+        const value = details?.[key];
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => (typeof item === "string" ? text(item) : null))
+                .filter((item): item is string => Boolean(item))
+                .slice(0, 8);
+        }
+    }
+    return [];
+}
+
+/**
+ * The capture's own analysis, for the reader looking at it.
+ *
+ * Read by id through the two loaders the capture card itself uses: the owner's,
+ * which is scoped to their session, then the public one. A capture that is
+ * neither theirs nor public returns nothing, so an id in the request cannot be
+ * used to read somebody else's private sighting into a prompt.
+ */
+export async function buildAskCaptureGrounding(captureId: string | null): Promise<AskCaptureGrounding | null> {
+    if (!captureId) return null;
+
+    const capture = await getAppCaptureDetail(captureId)
+        ?? (await getPublicCaptureDetail(captureId))?.capture
+        ?? null;
+    if (!capture || capture.hasUncertaintyFallback) return null;
+
+    const details = capture.premiumDetails;
+    const principleName = detailText(details, "principle_name", "principleName", "animal_power", "animalPower");
+
+    return {
+        name: capture.animalName,
+        scientificName: text(capture.scientificName),
+        summary: detailText(details, "species_spotlight", "species_subtitle_story", "speciesSubtitleStory", "summary", "overview"),
+        identification: detailList(details, "signature_traits", "signatureTraits"),
+        habitat: detailText(details, "typical_habitat", "typicalHabitat"),
+        diet: detailText(details, "diet_summary", "dietSummary"),
+        predators: detailText(details, "predators_summary", "predatorsSummary"),
+        sleepPattern: detailText(details, "sleep_pattern", "sleepPattern"),
+        lifespan: detailText(details, "lifespan_estimate", "lifespanEstimate"),
+        sexDifference: detailText(details, "sex_difference_notes", "sexDifferenceNotes"),
+        interestingFacts: detailList(details, "interesting_facts", "interestingFacts"),
+        power: principleName
+            ? {
+                principleName,
+                principleExpression: detailText(details, "principle_expression", "principleExpression"),
+                coreLesson: detailText(details, "core_lesson", "coreLesson", "lesson"),
+                shortMotto: detailText(details, "short_motto", "shortMotto", "motto"),
+                corePattern: null,
+                biologicalBasis: detailText(details, "biological_basis", "biologicalBasis"),
+                applicationExample: detailText(details, "application_example", "applicationExample"),
+                behavioralEvidence: [],
+                powerContinuum: null,
+                embodimentPractices: [],
+                reflectionQuestions: [],
+                relatedPowers: []
+            }
+            : null
+    };
+}
+
+/**
+ * The one animal a species-scope subject is about: the catalogue's row, with
+ * the reader's own capture filling what it lacks. Shared by the answer and by
+ * the drawer's opening suggestions, so both are about the same animal.
+ */
+export async function buildAskSubjectGrounding(subject: AskSubject): Promise<AskSpeciesGrounding | null> {
+    if (subject.scope !== "species" || !subject.slug) return null;
+
+    const [species, capture] = await Promise.all([
+        buildAskSpeciesGrounding(subject.slug),
+        buildAskCaptureGrounding(subject.captureId)
+    ]);
+
+    return mergeCaptureGrounding(species, capture, subject.slug);
+}
+
 /** Suggestion and waiting-line material, derived from the same grounding. */
 export function buildAskHints(species: AskSpeciesGrounding | null): AskHints {
     if (!species) return EMPTY_ASK_HINTS;
@@ -267,7 +357,7 @@ export async function buildAskPacket(params: {
     const {subject, question} = params;
 
     if (subject.scope === "species" && subject.slug) {
-        const species = await buildAskSpeciesGrounding(subject.slug);
+        const species = await buildAskSubjectGrounding(subject);
         if (species) {
             return {
                 scope: "species",

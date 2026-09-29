@@ -63,6 +63,7 @@ const GROUNDING_RULES_SPECIES = [
     "- Biology: treat supplied observations/functions as factual claims; do not invent contradictory animal behavior.",
     "- AnimalDex interpretation: the mapping from biology to human pattern is AnimalDex's interpretation, not scientific proof.",
     "- Human application: contextualize the fixed pattern to the user's situation with concrete, safe actions.",
+    "- Wild Profile: when supplied, personalize application to the user's stated Origin/Apex/Active animals.",
     "- system_dynamics is the same content the reader can open on this animal's System Dynamics card. When the question touches",
     "  the animal's operating states, frequency, triggers, thresholds, failure modes, or where the pattern appears in other",
     "  domains, answer FROM that content and reuse its exact state names, domain equivalents and failure-mode titles.",

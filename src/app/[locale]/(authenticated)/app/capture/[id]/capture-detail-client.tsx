@@ -13,10 +13,19 @@ import AnimalDetailTabBar, {type AnimalDetailTab} from "@/components/animal-deta
 import AnimalStoryCard, {type AnimalStoryPrinciple} from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
-import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
+import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
+import EarnPowerSection from "@/components/animal-detail/animal-powers/earn-power-section";
+import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
+import {useAnimalPower, usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
+import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
+import {CaptureContinuationBar, NewSpeciesCard, RewardShowcase} from "@/components/animal-detail/capture-reveal/capture-reveal";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
+import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
+import {allChallengersPowerLocked} from "@/lib/animal-powers";
+import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
+import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
 
 export type CaptureDetailViewer = {
     userId: string | null;
@@ -29,8 +38,18 @@ type CaptureDetailClientProps = {
     /** Community photographer when the card is not the viewer's (iOS `AnimalDetailRoute.spotter`). */
     spotter: DiscoverCollectorRef | null;
     mediaAssets: DiscoverMediaAsset[];
+    /** Whether the owner has marked this capture as one of their pets. Always false on somebody else's card. */
+    isMarkedAsPet?: boolean;
     /** Ranking cohort used for left/right paging across sibling captures. */
     cohort: {speciesProfileId: string | null; normalizedIdentityKey: string | null};
+    /**
+     * The species the Power, the Trials and System Dynamics are keyed by. Kept
+     * apart from the paging cohort, which only a public card carries — an owned
+     * card still has a species to learn from and earn against.
+     */
+    speciesProfileId: string | null;
+    /** What the Animal Power band is built from. Null when the species has no Power. */
+    powerProfile?: EnhancedAnimalPowerProfile | null;
     isChallengeAvailable: boolean;
     speciesSlug?: string | null;
     speciesName: string;
@@ -106,7 +125,10 @@ export default function CaptureDetailClient({
     viewer,
     spotter,
     mediaAssets,
+    isMarkedAsPet = false,
     cohort,
+    speciesProfileId,
+    powerProfile,
     isChallengeAvailable,
     speciesSlug,
     speciesName,
@@ -119,6 +141,41 @@ export default function CaptureDetailClient({
 }: CaptureDetailClientProps) {
     const router = useRouter();
     const [tab, setTab] = useState<AnimalDetailTab>("learn");
+    // The one earning destination for this screen. The Learn Power band's "Earn
+    // this Power" opens it; on close the earned state is re-read so a Power
+    // earned inside the sheet transforms the band without a reload.
+    const [showsEarnPowerSheet, setShowsEarnPowerSheet] = useState(false);
+    const animalPower = useAnimalPower(speciesProfileId);
+    // Set only when this card was opened by the capture flow that just made it.
+    // Claimed once, so reopening or reloading the card plays nothing again.
+    const [reveal, setReveal] = useState<CaptureReveal | null>(null);
+    const [showsRewards, setShowsRewards] = useState(false);
+
+    useEffect(() => {
+        if (!viewer.isOwner) return;
+        let storage: Storage | null = null;
+        try {
+            storage = window.sessionStorage;
+        } catch {
+            storage = null;
+        }
+        const claimed = claimCaptureReveal(storage, capture.id);
+        if (!claimed) return;
+        setReveal(claimed);
+        setShowsRewards(true);
+    }, [capture.id, viewer.isOwner]);
+
+    const rewardItems = useMemo(() => reveal ? captureRewardShowcase(
+        captureRewardBreakdown({
+            baseGameStats: capture.baseGameStats,
+            settingTag: capture.settingTag,
+            isEligibleCapture: capture.isEligibleCapture,
+            hasUncertaintyFallback: capture.hasUncertaintyFallback,
+            isNewSpecies: reveal.isNewSpecies
+        }),
+        reveal.awardedWildUniqueCredit
+    ) : [], [capture.baseGameStats, capture.hasUncertaintyFallback, capture.isEligibleCapture, capture.settingTag, reveal]);
+    const finishRewards = useCallback(() => setShowsRewards(false), []);
     const [cohortPage, setCohortPage] = useState<CohortPage>({ids: [capture.id], hasMore: false, nextOffset: null});
     const [isLoadingCohort, setIsLoadingCohort] = useState(false);
     const heroTouchStartRef = useRef<{x: number; y: number} | null>(null);
@@ -138,6 +195,41 @@ export default function CaptureDetailClient({
     const canInteract = isSignedIn && !viewer.isOwner;
     const canOffer = canInteract && !capture.hasUncertaintyFallback;
     const canCompare = canInteract && isChallengeAvailable;
+
+    // Comparison is gated on the ATTACKER. On somebody else's card the attacker
+    // is one of the VIEWER's animals, so the button is open only if at least one
+    // animal they could send has earned its Power (or has no Power to earn).
+    const viewerPlay = usePlayEligibility(canCompare);
+    const challengerIds = useMemo(
+        () => Object.values(viewerPlay.eligibility ?? {})
+            .filter((row) => !row.zooComparisonBanned && row.challengeHealth > 0)
+            .map((row) => row.captureId),
+        [viewerPlay.eligibility]
+    );
+    const compareLockedByPower = canCompare && allChallengersPowerLocked(challengerIds, viewerPlay.eligibility);
+    const isCheckingComparePower = canCompare && !viewerPlay.didAttempt;
+
+    // The Story card never carries the Power. There is exactly one Animal Power
+    // presentation on Learn — the band directly under the Story — and it is the
+    // same for everyone, Pro or not.
+    const resolvedPowerProfile = useMemo<EnhancedAnimalPowerProfile | null>(() => powerProfile ?? (
+        resolvedPrinciple && speciesProfileId ? {
+            speciesProfileId,
+            principleName: resolvedPrinciple.name,
+            principleExpression: resolvedPrinciple.expression ?? null,
+            coreLesson: resolvedPrinciple.coreLesson ?? null,
+            shortMotto: resolvedPrinciple.motto ?? null,
+            corePattern: null,
+            biologicalBasis: resolvedPrinciple.biologicalBasis ?? null,
+            applicationExample: resolvedPrinciple.applicationExample ?? null,
+            behavioralEvidence: [],
+            powerContinuum: null,
+            embodimentPractices: [],
+            reflectionQuestions: [],
+            relatedPowers: [],
+            availability: "legacy"
+        } : null
+    ), [powerProfile, resolvedPrinciple, speciesProfileId]);
 
     // iOS RankedAnimalDetailPagerView pages across the ranking cohort. The
     // sibling window is fetched after the first paint so the open stays cheap.
@@ -247,9 +339,12 @@ export default function CaptureDetailClient({
 
     const nextDisabled = currentIndex >= cohortPage.ids.length - 1 && !cohortPage.hasMore;
     const showsHeroCarousel = mediaAssets.length > 1 || mediaAssets.some((asset) => asset.kind !== "photo");
+    // The owner's card manages its media; anybody else's only shows it.
+    const canManageMedia = viewer.isOwner && mediaAssets.some((asset) => asset.mediaRowId);
+    const canMarkAsPet = viewer.isOwner && isEligibleToMarkAsPet(capture);
 
     return (
-        <div className="mx-auto w-full max-w-[88rem] pb-12">
+        <div className={`mx-auto w-full max-w-[88rem] ${reveal ? "pb-64" : "pb-12"}`}>
             {/* iOS toolbar: Done/close on the leading edge; the pager chrome sits at the bottom. */}
             <div className="mb-4 flex items-center justify-between gap-3">
                 <button
@@ -285,7 +380,16 @@ export default function CaptureDetailClient({
                     onTouchEnd={handleHeroTouchEnd}
                     className="relative aspect-[4/5] max-h-[48rem] overflow-hidden rounded-[2rem] border border-white/10 bg-black lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:aspect-auto"
                 >
-                    {showsHeroCarousel ? (
+                    {canManageMedia ? (
+                        <CaptureMediaManager
+                            captureId={capture.id}
+                            animalName={capture.animalName}
+                            assets={mediaAssets}
+                            isUncertain={capture.hasUncertaintyFallback}
+                            isMarkedAsPet={isMarkedAsPet}
+                            canMarkAsPet={canMarkAsPet}
+                        />
+                    ) : showsHeroCarousel ? (
                         <div className="absolute inset-0">
                             <MediaCarousel assets={mediaAssets} animalName={capture.animalName} isUncertain={capture.hasUncertaintyFallback} layout="hero" />
                         </div>
@@ -336,27 +440,33 @@ export default function CaptureDetailClient({
                             <AnimalStoryCard
                                 contentKey={`${capture.id}:${resolvedSpeciesSlug}`}
                                 story={story ?? fallbackStory}
-                                principle={resolvedPrinciple}
+                                principle={resolvedPowerProfile ? null : resolvedPrinciple}
                                 settingTag={capture.settingTag}
                             />
                         </div>
-                        {rankings ? <div className="mt-5">{rankings}</div> : null}
-                        {spotter ? <div className="mt-5"><SpottedByRow spotter={spotter} /></div> : null}
-                        <div className="mt-5">
-                            <CaptureMetadataBand
-                                captureId={capture.id}
-                                capturedAt={capture.createdAt}
-                                locationLabel={capture.locationLabel}
-                                locationHref={capture.locationLat != null && capture.locationLng != null
-                                    ? `https://www.google.com/maps/search/?api=1&query=${capture.locationLat},${capture.locationLng}`
-                                    : null}
-                            />
-                            {nativeRange ? <div className="-mx-5">{nativeRange}</div> : null}
-                        </div>
+                        {/* Capture notices stay with the identity they are about,
+                            above the Learn bands. */}
+                        {reveal?.isNewSpecies ? (
+                            <div className="-mx-5">
+                                <NewSpeciesCard animalName={capture.animalName} settingTag={capture.settingTag} />
+                            </div>
+                        ) : null}
+                        {/* LEARN BANDS — Animal Power first, directly under the
+                            Story, then System Dynamics. One continuous read. */}
+                        {resolvedPowerProfile && !capture.hasUncertaintyFallback ? (
+                            <div className="-mx-5">
+                                <AnimalPowerBand
+                                    profile={resolvedPowerProfile}
+                                    power={animalPower.power}
+                                    onEarnPower={speciesProfileId ? () => setShowsEarnPowerSheet(true) : null}
+                                />
+                            </div>
+                        ) : null}
                         <div className="mt-5">
                             <SystemDynamicsSection
-                                speciesProfileId={cohort.speciesProfileId}
+                                speciesProfileId={speciesProfileId}
                                 animalName={speciesName}
+                                defersHeadlineToAnimalPower={Boolean(resolvedPowerProfile)}
                             />
                         </div>
                     </div>
@@ -381,6 +491,22 @@ export default function CaptureDetailClient({
                             />
                         ) : null}
                         {capture.isDiscoverable ? <CaptureGiftsPanel captureId={capture.id} canSend={canInteract} /> : null}
+                        {/* Ranked captures and the capture's own details close the
+                            Stats tab. They are about this capture, not about what
+                            the animal teaches, so they draw nothing on Learn. */}
+                        {rankings ? <div className="mt-5">{rankings}</div> : null}
+                        {spotter ? <div className="mt-5"><SpottedByRow spotter={spotter} /></div> : null}
+                        <div className="mt-5">
+                            <CaptureMetadataBand
+                                captureId={capture.id}
+                                capturedAt={capture.createdAt}
+                                locationLabel={capture.locationLabel}
+                                locationHref={capture.locationLat != null && capture.locationLng != null
+                                    ? `https://www.google.com/maps/search/?api=1&query=${capture.locationLat},${capture.locationLng}`
+                                    : null}
+                            />
+                            {nativeRange ? <div className="-mx-5">{nativeRange}</div> : null}
+                        </div>
                     </div>
 
                     <div
@@ -389,8 +515,16 @@ export default function CaptureDetailClient({
                         hidden={tab !== "play"}
                         className={tab === "play" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
+                        {/* One mount. `EarnPowerSection` owns the choice between the
+                            two routes and shows the Trials as the Trial arm of it. */}
                         <div className="-mx-5 mb-5">
-                            <AnimalTrialsSection speciesProfileId={cohort.speciesProfileId} />
+                            <EarnPowerSection
+                                speciesProfileId={speciesProfileId}
+                                power={animalPower.power}
+                                didLoad={animalPower.didLoad}
+                                onReload={animalPower.reload}
+                                isViewersOwnAnimal={viewer.isOwner}
+                            />
                         </div>
                         {play}
                         {!viewer.isOwner ? (
@@ -401,6 +535,8 @@ export default function CaptureDetailClient({
                                 <p className="mt-1 text-xs leading-5 text-white/55">
                                     {capture.isZooComparisonBanned
                                         ? "Zoo captures can't be compared."
+                                        : compareLockedByPower
+                                            ? "Comparison opens when one of your animals has earned its Power."
                                         : isChallengeAvailable
                                             ? `${capture.challengeHealth} of 3 hearts left · stake ${capture.challengeStake} credits`
                                             : "This animal isn't accepting comparisons right now."}
@@ -408,13 +544,31 @@ export default function CaptureDetailClient({
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     {isSignedIn ? (
                                         <>
-                                            <Link
-                                                href={canCompare ? `/app/matchups?target=${encodeURIComponent(capture.id)}` : "/app/matchups"}
-                                                aria-disabled={!canCompare}
-                                                className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black ${canCompare ? "bg-primary-400 text-black" : "pointer-events-none bg-white/10 text-white/35"}`}
-                                            >
-                                                <AppIcon name="arena" /> Compare
-                                            </Link>
+                                            {compareLockedByPower ? (
+                                                // Locked, and still a way forward: it opens
+                                                // the picker, where each of the viewer's
+                                                // animals names the Power it needs and leads
+                                                // to the earning sheet for it.
+                                                <Link
+                                                    href={`/app/matchups?target=${encodeURIComponent(capture.id)}`}
+                                                    aria-label="Compare, locked. Earn a Power with one of your animals first."
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white/70"
+                                                >
+                                                    <span aria-hidden="true">🔒</span>
+                                                    <span className="flex flex-col leading-tight">
+                                                        <span>Compare</span>
+                                                        <span className="text-[10px] font-semibold text-white/45">Earn a Power with one of your animals first</span>
+                                                    </span>
+                                                </Link>
+                                            ) : (
+                                                <Link
+                                                    href={canCompare ? `/app/matchups?target=${encodeURIComponent(capture.id)}` : "/app/matchups"}
+                                                    aria-disabled={!canCompare || isCheckingComparePower}
+                                                    className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black ${canCompare && !isCheckingComparePower ? "bg-primary-400 text-black" : "pointer-events-none bg-white/10 text-white/35"}`}
+                                                >
+                                                    <AppIcon name="arena" /> {isCheckingComparePower ? "Checking your animals…" : "Compare"}
+                                                </Link>
+                                            )}
                                             {canOffer ? (
                                                 <Link href={`/app/trades?theirCapture=${encodeURIComponent(capture.id)}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white">
                                                     <AppIcon name="trade" /> Offer
@@ -432,6 +586,22 @@ export default function CaptureDetailClient({
                     </div>
                 </section>
             </div>
+
+            {reveal && showsRewards && rewardItems.length ? (
+                <RewardShowcase items={rewardItems} onFinished={finishRewards} />
+            ) : null}
+            {reveal ? <CaptureContinuationBar /> : null}
+
+            {showsEarnPowerSheet ? (
+                <EarnPowerSheet
+                    speciesProfileId={speciesProfileId}
+                    animalName={speciesName}
+                    onClose={() => {
+                        setShowsEarnPowerSheet(false);
+                        void animalPower.reload();
+                    }}
+                />
+            ) : null}
 
             {showsPager ? (
                 // iOS `rankedPagerChrome`: ‹ n / N › pinned above the tab bar.

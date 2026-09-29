@@ -76,12 +76,25 @@ export default function SystemDynamicsPanel({
      * guide itself never mounts because the payload carries no interpretation.
      */
     locked = false,
-    lockedAction
+    lockedAction,
+    /**
+     * True when an Animal Power band already owns the principle name on this
+     * screen.
+     *
+     * PRESENTATION ONLY — no data semantics change, and LOW/MID/HIGH doctrine is
+     * untouched. `displayHeadline` is the canonical principle name, which is
+     * exactly what the Power band prints in large type directly above this
+     * card; two identical headlines made the two sections look like duplicates
+     * of each other. When this is set the card leads with the MECHANISM
+     * instead — how this species biologically expresses the pattern.
+     */
+    defersHeadlineToAnimalPower = false
 }: {
     dynamics: SpeciesSystemDynamics;
     animalName: string;
     locked?: boolean;
     lockedAction?: ReactNode;
+    defersHeadlineToAnimalPower?: boolean;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [showsFullExplanation, setShowsFullExplanation] = useState(false);
@@ -105,6 +118,11 @@ export default function SystemDynamicsPanel({
         </>
     );
 
+    // The mechanism only earns a second line when it is not already the headline.
+    const summaryIdentity = defersHeadlineToAnimalPower && mechanism
+        ? <p className="text-base font-bold leading-snug text-white">{mechanism}</p>
+        : identity;
+
     const card = (open: (() => void) | null) => {
         const Wrapper = open ? "button" : "div";
         return (
@@ -119,7 +137,7 @@ export default function SystemDynamicsPanel({
                     <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/40">{behaviorTag}</span>
                 </div>
 
-                <div className="flex flex-col gap-0.5">{identity}</div>
+                <div className="flex flex-col gap-0.5">{summaryIdentity}</div>
 
                 <SystemStateRow signature={signature} profile={dynamics.frequencyProfile} style="compact" />
                 <SystemWaveform signature={signature} fallbackWaveform={dynamics.waveform} style="compact" />
@@ -128,7 +146,9 @@ export default function SystemDynamicsPanel({
 
                 {open ? (
                     <span className="inline-flex items-center gap-1.5 pt-1 text-xs font-semibold" style={{color: ACCENT}}>
-                        Explore System Dynamics <span aria-hidden="true">›</span>
+                        {/* Shorter when the Power band owns the headline: the card
+                            is already labelled SYSTEM DYNAMICS. */}
+                        {defersHeadlineToAnimalPower ? "Explore the pattern" : "Explore System Dynamics"} <span aria-hidden="true">›</span>
                     </span>
                 ) : null}
             </Wrapper>

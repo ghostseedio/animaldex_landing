@@ -24,6 +24,8 @@ import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askThreadKey, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
+import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
+import {getLocalePath} from "@/lib/site";
 import {
     askSuggestions,
     EMPTY_ASK_HINTS,
@@ -49,6 +51,8 @@ export type AskDrawerLabels = {
     close: string;
     newConversation: string;
     clearConfirm: string;
+    clearConfirmBodyAnimal: string;
+    clearConfirmBodyGeneral: string;
     clearConfirmAction: string;
     clearCancel: string;
     copy: string;
@@ -73,6 +77,7 @@ type AskContextPayload = {
     limit: number;
     signedIn: boolean;
     isPro: boolean;
+    hasWildProfile?: boolean;
     available: boolean;
 };
 
@@ -94,6 +99,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         subject: resolvedSubject,
         locale,
         principleName: hints.principleName,
+        viewer: {signedIn: context?.signedIn ?? false, hasWildProfile: context?.hasWildProfile ?? false},
         onAnswered: ({followUps}) => {
             trackEvent(SPECIES_ASK_FUNNEL_EVENTS.answered, {
                 species_slug: resolvedSubject.slug ?? "",
@@ -197,6 +203,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
 
     const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
         if (!question.trim() || isSending) return;
+        // The one chip that is a destination rather than a question: it opens
+        // the questionnaire instead of asking the model about it.
+        if (source === "followup" && isWildProfileFollowUp(question)) {
+            close();
+            window.location.assign(getLocalePath(locale, WILD_PROFILE_PATH));
+            return;
+        }
         trackEvent(
             source === "followup"
                 ? SPECIES_ASK_FUNNEL_EVENTS.followupClicked
@@ -207,7 +220,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         );
         setComposer("");
         void send(question);
-    }, [isSending, resolvedSubject.slug, send]);
+    }, [close, isSending, locale, resolvedSubject.slug, send]);
 
     const animalName = hints.animalName ?? resolvedSubject.name ?? null;
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
@@ -292,7 +305,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
 
                 {confirmingClear ? (
                     <div className="shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-3">
-                        <p className="text-sm text-ink-100">{labels.clearConfirm}</p>
+                        <p className="text-sm font-semibold text-ink-100">{labels.clearConfirm}</p>
+                        <p className="mt-1 text-xs leading-5 text-ink-300">
+                            {animalName
+                                ? labels.clearConfirmBodyAnimal.replace("{animal}", animalName)
+                                : labels.clearConfirmBodyGeneral}
+                        </p>
                         <div className="mt-2.5 flex gap-2">
                             <button
                                 type="button"
@@ -363,7 +381,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     photoAlt={animalName ?? ""}
                                     thinkingPhases={askThinkingPhases(
                                         lastQuestion(messages),
-                                        hints
+                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false}
                                     )}
                                     copied={copiedId === message.id}
                                     questionRef={message.id === trailingQuestionId ? trailingQuestionRef : undefined}

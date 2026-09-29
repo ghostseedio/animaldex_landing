@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 function friendlyFusionError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error ?? "");
 
+    if (message.includes("animal_power_required")) return "Earn this animal's Power to unlock Fusion for it.";
     if (message.includes("same_capture")) return "Choose a different animal as the teacher.";
     if (message.includes("insufficient_credits")) return "You do not have enough credits for this fusion.";
     if (message.includes("learned_sub_principle_exists")) return "This animal already learned that sub-principle.";

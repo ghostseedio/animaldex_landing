@@ -218,6 +218,8 @@ export function MediaCarousel({
   isUncertain = false,
   layout = "standard",
   onActiveAssetChange,
+  focusRequest = null,
+  onBrowseAll,
 }: {
   assets: DiscoverMediaAsset[];
   animalName: string;
@@ -225,6 +227,16 @@ export function MediaCarousel({
   /** `feed` and `hero` fill their parent; `standard` is a 16:10 card strip. */
   layout?: "standard" | "feed" | "hero";
   onActiveAssetChange?: (asset: DiscoverMediaAsset | null) => void;
+  /**
+   * Opens the carousel on one asset. The nonce makes a repeat request for the
+   * same asset count as a new one.
+   */
+  focusRequest?: {assetId: string; nonce: number} | null;
+  /**
+   * When set, the page indicator is a button that opens the media browser, as
+   * on iOS: dots up to eight items, a counter with a grid above that.
+   */
+  onBrowseAll?: (index: number) => void;
 }) {
   const media = useMemo(() => assets.length ? assets : [], [assets]);
   const videoSourceById = useMemo(() => new Map(media.map((asset) => [asset.id, asset.url])), [media]);
@@ -242,6 +254,18 @@ export function MediaCarousel({
   useEffect(() => {
     onActiveAssetChange?.(media[activeSlideIndex] ?? media[0] ?? null);
   }, [activeSlideIndex, media, onActiveAssetChange]);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const scroller = scrollerRef.current;
+    const index = media.findIndex((asset) => asset.id === focusRequest.assetId);
+    if (!scroller || index < 0) return;
+    scroller.scrollTo({left: index * scroller.clientWidth, behavior: "auto"});
+    setActiveSlideIndex(index);
+  // Keyed on the request, not on `media`: a refreshed asset list must not
+  // drag the carousel back to a page somebody has since swiped away from.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest?.assetId, focusRequest?.nonce]);
 
   useEffect(() => {
     setIsLowDataMode(readLowDataMode());
@@ -551,7 +575,7 @@ export function MediaCarousel({
                   <UncertainBadge />
                 </span>
               ) : null}
-              {media.length > 1 && !isFeedLayout ? (
+              {media.length > 1 && !isFeedLayout && !onBrowseAll ? (
                 <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[0.68rem] font-black text-white/90 ring-1 ring-white/10">
                   {index + 1} / {media.length}
                 </span>
@@ -560,7 +584,31 @@ export function MediaCarousel({
           );
         })}
       </div>
-      {media.length > 1 && !isFeedLayout ? (
+      {media.length > 1 && !isFeedLayout && onBrowseAll ? (
+        <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center">
+          <button
+            type="button"
+            onClick={() => onBrowseAll(activeSlideIndex)}
+            aria-label={`Browse all ${media.length} items`}
+            className="flex min-h-8 items-center gap-1.5 rounded-full bg-black/60 px-3 ring-1 ring-white/10"
+          >
+            {media.length <= 8 ? media.map((asset, index) => (
+              <span
+                key={`${asset.id}-dot`}
+                className={`h-1.5 rounded-full ${index === activeSlideIndex ? "w-4 bg-white/80" : "w-1.5 bg-white/35"}`}
+              />
+            )) : (
+              <>
+                <span className="text-[0.68rem] font-black text-white/90">{activeSlideIndex + 1} / {media.length}</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3 fill-white/80">
+                  <rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" />
+                  <rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" />
+                </svg>
+              </>
+            )}
+          </button>
+        </div>
+      ) : media.length > 1 && !isFeedLayout ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
           {media.map((asset, index) => (
             <span

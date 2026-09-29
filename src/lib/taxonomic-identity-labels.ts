@@ -137,9 +137,72 @@ export function labelLooksLikeTaxonomicRankProse(raw: string | null | undefined)
     return taxonomicRankProseFallback(raw) !== null;
 }
 
+/**
+ * Words that mean a label is a sentence fragment, not a name. Mirrors
+ * `IDENTITY_PROSE_LEAD_TOKENS` in the shared `capture-identity-prose.ts`, the
+ * iOS `AnalysisResult.identityProseLeadTokens`, and `identity_label_has_prose_lead`
+ * in the database. Deliberately excludes real label leads like "Domestic" or
+ * "Common".
+ */
+const IDENTITY_PROSE_LEAD_TOKENS = new Set([
+    "a", "an", "n", "the", "this", "that", "it", "its", "is",
+    "clearly", "likely", "possibly", "probably", "appears", "looks",
+    "seems", "adult", "juvenile", "immature", "young",
+    "some", "several", "many"
+]);
+
+/**
+ * Leading prose that can be removed without guessing: an optional hedge, an
+ * optional whole-or-truncated article, an optional life stage.
+ */
+const REMOVABLE_IDENTITY_PROSE_PREFIX =
+    /^(?:(?:clearly|apparently|evidently|likely|possibly|probably|maybe)\s+)?(?:(?:n|a|an|the)\s+)?(?:(?:adult|juvenile|immature|young|sub-?adult)\s+)?/i;
+
+/** Generic domestic phrasing that is a description, never a taxon title. */
+const GENERIC_DOMESTIC_PHRASE = /^(?:domestic|domesticated)\s+(?:varieties|variety|breeds?|bird|animal|form)$/i;
+
+/**
+ * True when a label opens like a sentence instead of naming an animal. Only the
+ * leading token is judged, so long or lowercase real catalog names ("minute
+ * pirate bug") pass.
+ */
+export function identityLabelHasProseLead(raw: string | null | undefined) {
+    const value = raw?.replace(/\s+/g, " ").trim();
+    if (!value) return false;
+    if (GENERIC_DOMESTIC_PHRASE.test(value)) return true;
+    const lead = value.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+    // Single-letter leads are never real taxon titles ("n adult …").
+    if (lead.length <= 1) return true;
+    return IDENTITY_PROSE_LEAD_TOKENS.has(lead);
+}
+
+/**
+ * Sentence leads from a refinement pass: "n adult Asian Arowana" (a truncated
+ * "an adult ..."), "clearly a Bactrian Camel". Reported 2026-09-27 as a live
+ * capture title. Stripping the lead leaves the name the fragment was wrapped
+ * around; a label with no prose lead is returned untouched.
+ */
+function strippedIdentityProseLead(value: string) {
+    if (!identityLabelHasProseLead(value)) return value;
+    const stripped = value.replace(REMOVABLE_IDENTITY_PROSE_PREFIX, "").trim();
+    return stripped || value;
+}
+
 /** Returns a display-safe identity label, swapping taxon prose for a common name. */
 export function sanitizedIdentityDisplayLabel(raw: string | null | undefined) {
     const trimmed = raw?.trim();
     if (!trimmed) return null;
-    return taxonomicRankProseFallback(trimmed) ?? trimmed;
+    return taxonomicRankProseFallback(trimmed) ?? strippedIdentityProseLead(trimmed);
+}
+
+/**
+ * Sanitizer for a *refinement* candidate (refined identity, breed guess,
+ * premium reviewed identity). Unlike the primary label, a refinement that is
+ * still prose after repair is dropped rather than shown, and the primary label
+ * stands.
+ */
+export function sanitizedRefinementDisplayLabel(raw: string | null | undefined) {
+    const value = sanitizedIdentityDisplayLabel(raw);
+    if (!value) return null;
+    return identityLabelHasProseLead(value) ? null : value;
 }

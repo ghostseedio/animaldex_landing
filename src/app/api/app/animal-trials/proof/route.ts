@@ -1,7 +1,13 @@
 import {NextResponse} from "next/server";
 import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {decodeAnimalTrial, sortTrials, verifierRefusalMessage} from "@/lib/animal-trials";
+import {
+    MAX_TEXT_PROOF_CHARACTERS,
+    MIN_TEXT_PROOF_CHARACTERS,
+    decodeAnimalTrial,
+    sortTrials,
+    verifierRefusalMessage
+} from "@/lib/animal-trials";
 
 export const runtime = "nodejs";
 
@@ -53,20 +59,36 @@ export async function POST(request: Request) {
     const frequency = String(form.get("frequency") ?? "").trim().toUpperCase();
     const proofType = String(form.get("proofType") ?? "photo").trim();
     const proof = form.get("proof");
+    const isText = proofType === "text";
+    const proofText = isText
+        ? String(form.get("proofText") ?? "").trim().slice(0, MAX_TEXT_PROOF_CHARACTERS)
+        : null;
 
     if (!speciesProfileId || !["LOW", "MID", "HIGH"].includes(frequency)) {
         return NextResponse.json({error: "A species profile id and frequency are required."}, {status: 400});
     }
 
-    if (!(proof instanceof File) || proof.size === 0) {
+    if (isText) {
+        // Too little written to check. Caught before the attempt is spent.
+        if (!proofText || proofText.length < MIN_TEXT_PROOF_CHARACTERS) {
+            return NextResponse.json(
+                {error: verifierRefusalMessage("proof_text_too_short"), code: "proof_text_too_short"},
+                {status: 400}
+            );
+        }
+    } else if (!(proof instanceof File) || proof.size === 0) {
         return NextResponse.json({error: "Evidence file is required."}, {status: 400});
     }
 
     const folder = proofFolder(user.id, speciesProfileId, frequency);
     const framePaths: string[] = [];
-    let proofPath: string;
+    // A written answer has no path: the words ARE the evidence, so nothing is
+    // written to the proofs bucket and nothing has to be cleaned up on a refusal.
+    let proofPath: string | null = null;
 
-    if (proofType === "video") {
+    if (isText) {
+        // No upload.
+    } else if (proofType === "video") {
         // Nothing server-side in this stack can decode video, so the sequence the
         // model judges is the one the browser assembled from the clip. It can
         // show a transformation — a tower standing, then down — and it cannot
@@ -94,10 +116,12 @@ export async function POST(request: Request) {
         proofPath = `${folder}/${crypto.randomUUID()}.jpg`;
     }
 
-    const uploadFailure = await upload(supabase, proofPath, proof);
+    if (proofPath && proof instanceof File) {
+        const uploadFailure = await upload(supabase, proofPath, proof);
 
-    if (uploadFailure) {
-        return NextResponse.json({error: uploadFailure}, {status: 400});
+        if (uploadFailure) {
+            return NextResponse.json({error: uploadFailure}, {status: 400});
+        }
     }
 
     const invoked = await invokeAuthenticatedSupabaseFunctionResponse("verify-animal-trial-proof", {
@@ -105,21 +129,13 @@ export async function POST(request: Request) {
         frequency,
         proof_path: proofPath,
         frame_paths: framePaths,
-        proof_type: proofType
+        proof_type: proofType,
+        proof_text: proofText
     });
 
-    if (!invoked.ok) {
-        // The body is the whole point: it names the refusal. Without it every
-        // refusal reaches the user as "try again in a moment", including the
-        // ones where trying again can never work.
-        const code = invoked.payload?.error || `http_${invoked.status}`;
-        return NextResponse.json(
-            {error: verifierRefusalMessage(code, invoked.payload?.message), code},
-            {status: 400}
-        );
-    }
-
-    // Re-read through the view so the caller gets the server's own post-verification state.
+    // Re-read through the view so the caller gets the server's own
+    // post-verification state. A refusal still moves the attempt budget, so the
+    // fresh row goes back on that path too.
     const {data} = await supabase
         .from("animal_trials_for_viewer_v1")
         .select()
@@ -130,15 +146,28 @@ export async function POST(request: Request) {
             .map(decodeAnimalTrial)
             .filter((trial): trial is NonNullable<typeof trial> => trial !== null)
     );
+    const trial = trials.find((item) => item.frequency === frequency) ?? null;
+
+    if (!invoked.ok) {
+        // The body is the whole point: it names the refusal. Without it every
+        // refusal reaches the user as "try again in a moment", including the
+        // ones where trying again can never work.
+        const code = invoked.payload?.error || `http_${invoked.status}`;
+        return NextResponse.json(
+            {error: verifierRefusalMessage(code, invoked.payload?.message), code, trials, trial},
+            {status: 400}
+        );
+    }
 
     return NextResponse.json({
         verification: {
             status: invoked.payload?.status ?? "needs_more_context",
             reason: invoked.payload?.reason ?? "Try again with clearer evidence.",
             rewardXP: invoked.payload?.reward_xp ?? 0,
-            framesUsed: invoked.payload?.frames_used ?? 0
+            framesUsed: invoked.payload?.frames_used ?? 0,
+            grantedPower: invoked.payload?.granted_power === true
         },
         trials,
-        trial: trials.find((item) => item.frequency === frequency) ?? null
+        trial
     });
 }

@@ -23,7 +23,15 @@ function readCursor(request: NextRequest): DiscoverTimelineCursor | null {
     const id = request.nextUrl.searchParams.get("cursorId");
 
     if (!date || !id || !Number.isFinite(rank)) return null;
-    return {date, sortRank: rank, id};
+    const afterCaptureId = request.nextUrl.searchParams.get("cursorCapture")?.trim() ?? "";
+    return {
+        date,
+        sortRank: rank,
+        id,
+        // Passed to a uuid parameter, so anything that is not one is dropped
+        // here rather than failing the whole page in the database.
+        ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(afterCaptureId) ? {afterCaptureId} : {})
+    };
 }
 
 export async function GET(request: NextRequest) {

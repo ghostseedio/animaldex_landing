@@ -4,7 +4,7 @@ import {
     resolveCanonicalIdentityKey,
     resolveCaptureVariantDisplay
 } from "@/lib/species-life-stage-policy";
-import {sanitizedIdentityDisplayLabel} from "@/lib/taxonomic-identity-labels";
+import {sanitizedIdentityDisplayLabel, sanitizedRefinementDisplayLabel} from "@/lib/taxonomic-identity-labels";
 
 type CaptureHeadlineInput = {
     animalName?: string | null;
@@ -140,7 +140,8 @@ function premiumReviewedIdentityGuess(input: CaptureHeadlineInput) {
     const premium = input.premiumDetails;
     if (!premium || typeof premium !== "object") return null;
 
-    const reviewedIdentity = clean(
+    // A refinement that is still prose after repair is dropped, not shown.
+    const reviewedIdentity = sanitizedRefinementDisplayLabel(
         typeof premium.reviewed_identity === "string"
             ? premium.reviewed_identity
             : typeof premium.reviewedIdentity === "string"
@@ -172,7 +173,8 @@ function premiumReviewedIdentityGuess(input: CaptureHeadlineInput) {
 }
 
 function refinedIdentityGuess(input: CaptureHeadlineInput) {
-    const breed = cleanIdentityName(input.refinedIdentity) ?? cleanIdentityName(input.breedGuess);
+    const breed = sanitizedRefinementDisplayLabel(input.refinedIdentity)
+        ?? sanitizedRefinementDisplayLabel(input.breedGuess);
     if (!breed) return null;
     if (isSameIdentity(breed, input.scientificName)) return null;
     if (refinedIdentityDisplayConfidence(input) < refinedIdentityDisplayThreshold(input)) return null;

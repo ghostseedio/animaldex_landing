@@ -6,6 +6,9 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {apexGrowthMatchTitle, apexGrowthPresentation} from "@/data/apex-growth";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
+import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
+import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
+import {gateIsLocked, powerGateAnalytics} from "@/lib/animal-powers";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
 type GrowthLabels = {
@@ -226,10 +229,20 @@ function PrincipleFusionModal({
     receiverName,
     receiverImageSrc,
     learnedCount,
+    receiverLocked,
+    onEarnPower,
     onSuccess
 }: {
     open: boolean;
     onClose: () => void;
+    /**
+     * The RECEIVER's Power gate. The donor is unaffected — it is material you
+     * already own, not the animal being enhanced. Shown only for `not_earned`:
+     * the two fail-open states let Fusion proceed and must never be dressed up
+     * as a lock the person could open.
+     */
+    receiverLocked: boolean;
+    onEarnPower: () => void;
     receiverCaptureId: string;
     donors: FusionDonorCapture[];
     fusionCost: number;
@@ -277,8 +290,10 @@ function PrincipleFusionModal({
 
     const selectedDonor = donors.find((donor) => donor.captureId === selectedDonorId) ?? null;
     const canAfford = creditBalance == null || creditBalance >= fusionCost;
-    const canSubmit = Boolean(selectedDonor?.principleName && canAfford && !isPending);
-    const disabledReason = !selectedDonor
+    const canSubmit = Boolean(!receiverLocked && selectedDonor?.principleName && canAfford && !isPending);
+    const disabledReason = receiverLocked
+        ? `Earn ${powerName} to unlock Fusion for this animal.`
+        : !selectedDonor
         ? "Choose a teacher first."
         : !selectedDonor.principleName
             ? "That teacher does not have an Animal Principle yet."
@@ -339,6 +354,23 @@ function PrincipleFusionModal({
                             <span className="rounded-full border border-white/15 bg-[#121212] px-2.5 py-1.5 text-[11px] font-semibold text-white/60">{learnedCount} learned</span>
                         </div>
                     </section>
+
+                    {receiverLocked && !result ? (
+                        // Locked Fusion, with the route out. Same destination as
+                        // a locked Comparison row: the real earning flow.
+                        <button
+                            type="button"
+                            onClick={onEarnPower}
+                            className="mt-4 flex w-full items-start gap-3 rounded-[18px] border border-[#A7F432]/30 bg-white/[0.04] p-3.5 text-left"
+                        >
+                            <span aria-hidden="true" className="w-[22px] text-center text-sm text-white/40">🔒</span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-semibold text-white">Fusion is locked</span>
+                                <span className="mt-0.5 block text-[10px] leading-4 text-white/60">Earn {powerName} to unlock Fusion for this animal.</span>
+                            </span>
+                            <span aria-hidden="true" className="text-[11px] font-bold text-[#A7F432]">›</span>
+                        </button>
+                    ) : null}
 
                     {error ? <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs font-medium leading-5 text-red-300">⚠ &nbsp; {error}</p> : null}
 
@@ -431,12 +463,29 @@ export default function SpeciesGrowthInteractive({
     const [isPending, startTransition] = useTransition();
     const [isComparisonPending, startComparisonTransition] = useTransition();
     const [clientSignedIn, setClientSignedIn] = useState(false);
+    // Comparison tools start folded. Opened state is per-visit, which is right:
+    // it is a detour, not a preference.
+    const [showsComparisonTools, setShowsComparisonTools] = useState(false);
+    const [showsEarnPower, setShowsEarnPower] = useState(false);
 
     useEffect(() => {
         setClientSignedIn(requestHasSupabaseAuthCookie(document.cookie));
     }, []);
 
     const treatAsSignedIn = growth.isAuthenticated || clientSignedIn;
+
+    // The receiver's Power gate. Null until the read lands, and a failed read
+    // leaves Fusion open under the existing rules — the server is the authority.
+    const play = usePlayEligibility(Boolean(growth.isAuthenticated && growth.primaryCaptureId));
+    const receiverPlay = growth.primaryCaptureId
+        ? play.eligibility?.[growth.primaryCaptureId.toLowerCase()] ?? null
+        : null;
+    const receiverLocked = Boolean(receiverPlay && gateIsLocked(receiverPlay.powerGateStatus));
+    const receiverSpeciesProfileId = receiverPlay?.canonicalSpeciesProfileId ?? null;
+
+    useEffect(() => {
+        if (fusionOpen && receiverLocked) powerGateAnalytics.lockedFusionImpression(receiverSpeciesProfileId);
+    }, [fusionOpen, receiverLocked, receiverSpeciesProfileId]);
 
     const presentation = growth.match ? apexGrowthPresentation(growth.match) : null;
     const powerName = growth.principle?.principle ?? speciesName;
@@ -723,7 +772,31 @@ export default function SpeciesGrowthInteractive({
                         </section>
                     ) : null}
 
-                    {growth.principle ? (
+                    {growth.principle && compareOnly ? (
+                        // Power Fusion as one row, for the foot of the Play tab.
+                        // The full card is the right shape on a surface about
+                        // Fusion and the wrong one here: on Play it was a third
+                        // hero card under a tab whose job is a single choice.
+                        // This keeps the entry point and the count, and lets the
+                        // sheet do the explaining.
+                        <button
+                            type="button"
+                            disabled={!canFuse}
+                            onClick={() => setFusionOpen(true)}
+                            className="-mx-5 flex items-center gap-3 border-y border-white/[0.08] px-5 py-4 text-left font-sans disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                            <span aria-hidden="true" className="w-6 text-center text-sm font-bold text-[#A7F432]">△</span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-semibold text-white">Fuse Powers</span>
+                                <span className={`mt-0.5 line-clamp-2 block text-[10px] leading-4 ${growth.learnedPrinciples.length > 0 ? "text-[#A7F432]" : "text-white/60"}`}>
+                                    {growth.learnedPrinciples.length > 0
+                                        ? `${growth.learnedPrinciples.length} extra lesson${growth.learnedPrinciples.length === 1 ? "" : "s"} learned`
+                                        : "Combine two animals to learn something neither teaches alone."}
+                                </span>
+                            </span>
+                            <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
+                        </button>
+                    ) : growth.principle ? (
                         <section
                             className="  border p-4 font-sans"
                             style={{
@@ -783,8 +856,45 @@ export default function SpeciesGrowthInteractive({
                 </>
             ) : null}
 
-            {comparison ? compareOnly ? (
-                <section className={`${growth.isAuthenticated && growth.hasCapture && growth.principle ? "mt-2" : "mt-0"} -mx-5 space-y-4 font-sans ${
+            {comparison && compareOnly ? (
+                // The comparison controls, folded into one quiet group. These are
+                // capture UTILITIES — hearts, battle availability, the stake —
+                // not the reason anybody opened the Play tab. Collapsing them is
+                // not hiding them: the summary row carries the state a person
+                // actually has to SEE, because empty hearts are the reason a
+                // comparison will not start.
+                <button
+                    type="button"
+                    onClick={() => setShowsComparisonTools((value) => !value)}
+                    aria-expanded={showsComparisonTools}
+                    aria-label={showsComparisonTools ? "Hide comparison tools" : "Show comparison tools"}
+                    className="-mx-5 flex min-h-11 items-center gap-2.5 px-5 py-3 text-left font-sans"
+                >
+                    <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Comparisons</span>
+                    <span className="ml-auto flex items-center gap-2">
+                        {isZooComparisonBanned ? (
+                            <span className="text-[10px] text-orange-300">Disabled for zoo animals</span>
+                        ) : (
+                            <>
+                                <span className={`flex gap-1 ${comparison.challengeHealth > 0 ? "text-[#A7F432]" : "text-orange-300"}`}>
+                                    {[0, 1, 2].map((index) => (
+                                        <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+                                        </svg>
+                                    ))}
+                                </span>
+                                {comparison.challengeHealth <= 0 ? (
+                                    <span className="text-[10px] font-bold text-orange-300">Empty</span>
+                                ) : null}
+                            </>
+                        )}
+                        <span aria-hidden="true" className="text-[10px] font-bold text-white/40">{showsComparisonTools ? "▴" : "▾"}</span>
+                    </span>
+                </button>
+            ) : null}
+
+            {comparison ? compareOnly ? !showsComparisonTools ? null : (
+                <section className={`mt-0 -mx-5 space-y-4 font-sans ${
                     wide ? "lg:mx-0 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0" : ""
                 }`}>
                     {isZooComparisonBanned ? (
@@ -1002,7 +1112,25 @@ export default function SpeciesGrowthInteractive({
                     receiverName={speciesName}
                     receiverImageSrc={growth.primaryCaptureImageSrc}
                     learnedCount={growth.learnedPrincipleCount}
+                    receiverLocked={receiverLocked}
+                    onEarnPower={() => {
+                        powerGateAnalytics.lockedFusionEarnTap(receiverSpeciesProfileId);
+                        setShowsEarnPower(true);
+                    }}
                     onSuccess={refresh}
+                />
+            ) : null}
+
+            {showsEarnPower ? (
+                <EarnPowerSheet
+                    speciesProfileId={receiverSpeciesProfileId}
+                    animalName={speciesName}
+                    onClose={() => {
+                        setShowsEarnPower(false);
+                        // Re-read: a Power earned in there unlocks Fusion here
+                        // without closing and reopening the sheet.
+                        void play.reload();
+                    }}
                 />
             ) : null}
         </div>

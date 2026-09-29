@@ -5,6 +5,7 @@ import {useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
 import SettingsActivityDrawer from "@/app/[locale]/(composited)/u/[handle]/settings-activity-drawer";
+import MyAnimalPowersSection from "@/components/animal-detail/animal-powers/my-animal-powers-section";
 import {
     AverageTraitsCard,
     BestForTagsChartCard,
@@ -750,6 +751,10 @@ export default function ProfileContent({
                         isWildScope={isWildInsightScope}
                         onToggleWildScope={setIsWildInsightScope}
                     />
+                    {/* What this person has been taught, above what they have
+                        found. Earned Powers are read for the signed-in viewer
+                        only, so this is the owner's own profile. */}
+                    {viewer.isOwner ? <MyAnimalPowersSection animalsMet={profile.speciesCount} /> : null}
                     <CompletedBindersSection
                         binders={binders}
                         href={viewer.isOwner ? `${localePrefix}/app/collection?segment=binders` : `${localePrefix}/app/collection`}

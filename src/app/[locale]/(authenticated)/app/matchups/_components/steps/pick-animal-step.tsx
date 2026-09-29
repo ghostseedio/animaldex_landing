@@ -2,10 +2,27 @@
 
 import type {MatchupOpponent, MatchupRosterCapture} from "@/data/matchups-types";
 import ChallengeHearts from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-hearts";
+import {type CapturePlayEligibilityMap, gateIsLocked} from "@/lib/animal-powers";
 import {allowsMatchup, tierRank} from "@/lib/matchup-stats";
 
-function eligibilityReason(capture: MatchupRosterCapture, opponent: MatchupOpponent) {
+function powerLock(capture: MatchupRosterCapture, eligibility: CapturePlayEligibilityMap | null) {
+    const gate = eligibility?.[capture.captureId.toLowerCase()];
+    return gate && gateIsLocked(gate.powerGateStatus) ? gate : null;
+}
+
+function eligibilityReason(
+    capture: MatchupRosterCapture,
+    opponent: MatchupOpponent,
+    eligibility: CapturePlayEligibilityMap | null
+) {
     if (capture.challengeHealth <= 0) return "Out of hearts";
+    // Its own reason, never folded into "Not eligible": an empty capture needs
+    // hearts, and this one needs a Power earned. Different problems, different
+    // fixes.
+    const gate = powerLock(capture, eligibility);
+    if (gate) {
+        return gate.principleName ? `Earn ${gate.principleName} to battle` : "Earn this animal's Power to battle";
+    }
     if (!capture.isChallengeReady) return "Not challenge-ready";
     if (!capture.isDiscoverable) return "Not public";
     if (!allowsMatchup(capture.battleTier, opponent.battleTier)) return "Tier mismatch";
@@ -17,16 +34,26 @@ export default function PickAnimalStep({
     opponent,
     roster,
     selectedCaptureId,
-    onSelect
+    eligibility = null,
+    onSelect,
+    onEarnPower
 }: {
     opponent: MatchupOpponent;
     roster: MatchupRosterCapture[];
     selectedCaptureId: string | null;
+    /**
+     * Bulk Power eligibility for the viewer's own captures. Null until it
+     * lands, which reads as "no Power lock" — the permissive default, so a slow
+     * request never hides a capture that is actually usable.
+     */
+    eligibility?: CapturePlayEligibilityMap | null;
     onSelect: (captureId: string) => void;
+    /** Opens the earning flow for a Power-locked capture, keeping the picker underneath. */
+    onEarnPower?: (capture: MatchupRosterCapture, speciesProfileId: string | null) => void;
 }) {
     const ranked = [...roster].sort((left, right) => {
-        const leftEligible = !eligibilityReason(left, opponent);
-        const rightEligible = !eligibilityReason(right, opponent);
+        const leftEligible = !eligibilityReason(left, opponent, eligibility);
+        const rightEligible = !eligibilityReason(right, opponent, eligibility);
         if (leftEligible !== rightEligible) return leftEligible ? -1 : 1;
 
         const leftDelta = Math.abs(tierRank(left.battleTier) - tierRank(opponent.battleTier));
@@ -40,8 +67,8 @@ export default function PickAnimalStep({
         return right.challengeHealth - left.challengeHealth;
     });
 
-    const eligible = ranked.filter((capture) => !eligibilityReason(capture, opponent));
-    const blocked = ranked.filter((capture) => eligibilityReason(capture, opponent));
+    const eligible = ranked.filter((capture) => !eligibilityReason(capture, opponent, eligibility));
+    const blocked = ranked.filter((capture) => eligibilityReason(capture, opponent, eligibility));
 
     return (
         <div className="space-y-5">
@@ -97,17 +124,38 @@ export default function PickAnimalStep({
             </div>
 
             {blocked.length ? (
-                <details className="rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-4 py-3">
+                <details
+                    open={blocked.some((capture) => capture.challengeHealth > 0 && powerLock(capture, eligibility)) || undefined}
+                    className="rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-4 py-3"
+                >
                     <summary className="cursor-pointer text-sm font-bold text-white/45">
                         {blocked.length} unavailable animal{blocked.length === 1 ? "" : "s"}
                     </summary>
                     <div className="mt-3 space-y-2">
-                        {blocked.map((capture) => (
-                            <div key={capture.captureId} className="flex items-center justify-between gap-3 text-sm text-white/35">
-                                <span className="truncate">{capture.animalName}</span>
-                                <span className="shrink-0 text-xs">{eligibilityReason(capture, opponent)}</span>
-                            </div>
-                        ))}
+                        {blocked.map((capture) => {
+                            const gate = capture.challengeHealth > 0 ? powerLock(capture, eligibility) : null;
+                            // A Power lock is the one blocked state with something
+                            // to DO about it, so it routes instead of doing
+                            // nothing. Every other reason stays inert as before.
+                            return gate && onEarnPower ? (
+                                <button
+                                    key={capture.captureId}
+                                    type="button"
+                                    onClick={() => onEarnPower(capture, gate.canonicalSpeciesProfileId)}
+                                    className="flex min-h-9 w-full items-center justify-between gap-3 text-left text-sm text-white/60"
+                                >
+                                    <span className="truncate">🔒 {capture.animalName}</span>
+                                    <span className="shrink-0 text-xs font-bold text-primary-300">
+                                        {eligibilityReason(capture, opponent, eligibility)} ›
+                                    </span>
+                                </button>
+                            ) : (
+                                <div key={capture.captureId} className="flex items-center justify-between gap-3 text-sm text-white/35">
+                                    <span className="truncate">{capture.animalName}</span>
+                                    <span className="shrink-0 text-xs">{eligibilityReason(capture, opponent, eligibility)}</span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </details>
             ) : null}

@@ -19,6 +19,43 @@ function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function metadataText(metadata: Record<string, unknown> | undefined, ...keys: string[]) {
+    for (const key of keys) {
+        const value = metadata?.[key];
+        if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return null;
+}
+
+/**
+ * Gives the account a usable display name and handle so no provider has to ask
+ * the user to type one. Never overwrites a value the user chose: the function
+ * no-ops once both fields are set.
+ *
+ * The sign-up trigger seeds most accounts, and deliberately leaves the rest —
+ * no name in the provider metadata, or only a private relay address — for this
+ * call. Without it a web-only account in that group stayed unnamed.
+ *
+ * Deliberately non-fatal: a profile row already exists at this point, so a
+ * failure here means a cosmetic default is missing, which must not be allowed
+ * to fail an otherwise successful sign-in.
+ */
+async function seedProfileIdentityIfNeeded(
+    supabase: SupabaseClient,
+    user: {id: string; email?: string | null; user_metadata?: Record<string, unknown>}
+) {
+    try {
+        const {error} = await supabase.rpc("ensure_profile_identity", {
+            p_user_id: user.id,
+            p_full_name: metadataText(user.user_metadata, "full_name", "name"),
+            p_email: user.email?.trim() || null
+        });
+        if (error) console.error("[auth-bootstrap] ensure_profile_identity failed; continuing sign-in", error.message);
+    } catch (error) {
+        console.error("[auth-bootstrap] ensure_profile_identity failed; continuing sign-in", error);
+    }
+}
+
 export async function ensureAuthenticatedProfileRows(supabase: SupabaseClient) {
     const {data: {user}, error: userError} = await supabase.auth.getUser();
 
@@ -31,6 +68,8 @@ export async function ensureAuthenticatedProfileRows(supabase: SupabaseClient) {
         const profileResult = await supabase
             .from("profiles")
             .upsert({id: user.id}, {onConflict: "id"});
+
+        if (!profileResult.error) await seedProfileIdentityIfNeeded(supabase, user);
 
         const creditResult = profileResult.error
             ? {error: null}

@@ -22,6 +22,8 @@ export type AskThinkingHints = {
     failureModes: string[];
     transition: {from: string; to: string} | null;
     hasDynamics: boolean;
+    /** The reader has a Wild Profile, so an application question is matched to it. */
+    hasWildProfile?: boolean;
 };
 
 export const EMPTY_ASK_THINKING_HINTS: AskThinkingHints = {
@@ -87,8 +89,8 @@ export function askThinkingPhases(question: string, hints: AskThinkingHints): st
         add("Lining it up against its contrasts…");
     }
 
-    if (matches(normalized, ["my life", "my work", "apply", "use this", "how do i", "should i"])) {
-        add("Working out how it applies to you…");
+    if (matches(normalized, ["my life", "my work", "apply", "use this", "how do i", "should i", "my "])) {
+        add(hints.hasWildProfile ? "Matching it to your Wild Profile…" : "Working out how it applies to you…");
     }
 
     if (matches(normalized, ["simple", "simply", "eli5", "explain", "what is", "what does", "mean"])) {

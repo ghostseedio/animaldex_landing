@@ -53,6 +53,8 @@ export default async function RootLayout(
         close: askT("close"),
         newConversation: askT("newConversation"),
         clearConfirm: askT("clearConfirm"),
+        clearConfirmBodyAnimal: askT("clearConfirmBodyAnimal"),
+        clearConfirmBodyGeneral: askT("clearConfirmBodyGeneral"),
         clearConfirmAction: askT("clearConfirmAction"),
         clearCancel: askT("clearCancel"),
         copy: askT("copy"),

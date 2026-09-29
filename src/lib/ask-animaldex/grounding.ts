@@ -92,6 +92,85 @@ export type AskSpeciesGrounding = {
     relatedLocations: Array<{slug: string; name: string}>;
 };
 
+/**
+ * What one capture's own analysis says about its animal: the field guide
+ * written for that sighting, which is what the card shows when the catalogue
+ * has nothing of its own.
+ */
+export type AskCaptureGrounding = {
+    name: string;
+    scientificName: string | null;
+    summary: string | null;
+    identification: string[];
+    habitat: string | null;
+    diet: string | null;
+    predators: string | null;
+    sleepPattern: string | null;
+    lifespan: string | null;
+    sexDifference: string | null;
+    interestingFacts: string[];
+    power: AskAnimalPower | null;
+};
+
+/**
+ * One animal's grounding for a reader who is looking at their own capture of
+ * it.
+ *
+ * The catalogue leads, because it is the content AnimalDex wrote and reviewed
+ * for the species. The capture fills what the catalogue leaves empty — and
+ * when the catalogue has no such species at all, the capture stands alone, so
+ * a question asked on that card is still answered about that animal instead of
+ * falling back to a general search.
+ */
+export function mergeCaptureGrounding(
+    species: AskSpeciesGrounding | null,
+    capture: AskCaptureGrounding | null,
+    fallbackSlug: string
+): AskSpeciesGrounding | null {
+    if (!capture) return species;
+
+    if (!species) {
+        return {
+            slug: fallbackSlug,
+            name: capture.name,
+            scientificName: capture.scientificName,
+            category: null,
+            summary: capture.summary,
+            identification: capture.identification,
+            habitat: capture.habitat,
+            nativeRange: null,
+            diet: capture.diet,
+            predators: capture.predators,
+            sleepPattern: capture.sleepPattern,
+            lifespan: capture.lifespan,
+            reproduction: null,
+            sexDifference: capture.sexDifference,
+            interestingFacts: capture.interestingFacts,
+            behaviorTraits: [],
+            spottingTips: [],
+            power: capture.power,
+            systemDynamics: null,
+            relatedSpecies: [],
+            relatedLocations: []
+        };
+    }
+
+    return {
+        ...species,
+        scientificName: species.scientificName ?? capture.scientificName,
+        summary: species.summary ?? capture.summary,
+        identification: species.identification.length ? species.identification : capture.identification,
+        habitat: species.habitat ?? capture.habitat,
+        diet: species.diet ?? capture.diet,
+        predators: species.predators ?? capture.predators,
+        sleepPattern: species.sleepPattern ?? capture.sleepPattern,
+        lifespan: species.lifespan ?? capture.lifespan,
+        sexDifference: species.sexDifference ?? capture.sexDifference,
+        interestingFacts: species.interestingFacts.length ? species.interestingFacts : capture.interestingFacts,
+        power: species.power ?? capture.power
+    };
+}
+
 /** What the reader is looking at, so pronouns resolve before a subject is assumed. */
 export type AskPageContext = {
     /** Route path, without locale prefix. */
@@ -113,6 +192,12 @@ export type AskGroundingPacket = {
     pageContext: AskPageContext | null;
     /** The reader's own photo of this animal exists, so the photo medium is offered. */
     hasReaderPhoto: boolean;
+    /**
+     * Present for a signed-in reader only, with a null summary when they have no
+     * Wild Profile. Absent for a signed-out one, who cannot have a profile and
+     * is not told to go and make one.
+     */
+    wildProfile?: {summary: string | null};
 };
 
 const SITE_CONTEXT = [
@@ -283,6 +368,11 @@ export function buildAskUserPrompt(params: {
             packet.hasReaderPhoto
                 ? "reader_photo: the reader has their own photo of this animal on screen"
                 : "reader_photo: none",
+            packet.wildProfile
+                ? packet.wildProfile.summary
+                    ? `wild_profile_summary:\n${packet.wildProfile.summary}`
+                    : "wild_profile_summary: not_set"
+                : "",
             pageLine,
             historyLine,
             "",
@@ -290,7 +380,10 @@ export function buildAskUserPrompt(params: {
             "Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when the question touches them.",
             "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover.",
             "Keep principle_name and core_pattern stable across follow-ups.",
-            "Use recent_conversation for pronouns and follow-up context, but never replace canonical animal grounding."
+            "Use recent_conversation for pronouns and follow-up context, but never replace canonical animal grounding.",
+            packet.wildProfile
+                ? "If the question asks for personal life application and wild_profile_summary is not_set, explain briefly that setting up Wild Profile helps AnimalDex tailor application — then still offer a general pattern-based answer."
+                : ""
         ].filter(Boolean).join("\n");
     }
 

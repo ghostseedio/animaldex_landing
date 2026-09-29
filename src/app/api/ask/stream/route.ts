@@ -15,6 +15,7 @@ import {NextResponse} from "next/server";
  */
 
 import {buildAskPacket} from "@/data/ask-grounding";
+import {getAskWildProfile} from "@/data/ask-wild-profile";
 import {
     ASK_RESPONSE_HEADERS,
     askLanguageName,
@@ -90,11 +91,46 @@ export async function POST(request: Request) {
 
     const subject = resolveAskSubject(body.subject);
     const history = resolveAskHistory(body.history);
-    const packet = await buildAskPacket({subject, question});
+    const [basePacket, wildProfile] = await Promise.all([
+        buildAskPacket({subject, question}),
+        getAskWildProfile(viewer.userId)
+    ]);
+    // A signed-in reader's Wild Profile personalises the answer. A signed-out
+    // one has none to have, so the packet says nothing about it either way.
+    const packet = viewer.signedIn
+        ? {...basePacket, wildProfile: {summary: wildProfile.summary}}
+        : basePacket;
     const languageName = askLanguageName(body.locale);
 
     const supportedVisuals = askSupportedVisuals(packet.hasReaderPhoto);
     const userPrompt = buildAskUserPrompt({userQuestion: question, packet, conversationHistory: history});
+    const closing = {
+        remaining: rate.remaining,
+        limit: rate.limit,
+        signed_in: viewer.signedIn,
+        is_pro: viewer.isPro,
+        has_wild_profile: wildProfile.hasWildProfile
+    };
+
+    // The one-piece answer, asked for by a client whose stream was cut off
+    // mid-answer. A different request shape, which often survives what killed
+    // the stream — a buffering proxy, an SSE-hostile network — and returns the
+    // whole answer or nothing, so the reader is never left with half of one.
+    if (body.mode === "complete") {
+        try {
+            const oneShot = await requestAskAnswerJSON({
+                systemPrompt: buildAskSystemPrompt({scope: packet.scope, supportedVisuals, languageName}),
+                userPrompt,
+                signal: request.signal
+            });
+            if (oneShot?.answer.trim()) {
+                return askJson({answer: oneShot.answer, follow_up_prompts: oneShot.followUps, ...closing});
+            }
+        } catch (error) {
+            console.error("[ask-animaldex] one-piece answer failed", error instanceof Error ? error.message.slice(0, 200) : "unknown");
+        }
+        return askJson({error: "unavailable"}, 503);
+    }
     const streamingSystemPrompt = buildAskStreamingSystemPrompt({
         scope: packet.scope,
         supportedVisuals,
@@ -134,14 +170,7 @@ export async function POST(request: Request) {
                 if (split.answer.length > emitted) {
                     send({delta: split.answer.slice(emitted)});
                 }
-                send({
-                    done: true,
-                    follow_up_prompts: split.followUps,
-                    remaining: rate.remaining,
-                    limit: rate.limit,
-                    signed_in: viewer.signedIn,
-                    is_pro: viewer.isPro
-                });
+                send({done: true, follow_up_prompts: split.followUps, ...closing});
             };
 
             const failures: string[] = [];
@@ -192,14 +221,7 @@ export async function POST(request: Request) {
                 });
                 if (oneShot) {
                     send({delta: oneShot.answer});
-                    send({
-                        done: true,
-                        follow_up_prompts: oneShot.followUps,
-                        remaining: rate.remaining,
-                        limit: rate.limit,
-                        signed_in: viewer.signedIn,
-                        is_pro: viewer.isPro
-                    });
+                    send({done: true, follow_up_prompts: oneShot.followUps, ...closing});
                     controller.close();
                     return;
                 }

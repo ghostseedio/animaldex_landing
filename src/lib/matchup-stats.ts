@@ -67,6 +67,9 @@ export function friendlyChallengeError(message: string) {
     if (raw.includes("pair_cooldown") || raw.includes("already ran this matchup")) {
         return "You already ran this matchup recently.";
     }
+    if (raw.includes("animal_power_required")) {
+        return "Earn this animal's Power to battle with it.";
+    }
     if (raw.includes("attacker_health_depleted")) {
         return "That animal is out of hearts. Restore it before comparing again.";
     }

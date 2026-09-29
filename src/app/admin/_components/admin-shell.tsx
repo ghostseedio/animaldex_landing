@@ -99,7 +99,7 @@ function SidebarBody({collapsed, activeHref, onNavigate}: {collapsed: boolean; a
             <div className="px-1 py-1">
                 <Brand collapsed={collapsed} />
             </div>
-            <div className="mt-5 min-h-0 flex-1 overflow-hidden">
+            <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-hidden">
                 <NavGroups collapsed={collapsed} activeHref={activeHref} onNavigate={onNavigate} />
             </div>
             <div className="mt-3 shrink-0 space-y-2 border-t border-line-300 pt-3">

@@ -11,6 +11,7 @@ import {getSpeciesBySlug} from "@/data/species";
 import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principles";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {coverFirstMediaOrder, timelineMediaOrder} from "@/lib/capture-media-order";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
 import {computeCaptureGradeBreakdown, shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
@@ -45,6 +46,14 @@ export type DiscoverMediaAsset = {
     mimeType: string | null;
     durationMs: number | null;
     sortOrder: number;
+    /**
+     * Set only on the owner's own card, where media can be managed: the
+     * `capture_images` row, whether the shot has its own analysis, and when it
+     * was added. A feed card carries none of them.
+     */
+    mediaRowId?: string;
+    hasIndependentAnalysis?: boolean;
+    createdAt?: string | null;
 };
 
 export type DiscoverCaptureItem = {
@@ -95,7 +104,13 @@ export type DiscoverCaptureItem = {
     typeTags: string[];
     collector: DiscoverCollectorRef;
     imageSrc: string;
+    /** Timeline order: moving media, then the newest extra photo, the analysis still last. */
     mediaAssets: DiscoverMediaAsset[];
+    /**
+     * Detail order, with the persisted cover as the first page. Present only
+     * when it differs from `mediaAssets`, which for most captures it does not.
+     */
+    coverFirstMediaAssets?: DiscoverMediaAsset[];
     href: string;
     scientificName: string | null;
     breedGuess: string | null;
@@ -238,6 +253,12 @@ export type DiscoverTimelineCursor = {
     date: string;
     sortRank: number;
     id: string;
+    /**
+     * The last capture already delivered. The capture feed is keyset-paged in
+     * the database from here, so a deep scroll reads the next captures instead
+     * of re-reading the newest ones and discarding them.
+     */
+    afterCaptureId?: string | null;
 };
 
 const PLACEHOLDER_IMAGE = "/images/placeholders/species-no-image.svg";
@@ -525,12 +546,6 @@ function mediaAssets(row: QueryRow) {
     return readObjectArray(row, "media_assets");
 }
 
-function mediaPriority(kind: DiscoverMediaAsset["kind"]) {
-    if (kind === "video") return 0;
-    if (kind === "loop") return 1;
-    return 2;
-}
-
 function mediaField(row: QueryRow, snakeKey: string, camelKey: string) {
     return row[snakeKey] ?? row[camelKey];
 }
@@ -563,22 +578,17 @@ function mediaAssetKey(row: QueryRow) {
     return `${typeof bucket === "string" ? bucket : ""}:${typeof path === "string" ? path : ""}`;
 }
 
-function sortMediaAssetRows(rows: QueryRow[]) {
-    return [...rows].sort((left, right) => {
-        const leftKind = normalizedMediaKind(mediaField(left, "media_kind", "mediaKind"));
-        const rightKind = normalizedMediaKind(mediaField(right, "media_kind", "mediaKind"));
-        const priorityDelta = mediaPriority(leftKind) - mediaPriority(rightKind);
-        if (priorityDelta !== 0) return priorityDelta;
-
-        const sortDelta = Number(mediaField(left, "sort_order", "sortOrder") ?? 0) - Number(mediaField(right, "sort_order", "sortOrder") ?? 0);
-        if (sortDelta !== 0) return sortDelta;
-
-        const leftCreated = parseDate(typeof mediaField(left, "created_at", "createdAt") === "string" ? mediaField(left, "created_at", "createdAt") as string : null);
-        const rightCreated = parseDate(typeof mediaField(right, "created_at", "createdAt") === "string" ? mediaField(right, "created_at", "createdAt") as string : null);
-        if (leftCreated !== rightCreated) return leftCreated - rightCreated;
-
-        return mediaAssetKey(left).localeCompare(mediaAssetKey(right));
-    });
+function orderableMediaRow(row: QueryRow) {
+    const created = mediaField(row, "created_at", "createdAt");
+    const createdAt = typeof created === "string" ? parseDate(created) : 0;
+    const sortOrder = Number(mediaField(row, "sort_order", "sortOrder") ?? 0);
+    return {
+        row,
+        id: mediaAssetKey(row),
+        kind: normalizedMediaKind(mediaField(row, "media_kind", "mediaKind")),
+        sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+        createdAt: createdAt > 0 ? createdAt : null
+    };
 }
 
 function toMediaAsset(captureId: string, row: QueryRow, analysisPhoto: QueryRow | null): DiscoverMediaAsset | null {
@@ -614,27 +624,47 @@ function toMediaAsset(captureId: string, row: QueryRow, analysisPhoto: QueryRow 
     };
 }
 
-function discoverMediaAssets(row: QueryRow, captureId: string): DiscoverMediaAsset[] {
-    const rows = sortMediaAssetRows(rawMediaAssetRows(row));
-    const analysisPhoto = rows.find((asset) => {
-        const kind = normalizedMediaKind(mediaField(asset, "media_kind", "mediaKind"));
-        const sortOrder = Number(mediaField(asset, "sort_order", "sortOrder") ?? 0);
-        return kind === "photo" && sortOrder === 0;
-    }) ?? rows.find((asset) => normalizedMediaKind(mediaField(asset, "media_kind", "mediaKind")) === "photo") ?? null;
+/**
+ * A capture's media in both orders iOS shows it in. The timeline order used to
+ * be persisted position ascending, which put the OLDEST photo first on a card
+ * whose whole reason for resurfacing was a newer one.
+ */
+function discoverMediaAssets(
+    row: QueryRow,
+    captureId: string
+): {timeline: DiscoverMediaAsset[]; coverFirst: DiscoverMediaAsset[] | null} {
+    const entries = rawMediaAssetRows(row).map(orderableMediaRow);
+    const analysisPhoto = (
+        entries.find((entry) => entry.kind === "photo" && entry.sortOrder === 0)
+        ?? entries.find((entry) => entry.kind === "photo")
+    )?.row ?? null;
 
-    const mapped = rows
-        .map((asset) => toMediaAsset(captureId, asset, analysisPhoto))
+    const toAssets = (ordered: typeof entries) => ordered
+        .map((entry) => toMediaAsset(captureId, entry.row, analysisPhoto))
         .filter((asset): asset is DiscoverMediaAsset => Boolean(asset));
 
-    return mapped.length ? mapped : [{
-        id: `${captureId}:fallback`,
-        kind: "photo",
-        url: resolveImageSrc(captureId),
-        posterUrl: null,
-        mimeType: null,
-        durationMs: null,
-        sortOrder: 0
-    }];
+    const timeline = toAssets(timelineMediaOrder(entries));
+
+    if (!timeline.length) {
+        return {
+            timeline: [{
+                id: `${captureId}:fallback`,
+                kind: "photo",
+                url: resolveImageSrc(captureId),
+                posterUrl: null,
+                mimeType: null,
+                durationMs: null,
+                sortOrder: 0
+            }],
+            coverFirst: null
+        };
+    }
+
+    const coverFirst = toAssets(coverFirstMediaOrder(entries));
+    const differs = coverFirst.length !== timeline.length
+        || coverFirst.some((asset, index) => asset.id !== timeline[index].id);
+
+    return {timeline, coverFirst: differs ? coverFirst : null};
 }
 
 function hasVideoMedia(row: QueryRow) {
@@ -916,7 +946,7 @@ function mapCaptureRow(
     const collector = collectorFromRow(row);
     const refreshedMedia = isMediaRefreshActivity(row);
     const learnedPrincipleName = primaryLearnedPrincipleName(row);
-    const media = discoverMediaAssets(row, captureId);
+    const {timeline: media, coverFirst: coverFirstMedia} = discoverMediaAssets(row, captureId);
     const premiumDetails = row.premium_details && typeof row.premium_details === "object" && !Array.isArray(row.premium_details)
         ? row.premium_details as Record<string, unknown>
         : null;
@@ -1023,6 +1053,7 @@ function mapCaptureRow(
         collector,
         imageSrc: media[0]?.posterUrl ?? media[0]?.url ?? resolveImageSrc(captureId),
         mediaAssets: media,
+        ...(coverFirstMedia ? {coverFirstMediaAssets: coverFirstMedia} : {}),
         href: resolveHref(slug, identityKey),
         scientificName: readString(row, "scientific_name"),
         breedGuess: readString(row, "breed_guess"),
@@ -1265,8 +1296,35 @@ export function buildDiscoverTimeline(
         .slice(0, limit);
 }
 
-function timelineCursorForItem(item: DiscoverTimelineItem): DiscoverTimelineCursor {
-    return {date: item.date, sortRank: item.sortRank, id: item.id};
+function timelineCursorForItem(item: DiscoverTimelineItem, afterCaptureId: string | null = null): DiscoverTimelineCursor {
+    return {date: item.date, sortRank: item.sortRank, id: item.id, ...(afterCaptureId ? {afterCaptureId} : {})};
+}
+
+/** The last capture in a delivered page, which is where the next capture page starts. */
+function lastDeliveredCaptureId(page: DiscoverTimelineItem[], previous: string | null) {
+    for (let index = page.length - 1; index >= 0; index -= 1) {
+        const item = page[index];
+        if (item.kind === "capture") return item.captureId;
+    }
+    return previous;
+}
+
+/**
+ * Activity cards the reader has not been shown. Each `*_unseen_*` view is its
+ * source view minus this viewer's ledger rows, with the same columns, so the
+ * source is a drop-in fallback if the unseen read fails.
+ */
+async function readUnseenActivity(
+    supabase: DiscoverSupabaseClient,
+    unseenView: string,
+    sourceView: string,
+    columns: string,
+    orderColumn: string,
+    limit: number
+) {
+    const unseen = await supabase.from(unseenView).select(columns).order(orderColumn, {ascending: false}).limit(limit);
+    if (!unseen.error) return unseen;
+    return supabase.from(sourceView).select(columns).order(orderColumn, {ascending: false}).limit(limit);
 }
 
 function itemIsAfterTimelineCursor(item: DiscoverTimelineItem, cursor: DiscoverTimelineCursor) {
@@ -1509,11 +1567,65 @@ async function hydrateDiscoverFeedMediaRows(supabase: DiscoverSupabaseClient, ro
         const captureId = readString(row, "capture_id");
         const hydrated = captureId ? mediaByCapture.get(captureId) : null;
         if (!hydrated || hydrated.length <= rawMediaAssetRows(row).length) return row;
-        return {...row, media_assets: sortMediaAssetRows(hydrated)};
+        // Order is decided where the assets are built, not here.
+        return {...row, media_assets: hydrated};
     });
 }
 
-async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: number) {
+/** `discover_feed_shuffled_v1` clamps its page to this. */
+const DISCOVER_FEED_RPC_MAX_LIMIT = 80;
+
+/**
+ * The signed-in reader's capture feed: newest first, with everything they have
+ * already scrolled past left out.
+ *
+ * `discover_feed_shuffled_v1` is the function iOS reads. Its name is history —
+ * since 20260905 it is a newest-first keyset page over `discover_feed_v1` that
+ * excludes the viewer's `discover_feed_seen` rows, and for a signed-out viewer
+ * it returns exactly what the view does. The seed is kept for its signature.
+ *
+ * Returns null when the call fails, and the caller falls back to the view: a
+ * feed that repeats a post is better than no feed.
+ */
+async function fetchUnseenDiscoverFeedRows(
+    supabase: DiscoverSupabaseClient,
+    limit: number,
+    afterCaptureId: string | null
+) {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const requestedLimit = Math.min(DISCOVER_FEED_RPC_MAX_LIMIT, Math.max(limit, 24));
+    const {data, error} = await supabase
+        .rpc("discover_feed_shuffled_v1", {
+            p_seed: "web",
+            p_limit: requestedLimit,
+            p_after_capture_id: afterCaptureId
+        })
+        .select(richFeedSelect);
+
+    if (error) {
+        if (process.env.NODE_ENV !== "production") {
+            logDevPerfEvent("discover.feed", "unseen rpc failed", {requestedLimit, error: error.message});
+        }
+        return null;
+    }
+
+    const rows = await hydrateDiscoverFeedMediaRows(supabase, (data ?? []) as unknown as QueryRow[]);
+    if (process.env.NODE_ENV !== "production") {
+        const totalMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+        logDevPerfEvent("discover.feed", "unseen rpc", {
+            requestedLimit,
+            keyset: Boolean(afterCaptureId),
+            rowCount: rows.length,
+            totalMs: Math.round(totalMs)
+        });
+    }
+    return rows;
+}
+
+async function fetchDiscoverFeedRows(supabase: DiscoverSupabaseClient, limit: number, afterCaptureId: string | null = null) {
+    const unseenRows = await fetchUnseenDiscoverFeedRows(supabase, limit, afterCaptureId);
+    if (unseenRows) return unseenRows;
+
     const requestedLimit = Math.max(limit, 24);
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     const richResult = await supabase
@@ -1581,8 +1693,11 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[], nextCursor: null as DiscoverTimelineCursor | null};
     }
 
-    const candidateLimit = cursor ? Math.max(120, limit * 8) : Math.max(limit + 1, 24);
-    const activityLimit = Math.max(12, Math.min(48, Math.ceil(candidateLimit / 2)));
+    const afterCaptureId = cursor?.afterCaptureId?.trim() || null;
+    // A keyset cursor reads the next captures directly. Without one, a cursor
+    // page still has to over-read from the top and filter.
+    const candidateLimit = cursor && !afterCaptureId ? Math.max(120, limit * 8) : Math.max(limit + 1, 24);
+    const activityLimit = Math.max(12, Math.min(48, Math.ceil(Math.max(candidateLimit, cursor ? 96 : 0) / 2)));
 
     const [
         feedRows,
@@ -1593,11 +1708,11 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         animalDexNumbers,
         behaviorPrinciples
     ] = await Promise.all([
-        fetchDiscoverFeedRows(supabase, candidateLimit),
-        supabase.from("discover_alignment_timeline_v1").select("*").order("completed_at", {ascending: false}).limit(activityLimit),
-        supabase.from("discover_principle_fusion_timeline_v1").select("*").order("created_at", {ascending: false}).limit(activityLimit),
-        supabase.from("discover_challenge_history_v2").select(discoverChallengeSelect).order("created_at", {ascending: false}).limit(activityLimit),
-        supabase.from("discover_trade_history_v1").select("id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind").order("completed_at", {ascending: false}).limit(activityLimit),
+        fetchDiscoverFeedRows(supabase, candidateLimit, afterCaptureId),
+        readUnseenActivity(supabase, "discover_alignment_timeline_unseen_v1", "discover_alignment_timeline_v1", "*", "completed_at", activityLimit),
+        readUnseenActivity(supabase, "discover_principle_fusion_timeline_unseen_v1", "discover_principle_fusion_timeline_v1", "*", "created_at", activityLimit),
+        readUnseenActivity(supabase, "discover_challenge_history_unseen_v2", "discover_challenge_history_v2", discoverChallengeSelect, "created_at", activityLimit),
+        readUnseenActivity(supabase, "discover_trade_history_unseen_v1", "discover_trade_history_v1", "id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind", "completed_at", activityLimit),
         buildAnimalDexNumberIndex(),
         getCatalogBehaviorPrincipleIndex()
     ]);
@@ -1607,7 +1722,11 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
     const challenges = ((challengeResult.data ?? []) as unknown as QueryRow[]).map(mapChallengeRow);
     const trades = ((tradeResult.data ?? []) as unknown as QueryRow[]).map(mapTradeRow);
-    const timeline = buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, candidateLimit);
+    // On a cursor page the activity lists are still read from the top, so the
+    // merge has to be wide enough to hold the ones the cursor will discard;
+    // otherwise they crowd the next captures out of the merged list.
+    const mergeLimit = cursor ? candidateLimit + activityLimit * 4 : candidateLimit;
+    const timeline = buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, mergeLimit);
     const filteredTimeline = cursor ? timeline.filter((item) => itemIsAfterTimelineCursor(item, cursor)) : timeline;
     const page = filteredTimeline.slice(0, limit);
 
@@ -1615,7 +1734,7 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         timeline: page,
         featured: buildDiscoverFeatured(captures),
         nextCursor: filteredTimeline.length > limit && page.length
-            ? timelineCursorForItem(page[page.length - 1])
+            ? timelineCursorForItem(page[page.length - 1], lastDeliveredCaptureId(page, afterCaptureId))
             : null
     };
 }
@@ -2015,3 +2134,73 @@ export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<Di
 }
 
 export type {ParsedDiscoverPostId};
+
+/**
+ * Every media row on a capture the signed-in person owns, in detail order.
+ *
+ * The owner's card has no public feed row to read media from — a private
+ * capture has none at all — so it used to open with a single image however many
+ * the capture held. Read with the viewer's own session, so row security decides
+ * what comes back; any failure returns nothing and the card falls back to its
+ * one primary image.
+ *
+ * Lives at the end of the file on purpose: the public single-post loaders
+ * above must never touch the signed-in client, and this is the one reader here
+ * that has to.
+ */
+export async function getOwnedCaptureMediaAssets(captureId: string): Promise<DiscoverMediaAsset[]> {
+    const normalizedCaptureId = captureId.trim();
+    if (!normalizedCaptureId) return [];
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+
+    const {data, error} = await supabase
+        .from("capture_images")
+        .select("capture_id,id,storage_bucket,storage_path,mime_type,media_kind,duration_ms,sort_order,created_at,poster_storage_bucket,poster_storage_path,observation_id")
+        .eq("capture_id", normalizedCaptureId);
+
+    if (error || !data?.length) return [];
+
+    const rows = data as unknown as QueryRow[];
+    const {timeline, coverFirst} = discoverMediaAssets(
+        {capture_id: normalizedCaptureId, media_assets: rows},
+        normalizedCaptureId
+    );
+    const rowsById = new Map(rows.map((row) => [mediaAssetKey(row), row]));
+
+    // What the owner needs in order to manage the media, which a feed card
+    // never carries.
+    return (coverFirst ?? timeline).map((asset) => {
+        const row = rowsById.get(asset.id);
+        const rowId = row ? readString(row, "id") : null;
+        if (!row || !rowId) return asset;
+        return {
+            ...asset,
+            mediaRowId: rowId,
+            hasIndependentAnalysis: Boolean(readString(row, "observation_id")),
+            createdAt: readString(row, "created_at")
+        };
+    });
+}
+
+/** Whether the signed-in owner has marked this capture as one of their pets. */
+export async function getOwnedCapturePetState(captureId: string): Promise<boolean> {
+    const normalizedCaptureId = captureId.trim();
+    if (!normalizedCaptureId) return false;
+
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return false;
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const {data, error} = await supabase
+        .from("profile_pets")
+        .select("capture_id")
+        .eq("user_id", user.id)
+        .eq("capture_id", normalizedCaptureId)
+        .limit(1);
+
+    return !error && Boolean(data?.length);
+}

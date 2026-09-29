@@ -28,7 +28,7 @@ import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
-import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
+import EarnPowerMount from "@/components/animal-detail/animal-powers/earn-power-mount";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
@@ -1180,7 +1180,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 play={(
                     <div className="flex flex-col gap-5">
                     <div className="-mx-5 lg:mx-0">
-                        <AnimalTrialsSection speciesProfileId={entry.speciesProfileId} />
+                        {/* One mount: the earn fork owns the choice between the
+                            two routes and shows the Trials as the Trial arm of it.
+                            A species page is about the species, so what earning
+                            unlocks is the reader's own captures of it. */}
+                        <EarnPowerMount speciesProfileId={entry.speciesProfileId} isViewersOwnAnimal={false} />
                     </div>
                     <SpeciesGrowthPanel
                         layout="wide"

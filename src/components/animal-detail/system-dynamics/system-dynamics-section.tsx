@@ -10,16 +10,20 @@ import SystemDynamicsPanel from "@/components/animal-detail/system-dynamics/syst
  * the owned capture card.
  *
  * The fetch is client-side because the public animal page is fully static
- * (`revalidate = false`), and because the Pro gate is per-viewer: the route
- * decides entitlement and a locked viewer never receives the prose. A species
- * with no generated row renders nothing at all, exactly as on iOS.
+ * (`revalidate = false`), and because the Pro gate is per-viewer. The SUMMARY
+ * card is core and everybody gets it; only the Explore destination it opens is
+ * Pro, so the route withholds that prose from a locked viewer. A species with
+ * no generated row renders nothing at all, exactly as on iOS.
  */
 export default function SystemDynamicsSection({
     speciesProfileId,
-    animalName
+    animalName,
+    defersHeadlineToAnimalPower = false
 }: {
     speciesProfileId: string | null | undefined;
     animalName: string;
+    /** Set where an Animal Power band sits directly above and already prints the principle name. */
+    defersHeadlineToAnimalPower?: boolean;
 }) {
     const [dynamics, setDynamics] = useState<SpeciesSystemDynamics | null>(null);
     const [isLocked, setIsLocked] = useState(false);
@@ -58,6 +62,7 @@ export default function SystemDynamicsSection({
             <SystemDynamicsPanel
                 dynamics={dynamics}
                 animalName={animalName}
+                defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
                 locked
                 lockedAction={(
                     <Link
@@ -74,5 +79,11 @@ export default function SystemDynamicsSection({
 
     if (!dynamics) return null;
 
-    return <SystemDynamicsPanel dynamics={dynamics} animalName={animalName} />;
+    return (
+        <SystemDynamicsPanel
+            dynamics={dynamics}
+            animalName={animalName}
+            defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
+        />
+    );
 }

@@ -11,7 +11,8 @@ import {NextResponse} from "next/server";
  * holds nothing until it asks, so it asks here.
  */
 
-import {buildAskHints, buildAskSpeciesGrounding} from "@/data/ask-grounding";
+import {buildAskHints, buildAskSubjectGrounding} from "@/data/ask-grounding";
+import {getAskWildProfile} from "@/data/ask-wild-profile";
 import {
     ASK_RESPONSE_HEADERS,
     resolveAskSubject,
@@ -35,9 +36,10 @@ export async function POST(request: Request) {
     const subject = resolveAskSubject(body.subject ?? body);
     const viewer = await resolveAskViewer(request);
 
-    const species = subject.scope === "species" && subject.slug
-        ? await buildAskSpeciesGrounding(subject.slug)
-        : null;
+    const [species, wildProfile] = await Promise.all([
+        buildAskSubjectGrounding(subject),
+        getAskWildProfile(viewer.userId)
+    ]);
     const hints = species ? buildAskHints(species) : EMPTY_ASK_HINTS;
 
     // A slug that resolves to nothing is a species page for an animal the
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
         limit: askLimitForViewer(viewer),
         signedIn: viewer.signedIn,
         isPro: viewer.isPro,
+        hasWildProfile: wildProfile.hasWildProfile,
         available: availableAskProviders().length > 0
     }, {headers: ASK_RESPONSE_HEADERS});
 }
