@@ -12,6 +12,7 @@ import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {contentThumb} from "@/data/content-thumbnails";
 import {localeConfig} from "@/i18n";
 import {getManagedPage} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
@@ -45,8 +46,8 @@ type SectionShellProps = {
 const visualProfiles = {
     scan: {
         eyebrow: "AI scanner guide",
-        heroImage: "/images/placeholders/feature-scan-overview.svg",
-        heroAlt: "AnimalDex scan workflow preview",
+        heroImage: contentThumb("answer-scan").src,
+        heroAlt: contentThumb("answer-scan").alt,
         companionImage: "/images/placeholders/phone-scan-card.svg",
         companionAlt: "AnimalDex phone scan card preview",
         toneClass: "from-primary-500/18 via-surface-800 to-canvas-900",
@@ -54,8 +55,8 @@ const visualProfiles = {
     },
     collection: {
         eyebrow: "Collection guide",
-        heroImage: "/images/placeholders/feature-collection-overview.svg",
-        heroAlt: "AnimalDex animal collection overview",
+        heroImage: contentThumb("answer-collection").src,
+        heroAlt: contentThumb("answer-collection").alt,
         companionImage: "/images/placeholders/phone-collection-card.svg",
         companionAlt: "AnimalDex collection card preview",
         toneClass: "from-amber-400/16 via-surface-800 to-canvas-900",
@@ -63,8 +64,8 @@ const visualProfiles = {
     },
     learning: {
         eyebrow: "Learning guide",
-        heroImage: "/images/placeholders/feature-discovery-overview.svg",
-        heroAlt: "AnimalDex learning and discovery overview",
+        heroImage: contentThumb("answer-learning").src,
+        heroAlt: contentThumb("answer-learning").alt,
         companionImage: "/images/placeholders/phone-guide-card.svg",
         companionAlt: "AnimalDex field guide card preview",
         toneClass: "from-sky-400/14 via-surface-800 to-canvas-900",
@@ -72,8 +73,8 @@ const visualProfiles = {
     },
     analysis: {
         eyebrow: "Analysis guide",
-        heroImage: "/images/placeholders/more-analysis.svg",
-        heroAlt: "AnimalDex analysis preview",
+        heroImage: contentThumb("answer-analysis").src,
+        heroAlt: contentThumb("answer-analysis").alt,
         companionImage: "/images/placeholders/phone-challenge-card.svg",
         companionAlt: "AnimalDex comparison card preview",
         toneClass: "from-fuchsia-400/14 via-surface-800 to-canvas-900",
@@ -81,8 +82,8 @@ const visualProfiles = {
     },
     discovery: {
         eyebrow: "Discovery guide",
-        heroImage: "/images/placeholders/more-discovery.svg",
-        heroAlt: "AnimalDex discovery overview",
+        heroImage: contentThumb("answer-discovery").src,
+        heroAlt: contentThumb("answer-discovery").alt,
         companionImage: "/images/placeholders/phone-discovery-card.svg",
         companionAlt: "AnimalDex discovery card preview",
         toneClass: "from-teal-400/14 via-surface-800 to-canvas-900",

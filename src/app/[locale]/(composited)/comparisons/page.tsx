@@ -21,6 +21,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {contentThumb} from "@/data/content-thumbnails";
 
 type ComparisonSort = "popular" | "newest" | "az";
 type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
@@ -233,9 +234,9 @@ export async function generateMetadata({params}: ComparisonsIndexPageProps): Pro
             title,
             description,
             url: getLocalePath(locale, "/comparisons"),
-            images: [{url: "/images/placeholders/more-challenges.svg", width: 1200, height: 675, alt: title}]
+            images: [{url: contentThumb("comparisons-hub").src, width: contentThumb("comparisons-hub").width, height: contentThumb("comparisons-hub").height, alt: contentThumb("comparisons-hub").alt}]
         },
-        twitter: {card: "summary_large_image", title, description, images: ["/images/placeholders/more-challenges.svg"]}
+        twitter: {card: "summary_large_image", title, description, images: [contentThumb("comparisons-hub").src]}
     };
 }
 

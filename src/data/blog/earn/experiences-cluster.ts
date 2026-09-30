@@ -1,5 +1,6 @@
 import {blogHrefs, earnPaths, supportArticleHrefs} from "@/data/earn-economy";
-import {earnBlogImage, earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
 
 const publishedAt = "2026-08-30";
@@ -13,10 +14,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "A herping tour should be observation, not a guaranteed snake. Here is how to read a local reptile guide listing before you book.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-guide.svg",
-            "Ethical herping walk focused on observation rather than handling"
-        ),
+        featuredImage: contentThumb("how-to-find-ethical-herping-tours-and-local-reptile-guides"),
         readingMinutes: 7,
         tags: ["wildlife-experiences", "herping"],
         searchIntents: ["herping tour", "herping trip", "reptile tour", "snake tour", "local reptile guide"],
@@ -60,10 +58,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "A guided herping trip is a small, slow look for reptiles and amphibians. Expect field craft and honesty, not a guaranteed encounter.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-curious.svg",
-            "Small group looking for frogs and reptiles along a public path"
-        ),
+        featuredImage: contentThumb("what-to-expect-on-a-guided-herping-trip"),
         readingMinutes: 6,
         tags: ["wildlife-experiences", "herping"],
         searchIntents: ["guided herping trip", "what happens on a herping tour", "night herping walk"],
@@ -93,10 +88,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "Choose a local wildlife guide by public area, group size, honesty about sightings, and how payment works — not by invented ratings.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-guide-card.svg",
-            "AnimalDex Wildlife Guide listing showing area, duration and per-person price"
-        ),
+        featuredImage: contentThumb("how-to-choose-a-local-wildlife-guide"),
         readingMinutes: 7,
         tags: ["wildlife-experiences"],
         searchIntents: ["how to choose a wildlife guide", "local nature guide", "wildlife guide near me"],
@@ -129,10 +121,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "Go alone when you already know the site. Book a birding guide when you need local timing, habitat, and a second pair of ears.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-traveler.svg",
-            "Birder with binoculars deciding whether to walk alone or with a local guide"
-        ),
+        featuredImage: contentThumb("birding-guide-vs-going-alone"),
         readingMinutes: 6,
         tags: ["wildlife-experiences", "birding"],
         searchIntents: ["birding guide", "birdwatching tour", "local birding guide"],
@@ -162,10 +151,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "A night wildlife walk is a slow, lit look at frogs, insects, and whatever else is active after dark. It is not a spotlight safari.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/feature-discovery-overview.svg",
-            "Night wildlife walk with a small group using lights to look, not to lure"
-        ),
+        featuredImage: contentThumb("what-happens-on-a-night-wildlife-walk"),
         readingMinutes: 6,
         tags: ["wildlife-experiences", "night wildlife"],
         searchIntents: ["night wildlife walk", "night wildlife tour", "night herping walk"],
@@ -195,10 +181,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "A wildlife photography tour should buy field time and identification context, not a staged animal. Read the listing before you pack the long lens.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-collector.svg",
-            "Wildlife photographer joining a local field outing rather than a staged set"
-        ),
+        featuredImage: contentThumb("wildlife-photography-tours-what-to-look-for"),
         readingMinutes: 6,
         tags: ["wildlife-experiences", "wildlife photography"],
         searchIntents: ["wildlife photography tour", "wildlife photography guide", "animal photography tour"],
@@ -231,10 +214,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "Skip baited photo ops. Look for small-group, public-area wildlife experiences with honest sighting language and cash paid to the Guide.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-family.svg",
-            "Travelers choosing a small local wildlife walk instead of a staged encounter"
-        ),
+        featuredImage: contentThumb("how-to-find-ethical-wildlife-experiences-while-traveling"),
         readingMinutes: 7,
         tags: ["wildlife-experiences", "travel"],
         searchIntents: ["ethical wildlife experiences", "wildlife activities while traveling", "local wildlife tour"],
@@ -265,10 +245,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "Birding, herping, night walks, macro, marine shore time, and photography outings — how those wildlife activities differ, and which AnimalDex listings match.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/feature-discovery-overview.svg",
-            "Different wildlife activities from birding to night walks shown as field outings"
-        ),
+        featuredImage: contentThumb("best-types-of-wildlife-activities-for-animal-lovers"),
         readingMinutes: 8,
         tags: ["wildlife-experiences"],
         searchIntents: ["wildlife activities", "wildlife trips", "animal spotting tour", "nature guide"],

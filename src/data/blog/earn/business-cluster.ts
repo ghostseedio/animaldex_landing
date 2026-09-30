@@ -1,5 +1,6 @@
 import {blogHrefs, supportArticleHrefs} from "@/data/earn-economy";
-import {earnBlogImage, earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
 
 const publishedAt = "2026-08-30";
@@ -13,10 +14,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "A zoo visit ends at the gate unless visitors have something to finish. A free-to-join AnimalDex Challenge gives them a published objective — not a raffle.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-family.svg",
-            "Zoo visitors using a free-to-join wildlife challenge after they leave a habitat"
-        ),
+        featuredImage: contentThumb("how-zoos-can-turn-visitors-into-active-wildlife-explorers"),
         readingMinutes: 8,
         tags: ["sponsored-challenges", "zoos"],
         searchIntents: ["zoo visitor engagement", "zoo marketing campaign", "interactive zoo activity"],
@@ -56,10 +54,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "Price promotions fill the car park. They do not change what people do inside. Here are interactive zoo ideas that stay honest — including a sponsored AnimalDex Challenge.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-challenges.svg",
-            "Zoo marketing planned around a participation challenge instead of a ticket discount"
-        ),
+        featuredImage: contentThumb("interactive-zoo-marketing-ideas-that-go-beyond-discount-tickets"),
         readingMinutes: 7,
         tags: ["sponsored-challenges", "zoos"],
         searchIntents: ["interactive zoo marketing", "zoo engagement ideas", "zoo campaign ideas"],
@@ -95,10 +90,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "Aquarium guests already photograph tanks. A free-to-join Sponsored Challenge can turn that habit into a finished objective — with live-capture rules if you want the work done on site.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-discovery-card.svg",
-            "Aquarium visitor completing a live wildlife capture challenge at a tank"
-        ),
+        featuredImage: contentThumb("how-aquariums-can-use-digital-wildlife-challenges-to-increase-engagement"),
         readingMinutes: 7,
         tags: ["sponsored-challenges", "aquariums"],
         searchIntents: ["aquarium visitor engagement", "aquarium marketing campaign", "digital aquarium challenge"],
@@ -134,10 +126,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "Gamification at a wildlife park should make people look longer, not run. Free-to-join objectives beat leaderboards that crowd a hide.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-traveler.svg",
-            "Wildlife park trail used for a quiet discovery challenge rather than a race"
-        ),
+        featuredImage: contentThumb("gamification-ideas-for-wildlife-parks-and-nature-attractions"),
         readingMinutes: 7,
         tags: ["sponsored-challenges", "wildlife parks"],
         searchIntents: ["wildlife park gamification", "nature attraction engagement", "safari park marketing"],
@@ -173,10 +162,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "Destination wildlife campaigns fail when they promise animals on cue. A Sponsored Challenge can ask travelers to look — with dates, a region, and a free join — without guaranteeing a sighting.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/feature-scan-overview.svg",
-            "Tourism campaign framed around wildlife discovery rather than a guaranteed sighting"
-        ),
+        featuredImage: contentThumb("how-tourism-boards-can-build-wildlife-discovery-campaigns"),
         readingMinutes: 8,
         tags: ["sponsored-challenges", "tourism"],
         searchIntents: ["tourism wildlife campaign", "destination wildlife marketing", "wildlife tourism campaign"],
@@ -213,10 +199,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "A sponsored wildlife challenge on AnimalDex is a free-to-join, time-boxed campaign with published objectives and achievement rewards. It is not a sweepstake, not PvP, and not cash-live.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-challenge-card.svg",
-            "Sponsored Challenge card in AnimalDex showing a free-to-join wildlife objective"
-        ),
+        featuredImage: contentThumb("what-is-a-sponsored-wildlife-challenge"),
         readingMinutes: 6,
         tags: ["sponsored-challenges"],
         searchIntents: ["sponsored wildlife challenge", "what is a wildlife challenge", "animal challenge campaign"],
@@ -258,10 +241,7 @@ export const businessEarnBlogPosts: BlogPost[] = [
             "How a zoo, aquarium, park, or tourism board actually gets a Challenge live: enquiry, configuration with AnimalDex, free collector join, achievement rewards. No sponsor dashboard.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-discovery.svg",
-            "Business briefing for an AnimalDex Sponsored Challenge configured with the team"
-        ),
+        featuredImage: contentThumb("how-animaldex-sponsored-challenges-work-for-businesses"),
         readingMinutes: 7,
         tags: ["sponsored-challenges"],
         searchIntents: ["wildlife app sponsorship", "sponsor animal challenge", "AnimalDex for businesses"],

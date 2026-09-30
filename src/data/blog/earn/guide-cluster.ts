@@ -1,5 +1,6 @@
 import {blogHrefs, earnFacts, supportArticleHrefs} from "@/data/earn-economy";
-import {earnBlogImage, earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
 
 const publishedAt = "2026-08-30";
@@ -13,10 +14,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             `Apply to become an AnimalDex Wildlife Guide after ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, and a ${earnFacts.accountAgeDays}-day account. Meeting the numbers lets you apply. A person still reviews you.`,
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-guide-card.svg",
-            "AnimalDex Wildlife Guide listing on a phone with public area and per-person price"
-        ),
+        featuredImage: contentThumb("how-to-become-a-wildlife-guide-with-animaldex"),
         readingMinutes: 8,
         tags: ["wildlife-guides", "earning"],
         searchIntents: ["become wildlife guide", "AnimalDex wildlife guide", "how to become a wildlife guide"],
@@ -55,10 +53,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Yes — if people will pay for your local knowledge and you stay legal. AnimalDex Wildlife Guides is one cash-on-the-day listing path. It is not a salary and not automatic approval.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-competitor.svg",
-            "Local birder leading a small-group dawn walk as an AnimalDex Wildlife Guide"
-        ),
+        featuredImage: contentThumb("can-birders-make-money-as-local-guides"),
         readingMinutes: 7,
         tags: ["wildlife-guides", "birding"],
         searchIntents: ["can birders make money", "local birding guide income", "bird watching guide jobs"],
@@ -97,10 +92,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Pick a public area, a duration, a guest cap, and a honest price. List it as an AnimalDex Wildlife Guide experience only after you are approved — and never guarantee the bird.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-collection.svg",
-            "Dawn birding experience described by public area and duration, not a guaranteed species"
-        ),
+        featuredImage: contentThumb("how-to-start-offering-local-birding-experiences"),
         readingMinutes: 7,
         tags: ["wildlife-guides", "birding"],
         searchIntents: ["start birding tours", "offer birdwatching walks", "local birding experience"],
@@ -135,10 +127,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Night herping can be listed as an AnimalDex Wildlife Guide experience if you stay legal, skip handling, and never promise a snake. Eligibility and human review still apply.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/blog-image-slot.svg",
-            "Night herping walk listed as a small-group AnimalDex Wildlife Guide experience"
-        ),
+        featuredImage: contentThumb("how-herpers-can-turn-local-knowledge-into-guided-wildlife-experiences"),
         readingMinutes: 7,
         tags: ["wildlife-guides", "herping"],
         searchIntents: ["herping guide", "night herping tour", "reptile walking guide"],
@@ -176,10 +165,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "An ethical wildlife guide sells orientation, not a guaranteed animal. AnimalDex Wildlife Guide terms ban baiting, handling, and promised sightings — and put permits on you.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-curious.svg",
-            "Ethical wildlife guide keeping distance and not guaranteeing a sighting"
-        ),
+        featuredImage: contentThumb("what-makes-a-great-ethical-wildlife-guide"),
         readingMinutes: 8,
         tags: ["wildlife-guides"],
         searchIntents: ["ethical wildlife guide", "responsible wildlife tourism", "wildlife guiding ethics"],
@@ -214,10 +200,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Photography guests want field time and identification context, not a rented hide with a bait pile. An AnimalDex Wildlife Guide listing can reach collectors already in the app.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-collection-card.svg",
-            "Wildlife photography guide listing reaching AnimalDex collectors"
-        ),
+        featuredImage: contentThumb("how-wildlife-photography-guides-can-find-new-clients"),
         readingMinutes: 7,
         tags: ["wildlife-guides", "wildlife photography"],
         searchIntents: ["wildlife photography guide clients", "photo tour clients", "wildlife photo workshop"],

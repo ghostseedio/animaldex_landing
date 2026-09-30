@@ -1,3 +1,4 @@
+import {contentThumb} from "@/data/content-thumbnails";
 import {CanonicalContentMetadata, ContentImage} from "@/data/content-schema";
 
 export const LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH = "/legendary-earth-beasts";
@@ -148,17 +149,10 @@ export type LegendaryEarthBeast = CanonicalContentMetadata & {
     sources: LegendaryEarthBeastSource[];
 };
 
-const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
 const publishedAt = "2026-07-06";
 
-function beastImage(alt: string, caption: string): ContentImage {
-    return {
-        src: placeholderSrc,
-        alt,
-        width: 1600,
-        height: 900,
-        caption: `Image slot: ${caption}`
-    };
+function beastImage(slug: string): ContentImage {
+    return contentThumb(slug);
 }
 
 type BeastInput = Omit<
@@ -179,7 +173,7 @@ function createBeast(input: BeastInput): LegendaryEarthBeast {
         description,
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: beastImage(input.imageAlt, input.imageCaption)
+        featuredImage: beastImage(input.slug)
     };
 }
 

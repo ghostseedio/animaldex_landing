@@ -1,4 +1,5 @@
 import type {BlogPost} from "@/data/blog/types";
+import {contentThumb} from "@/data/content-thumbnails";
 import {LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 
 const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
@@ -14,10 +15,7 @@ export const captureAnimalsAppPost: BlogPost = {
     description: "Looking for a capture animals app? AnimalDex lets you scan real animals, identify species, collect discoveries, and build your own real-world animal collection.",
     publishedAt: "2026-07-06",
     updatedAt: "2026-07-06",
-    featuredImage: imageSlot(
-        "Phone camera scanning a bird, dog, frog, butterfly, and wild animal cards appearing around the screen",
-        "Capture animals app hero — scan real wildlife and build your collection"
-    ),
+    featuredImage: contentThumb("capture-animals-app"),
     readingMinutes: 24,
     author: "AnimalDex",
     tags: [

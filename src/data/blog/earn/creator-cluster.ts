@@ -1,5 +1,6 @@
 import {blogHrefs, earnPaths, supportArticleHrefs} from "@/data/earn-economy";
-import {earnBlogImage, earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
+import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
 
 const publishedAt = "2026-08-30";
@@ -13,10 +14,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Turn field photos into a species-indexed AnimalDex collection. Live captures become cards you can search, compare, and keep building — without treating the camera roll as the archive.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/feature-collection-overview.svg",
-            "AnimalDex collection overview showing wildlife cards organised by species"
-        ),
+        featuredImage: contentThumb("how-wildlife-photographers-can-build-a-digital-species-collection"),
         readingMinutes: 8,
         tags: ["wildlife photography", "species collection", "creators"],
         searchIntents: ["wildlife photography app", "organize wildlife photos by species", "wildlife collection app"],
@@ -75,10 +73,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Wildlife photography income is usually a mix of licensing, assignments, teaching, and guiding — not an app payout. Here is where AnimalDex fits without pretending it replaces a career.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-collector.svg",
-            "Wildlife photographer reviewing a field collection rather than a payout dashboard"
-        ),
+        featuredImage: contentThumb("can-wildlife-photography-make-money"),
         readingMinutes: 9,
         tags: ["wildlife photography", "creators", "earning"],
         searchIntents: ["can wildlife photography make money", "wildlife photography income", "earn from wildlife photography"],
@@ -132,10 +127,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "If you already know the public paths, seasons, and honest expectations for local wildlife, AnimalDex Wildlife Guides is the in-app way to list a cash-on-the-day experience.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-guide.svg",
-            "Local wildlife outing listed as an AnimalDex Wildlife Guide experience"
-        ),
+        featuredImage: contentThumb("how-to-turn-local-wildlife-knowledge-into-a-guiding-side-income"),
         readingMinutes: 8,
         tags: ["wildlife-guides", "earning", "birding"],
         searchIntents: ["wildlife guiding side income", "become local nature guide", "earn money wildlife spotting"],
@@ -175,10 +167,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "A species tracker changes what you go out to shoot. AnimalDex turns live captures into a checklist you can actually finish — birds, herps, insects, and the rest.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/feature-discovery-overview.svg",
-            "Species checklist built from live AnimalDex wildlife captures"
-        ),
+        featuredImage: contentThumb("why-every-wildlife-photographer-should-track-the-species-they-photograph"),
         readingMinutes: 7,
         tags: ["wildlife photography", "species collection"],
         searchIntents: ["wildlife photography species tracker", "bird photography checklist app", "animal collection tracker"],
@@ -217,10 +206,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Bird lists are common. Reptile, frog, and insect lists are not. AnimalDex lets you keep one public wild record across those habits — without promising sightings.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/persona-curious.svg",
-            "Field notebook style record covering birds, frogs, and insects in one collection"
-        ),
+        featuredImage: contentThumb("from-birding-to-herping-build-a-public-record-of-what-you-find"),
         readingMinutes: 7,
         tags: ["birding", "herping", "species collection"],
         searchIntents: ["herping checklist", "birding species list app", "public wildlife record"],
@@ -255,10 +241,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Personal field challenges — new species, new habitats, stricter framing — improve the work. They are not the same thing as an AnimalDex Sponsored Challenge.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/phone-scan-card.svg",
-            "Photographer using a live AnimalDex capture as a field challenge, not a sponsored campaign"
-        ),
+        featuredImage: contentThumb("wildlife-photography-challenges-that-make-you-better-in-the-field"),
         readingMinutes: 7,
         tags: ["wildlife photography", "fieldcraft"],
         searchIntents: ["wildlife photography challenges", "photography field practice", "improve wildlife photos"],
@@ -294,10 +277,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Creator Rewards is designed to recognise live, diverse, high-quality wildlife contribution during open periods. It is currently paused. Credits, Score, and Gift prices do not become cash.",
         publishedAt,
         updatedAt: publishedAt,
-        featuredImage: earnBlogImage(
-            "/images/placeholders/more-analysis.svg",
-            "AnimalDex Earnings view reserved for genuine wildlife contribution, not Credit balances"
-        ),
+        featuredImage: contentThumb("how-animaldex-rewards-genuine-wildlife-contribution"),
         readingMinutes: 8,
         tags: ["creator-rewards", "earning"],
         searchIntents: ["AnimalDex creator rewards", "wildlife creator platform", "how AnimalDex rewards photographers"],

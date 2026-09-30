@@ -13,6 +13,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {contentThumb} from "@/data/content-thumbnails";
 
 export const revalidate = 86400;
 
@@ -75,9 +76,9 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             title,
             description,
             url: getLocalePath(locale, "/locations"),
-            images: [{url: "/images/placeholders/more-discovery.svg", width: 1200, height: 675, alt: title}]
+            images: [{url: contentThumb("locations-hub").src, width: contentThumb("locations-hub").width, height: contentThumb("locations-hub").height, alt: contentThumb("locations-hub").alt}]
         },
-        twitter: {card: "summary_large_image", title, description, images: ["/images/placeholders/more-discovery.svg"]}
+        twitter: {card: "summary_large_image", title, description, images: [contentThumb("locations-hub").src]}
     };
 }
 

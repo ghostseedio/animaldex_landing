@@ -1,4 +1,5 @@
 import type {BlogPost, BlogSubsection} from "@/data/blog/types";
+import {contentThumb} from "@/data/content-thumbnails";
 
 const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
 
@@ -42,10 +43,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
     description: "Discover 35 examples of biomimicry in animals, from shark skin and gecko feet to owl wings, elephant trunks, whale fins, spider silk, dolphins, ants, bees, and more.",
     publishedAt: "2026-06-29",
     updatedAt: "2026-06-29",
-    featuredImage: imageSlot(
-        "A collage of animals showing biomimicry examples including a shark, gecko, owl, elephant, kingfisher, whale, spider, and butterfly",
-        "Hero collage showing animals as nature-inspired design teachers"
-    ),
+    featuredImage: contentThumb("biomimicry-in-animals"),
     readingMinutes: 28,
     author: "AnimalDex",
     tags: ["Biomimicry", "Animal Biomimicry", "Nature-Inspired Design", "Animal Adaptations", "Animal Intelligence", "Bio-Inspired Technology", "Wildlife Education", "AnimalDex"],

@@ -1,4 +1,5 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
+import {contentThumb} from "@/data/content-thumbnails";
 import {isLegendaryEarthBeastSpeciesSlug} from "@/data/legendary-earth-beasts";
 import {buildDeterministicCanonicalStats, SpeciesStats} from "@/data/species-stats";
 import {speciesEntries, SpeciesEntry} from "@/data/species";
@@ -1347,13 +1348,7 @@ const rankingPagesData: RankingPage[] = [
         relatedRankingSlugs: ["most-reviled-animals", "rarest-animals", "animals-with-best-camouflage"],
         publishedAt: "2026-04-12",
         updatedAt: "2026-04-12",
-        featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "Ugliest Animals in the World: Top 10 Ranked ranking page on AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "Ranking image source: AnimalDex placeholder artwork."
-        }
+        featuredImage: contentThumb("ugliest-animals")
     },
     createRankingPage({
         slug: "rarest-animals",

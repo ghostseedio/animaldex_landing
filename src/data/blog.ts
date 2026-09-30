@@ -1,4 +1,5 @@
 import {getChallenge, getChallengesForSpecies} from "@/data/challenges";
+import {contentThumb} from "@/data/content-thumbnails";
 import {BlogMediaBlock} from "@/data/content-schema";
 import {journalMigratedPosts} from "@/data/blog/journal-migrated-posts";
 import {generatedSymbolismPosts} from "@/data/blog/symbolism/generated-posts";
@@ -4607,13 +4608,7 @@ const blogPostsData: BlogPost[] = [
         description: "A practical guide to animal breed pricing, local average cost, grading signals, and why responsible valuation needs more than a single photo.",
         publishedAt: "2026-04-24",
         updatedAt: "2026-04-24",
-        featuredImage: {
-            src: "/images/placeholders/phone-scan-card.svg",
-            alt: "AnimalDex scan card visual for estimating breed pricing and grading context",
-            width: 1200,
-            height: 675,
-            caption: "Breed pricing is strongest when scan evidence, grading notes, and market context stay together."
-        },
+        featuredImage: contentThumb("how-to-estimate-animal-breed-prices"),
         readingMinutes: 7,
         author: "AnimalDex Market Desk",
         tags: ["Breed pricing", "Animal grading", "Pet valuation"],
@@ -4710,13 +4705,7 @@ const blogPostsData: BlogPost[] = [
         description: "Learn how to design custom animal cards and decks for pets, wildlife trips, classrooms, photography projects, gifts, and creator sales.",
         publishedAt: "2026-04-24",
         updatedAt: "2026-04-24",
-        featuredImage: {
-            src: "/images/placeholders/feature-collection-overview.svg",
-            alt: "AnimalDex collection visual for custom animal card deck creation",
-            width: 1200,
-            height: 675,
-            caption: "The best custom animal decks feel like complete collectible sets, not isolated cards."
-        },
+        featuredImage: contentThumb("how-to-create-custom-animal-card-decks"),
         readingMinutes: 7,
         author: "AnimalDex Creator Desk",
         tags: ["Animal cards", "Custom decks", "Creator tools"],
@@ -4815,13 +4804,7 @@ const blogPostsData: BlogPost[] = [
         description: "Animals can teach focus, patience, resilience, teamwork, boundaries, and adaptability. Here is how AnimalDex can turn species learning into personal growth prompts.",
         publishedAt: "2026-04-24",
         updatedAt: "2026-04-24",
-        featuredImage: {
-            src: "/images/placeholders/more-guide.svg",
-            alt: "AnimalDex field guide visual for learning self-improvement from animals",
-            width: 1200,
-            height: 675,
-            caption: "Animal traits become more useful when they turn into repeatable reflection prompts."
-        },
+        featuredImage: contentThumb("what-animals-can-teach-us-about-self-improvement"),
         readingMinutes: 6,
         author: "AnimalDex Learning Desk",
         tags: ["Animal learning", "Self improvement", "Nature journaling"],

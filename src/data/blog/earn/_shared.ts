@@ -1,10 +1,6 @@
 import type {BlogPost} from "@/data/blog/types";
 import {earnPaths} from "@/data/earn-economy";
 
-export function earnBlogImage(src: string, alt: string) {
-    return {src, alt, width: 1200, height: 630};
-}
-
 export function earnBlogPost(
     post: Omit<BlogPost, "author" | "featuredImage"> & {featuredImage: BlogPost["featuredImage"]}
 ): BlogPost {

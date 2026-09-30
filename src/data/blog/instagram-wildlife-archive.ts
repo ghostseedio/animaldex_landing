@@ -1,20 +1,15 @@
+import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
 
-const image = (alt: string): BlogPost["featuredImage"] => ({
-    src: "/images/placeholders/feature-collection-overview.svg",
-    alt,
-    width: 1200,
-    height: 800
-});
-
 function post(input: Omit<BlogPost, "featuredImage" | "author" | "publishedAt" | "updatedAt" | "speciesSlugs"> & {featuredAlt: string}): BlogPost {
+    const {featuredAlt: _featuredAlt, ...postFields} = input;
     return {
-        ...input,
+        ...postFields,
         author: "AnimalDex Field Desk",
         publishedAt: "2026-08-30",
         updatedAt: "2026-08-30",
         speciesSlugs: [],
-        featuredImage: image(input.featuredAlt)
+        featuredImage: contentThumb(postFields.slug)
     };
 }
 

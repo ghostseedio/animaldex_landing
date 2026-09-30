@@ -10,6 +10,7 @@ import {
     legendaryEarthBeastsHubFaq,
     legendaryEarthBeastsHubTitle
 } from "@/data/legendary-earth-beasts";
+import {contentThumb} from "@/data/content-thumbnails";
 import {getSpeciesBySlug} from "@/data/species";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -20,12 +21,7 @@ type LegendaryEarthBeastsHubPageProps = {
     };
 };
 
-const hubFeaturedImage = legendaryEarthBeastEntries.find((beast) => beast.slug === "naga-snake")?.featuredImage || {
-    src: "/images/placeholders/blog-image-slot.svg",
-    alt: "Legendary Earth Beasts",
-    width: 1600,
-    height: 900
-};
+const hubFeaturedImage = legendaryEarthBeastEntries.find((beast) => beast.slug === "naga-snake")?.featuredImage || contentThumb("naga-snake");
 
 export async function generateMetadata({params}: LegendaryEarthBeastsHubPageProps): Promise<Metadata> {
     const {locale} = params;

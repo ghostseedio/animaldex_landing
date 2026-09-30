@@ -12,6 +12,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {contentThumb} from "@/data/content-thumbnails";
 
 export const revalidate = 86400;
 
@@ -48,10 +49,10 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             url: getLocalePath(locale, RANKING_CANONICAL_BASE_PATH),
             images: [
                 {
-                    url: "/images/placeholders/more-guide.svg",
-                    width: 1200,
-                    height: 675,
-                    alt: `${title} | AnimalDex`
+                    url: contentThumb("rankings-hub").src,
+                    width: contentThumb("rankings-hub").width,
+                    height: contentThumb("rankings-hub").height,
+                    alt: contentThumb("rankings-hub").alt
                 }
             ]
         },
@@ -59,7 +60,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             card: "summary_large_image",
             title: `${title} | AnimalDex`,
             description,
-            images: ["/images/placeholders/more-guide.svg"]
+            images: [contentThumb("rankings-hub").src]
         }
     };
 }
