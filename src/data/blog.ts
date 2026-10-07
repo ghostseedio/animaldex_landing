@@ -3302,10 +3302,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Pikachu tracks closely to a pika-like small mammal. The electrical gimmick is fantasy, but the compact rodent body plan is doing the design work.",
                         links: [{text: "pika", slug: "pika"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/thepokemonshow/images/8/80/20101007155439%21Ash_Pikachu.png/revision/latest?cb=20140425213328",
-                            alt: "Anime image of Pikachu used in the real-life Pokemon comparison list",
-                            width: 899,
-                            height: 580
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/pika.webp",
+                            alt: "American pika with a mouthful of grass on rocks, the real animal behind Pikachu",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Yellowstone National Park by Jacob W. Frank, Public domain, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3313,10 +3314,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Ekans is one of the cleanest examples in the series because it is essentially a snake with a direct naming joke layered on top.",
                         links: [{text: "snake", slug: "snake"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e7/Goh_Ekans.png/revision/latest?cb=20200405113459",
-                            alt: "Anime image of Ekans used in the real-life Pokemon comparison list",
-                            width: 1920,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/snake.webp",
+                            alt: "Indian cobra with its hood spread, the real animal behind Ekans",
+                            width: 1400,
+                            height: 1050,
+                            caption: "Photo: Dr. Raju Kasambe, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3324,10 +3326,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Magikarp clearly draws from carp, which is why it lands so well as a weak fish that later transforms into something far more dramatic.",
                         links: [{text: "carp", slug: "carp"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e5/Goh_Magikarp.png/revision/latest/scale-to-width-down/1200?cb=20200622002446",
-                            alt: "Anime image of Magikarp used in the real-life Pokemon comparison list",
-                            width: 1200,
-                            height: 675
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/carp.webp",
+                            alt: "Colorful koi carp, the real animal behind Magikarp",
+                            width: 1400,
+                            height: 931,
+                            caption: "Photo: Asturio Cantabrio, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3335,10 +3338,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Hoothoot reads as an owl first and a stylized clock-face mascot second, which makes it one of the easier bird inspirations to spot.",
                         links: [{text: "owl", slug: "owl"}],
                         image: {
-                            src: "https://static0.thegamerimages.com/wordpress/wp-content/uploads/2020/05/hoothoot-anime-bulbapedia.png?q=50&fit=crop&w=800&dpr=1.5",
-                            alt: "Anime image of Hoothoot used in the real-life Pokemon comparison list",
-                            width: 800,
-                            height: 450
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/owl-hoothoot.webp",
+                            alt: "Tawny owl peering from a tree hole, the real animal behind Hoothoot",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Anil Öztas, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3346,10 +3350,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Heracross is strongly based on a rhinoceros beetle, using the horn and armored insect profile as the core silhouette.",
                         links: [{text: "rhinoceros beetle", slug: "rhinoceros-beetle"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/2/20/Goh_Heracross.png/revision/latest?cb=20200816110158",
-                            alt: "Anime image of Heracross used in the real-life Pokemon comparison list",
-                            width: 1920,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/rhinoceros-beetle.webp",
+                            alt: "Japanese rhinoceros beetle with its forked horn, the real animal behind Heracross",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: harum.koh from Kobe city, Japan, CC BY-SA 2.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3357,10 +3362,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Torchic is based on a chicken, making it a straightforward poultry-based starter with exaggerated warmth and attitude.",
                         links: [{text: "chicken", slug: "domestic-chicken"}],
                         image: {
-                            src: "https://www.dexerto.com/cdn-image/wp-content/uploads/2025/02/06/Pokemon-Scarlet-and-Violet-.jpg?width=1200&quality=60&format=auto",
-                            alt: "Image used for Torchic in the real-life Pokemon comparison list",
-                            width: 1200,
-                            height: 675
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/chick.webp",
+                            alt: "Fluffy yellow chicken chick, the real animal behind Torchic",
+                            width: 1400,
+                            height: 1050,
+                            caption: "Photo: Rektz, CC BY 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3368,10 +3374,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Sharpedo is built on a shark template, especially in its torpedo body, exposed teeth, and forward-attack design.",
                         links: [{text: "shark", slug: "shark"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/international-pokedex/images/1/15/Sharpedo_%28Ash%29.png/revision/latest?cb=20180406183156",
-                            alt: "Anime image of Sharpedo used in the real-life Pokemon comparison list",
-                            width: 800,
-                            height: 450
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/shark.webp",
+                            alt: "Great white shark swimming in open water, the real animal behind Sharpedo",
+                            width: 1200,
+                            height: 835,
+                            caption: "Photo: Pterantula (Terry Goss) at en.wikipedia, CC BY 2.5, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3379,10 +3386,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Spheal maps cleanly onto a seal pup, using round body shape and marine-mammal softness as its whole appeal.",
                         links: [{text: "seal", slug: "seal"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/7/74/Marius%27s_Spheal.png/revision/latest?cb=20240223073311",
-                            alt: "Anime image of Spheal used in the real-life Pokemon comparison list",
-                            width: 1440,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/seal.webp",
+                            alt: "Harbor seal resting on the shore, the real animal behind Spheal",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Bureau of Land Management Oregon and Washington, Public domain, via Wikimedia Commons."
                         }
                     }
                 ],
@@ -3398,10 +3406,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Piplup is based on a penguin chick, and the tuxedo-like coloring is what makes the animal connection immediate.",
                         links: [{text: "penguin", slug: "penguin"}],
                         image: {
-                            src: "https://comicbook.com/wp-content/uploads/sites/4/2022/01/82298dd4-0790-49ae-939c-7e5fd7734288.jpg?w=1200",
-                            alt: "Image of Piplup used in the real-life Pokemon comparison list",
-                            width: 1200,
-                            height: 628
+                            src: "/images/blog/adelie-penguin-symbolism/what-is-a-penguin.webp",
+                            alt: "Ad\\u00e9lie penguin standing on rocks, the real animal behind Piplup",
+                            width: 500,
+                            height: 698,
+                            caption: "Photo by Stan Shebs, CC BY-SA, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3409,10 +3418,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Buizel draws from otters and similar semi-aquatic mustelids, especially in the flotation-ring concept around its neck.",
                         links: [{text: "otters", slug: "otter"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/e/e2/Ash_Buizel.png/revision/latest?cb=20230114015139",
-                            alt: "Anime image of Buizel used in the real-life Pokemon comparison list",
-                            width: 1920,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/otter.webp",
+                            alt: "Eurasian otter at the water's edge, the real animal behind Buizel",
+                            width: 1400,
+                            height: 932,
+                            caption: "Photo: Alexander Leisser, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3420,10 +3430,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Sandile is a crocodile, using the low-slung body, long snout, and ambush-predator profile as the base design.",
                         links: [{text: "crocodile", slug: "crocodile"}],
                         image: {
-                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/seasons/season14/season14_ep03_ss02.jpg",
-                            alt: "Pokemon TV image of Sandile used in the real-life Pokemon comparison list",
-                            width: 578,
-                            height: 327
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/crocodile.webp",
+                            alt: "Nile crocodile basking on a riverbank, the real animal behind Sandile",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3431,10 +3442,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Deerling is an easy deer read, with seasonal variants layered onto a familiar ungulate body plan.",
                         links: [{text: "deer", slug: "deer"}],
                         image: {
-                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/seasons/season15/season15_ep06_ss03.jpg",
-                            alt: "Pokemon TV image of Deerling used in the real-life Pokemon comparison list",
-                            width: 578,
-                            height: 327
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/deer.webp",
+                            alt: "Roe deer fawn in a meadow, the real animal behind Deerling",
+                            width: 1400,
+                            height: 934,
+                            caption: "Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3445,10 +3457,11 @@ const blogPostsData: BlogPost[] = [
                             {text: "finch", slug: "finch"}
                         ],
                         image: {
-                            src: "https://static.wikia.nocookie.net/thepokemonshow/images/4/42/Ash%27s_Fletchling.png/revision/latest?cb=20140520024341",
-                            alt: "Anime image of Fletchling used in the real-life Pokemon comparison list",
-                            width: 1280,
-                            height: 720
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/robin.webp",
+                            alt: "European robin with its head cocked on a branch, the real animal behind Fletchling",
+                            width: 1400,
+                            height: 1120,
+                            caption: "Photo: Francis C. Franklin, CC BY-SA 3.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3456,10 +3469,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Helioptile borrows from lizards with frilled-neck visual cues, turning a reptile template into a solar-powered creature concept.",
                         links: [{text: "lizards", slug: "lizard"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/8/82/Alexa_Helioptile.png/revision/latest/scale-to-width-down/1200?cb=20150901045405",
-                            alt: "Anime image of Helioptile used in the real-life Pokemon comparison list",
-                            width: 1200,
-                            height: 675
+                            src: "/images/blog/reptile-amphibian-life-list/sand-lizard.webp",
+                            alt: "Male sand lizard basking on weathered wood, the real animal behind Helioptile",
+                            width: 1400,
+                            height: 700,
+                            caption: "Photo: George Chernilevsky, Public domain, via Wikimedia Commons."
                         }
                     }
                 ],
@@ -3475,10 +3489,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Rowlet is an owl, but the design softens it into a round-bodied forest bird with an instantly readable face.",
                         links: [{text: "owl", slug: "owl"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/3/3d/Ash_Rowlet.png/revision/latest?cb=20161124113130",
-                            alt: "Anime image of Rowlet used in the real-life Pokemon comparison list",
-                            width: 1920,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/owl-rowlet.webp",
+                            alt: "Northern saw-whet owl, a small round owl, the real animal behind Rowlet",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Renee Grayson from Las Vegas, USA, CC BY 2.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3486,10 +3501,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Crabrawler has strong crab roots, especially the oversized claws and sideways, shell-backed body logic.",
                         links: [{text: "crab", slug: "crab"}],
                         image: {
-                            src: "https://media.tenor.com/2s-HnUONo_gAAAAe/pokemon-crabrawler.png",
-                            alt: "Image of Crabrawler used in the real-life Pokemon comparison list",
-                            width: 640,
-                            height: 358
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/crab.webp",
+                            alt: "Red king crab on the sea floor, the real animal behind Crabrawler",
+                            width: 1400,
+                            height: 788,
+                            caption: "Photo: Sasha Isachenko, CC BY-SA 3.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3497,10 +3513,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Nickit is based on a fox, leaning into the narrow muzzle, sly expression, and tail-heavy silhouette.",
                         links: [{text: "fox", slug: "fox"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon/images/9/98/Nickit_anime.png/revision/latest?cb=20191210162308",
-                            alt: "Anime image of Nickit used in the real-life Pokemon comparison list",
-                            width: 1920,
-                            height: 1080
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/fox.webp",
+                            alt: "Red fox in a field, the real animal behind Nickit",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Alexis Lours, CC BY 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3508,10 +3525,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Cramorant is a cormorant-like diving bird, which is why its long beak and awkward waterbird posture feel so specific.",
                         links: [{text: "cormorant", slug: "cormorant"}],
                         image: {
-                            src: "https://i.ytimg.com/vi/K0Lg4NmvCDc/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLBYz7qKAQ5HLAi4uxkWXVjg-zx8fw",
-                            alt: "Image of Cramorant used in the real-life Pokemon comparison list",
-                            width: 686,
-                            height: 386
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/cormorant.webp",
+                            alt: "Great cormorant drying its outspread wings, the real animal behind Cramorant",
+                            width: 1400,
+                            height: 788,
+                            caption: "Photo: Laurens R. Krol, CC BY 4.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3519,10 +3537,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Sprigatito is unmistakably a cat, using feline posture, face shape, and playful movement as the whole design anchor.",
                         links: [{text: "cat", slug: "cat"}],
                         image: {
-                            src: "https://www.pokemon.com/static-assets/content-assets/cms2/img/watch-pokemon-tv/horizons/01/horizons_ep40_ss01.png",
-                            alt: "Pokemon Horizons image of Sprigatito used in the real-life Pokemon comparison list",
-                            width: 578,
-                            height: 327
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/cat.webp",
+                            alt: "Domestic kitten looking up, the real animal behind Sprigatito",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: 0x010C, CC BY-SA 2.0, via Wikimedia Commons."
                         }
                     },
                     {
@@ -3530,10 +3549,11 @@ const blogPostsData: BlogPost[] = [
                         body: "Nymble is built on a grasshopper-like insect body, showing that even the latest generation still pulls heavily from real-animal structure.",
                         links: [{text: "grasshopper", slug: "grasshopper"}],
                         image: {
-                            src: "https://static.wikia.nocookie.net/pokemon-journeys-my-fanon/images/1/10/Ash%27s_Nymble.jpg/revision/latest?cb=20240629091346",
-                            alt: "Image of Nymble used in the real-life Pokemon comparison list",
-                            width: 680,
-                            height: 383
+                            src: "/images/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/grasshopper.webp",
+                            alt: "Grasshopper on a grass stem, the real animal behind Nymble",
+                            width: 1400,
+                            height: 933,
+                            caption: "Photo: Devilal, CC BY-SA 4.0, via Wikimedia Commons."
                         }
                     }
                 ]

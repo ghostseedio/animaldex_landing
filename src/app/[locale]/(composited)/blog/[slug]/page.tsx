@@ -362,6 +362,9 @@ function renderSectionCards(cards: NonNullable<ReturnType<typeof getBlogPost>>["
                             />
                         </div>
                     )}
+                    {card.image?.caption ? (
+                        <p className="-mt-1 text-[11px] leading-snug text-[color:var(--text-400)]">{card.image.caption}</p>
+                    ) : null}
                     <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--lime)]">
                         {card.label}
                     </p>

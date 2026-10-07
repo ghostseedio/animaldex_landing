@@ -16,6 +16,8 @@ export type BlogSectionCard = {
         alt: string;
         width: number;
         height: number;
+        /** Credit line, required for CC BY / CC BY-SA photos. */
+        caption?: string;
     };
 };
 
