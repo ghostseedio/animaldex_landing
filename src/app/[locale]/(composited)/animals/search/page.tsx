@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import Link from "@/app/[locale]/_components/link";
 import UniversalSearchField from "@/app/[locale]/(composited)/animals/_components/universal-search-field";
 import UniversalSearchResults from "@/app/[locale]/(composited)/animals/_components/universal-search-results";
@@ -26,7 +27,7 @@ export async function generateMetadata({params, searchParams}: Props): Promise<M
 
     // Internal search results: useful to readers, not something to index.
     return {
-        title: query ? t("metaTitleQuery", {query}) : t("metaTitle"),
+        title: templateSafeTitle(query ? t("metaTitleQuery", {query}) : t("metaTitle")),
         description: t("metaDescription"),
         robots: {index: false, follow: true}
     };

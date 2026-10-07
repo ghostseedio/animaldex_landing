@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {stripBrandSuffix, templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {notFound} from "next/navigation";
 import Image from "next/image";
 import {ReactNode} from "react";
@@ -136,13 +137,15 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
         return {};
     }
     const managed = await getManagedPage(slug);
-    const metadataTitle = managed?.title ?? entry.metaTitle;
+    // The layout template appends " | AnimalDex"; titles in the data (and some
+    // managed copies) already carry it, which doubled the brand.
+    const metadataTitle = stripBrandSuffix(managed?.title ?? entry.metaTitle);
     const metadataDescription = managed?.description ?? entry.metaDescription;
     const metadataImage = getAnswerPageImage(entry, managed?.featuredImage);
     const metadataImageUrl = getAbsoluteAssetUrl(metadataImage.src);
 
     return {
-        title: metadataTitle,
+        title: templateSafeTitle(metadataTitle),
         description: metadataDescription,
         keywords: [...baseKeywords, ...(managed?.searchIntents ?? entry.searchIntents)],
         alternates: {
@@ -157,7 +160,7 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),
-            title: `${metadataTitle} | AnimalDex`,
+            title: withBrandSuffix(metadataTitle),
             description: metadataDescription,
             url: getLocalePath(locale, `/${entry.slug}`),
             modifiedTime: managed?.updatedAt ?? entry.updatedAt,
@@ -173,7 +176,7 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
         },
         twitter: {
             card: "summary_large_image",
-            title: `${metadataTitle} | AnimalDex`,
+            title: withBrandSuffix(metadataTitle),
             description: metadataDescription,
             images: [{url: metadataImageUrl, alt: metadataImage.alt}]
         }

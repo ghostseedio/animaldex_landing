@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import Link from "@/app/[locale]/_components/link";
 import ExploreKnowledgeLinks from "@/app/[locale]/(composited)/_components/explore-knowledge-links";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
@@ -182,7 +183,7 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const pageDescription = t("metaDescription");
     return {
-        title: t("metaTitle"),
+        title: templateSafeTitle(t("metaTitle")),
         description: pageDescription,
         keywords: ["animal lessons", "lessons from animals", "animal behavior lessons", "biology backed lessons"],
         alternates: {

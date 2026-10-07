@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import ExploreKnowledgeLinks from "@/app/[locale]/(composited)/_components/explore-knowledge-links";
@@ -28,7 +29,7 @@ export async function generateMetadata({params}: AnimalSymbolismPageProps): Prom
     const canonicalUrl = getAnimalSymbolismPath(params.locale);
 
     return {
-        title: t("metaTitle"),
+        title: templateSafeTitle(t("metaTitle")),
         description: t("metaDescription"),
         keywords: ["animal symbolism", "what does an animal symbolize", "biology backed symbolism", "animal archetype meaning"],
         alternates: {

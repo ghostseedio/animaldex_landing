@@ -25,6 +25,18 @@ import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 
+// Pages whose route still exists but which next.config.js permanently redirects
+// (consolidated into /animal-identifier-app). A sitemap must only list final
+// URLs; these return a 308 with no <title>.
+const PERMANENTLY_REDIRECTED_PATHS = new Set([
+    "/ai-animal-scanner",
+    "/use-cases/ai-animal-scanner-identification-app"
+]);
+
+function isPermanentlyRedirected(path: string) {
+    return PERMANENTLY_REDIRECTED_PATHS.has(path);
+}
+
 function getSitemapChallengeEntries() {
     const allow = new Set(closedSeoNamespaceSlugs.comparisons ?? []);
     const bySlug = new Map<string, {slug: string; updatedAt: string}>();
@@ -133,7 +145,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/legal/refunds")}
         ];
 
-        const useCaseEntries = useCases.map((entry) => ({
+        const useCaseEntries = useCases.filter((entry) => !isPermanentlyRedirected(`/use-cases/${entry.slug}`)).map((entry) => ({
             url: getAbsoluteUrl(locale, `/use-cases/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
         }));
@@ -156,7 +168,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(page.updatedAt || page.publishedAt)
         }));
 
-        const answerPageEntries = answerPages.map((entry) => ({
+        const answerPageEntries = answerPages.filter((entry) => !isPermanentlyRedirected(`/${entry.slug}`)).map((entry) => ({
             url: getAbsoluteUrl(locale, `/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
         }));
@@ -186,9 +198,14 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             }
             return entries;
         });
-        const principlePageEntries = principleHubs.map((item) => ({
-            url: getAbsoluteUrl(locale, `/powers/${item.principleSlug}`)
-        }));
+        // Only power pages the route serves: catalog-only principles in the hub
+        // index 404 at /powers/<slug> (123 sitemap URLs did, e.g. /powers/agility).
+        const servedPowerSlugs = new Set(getLocalPrincipleSlugs());
+        const principlePageEntries = principleHubs
+            .filter((item) => servedPowerSlugs.has(item.principleSlug))
+            .map((item) => ({
+                url: getAbsoluteUrl(locale, `/powers/${item.principleSlug}`)
+            }));
         const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
             url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`)
         }));

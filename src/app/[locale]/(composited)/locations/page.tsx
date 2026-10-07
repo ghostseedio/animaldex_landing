@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import LocationsHubClient, {
     LocationHubItem,
     LocationPlaceGuideLink,
@@ -60,7 +61,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const description = messages.locations?.metaDescription || "Explore AnimalDex wildlife location guides for zoos, parks, forests, wetlands, beaches, islands, cities, and safari regions.";
 
     return {
-        title,
+        title: templateSafeTitle(title),
         description,
         keywords: [...baseKeywords, ...locationKeywords],
         alternates: {

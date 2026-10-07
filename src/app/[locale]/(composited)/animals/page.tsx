@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {Suspense} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
@@ -205,7 +206,7 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
     const description = messages.animals?.metaDescription || messages.meta?.description || "";
 
     return {
-        title,
+        title: templateSafeTitle(title),
         description,
         keywords: [...metaKeywords, ...speciesKeywords],
         alternates: {
@@ -220,7 +221,7 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
-            title: `${title} | AnimalDex`,
+            title: withBrandSuffix(title),
             description,
             url: getLocalePath(locale, "/animals"),
             images: [
@@ -228,13 +229,13 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
                     url: "/images/og.png",
                     width: 1200,
                     height: 630,
-                    alt: `${title} | AnimalDex`
+                    alt: withBrandSuffix(title)
                 }
             ]
         },
         twitter: {
             card: "summary_large_image",
-            title: `${title} | AnimalDex`,
+            title: withBrandSuffix(title),
             description,
             images: ["/images/og.png"]
         }

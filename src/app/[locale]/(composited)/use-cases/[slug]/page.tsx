@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getRelatedUseCases, getUseCase} from "@/data/use-cases";
@@ -37,7 +38,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
     if (!entry) return {};
 
     return {
-        title: entry.title,
+        title: templateSafeTitle(entry.title),
         description: entry.description,
         keywords: [...entry.searchIntents, entry.audience],
         alternates: {
@@ -52,7 +53,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),
-            title: `${entry.title} | AnimalDex`,
+            title: withBrandSuffix(entry.title),
             description: entry.description,
             url: getLocalePath(locale, `/use-cases/${entry.slug}`),
             modifiedTime: entry.updatedAt,
@@ -62,13 +63,13 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
                     url: "/images/og.png",
                     width: 1200,
                     height: 630,
-                    alt: `${entry.title} | AnimalDex`
+                    alt: withBrandSuffix(entry.title)
                 }
             ]
         },
         twitter: {
             card: "summary_large_image",
-            title: `${entry.title} | AnimalDex`,
+            title: withBrandSuffix(entry.title),
             description: entry.description,
             images: ["/images/og.png"]
         },

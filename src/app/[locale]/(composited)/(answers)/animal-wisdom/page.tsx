@@ -94,7 +94,7 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
     const {locale} = params;
 
     return {
-        title: `${pageTitle} | AnimalDex`,
+        title: pageTitle,
         description: pageDescription,
         keywords: [
             "Animal Wisdom",

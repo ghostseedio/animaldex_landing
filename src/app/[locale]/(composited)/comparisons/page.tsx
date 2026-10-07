@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
@@ -218,7 +219,7 @@ export async function generateMetadata({params}: ComparisonsIndexPageProps): Pro
     const description = messages.comparisons?.metaDescription || messages.meta?.description || "";
 
     return {
-        title,
+        title: templateSafeTitle(title),
         description,
         keywords: [...baseKeywords, ...challengeKeywords],
         alternates: {

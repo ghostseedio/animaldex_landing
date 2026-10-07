@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {localeConfig} from "@/i18n";
 import {ContentImage} from "@/data/content-schema";
 import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
@@ -41,7 +42,7 @@ export function buildContentMetadata({
     canonicalUrl
 }: BuildContentMetadataOptions): Metadata {
     const imageUrl = getAbsoluteAssetUrl(featuredImage.src);
-    const brandedTitle = title.includes("AnimalDex") ? title : `${title} | AnimalDex`;
+    const brandedTitle = withBrandSuffix(title);
     const brandedImageAlt = featuredImage.alt.includes("AnimalDex") ? featuredImage.alt : `${featuredImage.alt} | AnimalDex`;
     const resolvedCanonical = canonicalUrl || getLocalePath(locale, pathname);
     const hreflangLocales = isCollapsedEnglishDetailPath(pathname)
@@ -50,7 +51,7 @@ export function buildContentMetadata({
     const defaultPath = getLocalePath(localeConfig.defaultLocale, pathname);
 
     return {
-        title,
+        title: templateSafeTitle(title),
         description,
         keywords,
         alternates: {
