@@ -506,6 +506,12 @@
     "relatedRankingsDescription": "Lanjutkan ke halaman tier list terdekat untuk membandingkan kategori lain tanpa kehilangan konteks.",
     "faqTitle": "FAQ ranking",
     "faqDescription": "Jawaban singkat dan langsung untuk pertanyaan lanjutan yang biasanya muncul setelah headline ranking.",
+    "lifeLessonsMeetAnimal": "Kenali {animal}",
+    "topTeachTitle": "Pelajaran dari {subject}",
+    "topTeachDescription": "10 hewan teratas di daftar ini, masing-masing dengan prinsip AnimalDex-nya: perilaku yang memecahkan masalah bertahan hidup nyata, diterjemahkan menjadi pelajaran untuk kehidupan sehari-hari.",
+    "topTeachPrincipleLabel": "Prinsip",
+    "topTeachBestForLabel": "Paling cocok untuk",
+    "topTeachLessonLink": "Apa yang diajarkan {animal}",
     "ctaTitle": "Koleksi hewan-hewan seperti ini di AnimalDex",
     "ctaDescription": "Bergerak dari headline list ke panduan spesies, spotting nyata, dan koleksi yang dibangun dari hewan tercepat, terkuat, dan terpintar yang kamu ikuti.",
     "ctaButton": "Bangun koleksi hewanmu",
@@ -536,7 +542,8 @@
       "rarity": "Rarity",
       "fatality": "Fatality",
       "culture": "Culture",
-      "communication": "Communication"
+      "communication": "Communication",
+      "character": "Karakter"
     },
     "challengeCategories": {
       "battle": "Battle",

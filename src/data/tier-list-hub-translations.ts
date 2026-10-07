@@ -211,7 +211,8 @@ const pt: TranslatedTierListHubCopy = {
         rarity: "Raridade",
         fatality: "Letalidade",
         culture: "Cultura",
-        communication: "Comunicação"
+        communication: "Comunicação",
+        character: "Caráter"
     }
 };
 
@@ -315,7 +316,8 @@ const es: TranslatedTierListHubCopy = {
         rarity: "Rareza",
         fatality: "Letalidad",
         culture: "Cultura",
-        communication: "Comunicación"
+        communication: "Comunicación",
+        character: "Carácter"
     }
 };
 
@@ -419,7 +421,8 @@ const fr: TranslatedTierListHubCopy = {
         rarity: "Rareté",
         fatality: "Létalité",
         culture: "Culture",
-        communication: "Communication"
+        communication: "Communication",
+        character: "Caractère"
     }
 };
 

@@ -48,7 +48,10 @@ import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "
 import type {SpeciesEntry} from "@/data/species";
 import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
 import {buildAnimalDreamReading} from "@/lib/animal-dream-reading";
+import {buildAnimalMeaningSections} from "@/lib/animal-meaning-sections";
+import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
 import {isPublishedClosedSeoSlug} from "@/lib/closed-seo-namespaces";
+import {isPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {createEmptyPublicSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesDescriptorBySlug} from "@/data/species-descriptors";
 import {getSpeciesSubtitleStoryBySlug} from "@/data/species-subtitle-stories";
@@ -87,10 +90,22 @@ type SpeciesTextLink = {
     slug: string;
 };
 
-/** "What is a tayra?" / "What is an aardwolf?" — the lookup the page answers. */
-function whatIsQuestion(name: string) {
-    const article = /^[aeiou]/i.test(name) ? "an" : "a";
-    return `What is ${article} ${name}?`;
+/** "Gray Wolf Meaning & Symbolism: Cooperation" (≤ 60 chars), else without the principle. */
+function buildSpeciesMeaningTitle(name: string, principle: string | null) {
+    const withPrinciple = principle ? `${name} Meaning & Symbolism: ${principle}` : null;
+    if (withPrinciple && withPrinciple.length <= 60) return withPrinciple;
+    const plain = `${name} Meaning, Symbolism & Life Lessons`;
+    return plain.length <= 60 ? plain : `${name} Meaning & Symbolism`;
+}
+
+/** Leads with the meaning; trimmed to 155 at a word boundary. */
+function buildSpeciesMeaningDescription(name: string, principle: string, coreLesson: string, bestFor: string[]) {
+    const qualities = bestFor.slice(0, 3).map((quality) => quality.toLowerCase());
+    const helps = qualities.length ? ` What it teaches about ${qualities.join(", ")}, spirit animal and dream meaning.` : " Spirit animal and dream meaning.";
+    const text = `${name} symbolizes ${principle.toLowerCase()}: ${coreLesson.trim()}${helps}`;
+    if (text.length <= 155) return text;
+    const cut = text.slice(0, 152);
+    return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
 }
 
 /** The DB spotlight is the answer, so it leads; trimmed at a word boundary. */
@@ -306,14 +321,14 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         return {};
     }
 
-    // Species-lookup intent ("tenkile", "arabian sand boa") wants facts first;
-    // the symbolism/lesson angle stays on-page. Diet comes from the DB field guide.
-    const scientificName = entry.analysis.scientificName?.trim();
-    const factsLabel = entry.databaseSource?.fieldGuide.dietSummary ? "Facts, Habitat, Diet & Range" : "Facts, Habitat, Range & Lessons";
-    const title = scientificName && scientificName.toLowerCase() !== entry.name.toLowerCase() && !/under review/i.test(scientificName)
-        ? `${entry.name} (${scientificName}): ${factsLabel}`
-        : `${entry.name}: ${factsLabel}`;
-    const description = buildSpeciesMetaDescription(entry.name, entry.analysis.summary);
+    // AnimalDex is not an animal wiki: species pages target meaning, symbolism,
+    // spirit-animal and "what it teaches" searches, answered from the principle
+    // data. Facts stay on the page; /animal-lessons owns "what can we learn".
+    const metaPrinciple = resolveSpeciesBehaviorProfileForPage(entry.slug);
+    const title = buildSpeciesMeaningTitle(entry.name, metaPrinciple?.principle ?? null);
+    const description = metaPrinciple
+        ? buildSpeciesMeaningDescription(entry.name, metaPrinciple.principle, metaPrinciple.coreLesson, metaPrinciple.bestFor)
+        : buildSpeciesMetaDescription(entry.name, entry.analysis.summary);
 
     const metadata = buildContentMetadata({
         locale,
@@ -385,6 +400,18 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     // Local profile, else the catalog lesson snapshot: DB-only species get
     // their principle (and the dream reading built from it) too.
     const principleProfile = resolveSpeciesBehaviorProfileForPage(entry.slug);
+    const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
+    const meaningSections = principleProfile ? buildAnimalMeaningSections({
+        name: entry.name,
+        principle: principleProfile.principle,
+        principleExpression: principleProfile.principleExpression,
+        coreLesson: principleProfile.coreLesson,
+        motto: principleProfile.motto,
+        biologicalBasis: principleProfile.biologicalBasis,
+        applicationExample: principleProfile.applicationExample,
+        bestFor: principleProfile.bestFor,
+        systems: systemsEntry ?? null
+    }) : null;
     const dreamReading = principleProfile ? buildAnimalDreamReading({
         slug: entry.slug,
         name: entry.name,
@@ -473,7 +500,17 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const storyText = subtitleStory ?? ([entry.analysis.summary, miniSystemsSummary].filter(Boolean).join(" ") || null);
     const linkMatcher = createSpeciesLinkMatcher(entry.slug);
     const pageUrl = getAbsoluteUrl(locale, `/animals/${entry.slug}`);
-    const faqItems = [
+    const faqItems = meaningSections ? [
+        ...meaningSections.faq,
+        {
+            question: t("faqCoreLesson", {animal: entry.name.toLowerCase()}),
+            answer: principleProfile!.coreLesson
+        },
+        ...(dreamReading ? [{
+            question: dreamReading.question,
+            answer: `${dreamReading.answer} ${dreamReading.goodOrBad}`
+        }] : [])
+    ] : [
         {
             question: t("faqWhatSymbolize", {animal: entry.name.toLowerCase()}),
             answer: principleProfile
@@ -657,9 +694,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "overview",
             navLabel: t("understandOverview"),
-            // Animal pages are English-only (/id collapses to English), and the
-            // heading answers the "what is a tayra?" lookup the page ranks for.
-            title: whatIsQuestion(entry.name),
+            title: t("fieldGuideIntroductionTitle", {animal: entry.name}),
             whyQuestion: `Why is ${entry.name} built this way?`,
             content: (
                 <div className="flex flex-col gap-5">
@@ -976,6 +1011,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     animalName={entry.name}
                     profile={powerProfile}
                     dream={dreamReading}
+                    meaning={meaningSections}
+                    lessonHref={isPublishedLessonSlug(entry.slug) ? `/animal-lessons/${entry.slug}` : null}
                     artwork={(
                         <div className="relative h-44 w-44 overflow-hidden border border-primary-400/20 bg-primary-400/[0.06] p-4">
                             <SpeciesArtworkImage

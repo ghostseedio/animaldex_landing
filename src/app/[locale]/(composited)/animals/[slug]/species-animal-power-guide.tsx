@@ -1,6 +1,8 @@
 import type {ReactNode} from "react";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
+import Link from "@/app/[locale]/_components/link";
 import type {DreamReading} from "@/lib/animal-dream-reading";
+import type {AnimalMeaningSections} from "@/lib/animal-meaning-sections";
 
 type SpeciesAnimalPowerGuideProps = {
     animalName: string;
@@ -8,6 +10,10 @@ type SpeciesAnimalPowerGuideProps = {
     profile: EnhancedAnimalPowerProfile;
     /** "What does it mean to dream about a <animal>?", built from this principle. */
     dream?: DreamReading | null;
+    /** Symbolism, spirit animal, life areas and biomimicry — all from data. */
+    meaning?: AnimalMeaningSections | null;
+    /** /animal-lessons/<slug> when published: owns "what can we learn from…". */
+    lessonHref?: string | null;
     labels: {
         eyebrow: string;
         pattern: string;
@@ -31,6 +37,8 @@ export default function SpeciesAnimalPowerGuide({
     artwork,
     profile,
     dream,
+    meaning,
+    lessonHref,
     labels
 }: SpeciesAnimalPowerGuideProps) {
     const enhanced = profile.availability === "enhanced";
@@ -135,6 +143,46 @@ export default function SpeciesAnimalPowerGuide({
                     ) : null}
                 </div>
             )}
+
+            {meaning ? (
+                <div id="meaning" className="mt-10 grid scroll-mt-28 gap-8 border-t border-primary-400/15 pt-8">
+                    <div>
+                        <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{meaning.symbolism.question}</h3>
+                        <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{meaning.symbolism.answer}</p>
+                    </div>
+                    <div>
+                        <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{meaning.spiritAnimal.question}</h3>
+                        <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{meaning.spiritAnimal.answer}</p>
+                    </div>
+                    <div>
+                        <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{meaning.lifeAreas.question}</h3>
+                        <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{meaning.lifeAreas.intro}</p>
+                        {meaning.lifeAreas.qualities.length > 0 ? (
+                            <ul className="mt-4 flex flex-wrap gap-2">
+                                {meaning.lifeAreas.qualities.map((quality) => (
+                                    <li key={quality} className="border border-primary-400/25 bg-primary-400/[0.08] px-3 py-1.5 text-sm font-semibold text-primary-100">{quality}</li>
+                                ))}
+                            </ul>
+                        ) : null}
+                        {meaning.lifeAreas.example ? (
+                            <p className="mt-4 max-w-3xl text-base leading-7 text-ink-300"><span className="font-semibold text-white">In practice: </span>{meaning.lifeAreas.example}</p>
+                        ) : null}
+                        {lessonHref ? (
+                            <Link href={lessonHref} className="mt-4 inline-block text-sm font-semibold text-primary-200 hover:text-primary-100" underline>
+                                What can we learn from the {animalName}?
+                            </Link>
+                        ) : null}
+                    </div>
+                    {meaning.biomimicry ? (
+                        <div>
+                            <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{meaning.biomimicry.question}</h3>
+                            {meaning.biomimicry.role ? <p className="mt-2 text-sm font-semibold uppercase tracking-[0.14em] text-primary-200">{meaning.biomimicry.role}</p> : null}
+                            <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{meaning.biomimicry.hardware}</p>
+                            {meaning.biomimicry.insight ? <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{meaning.biomimicry.insight}</p> : null}
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
 
             {dream ? (
                 <div id="dream-meaning" className="mt-10 scroll-mt-28 border-t border-primary-400/15 pt-8">

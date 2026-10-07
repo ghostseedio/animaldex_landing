@@ -11,7 +11,16 @@ import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_compon
 import TierLegend from "@/app/[locale]/(composited)/rankings/_components/tier-legend";
 import TierListSummary from "@/app/[locale]/(composited)/rankings/_components/tier-list-summary";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
+import {
+    RankingApplySection,
+    RankingTopTeachItem,
+    RankingTopTeachSection,
+    RankingWhySection
+} from "@/app/[locale]/(composited)/rankings/_components/ranking-life-lessons-sections";
 import {getChallenge} from "@/data/challenges";
+import {rankingLifeLessons} from "@/data/ranking-life-lessons";
+import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
+import {isPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {
     getExpandedRankingEntries,
     getRankingHeadline,
@@ -21,6 +30,8 @@ import {
     RANKING_CANONICAL_BASE_PATH
 } from "@/data/rankings";
 import {getSpeciesBySlug, speciesEntries, SpeciesEntry} from "@/data/species";
+import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
+import {commonNameInSentence} from "@/lib/animal-dream-reading";
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -82,6 +93,19 @@ function getMovementDomain(entry: SpeciesEntry, labels: {air: string; water: str
     return labels.land;
 }
 
+/** "100 Fastest Animals in the World" → "fastest animals" (for appended headings). */
+function getRankingSubject(headline: string) {
+    return headline
+        .replace(/^.*\?\s*/, "")
+        .replace(/^the\s+/i, "")
+        .replace(/^(top\s+)?\d+\s+/i, "")
+        .replace(/:.*$/, "")
+        .replace(/,?\s+ranked$/i, "")
+        .replace(/\s+in the (animal )?world$/i, "")
+        .trim()
+        .toLowerCase();
+}
+
 function estimateReadingMinutes(entriesCount: number, paragraphs: string[]) {
     const words = paragraphs.join(" ").split(/\s+/).filter(Boolean).length + entriesCount * 18;
 
@@ -99,7 +123,7 @@ export async function generateMetadata({params}: RankingPageProps): Promise<Meta
     const keywords = [
         ...ranking.searchIntents,
         ranking.category,
-        ...ranking.entries.slice(0, 5).map((entry) => getSpeciesBySlug(entry.speciesSlug)?.name || entry.speciesSlug)
+        ...ranking.entries.slice(0, 5).map((entry) => (getSpeciesBySlug(entry.speciesSlug) ?? getPublishedSpeciesForContent(entry.speciesSlug))?.name || entry.speciesSlug)
     ];
 
     return buildContentMetadata({
@@ -127,7 +151,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     const rankingSpeciesEntries = speciesEntries;
     const rankingSpeciesBySlug = new Map(rankingSpeciesEntries.map((entry) => [entry.slug, entry]));
     const resolvedEntries = getExpandedRankingEntries(ranking, undefined, rankingSpeciesEntries).map((entry) => {
-        const species = rankingSpeciesBySlug.get(entry.speciesSlug) ?? getSpeciesBySlug(entry.speciesSlug);
+        const species = rankingSpeciesBySlug.get(entry.speciesSlug) ?? getSpeciesBySlug(entry.speciesSlug) ?? getPublishedSpeciesForContent(entry.speciesSlug);
 
         if (!species) {
             return null;
@@ -243,10 +267,47 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
             url: getAbsoluteUrl(locale, `/animals/${entry.species.slug}`)
         }))
     };
-    const faqSchema = ranking.faq && ranking.faq.length > 0 ? {
+    const lifeLessons = ranking.lifeLessons ?? rankingLifeLessons[ranking.slug];
+    const existingFaqQuestions = new Set((ranking.faq || []).map((item) => item.question.toLowerCase()));
+    // Existing FAQ entries stay first and unchanged; life-lesson questions are appended.
+    const faqItems = [
+        ...(ranking.faq || []),
+        ...(lifeLessons?.faq || []).filter((item) => !existingFaqQuestions.has(item.question.toLowerCase()))
+    ];
+    const applyCards = (lifeLessons?.apply || []).map((card) => {
+        const species = card.speciesSlug ? getSpeciesBySlug(card.speciesSlug) ?? getPublishedSpeciesForContent(card.speciesSlug) ?? undefined : undefined;
+
+        return {
+            title: card.title,
+            body: card.body,
+            species: species ? {slug: species.slug, name: species.name} : undefined
+        };
+    });
+    const rankingSubject = getRankingSubject(title);
+    const topTeachItems = entries.slice(0, 10).flatMap((entry): RankingTopTeachItem[] => {
+        const profile = resolveSpeciesBehaviorProfileForPage(entry.species.slug);
+
+        if (!profile) {
+            return [];
+        }
+
+        const hasLessonPage = isPublishedLessonSlug(entry.species.slug);
+
+        return [{
+            rank: entry.rank,
+            speciesSlug: entry.species.slug,
+            speciesName: entry.species.name,
+            principle: profile.principle,
+            coreLesson: profile.coreLesson,
+            bestFor: profile.bestFor.slice(0, 2),
+            lessonHref: hasLessonPage ? `/animal-lessons/${entry.species.slug}` : undefined,
+            lessonLabel: hasLessonPage ? t("topTeachLessonLink", {animal: commonNameInSentence(entry.species.name)}) : undefined
+        }];
+    });
+    const faqSchema = faqItems.length > 0 ? {
         "@context": "https://schema.org",
         "@type": "FAQPage",
-        mainEntity: ranking.faq.map((item) => ({
+        mainEntity: faqItems.map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: {
@@ -418,6 +479,25 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 </div>
             </section>
 
+            {lifeLessons ? <RankingWhySection lessons={lifeLessons} /> : null}
+
+            {lifeLessons ? (
+                <RankingApplySection
+                    title={lifeLessons.applyTitle}
+                    intro={lifeLessons.applyIntro}
+                    cards={applyCards}
+                    meetAnimalLabel={(animalName) => t("lifeLessonsMeetAnimal", {animal: commonNameInSentence(animalName)})}
+                />
+            ) : null}
+
+            <RankingTopTeachSection
+                title={t("topTeachTitle", {subject: rankingSubject})}
+                description={t("topTeachDescription")}
+                principleLabel={t("topTeachPrincipleLabel")}
+                bestForLabel={t("topTeachBestForLabel")}
+                items={topTeachItems}
+            />
+
             <RelatedRankingsSection
                 title={t("relatedRankingsTitle")}
                 description={t("relatedRankingsDescription")}
@@ -456,12 +536,12 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 </section>
             )}
 
-            {ranking.faq && ranking.faq.length > 0 && (
+            {faqItems.length > 0 && (
                 <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2>
                     <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("faqDescription")}</p>
                     <div className="mt-5 grid gap-3">
-                        {ranking.faq.map((item) => (
+                        {faqItems.map((item) => (
                             <div key={item.question} className="rounded-md border border-line-400 bg-canvas-900/40 p-4">
                                 <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                                 <p className="mt-2 text-base leading-7 text-ink-200">{item.answer}</p>

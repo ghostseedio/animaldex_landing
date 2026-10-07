@@ -500,6 +500,12 @@
     "relatedRankingsDescription": "Continue into nearby tier-list pages to compare more categories without losing context.",
     "faqTitle": "Tier-list FAQ",
     "faqDescription": "Short direct answers to the follow-up questions readers usually ask after the headline ranking.",
+    "lifeLessonsMeetAnimal": "Meet the {animal}",
+    "topTeachTitle": "What the {subject} can teach us",
+    "topTeachDescription": "The top 10 animals in this list, each with its AnimalDex principle: a behavior that solves a real survival problem, translated into a lesson you can use in daily life.",
+    "topTeachPrincipleLabel": "Principle",
+    "topTeachBestForLabel": "Best for",
+    "topTeachLessonLink": "What the {animal} teaches",
     "ctaTitle": "Collect animals like these in AnimalDex",
     "ctaDescription": "Move from headline lists into species guides, real sightings, and a collection built around the fastest, strongest, and smartest animals you care about.",
     "ctaButton": "Build your animal collection",
@@ -530,7 +536,8 @@
       "rarity": "Rarity",
       "fatality": "Fatality",
       "culture": "Culture",
-      "communication": "Communication"
+      "communication": "Communication",
+      "character": "Character"
     },
     "challengeCategories": {
       "battle": "Battle",

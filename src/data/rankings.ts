@@ -1,6 +1,9 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
+import type {RankingLifeLessons} from "@/data/ranking-life-lessons";
 import {contentThumb} from "@/data/content-thumbnails";
 import {isLegendaryEarthBeastSpeciesSlug} from "@/data/legendary-earth-beasts";
+import {qualityRankingPages} from "@/data/quality-ranking-pages";
+import {getQualityRankingCandidates, type QualityRankingConfig} from "@/data/quality-rankings";
 import {buildDeterministicCanonicalStats} from "@/data/species-stats-deterministic";
 import type {SpeciesStats} from "@/lib/battle-tier";
 import {speciesEntries, SpeciesEntry} from "@/data/species";
@@ -29,7 +32,8 @@ export type RankingCategory =
     | "rarity"
     | "fatality"
     | "culture"
-    | "communication";
+    | "communication"
+    | "character";
 
 export type RankingEntry = {
     rank: number;
@@ -74,6 +78,8 @@ export type RankingPage = CanonicalContentMetadata & {
     relatedChallengeSlugs?: string[];
     relatedRankingSlugs?: string[];
     blogLinks?: RankingBlogLink[];
+    /** Appended "why they need it / how to use it" sections (see ranking-life-lessons.ts). */
+    lifeLessons?: RankingLifeLessons;
     systemsSpeciesSlugs?: string[];
     statRankingKey?: RankingStatKey;
     statRankingLimit?: number;
@@ -83,6 +89,11 @@ export type RankingPage = CanonicalContentMetadata & {
      * templated filler, so the page stops at the curated ones.
      */
     expandedEntryLimit?: number;
+    /**
+     * Character-trait list ranked from each animal's AnimalDex "best for"
+     * qualities instead of a stat formula (see quality-rankings.ts).
+     */
+    qualityRanking?: QualityRankingConfig;
 };
 
 type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
@@ -91,6 +102,8 @@ const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage
 export const RANKING_CANONICAL_BASE_PATH = "/tier-list";
 export const MIN_RANKING_TABLE_ENTRIES = 100;
 const STAT_RANKING_TABLE_ENTRIES = 250;
+/** Quality lists stop here: past ~50 the matches are third-position filler. */
+export const QUALITY_RANKING_TABLE_ENTRIES = 50;
 export const FEATURED_TIER_LIST_SLUGS = [
     "most-dangerous-animals",
     "smartest-animals",
@@ -1650,7 +1663,8 @@ const rankingPagesData: RankingPage[] = [
         ],
         relatedRankingSlugs: ["smartest-animals", "animals-with-best-teamwork"],
         systemsSpeciesSlugs: ["dolphin", "orca", "honey-bee"]
-    })
+    }),
+    ...qualityRankingPages
 ];
 
 function assertUniqueRankingSlugs(entries: RankingPage[]) {
@@ -1676,6 +1690,10 @@ export function getRankingPage(slug: string) {
 export function getRankingTableSize(page: RankingPage) {
     if (page.statRankingKey) {
         return page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES;
+    }
+
+    if (page.qualityRanking) {
+        return getQualityRankingEntries(page, page.qualityRanking).length;
     }
 
     return page.expandedEntryLimit ?? MIN_RANKING_TABLE_ENTRIES;
@@ -1981,11 +1999,57 @@ function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tie
     return `${context || `${entry.name} has relevant traits for this category`}. AnimalDex profile stats and species-guide signals put it in ${tier} tier for ${category}.`;
 }
 
+/** Weak matches (one quality in third place) sit at the bottom of the table. */
+function getQualityRankingTier(score: number): RankingTier {
+    if (score >= 3) return "C";
+    if (score === 2) return "D";
+    return "E";
+}
+
+/**
+ * Quality lists rank the whole published catalog (hand-coded and DB-only
+ * species), not the `entries` passed to getExpandedRankingEntries: the trait
+ * data for most species lives only in the catalog lesson snapshot. Curated
+ * picks lead, but only when the animal's own data carries a mapped quality;
+ * every row's metric is the matched quality.
+ */
+function getQualityRankingEntries(page: RankingPage, config: QualityRankingConfig): ResolvedRankingEntry[] {
+    const candidates = getQualityRankingCandidates(config.qualities);
+    const candidatesBySlug = new Map(candidates.map((candidate) => [candidate.slug, candidate]));
+    const limit = Math.min(page.expandedEntryLimit ?? QUALITY_RANKING_TABLE_ENTRIES, candidates.length);
+    const pinned = [...page.entries]
+        .sort((left, right) => left.rank - right.rank)
+        .flatMap((entry): ResolvedRankingEntry[] => {
+            const candidate = candidatesBySlug.get(entry.speciesSlug);
+
+            return candidate
+                ? [{...entry, primaryMetric: candidate.matchedQuality, tier: getCuratedRankingTier(entry.rank)}]
+                : [];
+        });
+    const pinnedSlugs = new Set(pinned.map((entry) => entry.speciesSlug));
+    const generated = candidates
+        .filter((candidate) => !pinnedSlugs.has(candidate.slug))
+        .slice(0, Math.max(0, limit - pinned.length))
+        .map((candidate): ResolvedRankingEntry => ({
+            rank: 0,
+            speciesSlug: candidate.slug,
+            tier: capGeneratedRankingTier(getQualityRankingTier(candidate.score)),
+            primaryMetric: candidate.matchedQuality,
+            shortReason: candidate.coreLesson || `${candidate.name} lists ${candidate.matchedQuality} among its AnimalDex best-for qualities.`
+        }));
+
+    return renumberRankingEntries([...pinned, ...generated].slice(0, limit));
+}
+
 export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RANKING_TABLE_ENTRIES, entries = speciesEntries): ResolvedRankingEntry[] {
     const rankableEntries = getRankableSpeciesEntries(entries);
 
     if (page.statRankingKey) {
         return getStatRankingEntries(page, rankableEntries);
+    }
+
+    if (page.qualityRanking) {
+        return getQualityRankingEntries(page, page.qualityRanking);
     }
 
     const pinnedSlugs = new Set(page.entries.map((entry) => entry.speciesSlug));
