@@ -55,3 +55,38 @@ export async function getSpeciesSystemDynamics(speciesProfileId: string | null |
 
     return dynamics;
 }
+
+export type SpeciesSystemDynamicsCatalogItem = {
+    animalName: string;
+    dynamics: SpeciesSystemDynamics;
+};
+
+export type SpeciesSystemDynamicsCatalogPage = {
+    items: SpeciesSystemDynamicsCatalogItem[];
+    /** Rows read before filtering, so the caller can tell a short page from the end. */
+    fetchedCount: number;
+};
+
+/**
+ * Ready System Dynamics rows for catalog browse, oldest species id first. Web
+ * twin of iOS `fetchSystemDynamicsCatalog(limit:offset:)`: the row plus the
+ * species' display name, with rows this build cannot render dropped.
+ */
+export async function getSpeciesSystemDynamicsCatalogPage(limit: number, offset: number): Promise<SpeciesSystemDynamicsCatalogPage> {
+    const page = Math.max(1, Math.min(80, Math.floor(limit)));
+    const start = Math.max(0, Math.floor(offset));
+    const rows = await readSupabase(
+        `species_system_dynamics?select=*,species_profiles(display_name)&order=species_profile_id.asc&offset=${start}&limit=${page}`
+    );
+    if (!Array.isArray(rows)) return {items: [], fetchedCount: 0};
+
+    const items: SpeciesSystemDynamicsCatalogItem[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+        const dynamics = decodeSpeciesSystemDynamics(row);
+        if (!dynamics) continue;
+        const embedded = row.species_profiles as {display_name?: unknown} | null | undefined;
+        const animalName = optionalText(embedded?.display_name) ?? dynamics.archetypeName;
+        items.push({animalName, dynamics});
+    }
+    return {items, fetchedCount: rows.length};
+}

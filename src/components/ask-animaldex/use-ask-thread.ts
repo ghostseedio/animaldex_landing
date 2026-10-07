@@ -21,9 +21,11 @@ import {
 } from "@/lib/ask-animaldex/thread";
 import type {AskSubject} from "@/lib/ask-animaldex/subject";
 import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
+import {TRIAL_ASK_FALLBACK_FOLLOW_UPS} from "@/lib/animal-trial-ask";
 
 /** Offered when the model returns none, so the thread never dead-ends. */
-export function fallbackFollowUps(principleName: string | null): string[] {
+export function fallbackFollowUps(principleName: string | null, aboutTrial = false): string[] {
+    if (aboutTrial) return [...TRIAL_ASK_FALLBACK_FOLLOW_UPS];
     return principleName
         ? [
             "How do I practise this?",
@@ -232,13 +234,15 @@ export function useAskThread(params: {
                 hasReaderPhoto: subject.hasReaderPhoto,
                 title: subject.title,
                 summary: subject.summary,
-                path: subject.path
+                path: subject.path,
+                trialContext: subject.trialContext,
+                trialKey: subject.trialKey
             }
         };
 
         /** The model's own offers, plus the Wild Profile offer when the reader has none. */
         const offersFor = (raw: string[], event: StreamEvent) => decorateFollowUps(
-            raw.length ? raw : fallbackFollowUps(principleName),
+            raw.length ? raw : fallbackFollowUps(principleName, Boolean(subject.trialContext)),
             {
                 signedIn: event.signed_in ?? callbacks.current.viewer?.signedIn ?? false,
                 hasWildProfile: event.has_wild_profile ?? callbacks.current.viewer?.hasWildProfile ?? false

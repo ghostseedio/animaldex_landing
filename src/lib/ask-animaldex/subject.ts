@@ -8,6 +8,7 @@
  * species page from an article from the collection.
  */
 
+import {TRIAL_ASK_SUGGESTIONS} from "@/lib/animal-trial-ask";
 import type {AskThinkingHints} from "@/lib/ask-animaldex/thinking-phases";
 
 export type AskSubjectKind =
@@ -35,6 +36,13 @@ export type AskSubject = {
     summary: string | null;
     /** Route path with the locale prefix removed. */
     path: string;
+    /**
+     * The Animal Trial the reader is looking at, as grounding. Set, the
+     * assistant answers about that Trial and nothing else.
+     */
+    trialContext: string | null;
+    /** Keeps a Trial conversation separate from the animal's Power thread. */
+    trialKey: string | null;
 };
 
 /** Everything the drawer needs to write honest suggestions and waiting lines. */
@@ -73,7 +81,9 @@ export function emptyAskSubject(path = "/"): AskSubject {
         hasReaderPhoto: false,
         title: null,
         summary: null,
-        path
+        path,
+        trialContext: null,
+        trialKey: null
     };
 }
 
@@ -136,6 +146,8 @@ export type AskSuggestion = {
  * informed surface.
  */
 export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggestion[] {
+    // A Trial thread opens on the Trial, whatever the page is about.
+    if (subject.trialContext) return TRIAL_ASK_SUGGESTIONS;
     if (subject.scope !== "species") return generalSuggestions(subject);
 
     const name = hints.animalName?.trim() || subject.name?.trim() || "this animal";

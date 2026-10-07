@@ -6,8 +6,18 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
 import DiscoverCaptureActions from "@/app/[locale]/(authenticated)/app/_components/discover-capture-actions";
 import ShareDiscoverPostButton from "@/app/[locale]/p/[postId]/share-discover-post-button";
+import AnimalTrialCard, { AnimalTrialEvidence } from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
+import { animalTrialFrequencyLabel } from "@/lib/discover-animal-trial";
+import {
+  OVERALL_DRAW_LINE,
+  VOTE_RULE_LINE,
+  VOTING_TIMEOUT_FALLBACK_LINE,
+  roundWinnerText as battleRoundWinnerText,
+  voteProgressText,
+} from "@/lib/matchup-battle-rules";
 import type {
   DiscoverAlignmentItem,
+  DiscoverAnimalTrialItem,
   DiscoverCaptureItem,
   DiscoverChallengeItem,
   DiscoverChallengeParticipant,
@@ -685,6 +695,23 @@ function sharePropsForItem(item: DiscoverTimelineItem, locale: string) {
         collectorName: item.attacker.displayName,
       }),
       text: item.activitySummary,
+    };
+  }
+
+  if (item.kind === "animal-trial") {
+    return {
+      url,
+      title: discoverPostShareTitle({
+        kind: item.kind,
+        animalName: item.speciesName,
+        collectorName: item.collector.name,
+      }),
+      text: discoverPostShareDescription({
+        kind: item.kind,
+        animalName: item.speciesName,
+        collectorName: item.collector.name,
+        collectorUsername: item.collector.username,
+      }),
     };
   }
 
@@ -1486,7 +1513,7 @@ function ChallengeVotingCountdown({createdAt, deadline}: {createdAt: string; dea
           <path d="M12 9.5V13l2.2 1.6M9.4 2.6h5.2" />
         </svg>
         <span className="text-[11px] font-black tabular-nums">{formatVotingTimeRemaining(remaining)}</span>
-        <span className="ml-auto text-[9px] font-extrabold text-white/[0.62]">NO QUORUM → R1 WINS</span>
+        <span className="ml-auto text-[9px] font-extrabold text-white/[0.62]">{VOTE_RULE_LINE}</span>
       </div>
       <div className="h-[5px] w-full overflow-hidden rounded-full bg-white/10">
         <div className={`h-full rounded-full ${bar}`} style={{width: `${Math.min(100, (remaining / total) * 100)}%`}} />
@@ -1517,9 +1544,14 @@ function ChallengeRoundPager({
   const [page, setPage] = useState(0);
 
   function roundWinnerText(round: 2 | 3) {
-    const winnerId = round === 2 ? item.round2WinnerCaptureId : item.round3WinnerCaptureId;
-    const name = winnerId === attackerCaptureId ? item.attacker.animalName : item.defender.animalName;
-    return round === 2 ? `The community backed ${name}.` : `Species comparison favored ${name}.`;
+    return battleRoundWinnerText({
+      round,
+      round2Draw: item.round2Draw,
+      winnerCaptureId: round === 2 ? item.round2WinnerCaptureId : item.round3WinnerCaptureId,
+      attackerCaptureId,
+      attackerName: item.attacker.animalName,
+      defenderName: item.defender.animalName,
+    });
   }
 
   return (
@@ -1676,10 +1708,8 @@ function ChallengeCard({
 
   const statusPanel = isVoting ? (
     <div className="pointer-events-auto space-y-2 rounded-[14px] bg-black/[0.72] p-3">
-      <p className="text-[11px] font-black text-primary-200">ROUND 2 OF 3 · COMMUNITY VOTE</p>
-      <p className="text-xs font-medium tabular-nums text-white">
-        {votesCount} / {item.requiredVotes} votes
-      </p>
+      <p className="text-[11px] font-black text-primary-200">Round 2: Who would win?</p>
+      <p className="text-xs font-medium tabular-nums text-white">{voteProgressText(votesCount)}</p>
       {item.votingDeadlineAt ? (
         <ChallengeVotingCountdown createdAt={item.date} deadline={item.votingDeadlineAt} />
       ) : null}
@@ -1714,10 +1744,11 @@ function ChallengeCard({
           {item.roundsWonAttacker}–{item.roundsWonDefender}
         </p>
       </div>
+      {item.overallDraw ? (
+        <p className="text-[11px] font-medium text-white/[0.78]">{OVERALL_DRAW_LINE}</p>
+      ) : null}
       {item.settlementReason === "voting_timeout_round1_fallback" ? (
-        <p className="text-[11px] font-medium text-white/[0.78]">
-          Voting ended before the target was reached. The Round 1 winner takes the battle.
-        </p>
+        <p className="text-[11px] font-medium text-white/[0.78]">{VOTING_TIMEOUT_FALLBACK_LINE}</p>
       ) : (
         <ChallengeRoundPager item={item} attackerCaptureId={item.attacker.captureId} />
       )}
@@ -1907,9 +1938,24 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
         ) : item.kind === "alignment" ? (
           <div className="space-y-4"><img src={item.imageSrc} alt={item.rewardedAnimalName} className="aspect-square w-full rounded-[20px] object-cover"/><h3 className="text-xl font-bold text-white">Daily Companion</h3><p className="text-sm leading-6 text-white/65">{item.summary ?? item.moveTodayText ?? "Shared a Daily Alignment proof."}</p><div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Collector" value={item.collector.name}/><DetailRow label="Rewarded animal" value={item.rewardedAnimalName}/><DetailRow label="Stat boost" value={item.statBoostStat}/><DetailRow label="Post ID" value={item.proofId}/></div></div>
         ) : item.kind === "challenge" ? (
-          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.outcomeLine}</h3>{item.winningsLine ? <p className="text-sm text-amber-200">{item.winningsLine}</p> : null}<p className="text-sm leading-6 text-white/65">{item.activitySummary}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Scenario" value={item.scenarioTitle}/><DetailRow label="Deciding edge" value={item.decidingEdgeLabel ?? item.chosenStat}/><DetailRow label="Winner" value={item.winnerCaptureId === item.attacker.captureId ? item.attacker.displayName : item.defender.displayName}/><DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
+          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.outcomeLine}</h3>{item.winningsLine ? <p className="text-sm text-amber-200">{item.winningsLine}</p> : null}<p className="text-sm leading-6 text-white/65">{item.activitySummary}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Scenario" value={item.scenarioTitle}/><DetailRow label="Deciding edge" value={item.decidingEdgeLabel ?? item.chosenStat}/><DetailRow label="Winner" value={item.overallDraw ? "Draw" : item.winnerCaptureId === item.attacker.captureId ? item.attacker.displayName : item.defender.displayName}/><DetailRow label="Credits wagered" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/>{item.overallDraw ? <DetailRow label="Credits returned to each player" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/> : <DetailRow label={item.battleStatus === "completed" || item.challengeFormat !== "best_of_3_v2" ? "Credits paid to winner" : "Potential winner payout"} value={`${item.payoutAmount} ${item.payoutAmount === 1 ? "credit" : "credits"}`}/>}<DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
         ) : item.kind === "fusion" ? (
           <div className="space-y-4"><h3 className="text-xl font-bold text-white">Principle Fusion</h3><p className="text-sm leading-6 text-white/65">{item.receiverAnimalName} learned from {item.donorAnimalName}.</p><DetailRow label="Learned sub-principle" value={item.learnedPrinciple}/><DetailRow label="Expression" value={item.learnedExpression}/><DetailRow label="Post ID" value={item.fusionId}/></div>
+        ) : item.kind === "animal-trial" ? (
+          <div className="space-y-4">
+            <div className="aspect-[4/5] max-h-80 w-full overflow-hidden rounded-[20px]"><AnimalTrialEvidence item={item} /></div>
+            <h3 className="text-xl font-bold text-white">{item.isFailed ? "Animal Trial · Evidence not accepted" : "Animal Trial"}</h3>
+            <p className="whitespace-pre-line text-sm leading-6 text-white/65">{item.title}</p>
+            <div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3">
+              <DetailRow label="Collector" value={item.collector.name}/>
+              <DetailRow label="Animal" value={item.speciesName}/>
+              <DetailRow label="Power" value={item.principleName || null}/>
+              <DetailRow label="Route" value={animalTrialFrequencyLabel(item.frequency)}/>
+              <DetailRow label="Evidence" value={item.proofType}/>
+              {item.isFailed ? null : <DetailRow label="Reward" value={`+${item.rewardXP} XP${item.rewardCredits > 0 ? ` · +${item.rewardCredits} Credits` : ""}`}/>}
+              <DetailRow label="Post ID" value={item.postId}/>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4"><h3 className="text-xl font-bold text-white">Trade</h3><DetailRow label="Offered" value={`${item.offerer.animalName} · ${item.offerer.name}`}/><DetailRow label="Received" value={`${item.receiver.animalName} · ${item.receiver.name}`}/><DetailRow label="Post ID" value={item.id.replace(/^trade-/, "")}/></div>
         )}
@@ -1947,6 +1993,13 @@ export function DiscoverTimelineCard({
       break;
     case "trade":
       card = <TradeCard item={item} locale={locale} onInfo={onInfo} share={share} />;
+      break;
+    case "animal-trial":
+      card = (
+        <TimelineShell badge="Animal Trial" date={item.date} locale={locale} onInfo={onInfo} share={share}>
+          <AnimalTrialCard item={item} viewerUserId={viewerUserId} />
+        </TimelineShell>
+      );
       break;
   }
 

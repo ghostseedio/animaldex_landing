@@ -80,7 +80,8 @@ export default function MatchupResultDetailSheet({
                             requiredVotes: item.requiredVotes,
                             votesCount: item.votesCount,
                             settlementReason: item.settlementReason,
-                            finalScore: finalScore(item)
+                            finalScore: finalScore(item),
+                            overallDraw: item.overallDraw
                         })}
                     />
                 </div>

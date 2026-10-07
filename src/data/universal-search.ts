@@ -34,6 +34,9 @@ export type UniversalSearchBrief = {
     title: string;
     summary: string;
     bullets: string[];
+    /** `ai_general` when Gemini answered without AnimalDex evidence: labelled "AI answer", not "Field brief". */
+    source?: "db" | "ai_general";
+    related_animals?: string[];
 };
 
 export type UniversalSearchSpeciesHit = {
@@ -119,6 +122,37 @@ export type UniversalSearchHelpHit = {
     summary: string;
 };
 
+/** What the query asked about beyond the animal itself ("frequency of a dog", "lion trials"). */
+export type UniversalSearchFocus = "system_dynamics" | "trials";
+
+/** System Dynamics summary for a searched animal. */
+export type UniversalSearchDynamicsHit = {
+    species_profile_id: string;
+    display_name: string;
+    archetype_name: string | null;
+    behavior: string | null;
+    baseline_frequency: "LOW" | "MID" | "HIGH" | null;
+    triggered_frequency: "LOW" | "MID" | "HIGH" | null;
+    modes: Array<{frequency: string; label: string | null; weight: number | null}>;
+    core_principle: string | null;
+    signature_explanation: string | null;
+    failure_modes: string[];
+};
+
+export type UniversalSearchTrialHit = {
+    /** `${species_profile_id}:${frequency}` */
+    trial_id: string;
+    species_profile_id: string;
+    display_name: string;
+    frequency: "LOW" | "MID" | "HIGH" | null;
+    title: string;
+    objective: string | null;
+    animal_rule: string | null;
+    principle_name: string | null;
+    mechanism_connection: string | null;
+    estimated_minutes: number | null;
+};
+
 export type UniversalSearchResponse = {
     query: string;
     intent: UniversalSearchIntent | null;
@@ -129,6 +163,9 @@ export type UniversalSearchResponse = {
     learn: UniversalSearchLearnHit[];
     facts: UniversalSearchFactHit[];
     help: UniversalSearchHelpHit[];
+    dynamics: UniversalSearchDynamicsHit[];
+    trials: UniversalSearchTrialHit[];
+    focus: UniversalSearchFocus | null;
     cached: boolean;
     used_ai: boolean;
 };
@@ -220,6 +257,9 @@ export async function runUniversalSearch(params: {
         learn: Array.isArray(raw.learn) ? raw.learn : [],
         facts: Array.isArray(raw.facts) ? raw.facts : [],
         help: Array.isArray(raw.help) ? raw.help : [],
+        dynamics: Array.isArray(raw.dynamics) ? raw.dynamics.filter((hit) => Boolean(hit?.species_profile_id)) : [],
+        trials: Array.isArray(raw.trials) ? raw.trials.filter((hit) => Boolean(hit?.trial_id && hit.species_profile_id && hit.title)) : [],
+        focus: raw.focus === "system_dynamics" || raw.focus === "trials" ? raw.focus : null,
         cached: raw.cached === true,
         used_ai: raw.used_ai === true
     };

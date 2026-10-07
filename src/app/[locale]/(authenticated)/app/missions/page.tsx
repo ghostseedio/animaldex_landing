@@ -26,11 +26,40 @@ function campaignReward(campaign: AppSponsoredCampaign) {
     return cash ?? achievement ?? "Achievement";
 }
 
+/** The event window is over, even if the server status has not ticked to completed yet. */
+function isPastCampaign(campaign: AppSponsoredCampaign, now = Date.now()) {
+    if (campaign.status === "completed" || campaign.status === "archived") return true;
+    if (campaign.status === "scheduled" || campaign.status === "live") {
+        const end = Date.parse(campaign.endsAt);
+        return Number.isFinite(end) && end <= now;
+    }
+    return false;
+}
+
+function participantIsComplete(campaign: AppSponsoredCampaign) {
+    return campaign.participant?.status === "completed" || campaign.participant?.status === "rewarded";
+}
+
+/** A finished personal run stays "Completed"; a closed window is "Ended". */
 function campaignStatus(campaign: AppSponsoredCampaign) {
-    if (campaign.participant?.status === "completed" || campaign.participant?.status === "rewarded") return "COMPLETED";
+    if (participantIsComplete(campaign)) return "COMPLETED";
+    if (isPastCampaign(campaign)) return "ENDED";
     if (campaign.status === "live") return "LIVE";
     if (campaign.status === "scheduled") return "UPCOMING";
     return campaign.status.replaceAll("_", " ").toUpperCase();
+}
+
+function timeRemaining(campaign: AppSponsoredCampaign, now = Date.now()) {
+    const end = Date.parse(campaign.endsAt);
+    if (!Number.isFinite(end)) return null;
+    const remaining = end - now;
+    if (remaining <= 0) return null;
+    const days = Math.floor(remaining / 86_400_000);
+    if (days >= 2) return `${days} days left`;
+    if (days === 1) return "1 day left";
+    const hours = Math.floor(remaining / 3_600_000);
+    if (hours >= 2) return `${hours} hours left`;
+    return `${Math.max(1, Math.floor(remaining / 60_000))} min left`;
 }
 
 function campaignWindow(campaign: AppSponsoredCampaign) {
@@ -45,22 +74,28 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
     const progress = Math.max(0, campaign.participant?.progressCount ?? 0);
     const percent = Math.round(progress / Math.max(1, campaign.targetCount) * 100);
     const presentedBy = campaign.presenterName?.trim() || null;
+    const isPast = isPastCampaign(campaign);
+    const emphasised = campaign.status === "live" && !isPast && !participantIsComplete(campaign);
+    const remaining = isPast ? null : timeRemaining(campaign);
+    const left = Math.max(0, campaign.targetCount - progress);
 
     return (
-        <AppSurface padding={false} className="overflow-hidden">
+        <AppSurface padding={false} className={`overflow-hidden ${isPast ? "opacity-[0.78]" : ""}`}>
             {campaign.thumbnailUrl ? (
                 <div className="relative h-44 bg-white/[0.04]">
                     <img src={campaign.thumbnailUrl} alt={campaign.thumbnailAltText ?? ""} className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/30" />
                     <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.65rem] font-black text-black">{campaignStatus(campaign)}</span>
+                        <span className={`rounded-full px-3 py-1 text-[0.65rem] font-black ${emphasised ? "bg-primary-400 text-black" : "bg-black/70 text-white/80"}`}>{campaignStatus(campaign)}</span>
                         {campaign.sponsorOrganizationId ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white">Sponsored</span> : null}
+                        {remaining ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white/80">{remaining}</span> : null}
                     </div>
                 </div>
             ) : null}
             <div className="p-5">
                 <div className="flex flex-wrap items-center gap-2">
-                    {!campaign.thumbnailUrl ? <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.65rem] font-black text-black">{campaignStatus(campaign)}</span> : null}
+                    {!campaign.thumbnailUrl ? <span className={`rounded-full px-3 py-1 text-[0.65rem] font-black ${emphasised ? "bg-primary-400 text-black" : "bg-white/[0.08] text-white/80"}`}>{campaignStatus(campaign)}</span> : null}
+                    {!campaign.thumbnailUrl && remaining ? <span className="text-xs font-bold text-white/35">{remaining}</span> : null}
                     {campaign.sponsorOrganizationId && presentedBy ? (
                         <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">Presented by {presentedBy}</span>
                     ) : (
@@ -76,6 +111,11 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                         <span>{progress} / {campaign.targetCount}</span>
                         <span>{campaignObjective(campaign)}</span>
                     </div>
+                    {isPast && !participantIsComplete(campaign) ? (
+                        <p className="mt-2 text-xs font-bold text-white/45">This Challenge has ended.</p>
+                    ) : !isPast && campaign.participant && left > 0 ? (
+                        <p className="mt-2 text-xs font-bold text-white/45">{left === 1 ? "1 more to go" : `${left} more to go`}</p>
+                    ) : null}
                 </div>
                 <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-200/70">Reward</p>
@@ -93,6 +133,10 @@ export default async function MissionsPage() {
         getAppProgression(),
         getAppSponsoredCampaigns()
     ]);
+    const liveCampaigns = sponsoredCampaigns.filter((campaign) => !isPastCampaign(campaign));
+    const pastCampaigns = sponsoredCampaigns
+        .filter((campaign) => isPastCampaign(campaign))
+        .sort((left, right) => Date.parse(right.endsAt) - Date.parse(left.endsAt));
     const completed = progression.missions.filter((item) => item.completedCount > 0).length;
     const active = progression.missions.filter((item) => !item.isLocked && item.completedCount === 0).length;
     const tradePercent = Math.round(progression.overallScore / Math.max(1, progression.tradeUnlockScore) * 100);
@@ -112,7 +156,7 @@ export default async function MissionsPage() {
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
 
-            {sponsoredCampaigns.length ? (
+            {liveCampaigns.length ? (
                 <section className="space-y-4">
                     <AppSectionTitle
                         icon="arena"
@@ -120,7 +164,19 @@ export default async function MissionsPage() {
                         detail="Live and upcoming campaigns with clear rules, sponsor disclosure, and deterministic rewards."
                     />
                     <div className="grid gap-4 xl:grid-cols-2">
-                        {sponsoredCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
+                        {liveCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
+                    </div>
+                </section>
+            ) : pastCampaigns.length ? (
+                <p className="text-sm text-white/45">No live Challenges right now.</p>
+            ) : null}
+
+            {/* Challenges whose window has closed, kept out of the live list. */}
+            {pastCampaigns.length ? (
+                <section className="space-y-4">
+                    <AppSectionTitle icon="arena" title="Past events" detail="Challenges whose window has closed." />
+                    <div className="grid gap-4 xl:grid-cols-2">
+                        {pastCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
                     </div>
                 </section>
             ) : null}

@@ -100,7 +100,10 @@ export function resolveAskSubject(raw: unknown): AskSubject {
         hasReaderPhoto: body.hasReaderPhoto === true,
         title: cappedText(body.title, 140),
         summary: cappedText(body.summary, 400),
-        path
+        path,
+        // Mirrors `normalizedText(query.trial_context, 2000)` in the edge function.
+        trialContext: cappedText(body.trialContext, 2000),
+        trialKey: cappedText(body.trialKey, 120)
     };
 }
 

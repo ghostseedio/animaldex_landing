@@ -172,6 +172,7 @@ export async function ProfilePageBody({
                     farmCount: profile.farmCount,
                     tradesMade: profile.tradesMade,
                     missionsCompleted: profile.missionsCompleted,
+                    animalPowersEarned: profile.animalPowersEarned,
                     challengeWins: profile.challengeWins,
                     challengeLosses: profile.challengeLosses,
                     discoveryDistanceLabel: canViewLocations && profile.discoveryDistanceMeters != null

@@ -30,6 +30,18 @@ export type AskSubjectDeclaration = {
     summary?: string | null;
 };
 
+/**
+ * The Trial a sheet is showing. Declared separately from the page's subject
+ * because it comes and goes while the page stays: closing the sheet must give
+ * the assistant the page back, which a single overwritten declaration cannot.
+ */
+export type AskTrialDeclaration = {
+    trialContext: string;
+    trialKey: string;
+    /** The animal, so the drawer is titled when the page declared nothing. */
+    name?: string | null;
+};
+
 type AskContextValue = {
     subject: AskSubject;
     /** The reader's own photo URL, for the photo medium. Never sent to the model. */
@@ -47,6 +59,7 @@ const AskContext = createContext<AskContextValue | null>(null);
 export function AskAnimalDexProvider({locale, children}: {locale: string; children: React.ReactNode}) {
     const pathname = usePathname() ?? "/";
     const [declaration, setDeclaration] = useState<AskSubjectDeclaration | null>(null);
+    const [trial, setTrial] = useState<AskTrialDeclaration | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const pendingQuestion = useRef<string | null>(null);
 
@@ -55,23 +68,28 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     // to be about the animal the reader just left.
     useEffect(() => {
         setDeclaration(null);
+        setTrial(null);
     }, [pathname]);
 
     const subject = useMemo<AskSubject>(() => {
         const fromPath = askSubjectFromPath(pathname);
-        if (!declaration) return fromPath;
+        const trialFields = trial
+            ? {trialContext: trial.trialContext, trialKey: trial.trialKey}
+            : {trialContext: null, trialKey: null};
+        if (!declaration) return {...fromPath, ...trialFields, name: trial?.name ?? fromPath.name};
         const slug = declaration.slug ?? fromPath.slug;
         return {
             ...fromPath,
             slug,
             scope: slug && (declaration.scope ?? fromPath.scope) === "species" ? "species" : "general",
-            name: declaration.name ?? fromPath.name,
+            name: declaration.name ?? trial?.name ?? fromPath.name,
             captureId: declaration.captureId ?? fromPath.captureId,
             hasReaderPhoto: Boolean(declaration.photoUrl),
             title: declaration.title ?? fromPath.title,
-            summary: declaration.summary ?? fromPath.summary
+            summary: declaration.summary ?? fromPath.summary,
+            ...trialFields
         };
-    }, [pathname, declaration]);
+    }, [pathname, declaration, trial]);
 
     const open = useCallback((question?: string) => {
         if (question && question.trim()) pendingQuestion.current = question.trim();
@@ -102,7 +120,9 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     return (
         <AskContext.Provider value={value}>
             <AskSubjectDeclarationContext.Provider value={setDeclaration}>
-                {children}
+                <AskTrialDeclarationContext.Provider value={setTrial}>
+                    {children}
+                </AskTrialDeclarationContext.Provider>
             </AskSubjectDeclarationContext.Provider>
         </AskContext.Provider>
     );
@@ -111,6 +131,27 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
 const AskSubjectDeclarationContext = createContext<
     ((declaration: AskSubjectDeclaration | null) => void) | null
 >(null);
+
+const AskTrialDeclarationContext = createContext<
+    ((declaration: AskTrialDeclaration | null) => void) | null
+>(null);
+
+/**
+ * Rendered by a Trial sheet while it is open. Renders nothing. While mounted,
+ * the assistant is about this Trial; on unmount the page's own subject is back.
+ */
+export function AskTrialBridge(declaration: AskTrialDeclaration) {
+    const setTrial = useContext(AskTrialDeclarationContext);
+    const serialized = JSON.stringify(declaration);
+
+    useEffect(() => {
+        if (!setTrial) return;
+        setTrial(JSON.parse(serialized) as AskTrialDeclaration);
+        return () => setTrial(null);
+    }, [setTrial, serialized]);
+
+    return null;
+}
 
 /**
  * Falls back to a route-derived subject when no provider is mounted, so a

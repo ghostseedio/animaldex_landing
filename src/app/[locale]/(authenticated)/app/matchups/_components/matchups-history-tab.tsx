@@ -5,31 +5,20 @@ import {AppEmpty} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import MatchupResultDetailSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/matchup-result-detail-sheet";
 import type {MatchupHistoryItem} from "@/data/matchups-types";
 import {formatAppShortDateWithYear} from "@/lib/app-dates";
+import {battleHistoryStatus} from "@/lib/matchup-battle-rules";
 
 function isBestOfThree(item: MatchupHistoryItem) {
     return item.challengeFormat === "best_of_3_v2";
 }
 
-function isVoting(item: MatchupHistoryItem) {
-    return isBestOfThree(item) && item.battleStatus === "round_2_voting";
-}
 
 function isComplete(item: MatchupHistoryItem) {
     return !isBestOfThree(item) || item.battleStatus === "completed";
 }
 
-function finalScore(item: MatchupHistoryItem) {
-    if (!isBestOfThree(item) || !isComplete(item)) return null;
-    if (item.roundsWonAttacker == null || item.roundsWonDefender == null) return null;
-    return `${item.roundsWonAttacker}-${item.roundsWonDefender}`;
-}
 
 function statusCopy(item: MatchupHistoryItem) {
-    if (isVoting(item)) return `Round 2 - ${item.votesCount} / ${item.requiredVotes ?? 0} votes`;
-    const score = finalScore(item);
-    if (score) return `Complete - ${score}`;
-    if (isBestOfThree(item) && !isComplete(item)) return "Round 3 - Comparing species";
-    return item.viewerWon ? "Won" : "Lost";
+    return battleHistoryStatus(item) ?? (item.viewerDrew ? "Draw" : item.viewerWon ? "Won" : "Lost");
 }
 
 export default function MatchupsHistoryTab({
@@ -78,11 +67,11 @@ export default function MatchupsHistoryTab({
                             </p>
                         </div>
                         <div className="shrink-0 text-right">
-                            <span className={`rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] ${!isComplete(item) || item.viewerWon ? "bg-primary-400/15 text-primary-200" : "bg-rose-400/10 text-rose-200"}`}>
+                            <span className={`rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] ${item.viewerDrew ? "bg-white/10 text-white/70" : !isComplete(item) || item.viewerWon ? "bg-primary-400/15 text-primary-200" : "bg-rose-400/10 text-rose-200"}`}>
                                 {statusCopy(item)}
                             </span>
-                            <p className={`mt-2 text-sm font-bold ${!isComplete(item) ? "text-white/40" : item.creditsDelta >= 0 ? "text-primary-200" : "text-rose-300"}`}>
-                                {!isComplete(item) ? "Locked" : `${item.creditsDelta >= 0 ? "+" : ""}${item.creditsDelta}`}
+                            <p className={`mt-2 text-sm font-bold ${!isComplete(item) ? "text-white/40" : item.viewerDrew ? "text-white/60" : item.creditsDelta >= 0 ? "text-primary-200" : "text-rose-300"}`}>
+                                {!isComplete(item) ? "Locked" : item.viewerDrew ? "Returned" : `${item.creditsDelta >= 0 ? "+" : ""}${item.creditsDelta}`}
                             </p>
                         </div>
                     </button>

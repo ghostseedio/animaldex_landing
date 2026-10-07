@@ -198,7 +198,16 @@ export type AskGroundingPacket = {
      * is not told to go and make one.
      */
     wildProfile?: {summary: string | null};
+    /**
+     * The Animal Trial the person is looking at. Set, the answer is about that
+     * Trial — what it means, how to do it, an example — and the content index
+     * is withheld so the offers cannot wander off it.
+     */
+    trialContext?: string | null;
 };
+
+const TRIAL_GROUNDING_LEAD = "animal_trial — the person is looking at this Trial. Answer what it means, how to do it, and give concrete examples of this Trial. Do not replace it with a different task.";
+const TRIAL_CLOSING_INSTRUCTION = "The question is about animal_trial. Explain what this Trial means, how to do it, and give a concrete example of this Trial. Use the animal's Power only to explain that Trial. Follow-ups stay on this Trial: its meaning, an example, how to start, or what the evidence should show. Do not offer System Dynamics, the field guide, or the Power as the next question.";
 
 const SITE_CONTEXT = [
     "AnimalDex is an animal identification and collection app. A reader photographs an animal, the app identifies it, and",
@@ -346,10 +355,14 @@ export function buildAskUserPrompt(params: {
         : "";
 
     const historyLine = history.length > 0 ? `recent_conversation:\n${JSON.stringify(history)}` : "";
+    const trialContext = packet.trialContext?.trim() || null;
+    const trialBlock = trialContext ? `${TRIAL_GROUNDING_LEAD}\n${trialContext}` : "";
 
     if (packet.scope === "species" && packet.species) {
         const species = packet.species;
-        const contentIndex = buildAskContentIndex(species);
+        // In a Trial thread the index is withheld on purpose: the offers must
+        // stay on the Trial, and an index is an invitation to leave it.
+        const contentIndex = trialContext ? [] : buildAskContentIndex(species);
         return [
             `animal_name: ${species.name}`,
             `user_question: ${params.userQuestion}`,
@@ -362,9 +375,11 @@ export function buildAskUserPrompt(params: {
             species.systemDynamics
                 ? `system_dynamics:\n${JSON.stringify(species.systemDynamics)}`
                 : "system_dynamics: not_available",
-            contentIndex.length > 0
-                ? `available_content — everything AnimalDex holds on this animal, for your follow-up offers:\n${contentIndex.join("\n")}`
-                : "available_content: none",
+            trialContext
+                ? ""
+                : contentIndex.length > 0
+                    ? `available_content — everything AnimalDex holds on this animal, for your follow-up offers:\n${contentIndex.join("\n")}`
+                    : "available_content: none",
             packet.hasReaderPhoto
                 ? "reader_photo: the reader has their own photo of this animal on screen"
                 : "reader_photo: none",
@@ -373,13 +388,18 @@ export function buildAskUserPrompt(params: {
                     ? `wild_profile_summary:\n${packet.wildProfile.summary}`
                     : "wild_profile_summary: not_set"
                 : "",
+            trialBlock,
             pageLine,
             historyLine,
             "",
             "Answer the reader's latest question in conversation.",
-            "Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when the question touches them.",
-            "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover.",
-            "Keep principle_name and core_pattern stable across follow-ups.",
+            ...(trialContext
+                ? [TRIAL_CLOSING_INSTRUCTION]
+                : [
+                    "Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when the question touches them.",
+                    "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover.",
+                    "Keep principle_name and core_pattern stable across follow-ups."
+                ]),
             "Use recent_conversation for pronouns and follow-up context, but never replace canonical animal grounding.",
             packet.wildProfile
                 ? "If the question asks for personal life application and wild_profile_summary is not_set, explain briefly that setting up Wild Profile helps AnimalDex tailor application — then still offer a general pattern-based answer."
@@ -400,15 +420,22 @@ export function buildAskUserPrompt(params: {
         candidates.length > 0
             ? `candidate_species — what AnimalDex holds that matches this question:\n${JSON.stringify(candidates.map(candidateSummary))}`
             : "candidate_species: none matched",
-        contentIndex.length > 0
-            ? `available_content — what AnimalDex holds on those species, for your follow-up offers:\n${contentIndex.join("\n")}`
-            : "available_content: none",
+        trialContext
+            ? ""
+            : contentIndex.length > 0
+                ? `available_content — what AnimalDex holds on those species, for your follow-up offers:\n${contentIndex.join("\n")}`
+                : "available_content: none",
+        trialBlock,
         pageLine,
         historyLine,
         "",
         "Answer the reader's latest question in conversation.",
-        "Answer from candidate_species first; name only species that appear there.",
-        "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover.",
+        ...(trialContext
+            ? [TRIAL_CLOSING_INSTRUCTION]
+            : [
+                "Answer from candidate_species first; name only species that appear there.",
+                "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover."
+            ]),
         "Use recent_conversation for pronouns and follow-up context, and page_context to resolve what 'this' refers to."
     ].filter(Boolean).join("\n");
 }

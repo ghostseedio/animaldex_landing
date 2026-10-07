@@ -430,10 +430,14 @@ export function StatTile({
 
 export function BestForTagsChartCard({
     scores,
-    title
+    title,
+    isOwner = false,
+    usernameHandle = "@collector"
 }: {
     scores: ProfileBestForTag[];
     title: string;
+    isOwner?: boolean;
+    usernameHandle?: string;
 }) {
     const sorted = [...scores].sort((left, right) => {
         if (right.score !== left.score) return right.score - left.score;
@@ -447,14 +451,24 @@ export function BestForTagsChartCard({
             <div className="flex items-center gap-3">
                 <PanelTitle>{title}</PanelTitle>
                 <span className="ml-auto shrink-0">
-                    <PanelCaption>{sorted.length === 0 ? "No data yet" : "Top 25"}</PanelCaption>
+                    <PanelCaption>{sorted.length === 0 ? "None earned yet" : "Top 25"}</PanelCaption>
                 </span>
             </div>
 
             {sorted.length === 0 ? (
-                <p className="py-2.5 text-[15px] font-medium text-white/[0.62]">
-                    Discover animals with indexed principles or learned sub-principles to build this chart.
-                </p>
+                // Qualities are earned, not collected: a sighting scores one
+                // only once the animal's Power is held.
+                <div className="flex flex-col gap-2 py-2.5">
+                    <p className="flex items-center gap-2 text-[15px] font-bold text-white">
+                        <span aria-hidden="true" style={{color: THEME.neon}}>⚡</span>
+                        {isOwner ? "Qualities are earned, not collected" : "No Animal Powers earned yet"}
+                    </p>
+                    <p className="text-sm leading-6 text-white/[0.62]">
+                        {isOwner
+                            ? "Each animal's Power carries the qualities it teaches. Take its Trial or apply the Power in your own life from the Play tab, and those qualities join your profile. Sightings of that animal then build them further."
+                            : `${usernameHandle}'s qualities appear here as they earn Animal Powers.`}
+                    </p>
+                </div>
             ) : (
                 <div className="flex items-start gap-2">
                     <div className="flex h-32 w-7 shrink-0 flex-col justify-between pt-[22px] text-right text-[11px] font-semibold text-white/40">

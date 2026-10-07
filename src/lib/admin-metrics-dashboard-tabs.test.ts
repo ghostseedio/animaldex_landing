@@ -20,11 +20,18 @@ const migration = read("../../supabase/migrations/20260915120000_growth_platform
 describe("admin metrics dashboard", () => {
   it("opens on Overview and keeps the other founder tabs", () => {
     assert.match(dashboard, /type MetricsTab = "overview" \| "channels" \| "product" \| "revenue" \| "plan"/);
-    assert.match(dashboard, /: "overview"/);
+    assert.match(dashboard, /return "overview"/);
   });
 
   it("maps the old acquisition tab link onto Channels", () => {
-    assert.match(dashboard, /requestedTab === "acquisition"/);
+    assert.match(dashboard, /value === "channels" \|\| value === "acquisition"/);
+  });
+
+  it("switches tabs in place and writes the query string without a router navigation", () => {
+    // Next 13.4 drops router.push when only ?tab= changes, so the click looked dead.
+    assert.match(dashboard, /setTab\(nextTab\)/);
+    assert.match(dashboard, /window\.history\.pushState/);
+    assert.doesNotMatch(dashboard, /router\.push\(`\/admin\/metrics/);
   });
 
   it("keeps the month in the URL across tabs and month navigation", () => {

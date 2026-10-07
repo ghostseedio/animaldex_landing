@@ -30,6 +30,7 @@ test("each timeline item id maps to the ledger type and the bare id", () => {
     assert.deepEqual(discoverSeenPostForItemId(`fusion-${uuid(3)}`), {type: "principle_fusion", id: uuid(3)});
     assert.deepEqual(discoverSeenPostForItemId(`challenge-${uuid(4)}`), {type: "challenge", id: uuid(4)});
     assert.deepEqual(discoverSeenPostForItemId(`trade-${uuid(5)}`), {type: "trade", id: uuid(5)});
+    assert.deepEqual(discoverSeenPostForItemId(`animal-trial-${uuid(6)}`), {type: "animal_trial", id: uuid(6)});
 });
 
 test("an item that cannot be named exactly is never marked", () => {

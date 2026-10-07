@@ -1,3 +1,4 @@
+import {viewerPerspective} from "@/lib/matchup-battle-rules";
 import "server-only";
 
 import type {DiscoverCaptureItem} from "@/data/discover-timeline";
@@ -31,6 +32,7 @@ const HISTORY_SELECT = [
     "round1_winner_capture_id", "round2_winner_capture_id", "round3_winner_capture_id",
     "overall_winner_capture_id", "rounds_won_attacker", "rounds_won_defender",
     "round3_species_comparison_slug", "viewer_voted_capture_id", "voting_deadline_at", "settlement_reason",
+    "round2_draw", "overall_draw",
     "attacker_animal_name", "defender_animal_name"
 ].join(",");
 
@@ -152,9 +154,24 @@ function mapHistoryRow(row: QueryRow, viewerUserId: string): MatchupHistoryItem 
     const defenderUserId = readString(row, "defender_user_id") ?? "";
     const winnerUserId = readString(row, "winner_user_id") ?? "";
     const viewerWasAttacker = attackerUserId === viewerUserId;
-    const viewerWon = winnerUserId === viewerUserId;
     const stakeAmount = readNumber(row, "stake_amount");
     const payoutAmount = readNumber(row, "payout_amount");
+    const challengeFormat = readString(row, "challenge_format");
+    const battleStatus = readString(row, "battle_status");
+    const overallDraw = row.overall_draw === true;
+    // A drawn battle keeps the Round 1 winner in winner_user_id for older
+    // decoders; it is not a win, and both stakes came back.
+    const perspective = viewerPerspective({
+        challengeFormat,
+        battleStatus,
+        attackerUserId,
+        defenderUserId,
+        winnerUserId,
+        overallDraw,
+        stakeAmount,
+        payoutAmount
+    }, viewerUserId);
+    const viewerWon = perspective?.viewerWon ?? false;
 
     return {
         id: readString(row, "id") ?? "",
@@ -190,9 +207,9 @@ function mapHistoryRow(row: QueryRow, viewerUserId: string): MatchupHistoryItem 
         defenderContextScore: readNumber(row, "defender_context_score", NaN) || null,
         viewerWasAttacker,
         viewerWon,
-        creditsDelta: viewerWon ? payoutAmount - stakeAmount : -stakeAmount,
-        challengeFormat: readString(row, "challenge_format"),
-        battleStatus: readString(row, "battle_status"),
+        creditsDelta: perspective?.creditsDelta ?? -stakeAmount,
+        challengeFormat,
+        battleStatus,
         requiredVotes: readNumber(row, "required_votes", NaN) || null,
         votesCount: readNumber(row, "votes_count"),
         round1WinnerCaptureId: readString(row, "round1_winner_capture_id"),
@@ -204,7 +221,10 @@ function mapHistoryRow(row: QueryRow, viewerUserId: string): MatchupHistoryItem 
         speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
         viewerVotedCaptureId: readString(row, "viewer_voted_capture_id"),
         votingDeadlineAt: readString(row, "voting_deadline_at"),
-        settlementReason: readString(row, "settlement_reason")
+        settlementReason: readString(row, "settlement_reason"),
+        round2Draw: row.round2_draw === true,
+        overallDraw,
+        viewerDrew: perspective?.viewerDrew ?? false
     };
 }
 
@@ -258,7 +278,9 @@ export function mapResolveRow(row: QueryRow): MatchupResolveResult {
         speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
         viewerVotedCaptureId: readString(row, "viewer_voted_capture_id"),
         votingDeadlineAt: readString(row, "voting_deadline_at"),
-        settlementReason: readString(row, "settlement_reason")
+        settlementReason: readString(row, "settlement_reason"),
+        round2Draw: row.round2_draw === true,
+        overallDraw: row.overall_draw === true
     };
 }
 

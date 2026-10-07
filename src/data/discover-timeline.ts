@@ -15,6 +15,8 @@ import {coverFirstMediaOrder, timelineMediaOrder} from "@/lib/capture-media-orde
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
 import {computeCaptureGradeBreakdown, shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {getCatalogLandingPageIndex} from "@/data/catalog-landing-pages";
+import {animalTrialEvidenceRoute} from "@/lib/discover-animal-trial";
 import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-post";
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
@@ -172,6 +174,36 @@ export type DiscoverFusionItem = {
     href: string;
 };
 
+/**
+ * One row of `discover_animal_trial_timeline_v1`: a completed Animal Trial,
+ * evidence that failed both checks, or a written "Apply It Your Way" account.
+ * The id is the view's deterministic `post_id`, so a history tap on the phone
+ * and a share link here both land on the same card.
+ */
+export type DiscoverAnimalTrialItem = {
+    kind: "animal-trial";
+    id: string;
+    postId: string;
+    date: string;
+    sortRank: 5;
+    speciesProfileId: string;
+    title: string;
+    speciesName: string;
+    principleName: string;
+    /** `LOW` / `MID` / `HIGH`, or `APPLICATION` for the written route. */
+    frequency: string;
+    /** `photo` / `screenshot` / `video` / `text` / `application`. */
+    proofType: string;
+    rewardXP: number;
+    rewardCredits: number;
+    /** Both evidence checks were used and the Trial was not accepted. */
+    isFailed: boolean;
+    collector: DiscoverCollectorRef;
+    /** Route serving the submitted still (or a frame of the recording). Null for a written answer. */
+    evidenceSrc: string | null;
+    href: string;
+};
+
 export type DiscoverChallengeParticipant = {
     userId: string;
     captureId: string;
@@ -214,6 +246,11 @@ export type DiscoverChallengeItem = {
     speciesComparisonSlug: string | null;
     votingDeadlineAt: string | null;
     settlementReason: string | null;
+    /** The Round 2 vote finished level, so nobody scored that round. */
+    round2Draw: boolean;
+    /** Settled 1–1: no winner, no payout, each stake returned. */
+    overallDraw: boolean;
+    stakeAmount: number;
     winnerExplanation: string | null;
     strategicInsight: string | null;
     outcomeLine: string;
@@ -237,7 +274,8 @@ export type DiscoverTimelineItem =
     | DiscoverAlignmentItem
     | DiscoverFusionItem
     | DiscoverChallengeItem
-    | DiscoverTradeItem;
+    | DiscoverTradeItem
+    | DiscoverAnimalTrialItem;
 
 export type DiscoverFeaturedItem = {
     captureId: string;
@@ -1129,6 +1167,47 @@ function mapFusionRow(row: QueryRow): DiscoverFusionItem {
     };
 }
 
+type SpeciesHrefResolver = (speciesProfileId: string) => string;
+
+/** Species pages are keyed by slug; the Trial view carries only the profile id. */
+async function buildSpeciesHrefResolver(): Promise<SpeciesHrefResolver> {
+    try {
+        const index = await getCatalogLandingPageIndex();
+        return (speciesProfileId) => {
+            const status = index.resolve({species_profile_id: speciesProfileId});
+            return status.hasPage && status.path ? status.path : "/animals";
+        };
+    } catch {
+        return () => "/animals";
+    }
+}
+
+function mapAnimalTrialRow(row: QueryRow, speciesHref: SpeciesHrefResolver): DiscoverAnimalTrialItem {
+    const postId = (readString(row, "post_id") ?? "").toLowerCase();
+    const speciesProfileId = (readString(row, "species_profile_id") ?? "").toLowerCase();
+    const hasEvidence = Boolean(readString(row, "evidence_storage_bucket") && readString(row, "evidence_storage_path"));
+
+    return {
+        kind: "animal-trial",
+        id: `animal-trial-${postId}`,
+        postId,
+        date: readString(row, "completed_at") ?? new Date(0).toISOString(),
+        sortRank: 5,
+        speciesProfileId,
+        title: readString(row, "title") ?? "Animal Trial",
+        speciesName: readString(row, "species_display_name") ?? "Animal",
+        principleName: readString(row, "principle_name") ?? "",
+        frequency: (readString(row, "frequency") ?? "").toUpperCase(),
+        proofType: (readString(row, "proof_type") ?? "photo").toLowerCase(),
+        rewardXP: Math.max(0, Math.round(readNumber(row, "reward_xp_awarded"))),
+        rewardCredits: Math.max(0, Math.round(readNumber(row, "reward_credits_awarded"))),
+        isFailed: readString(row, "outcome") === "failed",
+        collector: collectorFromRow(row),
+        evidenceSrc: hasEvidence && postId ? animalTrialEvidenceRoute(postId) : null,
+        href: speciesHref(speciesProfileId)
+    };
+}
+
 function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
     const id = readString(row, "id") ?? "";
     const attacker = mapChallengeParticipant(row, "attacker");
@@ -1145,6 +1224,9 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
     const attackerContextScore = readNullableNumber(row, "attacker_context_score");
     const defenderContextScore = readNullableNumber(row, "defender_context_score");
     const winnerXpAmount = challengeWinnerXpAmount(attackerWon, {attackerContextScore, defenderContextScore});
+    const challengeFormat = readString(row, "challenge_format");
+    const battleStatus = readString(row, "battle_status");
+    const overallDraw = challengeFormat === "best_of_3_v2" && battleStatus === "completed" && row.overall_draw === true;
 
     return {
         kind: "challenge",
@@ -1162,8 +1244,8 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
         payoutAmount,
         attackerContextScore,
         defenderContextScore,
-        challengeFormat: readString(row, "challenge_format"),
-        battleStatus: readString(row, "battle_status"),
+        challengeFormat,
+        battleStatus,
         requiredVotes: readNumber(row, "required_votes"),
         votesCount: readNumber(row, "votes_count"),
         round1WinnerCaptureId: readString(row, "round1_winner_capture_id"),
@@ -1175,6 +1257,9 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
         speciesComparisonSlug: readString(row, "round3_species_comparison_slug"),
         votingDeadlineAt: readString(row, "voting_deadline_at"),
         settlementReason: readString(row, "settlement_reason"),
+        round2Draw: row.round2_draw === true,
+        overallDraw,
+        stakeAmount: readNumber(row, "stake_amount"),
         winnerExplanation: readString(row, "winner_explanation"),
         strategicInsight: readString(row, "strategic_insight"),
         outcomeLine: challengeOutcomeLine({
@@ -1182,7 +1267,8 @@ function mapChallengeRow(row: QueryRow): DiscoverChallengeItem {
             chosenStat,
             winnerDisplayName: winner.displayName
         }),
-        winningsLine: challengeWinningsLine(winner.displayName, payoutAmount),
+        // Nobody won a drawn battle, so there is nothing to say was won.
+        winningsLine: overallDraw ? null : challengeWinningsLine(winner.displayName, payoutAmount),
         activitySummary: challengeActivitySummary({
             winnerAnimalName: winner.animalName,
             loserAnimalName: loser.animalName,
@@ -1268,7 +1354,8 @@ export function buildDiscoverTimeline(
     fusions: DiscoverFusionItem[],
     challenges: DiscoverChallengeItem[],
     trades: DiscoverTradeItem[],
-    limit = 60
+    limit = 60,
+    animalTrials: DiscoverAnimalTrialItem[] = []
 ): DiscoverTimelineItem[] {
     const excluded = excludedCaptureIds(captures, alignments, fusions);
     const captureItems = captures
@@ -1280,7 +1367,8 @@ export function buildDiscoverTimeline(
         ...alignments,
         ...fusions,
         ...challenges,
-        ...trades
+        ...trades,
+        ...animalTrials
     ];
 
     return items
@@ -1401,6 +1489,7 @@ const discoverChallengeSelect = [
     "round1_winner_capture_id", "round2_winner_capture_id", "round3_winner_capture_id",
     "overall_winner_capture_id", "rounds_won_attacker", "rounds_won_defender",
     "round3_species_comparison_slug", "voting_deadline_at", "settlement_reason",
+    "round2_draw", "overall_draw",
     "attacker_profile_display_name", "attacker_profile_username", "attacker_profile_avatar_url", "attacker_profile_instagram_url",
     "defender_profile_display_name", "defender_profile_username", "defender_profile_avatar_url", "defender_profile_instagram_url",
     "attacker_animal_name", "attacker_scientific_name", "attacker_breed_guess", "attacker_breed_confidence",
@@ -1705,16 +1794,20 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         fusionResult,
         challengeResult,
         tradeResult,
+        animalTrialResult,
         animalDexNumbers,
-        behaviorPrinciples
+        behaviorPrinciples,
+        speciesHref
     ] = await Promise.all([
         fetchDiscoverFeedRows(supabase, candidateLimit, afterCaptureId),
         readUnseenActivity(supabase, "discover_alignment_timeline_unseen_v1", "discover_alignment_timeline_v1", "*", "completed_at", activityLimit),
         readUnseenActivity(supabase, "discover_principle_fusion_timeline_unseen_v1", "discover_principle_fusion_timeline_v1", "*", "created_at", activityLimit),
         readUnseenActivity(supabase, "discover_challenge_history_unseen_v2", "discover_challenge_history_v2", discoverChallengeSelect, "created_at", activityLimit),
         readUnseenActivity(supabase, "discover_trade_history_unseen_v1", "discover_trade_history_v1", "id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind", "completed_at", activityLimit),
+        readUnseenActivity(supabase, "discover_animal_trial_timeline_unseen_v1", "discover_animal_trial_timeline_v1", "*", "completed_at", activityLimit),
         buildAnimalDexNumberIndex(),
-        getCatalogBehaviorPrincipleIndex()
+        getCatalogBehaviorPrincipleIndex(),
+        buildSpeciesHrefResolver()
     ]);
 
     const captures = feedRows.map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
@@ -1722,11 +1815,12 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
     const challenges = ((challengeResult.data ?? []) as unknown as QueryRow[]).map(mapChallengeRow);
     const trades = ((tradeResult.data ?? []) as unknown as QueryRow[]).map(mapTradeRow);
+    const animalTrials = ((animalTrialResult.data ?? []) as unknown as QueryRow[]).map((row) => mapAnimalTrialRow(row, speciesHref));
     // On a cursor page the activity lists are still read from the top, so the
     // merge has to be wide enough to hold the ones the cursor will discard;
     // otherwise they crowd the next captures out of the merged list.
     const mergeLimit = cursor ? candidateLimit + activityLimit * 4 : candidateLimit;
-    const timeline = buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, mergeLimit);
+    const timeline = buildDiscoverTimeline(captures, alignments, fusions, challenges, trades, mergeLimit, animalTrials);
     const filteredTimeline = cursor ? timeline.filter((item) => itemIsAfterTimelineCursor(item, cursor)) : timeline;
     const page = filteredTimeline.slice(0, limit);
 
@@ -1904,6 +1998,19 @@ async function resolveDiscoverPostByIdOnce(parsed: ParsedDiscoverPostId): Promis
             .limit(1);
         if (error || !data?.length) return null;
         return mapChallengeRow(data[0] as unknown as QueryRow);
+    }
+
+    if (parsed.kind === "animal-trial") {
+        const [{data, error}, speciesHref] = await Promise.all([
+            supabase
+                .from("discover_animal_trial_timeline_v1")
+                .select("*")
+                .eq("post_id", parsed.entityId.toLowerCase())
+                .limit(1),
+            buildSpeciesHrefResolver()
+        ]);
+        if (error || !data?.length) return null;
+        return mapAnimalTrialRow(data[0] as unknown as QueryRow, speciesHref);
     }
 
     const {data, error} = await supabase
@@ -2203,4 +2310,71 @@ export async function getOwnedCapturePetState(captureId: string): Promise<boolea
         .limit(1);
 
     return !error && Boolean(data?.length);
+}
+
+// MARK: - Animal Trial posts
+
+const ANIMAL_TRIAL_POST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Other public Trial posts for the same index, newest first. The card pins the
+ * post already on screen and pages through the rest, as the phone does.
+ */
+export async function getDiscoverAnimalTrialCohort(
+    speciesProfileIds: string[],
+    limit: number,
+    offset = 0,
+    /** One Trial's attempts only (`LOW`/`MID`/`HIGH`). The written route is its own frequency and never mixes in. */
+    frequency: string | null = null
+): Promise<DiscoverAnimalTrialItem[]> {
+    const ids = Array.from(new Set(speciesProfileIds.map((id) => id.trim().toLowerCase()).filter((id) => ANIMAL_TRIAL_POST_ID_PATTERN.test(id))));
+    if (!ids.length) return [];
+
+    const supabase = createSupabasePublicClient();
+    if (!supabase) return [];
+
+    const pageSize = Math.max(1, Math.min(40, Math.floor(limit)));
+    const start = Math.max(0, Math.floor(offset));
+    let query = supabase
+        .from("discover_animal_trial_timeline_v1")
+        .select("*")
+        .in("species_profile_id", ids);
+    const normalizedFrequency = frequency?.trim().toUpperCase();
+    if (normalizedFrequency && /^[A-Z]{3,12}$/.test(normalizedFrequency)) {
+        query = query.eq("frequency", normalizedFrequency);
+    }
+    const [{data, error}, speciesHref] = await Promise.all([
+        query
+            .order("completed_at", {ascending: false})
+            .order("post_id", {ascending: false})
+            .range(start, start + pageSize - 1),
+        buildSpeciesHrefResolver()
+    ]);
+    if (error || !data?.length) return [];
+    return (data as unknown as QueryRow[]).map((row) => mapAnimalTrialRow(row, speciesHref));
+}
+
+/**
+ * Where a published post's evidence lives. The public view is the guard: a
+ * still that is not on a shared, finished Trial is not in it, so nothing
+ * private can be named here.
+ */
+export async function getDiscoverAnimalTrialEvidenceReference(postId: string): Promise<{bucket: string; path: string} | null> {
+    const normalized = postId.trim().toLowerCase();
+    if (!ANIMAL_TRIAL_POST_ID_PATTERN.test(normalized)) return null;
+
+    const supabase = createSupabasePublicClient();
+    if (!supabase) return null;
+
+    const {data, error} = await supabase
+        .from("discover_animal_trial_timeline_v1")
+        .select("evidence_storage_bucket,evidence_storage_path")
+        .eq("post_id", normalized)
+        .limit(1);
+    if (error || !data?.length) return null;
+
+    const row = data[0] as unknown as QueryRow;
+    const bucket = readString(row, "evidence_storage_bucket");
+    const path = readString(row, "evidence_storage_path");
+    return bucket && path ? {bucket, path} : null;
 }

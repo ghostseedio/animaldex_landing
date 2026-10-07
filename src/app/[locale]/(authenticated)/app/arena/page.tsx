@@ -12,7 +12,7 @@ export default async function ArenaPage({params}: ArenaPageProps) {
     return (
         <div className="mx-auto max-w-[640px] space-y-7">
             <header className="space-y-2">
-                <h1 className="font-display text-[34px] font-black leading-none text-white">Arena</h1>
+                <h1 className="font-display text-[34px] font-black leading-none text-white">Play</h1>
                 <p className="text-base text-white/55">Start with Matchups, then open a training module below.</p>
             </header>
 

@@ -7,6 +7,10 @@ import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui"
 import {canonicalPowerKey, displayPowerLabel} from "@/lib/power-set-tags";
 import {formatAnimalDexNumber} from "@/lib/animaldex-number";
 import type {CollectionDiscoveryStats} from "@/lib/collection-discovery";
+import CollectionSystemDynamics, {
+    FREQUENCY_FILTER_OPTIONS,
+    type SystemDynamicsFrequencyFilter
+} from "@/app/[locale]/(authenticated)/app/collection/collection-system-dynamics";
 
 export type CatalogSpecies = {
     slug: string;
@@ -33,7 +37,7 @@ export type CatalogSpecies = {
     legendaryTier: "S" | null;
 };
 
-type ContentMode = "animals" | "powers" | "lessons";
+type ContentMode = "animals" | "powers" | "lessons" | "systemDynamics";
 type Ownership = "all" | "discovered" | "undiscovered";
 type Indexing = "all" | "indexed" | "unindexed";
 type SpeciesFilter = "allSpecies" | "breedsOnly";
@@ -50,6 +54,7 @@ type CatalogFilters = {
     animalSort: AnimalSort;
     powerSort: PowerSort;
     lessonSort: LessonSort;
+    frequencyFilter: SystemDynamicsFrequencyFilter;
 };
 
 const DEFAULT_FILTERS: CatalogFilters = {
@@ -59,7 +64,8 @@ const DEFAULT_FILTERS: CatalogFilters = {
     speciesFilter: "allSpecies",
     animalSort: "number",
     powerSort: "mostLinked",
-    lessonSort: "alphabetical"
+    lessonSort: "alphabetical",
+    frequencyFilter: "all"
 };
 
 const ANIMAL_BATCH_SIZE = 40;
@@ -85,7 +91,8 @@ const SPECIES_OPTIONS: Array<{id: SpeciesFilter; label: string}> = [
 const CONTENT_MODE_OPTIONS: Array<{id: ContentMode; label: string}> = [
     {id: "animals", label: "Animals"},
     {id: "powers", label: "Powers"},
-    {id: "lessons", label: "Lessons"}
+    {id: "lessons", label: "Lessons"},
+    {id: "systemDynamics", label: "Systems Dynamics"}
 ];
 
 const ANIMAL_SORT_OPTIONS: Array<{id: AnimalSort; title: string; detail: string}> = [
@@ -247,6 +254,7 @@ function countPendingChanges(
     let count = 0;
     if (pendingQuery.trim() !== appliedQuery.trim()) count += 1;
     if (pending.contentMode !== applied.contentMode) count += 1;
+    if (pending.frequencyFilter !== applied.frequencyFilter) count += 1;
     if (pending.ownership !== applied.ownership) count += 1;
     if (pending.indexing !== applied.indexing) count += 1;
     if (pending.speciesFilter !== applied.speciesFilter) count += 1;
@@ -300,6 +308,7 @@ export default function CollectionCatalog({
     const [visibleAnimalCount, setVisibleAnimalCount] = useState(ANIMAL_BATCH_SIZE);
     const [visiblePowerCount, setVisiblePowerCount] = useState(FACET_BATCH_SIZE);
     const [visibleLessonCount, setVisibleLessonCount] = useState(FACET_BATCH_SIZE);
+    const [systemDynamicsCount, setSystemDynamicsCount] = useState(0);
     const animalSentinelRef = useRef<HTMLDivElement | null>(null);
     const powerSentinelRef = useRef<HTMLDivElement | null>(null);
     const lessonSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -398,7 +407,9 @@ export default function CollectionCatalog({
         ? "Search species, lesson, or animal power"
         : appliedFilters.contentMode === "powers"
             ? "Search powers"
-            : "Search principles";
+            : appliedFilters.contentMode === "systemDynamics"
+                ? "Search systems"
+                : "Search principles";
 
     const matchedSummary = appliedFilters.contentMode === "animals"
         ? appliedFilters.indexing === "all"
@@ -406,7 +417,9 @@ export default function CollectionCatalog({
             : `Matched results total: ${filteredAnimals.length}`
         : appliedFilters.contentMode === "powers"
             ? `Matched results total: ${powerFacets.length} powers · ${species.length} animals`
-            : `Matched results total: ${lessonFacets.length} lessons · ${species.length} animals`;
+            : appliedFilters.contentMode === "systemDynamics"
+                ? `Matched results total: ${systemDynamicsCount} systems`
+                : `Matched results total: ${lessonFacets.length} lessons · ${species.length} animals`;
 
     function openFilters() {
         setPendingFilters(appliedFilters);
@@ -488,7 +501,9 @@ export default function CollectionCatalog({
                         ? `${filteredAnimals.length} shown`
                         : appliedFilters.contentMode === "powers"
                             ? `${powerFacets.length} powers`
-                            : `${lessonFacets.length} lessons`}
+                            : appliedFilters.contentMode === "systemDynamics"
+                                ? `${systemDynamicsCount} systems`
+                                : `${lessonFacets.length} lessons`}
                 </span>
             </div>
 
@@ -567,7 +582,7 @@ export default function CollectionCatalog({
 
                             <div className="mt-5 space-y-2">
                                 <p className="text-xs font-black uppercase tracking-wider text-white/35">Show</p>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     {CONTENT_MODE_OPTIONS.map((option) => (
                                         <FilterChip
                                             key={option.id}
@@ -639,6 +654,20 @@ export default function CollectionCatalog({
                                         </div>
                                     </div>
                                 </>
+                            ) : pendingFilters.contentMode === "systemDynamics" ? (
+                                <div className="mt-5 space-y-2">
+                                    <p className="text-xs font-black uppercase tracking-wider text-white/35">Frequency</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {FREQUENCY_FILTER_OPTIONS.map((option) => (
+                                            <FilterChip
+                                                key={option.id}
+                                                title={option.label}
+                                                selected={pendingFilters.frequencyFilter === option.id}
+                                                onClick={() => setPendingFilters((current) => ({...current, frequencyFilter: option.id}))}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             ) : pendingFilters.contentMode === "powers" ? (
                                 <div className="mt-5 space-y-2">
                                     <p className="text-xs font-black uppercase tracking-wider text-white/35">Sort powers by</p>
@@ -730,6 +759,12 @@ export default function CollectionCatalog({
                         </div>
                     ) : null}
                 </>
+            ) : appliedFilters.contentMode === "systemDynamics" ? (
+                <CollectionSystemDynamics
+                    query={appliedQuery}
+                    frequencyFilter={appliedFilters.frequencyFilter}
+                    onCountChange={setSystemDynamicsCount}
+                />
             ) : appliedFilters.contentMode === "powers" ? (
                 <>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

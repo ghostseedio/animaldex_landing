@@ -1,4 +1,9 @@
-export const DISCOVER_POST_KINDS = ["capture", "alignment", "fusion", "challenge", "trade"] as const;
+/**
+ * `animal-trial` is checked before the others only by convention; no other
+ * kind's prefix is a prefix of it. Its entity id is the deterministic
+ * `md5(user:species:frequency)::uuid` the database view publishes as `post_id`.
+ */
+export const DISCOVER_POST_KINDS = ["capture", "alignment", "fusion", "challenge", "trade", "animal-trial"] as const;
 
 export type DiscoverPostKind = (typeof DISCOVER_POST_KINDS)[number];
 
@@ -72,6 +77,10 @@ export function discoverPostShareTitle(input: {
         return "Principle fusion on AnimalDex";
     }
 
+    if (input.kind === "animal-trial") {
+        return collector ? `${animal} Trial · ${collector}` : `${animal} Trial on AnimalDex`;
+    }
+
     return "AnimalDex trade";
 }
 
@@ -117,6 +126,10 @@ export function discoverPostShareDescription(input: {
 
     if (input.kind === "fusion") {
         return `${handle} fused a behavior principle on AnimalDex.`;
+    }
+
+    if (input.kind === "animal-trial") {
+        return `${handle} took the ${animal} Animal Trial on AnimalDex.`;
     }
 
     return `A completed AnimalDex trade involving ${animal}.`;

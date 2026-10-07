@@ -52,7 +52,9 @@ type AskThreadSnapshot = {
 };
 
 /** Where a conversation is filed. One animal, one capture, or the site at large. */
-export function askThreadKey(subject: {scope: "species" | "general"; slug?: string | null; captureId?: string | null}) {
+export function askThreadKey(subject: {scope: "species" | "general"; slug?: string | null; captureId?: string | null; trialKey?: string | null}) {
+    // A Trial conversation is its own thread, never a continuation of the animal's.
+    if (subject.trialKey) return `trial:${subject.trialKey}`;
     if (subject.captureId) return `capture:${subject.captureId}`;
     if (subject.scope === "species" && subject.slug) return `species:${subject.slug}`;
     return "general";

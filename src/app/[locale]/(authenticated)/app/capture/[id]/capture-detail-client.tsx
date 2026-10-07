@@ -16,6 +16,7 @@ import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/sy
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
 import EarnPowerSection from "@/components/animal-detail/animal-powers/earn-power-section";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
+import {useSpeciesUnlock} from "@/components/animal-detail/animal-trials/use-species-unlock";
 import {useAnimalPower, usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
 import {CaptureContinuationBar, NewSpeciesCard, RewardShowcase} from "@/components/animal-detail/capture-reveal/capture-reveal";
@@ -145,6 +146,9 @@ export default function CaptureDetailClient({
     // this Power" opens it; on close the earned state is re-read so a Power
     // earned inside the sheet transforms the band without a reload.
     const [showsEarnPowerSheet, setShowsEarnPowerSheet] = useState(false);
+    // On someone else's capture the viewer may take the Trial only if they
+    // have unlocked the species themselves (iOS `viewerCanAttemptTrials`).
+    const trialUnlock = useSpeciesUnlock([speciesProfileId], {ownsThisCapture: viewer.isOwner});
     const animalPower = useAnimalPower(speciesProfileId);
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
@@ -524,6 +528,7 @@ export default function CaptureDetailClient({
                                 didLoad={animalPower.didLoad}
                                 onReload={animalPower.reload}
                                 isViewersOwnAnimal={viewer.isOwner}
+                                canAttemptTrials={trialUnlock.canAttempt}
                             />
                         </div>
                         {play}
@@ -596,6 +601,7 @@ export default function CaptureDetailClient({
                 <EarnPowerSheet
                     speciesProfileId={speciesProfileId}
                     animalName={speciesName}
+                    ownsThisCapture={viewer.isOwner}
                     onClose={() => {
                         setShowsEarnPowerSheet(false);
                         void animalPower.reload();

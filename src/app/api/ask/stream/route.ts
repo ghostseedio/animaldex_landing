@@ -97,9 +97,14 @@ export async function POST(request: Request) {
     ]);
     // A signed-in reader's Wild Profile personalises the answer. A signed-out
     // one has none to have, so the packet says nothing about it either way.
-    const packet = viewer.signedIn
+    const groundedPacket = viewer.signedIn
         ? {...basePacket, wildProfile: {summary: wildProfile.summary}}
         : basePacket;
+    // A Trial question is grounded on that Trial and kept there.
+    const packet = subject.trialContext
+        ? {...groundedPacket, trialContext: subject.trialContext}
+        : groundedPacket;
+    const aboutTrial = Boolean(subject.trialContext);
     const languageName = askLanguageName(body.locale);
 
     const supportedVisuals = askSupportedVisuals(packet.hasReaderPhoto);
@@ -119,7 +124,7 @@ export async function POST(request: Request) {
     if (body.mode === "complete") {
         try {
             const oneShot = await requestAskAnswerJSON({
-                systemPrompt: buildAskSystemPrompt({scope: packet.scope, supportedVisuals, languageName}),
+                systemPrompt: buildAskSystemPrompt({scope: packet.scope, supportedVisuals, languageName, aboutTrial}),
                 userPrompt,
                 signal: request.signal
             });
@@ -134,7 +139,8 @@ export async function POST(request: Request) {
     const streamingSystemPrompt = buildAskStreamingSystemPrompt({
         scope: packet.scope,
         supportedVisuals,
-        languageName
+        languageName,
+        aboutTrial
     });
 
     const encoder = new TextEncoder();

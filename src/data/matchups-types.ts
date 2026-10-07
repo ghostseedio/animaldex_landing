@@ -85,6 +85,11 @@ export type MatchupHistoryItem = {
     viewerVotedCaptureId: string | null;
     votingDeadlineAt: string | null;
     settlementReason: string | null;
+    /** The Round 2 vote finished level, so nobody scored that round. */
+    round2Draw: boolean;
+    /** Settled 1–1: no winner, no payout, each stake returned. */
+    overallDraw: boolean;
+    viewerDrew: boolean;
 };
 
 export type MatchupResolveResult = {
@@ -133,6 +138,8 @@ export type MatchupResolveResult = {
     viewerVotedCaptureId: string | null;
     votingDeadlineAt: string | null;
     settlementReason: string | null;
+    round2Draw: boolean;
+    overallDraw: boolean;
 };
 
 export type MatchupArenaFilter = "all" | "nearTier" | "lowStake" | "highReward";

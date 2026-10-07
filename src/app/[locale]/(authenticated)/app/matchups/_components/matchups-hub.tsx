@@ -9,10 +9,18 @@ import ChallengeWizardSheet from "@/app/[locale]/(authenticated)/app/matchups/_c
 import ChallengeSettingsSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-settings-sheet";
 import MatchupsArenaTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-arena-tab";
 import MatchupsHistoryTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-history-tab";
+import {ArenaTrialsTab, TrialHistoryList, TrialStatsRow, useArenaTrials} from "@/app/[locale]/(authenticated)/app/matchups/_components/arena-trials";
 import type {MatchupHistoryItem, MatchupOpponent, MatchupResolveResult, MatchupRosterCapture} from "@/data/matchups-types";
 import type {SpeciesComparisonSummary} from "@/data/species-comparisons";
+import {isOverallDraw} from "@/lib/matchup-battle-rules";
 
-type Segment = "arena" | "history";
+/** Trials, then Comparisons, then the history of whichever was last open. */
+type Segment = "trials" | "arena" | "history";
+/**
+ * Which history the History segment is showing. Set by the last live segment
+ * the person opened, and by the chips on the history page itself.
+ */
+type HistorySubject = "trials" | "comparisons";
 
 export default function MatchupsHub({
     locale,
@@ -34,7 +42,9 @@ export default function MatchupsHub({
     const router = useRouter();
     const searchParams = useSearchParams();
     const {applyDelta} = useAppCredits();
-    const [segment, setSegment] = useState<Segment>("arena");
+    const [segment, setSegment] = useState<Segment>("trials");
+    const [historySubject, setHistorySubject] = useState<HistorySubject>("trials");
+    const trials = useArenaTrials(true);
     const [arena, setArena] = useState(initialArena);
     const [history, setHistory] = useState(initialHistory);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -68,9 +78,12 @@ export default function MatchupsHub({
 
     function handleComplete(result: MatchupResolveResult) {
         const battleComplete = result.challengeFormat !== "best_of_3_v2" || result.battleStatus === "completed";
-        const creditsDelta = battleComplete && result.winnerUserId === viewerUserId
-            ? result.payoutAmount - result.stakeAmount
-            : -result.stakeAmount;
+        const battleDrawn = isOverallDraw(result);
+        const viewerWon = !battleDrawn && battleComplete && result.winnerUserId === viewerUserId;
+        // A draw refunds both stakes, so the viewer's balance does not move.
+        const creditsDelta = battleDrawn
+            ? 0
+            : viewerWon ? result.payoutAmount - result.stakeAmount : -result.stakeAmount;
         applyDelta(creditsDelta);
 
         setHistory((current) => {
@@ -107,7 +120,7 @@ export default function MatchupsHub({
                 attackerContextScore: result.attackerContextScore,
                 defenderContextScore: result.defenderContextScore,
                 viewerWasAttacker: true,
-                viewerWon: result.winnerUserId === viewerUserId,
+                viewerWon,
                 creditsDelta,
                 challengeFormat: result.challengeFormat,
                 battleStatus: result.battleStatus,
@@ -122,13 +135,24 @@ export default function MatchupsHub({
                 speciesComparisonSlug: result.speciesComparisonSlug,
                 viewerVotedCaptureId: result.viewerVotedCaptureId,
                 votingDeadlineAt: result.votingDeadlineAt,
-                settlementReason: result.settlementReason
+                settlementReason: result.settlementReason,
+                round2Draw: result.round2Draw,
+                overallDraw: result.overallDraw,
+                viewerDrew: battleDrawn
             };
             return [next, ...current.filter((item) => item.id !== next.id)];
         });
         setArena((current) => current.filter((item) => item.captureId !== result.defenderCaptureId));
     }
 
+    function selectSegment(next: Segment) {
+        setSegment(next);
+        if (next === "trials") setHistorySubject("trials");
+        if (next === "arena") setHistorySubject("comparisons");
+        if (next === "history") void trials.refresh();
+    }
+
+    const showsComparisonFigures = segment === "arena" || (segment === "history" && historySubject === "comparisons");
     const winCount = history.filter((item) => item.viewerWon && (item.challengeFormat !== "best_of_3_v2" || item.battleStatus === "completed")).length;
     const netCredits = history.reduce((total, item) => total + item.creditsDelta, 0);
     const netCreditsLabel = netCredits >= 0 ? `+${netCredits}` : `${netCredits}`;
@@ -140,10 +164,14 @@ export default function MatchupsHub({
                 <header className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1.5">
                         <h1 className="font-display text-[28px] font-black leading-none text-white md:text-[34px]">
-                            Comparisons
+                            Play
                         </h1>
                         <p className="text-sm text-white/55 md:text-base">
-                            Pick an animal to compare
+                            {segment === "trials"
+                                ? "Trials for the animals you've caught"
+                                : segment === "arena"
+                                    ? "Pick an animal to compare"
+                                    : historySubject === "trials" ? "Your Trials, finished and failed" : "Your past comparisons"}
                         </p>
                     </div>
                     <button
@@ -159,27 +187,52 @@ export default function MatchupsHub({
                 </header>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
-                {[
-                    {label: "Ready", value: arena.length, accent: "bg-primary-400"},
-                    {label: "Wins", value: winCount, accent: "bg-violet-400"},
-                    {label: "Net credits", value: netCreditsLabel, accent: "bg-amber-400"}
-                ].map((metric) => (
-                    <div key={metric.label} className="min-w-0 rounded-[18px] border border-white/[0.06] bg-white/[0.04] p-3">
-                        <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.08em] text-white/30">{metric.label}</p>
-                        <p className="mt-1.5 truncate font-display text-xl font-black tabular-nums text-white">{metric.value}</p>
-                        <div className={`mt-2 h-[3px] rounded-full ${metric.accent}`} />
-                    </div>
-                ))}
-            </div>
+            {segment === "history" ? (
+                <div role="tablist" aria-label="Which history" className="flex gap-2">
+                    {([
+                        {id: "trials", label: "Trials"},
+                        {id: "comparisons", label: "Comparisons"}
+                    ] as Array<{id: HistorySubject; label: string}>).map((option) => (
+                        <button
+                            key={option.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={historySubject === option.id}
+                            onClick={() => setHistorySubject(option.id)}
+                            className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition ${historySubject === option.id ? "border-transparent bg-primary-400 text-black" : "border-white/10 bg-white/[0.03] text-white/70 hover:text-white"}`}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+            ) : null}
+
+            {showsComparisonFigures ? (
+                <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                        {label: "Ready", value: arena.length, accent: "bg-primary-400"},
+                        {label: "Wins", value: winCount, accent: "bg-violet-400"},
+                        {label: "Net credits", value: netCreditsLabel, accent: "bg-amber-400"}
+                    ].map((metric) => (
+                        <div key={metric.label} className="min-w-0 rounded-[18px] border border-white/[0.06] bg-white/[0.04] p-3">
+                            <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.08em] text-white/30">{metric.label}</p>
+                            <p className="mt-1.5 truncate font-display text-xl font-black tabular-nums text-white">{metric.value}</p>
+                            <div className={`mt-2 h-[3px] rounded-full ${metric.accent}`} />
+                        </div>
+                    ))}
+                </div>
+            ) : segment === "history" ? (
+                <TrialStatsRow history={trials.history} />
+            ) : null}
 
             <AppSegmentedControl
                 value={segment}
                 options={[
-                    {id: "arena", label: "Find"},
+                    {id: "trials", label: "Trials"},
+                    {id: "arena", label: "Comparisons"},
                     {id: "history", label: "History"}
                 ]}
-                onChange={setSegment}
+                onChange={selectSegment}
                 fullWidth
             />
 
@@ -189,13 +242,27 @@ export default function MatchupsHub({
                 </div>
             ) : null}
 
-            {segment === "arena" ? (
+            {segment === "trials" ? (
+                <ArenaTrialsTab
+                    openTrials={trials.openTrials}
+                    didLoad={trials.didLoad}
+                    onNote={trials.note}
+                    onRefresh={trials.refresh}
+                />
+            ) : segment === "arena" ? (
                 <MatchupsArenaTab
                     opponents={arena}
                     roster={roster}
                     popularBreakdowns={initialPopularBreakdowns}
                     onOpenSettings={() => setSettingsOpen(true)}
                     onChallenge={handleChallenge}
+                />
+            ) : historySubject === "trials" ? (
+                <TrialHistoryList
+                    history={trials.history}
+                    postIds={trials.postIds}
+                    didLoad={trials.didLoad}
+                    onNote={trials.note}
                 />
             ) : (
                 <MatchupsHistoryTab history={history} locale={locale} />
@@ -215,7 +282,10 @@ export default function MatchupsHub({
                         clearTargetParam();
                     }}
                     onComplete={handleComplete}
-                    onViewHistory={() => setSegment("history")}
+                    onViewHistory={() => {
+                        setHistorySubject("comparisons");
+                        setSegment("history");
+                    }}
                 />
             ) : null}
         </AppPage>

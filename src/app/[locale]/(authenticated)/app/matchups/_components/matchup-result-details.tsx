@@ -2,6 +2,7 @@
 
 import {useState} from "react";
 import MatchupStatBars from "@/app/[locale]/(authenticated)/app/matchups/_components/matchup-stat-bars";
+import {OVERALL_DRAW_LINE, creditCountText, voteProgressText} from "@/lib/matchup-battle-rules";
 import type {MatchupGameStats} from "@/lib/matchup-stats";
 import {
     formatScenarioDomainLabel,
@@ -51,6 +52,8 @@ export type MatchupResultPresentation = {
     votesCount?: number;
     settlementReason?: string | null;
     finalScore?: string | null;
+    /** Settled 1–1: nobody won, each stake was returned. */
+    overallDraw?: boolean;
 };
 
 function Metric({label, value, accent}: {label: string; value: string | number; accent?: "green" | "rose" | "neutral"}) {
@@ -110,8 +113,9 @@ export default function MatchupResultDetails({
     const bestOfThree = result.challengeFormat === "best_of_3_v2";
     const battleComplete = !bestOfThree || result.battleStatus === "completed";
     const battleVoting = bestOfThree && result.battleStatus === "round_2_voting";
-    const creditsLabel = battleVoting ? "Locked" : `${result.creditsDelta >= 0 ? "+" : ""}${result.creditsDelta}`;
-    const payoutLabel = battleComplete ? result.payoutAmount : "After Round 3";
+    const drawn = Boolean(result.overallDraw) && battleComplete;
+    const creditsLabel = battleVoting ? "Locked" : drawn ? "Returned" : `${result.creditsDelta >= 0 ? "+" : ""}${result.creditsDelta}`;
+    const payoutLabel = drawn ? "Refunded" : battleComplete ? result.payoutAmount : "After Round 3";
 
     return (
         <div className="space-y-5">
@@ -193,7 +197,10 @@ export default function MatchupResultDetails({
                                     <DetailRow label="Format" value="Best of 3" />
                                     <DetailRow label="Settlement" value={battleComplete ? "Complete" : "After Round 3"} />
                                     {battleVoting ? (
-                                        <DetailRow label="Next" value={`Round 2 community vote - ${result.votesCount ?? 0}/${result.requiredVotes ?? 0}`} />
+                                        <DetailRow label="Next" value={`Round 2 community vote · ${voteProgressText(result.votesCount ?? 0)}`} />
+                                    ) : null}
+                                    {drawn ? (
+                                        <DetailRow label="Credits returned to each player" value={creditCountText(result.stakeAmount)} />
                                     ) : null}
                                     {result.finalScore ? <DetailRow label="Final score" value={result.finalScore} /> : null}
                                     {result.settlementReason === "voting_timeout_round1_fallback" ? (
@@ -201,7 +208,7 @@ export default function MatchupResultDetails({
                                     ) : null}
                                 </>
                             ) : null}
-                            {battleComplete ? (
+                            {battleComplete && !drawn ? (
                                 <>
                                     <DetailRow
                                         label={survival ? "Best adapted payout" : "Best-fit payout"}
@@ -228,7 +235,9 @@ export default function MatchupResultDetails({
                 </div>
             ) : null}
 
-            {battleComplete ? (
+            {drawn ? (
+                <p className="text-sm leading-6 text-white/45">{OVERALL_DRAW_LINE}</p>
+            ) : battleComplete ? (
                 <p className="text-sm leading-6 text-white/45">
                     {payoutSummaryText({
                         scenarioDomain: result.scenarioDomain,
@@ -291,6 +300,7 @@ export function toResultPresentation(input: {
     votesCount?: number;
     settlementReason?: string | null;
     finalScore?: string | null;
+    overallDraw?: boolean;
 }): MatchupResultPresentation {
     return {
         scenarioTitle: input.scenarioTitle,
@@ -326,6 +336,7 @@ export function toResultPresentation(input: {
         requiredVotes: input.requiredVotes ?? null,
         votesCount: input.votesCount ?? 0,
         settlementReason: input.settlementReason ?? null,
-        finalScore: input.finalScore ?? null
+        finalScore: input.finalScore ?? null,
+        overallDraw: input.overallDraw ?? false
     };
 }

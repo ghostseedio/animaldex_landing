@@ -175,6 +175,8 @@ export function powerRefusalMessage(code: string, serverMessage?: string | null)
             return "Pick one of the listed areas of life.";
         case "power_not_found":
             return "This animal has no Power to earn yet.";
+        case "species_not_unlocked":
+            return "You don't own this index yet. Capture this animal first.";
         case "grading_unavailable":
             // Explicitly NOT phrased as a refusal. Nothing was graded and no
             // attempt was spent, so the copy must not imply otherwise.

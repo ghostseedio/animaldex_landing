@@ -6,6 +6,8 @@ import {
     type AnimalTrialVerificationResult,
     MAX_TEXT_PROOF_CHARACTERS,
     MIN_TEXT_PROOF_CHARACTERS,
+    NOT_YET_CAPTURED_NOTE,
+    NOT_YET_CAPTURED_TITLE,
     allowsLibraryEvidence,
     canSubmitEvidence,
     countdownLabel,
@@ -17,6 +19,7 @@ import {
     isComplete,
     isRandomlyActivated,
     isTimed,
+    notingApproval,
     primaryActionTitle,
     remainingProofAttempts,
     remainingSeconds,
@@ -26,9 +29,17 @@ import {
     rewardXP,
     safetyNote,
     socialProofText,
+    stillProofType,
+    trialStartErrorMessage,
     wasRejected
 } from "@/lib/animal-trials";
 import {extractTrialFrames} from "@/lib/animal-trial-frames";
+import {TRIAL_ASK_SUGGESTIONS, trialAskBrief, trialAskKey} from "@/lib/animal-trial-ask";
+import type {DiscoverAnimalTrialItem} from "@/data/discover-timeline";
+import {AskTrialBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {AnimalTrialEvidence} from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
+import {discoverPostPath} from "@/lib/discover-post";
+import Link from "@/app/[locale]/_components/link";
 
 /**
  * One Trial, full screen. Ported from iOS `AnimalTrialDetailView`.
@@ -42,9 +53,14 @@ import {extractTrialFrames} from "@/lib/animal-trial-frames";
  * to press one button. The evidence rules open themselves the moment the Trial
  * is actually active and they become the task. The constraint sits behind an ⓘ
  * and the biology behind one row, both one tap away, neither in the way.
+ *
+ * Below the Trial itself: Ask AnimalDex about it, and what other people
+ * submitted — so a person who is unsure what "counts" can see, and ask.
  */
 
 const NEON = "#A7F432";
+
+type Submission = {image: string | null; text: string | null};
 
 function Band({accent, children}: {accent?: string; children: React.ReactNode}) {
     return (
@@ -76,12 +92,31 @@ function Pill({children, color}: {children: React.ReactNode; color: string}) {
     );
 }
 
+/** The still and/or the words this person handed in. */
+function SubmittedEvidence({submission}: {submission: Submission}) {
+    if (!submission.image && !submission.text) return null;
+    return (
+        <div className="flex flex-col gap-2">
+            {submission.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={submission.image} alt="Your evidence" className="max-h-[220px] w-full rounded-2xl object-cover" />
+            ) : null}
+            {submission.text ? (
+                <p className="whitespace-pre-line rounded-2xl bg-black/30 p-3 text-sm leading-6 text-white/85">{submission.text}</p>
+            ) : null}
+        </div>
+    );
+}
+
 export default function AnimalTrialDetail({
     trial,
+    canAttempt = true,
     onChange,
     onClose
 }: {
     trial: AnimalTrial;
+    /** False when the viewer has not unlocked this animal: the Trial reads, but cannot be started or submitted. */
+    canAttempt?: boolean;
     onChange: (trial: AnimalTrial) => void;
     onClose: () => void;
 }) {
@@ -93,11 +128,16 @@ export default function AnimalTrialDetail({
     /** PROOF opens itself once the Trial is active; before that it is one row the reader may open. */
     const [showsProof, setShowsProof] = useState(false);
     const [showsRule, setShowsRule] = useState(false);
+    /** WHAT YOU GET starts open before a Trial is under way, and folds to one row once it is. */
+    const [showsBenefit, setShowsBenefit] = useState(() => !canSubmitEvidence(trial) && !isComplete(trial));
     /** The written answer, for the Trials whose evidence IS words. */
     const [textAnswer, setTextAnswer] = useState("");
     const [now, setNow] = useState(() => Date.now());
+    const [submission, setSubmission] = useState<Submission>({image: null, text: null});
+    const [otherAttempts, setOtherAttempts] = useState<DiscoverAnimalTrialItem[] | null>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const libraryInputRef = useRef<HTMLInputElement>(null);
+    const {open: openAsk} = useAskAnimalDex();
 
     const accent = frequencyAccent(current.frequency);
     const timed = isTimed(current);
@@ -112,6 +152,45 @@ export default function AnimalTrialDetail({
         return () => window.clearInterval(timer);
     }, [complete, timed]);
 
+    /** What this person already handed in, once there is anything to show. */
+    const loadSubmission = useCallback(async () => {
+        if (!(isComplete(current) || wasRejected(current) || current.proofAttemptCount > 0)) return;
+        try {
+            const response = await fetch(
+                `/api/app/animal-trials/submission?speciesProfileId=${encodeURIComponent(current.speciesProfileId)}&frequency=${encodeURIComponent(current.frequency)}`,
+                {cache: "no-store"}
+            );
+            if (!response.ok) return;
+            const payload = await response.json() as Submission;
+            setSubmission({image: payload.image ?? null, text: payload.text ?? null});
+        } catch {
+            // The verdict still reads without the picture.
+        }
+    }, [current]);
+
+    useEffect(() => {
+        void loadSubmission();
+    }, [loadSubmission]);
+
+    // Other people's attempts at THIS Trial: completions and evidence that
+    // failed both checks. A rejection with a check left is not a post yet.
+    useEffect(() => {
+        let cancelled = false;
+        void fetch(
+            `/api/discover/animal-trial-cohort?species=${encodeURIComponent(current.speciesProfileId)}&frequency=${encodeURIComponent(current.frequency)}&limit=24`
+        )
+            .then((response) => (response.ok ? response.json() : {items: []}))
+            .then((payload: {items?: DiscoverAnimalTrialItem[]}) => {
+                if (!cancelled) setOtherAttempts(Array.isArray(payload.items) ? payload.items : []);
+            })
+            .catch(() => {
+                if (!cancelled) setOtherAttempts([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [current.frequency, current.speciesProfileId]);
+
     const apply = useCallback((updated: AnimalTrial | null) => {
         if (!updated) return;
         setCurrent(updated);
@@ -119,8 +198,12 @@ export default function AnimalTrialDetail({
     }, [onChange]);
 
     const runLifecycle = useCallback(async (action: "start" | "restart") => {
+        if (!canAttempt) return;
         setIsWorking(true);
         setErrorMessage(null);
+        const fallback = action === "start"
+            ? "Could not start this Trial. Check your connection and try again."
+            : "Could not restart this Trial.";
         try {
             const response = await fetch("/api/app/animal-trials", {
                 method: "POST",
@@ -142,18 +225,36 @@ export default function AnimalTrialDetail({
                 return;
             }
             if (!response.ok) {
-                setErrorMessage(payload.error ?? "That could not be completed. Try again in a moment.");
+                setErrorMessage(trialStartErrorMessage(payload.error ?? "", payload.error ?? fallback));
                 return;
             }
             apply(payload.trial);
         } catch {
-            setErrorMessage("That could not be completed. Try again in a moment.");
+            setErrorMessage(fallback);
         } finally {
             setIsWorking(false);
         }
-    }, [apply, current.frequency, current.speciesProfileId]);
+    }, [apply, canAttempt, current.frequency, current.speciesProfileId]);
+
+    /**
+     * After a verdict: an approval is shown at once and the server's row is
+     * re-read; a stale re-read that still says "active" is discarded so an
+     * older cached row can never put the button back.
+     */
+    const settleVerification = useCallback((payload: {verification?: AnimalTrialVerificationResult; trial?: AnimalTrial | null}) => {
+        const result = payload.verification ?? null;
+        setVerification(result);
+        if (result && isApproved(result)) {
+            const optimistic = notingApproval(current, {reason: result.reason, rewardXP: result.rewardXP});
+            const refreshed = payload.trial ?? null;
+            apply(refreshed && isComplete(refreshed) ? refreshed : optimistic);
+            return;
+        }
+        apply(payload.trial ?? null);
+    }, [apply, current]);
 
     const submitEvidence = useCallback(async (file: File) => {
+        if (!canAttempt) return;
         setIsWorking(true);
         setErrorMessage(null);
         setVerification(null);
@@ -162,7 +263,9 @@ export default function AnimalTrialDetail({
             const form = new FormData();
             form.set("speciesProfileId", current.speciesProfileId);
             form.set("frequency", current.frequency);
-            form.set("proofType", video ? "video" : "photo");
+            // A screenshot Trial accepts only "screenshot"; sending the same
+            // image as "photo" is refused before it is looked at.
+            form.set("proofType", video ? "video" : stillProofType(current));
             form.set("proof", file);
 
             if (video) {
@@ -185,14 +288,13 @@ export default function AnimalTrialDetail({
                 return;
             }
 
-            setVerification(payload.verification ?? null);
-            apply(payload.trial);
+            settleVerification(payload);
         } catch {
             setErrorMessage("Could not check that evidence. Try again in a moment.");
         } finally {
             setIsWorking(false);
         }
-    }, [apply, current]);
+    }, [apply, canAttempt, current, settleVerification]);
 
     const written = requiresText(current);
     const submittable = canSubmitEvidence(current);
@@ -204,6 +306,7 @@ export default function AnimalTrialDetail({
      * straight to the verifier rather than through storage.
      */
     const submitText = useCallback(async () => {
+        if (!canAttempt) return;
         setIsWorking(true);
         setErrorMessage(null);
         setVerification(null);
@@ -225,24 +328,25 @@ export default function AnimalTrialDetail({
                 return;
             }
 
-            setVerification(payload.verification ?? null);
-            apply(payload.trial);
+            settleVerification(payload);
         } catch {
             setErrorMessage("Could not check that answer. Try again in a moment.");
         } finally {
             setIsWorking(false);
         }
-    }, [apply, current.frequency, current.speciesProfileId, trimmedAnswer]);
+    }, [apply, canAttempt, current.frequency, current.speciesProfileId, settleVerification, trimmedAnswer]);
 
     const outOfAttempts = !complete && submittable && !hasProofAttemptsLeft(current);
-    const actionTitle = outOfAttempts ? "NO CHECKS LEFT" : primaryActionTitle(current);
-    const actionDisabled = isWorking
+    const actionTitle = !canAttempt ? NOT_YET_CAPTURED_TITLE : outOfAttempts ? "NO CHECKS LEFT" : primaryActionTitle(current);
+    const actionDisabled = !canAttempt
+        || isWorking
         || current.status === "pending_activation"
         || outOfAttempts
         // Never let a text Trial spend one of its two checks on an empty box.
         || (written && submittable && !hasEnoughAnswer);
 
     const primaryAction = () => {
+        if (!canAttempt) return;
         switch (current.status) {
             case "notStarted":
                 void runLifecycle("start");
@@ -294,12 +398,13 @@ export default function AnimalTrialDetail({
     const proofDetail = (
         <>
             <p className="text-sm leading-6 text-white/60">{current.proofPrompt}</p>
-            {current.successCriteria.map((criterion) => (
-                <p key={criterion} className="text-[10px] text-white/55">✓ {criterion}</p>
+            {current.successCriteria.map((criterion, index) => (
+                <p key={`${index}-${criterion}`} className="text-[10px] text-white/55">✓ {criterion}</p>
             ))}
-            {/* Completing a Trial is public. Saying that here, before anyone
-                uploads anything, is the only honest place to say it. */}
-            <p className="text-[10px] text-white/40">🌐 Completing this shares it to Discover.</p>
+            {/* Completing a Trial is public — and so is evidence that fails
+                both checks. Saying that here, before anyone uploads anything,
+                is the only honest place to say it. */}
+            <p className="text-[10px] text-white/40">🌐 Accepted or not, this posts to Discover.</p>
             {socialProofText(current) ? (
                 <p className="text-[10px]" style={{color: NEON}}>{socialProofText(current)}</p>
             ) : null}
@@ -307,6 +412,7 @@ export default function AnimalTrialDetail({
             {/* The checker's verdict and the budget, both of which used to be invisible. */}
             {current.proofAttemptCount > 0 || wasRejected(current) ? (
                 <div className="mt-2 flex flex-col gap-2 border-t border-white/[0.08] pt-3">
+                    <SubmittedEvidence submission={submission} />
                     {wasRejected(current) && current.verificationReason ? (
                         <div>
                             <Eyebrow color="#FB923C">Not accepted</Eyebrow>
@@ -329,14 +435,29 @@ export default function AnimalTrialDetail({
         </>
     );
 
+    /** WHAT YOU GET — the reason to do it, folded to one row once it is under way. */
+    const benefitBand = current.userBenefit.trim() ? (
+        <Band accent={NEON}>
+            <button
+                type="button"
+                onClick={() => setShowsBenefit((value) => !value)}
+                aria-expanded={showsBenefit}
+                aria-label={showsBenefit ? "Hide what you get" : "Show what you get"}
+                className="flex min-h-8 w-full items-center gap-2 text-left"
+            >
+                <Eyebrow>What you get</Eyebrow>
+                <span aria-hidden="true" className="ml-auto text-[10px] font-bold text-white/40">{showsBenefit ? "▴" : "▾"}</span>
+            </button>
+            {showsBenefit ? <p className="text-sm leading-6 text-white">{current.userBenefit}</p> : null}
+        </Band>
+    ) : null;
+
     /**
      * WHY THIS TRIAL — one row, closed.
      *
      * This is the most interesting part of the product and the least urgent
      * part of the screen: nobody needs the bridge from the Principle, or the
-     * biology behind it, in order to do the thing. One row, one toggle, both
-     * paragraphs inside, reading Principle → what it asks of you → what the
-     * animal actually does.
+     * biology behind it, in order to do the thing.
      */
     const whyBand = (
         <section className="relative border-b border-white/[0.08] bg-white/[0.03] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${accent}8C`}}>
@@ -347,8 +468,6 @@ export default function AnimalTrialDetail({
                 className="flex min-h-8 w-full items-center gap-2 text-left"
             >
                 <Eyebrow>Why this Trial</Eyebrow>
-                {/* The Principle name stays canonical in the database and on the
-                    Field Guide; it is not a heading a reader can use here. */}
                 <span className="ml-auto rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em]" style={{color: accent, backgroundColor: `${accent}29`}}>
                     {current.speciesDisplayName}
                 </span>
@@ -365,6 +484,84 @@ export default function AnimalTrialDetail({
         </section>
     );
 
+    /** Ask AnimalDex about this Trial: its meaning, an example, how to start. */
+    const askBand = (
+        <section className="relative flex flex-col gap-3 border-b border-white/[0.08] bg-white/[0.03] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
+            <div className="flex items-center gap-2">
+                <span aria-hidden="true" className="text-xs" style={{color: NEON}}>✦</span>
+                <Eyebrow color={NEON}>Ask AnimalDex</Eyebrow>
+            </div>
+            <p className="text-sm leading-6 text-white/70">Ask what this Trial means and for examples.</p>
+            <div className="flex flex-wrap gap-2">
+                {TRIAL_ASK_SUGGESTIONS.map((suggestion) => (
+                    <button
+                        key={suggestion.title}
+                        type="button"
+                        onClick={() => openAsk(suggestion.prompt)}
+                        className="min-h-9 rounded-full border border-white/10 bg-black/25 px-3 text-xs font-semibold text-white/80 transition hover:border-white/25 hover:text-white"
+                    >
+                        {suggestion.title}
+                    </button>
+                ))}
+            </div>
+            <button
+                type="button"
+                onClick={() => openAsk()}
+                className="flex min-h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-4 text-left text-sm text-white/55"
+            >
+                Ask about this Trial…
+                <span aria-hidden="true" className="font-black" style={{color: NEON}}>→</span>
+            </button>
+        </section>
+    );
+
+    const viewerHasPostedThisTrial = complete
+        || (!hasProofAttemptsLeft(current) && (current.status === "active" || current.status === "proof_submitted"));
+
+    /** What other people submitted for this exact Trial. */
+    const otherAttemptsBand = (
+        <section className="relative flex flex-col gap-3 border-b border-white/[0.08] bg-white/[0.02] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${accent}8C`}}>
+            <div className="flex items-center gap-2">
+                <Eyebrow>Other attempts</Eyebrow>
+                {otherAttempts?.length ? (
+                    <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-black text-white/70">{otherAttempts.length}</span>
+                ) : null}
+            </div>
+            {otherAttempts == null ? (
+                <p className="text-xs text-white/40">Looking for attempts…</p>
+            ) : otherAttempts.length === 0 ? (
+                <p className="text-xs text-white/55">
+                    {viewerHasPostedThisTrial ? "No other attempts yet." : "No attempts yet. You'll be the first."}
+                </p>
+            ) : (
+                <div className="-mx-5 flex gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {otherAttempts.map((attempt) => (
+                        <Link
+                            key={attempt.id}
+                            href={discoverPostPath(attempt.id)}
+                            aria-label={`${attempt.collector.name}. ${attempt.isFailed ? "Failed." : "Completed."}`}
+                            className="flex w-[148px] shrink-0 flex-col gap-1.5"
+                        >
+                            <span className="relative block h-[168px] w-[148px] overflow-hidden rounded-xl bg-white/[0.04]">
+                                {attempt.evidenceSrc ? (
+                                    <AnimalTrialEvidence item={attempt} />
+                                ) : (
+                                    <span className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#0a1f0f_0%,#161616_55%,#000_100%)] text-2xl text-white/50">
+                                        {attempt.proofType === "text" || attempt.proofType === "application" ? "≡" : "▣"}
+                                    </span>
+                                )}
+                            </span>
+                            <span className="truncate text-xs font-semibold text-white">{attempt.collector.name}</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.1em]" style={{color: attempt.isFailed ? "#FB923C" : NEON}}>
+                                {attempt.isFailed ? "Failed" : "Completed"}
+                            </span>
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+
     return (
         // Above the floating Ask AnimalDex pill (z-55), which otherwise sits on
         // top of the action bar and covers the one button this sheet is for.
@@ -374,6 +571,9 @@ export default function AnimalTrialDetail({
             aria-label="Animal Trial"
             className="fixed inset-0 z-[58] flex flex-col bg-black"
         >
+            {/* While this sheet is open, Ask AnimalDex is about this Trial. */}
+            <AskTrialBridge trialContext={trialAskBrief(current)} trialKey={trialAskKey(current)} name={current.speciesDisplayName} />
+
             <header className="flex items-center justify-between border-b border-white/[0.08] px-5 py-3">
                 <span className="text-[10px] font-black uppercase tracking-[0.13em] text-white/55">Animal Trial</span>
                 {/* Never a dead end: every presented surface closes. */}
@@ -394,15 +594,9 @@ export default function AnimalTrialDetail({
                         {frequencyBadge(current.frequency)}
                     </p>
                     <h2 className="mt-2 font-display text-3xl font-black leading-tight text-white">{current.title}</h2>
-                    {/* What the frequency MEANS, in four words. The species name used
-                        to sit here and said nothing a reader did not already know —
-                        this sheet is always opened from that animal's own card. */}
                     <p className="mt-2 text-xs text-white/55">{frequencyCharacter(current.frequency)}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                        {/* The reward is the reason, so it leads and it is the only
-                            coloured thing here. */}
                         <Pill color={NEON}>⚡ {rewardSummary}</Pill>
-                        {/* An ESTIMATE. Only HIGH also has a limit, and only HIGH says so. */}
                         <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold text-white/70">
                             ~{current.estimatedMinutes} min
                         </span>
@@ -416,19 +610,29 @@ export default function AnimalTrialDetail({
 
                 {complete ? (
                     <>
-                        <section className="border-b border-white/[0.08] bg-white/[0.03] px-5 py-6">
+                        <section className="border-b border-white/[0.08] bg-white/[0.03] px-5 py-6" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
                             <p className="text-[10px] font-black uppercase tracking-[0.13em]" style={{color: NEON}}>Trial complete</p>
                             <p className="mt-2 text-xl font-bold uppercase text-white">{current.speciesDisplayName}</p>
                             <p className="mt-1 text-xs text-white/55">{frequencyBadge(current.frequency)} · {current.title}</p>
                             <p className="mt-3 text-3xl font-black" style={{color: NEON}}>+{current.rewardXPAwarded} XP</p>
+                            {submission.image || submission.text ? (
+                                <div className="mt-4"><SubmittedEvidence submission={submission} /></div>
+                            ) : null}
+                            {current.verificationReason?.trim() ? (
+                                <div className="mt-4">
+                                    <Eyebrow color={NEON}>Why it counted</Eyebrow>
+                                    <p className="mt-1 text-sm leading-6 text-white/85">{current.verificationReason}</p>
+                                </div>
+                            ) : null}
                             {current.completedAt ? (
-                                <p className="mt-2 text-[10px] text-white/40">
+                                <p className="mt-3 text-[10px] text-white/40">
                                     Completed {new Date(current.completedAt).toLocaleString()}
                                 </p>
                             ) : null}
                             <p className="mt-1 text-[10px] text-white/40">You can only earn this one once.</p>
                         </section>
                         {whyBand}
+                        {benefitBand}
                     </>
                 ) : (
                     <>
@@ -470,7 +674,6 @@ export default function AnimalTrialDetail({
                             </Band>
                         ) : submittable ? (
                             <Band accent={accent}>
-                                {/* Untimed and under way. No clock, and it says so. */}
                                 <div className="flex items-center justify-between gap-3">
                                     <Eyebrow color={accent}>Trial active</Eyebrow>
                                     <span className="text-[10px] font-bold text-white/55">∞ No time limit</span>
@@ -480,8 +683,6 @@ export default function AnimalTrialDetail({
                                 </p>
                             </Band>
                         ) : isRandomlyActivated(current) ? (
-                            // The one thing a not-yet-started Trial can say that the
-                            // hero cannot: this one does not begin when you press the button.
                             <Band accent={accent}>
                                 <p className="text-sm leading-6 text-white">
                                     Activate it, then carry on with your day. It goes live at a moment you won&rsquo;t see coming.
@@ -489,15 +690,7 @@ export default function AnimalTrialDetail({
                             </Band>
                         ) : null}
 
-                        {/* The reason to do it at all. Only shown while "why would I"
-                            is still open: once a Trial is armed or running the person
-                            has already answered it, and the reward stays in the hero. */}
-                        {current.userBenefit && !submittable ? (
-                            <Band accent={NEON}>
-                                <Eyebrow>What you get</Eyebrow>
-                                <p className="text-sm leading-6 text-white">{current.userBenefit}</p>
-                            </Band>
-                        ) : null}
+                        {benefitBand}
 
                         {/* The action, and the one constraint that qualifies it. The
                             safety note is NOT behind the tap: nothing a person needs
@@ -528,7 +721,7 @@ export default function AnimalTrialDetail({
                         {/* The answer box for a text Trial. It replaces the camera
                             entirely rather than sitting beside it: a Trial whose
                             proof_types is {text} rejects a photo server-side. */}
-                        {written && submittable ? (
+                        {written && submittable && canAttempt ? (
                             <Band accent={accent}>
                                 <Eyebrow>Your answer</Eyebrow>
                                 <textarea
@@ -577,12 +770,18 @@ export default function AnimalTrialDetail({
                     </>
                 )}
 
+                {askBand}
+                {otherAttemptsBand}
+
                 <div className="h-6" />
             </div>
 
             {/* Action bar */}
             {!complete ? (
                 <div className="border-t border-white/[0.08] bg-black/80 px-4 py-3 backdrop-blur">
+                    {!canAttempt ? (
+                        <p className="mb-2 text-center text-[10px] text-white/55">{NOT_YET_CAPTURED_NOTE}</p>
+                    ) : null}
                     {errorMessage ? (
                         <p className="mb-2 text-center text-[10px] text-orange-400">{errorMessage}</p>
                     ) : null}
@@ -593,10 +792,11 @@ export default function AnimalTrialDetail({
                         type="button"
                         onClick={primaryAction}
                         disabled={actionDisabled}
-                        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-black text-black/90 disabled:cursor-not-allowed"
+                        className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-black disabled:cursor-not-allowed ${canAttempt ? "text-black/90" : "text-white/60"}`}
                         style={{backgroundColor: actionDisabled ? "rgba(255,255,255,0.14)" : accent}}
                     >
                         {isWorking ? "…" : null}
+                        {!canAttempt ? <span aria-hidden="true">🔒</span> : null}
                         {actionTitle}
                     </button>
                 </div>

@@ -24,6 +24,7 @@ import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askThreadKey, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
+import {TRIAL_ASK_EMPTY_HEADING, TRIAL_ASK_PLACEHOLDER} from "@/lib/animal-trial-ask";
 import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
 import {getLocalePath} from "@/lib/site";
 import {
@@ -133,7 +134,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     hasReaderPhoto: subject.hasReaderPhoto,
                     title: subject.title,
                     summary: subject.summary,
-                    path: subject.path
+                    path: subject.path,
+                    trialContext: subject.trialContext,
+                    trialKey: subject.trialKey
                 }
             })
         })
@@ -225,11 +228,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const animalName = hints.animalName ?? resolvedSubject.name ?? null;
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
 
+    const aboutTrial = Boolean(resolvedSubject.trialContext);
     const placeholder = hasConversation
         ? labels.placeholderFollowUp
-        : animalName
-            ? labels.placeholderAnimal.replace("{animal}", animalName)
-            : labels.placeholderGeneral;
+        : aboutTrial
+            ? TRIAL_ASK_PLACEHOLDER
+            : animalName
+                ? labels.placeholderAnimal.replace("{animal}", animalName)
+                : labels.placeholderGeneral;
 
     const lastMessageId = messages[messages.length - 1]?.id ?? null;
     const remainingCopy = quota.remaining !== null && quota.limit !== null
@@ -339,14 +345,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <div className="flex flex-col gap-4">
                             <div>
                                 <h2 className="font-display text-xl font-bold leading-7 text-white">
-                                    {animalName
-                                        ? labels.emptyTitleAnimal.replace("{animal}", animalName)
-                                        : labels.emptyTitleGeneral}
+                                    {aboutTrial
+                                        ? TRIAL_ASK_EMPTY_HEADING
+                                        : animalName
+                                            ? labels.emptyTitleAnimal.replace("{animal}", animalName)
+                                            : labels.emptyTitleGeneral}
                                 </h2>
                                 <p className="mt-1.5 text-sm leading-6 text-ink-300">{labels.emptyHint}</p>
                             </div>
                             <div className="flex flex-col gap-2">
-                                {suggestions.slice(0, 3).map((suggestion) => (
+                                {suggestions.slice(0, aboutTrial ? suggestions.length : 3).map((suggestion) => (
                                     <button
                                         key={suggestion.prompt}
                                         type="button"
@@ -381,7 +389,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     photoAlt={animalName ?? ""}
                                     thinkingPhases={askThinkingPhases(
                                         lastQuestion(messages),
-                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false}
+                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial}
                                     )}
                                     copied={copiedId === message.id}
                                     questionRef={message.id === trailingQuestionId ? trailingQuestionRef : undefined}

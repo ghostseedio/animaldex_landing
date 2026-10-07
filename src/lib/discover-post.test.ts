@@ -17,4 +17,9 @@ test("accepted discover post ids stay scoped to one entity", () => {
         postId: "capture-158d89d7-fdae-4cae-8158-013bddd5e3b6"
     });
     assert.equal(parseDiscoverPostId("158d89d7-fdae-4cae-8158-013bddd5e3b6")?.postId, "capture-158d89d7-fdae-4cae-8158-013bddd5e3b6");
+    assert.deepEqual(parseDiscoverPostId("animal-trial-d848f876-2402-a0bf-b797-5cc036601716"), {
+        kind: "animal-trial",
+        entityId: "d848f876-2402-a0bf-b797-5cc036601716",
+        postId: "animal-trial-d848f876-2402-a0bf-b797-5cc036601716"
+    });
 });

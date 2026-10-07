@@ -135,6 +135,7 @@ type ProfileContentProps = {
         farmCount: number;
         tradesMade: number;
         missionsCompleted: number;
+        animalPowersEarned: number | null;
         challengeWins: number;
         challengeLosses: number;
         discoveryDistanceLabel: string | null;
@@ -457,6 +458,11 @@ export default function ProfileContent({
         const chips: ProfileStatChip[] = [
             {title: "Captures", value: String(profile.captureCount), tint: THEME.neon},
             {title: "Species", value: String(profile.speciesCount), tint: THEME.mint},
+            // Powers earned sits beside the species met: what this person has
+            // been taught, next to what they have found.
+            ...(profile.animalPowersEarned != null
+                ? [{title: "Powers earned", value: String(profile.animalPowersEarned), tint: THEME.neon}]
+                : []),
             {title: "Unindexed captures", value: String(profile.unindexedCount), tint: "rgba(255,59,48,0.92)"},
             {
                 title: "Indexed",
@@ -464,7 +470,7 @@ export default function ProfileContent({
                 tint: THEME.mint,
                 denominator: speciesDenominator
             },
-            {title: "Sets complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"},
+            {title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"},
             {
                 title: "Challenges",
                 value: `${profile.challengeWins}/${profile.challengeWins + profile.challengeLosses}`,
@@ -744,6 +750,8 @@ export default function ProfileContent({
                     <BestForTagsChartCard
                         scores={profile.bestForTagScores}
                         title={viewer.isOwner ? "YOUR QUALITIES" : `@${profile.username}'S QUALITIES`.toUpperCase()}
+                        isOwner={viewer.isOwner}
+                        usernameHandle={`@${profile.username}`}
                     />
                     <AverageTraitsCard stats={profile.averageTraits} />
                     <ProfileInsightsSection

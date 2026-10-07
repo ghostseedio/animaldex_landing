@@ -18,6 +18,14 @@ type SpeciesRankingCarouselProps = {
     };
     currentCaptureId?: string | null;
     currentCaptureGrade?: number | null;
+    /**
+     * The viewer's own capture is private, so it is not in the public cohort
+     * and holds no rank. It is pinned after the public cards so they can still
+     * compare against the community.
+     */
+    currentCaptureIsPrivate?: boolean;
+    /** The private capture's own image route, since it has no public one. */
+    currentCaptureImageSrc?: string | null;
     layout?: "compact" | "wide";
 };
 
@@ -59,16 +67,22 @@ export default function SpeciesRankingCarousel({
     items,
     currentCaptureId = null,
     currentCaptureGrade = null,
+    currentCaptureIsPrivate = false,
+    currentCaptureImageSrc = null,
     layout = "compact"
 }: SpeciesRankingCarouselProps) {
     const wide = layout === "wide";
     const currentItem = currentCaptureId
         ? items.find((item) => item.captureId === currentCaptureId)
         : null;
+    const pinsPrivateCapture = Boolean(currentCaptureId && !currentItem && currentCaptureIsPrivate);
+    const rankedCount = items.length;
     const summary = currentItem
-        ? `You’re #${currentItem.rank} of ${items.length}`
-        : items.length > 0
-            ? `${items.length} ranked ${items.length === 1 ? "capture" : "captures"} in this group.`
+        ? `You’re #${currentItem.rank} of ${rankedCount}`
+        : rankedCount > 0
+            ? pinsPrivateCapture
+                ? `${rankedCount} ranked ${rankedCount === 1 ? "capture" : "captures"} in this group. Yours is private.`
+                : `${rankedCount} ranked ${rankedCount === 1 ? "capture" : "captures"} in this group.`
             : "No captures yet";
 
     return (
@@ -136,6 +150,27 @@ export default function SpeciesRankingCarousel({
                             </article>
                         );
                     })}
+                    {pinsPrivateCapture ? (
+                        <article
+                            aria-label="Your capture. Private, so it is not ranked."
+                            className={`w-[136px] shrink-0 overflow-hidden border border-[#A7F432]/80 bg-[#171a18] ring-1 ring-[#A7F432]/80 ${wide ? "lg:w-[164px]" : ""}`}
+                        >
+                            <div className={`relative h-[148px] w-[136px] overflow-hidden bg-black/30 ${wide ? "lg:h-[178px] lg:w-[164px]" : ""}`}>
+                                {currentCaptureImageSrc ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={currentCaptureImageSrc} alt="Your capture" className="h-full w-full object-cover" loading="lazy" />
+                                ) : null}
+                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
+                                <span className="absolute left-2 top-2 rounded-full bg-[#A7F432] px-2 py-[5px] text-[10px] font-bold leading-none text-black/90">
+                                    Private
+                                </span>
+                            </div>
+                            <div className="min-h-[66px] space-y-1.5 border-t border-white/[0.08] bg-[linear-gradient(145deg,#202421,#151716)] px-2 py-[9px]">
+                                <p className="truncate text-[11px] font-medium leading-[13px] text-white">You</p>
+                                {currentCaptureGrade != null ? <GradeBadge grade={currentCaptureGrade} /> : null}
+                            </div>
+                        </article>
+                    ) : null}
                 </div>
             ) : (
                 <div className="h-24" aria-hidden="true" />

@@ -94,6 +94,26 @@ function postSeoFields(item: DiscoverTimelineItem) {
         };
     }
 
+    if (item.kind === "animal-trial") {
+        return {
+            title: discoverPostShareTitle({
+                kind: item.kind,
+                animalName: item.speciesName,
+                collectorName: item.collector.name
+            }),
+            description: discoverPostShareDescription({
+                kind: item.kind,
+                animalName: item.speciesName,
+                collectorName: item.collector.name,
+                collectorUsername: item.collector.username
+            }),
+            imageSrc: item.evidenceSrc ?? "/images/placeholders/species-no-image.svg",
+            publishedAt: item.date,
+            keywords: [item.speciesName, item.principleName, "AnimalDex", "animal trial"].filter(Boolean),
+            video: null
+        };
+    }
+
     if (item.kind === "challenge") {
         return {
             title: discoverPostShareTitle({

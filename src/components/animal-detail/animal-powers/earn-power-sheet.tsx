@@ -19,9 +19,12 @@ import EarnPowerMount from "@/components/animal-detail/animal-powers/earn-power-
 export default function EarnPowerSheet({
     speciesProfileId,
     animalName,
+    ownsThisCapture = false,
     onClose
 }: {
     speciesProfileId: string | null | undefined;
+    /** Opened from the viewer's own capture, which is itself the unlock. */
+    ownsThisCapture?: boolean;
     /**
      * What the person was looking at when they hit the lock. Shown in the title
      * so the sheet is obviously about that animal.
@@ -60,7 +63,7 @@ export default function EarnPowerSheet({
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto w-full max-w-2xl pb-6">
-                    <EarnPowerMount speciesProfileId={speciesProfileId} />
+                    <EarnPowerMount speciesProfileId={speciesProfileId} ownsThisCapture={ownsThisCapture} />
                 </div>
             </div>
         </div>

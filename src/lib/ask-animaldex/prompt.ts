@@ -233,6 +233,19 @@ const FOLLOW_UP_RULES = [
     "- If available_content is empty, offer to go deeper on the animal's own behaviour instead."
 ];
 
+/// The same slot when the person is asking about one Animal Trial: every
+/// offer stays on that Trial, and nothing else in the index is dangled.
+const TRIAL_FOLLOW_UP_RULES = [
+    "Follow-ups: 2-3 offers to continue, each under 70 characters.",
+    "- The person is asking about one Animal Trial. Every follow-up stays on that Trial.",
+    "- Write them as things YOU will do next: 'Explain what this Trial is asking', 'Give an example of doing it well', 'Show what the evidence should look like'.",
+    "- Do not offer the field guide, System Dynamics, the Power, or another animal as the next question."
+];
+
+function followUpRules(options: {aboutTrial?: boolean}) {
+    return options.aboutTrial ? TRIAL_FOLLOW_UP_RULES : FOLLOW_UP_RULES;
+}
+
 const SAFETY_RULES = [
     "Do not diagnose mental-health conditions.",
     "Do not use symbolism, spirit animal, totem, archetype, vibration, or frequency-as-mysticism language.",
@@ -240,6 +253,8 @@ const SAFETY_RULES = [
 ];
 
 export type AskPromptOptions = {
+    /** The question is about one Animal Trial (see `trialContext` on the packet). */
+    aboutTrial?: boolean;
     scope: AskScope;
     /// Visual mediums this surface can render; empty means prose and tables only.
     supportedVisuals?: AskVisualMedium[];
@@ -296,7 +311,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
         "1. The answer itself.",
         `2. Then a line containing exactly ${ASK_FOLLOW_UP_SENTINEL}`,
         "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
-        ...FOLLOW_UP_RULES,
+        ...followUpRules(options),
         `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
         "",
         ...STRUCTURE_CONTRACT
@@ -332,7 +347,7 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
         "Return JSON only:",
         '{"answer":"markdown answer","follow_up_prompts":["short offer","short offer"]}',
         "answer must be a single JSON string with real newlines escaped as \\n.",
-        ...FOLLOW_UP_RULES
+        ...followUpRules(options)
     ].join("\n");
 }
 

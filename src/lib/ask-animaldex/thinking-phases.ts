@@ -13,6 +13,8 @@
  * there.
  */
 
+import {TRIAL_ASK_THINKING_PHASES} from "@/lib/animal-trial-ask";
+
 export type AskThinkingHints = {
     animalName: string | null;
     principleName: string | null;
@@ -24,6 +26,8 @@ export type AskThinkingHints = {
     hasDynamics: boolean;
     /** The reader has a Wild Profile, so an application question is matched to it. */
     hasWildProfile?: boolean;
+    /** The question is about one Animal Trial, so that is all that is being read. */
+    aboutTrial?: boolean;
 };
 
 export const EMPTY_ASK_THINKING_HINTS: AskThinkingHints = {
@@ -56,6 +60,7 @@ function matchedDomain(question: string, domains: string[]): string | null {
 
 /** Ordered status lines for one question. At most three. */
 export function askThinkingPhases(question: string, hints: AskThinkingHints): string[] {
+    if (hints.aboutTrial) return [...TRIAL_ASK_THINKING_PHASES];
     const normalized = question.toLowerCase();
     const phases: string[] = [];
     const add = (line: string) => {

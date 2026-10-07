@@ -66,6 +66,8 @@ type PublicProfileSummaryRow = {
     best_find_id?: string | null;
     trades_made?: number | null;
     missions_completed?: number | null;
+    /** Null when the read surface does not carry it (the legacy summary view). */
+    animal_powers_earned?: number | null;
     collection_value_usd?: number | null;
     score_includes_power_sets?: boolean;
     challenge_wins?: number | null;
@@ -96,6 +98,8 @@ type MaterializedProfileStatsRow = {
     challenge_losses?: number | null;
     discovery_distance_meters?: number | null;
     located_observation_count?: number | null;
+    /** Animal Powers held. One per completed Trial set or approved application. */
+    animal_powers_earned?: number | null;
 };
 
 type ProfileInsightIdRow = {
@@ -238,6 +242,8 @@ export type PublicProfileCard = {
     rareFinds: number;
     tradesMade: number;
     missionsCompleted: number;
+    /** Animal Powers held; null when the read surface does not carry it. */
+    animalPowersEarned: number | null;
     collectionValueUsd: number | null;
     averageRarity: number | null;
     averageTraits: {
@@ -357,13 +363,14 @@ function toPublicProfileSummaryFromMaterialized(row: MaterializedProfileStatsRow
         challenge_wins: row.challenge_wins,
         challenge_losses: row.challenge_losses,
         discovery_distance_meters: row.discovery_distance_meters,
-        located_observation_count: row.located_observation_count
+        located_observation_count: row.located_observation_count,
+        animal_powers_earned: row.animal_powers_earned ?? null
     };
 }
 
 async function fetchPublicProfileSummary(userId: string) {
     const materializedParams = new URLSearchParams({
-        select: "user_id,overall_score,observation_count,unique_species_count,indexed_species_count,rare_observation_count,wild_observation_count,zoo_observation_count,domestic_observation_count,farm_observation_count,collection_value_cents,average_dominance,average_speed,average_size,average_intelligence,average_rarity,completed_trade_count,challenge_wins,challenge_losses,discovery_distance_meters,located_observation_count",
+        select: "user_id,overall_score,observation_count,unique_species_count,indexed_species_count,rare_observation_count,wild_observation_count,zoo_observation_count,domestic_observation_count,farm_observation_count,collection_value_cents,average_dominance,average_speed,average_size,average_intelligence,average_rarity,completed_trade_count,challenge_wins,challenge_losses,discovery_distance_meters,located_observation_count,animal_powers_earned",
         user_id: `eq.${userId}`,
         limit: "1"
     });
@@ -891,6 +898,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         rareFinds: Number(summary?.rare_finds ?? 0),
         tradesMade: Number(summary?.trades_made ?? 0),
         missionsCompleted: Number(summary?.missions_completed ?? 0),
+        animalPowersEarned: summary?.animal_powers_earned == null ? null : Number(summary.animal_powers_earned),
         collectionValueUsd: summary?.collection_value_usd != null ? Number(summary.collection_value_usd) : null,
         averageRarity: summary?.average_rarity != null ? Number(summary.average_rarity) : null,
         averageTraits: {

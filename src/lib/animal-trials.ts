@@ -64,8 +64,16 @@ export type AnimalTrial = {
     rewardXPAwarded: number;
     rewardCreditsAwarded: number;
     completedAt: string | null;
+    /** A finished Trial is a Discover post; the row says so. */
+    sharePublicly: boolean;
     /** How many people have publicly completed this Trial, excluding the viewer. */
     otherCompletionCount: number;
+    /**
+     * The Qualities the animal's Power carries (`best_use_cases` on the view).
+     * Earning the Power puts them on the person's profile; the history row
+     * shows what a finished Trial contributed.
+     */
+    bestUseCases: string[];
 };
 
 /**
@@ -150,13 +158,109 @@ export function isComplete(trial: AnimalTrial) {
     return trial.status === "completed";
 }
 
+/** The Power name, once it is actually a name. */
+export function earnedPowerName(trial: AnimalTrial) {
+    const trimmed = trial.principleName.trim();
+    return trimmed || null;
+}
+
+/** Best-for qualities, in assignment order, with blanks and repeats removed. */
+export function earnedQualities(trial: AnimalTrial) {
+    const seen = new Set<string>();
+    const labels: string[] = [];
+    for (const raw of trial.bestUseCases) {
+        const trimmed = raw.trim();
+        if (!trimmed || seen.has(trimmed.toLowerCase())) continue;
+        seen.add(trimmed.toLowerCase());
+        labels.push(trimmed);
+    }
+    return labels;
+}
+
+/**
+ * Still possible to finish. A rejection with a check left is in progress.
+ * Expired, abandoned, and out-of-checks rows are history, not an open list.
+ */
+export function isInProgress(trial: AnimalTrial) {
+    switch (trial.status) {
+        case "pending_activation":
+            return true;
+        case "active":
+        case "proof_submitted":
+            return hasProofAttemptsLeft(trial);
+        default:
+            return false;
+    }
+}
+
+/**
+ * Started, and the evidence never succeeded. Not-started catalog rows are not
+ * failures — the person never took them.
+ */
+export function isFailed(trial: AnimalTrial) {
+    if (isComplete(trial) || trial.status === "notStarted" || isInProgress(trial)) return false;
+    switch (trial.status) {
+        case "expired":
+        case "abandoned":
+            return true;
+        case "active":
+        case "proof_submitted":
+            return !hasProofAttemptsLeft(trial);
+        default:
+            return false;
+    }
+}
+
+export function failureSummary(trial: AnimalTrial) {
+    switch (trial.status) {
+        case "expired": return "Window closed";
+        case "abandoned": return "Left unfinished";
+        case "active":
+        case "proof_submitted": return "Evidence not accepted";
+        default: return "Not completed";
+    }
+}
+
+/**
+ * The row the sheet shows the moment the verifier approves, before the
+ * re-read lands. An older cached row must never put the button back.
+ */
+export function notingApproval(trial: AnimalTrial, input: {reason: string | null; rewardXP: number}): AnimalTrial {
+    return {
+        ...trial,
+        status: "completed",
+        verificationStatus: "approved",
+        verificationReason: input.reason ?? trial.verificationReason,
+        rewardXPAwarded: input.rewardXP > 0 ? input.rewardXP : trial.rewardXPAwarded,
+        rewardCreditsAwarded: trial.rewardCreditsAwarded > 0 ? trial.rewardCreditsAwarded : trial.rewardCredits,
+        completedAt: trial.completedAt ?? new Date().toISOString()
+    };
+}
+
 /**
  * A library pick is only honest evidence when the Trial is ABOUT something
  * already on the device. Everything else is a thing you just did, and must be
  * captured live.
  */
 export function allowsLibraryEvidence(trial: AnimalTrial) {
+    return acceptsScreenshot(trial);
+}
+
+export function acceptsScreenshot(trial: AnimalTrial) {
     return trial.proofTypes.includes("screenshot");
+}
+
+export function acceptsPhoto(trial: AnimalTrial) {
+    return trial.proofTypes.includes("photo");
+}
+
+/**
+ * What a still must be submitted as. A screenshot Trial's `proof_types` is
+ * `["screenshot"]` only. Sending that image as `"photo"` is refused with
+ * `proof_type_not_allowed` before the picture is ever looked at.
+ */
+export function stillProofType(trial: AnimalTrial) {
+    return acceptsScreenshot(trial) && !acceptsPhoto(trial) ? "screenshot" : "photo";
 }
 
 export function remainingProofAttempts(trial: AnimalTrial) {
@@ -226,6 +330,59 @@ export function primaryActionTitle(trial: AnimalTrial) {
         case "abandoned":
             return "TRY AGAIN";
     }
+}
+
+/**
+ * The card shows what to DO, cut to one breath. Mirrors `AnimalTrialCard.preview`:
+ * 120 characters, broken at the last space when that leaves most of the line.
+ */
+export const WHAT_TO_DO_CHARACTER_LIMIT = 120;
+
+export function instructionsPreview(text: string) {
+    const trimmed = text.trim();
+    if (trimmed.length <= WHAT_TO_DO_CHARACTER_LIMIT) return trimmed;
+    let head = trimmed.slice(0, WHAT_TO_DO_CHARACTER_LIMIT);
+    const lastSpace = head.lastIndexOf(" ");
+    if (lastSpace > 70) head = head.slice(0, lastSpace);
+    return `${head}…`;
+}
+
+/** "2/3 complete" over the cards, once an animal has more than one Trial. */
+export function trialProgress(trials: AnimalTrial[]) {
+    const total = trials.length;
+    const done = trials.filter(isComplete).length;
+    const fraction = total ? done / total : 0;
+    return {done, total, fraction, percent: Math.round(fraction * 100), label: `${done}/${total} complete`};
+}
+
+/**
+ * Whether this person may start or submit a Trial for a species. A Trial is per
+ * person per species: looking at someone else's public capture does not grant
+ * it — the viewer has to have unlocked the animal themselves. Mirrors
+ * `AnimalTrialUnlock.canAttempt` and the server's `species_not_unlocked`.
+ */
+export function canAttemptTrial(input: {
+    ownsThisCapture: boolean;
+    speciesProfileIds: Array<string | null | undefined>;
+    identityKeys: Array<string | null | undefined>;
+    discoveredProfileIds: Set<string>;
+    discoveredIdentityKeys: Set<string>;
+}) {
+    if (input.ownsThisCapture) return true;
+    if (input.speciesProfileIds.some((id) => id && input.discoveredProfileIds.has(id.toLowerCase()))) return true;
+    return input.identityKeys.some((key) => {
+        const normalized = key?.trim().toLowerCase();
+        return Boolean(normalized && input.discoveredIdentityKeys.has(normalized));
+    });
+}
+
+export const NOT_YET_CAPTURED_TITLE = "NOT YET CAPTURED";
+export const NOT_YET_CAPTURED_NOTE = "You don't own this index yet.";
+
+/** A start/restart refusal, with the unlock gate named plainly. */
+export function trialStartErrorMessage(error: unknown, fallback: string) {
+    const text = typeof error === "string" ? error : error instanceof Error ? error.message : JSON.stringify(error ?? "");
+    return /species_not_unlocked/i.test(text) ? NOT_YET_CAPTURED_NOTE : fallback;
 }
 
 export function canSubmitEvidence(trial: AnimalTrial) {
@@ -311,6 +468,8 @@ export function verifierRefusalMessage(code: string, serverMessage?: string | nu
             return "Your evidence did not finish uploading. Try adding it again.";
         case "proof_path_not_owned":
             return "That evidence could not be verified as yours.";
+        case "species_not_unlocked":
+            return "Capture this animal before taking its Trials.";
         case "verification_failed":
             return "The check could not be completed. Try again in a moment.";
         case "server_configuration":
@@ -327,7 +486,8 @@ const NON_RETRYABLE_CODES = [
     "trial_not_active_yet",
     "trial_window_closed",
     "trial_not_active",
-    "proof_type_not_allowed"
+    "proof_type_not_allowed",
+    "species_not_unlocked"
 ];
 
 export function isRetryableRefusal(code: string) {
@@ -395,6 +555,98 @@ export function decodeAnimalTrial(row: any): AnimalTrial | null {
         rewardXPAwarded: num(row?.reward_xp_awarded),
         rewardCreditsAwarded: num(row?.reward_credits_awarded),
         completedAt: row?.completed_at ?? null,
-        otherCompletionCount: num(row?.other_completion_count)
+        sharePublicly: row?.share_publicly === true,
+        otherCompletionCount: num(row?.other_completion_count),
+        bestUseCases: list(row?.best_use_cases)
     };
+}
+
+// MARK: - The Play hub
+
+export type ArenaTrialGroup = {
+    /** The species profile id. */
+    id: string;
+    name: string;
+    trials: AnimalTrial[];
+    /** Not yet completed, calm to volatile. The finished ones stay in `trials` so the count can read 1/3. */
+    remaining: AnimalTrial[];
+    completedCount: number;
+};
+
+/**
+ * Open Trials grouped by animal, as the Play tab lists them. An animal whose
+ * every Trial is finished has nothing remaining and is left out; the server's
+ * `arena_caught_trials_v1` already drops it, this just never shows an empty
+ * group on a stale read.
+ */
+export function arenaTrialGroups(openTrials: AnimalTrial[]): ArenaTrialGroup[] {
+    const bySpecies = new Map<string, AnimalTrial[]>();
+    for (const trial of openTrials) {
+        const key = trial.speciesProfileId.toLowerCase();
+        bySpecies.set(key, [...(bySpecies.get(key) ?? []), trial]);
+    }
+    return Array.from(bySpecies.entries())
+        .map(([id, trials]) => ({
+            id,
+            name: trials[0]?.speciesDisplayName ?? "Animal",
+            trials,
+            remaining: sortTrials(trials.filter((trial) => !isComplete(trial))),
+            completedCount: trials.filter(isComplete).length
+        }))
+        .filter((group) => group.remaining.length > 0)
+        .sort((left, right) => left.name.localeCompare(right.name, undefined, {sensitivity: "base"}));
+}
+
+/**
+ * Keeps a Trial the person just finished over a stale server row that still
+ * says otherwise, so a finished Trial never becomes submittable again on a
+ * cached read.
+ */
+export function mergeOpenTrials(previous: AnimalTrial[], fetched: AnimalTrial[]) {
+    const finishedLocally = previous.filter(isComplete);
+    return fetched.map((row) => {
+        const local = finishedLocally.find((item) => trialId(item) === trialId(row));
+        return local && !isComplete(row) ? local : row;
+    });
+}
+
+function timestamp(value: string | null) {
+    const parsed = value ? Date.parse(value) : NaN;
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/** Completed Trials, newest completion first. */
+export function completedTrialHistory(history: AnimalTrial[]) {
+    return history.filter(isComplete).sort((left, right) => timestamp(right.completedAt) - timestamp(left.completedAt));
+}
+
+/** Trials whose evidence never succeeded, most recent first. */
+export function failedTrialHistory(history: AnimalTrial[]) {
+    const when = (trial: AnimalTrial) => timestamp(trial.completedAt ?? trial.completionDeadlineAt ?? trial.activatedAt);
+    return history.filter(isFailed).sort((left, right) => when(right) - when(left));
+}
+
+/**
+ * A Trial the sheet just wrote, folded into both hub lists: history gains a
+ * finished one at the top, and the open list keeps it so an animal still on
+ * 1/3 does not lose the finished Trial from its count.
+ */
+export function noteTrialUpdate(lists: {openTrials: AnimalTrial[]; history: AnimalTrial[]}, updated: AnimalTrial) {
+    const id = trialId(updated);
+    const openTrials = lists.openTrials.filter((item) => trialId(item) !== id);
+    const history = lists.history.filter((item) => trialId(item) !== id);
+    return {
+        openTrials: [...openTrials, updated],
+        history: isComplete(updated) || isFailed(updated) ? [updated, ...history] : history
+    };
+}
+
+/** "Completed 3 Oct 2026", or the failure in two words. */
+export function trialHistoryStatusLine(trial: AnimalTrial) {
+    if (isComplete(trial)) {
+        return trial.completedAt
+            ? `Completed ${new Date(trial.completedAt).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}`
+            : "Completed";
+    }
+    return failureSummary(trial);
 }

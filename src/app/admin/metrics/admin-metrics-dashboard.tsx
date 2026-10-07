@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createContext, FormEvent, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Badge, Button, Card, CardContent, CardHeader, InfoTip, Segmented, Stat, TD, TH, Table } from "@/components/admin/ui";
 import {
@@ -109,6 +109,13 @@ const tabs: Array<{ value: MetricsTab; label: string }> = [
   { value: "revenue", label: "Revenue" },
   { value: "plan", label: "Plan & log" },
 ];
+
+function tabFromQuery(value: string | null): MetricsTab {
+  // Older links used ?tab=acquisition for what is now Channels.
+  if (value === "channels" || value === "acquisition") return "channels";
+  if (value === "product" || value === "revenue" || value === "plan") return value;
+  return "overview";
+}
 
 const platformColors: Record<GrowthPlatform, string> = {
   ios: "#7cc4ff",
@@ -733,16 +740,14 @@ function SocialAccounts({
 // ---------------------------------------------------------------------------
 
 export default function AdminMetricsDashboard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const growthMonth = parseGrowthMonth(searchParams.get("month"));
   const requestedTab = searchParams.get("tab");
-  const tab: MetricsTab =
-    requestedTab === "channels" || requestedTab === "acquisition"
-      ? "channels"
-      : requestedTab === "product" || requestedTab === "revenue" || requestedTab === "plan"
-        ? requestedTab
-        : "overview";
+  const urlTab = tabFromQuery(requestedTab);
+  const urlMonth = parseGrowthMonth(searchParams.get("month"));
+  // The visible tab is local state. Next 13.4 ignores router.push when only the
+  // query string changes, so a click that only wrote ?tab= never re-rendered.
+  const [tab, setTab] = useState<MetricsTab>(urlTab);
+  const [growthMonth, setGrowthMonth] = useState(urlMonth);
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("USD");
   const [fx, setFx] = useState<FxRates | null>(null);
@@ -760,13 +765,36 @@ export default function AdminMetricsDashboard() {
   const monthName = monthLabel(growthMonth);
   const monthState = growthMonthState(growthMonth);
 
+  useEffect(() => {
+    // Follow the address bar. A tab click writes it directly, because Next 13.4
+    // leaves useSearchParams on the previous query for same-page navigations.
+    const live = new URLSearchParams(window.location.search);
+    setTab(tabFromQuery(live.get("tab")));
+    setGrowthMonth(parseGrowthMonth(live.get("month")));
+  }, [urlTab, urlMonth]);
+
+  useEffect(() => {
+    function syncFromHistory() {
+      const params = new URLSearchParams(window.location.search);
+      setTab(tabFromQuery(params.get("tab")));
+      setGrowthMonth(parseGrowthMonth(params.get("month")));
+    }
+    window.addEventListener("popstate", syncFromHistory);
+    return () => window.removeEventListener("popstate", syncFromHistory);
+  }, []);
+
   function navigate(next: { tab?: MetricsTab; month?: string }) {
-    const params = new URLSearchParams(searchParams.toString());
     const nextTab = next.tab ?? tab;
+    const nextMonth = next.month ? parseGrowthMonth(next.month) : growthMonth;
+    setTab(nextTab);
+    setGrowthMonth(nextMonth);
+    const params = new URLSearchParams(window.location.search);
     if (nextTab === "overview") params.delete("tab");
     else params.set("tab", nextTab);
-    params.set("month", next.month ? parseGrowthMonth(next.month) : growthMonth);
-    router.push(`/admin/metrics?${params.toString()}`);
+    params.set("month", nextMonth);
+    const url = `/admin/metrics?${params.toString()}`;
+    const historyState = window.history.state;
+    window.history.pushState(historyState ? { ...historyState } : historyState, "", url);
   }
 
   const loadGrowth = useCallback(async (month: string) => {

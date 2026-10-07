@@ -13,7 +13,7 @@
  */
 
 /** The card types `mark_discover_timeline_seen` accepts. */
-export type DiscoverSeenPostType = "capture" | "challenge" | "trade" | "alignment" | "principle_fusion";
+export type DiscoverSeenPostType = "capture" | "challenge" | "trade" | "alignment" | "principle_fusion" | "animal_trial";
 
 export type DiscoverSeenPost = {
     type: DiscoverSeenPostType;
@@ -21,7 +21,7 @@ export type DiscoverSeenPost = {
 };
 
 export const DISCOVER_SEEN_POST_TYPES: DiscoverSeenPostType[] = [
-    "capture", "challenge", "trade", "alignment", "principle_fusion"
+    "capture", "challenge", "trade", "alignment", "principle_fusion", "animal_trial"
 ];
 
 /** How long a post has to be the leading one before it counts as seen. */
@@ -39,7 +39,10 @@ const ITEM_ID_PREFIXES: Array<[string, DiscoverSeenPostType]> = [
     ["alignment-", "alignment"],
     ["fusion-", "principle_fusion"],
     ["challenge-", "challenge"],
-    ["trade-", "trade"]
+    ["trade-", "trade"],
+    // The ledger id is the view's `post_id`, so the mark hides the same card
+    // the phone would hide.
+    ["animal-trial-", "animal_trial"]
 ];
 
 /**

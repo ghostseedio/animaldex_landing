@@ -6,9 +6,9 @@ type TrainBackLinkProps = {
     label?: string;
 };
 
-export default function TrainBackLink({href = "/app/arena", label = "Arena"}: TrainBackLinkProps) {
+export default function TrainBackLink({href = "/app/arena", label = "Play"}: TrainBackLinkProps) {
     return (
-        <Link href={href} aria-label="Back to Arena" className="inline-flex min-h-10 items-center gap-[5px] rounded-xl px-2 text-sm font-bold text-primary-200 transition hover:bg-white/[0.04] hover:text-primary-100">
+        <Link href={href} aria-label={`Back to ${label}`} className="inline-flex min-h-10 items-center gap-[5px] rounded-xl px-2 text-sm font-bold text-primary-200 transition hover:bg-white/[0.04] hover:text-primary-100">
             <AppIcon name="back" className="h-3.5 w-3.5 stroke-[2.2]" />
             {label}
         </Link>

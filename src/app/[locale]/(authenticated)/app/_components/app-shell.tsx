@@ -20,7 +20,7 @@ type AppShellProps = {
 const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app", label: "Home", icon: "home"},
     {href: "/app/collection", label: "Collection", icon: "collection"},
-    {href: "/app/arena", label: "Arena", icon: "arena"},
+    {href: "/app/arena", label: "Play", icon: "arena"},
     {href: "/app/profile", label: "Profile", icon: "profile"}
 ];
 

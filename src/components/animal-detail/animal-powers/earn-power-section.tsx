@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from "react";
 import {type AnimalPower, powerGateAnalytics} from "@/lib/animal-powers";
+import {type AnimalTrial, NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE, isComplete} from "@/lib/animal-trials";
 import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
 
@@ -20,15 +21,18 @@ import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-yo
  * 729 species have a Power and no authored Trial. For those the control does
  * not appear at all and the written route is simply the page, because offering
  * a choice with one arm is worse than offering no choice.
+ *
+ * A Trial — and a Power — is per person per species. On an animal the viewer
+ * has not caught, both routes are shown and neither can be taken.
  */
 
 const NEON = "#A7F432";
 
 type Route = "trial" | "application";
 
-const ROUTES: Array<{id: Route; title: string; icon: string; blurb: string}> = [
-    {id: "trial", title: "Take the Trial", icon: "◎", blurb: "Do the animal's challenge and show it."},
-    {id: "application", title: "Apply It Your Way", icon: "✎", blurb: "Use the lesson in your life and say what happened."}
+const ROUTES: Array<{id: Route; title: string}> = [
+    {id: "trial", title: "Take the Trial"},
+    {id: "application", title: "Apply It Your Way"}
 ];
 
 /**
@@ -96,7 +100,8 @@ export default function EarnPowerSection({
     power,
     didLoad,
     onReload,
-    isViewersOwnAnimal = true
+    isViewersOwnAnimal = true,
+    canAttemptTrials = true
 }: {
     speciesProfileId: string | null | undefined;
     power: AnimalPower | null;
@@ -110,6 +115,11 @@ export default function EarnPowerSection({
      * that species — not for the animal on screen, which is not theirs.
      */
     isViewersOwnAnimal?: boolean;
+    /**
+     * False when the viewer has not unlocked this animal. Both routes still
+     * show — they are the reason to catch it — and neither can be taken.
+     */
+    canAttemptTrials?: boolean;
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
@@ -125,8 +135,8 @@ export default function EarnPowerSection({
 
     if (!speciesProfileId) return null;
 
-    // Finishing a Trial earns the Power, so the earned state is re-read the
-    // moment one completes.
+    // Finishing a Trial earns the Power once every frequency is done, so the
+    // earned state is re-read the moment one completes.
     const handleTrialCompleted = () => {
         void onReload().then((reloaded) => {
             if (reloaded?.isEarned && !power?.isEarned) {
@@ -135,11 +145,17 @@ export default function EarnPowerSection({
         });
     };
 
+    const trialDidUpdate = (trial: AnimalTrial) => {
+        if (isComplete(trial)) handleTrialCompleted();
+    };
+
     const trials = (showsHeader: boolean) => (
         <AnimalTrialsSection
             speciesProfileId={speciesProfileId}
             showsHeader={showsHeader}
+            canAttempt={canAttemptTrials}
             onTrialCompleted={handleTrialCompleted}
+            onUpdated={trialDidUpdate}
         />
     );
 
@@ -153,15 +169,30 @@ export default function EarnPowerSection({
             <p className="text-sm leading-6 text-white">
                 Use the lesson somewhere in your own life, then tell us the one thing you did.
             </p>
-            <p className="text-[10px] text-white/40">🔒 Nobody else sees what you write.</p>
-            <button
-                type="button"
-                onClick={() => setShowsApply(true)}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
-                style={{backgroundColor: NEON}}
-            >
-                WRITE WHAT YOU DID <span aria-hidden="true">→</span>
-            </button>
+            {/* What you write is a Discover post, whatever the verdict. Said
+                here, before anyone writes anything. */}
+            <p className="text-[10px] text-white/40">📡 Accepted and rejected writing both post to Discover.</p>
+            {canAttemptTrials ? (
+                <button
+                    type="button"
+                    onClick={() => setShowsApply(true)}
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
+                    style={{backgroundColor: NEON}}
+                >
+                    WRITE WHAT YOU DID <span aria-hidden="true">→</span>
+                </button>
+            ) : (
+                <>
+                    <button
+                        type="button"
+                        disabled
+                        className="flex min-h-[48px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-white/[0.08] text-base font-bold text-white/60"
+                    >
+                        🔒 {NOT_YET_CAPTURED_TITLE}
+                    </button>
+                    <p className="text-center text-[10px] text-white/40">{NOT_YET_CAPTURED_NOTE}</p>
+                </>
+            )}
         </div>
     );
 
@@ -177,11 +208,6 @@ export default function EarnPowerSection({
                     <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.11em]">Power earned</span>
                     <span className="truncate text-[10px] font-bold text-white">· {power.principleName}</span>
-                    {power.earnedAt ? (
-                        <span className="text-[10px] text-white/40">
-                            · {new Date(power.earnedAt).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}
-                        </span>
-                    ) : null}
                 </div>
                 <UnlockRows earned powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} />
                 {/* Earned, so there is nothing left to choose. The Trials stay —
@@ -197,36 +223,32 @@ export default function EarnPowerSection({
             <>
                 {/* Locked features first: what you get, then how to get it. */}
                 <UnlockRows earned={false} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} />
-                <div className="flex flex-col gap-3 px-5 pb-4 pt-5">
+                <div className="flex flex-col gap-1 px-5 pb-3 pt-5">
                     <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Choose how to earn it</p>
-                    <div role="tablist" aria-label="How to earn this Power" className="grid grid-cols-2 gap-2.5">
-                        {ROUTES.map((option) => {
-                            const selected = route === option.id;
-                            return (
-                                <button
-                                    key={option.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={selected}
-                                    aria-label={`${option.title}. ${option.blurb}`}
-                                    onClick={() => setRoute(option.id)}
-                                    className={`flex flex-col items-start gap-[7px] rounded-[18px] border p-3.5 text-left transition-colors ${selected ? "border-transparent" : "border-[#A7F432]/30 bg-white/[0.04]"}`}
-                                    style={selected ? {backgroundColor: NEON} : undefined}
-                                >
-                                    <span
-                                        aria-hidden="true"
-                                        className={`grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold ${selected ? "bg-black/20 text-black" : "bg-[#A7F432]/15"}`}
-                                        style={selected ? undefined : {color: NEON}}
-                                    >
-                                        {option.icon}
-                                    </span>
-                                    <span className={`text-base font-bold leading-5 ${selected ? "text-black" : "text-white"}`}>{option.title}</span>
-                                    <span className={`text-[10px] leading-4 ${selected ? "text-black/75" : "text-white/60"}`}>{option.blurb}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
                     <p className="text-[10px] text-white/40">Either one earns the Power. You only need to do one.</p>
+                </div>
+                {/* A full-bleed segmented band, the same treatment as the
+                    Learn / Stats / Play bar: the selected route is lit from
+                    below rather than boxed. */}
+                <div role="tablist" aria-label="How to earn this Power" className="flex border-t border-white/[0.08]">
+                    {ROUTES.map((option) => {
+                        const selected = route === option.id;
+                        return (
+                            <button
+                                key={option.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={selected}
+                                aria-label={option.title}
+                                onClick={() => setRoute(option.id)}
+                                className={`relative flex-1 px-3 py-[15px] text-sm font-bold transition-colors ${selected ? "text-white" : "text-white/40"}`}
+                                style={selected ? {backgroundImage: "linear-gradient(to bottom, rgba(255,255,255,0.02), rgba(167,244,50,0.14))"} : undefined}
+                            >
+                                {option.title}
+                                {selected ? <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5" style={{backgroundColor: NEON}} /> : null}
+                            </button>
+                        );
+                    })}
                 </div>
                 <div className="border-t border-white/[0.08]">
                     {route === "trial" ? trials(false) : applyPanel(false)}

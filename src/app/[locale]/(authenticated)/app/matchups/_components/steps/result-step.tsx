@@ -7,6 +7,7 @@ import MatchupResultDetails, {toResultPresentation} from "@/app/[locale]/(authen
 import RewardShowcaseOverlay, {type RewardShowcaseItem} from "@/app/[locale]/(authenticated)/app/matchups/_components/reward-showcase-overlay";
 import SpeciesComparisonSheet from "@/app/[locale]/(authenticated)/app/matchups/_components/species-comparison-sheet";
 import type {MatchupOpponent, MatchupResolveResult, MatchupRosterCapture} from "@/data/matchups-types";
+import {OVERALL_DRAW_LINE, ROUND_TWO_DRAW_LINE, VOTE_CLOSE_EXPLANATION, VOTE_RULE_LINE, isOverallDraw, voteProgressText} from "@/lib/matchup-battle-rules";
 import {isAnimalSurvivalScenario} from "@/lib/matchup-result-copy";
 import {playRewardCredits, playRewardPoints} from "@/lib/matchup-sounds";
 
@@ -116,13 +117,18 @@ export default function ResultStep({
     onFindAnother: () => void;
     onViewHistory: () => void;
 }) {
-    const viewerWon = result.winnerUserId === viewerUserId;
+    // A drawn battle keeps the Round 1 winner in winner_user_id for older
+    // decoders; nobody won it, and both stakes came back.
+    const battleDrawn = isOverallDraw(result);
+    const viewerWon = !battleDrawn && result.winnerUserId === viewerUserId;
     const attackerWon = result.winnerCaptureId === attacker.captureId;
     const winnerName = attackerWon ? attacker.animalName : opponent.animalName;
     const battleComplete = isBattleComplete(result);
     const battleVoting = isBattleVoting(result);
     const battleFinalScore = finalScoreText(result);
-    const creditsDelta = battleComplete
+    const creditsDelta = battleDrawn
+        ? 0
+        : battleComplete
         ? viewerWon ? result.payoutAmount - result.stakeAmount : -result.stakeAmount
         : -result.stakeAmount;
     const loserHealth = attackerWon ? opponentHealth : attackerHealth;
@@ -201,31 +207,33 @@ export default function ResultStep({
                 <RewardShowcaseOverlay item={showcaseItem} visible={showcaseVisible} />
             ) : null}
 
-            <div className={`relative overflow-hidden rounded-[1.35rem] border px-4 py-5 ${!battleComplete || viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
+            <div className={`relative overflow-hidden rounded-[1.35rem] border px-4 py-5 ${battleDrawn ? "border-white/15 bg-white/[0.05]" : !battleComplete || viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(163,230,53,0.16),transparent_55%)]" />
                 <p className="relative text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/40">
                     {battleVoting ? "Round 1 of 3 resolved" : survival ? "Best adapted" : "Scenario fit resolved"}
                 </p>
                 <p className="relative mt-2 font-display text-3xl font-bold text-white">
-                    {battleVoting ? "Community vote is next" : viewerWon ? "You won" : "You lost"}
+                    {battleVoting ? "Community vote is next" : battleDrawn ? "Draw" : viewerWon ? "You won" : "You lost"}
                 </p>
                 <p className="relative mt-1 text-sm text-white/55">
                     {battleVoting
                         ? `${winnerName} won Round 1. The battle settles after Round 3.`
-                        : `${winnerName} won the scenario.`}
+                        : battleDrawn
+                            ? OVERALL_DRAW_LINE
+                            : `${winnerName} won the scenario.`}
                 </p>
                 {battleFinalScore ? <p className="relative mt-3 text-sm font-black text-primary-200">Final score {battleFinalScore}</p> : null}
             </div>
 
             {battleVoting ? (
                 <div className="rounded-[1.15rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
-                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-100">Round 2 of 3 - Community vote</p>
-                    <p className="mt-2 font-display text-xl font-bold text-white">{result.votesCount} / {result.requiredVotes ?? 0} votes</p>
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-100">Round 2: Who would win?</p>
+                    <p className="mt-2 font-display text-xl font-bold text-white">{voteProgressText(result.votesCount)}</p>
                     <p className="mt-1 text-sm leading-6 text-white/55">
-                        Voting is live. If the target is not reached, the Round 1 winner takes the battle.
+                        Voting is live. {VOTE_CLOSE_EXPLANATION}
                     </p>
                     {voteTimeRemaining(result.votingDeadlineAt) ? (
-                        <p className="mt-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100">{voteTimeRemaining(result.votingDeadlineAt)} - No quorum means R1 wins</p>
+                        <p className="mt-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100">{voteTimeRemaining(result.votingDeadlineAt)} · {VOTE_RULE_LINE}</p>
                     ) : null}
                 </div>
             ) : null}
@@ -290,7 +298,8 @@ export default function ResultStep({
                     requiredVotes: result.requiredVotes,
                     votesCount: result.votesCount,
                     settlementReason: result.settlementReason,
-                    finalScore: battleFinalScore
+                    finalScore: battleFinalScore,
+                    overallDraw: battleDrawn
                 })}
             />
 
@@ -299,7 +308,9 @@ export default function ResultStep({
                     <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Round 2 of 3 - Community</p>
                         <p className="mt-2 text-sm font-bold text-white">
-                            The community backed {(result.round2WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName)}.
+                            {result.round2Draw
+                                ? ROUND_TWO_DRAW_LINE
+                                : `The community backed ${result.round2WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName}.`}
                         </p>
                     </div>
                     <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">

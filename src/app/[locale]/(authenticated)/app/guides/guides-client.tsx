@@ -48,6 +48,21 @@ function statusLabel(status: string) {
     return status.replace(/_/g, " ");
 }
 
+/** Today's civil date, so a pending request for a past day reads as expired even before the server ticks it. */
+function todayKey(now = new Date()) {
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/** The status as it stands today: a pending request whose date has passed is expired. */
+function effectiveStatus(booking: {status: string; requestedDate: string}) {
+    if (booking.status === "pending" && /^\d{4}-\d{2}-\d{2}$/.test(booking.requestedDate) && booking.requestedDate < todayKey()) {
+        return "expired";
+    }
+    return booking.status;
+}
+
 export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTab}) {
     const [tab, setTab] = useState<HubTab>(initialTab);
     const [loading, setLoading] = useState(true);
@@ -63,7 +78,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
     const canManageListings = phase === "approved";
     const published = useMemo(() => listings.filter((listing) => listing.status === "published"), [listings]);
     const drafts = useMemo(() => listings.filter((listing) => listing.status !== "published"), [listings]);
-    const pendingBookings = useMemo(() => bookings.filter((booking) => booking.status === "pending"), [bookings]);
+    const pendingBookings = useMemo(() => bookings.filter((booking) => effectiveStatus(booking) === "pending"), [bookings]);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -292,7 +307,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
                             <AppSurface key={booking.id} className="space-y-3">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-[0.14em] text-primary-200">{statusLabel(booking.status)}</p>
+                                        <p className={`text-xs font-black uppercase tracking-[0.14em] ${effectiveStatus(booking) === "expired" ? "text-white/40" : "text-primary-200"}`}>{statusLabel(effectiveStatus(booking))}</p>
                                         <h3 className="mt-1 font-display text-lg font-bold text-white">{booking.listingTitle ?? "Guide listing"}</h3>
                                         <p className="mt-1 text-sm text-white/45">
                                             {booking.requestedDate} · {booking.guestCount} guest{booking.guestCount === 1 ? "" : "s"}
@@ -301,13 +316,16 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
                                         {booking.message ? <p className="mt-2 text-sm leading-6 text-white/55">{booking.message}</p> : null}
                                     </div>
                                 </div>
-                                {booking.status === "pending" ? (
+                                {effectiveStatus(booking) === "expired" ? (
+                                    <p className="text-xs text-white/45">The date passed before you replied</p>
+                                ) : null}
+                                {effectiveStatus(booking) === "pending" ? (
                                     <div className="flex flex-wrap gap-2">
                                         <button type="button" disabled={busy} onClick={() => void resolveBooking(booking.id, "accepted")} className="rounded-full bg-primary-400 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Accept</button>
                                         <button type="button" disabled={busy} onClick={() => void resolveBooking(booking.id, "declined")} className="rounded-full border border-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white/70">Decline</button>
                                     </div>
                                 ) : null}
-                                {booking.status === "accepted" ? (
+                                {effectiveStatus(booking) === "accepted" ? (
                                     <button type="button" disabled={busy} onClick={() => void resolveBooking(booking.id, "completed")} className="rounded-full bg-primary-400 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Mark complete</button>
                                 ) : null}
                             </AppSurface>

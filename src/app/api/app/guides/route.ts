@@ -59,6 +59,11 @@ export async function GET() {
     const auth = await requireUser();
     if ("error" in auth) return auth.error;
 
+    // Marks this account's unanswered requests as expired once the outing
+    // date has passed, so the list below never offers Accept on a dead date.
+    // Missing on older databases; the client still treats those rows as expired.
+    await auth.supabase.rpc("expire_past_guide_booking_requests").then(() => undefined, () => undefined);
+
     const [eligibilityRes, listingsRes, bookingsRes] = await Promise.all([
         auth.supabase.rpc("get_guide_seller_eligibility"),
         auth.supabase.from("guide_listings").select("*").eq("seller_user_id", auth.user.id).order("updated_at", {ascending: false}),

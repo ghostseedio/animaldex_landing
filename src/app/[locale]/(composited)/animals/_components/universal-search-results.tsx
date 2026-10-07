@@ -3,6 +3,10 @@
 import {useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {
+    UniversalSearchDynamicsBand,
+    UniversalSearchTrialRow
+} from "@/app/[locale]/(composited)/animals/_components/universal-search-animal-layers";
 import type {
     UniversalSearchIntent,
     UniversalSearchResponse,
@@ -284,7 +288,36 @@ export default function UniversalSearchResults({
         || data.learn.length
         || data.facts.length
         || data.help.length
+        || data.dynamics.length
+        || data.trials.length
     );
+
+    /** The animal's own page, which is where a Trial is taken and Explore lives. */
+    const speciesHrefForProfile = (speciesProfileId: string, displayName: string) => {
+        const hit = data.species.find((item) => item.species_profile_id === speciesProfileId);
+        return hit ? resolveSpeciesHref(hit) : displayName ? `/animals/search?q=${encodeURIComponent(displayName)}` : null;
+    };
+
+    // What the query asked for leads: "frequency of a dog" opens on its
+    // System Dynamics, "lion trials" on its Trials. Without a focus the first
+    // dynamics band and two Trials follow the ranked results.
+    const dynamicsSection = data.dynamics.length ? (
+        <section className="space-y-3">
+            {data.dynamics.map((hit) => (
+                <UniversalSearchDynamicsBand key={hit.species_profile_id} hit={hit} href={speciesHrefForProfile(hit.species_profile_id, hit.display_name)} />
+            ))}
+        </section>
+    ) : null;
+    const trialsSection = (limit?: number) => data.trials.length ? (
+        <section>
+            <SectionHeading>Trials</SectionHeading>
+            <div className="divide-y divide-white/10 border border-white/10 bg-white/[0.03]">
+                {data.trials.slice(0, limit ?? data.trials.length).map((hit) => (
+                    <UniversalSearchTrialRow key={hit.trial_id} hit={hit} href={speciesHrefForProfile(hit.species_profile_id, hit.display_name)} />
+                ))}
+            </div>
+        </section>
+    ) : null;
 
     if (!hasAnything) {
         return (
@@ -299,7 +332,10 @@ export default function UniversalSearchResults({
         <div className="space-y-12">
             {data.brief ? (
                 <section className=" border border-primary-400/25 bg-primary-400/[0.06] p-6 md:p-8">
-                    <h2 className="font-display text-2xl font-bold text-white md:text-3xl">{data.brief.title}</h2>
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-300">
+                        {data.brief.source === "ai_general" ? "AI answer" : "Field brief"}
+                    </p>
+                    <h2 className="mt-2 font-display text-2xl font-bold text-white md:text-3xl">{data.brief.title}</h2>
                     <p className="mt-3 text-base leading-7 text-ink-100">{data.brief.summary}</p>
                     {data.brief.bullets.length ? (
                         <ul className="mt-4 space-y-2">
@@ -313,6 +349,9 @@ export default function UniversalSearchResults({
                     ) : null}
                 </section>
             ) : null}
+
+            {data.focus === "system_dynamics" ? dynamicsSection : null}
+            {data.focus === "trials" ? trialsSection() : null}
 
             {data.species.length ? (
                 <section>
@@ -386,6 +425,13 @@ export default function UniversalSearchResults({
                     </div>
                 </section>
             ) : null}
+
+            {data.focus == null && data.dynamics.length ? (
+                <section className="space-y-3">
+                    <UniversalSearchDynamicsBand hit={data.dynamics[0]} href={speciesHrefForProfile(data.dynamics[0].species_profile_id, data.dynamics[0].display_name)} />
+                </section>
+            ) : null}
+            {data.focus == null ? trialsSection(2) : null}
 
             {data.comparisons.length ? (
                 <section>
