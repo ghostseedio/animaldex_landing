@@ -1842,6 +1842,134 @@
       }
     },
     {
+      "slug": "cockroach-vs-clothes-and-house-moth",
+      "animalASlug": "cockroach",
+      "animalBSlug": "clothes-and-house-moth",
+      "animalADisplayName": "Cockroach",
+      "animalBDisplayName": "Clothes & House Moth",
+      "comparisonType": "battle",
+      "title": "Cockroach vs Clothes & House Moth: Who Actually Wins?",
+      "description": "A deep dive into the battle of resilience and survival between the cockroach and the clothes & house moth.",
+      "quickVerdict": "In a battle between the cockroach and the clothes & house moth, the cockroach emerges as the clear winner due to its superior speed, resilience, and adaptability. While moths are stealthy and can evade predators, the cockroach's robust physicality and defensive strategies make it a formidable opponent in most scenarios.",
+      "shortAnswer": [
+        "Cockroaches are faster and more durable.",
+        "Moths have stealth but lack defensive power.",
+        "Cockroaches can survive extreme conditions."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue moths can evade cockroaches due to their flying ability.",
+        "The stealth and camouflage of moths can lead to underestimation of their threat.",
+        "Moths may be considered more vulnerable, leading to a perception that they can easily be outmaneuvered."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Quick bursts of speed",
+          "animalBValue": "Swift evasive maneuvers",
+          "advantage": "animalA",
+          "takeaway": "Cockroaches can quickly escape threats or close gaps during encounters."
+        },
+        {
+          "key": "stealth",
+          "label": "Stealth",
+          "animalAValue": "Moderate stealth in darkness",
+          "animalBValue": "High stealth with camouflage",
+          "advantage": "animalB",
+          "takeaway": "Moths can often avoid detection, but not outlast a cockroach in a direct confrontation."
+        },
+        {
+          "key": "durability",
+          "label": "Close-range durability",
+          "animalAValue": "Can survive extreme conditions",
+          "animalBValue": "Fragile wings and body",
+          "advantage": "animalA",
+          "takeaway": "Cockroaches can withstand physical damage better than moths."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Cockroach dominance in cover.",
+          "explanation": "In a cover duel, the cockroach leverages its speed and ability to navigate tight spaces effectively, leading to a decisive advantage over the moth. While the moth may attempt to evade through flight, the cockroach's resilience allows it to withstand any close encounters."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "Cockroach outpaces the moth.",
+          "explanation": "On open ground, the cockroach's quick bursts of speed enable it to cover more distance and evade attacks, making it difficult for the moth to launch successful evasions or attacks, ultimately leading to the cockroach's victory."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "Cockroach claims the resource.",
+          "explanation": "When competing for food or shelter, the cockroach's tenacity and adaptability give it the upper hand. Moths may try to outmaneuver but often find themselves outmatched in a direct contest."
+        }
+      ],
+      "finalTake": [
+        "In summary, the cockroach has established itself as a superior survivor in this matchup against the clothes & house moth. Its combination of speed, durability, and adaptability highlights its evolutionary advantages. While moths possess unique stealth and evasion skills, these traits do not translate effectively in a direct confrontation.",
+        "Ultimately, the cockroach's resilience in various environments, along with its ability to withstand threats, positions it as the overall winner in this battle of survival."
+      ],
+      "faq": [
+        {
+          "question": "Would a cockroach beat a moth?",
+          "answer": "Yes, a cockroach would generally beat a moth due to its superior speed and durability."
+        },
+        {
+          "question": "What makes cockroaches stronger than moths?",
+          "answer": "Cockroaches are faster, can survive in extreme conditions, and have a more robust physical structure."
+        },
+        {
+          "question": "Are moths dangerous despite being weaker?",
+          "answer": "Yes, moths can still be a nuisance, especially in homes, as they can damage clothing and stored items."
+        }
+      ],
+      "searchIntents": [
+        "cockroach vs moth who wins"
+      ],
+      "speciesSlugs": [
+        "cockroach",
+        "clothes-and-house-moth"
+      ],
+      "systemsSpeciesSlugs": [
+        "cockroach",
+        "clothes-and-house-moth"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "cockroach",
+          "entry": {
+            "roleTitle": "The Resilient Survivor",
+            "specializedHardware": "Armored exoskeleton for protection",
+            "systemsScript": "Plays a crucial role in breaking down organic matter and recycling nutrients.",
+            "strategicInsight": "Their ability to thrive in diverse and extreme environments can teach humans about resilience and adaptability."
+          }
+        },
+        {
+          "slug": "clothes-and-house-moth",
+          "entry": {
+            "roleTitle": "The Clothes & House Moth Field Operator",
+            "specializedHardware": "Clothes & House Moth morphology and senses concentrate force where timing matters most.",
+            "systemsScript": "Clothes & House Moth reshapes prey behavior and local risk patterns across its habitat.",
+            "strategicInsight": "Save force for the window where position makes the cost worth paying."
+          }
+        }
+      ],
+      "publishedAt": "2026-10-07T14:35:25.79+00:00",
+      "updatedAt": "2026-10-07T14:35:25.870637+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/cockroach-vs-clothes-and-house-moth.webp",
+        "alt": "cockroach-vs-clothes-and-house-moth comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
       "slug": "common-house-gecko-vs-moth",
       "animalASlug": "common-house-gecko",
       "animalBSlug": "moth",

@@ -102,12 +102,68 @@ function mergeSorted(left, right) {
     return [...new Set([...left, ...right])].sort((a, b) => a.localeCompare(b));
 }
 
+function readEnv(name) {
+    for (const file of [".env.local", ".env"]) {
+        try {
+            const match = readFileSync(join(root, file), "utf8").match(new RegExp(`^${name}=(.*)$`, "m"));
+            const value = match?.[1]?.trim().replace(/^["']|["']$/g, "");
+            if (value) return value;
+        } catch {}
+    }
+    return process.env[name]?.trim() || "";
+}
+
+/**
+ * Every indexed catalog species (AnimalDex number set, not hidden), slugged the
+ * way the site does. Reading the catalog directly means a species can't miss
+ * its page just because the deployed sitemap predates it — copying the live
+ * sitemap alone could never publish a species the last build left out.
+ */
+async function collectIndexedCatalogSlugs() {
+    const url = readEnv("SUPABASE_URL") || readEnv("NEXT_PUBLIC_SUPABASE_URL");
+    const key = readEnv("SUPABASE_SERVICE_ROLE_KEY") || readEnv("SUPABASE_ANON_KEY") || readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    if (!url || !key) {
+        console.warn("No Supabase credentials: publishing from the live sitemap only.");
+        return new Set();
+    }
+    const {isNonCanonicalLifeStageCatalogIdentity} = await import("../src/lib/species-life-stage-policy.ts");
+    const headers = {apikey: key, Authorization: `Bearer ${key}`};
+    async function all(table, select) {
+        const rows = [];
+        for (let offset = 0; ; offset += 1000) {
+            const response = await fetch(`${url}/rest/v1/${table}?select=${select}&animaldex_number=not.is.null&order=animaldex_number.asc&offset=${offset}&limit=1000`, {headers});
+            if (!response.ok) throw new Error(`${table} ${response.status}`);
+            const page = await response.json();
+            rows.push(...page);
+            if (page.length < 1000) break;
+        }
+        return rows;
+    }
+    const [profiles, catalog] = await Promise.all([
+        all("species_profiles", "id,animaldex_number,catalog_status"),
+        all("species_catalog_v1", "species_profile_id,landing_page_slug,normalized_identity_key")
+    ]);
+    const numbers = new Map(profiles.filter((row) => row.catalog_status !== "hidden").map((row) => [row.id, row.animaldex_number]));
+    const slugs = new Set();
+    for (const row of catalog) {
+        const number = numbers.get(row.species_profile_id);
+        if (number === undefined || isNonCanonicalLifeStageCatalogIdentity(row.normalized_identity_key)) continue;
+        const landing = row.landing_page_slug?.trim() || "";
+        const stripped = landing.endsWith(`-${number}`) ? landing.slice(0, -`-${number}`.length) : landing;
+        const slug = (stripped || (row.normalized_identity_key ?? "").trim().replace(/_/g, "-"))
+            .toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+        if (slug) slugs.add(slug);
+    }
+    return slugs;
+}
+
 const local = collectLocalSlugs();
 const remote = await collectSitemapSlugs();
+const catalogSlugs = await collectIndexedCatalogSlugs();
 const payload = {
     generatedAt: new Date().toISOString().slice(0, 10),
-    source: "live sitemap.xml plus local static species/lesson slugs",
-    animals: mergeSorted(local.animals, remote.animals),
+    source: "indexed catalog species plus live sitemap.xml plus local static species/lesson slugs",
+    animals: mergeSorted(mergeSorted(local.animals, remote.animals), catalogSlugs),
     lessons: mergeSorted(local.lessons, remote.lessons)
 };
 

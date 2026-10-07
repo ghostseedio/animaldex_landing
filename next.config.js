@@ -130,6 +130,16 @@ module.exports = withNextIntl({
                 destination: "/comparisons/tiger-vs-cheetah-speed",
                 permanent: true
             })),
+            // Indexed catalog species the collection alias table folds into a
+            // parent species: they share its page instead of 404ing.
+            ...[
+                ["african-lion", "lion"],
+                ["egyptian-spiny-tailed-lizard", "spiny-tailed-lizard"]
+            ].flatMap(([from, to]) => ["", "/id"].map((prefix) => ({
+                source: `${prefix}/animals/${from}`,
+                destination: `/animals/${to}`,
+                permanent: true
+            }))),
             // Indexed misspellings of the mating-drive tier list (Search Console, Oct 2026).
             ...[
                 "animals-highest-mating-drive",

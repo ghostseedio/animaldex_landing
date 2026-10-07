@@ -2290,19 +2290,19 @@
     },
     {
       "slug": "barn-funnel-weaver",
-      "displayName": "Common House Spider",
-      "normalizedIdentityKey": "common_house_spider",
-      "principleName": "Web Strategy",
-      "principleExpression": "Position your resources where they will be most effective.",
-      "coreLesson": "The Common House Spider demonstrates the power of strategic placement by spinning webs in high-traffic areas to efficiently capture prey.",
-      "biologicalBasis": "This spider builds its webs in locations where insects frequently pass, maximizing its chances of catching food without expending extra energy.",
-      "shortMotto": "Strategic placement wins.",
+      "displayName": "Barn Funnel Weaver",
+      "normalizedIdentityKey": "barn_funnel_weaver",
+      "principleName": "Funnel Retreat",
+      "principleExpression": "Create a safe retreat to regroup and plan.",
+      "coreLesson": "The Barn Funnel Weaver demonstrates the importance of having a secure space to retreat to when needing to regroup and strategize.",
+      "biologicalBasis": "Barn Funnel Weavers build funnel-shaped webs with a retreat where they can hide from predators and ambush prey.",
+      "shortMotto": "Retreat to strategize.",
       "bestUseCases": [
-        "Leverage",
-        "Strategy",
-        "Efficiency"
+        "Safe Shelter",
+        "Planning",
+        "Strategy"
       ],
-      "applicationExample": "A lemonade stand moves from the quiet garden to the corner where joggers pass all morning.",
+      "applicationExample": "After a hectic day at work, Sarah spends time in her cozy reading nook to relax and plan her next steps.",
       "imageFile": null,
       "source": "catalog"
     },

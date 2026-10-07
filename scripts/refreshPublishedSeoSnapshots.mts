@@ -239,6 +239,27 @@ type GuideRow = {
     updated_at: string | null;
 };
 
+/** biology landing slug → beast display name, filled in main() from the legendary seeds. */
+const legendaryBeastByBiologySlug = new Map<string, string>();
+
+/**
+ * The real species behind a Legendary Earth Beast shares its field guide with
+ * the beast, so its spotlight reads "Bengal Tiger teaches Silent Ascent through
+ * … Its Sky Tigress form fits cliffside legend…". On the species page keep the
+ * biology: drop the beast sentence and state the traits plainly.
+ */
+function sanitizeBiologySpotlight(slug: string, name: string, spotlight: string | null) {
+    const beast = legendaryBeastByBiologySlug.get(slug);
+    if (!beast || !spotlight) {
+        return spotlight;
+    }
+    const sentences = spotlight.match(/[^.!?]+[.!?]+/g)?.map((sentence) => sentence.trim()) ?? [spotlight];
+    const kept = sentences
+        .filter((sentence) => !sentence.toLowerCase().includes(beast.toLowerCase()) && !/\bform\b|\blegend/i.test(sentence))
+        .map((sentence) => sentence.replace(/^(.+?) teaches [^.]*? through (.+)$/i, (_match, subject: string, traits: string) => `${subject} is known for ${traits}`));
+    return kept.join(" ").trim() || null;
+}
+
 function mapAnimal(row: CatalogRow, guide: GuideRow | null) {
     const slug = canonicalSlug(row);
     const name = clean(row.display_name) ?? clean(row.refined_identity) ?? clean(row.animal_name) ?? slug.replace(/-/g, " ");
@@ -246,8 +267,14 @@ function mapAnimal(row: CatalogRow, guide: GuideRow | null) {
     const rarityScore = Math.max(0, Math.min(100, Number(gameStats?.rarity ?? 0)));
     const signatureTraits = (guide?.signature_traits ?? []).filter(Boolean);
     const interestingFacts = (guide?.interesting_facts ?? []).filter(Boolean);
-    const subtitle = clean(guide?.species_subtitle_story) ?? clean(row.species_subtitle_story) ?? clean(row.species_subtitle);
-    const summary = clean(guide?.species_spotlight) ?? subtitle ?? `${name} is an indexed AnimalDex species with a field profile connected to live captures, canonical stats, and collection progress.`;
+    const isBeastBiology = legendaryBeastByBiologySlug.has(slug);
+    const subtitle = isBeastBiology ? null : clean(guide?.species_subtitle_story) ?? clean(row.species_subtitle_story) ?? clean(row.species_subtitle);
+    const habitatSentence = clean(guide?.typical_habitat)?.replace(/^Native range keys:[^.]*\.\s*/i, "");
+    const beastSafeSpotlight = sanitizeBiologySpotlight(slug, name, clean(guide?.species_spotlight));
+    const spotlight = isBeastBiology && beastSafeSpotlight && habitatSentence
+        ? `${beastSafeSpotlight} It lives in ${habitatSentence.charAt(0).toLowerCase()}${habitatSentence.slice(1)}`
+        : beastSafeSpotlight;
+    const summary = spotlight ?? subtitle ?? `${name} is an indexed AnimalDex species with a field profile connected to live captures, canonical stats, and collection progress.`;
     const habitat = clean(guide?.typical_habitat) ?? metadataRange(row) ?? `${name} habitat data is maintained in the live AnimalDex field guide.`;
     const nativeRange = metadataRange(row) ?? habitat;
     const scientificName = clean(row.scientific_name) ?? "Scientific classification under review";
@@ -304,7 +331,7 @@ function mapAnimal(row: CatalogRow, guide: GuideRow | null) {
 }
 
 /** DB facts for a hand-coded species; null when the catalog has nothing to add. */
-function mapStaticOverlay(row: CatalogRow, guide: GuideRow | null) {
+function mapStaticOverlay(slug: string, row: CatalogRow, guide: GuideRow | null) {
     if (typeof row.animaldex_number !== "number" || row.animaldex_number < 1) {
         return null;
     }
@@ -315,7 +342,7 @@ function mapStaticOverlay(row: CatalogRow, guide: GuideRow | null) {
         animalDexNumber: row.animaldex_number,
         identityKind: clean(row.identity_kind),
         canonicalGameStats: readCatalogGameStats(row.canonical_game_stats as Record<string, number> | null),
-        spotlight: clean(guide?.species_spotlight),
+        spotlight: sanitizeBiologySpotlight(slug, "", clean(guide?.species_spotlight)),
         typicalHabitat: clean(guide?.typical_habitat),
         signatureTraits,
         interestingFacts,
@@ -389,6 +416,10 @@ async function main() {
     }
 
     const {speciesEntries} = await import("../src/data/species.ts");
+    const {legendaryEarthBeastCatalogSeeds} = await import("../src/data/legendary-earth-beasts-catalog-seed.ts");
+    for (const seed of legendaryEarthBeastCatalogSeeds) {
+        legendaryBeastByBiologySlug.set(seed.biologyLandingSlug, seed.displayName);
+    }
     const published = JSON.parse(readFileSync(join(root, "src/data/published-seo-slugs.json"), "utf8")) as {
         animals: string[];
         lessons: string[];
@@ -509,7 +540,7 @@ async function main() {
         if (profile?.catalog_status === "hidden") {
             continue;
         }
-        const overlay = mapStaticOverlay({
+        const overlay = mapStaticOverlay(slug, {
             ...row,
             animaldex_number: typeof profile?.animaldex_number === "number" ? profile.animaldex_number : row.animaldex_number,
             canonical_game_stats: profile?.canonical_game_stats ?? row.canonical_game_stats

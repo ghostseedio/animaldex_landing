@@ -28,7 +28,7 @@ test("published EN animal and lesson static params cover the slug index", () => 
     assert.ok(publishedSeoSlugs.animals.length >= 2300);
     assert.ok(publishedSeoSlugs.lessons.length >= 2400);
     // Pinned to the last operator refresh (2026-10-07); bump when re-running refresh:published-seo.
-    assert.equal(animalSnapshot.entries.length, 1527);
+    assert.equal(animalSnapshot.entries.length, 1529);
     assert.equal(lessonSnapshot.entries.length, 1564);
     assert.deepEqual(
         animalSnapshot.entries.map((entry) => entry.slug),

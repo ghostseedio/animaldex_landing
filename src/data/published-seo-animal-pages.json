@@ -9741,53 +9741,53 @@
     },
     {
       "slug": "barn-funnel-weaver",
-      "name": "Common House Spider",
-      "speciesProfileId": "97daf592-8f28-42bc-aa2d-72c07c7c0fd3",
-      "normalizedIdentityKey": "common_house_spider",
-      "heroTitle": "Common House Spider — Identification, Habitat, Animal Power & Facts",
-      "publishedAt": "2026-07-17T23:40:21.54962+00:00",
-      "updatedAt": "2026-09-28T23:45:24.072425+00:00",
+      "name": "Barn Funnel Weaver",
+      "speciesProfileId": "fd53d066-8530-46a7-956e-e0e867265fc1",
+      "normalizedIdentityKey": "barn_funnel_weaver",
+      "heroTitle": "Barn Funnel Weaver — Identification, Habitat, Animal Power & Facts",
+      "publishedAt": "2026-09-20T15:21:26.646808+00:00",
+      "updatedAt": "2026-09-28T23:51:10.576187+00:00",
       "featuredImage": {
         "src": "/api/species-images/barn-funnel-weaver",
-        "alt": "Common House Spider AnimalDex species guide",
+        "alt": "Barn Funnel Weaver AnimalDex species guide",
         "width": 1200,
         "height": 1500
       },
       "searchIntents": [
-        "Common House Spider",
-        "Parasteatoda tepidariorum",
-        "Common House Spider facts",
-        "Common House Spider habitat",
-        "Common House Spider animal power",
-        "Common House Spider identification"
+        "Barn Funnel Weaver",
+        "Tegenaria domestica",
+        "Barn Funnel Weaver facts",
+        "Barn Funnel Weaver habitat",
+        "Barn Funnel Weaver animal power",
+        "Barn Funnel Weaver identification"
       ],
       "analysis": {
-        "summary": "A small comb-footed spider that lives in an untidy tangle web in quiet corners of buildings. Sticky threads run from the tangle down to the floor or wall below; when an ant or beetle walks into one, the thread snaps free and lifts the struggling insect off the ground.",
-        "scientificName": "Parasteatoda tepidariorum",
-        "category": "Arachnid",
+        "summary": "A long-legged, mottled brown spider that lives alongside people, building its web in dry corners of buildings. The web is a flat, dense sheet of silk leading back to a funnel-shaped retreat.",
+        "scientificName": "Tegenaria domestica",
+        "category": "Animal",
         "identification": [
-          "Brown to greyish abdomen mottled with dark chevrons",
-          "Pale yellowish-brown legs with dark rings",
-          "Abdomen tall and globular, rising high above the legs",
-          "Female body roughly 5 to 6 millimetres long"
+          "Legs banded with darker rings",
+          "Two dark stripes along the pale brown carapace",
+          "Abdomen with mottled chevron-like markings",
+          "Long, hairy legs, clearly longer than the body"
         ],
-        "habitat": "Native range keys: europe. In Europe mostly inside buildings: corners of rooms, cellars, stairwells, garages, sheds, barns and greenhouses, in sheltered spots out of draughts. Outdoors it uses the shelter of eaves, window frames and walls.",
-        "nativeRange": "Native range keys: europe. In Europe mostly inside buildings: corners of rooms, cellars, stairwells, garages, sheds, barns and greenhouses, in sheltered spots out of draughts. Outdoors it uses the shelter of eaves, window frames and walls.",
-        "rarityScore": 7,
-        "rarityReason": "AnimalDex canonical rarity score: 7/100, maintained by the live indexed species profile."
+        "habitat": "Native range keys: europe. Dry, sheltered places around buildings: barns, sheds, garages, cellars, window frames and woodpiles. In warmer southern Europe it also lives outdoors under bark and in rock crevices.",
+        "nativeRange": "Native range keys: europe. Dry, sheltered places around buildings: barns, sheds, garages, cellars, window frames and woodpiles. In warmer southern Europe it also lives outdoors under bark and in rock crevices.",
+        "rarityScore": 10,
+        "rarityReason": "AnimalDex canonical rarity score: 10/100, maintained by the live indexed species profile."
       },
       "premiumDetails": {
         "behaviorTraits": [
-          "Brown to greyish abdomen mottled with dark chevrons",
-          "Pale yellowish-brown legs with dark rings",
-          "Abdomen tall and globular, rising high above the legs",
-          "Female body roughly 5 to 6 millimetres long"
+          "Legs banded with darker rings",
+          "Two dark stripes along the pale brown carapace",
+          "Abdomen with mottled chevron-like markings",
+          "Long, hairy legs, clearly longer than the body"
         ],
         "whyInteresting": [
-          "A female can make several brown, pear-shaped egg sacs over her life, each holding a few hundred eggs, and hangs them in the web.",
-          "It belongs to the comb-footed spiders, named for a row of serrated bristles on the hind legs used to fling silk over prey.",
-          "It has become a laboratory model for studying how spider embryos develop and how their body plan is laid down.",
-          "Its bite is not considered dangerous to people, and it seldom bites even when handled."
+          "Its sheet web is not sticky; prey is caught because it stumbles and slows on the dense mat of silk.",
+          "Adult males leave their own webs to search for females, and are then sometimes seen running across floors.",
+          "A male may share a female's web for some time before mating.",
+          "Carried with people and goods, it now lives in buildings on many continents far beyond its European home."
         ],
         "respectfulSpotting": [
           "Observe from a respectful distance and avoid changing the animal's behavior.",
@@ -9798,24 +9798,24 @@
       },
       "relatedSpecies": [],
       "databaseSource": {
-        "animalDexNumber": 1735,
+        "animalDexNumber": 2290,
         "identityKind": "species",
         "canonicalGameStats": {
-          "size": 2,
-          "speed": 8,
-          "rarity": 7,
-          "dominance": 9,
-          "intelligence": 18
+          "size": 5,
+          "speed": 20,
+          "rarity": 10,
+          "dominance": 15,
+          "intelligence": 25
         },
         "seoIndexable": true,
         "fieldGuideVersion": "v1_pending",
         "fieldGuide": {
-          "dietSummary": "Flies, mosquitoes, moths, ants, beetles, woodlice and other spiders. Prey caught in the web is wrapped in silk, bitten, and hauled up into the tangle to be eaten.",
-          "predatorsSummary": "Other spiders are its main enemies, notably the daddy-long-legs spider, which enters its web to hunt it. Outdoors, spider-hunting wasps and birds take some. A disturbed spider drops on a thread or pulls in its legs and hangs motionless.",
-          "sleepPattern": "Hangs upside down in the web by day and night, often tucked under a scrap of debris or a silk shelter. Most web building and repair happens at night.",
-          "lifespanEstimate": "Adult females commonly live about a year and sometimes longer; males die soon after mating. Young take several months to mature.",
-          "femaleOffspringNotes": "A female makes several brown, papery, pear-shaped egg sacs, sometimes more than ten, each holding up to a few hundred eggs. She hangs them in the web and stays near them; spiderlings remain in the web for a short time before dispersing.",
-          "sexDifferenceNotes": "Males are smaller than females, with a less rounded abdomen, relatively longer legs and swollen palps. A male often lives for a time in a female's web."
+          "dietSummary": "Flies, moths, beetles, woodlice and other small crawling or flying creatures that walk or fall onto the web. It digests prey externally and sucks it dry.",
+          "predatorsSummary": "Daddy-long-legs spiders often invade its webs and kill it; spider-hunting wasps, centipedes, birds and other house spiders also take it. It retreats deep into its tube and runs fast when disturbed.",
+          "sleepPattern": "Mostly nocturnal, sitting at the mouth of its tube after dark and withdrawing inside during the day.",
+          "lifespanEstimate": "Females commonly live about 2 years and sometimes longer; males usually die within months of maturing.",
+          "femaleOffspringNotes": "After mating, a female makes several egg sacs over time, each holding many eggs, and hides them near the web, often camouflaged with debris. Spiderlings disperse after hatching and moult several times before maturing.",
+          "sexDifferenceNotes": "Females are larger and heavier-bodied, reaching about 1 cm in body length. Males are smaller and slimmer with relatively longer legs and swollen, club-like palps."
         }
       }
     },
@@ -27977,6 +27977,86 @@
       }
     },
     {
+      "slug": "common-house-spider",
+      "name": "Common House Spider",
+      "speciesProfileId": "97daf592-8f28-42bc-aa2d-72c07c7c0fd3",
+      "normalizedIdentityKey": "common_house_spider",
+      "heroTitle": "Common House Spider — Identification, Habitat, Animal Power & Facts",
+      "publishedAt": "2026-07-17T23:40:21.54962+00:00",
+      "updatedAt": "2026-09-28T23:45:24.072425+00:00",
+      "featuredImage": {
+        "src": "/api/species-images/common-house-spider",
+        "alt": "Common House Spider AnimalDex species guide",
+        "width": 1200,
+        "height": 1500
+      },
+      "searchIntents": [
+        "Common House Spider",
+        "Parasteatoda tepidariorum",
+        "Common House Spider facts",
+        "Common House Spider habitat",
+        "Common House Spider animal power",
+        "Common House Spider identification"
+      ],
+      "analysis": {
+        "summary": "A small comb-footed spider that lives in an untidy tangle web in quiet corners of buildings. Sticky threads run from the tangle down to the floor or wall below; when an ant or beetle walks into one, the thread snaps free and lifts the struggling insect off the ground.",
+        "scientificName": "Parasteatoda tepidariorum",
+        "category": "Arachnid",
+        "identification": [
+          "Brown to greyish abdomen mottled with dark chevrons",
+          "Pale yellowish-brown legs with dark rings",
+          "Abdomen tall and globular, rising high above the legs",
+          "Female body roughly 5 to 6 millimetres long"
+        ],
+        "habitat": "Native range keys: europe. In Europe mostly inside buildings: corners of rooms, cellars, stairwells, garages, sheds, barns and greenhouses, in sheltered spots out of draughts. Outdoors it uses the shelter of eaves, window frames and walls.",
+        "nativeRange": "Native range keys: europe. In Europe mostly inside buildings: corners of rooms, cellars, stairwells, garages, sheds, barns and greenhouses, in sheltered spots out of draughts. Outdoors it uses the shelter of eaves, window frames and walls.",
+        "rarityScore": 7,
+        "rarityReason": "AnimalDex canonical rarity score: 7/100, maintained by the live indexed species profile."
+      },
+      "premiumDetails": {
+        "behaviorTraits": [
+          "Brown to greyish abdomen mottled with dark chevrons",
+          "Pale yellowish-brown legs with dark rings",
+          "Abdomen tall and globular, rising high above the legs",
+          "Female body roughly 5 to 6 millimetres long"
+        ],
+        "whyInteresting": [
+          "A female can make several brown, pear-shaped egg sacs over her life, each holding a few hundred eggs, and hangs them in the web.",
+          "It belongs to the comb-footed spiders, named for a row of serrated bristles on the hind legs used to fling silk over prey.",
+          "It has become a laboratory model for studying how spider embryos develop and how their body plan is laid down.",
+          "Its bite is not considered dangerous to people, and it seldom bites even when handled."
+        ],
+        "respectfulSpotting": [
+          "Observe from a respectful distance and avoid changing the animal's behavior.",
+          "Do not block feeding, shelter, nesting, or travel routes.",
+          "Use a live camera capture without handling or staging wildlife."
+        ],
+        "lookalikes": []
+      },
+      "relatedSpecies": [],
+      "databaseSource": {
+        "animalDexNumber": 1735,
+        "identityKind": "species",
+        "canonicalGameStats": {
+          "size": 2,
+          "speed": 8,
+          "rarity": 7,
+          "dominance": 9,
+          "intelligence": 18
+        },
+        "seoIndexable": true,
+        "fieldGuideVersion": "v1_pending",
+        "fieldGuide": {
+          "dietSummary": "Flies, mosquitoes, moths, ants, beetles, woodlice and other spiders. Prey caught in the web is wrapped in silk, bitten, and hauled up into the tangle to be eaten.",
+          "predatorsSummary": "Other spiders are its main enemies, notably the daddy-long-legs spider, which enters its web to hunt it. Outdoors, spider-hunting wasps and birds take some. A disturbed spider drops on a thread or pulls in its legs and hangs motionless.",
+          "sleepPattern": "Hangs upside down in the web by day and night, often tucked under a scrap of debris or a silk shelter. Most web building and repair happens at night.",
+          "lifespanEstimate": "Adult females commonly live about a year and sometimes longer; males die soon after mating. Young take several months to mature.",
+          "femaleOffspringNotes": "A female makes several brown, papery, pear-shaped egg sacs, sometimes more than ten, each holding up to a few hundred eggs. She hangs them in the web and stays near them; spiderlings remain in the web for a short time before dispersing.",
+          "sexDifferenceNotes": "Males are smaller than females, with a less rounded abdomen, relatively longer legs and swollen palps. A male often lives for a time in a female's web."
+        }
+      }
+    },
+    {
       "slug": "common-housefly-catcher",
       "name": "Peters's Jumping Spider",
       "speciesProfileId": "5d7c0a66-9329-4acb-90f3-fac374f05145",
@@ -37562,7 +37642,7 @@
       "normalizedIdentityKey": "cat",
       "heroTitle": "Domestic Cat — Identification, Habitat, Animal Power & Facts",
       "publishedAt": "2026-05-06T15:54:08.875149+00:00",
-      "updatedAt": "2026-10-06T04:01:15.28+00:00",
+      "updatedAt": "2026-10-07T14:01:24.986+00:00",
       "featuredImage": {
         "src": "/api/species-images/domestic-cat",
         "alt": "Domestic Cat AnimalDex species guide",
@@ -110193,6 +110273,86 @@
           "lifespanEstimate": "Not well documented in the wild; long-term studies in Kenya have followed individual breeding adults over many seasons, but a typical lifespan has not been published widely.",
           "femaleOffspringNotes": "A cooperative breeder: the breeding pair builds a domed grass nest in a thorn tree, and the female lays about three to four blue eggs. Other group members, often grown offspring, help feed the chicks.",
           "sexDifferenceNotes": "Males and females look alike in plumage and size and cannot be told apart reliably in the field."
+        }
+      }
+    },
+    {
+      "slug": "swamp-forest-crab",
+      "name": "Swamp Forest Crab",
+      "speciesProfileId": "862bb347-002e-4877-8e74-9ff62fe92fa5",
+      "normalizedIdentityKey": "parathelphusa_reticulata",
+      "heroTitle": "Swamp Forest Crab — Identification, Habitat, Animal Power & Facts",
+      "publishedAt": "2026-08-20T09:58:55.174201+00:00",
+      "updatedAt": "2026-09-30T06:04:44.849636+00:00",
+      "featuredImage": {
+        "src": "/api/species-images/swamp-forest-crab",
+        "alt": "Swamp Forest Crab AnimalDex species guide",
+        "width": 1200,
+        "height": 1500
+      },
+      "searchIntents": [
+        "Swamp Forest Crab",
+        "Parathelphusa reticulata",
+        "Swamp Forest Crab facts",
+        "Swamp Forest Crab habitat",
+        "Swamp Forest Crab animal power",
+        "Swamp Forest Crab identification"
+      ],
+      "analysis": {
+        "summary": "A small dark freshwater crab of Singapore swamp forest. It keeps to peat pools and leaf litter well inland of the tide.",
+        "scientificName": "Parathelphusa reticulata",
+        "category": "Marine invertebrate",
+        "identification": [
+          "Dark rounded carapace",
+          "Freshwater swamp pools",
+          "Singapore endemic",
+          "Leaf-litter shelter"
+        ],
+        "habitat": "Native range keys: southeast_asia. Freshwater swamp forest in Singapore, in shaded peat pools away from salt water.",
+        "nativeRange": "Native range keys: southeast_asia. Freshwater swamp forest in Singapore, in shaded peat pools away from salt water.",
+        "rarityScore": 78,
+        "rarityReason": "AnimalDex canonical rarity score: 78/100, maintained by the live indexed species profile."
+      },
+      "premiumDetails": {
+        "behaviorTraits": [
+          "Dark rounded carapace",
+          "Freshwater swamp pools",
+          "Singapore endemic",
+          "Leaf-litter shelter"
+        ],
+        "whyInteresting": [
+          "It is known only from freshwater swamp forest in Singapore.",
+          "The crab shelters among peat pools and fallen leaves.",
+          "The habitat is a remnant, so the species is critically scarce.",
+          "It is a true freshwater crab, not a shore crab washed inland."
+        ],
+        "respectfulSpotting": [
+          "Observe from a respectful distance and avoid changing the animal's behavior.",
+          "Do not block feeding, shelter, nesting, or travel routes.",
+          "Use a live camera capture without handling or staging wildlife."
+        ],
+        "lookalikes": []
+      },
+      "relatedSpecies": [],
+      "databaseSource": {
+        "animalDexNumber": 2398,
+        "identityKind": "species",
+        "canonicalGameStats": {
+          "size": 4,
+          "speed": 12,
+          "rarity": 78,
+          "dominance": 8,
+          "intelligence": 12
+        },
+        "seoIndexable": true,
+        "fieldGuideVersion": "where_to_look_v1_20260731",
+        "fieldGuide": {
+          "dietSummary": "Picks through submerged leaf litter and takes small invertebrates in the swamp pools.",
+          "predatorsSummary": "Birds, monitor lizards and larger freshwater animals take crabs that leave cover. The litter is the main shelter.",
+          "sleepPattern": "Active mainly after dark among the pools, and tucked into litter or burrows through the day.",
+          "lifespanEstimate": "Adults live for multiple years in the same swamp pools.",
+          "femaleOffspringNotes": "Females carry the eggs and young under the abdomen until the young crabs can walk in the pool.",
+          "sexDifferenceNotes": "Females brood the eggs beneath the abdomen. Males have narrower abdomens and larger claws."
         }
       }
     },

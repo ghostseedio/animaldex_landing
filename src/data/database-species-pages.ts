@@ -3,7 +3,6 @@ import "server-only";
 import type {SpeciesEntry} from "@/data/species";
 import {speciesEntries} from "@/data/species";
 import {
-    getBiologyAnchorSlugsToExclude,
     getLegendaryCatalogSeedByBeastSlug,
     getLegendaryCatalogSeedByBiologyLandingSlug
 } from "@/data/legendary-earth-beasts-catalog-seed";
@@ -1217,7 +1216,8 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
         }
 
         const biologySeed = getLegendaryCatalogSeedByBiologyLandingSlug(candidate);
-        if (biologySeed) {
+        // Fall back to the beast only when the real species has no page of its own.
+        if (biologySeed && !getSnapshotSpeciesBySlug(candidate)) {
             const beastStaticEntry = speciesEntries.find((entry) => entry.slug === biologySeed.beastSlug) ?? null;
             if (beastStaticEntry) {
                 return resolveLegendaryCatalogEntryFromSnapshot(beastStaticEntry);
@@ -1321,14 +1321,15 @@ export async function getSitemapSpeciesEntries(): Promise<SitemapSpeciesEntry[]>
         const databaseEntries = await loadSitemapDatabaseSpecies();
         const databaseBySlug = new Map(databaseEntries.map((entry) => [entry.slug, entry]));
         const staticSlugs = new Set(speciesEntries.map((entry) => entry.slug));
-        const biologyAnchorSlugs = getBiologyAnchorSlugsToExclude();
+        // The real species behind a Legendary Earth Beast (bengal-tiger behind
+        // sky-tigress) is its own indexed catalog row with its own number, so it
+        // is listed like any other species.
         const fromStatic = speciesEntries
-            .filter((entry) => !biologyAnchorSlugs.has(entry.slug))
             .map((entry) => ({
                 slug: entry.slug,
                 updatedAt: databaseBySlug.get(entry.slug)?.updatedAt ?? entry.updatedAt
             }));
-        const fromDatabase = databaseEntries.filter((entry) => !staticSlugs.has(entry.slug) && !biologyAnchorSlugs.has(entry.slug));
+        const fromDatabase = databaseEntries.filter((entry) => !staticSlugs.has(entry.slug));
         const bySlug = new Map<string, SitemapSpeciesEntry>();
 
         for (const entry of [...fromStatic, ...fromDatabase]) {
@@ -1355,7 +1356,6 @@ export async function getUnifiedSpeciesEntries() {
         }
     }
     const staticSlugs = new Set(speciesEntries.map((entry) => entry.slug));
-    const biologyAnchorSlugs = getBiologyAnchorSlugsToExclude();
     const enrichedStatic = speciesEntries.map((entry) => {
         if (legendaryEarthBeastSpeciesSlugs.has(entry.slug)) {
             const seed = getLegendaryCatalogSeedByBeastSlug(entry.slug);
@@ -1369,7 +1369,7 @@ export async function getUnifiedSpeciesEntries() {
     return dedupeCatalogSpeciesEntries(
         [
             ...enrichedStatic,
-            ...databaseEntries.filter((entry) => !staticSlugs.has(entry.slug) && !biologyAnchorSlugs.has(entry.slug))
+            ...databaseEntries.filter((entry) => !staticSlugs.has(entry.slug))
         ]
     ).sort((left, right) => left.name.localeCompare(right.name));
 }
