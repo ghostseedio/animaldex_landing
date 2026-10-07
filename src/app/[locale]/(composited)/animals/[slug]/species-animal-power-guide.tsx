@@ -1,10 +1,13 @@
 import type {ReactNode} from "react";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
+import type {DreamReading} from "@/lib/animal-dream-reading";
 
 type SpeciesAnimalPowerGuideProps = {
     animalName: string;
     artwork?: ReactNode;
     profile: EnhancedAnimalPowerProfile;
+    /** "What does it mean to dream about a <animal>?", built from this principle. */
+    dream?: DreamReading | null;
     labels: {
         eyebrow: string;
         pattern: string;
@@ -27,6 +30,7 @@ export default function SpeciesAnimalPowerGuide({
     animalName,
     artwork,
     profile,
+    dream,
     labels
 }: SpeciesAnimalPowerGuideProps) {
     const enhanced = profile.availability === "enhanced";
@@ -131,6 +135,23 @@ export default function SpeciesAnimalPowerGuide({
                     ) : null}
                 </div>
             )}
+
+            {dream ? (
+                <div id="dream-meaning" className="mt-10 scroll-mt-28 border-t border-primary-400/15 pt-8">
+                    <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{dream.question}</h3>
+                    <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-200">{dream.answer}</p>
+                    <p className="mt-3 max-w-3xl text-base leading-7 text-ink-300">{dream.goodOrBad}</p>
+                    <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        {dream.scenarios.map((scenario) => (
+                            <article key={scenario.title} className="border border-line-300 bg-canvas-900/40 p-5">
+                                <h4 className="text-base font-semibold text-white">{scenario.title}</h4>
+                                <p className="mt-2 text-base leading-7 text-ink-200">{scenario.reading}</p>
+                            </article>
+                        ))}
+                    </div>
+                    <p className="mt-4 text-sm text-ink-400">{dream.note}</p>
+                </div>
+            ) : null}
         </section>
     );
 }

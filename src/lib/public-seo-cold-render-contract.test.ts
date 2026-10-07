@@ -38,7 +38,17 @@ test("public animal and lesson detail pages do not fan out remote SEO work", () 
     assert.match(animals, /export const revalidate = false/);
     assert.match(animals, /export const dynamicParams = false/);
     assert.match(animals, /resolveLocalSpeciesStats/);
-    assert.match(animals, /resolveLocalSpeciesBehaviorProfile/);
+    // Principle comes from local data or the checked-in lesson snapshot — never
+    // the async catalog fetch in resolveSpeciesBehaviorProfile.
+    assert.match(animals, /resolveSpeciesBehaviorProfileForPage\(/);
+    assert.doesNotMatch(animals, /resolveSpeciesBehaviorProfile\(/);
+    const lessonsSource = readFileSync(join(root, "data/species-behavior-lessons.ts"), "utf8");
+    const pageResolver = lessonsSource.slice(
+        lessonsSource.indexOf("export function resolveSpeciesBehaviorProfileForPage"),
+        lessonsSource.indexOf("export async function resolveSpeciesBehaviorProfile")
+    );
+    assert.match(pageResolver, /getSnapshotLessonBySlug/);
+    assert.doesNotMatch(pageResolver, /await|fetch|fetchCatalogLessonBySlug/);
     assert.match(animals, /getChallengesForSpecies/);
     assert.match(animals, /createEmptyPublicSpeciesGrowthContext/);
     assert.doesNotMatch(animals, /getSpeciesImageReferences/);

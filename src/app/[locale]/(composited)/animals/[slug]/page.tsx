@@ -46,7 +46,9 @@ import {getSpeciesSpottingContent} from "@/data/species-spotting";
 import {getBattleTier, resolveLocalSpeciesStats, type SpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
 import type {SpeciesEntry} from "@/data/species";
-import {resolveLocalSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
+import {buildAnimalDreamReading} from "@/lib/animal-dream-reading";
+import {isPublishedClosedSeoSlug} from "@/lib/closed-seo-namespaces";
 import {createEmptyPublicSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesDescriptorBySlug} from "@/data/species-descriptors";
 import {getSpeciesSubtitleStoryBySlug} from "@/data/species-subtitle-stories";
@@ -380,10 +382,24 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const relatedBlogPosts = getBlogPostsForSpecies(entry.slug, 3);
     const relatedChallenges = getChallengesForSpecies(entry.slug, 4);
     const featuredRankings = getRankingsForSpecies(entry.slug, 3);
-    const principleProfile = resolveLocalSpeciesBehaviorProfile(entry.slug);
+    // Local profile, else the catalog lesson snapshot: DB-only species get
+    // their principle (and the dream reading built from it) too.
+    const principleProfile = resolveSpeciesBehaviorProfileForPage(entry.slug);
+    const dreamReading = principleProfile ? buildAnimalDreamReading({
+        slug: entry.slug,
+        name: entry.name,
+        principle: principleProfile.principle,
+        principleExpression: principleProfile.principleExpression,
+        coreLesson: principleProfile.coreLesson,
+        motto: principleProfile.motto,
+        bestFor: principleProfile.bestFor
+    }) : null;
     const enhancedPower = null;
     const primaryQuality = principleProfile?.bestFor[0] ?? null;
-    const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
+    // Catalog lessons name qualities that have no /powers page; link only real ones.
+    const primaryQualitySlug = primaryQuality && isPublishedClosedSeoSlug("powers", toQualitySlug(primaryQuality))
+        ? toQualitySlug(primaryQuality)
+        : null;
     const relatedSlugs = Array.from(new Set(
         legendaryBeast
             ? getRelatedLegendaryEarthBeasts(entry.slug, 3).map((beast) => beast.slug)
@@ -470,6 +486,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 ? principleProfile.coreLesson
                 : `${entry.name} teaches practical lessons through habitat fit, behavioral timing, and adaptation under pressure.`
         },
+        ...(dreamReading ? [{
+            question: dreamReading.question,
+            answer: `${dreamReading.answer} ${dreamReading.goodOrBad}`
+        }] : []),
         {
             question: t("faqBiologicalBasis", {animal: entry.name.toLowerCase()}),
             answer: principleProfile
@@ -955,6 +975,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <SpeciesAnimalPowerGuide
                     animalName={entry.name}
                     profile={powerProfile}
+                    dream={dreamReading}
                     artwork={(
                         <div className="relative h-44 w-44 overflow-hidden border border-primary-400/20 bg-primary-400/[0.06] p-4">
                             <SpeciesArtworkImage
@@ -1283,7 +1304,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 items={related}
             />
 
-            {primaryQuality && relatedPowerSpecies.length > 0 ? (
+            {primaryQuality && primaryQualitySlug && relatedPowerSpecies.length > 0 ? (
                 <RelatedSpeciesSection
                     title={t("moreWithPrincipleTitle", {principle: primaryQuality})}
                     hubHref={`/powers/${primaryQualitySlug}`}

@@ -746,6 +746,43 @@ export function resolveLocalSpeciesBehaviorProfile(slug: string): ResolvedSpecie
     };
 }
 
+/**
+ * Build-time principle profile for a species page: the local profile, else the
+ * catalog lesson from the checked-in snapshot. No network, so SSG species
+ * pages for the ~1,400 database-only species show their principle too.
+ */
+export function resolveSpeciesBehaviorProfileForPage(slug: string): ResolvedSpeciesBehaviorProfile | null {
+    const local = resolveLocalSpeciesBehaviorProfile(slug);
+    if (local) {
+        return local;
+    }
+
+    const lesson = getSnapshotLessonBySlug(slug);
+    if (!lesson?.principleName || !lesson.coreLesson) {
+        return null;
+    }
+
+    const principleSlug = toPrincipleSlug(lesson.principleName);
+    return {
+        principle: lesson.principleName,
+        principleSlug,
+        browseCluster: lesson.principleName,
+        browseClusterSlug: principleSlug,
+        motto: lesson.shortMotto || lesson.coreLesson,
+        principleExpression: lesson.principleExpression ?? undefined,
+        coreLesson: lesson.coreLesson,
+        biologicalBasis: lesson.biologicalBasis || "",
+        applicationExample: lesson.applicationExample || undefined,
+        bestFor: lesson.bestUseCases,
+        relatedSpeciesSlugs: [],
+        source: "catalog_db",
+        hasCatalogLesson: true,
+        hasLessonPage: true,
+        clusterPrinciple: lesson.principleName,
+        clusterPrincipleSlug: principleSlug
+    };
+}
+
 export async function resolveSpeciesBehaviorProfile(slug: string): Promise<ResolvedSpeciesBehaviorProfile | null> {
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(slug);
     const localProfile = getBehavioralPrincipleProfile(slug, systemsEntry, speciesSystemsIntelligence);
