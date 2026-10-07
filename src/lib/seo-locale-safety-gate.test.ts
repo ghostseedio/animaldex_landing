@@ -25,7 +25,12 @@ test("comparison detail articles are English DB bodies, so /id twins may consoli
 
     // Indexable title/description come from the comparison row, not locale JSON.
     assert.match(metadata, /title: challenge\.title/);
-    assert.match(metadata, /description: challenge\.description/);
+    // Description leads with the data-driven verdict (row summary as fallback).
+    assert.match(
+        metadata,
+        /description: buildVerdictMetaDescription\(challenge\.quickVerdict, challenge\.description\)/
+    );
+    assert.doesNotMatch(metadata, /description: t\(/);
     assert.doesNotMatch(metadata, /t\("metaTitle"/);
     assert.match(page, /headline: challenge\.title/);
     assert.match(page, /summary=\{challenge\.quickVerdict\}/);

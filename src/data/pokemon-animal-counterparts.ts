@@ -1,3 +1,5 @@
+import {resolvePokemonSpeciesSlugs} from "@/data/pokemon-animal-species-map";
+
 export const POKEMON_ANIMAL_CANONICAL_BASE_PATH = "/pokemon-animals";
 
 export type PokemonAnimalConfidence = "strong" | "medium" | "broad" | "none";
@@ -20,6 +22,8 @@ export type PokemonAnimalCounterpart = {
 export type PokemonAnimalEntry = PokemonAnimalRow & PokemonAnimalCounterpart & {
     generationSlug: string;
     generationLabel: string;
+    /** Published `/animals/<slug>` species for the counterpart; empty when there is no real-animal match. */
+    speciesSlugs: string[];
 };
 
 export type PokemonAnimalGeneration = {
@@ -8305,7 +8309,42 @@ const explicitCounterparts: Record<string, PokemonAnimalCounterpart> = {
     articuno: {animal: "bird", confidence: "strong", note: "Articuno is an elemental bird design."},
     zapdos: {animal: "bird", confidence: "strong", note: "Zapdos is an elemental bird design."},
     moltres: {animal: "bird", confidence: "strong", note: "Moltres is an elemental bird design."},
-    mewtwo: {animal: "cat-like humanoid", confidence: "broad", note: "Mewtwo is a psychic humanoid creature with cat-like traits, not a single real animal."},
+    mewtwo: {animal: "cat (feline humanoid)", confidence: "broad", note: "Mewtwo is a genetically engineered psychic humanoid cloned from Mew. Its head, ears and digitigrade legs read as feline, and its thick tail and upright stance are often compared to a kangaroo."},
+    psyduck: {animal: "duck or platypus", confidence: "medium", note: "Psyduck's flat bill and webbed feet read as a duck, while its stocky upright body and flat tail are often compared to a platypus."},
+    golduck: {animal: "duck or platypus", confidence: "medium", note: "Golduck keeps a duck's bill and webbed limbs on a sleeker, platypus-like swimming body."},
+    sandshrew: {animal: "armadillo or pangolin", confidence: "medium", note: "Despite its Mouse Pokemon category, Sandshrew's armored back and habit of curling into a ball are closest to an armadillo or pangolin."},
+    sandslash: {animal: "armadillo or pangolin", confidence: "medium", note: "Sandslash adds spines and long claws to an armored, ball-rolling body most often compared to a pangolin or armadillo."},
+    bellsprout: {animal: "no single real animal", confidence: "none", note: "Bellsprout is a carnivorous-plant design, closest to a pitcher plant rather than an animal."},
+    weepinbell: {animal: "no single real animal", confidence: "none", note: "Weepinbell's \"Flycatcher\" category refers to a fly-trapping pitcher plant, not a bird."},
+    victreebel: {animal: "no single real animal", confidence: "none", note: "Victreebel is a pitcher-plant design that traps prey, not a real animal counterpart."},
+    magikarp: {animal: "carp", confidence: "strong", note: "Magikarp is closest to a carp, the fish of the East Asian legend in which a carp leaps a waterfall and becomes a dragon."},
+    gyarados: {animal: "sea serpent", confidence: "broad", note: "Gyarados is a fantasy sea serpent that evolves from the carp-like Magikarp, echoing the legend of a carp becoming a dragon; the closest real animal on its line is the carp."},
+    cyndaquil: {animal: "echidna or shrew", confidence: "medium", note: "Cyndaquil's long snout, small low body and flaming back crest are most often compared to an echidna or a shrew."},
+    wooper: {animal: "axolotl", confidence: "strong", note: "Wooper's feathery external gills, wide smile and aquatic larval look are closest to an axolotl."},
+    quagsire: {animal: "axolotl", confidence: "medium", note: "Quagsire keeps Wooper's axolotl-like face on a larger, upright body."},
+    clodsire: {animal: "axolotl", confidence: "medium", note: "Clodsire evolves from Paldean Wooper and keeps a heavy, axolotl-like amphibian body."},
+    yanma: {animal: "dragonfly", confidence: "strong", note: "Yanma's huge compound eyes and two pairs of clear wings make it a dragonfly-like insect."},
+    yanmega: {animal: "dragonfly", confidence: "strong", note: "Yanmega's \"Ogre Darner\" category names a darner, a large type of dragonfly."},
+    stantler: {animal: "deer", confidence: "strong", note: "Stantler's branching antlers and hoofed body make it a deer, often compared to an elk or reindeer."},
+    wyrdeer: {animal: "deer", confidence: "strong", note: "Wyrdeer is a large antlered deer, the evolution of Stantler."},
+    mudkip: {animal: "axolotl or mudskipper", confidence: "medium", note: "Mudkip's head fin and cheek gills suggest an axolotl, while its name and muddy habitat point to a mudskipper."},
+    marshtomp: {animal: "axolotl or mudskipper", confidence: "medium", note: "Marshtomp keeps Mudkip's amphibious, axolotl- and mudskipper-like traits on a bipedal body."},
+    swampert: {animal: "axolotl or mudskipper", confidence: "broad", note: "Swampert is a heavy amphibian design that keeps the axolotl and mudskipper cues of its line."},
+    slakoth: {animal: "sloth", confidence: "strong", note: "Slakoth is closest to a sloth, from its long claws to its slow, lazy behavior."},
+    vigoroth: {animal: "sloth", confidence: "medium", note: "Vigoroth keeps the sloth line's claws and build but is restless and ape-like."},
+    slaking: {animal: "sloth", confidence: "medium", note: "Slaking returns to the sloth line's lazy habits in a large, gorilla-like body."},
+    zangoose: {animal: "mongoose", confidence: "strong", note: "Zangoose is closest to a mongoose; its rivalry with the snake Pokemon Seviper mirrors mongoose-versus-snake encounters."},
+    trapinch: {animal: "antlion larva", confidence: "strong", note: "Trapinch's oversized jaws and sand-pit ambush match an antlion larva."},
+    vibrava: {animal: "antlion or dragonfly", confidence: "medium", note: "Vibrava is the winged stage of an antlion-like insect, with dragonfly-like wings."},
+    flygon: {animal: "antlion or dragonfly", confidence: "medium", note: "Flygon combines the adult antlion's dragonfly-like wings with a dragon body."},
+    bidoof: {animal: "beaver", confidence: "medium", note: "Bidoof's buck teeth and stout rodent body read as a beaver, which its evolution Bibarel makes explicit."},
+    bibarel: {animal: "beaver", confidence: "strong", note: "Bibarel is officially the Beaver Pokemon, with a beaver's flat tail and gnawing teeth."},
+    shelmet: {animal: "snail", confidence: "medium", note: "Shelmet is a snail-like creature hiding in a helmet-shaped shell."},
+    goomy: {animal: "slug or snail", confidence: "medium", note: "Goomy's soft, slimy body and eye-stalk-like horns are closest to a slug or snail."},
+    sliggoo: {animal: "slug or snail", confidence: "medium", note: "Sliggoo keeps a slug's slime and adds a snail-like shell."},
+    goodra: {animal: "slug or snail", confidence: "broad", note: "Goodra is a slimy dragon whose soft body and antennae keep the slug-like look of its line."},
+    riolu: {animal: "jackal or wolf", confidence: "medium", note: "Riolu is a small, puppy-like canine with a jackal's pointed ears and black face mask."},
+    lucario: {animal: "jackal or wolf", confidence: "medium", note: "Lucario's long snout, tall pointed ears and black facial mask are canine traits most often compared to a jackal or wolf."},
     mew: {animal: "cat or embryo-like mammal", confidence: "broad", note: "Mew is a fantasy mammal with cat-like and embryo-like cues."}
 };
 
@@ -8320,7 +8359,6 @@ const genusRules: Array<[RegExp, string]> = [
     [/\bMud Fish\b/i, "fish"],
     [/\bEleFish\b/i, "electric eel"],
     [/\bFirefly\b/i, "firefly"],
-    [/\bFlycatcher\b/i, "flycatcher bird"],
     [/\bWood Gecko\b/i, "gecko"],
     [/\bLand Snake\b/i, "snake"],
     [/\bRock Snake\b/i, "snake"],
@@ -8449,7 +8487,8 @@ function buildEntry(row: PokemonAnimalRow): PokemonAnimalEntry {
         ...row,
         ...defaultCounterpart(row),
         generationSlug: generation.slug,
-        generationLabel: generation.label
+        generationLabel: generation.label,
+        speciesSlugs: []
     };
 }
 
@@ -8494,7 +8533,15 @@ function resolveFamilyCounterparts(entries: PokemonAnimalEntry[]) {
     });
 }
 
-export const pokemonAnimalEntries: PokemonAnimalEntry[] = resolveFamilyCounterparts(pokemonAnimalRows.map(buildEntry));
+function attachSpeciesSlugs(entry: PokemonAnimalEntry): PokemonAnimalEntry {
+    if (entry.confidence === "none") {
+        return entry;
+    }
+
+    return {...entry, speciesSlugs: resolvePokemonSpeciesSlugs(entry.slug, entry.animal)};
+}
+
+export const pokemonAnimalEntries: PokemonAnimalEntry[] = resolveFamilyCounterparts(pokemonAnimalRows.map(buildEntry)).map(attachSpeciesSlugs);
 
 export const pokemonAnimalEntriesBySlug = new Map(pokemonAnimalEntries.map((entry) => [entry.slug, entry]));
 export const pokemonAnimalGenerationsBySlug = new Map(pokemonAnimalGenerations.map((generation) => [generation.slug, generation]));
@@ -8509,6 +8556,13 @@ export function getPokemonAnimalGeneration(slug: string) {
 
 export function getPokemonAnimalEntriesByGeneration(generationId: number) {
     return pokemonAnimalEntries.filter((entry) => entry.generation === generationId);
+}
+
+/** Other Pokémon mapped to the given real species, in National Dex order. */
+export function getPokemonSharingSpecies(entry: PokemonAnimalEntry, speciesSlug: string, limit = 8) {
+    return pokemonAnimalEntries
+        .filter((item) => item.slug !== entry.slug && item.speciesSlugs.includes(speciesSlug))
+        .slice(0, limit);
 }
 
 export function getPokemonAnimalSummary() {

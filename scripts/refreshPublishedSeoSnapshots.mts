@@ -303,6 +303,34 @@ function mapAnimal(row: CatalogRow, guide: GuideRow | null) {
     };
 }
 
+/** DB facts for a hand-coded species; null when the catalog has nothing to add. */
+function mapStaticOverlay(row: CatalogRow, guide: GuideRow | null) {
+    if (typeof row.animaldex_number !== "number" || row.animaldex_number < 1) {
+        return null;
+    }
+    const signatureTraits = (guide?.signature_traits ?? []).map((item) => item?.trim()).filter(Boolean) as string[];
+    const interestingFacts = (guide?.interesting_facts ?? []).map((item) => item?.trim()).filter(Boolean) as string[];
+
+    return {
+        animalDexNumber: row.animaldex_number,
+        identityKind: clean(row.identity_kind),
+        canonicalGameStats: readCatalogGameStats(row.canonical_game_stats as Record<string, number> | null),
+        spotlight: clean(guide?.species_spotlight),
+        typicalHabitat: clean(guide?.typical_habitat),
+        signatureTraits,
+        interestingFacts,
+        fieldGuideVersion: guide?.field_guide_version ?? null,
+        fieldGuide: {
+            dietSummary: clean(guide?.diet_summary),
+            predatorsSummary: clean(guide?.predators_summary),
+            sleepPattern: clean(guide?.sleep_pattern),
+            lifespanEstimate: clean(guide?.lifespan_estimate),
+            femaleOffspringNotes: clean(guide?.female_offspring_notes),
+            sexDifferenceNotes: clean(guide?.sex_difference_notes)
+        }
+    };
+}
+
 function mapLesson(row: CatalogRow) {
     const slug = canonicalSlug(row);
     if (!slug || !row.core_lesson?.trim() || !row.principle_name?.trim()) {
@@ -369,7 +397,10 @@ async function main() {
     const localSlugs = new Set(speciesEntries.map((entry) => entry.slug));
     const missingAnimals = published.animals.filter((slug) => !localSlugs.has(slug));
     const missingLessons = published.lessons.filter((slug) => !localSlugs.has(slug));
-    const neededSlugs = [...new Set([...missingAnimals, ...missingLessons])].sort((a, b) => a.localeCompare(b));
+    // Hand-coded species still get the DB field guide, stats and traits, as a
+    // build-time overlay: without it ~880 static pages print template copy.
+    const staticAnimals = [...localSlugs].sort((a, b) => a.localeCompare(b));
+    const neededSlugs = [...new Set([...missingAnimals, ...missingLessons, ...staticAnimals])].sort((a, b) => a.localeCompare(b));
 
     const headers = supabaseHeaders(key);
     const catalogSelect = [
@@ -468,6 +499,26 @@ async function main() {
         .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
         .sort((left, right) => left.slug.localeCompare(right.slug));
 
+    const staticOverlay: Record<string, ReturnType<typeof mapStaticOverlay>> = {};
+    for (const slug of staticAnimals) {
+        const row = rowsBySlug.get(slug);
+        if (!row) {
+            continue;
+        }
+        const profile = profilesById.get(row.species_profile_id);
+        if (profile?.catalog_status === "hidden") {
+            continue;
+        }
+        const overlay = mapStaticOverlay({
+            ...row,
+            animaldex_number: typeof profile?.animaldex_number === "number" ? profile.animaldex_number : row.animaldex_number,
+            canonical_game_stats: profile?.canonical_game_stats ?? row.canonical_game_stats
+        }, guidesByProfileId.get(row.species_profile_id) ?? null);
+        if (overlay) {
+            staticOverlay[slug] = overlay;
+        }
+    }
+
     const uniqueAnimals = new Map(animalEntries.map((entry) => [entry.slug, entry]));
     const uniqueLessons = new Map(lessonEntries.map((entry) => [entry.slug, entry]));
     const note = "Newly published DB content does not become an SEO page until this snapshot is refreshed and deployed. The production build consumes this file only and never fetches Supabase.";
@@ -488,6 +539,16 @@ async function main() {
         note,
         entries: [...uniqueLessons.values()]
     }, null, 2)}\n`);
+
+    const overlayPath = join(root, "src/data/published-seo-static-species-overlay.json");
+    writeFileSync(overlayPath, `${JSON.stringify({
+        generatedAt,
+        source: "operator refresh from production catalog + species_field_guide for hand-coded species",
+        note: "Merged into static species entries at build time (src/lib/static-species-overlay.ts). The build never fetches Supabase.",
+        entries: staticOverlay
+    }, null, 2)}\n`);
+    console.log(`wrote ${overlayPath}`);
+    console.log(`static species overlays ${Object.keys(staticOverlay).length} / ${staticAnimals.length} hand-coded`);
 
     const missingAnimalGaps = missingAnimals.filter((slug) => !uniqueAnimals.has(slug));
     const missingLessonGaps = missingLessons.filter((slug) => !uniqueLessons.has(slug));

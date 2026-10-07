@@ -10,9 +10,21 @@ import {
 } from "@/data/rankings";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
-import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {contentThumb} from "@/data/content-thumbnails";
+import {getTierListHubLanguageAlternates} from "@/data/tier-list-hub-translations";
+import {
+    buildTierListHubFaqSchema,
+    getTierListHubAnswers,
+    getTierListHubLeaders,
+    TierListHubAnswer,
+    TierListHubFaq,
+    TierListHubFaqItem,
+    TierListHubIntro,
+    TierListHubLanguageLinks,
+    TierListHubQuickAnswers
+} from "@/app/[locale]/(composited)/rankings/_components/tier-list-hub-sections";
+import {ScopedTranslator} from "@/loaders/translation";
 
 export const revalidate = 86400;
 
@@ -23,10 +35,14 @@ export function generateStaticParams() {
 export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
     const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
+    const t = await getScopedTranslator(locale, "rankings");
     const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
     const rankingKeywords = Array.from(new Set(rankingPages.flatMap((page) => page.searchIntents)));
-    const title = messages.rankings?.metaTitle || "Animal Tier List — Animal Rankings & Top 100 Lists";
-    const description = messages.rankings?.metaDescription || messages.meta?.description || "";
+    const title = messages.rankings?.metaTitle || "Animal Tier List: Fastest, Strongest & Smartest Animals";
+    // The description names the current #1s, read from the same data as the lists.
+    const description = messages.rankings?.metaDescription
+        ? t("metaDescription", {...getTierListHubLeaders(getTierListHubAnswers())})
+        : messages.meta?.description || "";
 
     return {
         title,
@@ -34,12 +50,9 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
         keywords: [...baseKeywords, ...rankingKeywords],
         alternates: {
             canonical: getLocalePath(locale, RANKING_CANONICAL_BASE_PATH),
-            languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = getLocalePath(localeItem, RANKING_CANONICAL_BASE_PATH);
-                return acc;
-            }, {
-                "x-default": getLocalePath(localeConfig.defaultLocale, RANKING_CANONICAL_BASE_PATH)
-            } as Record<string, string>)
+            // en + id are next-intl locales; pt/es/fr are translated hub pages
+            // (src/data/tier-list-hub-translations.ts), not site locales.
+            languages: getTierListHubLanguageAlternates()
         },
         openGraph: {
             type: "website",
@@ -67,6 +80,42 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {month: "short", day: "numeric", year: "numeric"}).format(new Date(date));
+}
+
+function buildQuickAnswerItems(t: ScopedTranslator, answers: TierListHubAnswer[]) {
+    return answers.map((answer) => ({
+        slug: answer.slug,
+        href: answer.href,
+        label: t(`quickAnswers.${answer.slug}.label`),
+        leader: answer.names[0],
+        followedBy: t("quickAnswerFollowedBy", {second: answer.names[1], third: answer.names[2]})
+    }));
+}
+
+function buildFaqItems(t: ScopedTranslator, answers: TierListHubAnswer[]): TierListHubFaqItem[] {
+    return [
+        {
+            question: t("hubFaqWhatIsQuestion"),
+            answer: `${t("introParagraphOne")} ${t("introParagraphTwo")}`
+        },
+        ...answers.map((answer) => {
+            const noteKey = `quickAnswers.${answer.slug}.note`;
+            const note = t(noteKey);
+            // English uses the #1 entry's own reason; other locales carry a
+            // translated note so the answer does not switch language mid-way.
+            const context = note === noteKey ? answer.leaderReason : note;
+
+            return {
+                question: t(`quickAnswers.${answer.slug}.question`),
+                answer: `${t("hubFaqAnswer", {
+                    first: answer.names[0],
+                    second: answer.names[1],
+                    third: answer.names[2],
+                    list: t(`quickAnswers.${answer.slug}.list`)
+                })} ${context}`
+            };
+        })
+    ];
 }
 
 function formatMethodologyLabel(categoryLabel: string, statRankingKey?: string) {
@@ -122,6 +171,10 @@ export default async function RankingsIndexPage({params}: {params: {locale: stri
             methodologyLabel: formatMethodologyLabel(categoryLabel, page.statRankingKey)
         };
     });
+    const hubAnswers = getTierListHubAnswers();
+    const quickAnswerItems = buildQuickAnswerItems(t, hubAnswers);
+    const faqItems = buildFaqItems(t, hubAnswers);
+    const faqSchema = buildTierListHubFaqSchema(faqItems, locale);
     const credibilityItems = [
         t("credibilityEvidence"),
         t("credibilityMethodology"),
@@ -130,7 +183,7 @@ export default async function RankingsIndexPage({params}: {params: {locale: stri
 
     return (
         <section className="mx-auto flex w-full max-w-[86rem] flex-col gap-10 overflow-hidden px-4 py-10 md:px-8 md:py-14">
-            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema, faqSchema])}} />
 
             <header className="w-[calc(100vw-2rem)] max-w-full border-b border-line-300 pb-8 md:w-auto md:max-w-5xl">
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary-200">{t("eyebrow")}</p>
@@ -146,6 +199,18 @@ export default async function RankingsIndexPage({params}: {params: {locale: stri
                     ))}
                 </ul>
             </header>
+
+            <TierListHubIntro
+                title={t("introTitle")}
+                paragraphs={[t("introParagraphOne"), t("introParagraphTwo")]}
+            />
+
+            <TierListHubQuickAnswers
+                title={t("quickAnswersTitle")}
+                description={t("quickAnswersDescription")}
+                items={quickAnswerItems}
+                viewListLabel={t("quickAnswerViewList")}
+            />
 
             <TierListFilters
                 items={cards}
@@ -167,6 +232,8 @@ export default async function RankingsIndexPage({params}: {params: {locale: stri
                 </div>
             </section>
 
+            <TierListHubFaq title={t("hubFaqTitle")} items={faqItems} />
+
             <section className="w-[calc(100vw-2rem)] max-w-full border-t border-line-300 pt-8 md:w-auto">
                 <h2 className="font-display text-3xl font-bold text-white">{t("relatedNavigationTitle")}</h2>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -184,6 +251,9 @@ export default async function RankingsIndexPage({params}: {params: {locale: stri
                             {item.label}
                         </Link>
                     ))}
+                </div>
+                <div className="mt-6">
+                    <TierListHubLanguageLinks label={t("otherLanguages")} current={locale} />
                 </div>
             </section>
         </section>

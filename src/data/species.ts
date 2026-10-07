@@ -52,6 +52,11 @@ export type SpeciesEntry = {
     searchIntents: string[];
     analysis: SpeciesAnalysis;
     premiumDetails: SpeciesPremiumDetails;
+    /**
+     * "template" marks the expansion-pack entries whose summary, identification
+     * and premium details are generated copy; the DB overlay replaces them.
+     */
+    contentSource?: "authored" | "template";
     relatedSpecies: string[];
     databaseSource?: {
         animalDexNumber: number;
@@ -218,6 +223,7 @@ function createSpeciesEntry({
         ],
         analysis,
         premiumDetails: premiumDetails ?? buildDefaultPremiumDetails(name, analysis),
+        contentSource: premiumDetails ? "authored" : "template",
         relatedSpecies,
         databaseSource
     };

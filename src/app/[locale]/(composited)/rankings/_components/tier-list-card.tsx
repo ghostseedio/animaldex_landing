@@ -23,9 +23,18 @@ type TierListCardProps = {
     href: string;
     actionLabel: string;
     priority?: boolean;
+    rankedSpeciesLabel?: string;
+    methodLabel?: string;
 };
 
-export default function TierListCard({item, href, actionLabel, priority = false}: TierListCardProps) {
+export default function TierListCard({
+    item,
+    href,
+    actionLabel,
+    priority = false,
+    rankedSpeciesLabel = "Ranked species",
+    methodLabel = "Method"
+}: TierListCardProps) {
     return (
         <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-line-300 bg-surface-900/80 transition duration-200 hover:-translate-y-0.5 hover:border-primary-500/50 hover:bg-surface-800/90 motion-reduce:transform-none">
             <Link href={href} className="block overflow-hidden border-b border-line-400 bg-canvas-900" aria-label={item.title}>
@@ -57,11 +66,11 @@ export default function TierListCard({item, href, actionLabel, priority = false}
                 </p>
                 <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-line-400 pt-4 text-sm">
                     <div>
-                        <dt className="text-ink-400">Ranked species</dt>
+                        <dt className="text-ink-400">{rankedSpeciesLabel}</dt>
                         <dd className="mt-1 font-semibold text-white">{item.rankedSpeciesCount}</dd>
                     </div>
                     <div>
-                        <dt className="text-ink-400">Method</dt>
+                        <dt className="text-ink-400">{methodLabel}</dt>
                         <dd className="mt-1 font-semibold text-white">{item.methodologyLabel}</dd>
                     </div>
                 </dl>

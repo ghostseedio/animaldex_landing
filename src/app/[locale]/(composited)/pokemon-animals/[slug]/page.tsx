@@ -2,6 +2,13 @@ import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import PokemonAnimalTable from "@/app/[locale]/(composited)/pokemon-animals/pokemon-animal-table";
+import PokemonRealSpeciesSection from "@/app/[locale]/(composited)/pokemon-animals/pokemon-real-species-section";
+import {
+    buildPokemonEntryContent,
+    buildPokemonEntryDescription,
+    buildPokemonEntryTitle,
+    withArticle
+} from "@/app/[locale]/(composited)/pokemon-animals/pokemon-entry-content";
 import {
     POKEMON_ANIMAL_CANONICAL_BASE_PATH,
     getPokemonAnimalEntriesByGeneration,
@@ -65,10 +72,8 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
         return {};
     }
 
-    const title = `What Animal Is ${entry.name} Based On?`;
-    const description = entry.confidence === "none"
-        ? `${entry.name} does not have a single clear real-animal counterpart. AnimalDex compares its official category and design cues.`
-        : `${entry.name} most closely resembles ${entry.animal}. See the quick animal comparison, category, generation, and confidence level.`;
+    const title = buildPokemonEntryTitle(entry);
+    const description = buildPokemonEntryDescription(entry);
 
     return {
         title,
@@ -77,7 +82,8 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             `what animal is ${entry.name} based on`,
             `${entry.name} real animal`,
             `${entry.name} animal counterpart`,
-            `${entry.name} based on`
+            `${entry.name} based on`,
+            `what animal is ${entry.name}`
         ],
         alternates: englishOnlyLanguageAlternates(`${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`),
         openGraph: {
@@ -174,9 +180,13 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
         .filter((item) => item.slug !== entry.slug && item.animal === entry.animal)
         .slice(0, 8);
     const pageUrl = getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`);
-    const answer = entry.confidence === "none"
-        ? `${entry.name} is not cleanly based on a single real animal. The best answer is that it is a fantasy design with no single animal counterpart.`
-        : `${entry.name} most closely resembles ${entry.animal}.`;
+    const {answer, noteParagraphs, species, comparison, faqs} = buildPokemonEntryContent(entry);
+    const primarySpecies = species[0] ?? null;
+    const comparisonHeading = primarySpecies
+        ? `How ${entry.name} compares to the real ${primarySpecies.name}`
+        : entry.confidence === "none"
+            ? `Why ${entry.name} has no single real animal`
+            : `How ${entry.name} compares to ${withArticle(entry.animal)}`;
     const schema = [
         {
             "@context": "https://schema.org",
@@ -186,21 +196,22 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
             url: pageUrl,
             inLanguage: locale,
             author: {"@type": "Organization", name: "AnimalDex"},
-            publisher: {"@type": "Organization", name: "AnimalDex"}
+            publisher: {"@type": "Organization", name: "AnimalDex"},
+            ...(species.length > 0
+                ? {about: species.map((item) => ({"@type": "Thing", name: item.name, url: getAbsoluteUrl(locale, item.animalHref)}))}
+                : {})
         },
         {
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            mainEntity: [
-                {
-                    "@type": "Question",
-                    name: `What animal is ${entry.name} based on?`,
-                    acceptedAnswer: {
-                        "@type": "Answer",
-                        text: answer
-                    }
+            mainEntity: faqs.map((faq) => ({
+                "@type": "Question",
+                name: faq.question,
+                acceptedAnswer: {
+                    "@type": "Answer",
+                    text: faq.answer
                 }
-            ]
+            }))
         },
         {
             "@context": "https://schema.org",
@@ -228,6 +239,13 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
                     What Animal Is {entry.name} Based On?
                 </h1>
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{answer}</p>
+                {noteParagraphs.length > 0 ? (
+                    <div className="flex flex-col gap-4 max-w-4xl">
+                        {noteParagraphs.map((paragraph) => (
+                            <p key={paragraph} className="text-ink-200 text-lg leading-8">{paragraph}</p>
+                        ))}
+                    </div>
+                ) : null}
             </section>
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,11 +260,29 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
             </section>
 
             <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Why this comparison?</h2>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.note}</p>
-                <p className="text-ink-200 text-lg md:text-xl leading-8">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{comparisonHeading}</h2>
+                {comparison.map((paragraph) => (
+                    <p key={paragraph} className="text-ink-200 text-lg md:text-xl leading-8">{paragraph}</p>
+                ))}
+                <p className="text-ink-300 text-base md:text-lg leading-7">
                     Official category: <span className="text-white">{entry.genus}</span>. This page is an AnimalDex comparison for real-animal resemblance, not an official design-origin claim.
                 </p>
+            </section>
+
+            {species.map((item) => (
+                <PokemonRealSpeciesSection key={item.slug} species={item} />
+            ))}
+
+            <section className="flex flex-col gap-4">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.name} animal FAQ</h2>
+                <dl className="flex flex-col gap-4">
+                    {faqs.map((faq) => (
+                        <div key={faq.question} className="  border border-line-300 bg-surface-900/80 px-6 py-5">
+                            <dt className="font-display text-xl md:text-2xl text-white">{faq.question}</dt>
+                            <dd className="text-ink-200 text-base md:text-lg leading-7 mt-2">{faq.answer}</dd>
+                        </div>
+                    ))}
+                </dl>
             </section>
 
             {relatedEntries.length > 0 ? (

@@ -10,6 +10,7 @@ import {challengeEntries} from "@/data/challenges";
 import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import {getTranslatedTierListHubPaths} from "@/data/tier-list-hub-translations";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
 import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalGenerations} from "@/data/pokemon-animal-counterparts";
@@ -116,6 +117,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/comparisons")},
             {url: getAbsoluteUrl(locale, "/animal-wisdom")},
             {url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)},
+            // Translated hub pages (pt/es/fr) — not site locales, so they sit in
+            // the default-locale branch at their literal paths.
+            ...getTranslatedTierListHubPaths().map((path) => ({url: getAbsoluteUrl(locale, path)})),
             {url: getAbsoluteUrl(locale, "/locations")},
             {url: getAbsoluteUrl(locale, "/powers")},
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},

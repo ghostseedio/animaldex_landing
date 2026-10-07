@@ -14,6 +14,7 @@ import {animalSystemsPosts2} from "@/data/blog/animal-systems-2";
 import {animalSystemsPosts3} from "@/data/blog/animal-systems-3";
 import {earnEconomyBlogPosts} from "@/data/blog/earn";
 import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
+import {superlativeBlogPosts} from "@/data/blog/superlatives";
 import {
     BlogFAQ,
     BlogLink,
@@ -3893,6 +3894,7 @@ const blogPostsData: BlogPost[] = [
     ...animalSystemsPosts1,
     ...animalSystemsPosts2,
     ...animalSystemsPosts3,
+    ...superlativeBlogPosts,
     {
         slug: "how-to-estimate-animal-breed-prices",
         title: "How to estimate animal breed prices without guessing",

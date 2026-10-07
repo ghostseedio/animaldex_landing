@@ -87,6 +87,8 @@ type ExtremeBattleChallengeInput = {
     statCategories: [ChallengeStatCategory, ChallengeStatCategory, ChallengeStatCategory];
     scenarioBreakdown: [ChallengeScenario, ChallengeScenario, ChallengeScenario];
     finalTake: string;
+    /** Search-phrased FAQs inserted after the generated "who wins" answer. */
+    extraFaq?: ChallengeFAQ[];
     relatedChallengeSlugs?: string[];
     systemsSpeciesSlugs?: string[];
 };
@@ -133,6 +135,7 @@ function createExtremeBattleChallengeEntry({
     statCategories,
     scenarioBreakdown,
     finalTake,
+    extraFaq,
     relatedChallengeSlugs,
     systemsSpeciesSlugs
 }: ExtremeBattleChallengeInput) {
@@ -157,6 +160,7 @@ function createExtremeBattleChallengeEntry({
                 question: `Who wins, ${animalALabel} or ${animalBLabel}?`,
                 answer: quickVerdict
             },
+            ...(extraFaq ?? []),
             {
                 question: "Why does this matchup stay interesting?",
                 answer: finalTake
@@ -179,7 +183,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "tiger",
         animalBSlug: "lion",
         comparisonType: "battle",
-        title: "Tiger vs Lion: Who Actually Wins?",
+        title: "Tiger vs Lion: Who Would Win in a Fight?",
         description: "A grounded tiger vs lion comparison covering one-on-one fighting ability, social pressure, habitat context, and the scenarios that change the answer.",
         quickVerdict: "In a one-on-one land fight, the tiger usually has the edge. Lions become more dangerous when the matchup stops being a duel and starts rewarding coalition pressure, open-country control, or prolonged group conflict.",
         shortAnswer: [
@@ -302,7 +306,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "tiger",
         animalBSlug: "cheetah",
         comparisonType: "speed",
-        title: "Tiger vs Cheetah Speed: Which Big Cat Is Actually Faster?",
+        title: "Tiger vs Cheetah: Which Is Faster?",
         description: "A speed-first tiger vs cheetah comparison looking at acceleration, top-end running, terrain fit, endurance limits, and what 'faster' really means in biology.",
         quickVerdict: "Cheetah is the faster cat when the question is raw land speed. Tiger is more powerful and more dangerous in a fight, but speed is the cheetah's clear domain.",
         shortAnswer: [
@@ -418,7 +422,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "komodo-dragon",
         animalBSlug: "king-cobra",
         comparisonType: "battle",
-        title: "Komodo Dragon vs King Cobra: What Happens in a Real Clash?",
+        title: "Komodo Dragon vs King Cobra: Who Would Win in a Fight?",
         description: "A real-biology Komodo dragon vs king cobra comparison covering size, strike dynamics, armor, venom risk, terrain context, and why the answer depends on engagement conditions.",
         quickVerdict: "Komodo dragon usually has the edge in a direct physical clash because of its size, armor, and crushing close-range force. King cobra remains dangerous because one clean venom-delivering strike can change the outcome fast.",
         shortAnswer: [
@@ -534,7 +538,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "crocodile",
         animalBSlug: "great-white-shark",
         comparisonType: "battle",
-        title: "Crocodile vs Shark: Who Wins Where Water Meets Shore?",
+        title: "Crocodile vs Shark: Who Would Win in a Fight?",
         description: "A grounded crocodile vs shark comparison covering open saltwater, estuary edges, ambush range, bite dynamics, and why habitat matters more than hype.",
         quickVerdict: "Great white shark has the edge in open ocean. Crocodile becomes more dangerous the closer the matchup gets to shallow water, shoreline bottlenecks, and ambush-heavy edge habitat.",
         shortAnswer: [
@@ -642,7 +646,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "eagle",
         animalBSlug: "peregrine-falcon",
         comparisonType: "battle",
-        title: "Eagle vs Falcon: Which Raptor Has the Real Edge?",
+        title: "Eagle vs Falcon: Who Would Win in a Fight?",
         description: "A clean eagle vs falcon comparison covering power, stoop speed, air control, strike style, and what changes in open sky versus close aerial conflict.",
         quickVerdict: "Eagle usually has the power edge in a direct clash. Falcon owns the speed edge and often the cleaner aerial intercept, but size and grip strength still favor the eagle when contact happens.",
         shortAnswer: [
@@ -750,7 +754,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "wolf",
         animalBSlug: "spotted-hyena",
         comparisonType: "battle",
-        title: "Wolf vs Hyena: Which Predator Has the Real Fighting Edge?",
+        title: "Wolf vs Hyena: Who Would Win in a Fight?",
         description: "A realistic wolf vs hyena comparison covering one-on-one force, pack context, stamina, bite mechanics, and what changes when the contest stops being a duel.",
         quickVerdict: "In a one-on-one clash, spotted hyena usually gets the edge through heavier bite mechanics and stronger close-range durability. Wolves improve when the question shifts to coordinated pack pursuit rather than a single violent contest.",
         shortAnswer: [
@@ -858,7 +862,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "dolphin",
         animalBSlug: "great-white-shark",
         comparisonType: "intelligence",
-        title: "Dolphin vs Shark Intelligence: Which Marine Hunter Is Smarter?",
+        title: "Dolphin vs Shark: Which Is Smarter?",
         description: "A sharp dolphin vs shark intelligence comparison looking at cognition, social learning, communication, sensory processing, and what 'smarter' should mean in biology.",
         quickVerdict: "Dolphin is clearly smarter in flexible cognition, communication, and social coordination. Shark remains an elite sensory hunter, but intelligence and predatory efficiency are not the same thing.",
         shortAnswer: [
@@ -966,7 +970,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "leopard",
         animalBSlug: "cheetah",
         comparisonType: "battle",
-        title: "Leopard vs Cheetah: Which Big Cat Has the Real Edge?",
+        title: "Leopard vs Cheetah: Differences and Who Would Win",
         description: "A realistic leopard vs cheetah comparison covering power, speed, tree use, stealth, and why the faster cat is not usually the better fighter.",
         quickVerdict: "Leopard usually has the edge in a direct fight. Cheetah is faster in open ground, but leopard is stronger, more durable, and better built for close-range violence.",
         relatedArticles: [
@@ -1081,7 +1085,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lion",
         animalBSlug: "spotted-hyena",
         comparisonType: "battle",
-        title: "Lion vs Hyena: Who Really Has the Edge?",
+        title: "Lion vs Hyena: Who Would Win in a Fight?",
         description: "A real-biology lion vs hyena comparison covering one-on-one force, clan pressure, carcass contests, and why lions still treat hyenas seriously.",
         quickVerdict: "Lion usually has the edge in a direct one-on-one clash. Spotted hyenas stay dangerous because they are durable, persistent, and far more formidable once the matchup involves clan pressure rather than a solo contest.",
         shortAnswer: [
@@ -1189,7 +1193,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "polar-bear",
         animalBSlug: "tiger",
         comparisonType: "battle",
-        title: "Bear vs Tiger: Who Has the Edge in a Real Clash?",
+        title: "Bear vs Tiger: Who Would Win in a Fight?",
         description: "A big-bear vs tiger comparison using the polar bear as the bear-side model, covering mass, power, terrain, and why the answer shifts between open ground and ambush terrain.",
         quickVerdict: "Tiger is the safer general answer in a one-on-one land clash when stealth, timing, and clean engagement matter. A very large bear represented here by the polar bear changes the problem through sheer mass and durability, especially in open, cold terrain.",
         shortAnswer: [
@@ -1297,7 +1301,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "red-fox",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Fox vs Wolf: Who Actually Has the Edge?",
+        title: "Fox vs Wolf: Who Would Win in a Fight?",
         description: "A practical fox vs wolf comparison covering direct confrontation, intelligence, adaptability, and why the fight answer is simpler than the overall survival comparison.",
         quickVerdict: "Wolf clearly has the edge in a direct fight. Fox stays impressive because it is more about adaptability, stealth, and opportunistic survival than trying to overpower larger canids.",
         shortAnswer: [
@@ -1405,7 +1409,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "reticulated-python",
         animalBSlug: "king-cobra",
         comparisonType: "battle",
-        title: "Python vs Cobra: Which Snake Has the Better Real-World Edge?",
+        title: "Python vs Cobra: Who Would Win in a Fight?",
         description: "A biologically grounded python vs cobra comparison covering constriction, venom, reach, first strike, and what happens if either snake gets its preferred fight.",
         quickVerdict: "King cobra has the edge if it lands the first clean venom strike at range. Python has the edge once it turns the fight into body contact and constriction.",
         shortAnswer: [
@@ -1513,7 +1517,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "elephant",
         animalBSlug: "white-rhinoceros",
         comparisonType: "battle",
-        title: "Elephant vs Rhino: Who Has the Real Edge?",
+        title: "Elephant vs Rhino: Who Would Win in a Fight?",
         description: "A grounded elephant vs rhino comparison covering size, charge mechanics, temperament, footing, and what changes between a frontal clash and space-control standoff.",
         quickVerdict: "Elephant usually has the overall edge through greater size, reach, and control of space. A rhino still remains dangerous because its charge is compact, forceful, and built for brutal short-range disruption.",
         shortAnswer: [
@@ -1621,7 +1625,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "octopus",
         animalBSlug: "crab",
         comparisonType: "battle",
-        title: "Octopus vs Crab: Which Sea Fighter Has the Better Edge?",
+        title: "Octopus vs Crab: Who Would Win in a Fight?",
         description: "A real-biology octopus vs crab comparison covering intelligence, shell armor, grip control, ambush angle, and why the answer shifts with space and shelter.",
         quickVerdict: "Octopus usually has the edge because intelligence, flexibility, and grip-based control are excellent answers to a crab's shell and claws. Crab still becomes dangerous in tight defensive terrain where armor and pinch range matter more.",
         shortAnswer: [
@@ -1729,7 +1733,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "mantis-shrimp",
         animalBSlug: "boxer-crab",
         comparisonType: "battle",
-        title: "Mantis Shrimp vs Boxer Crab: Which Reef Fighter Has the Better Design?",
+        title: "Mantis Shrimp vs Boxer Crab: Who Would Win in a Fight?",
         description: "A reef-scale mantis shrimp vs boxer crab comparison covering strike speed, defensive symbiosis, close-range control, and what happens when tiny specialists meet.",
         quickVerdict: "Mantis shrimp usually has the edge because its strike power and sensory advantage are extreme. Boxer crab stays interesting because its anemone-based defense can still punish careless close contact.",
         shortAnswer: [
@@ -1837,7 +1841,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "gorilla",
         animalBSlug: "tiger",
         comparisonType: "battle",
-        title: "Gorilla vs Tiger: Who Actually Has the Edge?",
+        title: "Gorilla vs Tiger: Who Would Win in a Fight?",
         description: "A real-biology gorilla vs tiger comparison covering strength, predatory design, close contact, and why raw power is not the same as combat specialization.",
         quickVerdict: "Tiger usually has the edge because it is a true apex ambush predator built for finishing violent encounters. Gorilla is enormously strong, but its body and behavior are not specialized for predator-style combat in the same way.",
         shortAnswer: [
@@ -1945,7 +1949,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "jaguar",
         animalBSlug: "crocodile",
         comparisonType: "battle",
-        title: "Jaguar vs Crocodile: Who Has the Edge at the Waterline?",
+        title: "Jaguar vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded jaguar vs crocodile comparison covering ambush timing, bite mechanics, shoreline control, and how the answer shifts between bank and water.",
         quickVerdict: "Jaguar usually has the edge on land or at the immediate waterline where stealth and skull-crushing bite placement matter. Crocodile becomes more dangerous as the fight shifts deeper into its own water-heavy ambush zone.",
         shortAnswer: [
@@ -2053,11 +2057,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "red-tailed-hawk",
         animalBSlug: "eagle",
         comparisonType: "battle",
-        title: "Hawk vs Eagle: Which Raptor Has the Better Edge?",
+        title: "Hawk vs Eagle: Differences and Who Would Win",
         description: "A hawk vs eagle comparison using the red-tailed hawk as the hawk-side model, covering power, soaring control, contact authority, and open-sky engagement.",
-        quickVerdict: "Eagle usually has the edge because it brings more size, grip strength, and direct-contact authority. The hawk remains impressive as a flexible aerial hunter, but not usually the heavier fighter in a clash like this.",
+        quickVerdict: "An eagle would usually beat a hawk: eagles are much larger, often several times heavier, with bigger feet, talons and beaks. Hawks are smaller, lighter and often more agile in the air.",
         shortAnswer: [
-            "The hawk side here is modeled through the red-tailed hawk, which gives the page a real species anchor instead of a vague generic category. Red-tailed hawks are excellent aerial hunters, but eagles operate at a larger power scale with more grip authority and broader close-range dominance.",
+            "Hawks and eagles belong to the same bird family, Accipitridae, so the difference is mostly size and build rather than a strict scientific line. Eagles are bigger: a bald or golden eagle has a wingspan of around 1.8 to 2.3 m, while a red-tailed hawk, the hawk used on this page, spans roughly 1.1 to 1.4 m. Eagles also have heavier, deeper beaks, larger feet and long, broad wings for soaring, while hawks are lighter and turn more tightly. In a fight, the eagle's size and grip usually win.",
             "That makes eagle the safer direct answer. The hawk keeps value through adaptability and efficient surveillance, not by out-muscling a larger eagle in most contact scenarios."
         ],
         whyThisMatchupIsInteresting: [
@@ -2134,8 +2138,16 @@ const challengeData: ChallengeEntry[] = [
         ],
         faq: [
             {
-                question: "Who wins, hawk or eagle?",
-                answer: "Using the red-tailed hawk as the hawk-side model, the eagle usually gets the edge because it is larger and stronger in direct contact."
+                question: "What is the difference between a hawk and an eagle?",
+                answer: "Mainly size and build. Both belong to the family Accipitridae, but eagles are much larger, with wingspans around 1.8 to 2.3 m for bald and golden eagles versus about 1.1 to 1.4 m for a red-tailed hawk. Eagles have heavier, deeper beaks, bigger feet and talons, and long, broad wings for soaring. Hawks are lighter and more manoeuvrable, especially the forest hawks."
+            },
+            {
+                question: "How can you tell a hawk from an eagle in flight?",
+                answer: "Look at size, wing shape and head. An eagle in flight looks huge, with long, broad, plank-like wings and spread \"fingers\" at the wingtips, and a large head and beak that project well in front of the wings. A red-tailed hawk is noticeably smaller, with shorter, rounder wings, a fan-shaped tail and a smaller head, and it tends to flap more often."
+            },
+            {
+                question: "Who would win, a hawk or an eagle?",
+                answer: "The eagle, in almost every case. Eagles are often several times heavier than hawks, with larger feet, a stronger grip and a bigger beak, which are the tools raptors fight with. A hawk can use agility to escape or harass a larger bird, and smaller raptors often mob eagles, but in direct contact the eagle's size decides it. Eagles also sometimes steal prey from hawks."
             },
             {
                 question: "Is a hawk weaker than an eagle?",
@@ -2151,7 +2163,9 @@ const challengeData: ChallengeEntry[] = [
             "hawk vs eagle who wins",
             "hawk vs eagle differences",
             "red tailed hawk vs eagle",
-            "eagle vs hawk fight"
+            "eagle vs hawk fight",
+            "difference between hawk and eagle",
+            "hawk vs eagle size"
         ],
         systemsSpeciesSlugs: ["red-tailed-hawk", "eagle"],
         relatedChallengeSlugs: ["eagle-vs-falcon", "lion-vs-hyena"]
@@ -2161,7 +2175,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "orca",
         animalBSlug: "great-white-shark",
         comparisonType: "battle",
-        title: "Orca vs Great White Shark: Who Has the Ocean Edge?",
+        title: "Orca vs Great White Shark: Who Would Win in a Fight?",
         description: "A premium orca vs great white shark comparison covering size, intelligence, social hunting, turning control, and why this is one of the clearest predator mismatches in marine biology.",
         quickVerdict: "Orca usually has the edge. Size, intelligence, social coordination, and attack control make it the more complete apex system against a great white shark.",
         shortAnswer: [
@@ -2269,11 +2283,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "honey-badger",
         animalBSlug: "snake",
         comparisonType: "battle",
-        title: "Honey Badger vs Snake: Which Side Usually Has the Edge?",
+        title: "Honey Badger vs Snake: Who Wins, and Is It Immune to Venom?",
         description: "A grounded honey badger vs snake comparison covering toughness, strike risk, prey handling, terrain, and why a generic snake page still needs scenario nuance.",
-        quickVerdict: "Honey badger usually has the edge against many snakes because toughness, aggression, and prey-handling skill make it a specialized raid animal. Snake still remains dangerous because one clean venomous strike can flip the outcome fast.",
+        quickVerdict: "Honey badger usually wins against most snakes, including cobras: it is a skilled snake hunter with thick, loose skin and partial venom resistance. A clean bite from a large venomous snake can still knock it out or kill it.",
         shortAnswer: [
-            "This page uses a broad snake model because the intended query is generic and the fight logic changes a lot across venomous and non-venomous species. The honey badger still gets the safer headline because it is unusually willing and unusually built to handle defended prey.",
+            "Honey badgers regularly hunt snakes, including cobras and puff adders, so in most real encounters the badger is the predator and the badger wins. Three things help it: thick, loose skin that is hard to bite through cleanly, relentless persistence, and partial resistance to snake neurotoxins. That resistance is not immunity, so a large venomous snake that lands a solid bite can still win.",
             "That does not mean every snake loses cleanly. A venomous species with good strike distance, timing, and cover can still make the matchup dangerous or fatal."
         ],
         whyThisMatchupIsInteresting: [
@@ -2354,6 +2368,18 @@ const challengeData: ChallengeEntry[] = [
                 answer: "Honey badger usually gets the edge overall, but a venomous snake can still reverse the outcome with one clean strike."
             },
             {
+                question: "Is a honey badger immune to snake venom?",
+                answer: "No, but it is partly resistant. Honey badgers carry mutations in the nicotinic acetylcholine receptor, the muscle receptor that cobra-type neurotoxins attack, so those toxins bind less well. Drabeck and colleagues (2015) showed the same kind of resistance evolved separately in mongooses, hedgehogs and pigs. A serious bite can still knock a badger unconscious: badgers have been filmed collapsing after a bite and recovering hours later, and a large enough dose can kill."
+            },
+            {
+                question: "Can a honey badger kill a cobra?",
+                answer: "Yes. Cobras are among the venomous snakes honey badgers regularly hunt and eat in Africa. The badger tracks the snake, often digs it out of a burrow, and goes for the head while its thick, loose skin absorbs defensive strikes. Partial venom resistance lets it survive bites that would kill many mammals its size, although a well-placed bite can still disable it for hours."
+            },
+            {
+                question: "Can a honey badger kill a black mamba?",
+                answer: "It can, but a black mamba is one of the riskiest snakes a honey badger can take on. Mambas are fast, often strike more than once, and deliver a large dose of potent neurotoxic venom, so the badger's partial resistance may not be enough. Honey badgers are known snake predators across the mamba's range, yet a fight with a large adult mamba is genuinely dangerous for the badger."
+            },
+            {
                 question: "Why do honey badgers do well against snakes?",
                 answer: "Because they combine toughness, persistence, loose skin, and a willingness to keep forcing close contact."
             },
@@ -2367,7 +2393,10 @@ const challengeData: ChallengeEntry[] = [
             "honey badger vs snake who wins",
             "honey badger vs snake fight",
             "snake vs honey badger",
-            "does honey badger beat snakes"
+            "does honey badger beat snakes",
+            "is a honey badger immune to snake venom",
+            "can a honey badger kill a cobra",
+            "honey badger vs black mamba"
         ],
         systemsSpeciesSlugs: ["honey-badger", "snake"],
         relatedChallengeSlugs: ["python-vs-cobra", "komodo-dragon-vs-king-cobra"]
@@ -2377,7 +2406,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "ostrich",
         animalBSlug: "cheetah",
         comparisonType: "speed",
-        title: "Ostrich vs Cheetah Speed: Which Is Actually Faster?",
+        title: "Ostrich vs Cheetah: Which Is Faster?",
         description: "A grounded ostrich vs cheetah speed comparison covering acceleration, top speed, endurance, and why open-ground running is not just one number.",
         quickVerdict: "Cheetah owns the cleaner top-speed headline, but ostrich is a real long-stride runner and can stay competitive when the question shifts from explosive pursuit to sustained open-ground movement.",
         shortAnswer: [
@@ -2462,7 +2491,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lion",
         animalBSlug: "leopard",
         comparisonType: "battle",
-        title: "Lion vs Leopard: Who Wins the Real Matchup?",
+        title: "Lion vs Leopard: Who Would Win in a Fight?",
         description: "A biology-first lion vs leopard comparison covering size, force, trees, pressure, and why these cats solve survival very differently.",
         quickVerdict: "Lion is the stronger direct-fight answer because it is much larger and more built for violent dominance. Leopard only improves when the scenario rewards cover, escape options, or vertical terrain instead of a clean fight.",
         shortAnswer: [
@@ -2547,7 +2576,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lion",
         animalBSlug: "elephant",
         comparisonType: "battle",
-        title: "Lion vs Elephant: What Happens in a Real Encounter?",
+        title: "Lion vs Elephant: Who Would Win in a Fight?",
         description: "A grounded lion vs elephant comparison covering scale, group pressure, calves versus adults, and why this query depends on age and circumstance.",
         quickVerdict: "Adult elephant is the stronger overall answer. Lion only becomes realistic when the scenario involves pride pressure, vulnerability, exhaustion, or a younger and less secure elephant.",
         shortAnswer: [
@@ -2632,7 +2661,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lion",
         animalBSlug: "gorilla",
         comparisonType: "battle",
-        title: "Lion vs Gorilla: Which Animal Actually Has the Edge?",
+        title: "Lion vs Gorilla: Who Would Win in a Fight?",
         description: "A real-biology lion vs gorilla comparison covering predatory hardware, primate strength, terrain, and why strength alone is not the whole answer.",
         quickVerdict: "Lion is the stronger overall fight answer because it is a dedicated large-prey predator. Gorilla has huge strength, but it is not built around finishing predator-level combat under pressure.",
         shortAnswer: [
@@ -2717,7 +2746,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "tiger",
         animalBSlug: "leopard",
         comparisonType: "battle",
-        title: "Tiger vs Leopard: How Big Is the Real Gap?",
+        title: "Tiger vs Leopard: Who Would Win in a Fight?",
         description: "A grounded tiger vs leopard comparison covering size, ambush talent, terrain fit, and why this is not a close direct-fight matchup.",
         quickVerdict: "Tiger is the stronger direct-fight answer by a wide margin. Leopard stays relevant through stealth, flexibility, and escape options, not through matching tiger force head-on.",
         shortAnswer: [
@@ -2802,7 +2831,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "tiger",
         animalBSlug: "jaguar",
         comparisonType: "battle",
-        title: "Tiger vs Jaguar: Which Big Cat Has the Edge?",
+        title: "Tiger vs Jaguar: Who Would Win in a Fight?",
         description: "A real tiger vs jaguar comparison covering size, bite power, ambush design, and why the jaguar's famous force still meets a bigger cat.",
         quickVerdict: "Tiger is the stronger overall fight answer because it is significantly larger while still being an elite ambush predator. Jaguar remains dangerous because its bite mechanics and close-range force are unusually efficient.",
         shortAnswer: [
@@ -2887,11 +2916,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "leopard",
         animalBSlug: "jaguar",
         comparisonType: "battle",
-        title: "Leopard vs Jaguar: Which Spotted Cat Wins?",
+        title: "Jaguar vs Leopard: Differences and Who Would Win",
         description: "A biology-first leopard vs jaguar comparison covering body build, bite mechanics, terrain, and why these similar-looking cats fight very differently.",
-        quickVerdict: "Jaguar is the stronger overall fight answer because it is more power-dense and more built for heavy close-range finishing. Leopard stays competitive through agility, climbing, and flexible use of cover.",
+        quickVerdict: "A jaguar would usually beat a leopard: it is stockier and more muscular, with the strongest bite for its size of any big cat. Tell them apart by the jaguar's rosettes, which have spots inside.",
         shortAnswer: [
-            "The visual similarity fools people. Jaguar is the heavier, more crushing cat. Leopard is the lighter, more adaptable tree-linked generalist."
+            "Jaguars and leopards look alike, but they are easy to tell apart once you know where to look. Jaguar rosettes are larger and often have one or more dark spots in the centre; leopard rosettes are smaller, more tightly packed and have no central spot. Jaguars are stockier, with a broader head, deeper chest and shorter tail, and they live only in the Americas, while leopards live in Africa and Asia. In a fight, the heavier jaguar, which has the strongest bite relative to its size of any big cat, would usually win."
         ],
         whyThisMatchupIsInteresting: [
             "It is one of the best cat-comparison pages because it separates lookalike confusion from real biomechanical difference."
@@ -2950,8 +2979,16 @@ const challengeData: ChallengeEntry[] = [
         ],
         faq: [
             {
-                question: "Who wins, leopard or jaguar?",
-                answer: "Jaguar usually gets the edge because it is heavier and more built for crushing close-range force."
+                question: "What is the difference between a jaguar and a leopard?",
+                answer: "Look at the spots and the build. Jaguar rosettes are larger, with dark spots inside them, while leopard rosettes are smaller, closer together and empty in the middle. Jaguars are stockier and more muscular, with a broader head and shorter tail; leopards are slimmer and longer-limbed. Range settles it too: jaguars live in the Americas, leopards in Africa and Asia, so the two never meet in the wild."
+            },
+            {
+                question: "Who would win, a jaguar or a leopard?",
+                answer: "The jaguar, in most cases. Jaguars are generally heavier and more muscular than leopards, and they have the strongest bite relative to body size of any big cat, strong enough to pierce turtle shells and the skulls of their prey. Leopards are agile, superb climbers and very strong for their weight, but in a close fight the jaguar's extra mass and bite would usually decide it."
+            },
+            {
+                question: "Is a black panther a jaguar or a leopard?",
+                answer: "It can be either. \"Black panther\" is not a separate species but a name for melanistic, all-black jaguars in the Americas or leopards in Africa and Asia. Their rosettes are still there and can often be seen in good light. So a black panther in South America is a jaguar, while one in India or Africa is a leopard."
             },
             {
                 question: "Why do people confuse jaguars and leopards?",
@@ -2962,7 +2999,10 @@ const challengeData: ChallengeEntry[] = [
             "leopard vs jaguar",
             "leopard vs jaguar who wins",
             "difference between leopard and jaguar",
-            "jaguar vs leopard fight"
+            "jaguar vs leopard fight",
+            "jaguar vs leopard differences",
+            "jaguar vs leopard who would win",
+            "black panther jaguar or leopard"
         ],
         systemsSpeciesSlugs: ["leopard", "jaguar"],
         relatedChallengeSlugs: ["tiger-vs-jaguar", "lion-vs-leopard"]
@@ -2972,7 +3012,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "cougar",
         animalBSlug: "leopard",
         comparisonType: "battle",
-        title: "Cougar vs Leopard: Which Cat Has the Better Fight Profile?",
+        title: "Cougar vs Leopard: Who Would Win in a Fight?",
         description: "A grounded cougar vs leopard comparison covering build, climbing, adaptability, and how two mid-to-large ambush cats differ in direct contact.",
         quickVerdict: "Leopard usually has the cleaner fight edge because it is more compact, more armed for violent close contact, and more comfortable turning cover into advantage. Cougar is still a powerful ambush cat with real reach and jumping ability.",
         shortAnswer: [
@@ -3057,7 +3097,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "cougar",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Cougar vs Wolf: Which Predator Has the Edge?",
+        title: "Cougar vs Wolf: Who Would Win in a Fight?",
         description: "A biology-first cougar vs wolf comparison covering solo combat, pack context, terrain, and why this depends on whether the matchup is one body or a social system.",
         quickVerdict: "Cougar gets the edge in a clean one-on-one because the cat is built for ambush, grappling, and fast finishing contact. Wolf becomes more dangerous the moment the scenario includes pack pressure, pursuit, or repeated harassment.",
         shortAnswer: [
@@ -3142,7 +3182,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "bobcat",
         animalBSlug: "coyote",
         comparisonType: "battle",
-        title: "Bobcat vs Coyote: Which One Has the Edge?",
+        title: "Bobcat vs Coyote: Who Would Win in a Fight?",
         description: "A grounded bobcat vs coyote comparison covering ambush, size, open ground, and the difference between cat precision and canid pressure.",
         quickVerdict: "Coyote often gets the overall edge in open direct conditions because it is usually larger and more durable in a straightforward contest. Bobcat improves sharply in cover, surprise, and short explosive contact.",
         shortAnswer: [
@@ -3227,7 +3267,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "gorilla",
         animalBSlug: "chimpanzee",
         comparisonType: "strength",
-        title: "Gorilla vs Chimpanzee: Which Primate Is Stronger?",
+        title: "Gorilla vs Chimpanzee: Which Is Stronger?",
         description: "A grounded gorilla vs chimpanzee comparison focused on strength, body design, aggression, and why a smaller ape can still stay dangerous.",
         quickVerdict: "Gorilla is the stronger overall answer by a wide margin. Chimpanzee stays dangerous through speed, social aggression, and unpredictability, but it does not match gorilla scale.",
         shortAnswer: [
@@ -3312,11 +3352,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "gorilla",
         animalBSlug: "orangutan",
         comparisonType: "strength",
-        title: "Gorilla vs Orangutan: Which Ape Is Stronger?",
+        title: "Gorilla vs Orangutan: Which Is Stronger?",
         description: "A biology-first gorilla vs orangutan comparison covering body plan, raw power, climbing, and why these apes express strength very differently.",
-        quickVerdict: "Gorilla is the stronger overall answer because it brings much more total mass and collision power. Orangutan remains extraordinary in arm strength and climbing control, but it is built for the trees, not for overpowering a gorilla on the ground.",
+        quickVerdict: "The gorilla is stronger overall: an adult male is roughly twice the weight of a large male orangutan, with far more total muscle. Orangutans have remarkable arm and grip strength for climbing, but on the ground the gorilla wins.",
         shortAnswer: [
-            "Both apes are immensely strong, but they apply that strength differently. Gorilla is the heavier ground-dominant answer. Orangutan is the more arboreal and leverage-rich one."
+            "The gorilla is the stronger ape. Adult male gorillas (silverbacks) commonly weigh around 140 to 200 kg, while adult male orangutans are usually well under 100 kg, so the gorilla brings far more total muscle and mass. Orangutans are still extraordinarily strong for their size, especially in the arms, shoulders and grip, because they spend most of their lives hanging and climbing in the forest canopy."
         ],
         whyThisMatchupIsInteresting: [
             "It is a good page because readers often collapse all ape strength into one thing when the real answer is strongly shaped by habitat."
@@ -3376,18 +3416,24 @@ const challengeData: ChallengeEntry[] = [
         faq: [
             {
                 question: "Who is stronger, gorilla or orangutan?",
-                answer: "Gorilla overall."
+                answer: "The gorilla. An adult male gorilla commonly weighs 140 to 200 kg, about twice a large male orangutan, and that extra muscle mass makes it stronger in total. Orangutans have exceptional arm and grip strength for hauling their bodies through the trees, so pound for pound the gap narrows, but no controlled strength tests exist that would put an orangutan ahead overall."
             },
             {
-                question: "Are orangutans still incredibly strong?",
-                answer: "Yes. Their climbing and arm strength are exceptional, even if the gorilla still wins the overall strength comparison."
+                question: "Would a gorilla beat an orangutan in a fight?",
+                answer: "Almost certainly, if the fight happened on the ground. The gorilla is much heavier, and male gorillas use chest-beating displays, charges and powerful bites against rivals. An orangutan would do better in the trees, where its long arms and climbing skill matter most. In reality they never meet: gorillas live in central Africa, while orangutans live only on Borneo and Sumatra."
+            },
+            {
+                question: "How strong is an orangutan?",
+                answer: "Very strong for its size. An adult male orangutan has an arm span that can exceed 2 metres and spends much of its life supporting its full body weight by its arms, which builds exceptional upper-body and grip strength. Claims that orangutans are a precise number of times stronger than a person are common, but they are rarely based on controlled measurements, so treat any exact multiplier with caution."
             }
         ],
         searchIntents: [
             "gorilla vs orangutan",
             "gorilla vs orangutan stronger",
             "orangutan vs gorilla",
-            "who is stronger gorilla or orangutan"
+            "who is stronger gorilla or orangutan",
+            "gorilla vs orangutan fight",
+            "orangutan vs gorilla who would win"
         ],
         systemsSpeciesSlugs: ["gorilla", "orangutan"],
         relatedChallengeSlugs: ["gorilla-vs-chimpanzee", "chimpanzee-vs-orangutan"]
@@ -3397,7 +3443,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "chimpanzee",
         animalBSlug: "orangutan",
         comparisonType: "strength",
-        title: "Chimpanzee vs Orangutan: Which Ape Has the Better Edge?",
+        title: "Chimpanzee vs Orangutan: Which Is Stronger?",
         description: "A grounded chimpanzee vs orangutan comparison covering power, agility, leverage, and why tree specialists and social apes are hard to compare directly.",
         quickVerdict: "Orangutan gets the stronger pure-strength verdict, while chimpanzee gets the faster, more aggressive, and more socially volatile profile.",
         shortAnswer: [
@@ -3482,7 +3528,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "bonobo",
         animalBSlug: "chimpanzee",
         comparisonType: "intelligence",
-        title: "Bonobo vs Chimpanzee Intelligence: Which Ape Thinks Better?",
+        title: "Bonobo vs Chimpanzee: Differences and Which Is Smarter",
         description: "A grounded bonobo vs chimpanzee intelligence comparison covering social strategy, cooperation, conflict style, and why smarter depends on the task.",
         quickVerdict: "Chimpanzee often gets the edge in tool-use intensity and aggressive problem solving, while bonobo is stronger in social regulation, tolerance, and cooperation. The real answer depends on what kind of intelligence the task rewards.",
         shortAnswer: [
@@ -3567,7 +3613,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "elephant",
         animalBSlug: "hippopotamus",
         comparisonType: "battle",
-        title: "Elephant vs Hippopotamus: Who Wins the Real Matchup?",
+        title: "Elephant vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded elephant vs hippopotamus comparison covering size, bite danger, water, and why a huge herbivore duel still depends on setting.",
         quickVerdict: "Elephant is the stronger overall answer on land because it is larger, taller, and better at controlling space with bulk. Hippopotamus becomes far more dangerous in water-linked chaos where its bite and low heavy body matter more.",
         shortAnswer: [
@@ -3652,7 +3698,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "elephant",
         animalBSlug: "giraffe",
         comparisonType: "strength",
-        title: "Elephant vs Giraffe: Which Giant Has the Stronger Edge?",
+        title: "Elephant vs Giraffe: Which Is Stronger?",
         description: "A grounded elephant vs giraffe comparison covering scale, reach, kicking danger, and what giant herbivore strength really looks like.",
         quickVerdict: "Elephant is the stronger overall answer because it carries much more mass and pushing power. Giraffe stays dangerous through height, kicking, and awkward geometry rather than through direct bulk.",
         shortAnswer: [
@@ -3737,7 +3783,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "hippopotamus",
         animalBSlug: "crocodile",
         comparisonType: "battle",
-        title: "Hippopotamus vs Crocodile: Who Has the Edge at the Waterline?",
+        title: "Hippopotamus vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded hippo vs crocodile comparison covering bite, armor, water control, and why adult size changes the answer sharply.",
         quickVerdict: "Adult hippopotamus usually has the edge because it is massively larger and brutally powerful at close range. Crocodile remains dangerous through ambush, water control, and attacks on smaller or less secure targets.",
         shortAnswer: [
@@ -3822,7 +3868,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "hippopotamus",
         animalBSlug: "white-rhinoceros",
         comparisonType: "battle",
-        title: "Hippopotamus vs Rhino: Which Heavyweight Usually Wins?",
+        title: "Hippopotamus vs Rhino: Who Would Win in a Fight?",
         description: "A grounded hippo vs rhino comparison covering mass, weapon style, land versus water, and why this heavyweight matchup depends on footing.",
         quickVerdict: "On open land, white rhinoceros usually gets the cleaner answer through charge mechanics and horn-first pressure. In water-linked or short messy contact, hippopotamus becomes much more dangerous.",
         shortAnswer: [
@@ -3907,7 +3953,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "giraffe",
         animalBSlug: "lion",
         comparisonType: "battle",
-        title: "Giraffe vs Lion: Can a Giraffe Actually Win?",
+        title: "Giraffe vs Lion: Who Would Win in a Fight?",
         description: "A grounded giraffe vs lion comparison covering kicks, scale, pride pressure, and why adult giraffes are not easy targets.",
         quickVerdict: "Adult giraffe is far more dangerous than people assume and can absolutely repel or injure lions. Lion still gets the better overall predation answer once pride pressure, target vulnerability, or repeated attacks enter the story.",
         shortAnswer: [
@@ -3992,7 +4038,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "moose",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Moose vs Wolf: Which Side Usually Wins?",
+        title: "Moose vs Wolf: Who Would Win in a Fight?",
         description: "A grounded moose vs wolf comparison covering size, kicking danger, pack pressure, snow, and why single-wolf and pack-wolf answers are different.",
         quickVerdict: "Adult moose is the stronger one-on-one answer. Wolves become the stronger overall predation answer when the scenario includes a pack, winter pressure, or a target that cannot move cleanly.",
         shortAnswer: [
@@ -4077,7 +4123,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "moose",
         animalBSlug: "elk",
         comparisonType: "strength",
-        title: "Moose vs Elk: Which Deer Giant Is Stronger?",
+        title: "Moose vs Elk: Differences and Which Is Stronger",
         description: "A grounded moose vs elk comparison covering body size, antlers, habitat, and why the biggest deer page is mostly about scale.",
         quickVerdict: "Moose is the stronger overall answer because it is usually much larger and heavier. Elk stays more agile and more group-oriented, but it does not usually match full moose scale.",
         shortAnswer: [
@@ -4162,7 +4208,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "deer",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Deer vs Wolf: Which Side Usually Wins?",
+        title: "Deer vs Wolf: Who Would Win in a Fight?",
         description: "A grounded deer vs wolf comparison covering speed, alertness, pack pressure, and how prey survival differs from duel logic.",
         quickVerdict: "Wolf is the stronger overall predation answer, but deer survives plenty of encounters through awareness, escape timing, and terrain. As a one-on-one body contest, the deer is more dangerous than people often assume.",
         shortAnswer: [
@@ -4247,7 +4293,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "deer",
         animalBSlug: "coyote",
         comparisonType: "battle",
-        title: "Deer vs Coyote: What Does the Real Matchup Look Like?",
+        title: "Deer vs Coyote: Who Would Win in a Fight?",
         description: "A grounded deer vs coyote comparison covering speed, vulnerability, solo predator limits, and why age class matters more here than in headline fight pages.",
         quickVerdict: "Healthy adult deer usually has the edge over a single coyote because size, speed, and kicking danger are real. Coyote improves against younger, weaker, or badly positioned deer and gets stronger with numbers.",
         shortAnswer: [
@@ -4332,7 +4378,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "elk",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Elk vs Wolf: Which Side Has the Real Advantage?",
+        title: "Elk vs Wolf: Who Would Win in a Fight?",
         description: "A grounded elk vs wolf comparison covering herd defense, pack hunting, season, and why predation is different from a duel.",
         quickVerdict: "A healthy adult elk is the stronger one-body answer, but wolves get the stronger overall predation verdict because pack coordination and winter pressure change the problem.",
         shortAnswer: [
@@ -4417,7 +4463,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "reindeer",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Reindeer vs Wolf: Which Side Usually Comes Out Ahead?",
+        title: "Reindeer vs Wolf: Who Would Win in a Fight?",
         description: "A grounded reindeer vs wolf comparison covering herd movement, snow, endurance, and why Arctic-style prey dynamics are about conditions as much as power.",
         quickVerdict: "Wolf gets the stronger overall predation verdict, especially in snow and under pack pressure. Reindeer survives through herd movement, early detection, and terrain knowledge rather than through overpowering wolves.",
         shortAnswer: [
@@ -4502,7 +4548,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "wolf",
         animalBSlug: "coyote",
         comparisonType: "battle",
-        title: "Wolf vs Coyote: Which Canid Has the Edge?",
+        title: "Wolf vs Coyote: Who Would Win in a Fight?",
         description: "A grounded wolf vs coyote comparison covering size, pack context, territory, and why this is usually not a fair one-on-one matchup.",
         quickVerdict: "Wolf is the stronger overall answer because it is larger, more forceful, and more dangerous in direct contact. Coyote survives through flexibility and human-edge adaptability, not by matching wolf scale.",
         shortAnswer: [
@@ -4587,7 +4633,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "wolf",
         animalBSlug: "african-wild-dog",
         comparisonType: "battle",
-        title: "Wolf vs African Wild Dog: Which Pack Hunter Has the Better Edge?",
+        title: "Wolf vs African Wild Dog: Who Would Win in a Fight?",
         description: "A grounded wolf vs African wild dog comparison covering bite force, endurance, social hunting, and why two pack predators can still solve hunting differently.",
         quickVerdict: "Wolf gets the slight overall edge in direct physical confrontation because it is heavier and more robust. African wild dog remains exceptional in coordinated pursuit and group hunting efficiency.",
         shortAnswer: [
@@ -4672,7 +4718,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "african-wild-dog",
         animalBSlug: "spotted-hyena",
         comparisonType: "battle",
-        title: "African Wild Dog vs Hyena: Which Hunter Has the Edge?",
+        title: "African Wild Dog vs Hyena: Who Would Win in a Fight?",
         description: "A grounded African wild dog vs hyena comparison covering coordination, bite power, scavenging conflict, and why body force still matters.",
         quickVerdict: "Spotted hyena gets the edge in direct physical conflict because it is tougher and more built for brutal contact. African wild dog stays exceptional in pure pack-hunt coordination and endurance pursuit.",
         shortAnswer: [
@@ -4757,7 +4803,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "dhole",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Dhole vs Wolf: Which Wild Canid Has the Better Matchup?",
+        title: "Dhole vs Wolf: Who Would Win in a Fight?",
         description: "A grounded dhole vs wolf comparison covering size, pack behavior, terrain, and how Asian and northern canids solve predation differently.",
         quickVerdict: "Wolf gets the stronger direct-fight verdict because it is larger and more robust. Dhole stays impressive through pack cohesion, persistence, and coordinated pursuit in rougher terrain.",
         shortAnswer: [
@@ -4842,7 +4888,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "fox",
         animalBSlug: "coyote",
         comparisonType: "battle",
-        title: "Fox vs Coyote: Which Canid Comes Out Ahead?",
+        title: "Fox vs Coyote: Who Would Win in a Fight?",
         description: "A grounded fox vs coyote comparison covering size, cunning, edge habitats, and why this is mostly a scale mismatch.",
         quickVerdict: "Coyote is the stronger overall answer because it is larger, tougher, and much better suited to a direct confrontation. Fox stays successful through stealth, speed, and edge-country opportunism rather than through dominance.",
         shortAnswer: [
@@ -4927,7 +4973,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "honey-badger",
         animalBSlug: "wolverine",
         comparisonType: "battle",
-        title: "Honey Badger vs Wolverine: Which Tough Mammal Has the Edge?",
+        title: "Honey Badger vs Wolverine: Who Would Win in a Fight?",
         description: "A grounded honey badger vs wolverine comparison covering toughness, bite, climate, and why both animals are famous for refusing easy outcomes.",
         quickVerdict: "Wolverine gets the slight overall edge through heavier build, stronger cold-country durability, and brutal persistence. Honey badger stays fully dangerous through aggression, digging power, and willingness to force ugly contact.",
         shortAnswer: [
@@ -5012,7 +5058,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "wolverine",
         animalBSlug: "wolf",
         comparisonType: "battle",
-        title: "Wolverine vs Wolf: Which Predator Has the Better Edge?",
+        title: "Wolverine vs Wolf: Who Would Win in a Fight?",
         description: "A grounded wolverine vs wolf comparison covering size, intimidation, toughness, and why one-on-one is not the same as pack pressure.",
         quickVerdict: "Wolf gets the cleaner overall one-on-one answer through larger size and more complete predatory hardware. Wolverine stays dangerous because it is unusually hard to intimidate or finish cleanly.",
         shortAnswer: [
@@ -5097,7 +5143,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "eagle",
         animalBSlug: "owl",
         comparisonType: "battle",
-        title: "Eagle vs Owl: Which Bird of Prey Has the Edge?",
+        title: "Eagle vs Owl: Who Would Win in a Fight?",
         description: "A grounded eagle vs owl comparison covering daylight power, night hunting, grip strength, and why the answer changes with time and space.",
         quickVerdict: "Eagle gets the stronger daylight open-air verdict through size, forward force, and daytime control. Owl improves sharply in low light and close surprise conditions where silence and night sensing matter more.",
         shortAnswer: [
@@ -5182,7 +5228,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "bald-eagle",
         animalBSlug: "crowned-eagle",
         comparisonType: "battle",
-        title: "Bald Eagle vs Crowned Eagle: Which Eagle Has the Better Edge?",
+        title: "Bald Eagle vs Crowned Eagle: Who Would Win in a Fight?",
         description: "A grounded bald eagle vs crowned eagle comparison covering body size, forest attack style, and why not all large eagles solve prey the same way.",
         quickVerdict: "Bald eagle gets the broader size and open-space verdict, while crowned eagle becomes far more dangerous in forested ambush contexts where explosive attack on agile prey matters more.",
         shortAnswer: [
@@ -5267,7 +5313,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "peregrine-falcon",
         animalBSlug: "owl",
         comparisonType: "speed",
-        title: "Peregrine Falcon vs Owl: Which Bird Has the Better Edge?",
+        title: "Peregrine Falcon vs Owl: Which Is Faster?",
         description: "A grounded peregrine falcon vs owl comparison covering speed, surprise, light conditions, and why fastest is not always best.",
         quickVerdict: "Peregrine falcon gets the speed and open-air answer by a mile. Owl gets the quieter low-light answer and can become much more relevant when the page shifts from raw speed to surprise in darkness.",
         shortAnswer: [
@@ -5352,7 +5398,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "raven",
         animalBSlug: "crow",
         comparisonType: "intelligence",
-        title: "Raven vs Crow Intelligence: Which Bird Is Smarter?",
+        title: "Raven vs Crow: Differences and Which Is Smarter",
         description: "A grounded raven vs crow intelligence comparison covering problem solving, social behavior, and why both corvids rank so highly.",
         quickVerdict: "There is no clean knockout winner. Ravens often get the edge in complex solo problem solving and object play, while crows often shine in urban adaptation, social flexibility, and tool-linked reputation.",
         shortAnswer: [
@@ -5437,7 +5483,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "eagle",
         animalBSlug: "raven",
         comparisonType: "battle",
-        title: "Eagle vs Raven: Which Bird Has the Better Edge?",
+        title: "Eagle vs Raven: Who Would Win in a Fight?",
         description: "A grounded eagle vs raven comparison covering size, intelligence, harassment, and why a smaller smart bird can still matter around a giant raptor.",
         quickVerdict: "Eagle is the stronger direct-power answer by a huge margin. Raven stays relevant through intelligence, harassment, and aerial boldness, not through matching eagle force.",
         shortAnswer: [
@@ -5522,7 +5568,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "peregrine-falcon",
         animalBSlug: "red-tailed-hawk",
         comparisonType: "speed",
-        title: "Peregrine Falcon vs Red-tailed Hawk: Which Bird Has the Better Speed Edge?",
+        title: "Peregrine Falcon vs Red-tailed Hawk: Which Is Faster?",
         description: "A grounded peregrine falcon vs red-tailed hawk comparison covering speed, soaring, diving, and why these raptors solve flight differently.",
         quickVerdict: "Peregrine falcon is the clear speed winner. Red-tailed hawk remains the better soaring, watching, and broad-habitat control bird rather than the faster one.",
         shortAnswer: [
@@ -5607,7 +5653,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "king-cobra",
         animalBSlug: "black-mamba",
         comparisonType: "battle",
-        title: "King Cobra vs Black Mamba: Which Snake Has the Edge?",
+        title: "King Cobra vs Black Mamba: Who Would Win in a Fight?",
         description: "A grounded king cobra vs black mamba comparison covering venom, range, posture, and why anti-snake specialization matters.",
         quickVerdict: "King cobra gets the slight overall edge because it is built to handle other snakes and can fight from a high controlled posture. Black mamba remains terrifying through speed, strike delivery, and lethal venom.",
         shortAnswer: [
@@ -5692,7 +5738,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "green-anaconda",
         animalBSlug: "crocodile",
         comparisonType: "battle",
-        title: "Green Anaconda vs Crocodile: Which Reptile Has the Edge?",
+        title: "Green Anaconda vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded green anaconda vs crocodile comparison covering water, ambush, constriction, and why body position decides everything.",
         quickVerdict: "Crocodile gets the safer overall edge because armor, bite, and water ambush control make it the more complete direct predator. Green anaconda remains dangerous in tight aquatic contact where its body can wrap before the crocodile gets full leverage.",
         shortAnswer: [
@@ -5777,7 +5823,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "green-anaconda",
         animalBSlug: "jaguar",
         comparisonType: "battle",
-        title: "Green Anaconda vs Jaguar: Which Amazon Predator Has the Edge?",
+        title: "Green Anaconda vs Jaguar: Who Would Win in a Fight?",
         description: "A grounded green anaconda vs jaguar comparison covering ambush angles, water, bite force, and why this is one of the strongest wetland predator pages.",
         quickVerdict: "Jaguar gets the overall edge because it is more complete on land and carries a crushing close-range finish. Green anaconda becomes much more dangerous in water-heavy surprise contact where constriction and body control can start first.",
         shortAnswer: [
@@ -5862,7 +5908,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "crocodile-monitor",
         animalBSlug: "komodo-dragon",
         comparisonType: "battle",
-        title: "Crocodile Monitor vs Komodo Dragon: Which Giant Monitor Lizard Has the Edge?",
+        title: "Crocodile Monitor vs Komodo Dragon: Who Would Win?",
         description: "A grounded crocodile monitor vs Komodo dragon comparison covering size, arboreal ability, bite power, and the difference between a forest climber and a heavy island giant.",
         quickVerdict: "Komodo dragon gets the overall edge because it is heavier and more brutally grounded in close combat. Crocodile monitor stays impressive through climbing, length, and speed in vertical forest structure.",
         shortAnswer: [
@@ -5947,7 +5993,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "crocodile",
         animalBSlug: "american-alligator",
         comparisonType: "battle",
-        title: "Crocodile vs Alligator: Which Crocodilian Has the Edge?",
+        title: "Crocodile vs Alligator: Differences and Who Would Win",
         description: "A grounded crocodile vs alligator comparison covering aggression, snout, habitat, and why similar-looking crocodilians still differ in style.",
         quickVerdict: "Crocodile usually gets the slight overall edge because it is often more aggressive and more built for a wider range of salty and open-water environments. Alligator remains massively dangerous and can look better in some freshwater ambush contexts.",
         shortAnswer: [
@@ -6032,7 +6078,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "crocodile",
         animalBSlug: "black-caiman",
         comparisonType: "battle",
-        title: "Crocodile vs Black Caiman: Which Aquatic Predator Has the Edge?",
+        title: "Crocodile vs Black Caiman: Who Would Win in a Fight?",
         description: "A grounded crocodile vs black caiman comparison covering ambush power, habitat overlap, and the difference between two large predatory crocodilians.",
         quickVerdict: "Crocodile gets the slight broader edge through more generalized dominance and a stronger all-round reputation. Black caiman remains extremely dangerous and fully credible in quiet river-ambush contexts.",
         shortAnswer: [
@@ -6117,7 +6163,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "reticulated-python",
         animalBSlug: "green-anaconda",
         comparisonType: "battle",
-        title: "Reticulated Python vs Green Anaconda: Which Giant Snake Has the Edge?",
+        title: "Reticulated Python vs Green Anaconda: Who Would Win?",
         description: "A grounded reticulated python vs green anaconda comparison covering length, bulk, habitat, and why giant snakes still need the right environment.",
         quickVerdict: "Reticulated python gets the length and land-flexibility edge. Green anaconda gets the heavier water-power edge. The real answer depends heavily on whether the fight is mostly terrestrial or mostly aquatic.",
         shortAnswer: [
@@ -6202,7 +6248,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "shark",
         animalBSlug: "bull-shark",
         comparisonType: "battle",
-        title: "Shark vs Bull Shark: What Changes When the Shark Gets More Specialized?",
+        title: "Shark vs Bull Shark: Who Would Win in a Fight?",
         description: "A grounded shark vs bull shark comparison covering broad shark design, freshwater tolerance, aggression, and why one generic page still needs a specific challenger.",
         quickVerdict: "The broad shark category is too large for one neat fight answer, but bull shark stands out as one of the most intimidating all-rounders because it is aggressive, powerful, and unusually flexible across water conditions.",
         shortAnswer: [
@@ -6287,11 +6333,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "great-white-shark",
         animalBSlug: "bull-shark",
         comparisonType: "battle",
-        title: "Great White Shark vs Bull Shark: Which Predator Has the Better Edge?",
+        title: "Bull Shark vs Great White: Size, Bite and Who Would Win",
         description: "A grounded great white shark vs bull shark comparison covering size, bite, habitat range, and why these sharks feel dangerous in different ways.",
-        quickVerdict: "Great white shark gets the stronger overall open-water fight verdict because it is larger and more apex-scaled. Bull shark stays dangerous through aggression, thick build, and unusual freshwater-linked flexibility.",
+        quickVerdict: "A great white would beat a bull shark: it is typically 4 to 5 m long, several times heavier, and has the bigger bite. Bull sharks are tough and aggressive, and they can live in fresh water, where great whites never go.",
         shortAnswer: [
-            "Great white is the larger ocean heavyweight. Bull shark is the more flexible nearshore and river-mouth threat."
+            "In a straight fight the great white shark wins. Adult great whites are typically 4 to 5 m long and large ones weigh well over a tonne, while bull sharks usually reach about 2 to 3.5 m and a few hundred kilograms at most. The bull shark has one of the strongest bites for its size of any shark, but the great white's larger jaws and body still give it the edge. The bigger difference is habitat: bull sharks tolerate fresh water and travel far up rivers, while great whites stay in the sea."
         ],
         whyThisMatchupIsInteresting: [
             "It compares two famous sharks that trigger very different fear profiles in search behavior."
@@ -6351,7 +6397,19 @@ const challengeData: ChallengeEntry[] = [
         faq: [
             {
                 question: "Who wins, great white shark or bull shark?",
-                answer: "Great white shark overall in open water."
+                answer: "The great white overall. It is longer, several times heavier and has the larger bite, so in open water the bull shark is outmatched despite its toughness and aggression."
+            },
+            {
+                question: "Bull shark vs great white: which is bigger?",
+                answer: "The great white, by a wide margin. Adult great whites typically measure 4 to 5 m, large females can approach 6 m, and big individuals weigh more than a tonne. Bull sharks are stocky but shorter, usually about 2 to 3.5 m, with females larger than males. A big great white can therefore be several times the weight of a large bull shark."
+            },
+            {
+                question: "Which shark has the stronger bite, bull shark or great white?",
+                answer: "Relative to body size, the bull shark has one of the most powerful bites measured in any shark, thanks to its broad head and heavy jaw muscles. In absolute terms the great white bites harder because it is so much larger, and its serrated triangular teeth are built to cut chunks from big prey such as seals. So: bull shark pound for pound, great white overall."
+            },
+            {
+                question: "Can bull sharks live in fresh water?",
+                answer: "Yes. Bull sharks are the best-known shark able to move between salt and fresh water, because their kidneys and rectal gland adjust how they handle salt and water. They have been recorded far up rivers such as the Amazon and the Mississippi and have lived in Lake Nicaragua. Great white sharks cannot do this and stay in the ocean, mostly in cooler coastal waters."
             },
             {
                 question: "Why is bull shark still so feared?",
@@ -6362,7 +6420,10 @@ const challengeData: ChallengeEntry[] = [
             "great white shark vs bull shark",
             "bull shark vs great white shark",
             "great white vs bull shark who wins",
-            "which shark is stronger bull shark or great white"
+            "which shark is stronger bull shark or great white",
+            "bull shark vs great white",
+            "bull shark vs great white size",
+            "bull shark vs great white bite force"
         ],
         systemsSpeciesSlugs: ["great-white-shark", "bull-shark"],
         relatedChallengeSlugs: ["orca-vs-great-white-shark", "shark-vs-bull-shark"]
@@ -6372,7 +6433,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "dolphin",
         animalBSlug: "octopus",
         comparisonType: "intelligence",
-        title: "Dolphin vs Octopus Intelligence: Which Animal Thinks Better?",
+        title: "Dolphin vs Octopus: Which Is Smarter?",
         description: "A grounded dolphin vs octopus intelligence comparison covering problem solving, social learning, manipulation, and why marine intelligence is not one thing.",
         quickVerdict: "Dolphin gets the edge in social intelligence, communication, and group learning. Octopus gets the edge in solitary problem solving, manipulation, and flexible immediate adaptation. The smartest answer still depends on the task.",
         shortAnswer: [
@@ -6457,7 +6518,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "cuttlefish",
         animalBSlug: "octopus",
         comparisonType: "intelligence",
-        title: "Cuttlefish vs Octopus Intelligence: Which Cephalopod Thinks Better?",
+        title: "Cuttlefish vs Octopus: Which Is Smarter?",
         description: "A grounded cuttlefish vs octopus intelligence comparison covering camouflage, problem solving, body control, and why both cephalopods deserve serious credit.",
         quickVerdict: "Octopus gets the edge in direct manipulation and puzzle-style problem solving. Cuttlefish gets the edge in visual signaling, camouflage control, and rapid display-based adaptation. The smartest answer depends on the task format.",
         shortAnswer: [
@@ -6542,7 +6603,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "orca",
         animalBSlug: "blue-whale",
         comparisonType: "battle",
-        title: "Orca vs Blue Whale: Which Ocean Giant Has the Real Edge?",
+        title: "Orca vs Blue Whale: Who Would Win in a Fight?",
         description: "A grounded orca vs blue whale comparison covering size, pod pressure, calf vulnerability, and why the largest animal on Earth is still not a simple fight page.",
         quickVerdict: "Healthy adult blue whale is too large for a simple one-on-one 'orca wins' claim. Orca gets the stronger practical predation answer through pod coordination, target selection, and pressure on calves or vulnerable whales.",
         shortAnswer: [
@@ -6627,7 +6688,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "secretary-bird",
         animalBSlug: "king-cobra",
         comparisonType: "battle",
-        title: "Secretary Bird vs King Cobra: Which Snake Hunter Has the Real Edge?",
+        title: "Secretary Bird vs King Cobra: Who Would Win in a Fight?",
         description: "A grounded secretary bird vs king cobra comparison covering open-ground pressure, strike danger, leg reach, and why spacing changes the whole matchup.",
         quickVerdict: "Secretary bird usually has the edge in open ground because its long legs, stomping force, and strike avoidance are built for dangerous snake encounters. King cobra remains live if it lands a clean venom strike before the bird establishes pressure.",
         shortAnswer: [
@@ -6710,7 +6771,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "bald-eagle",
         animalBSlug: "peregrine-falcon",
         comparisonType: "battle",
-        title: "Bald Eagle vs Peregrine Falcon: Power or Speed?",
+        title: "Bald Eagle vs Peregrine Falcon: Who Would Win in a Fight?",
         description: "A bald eagle vs peregrine falcon comparison covering grip strength, stoop speed, collision range, and how contact changes an aerial matchup.",
         quickVerdict: "Peregrine falcon wins the speed question clearly. Bald eagle usually gets the overall edge in a direct clash because size, talon grip, and durability matter more once contact happens.",
         shortAnswer: [
@@ -6793,7 +6854,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "shoebill",
         animalBSlug: "great-blue-heron",
         comparisonType: "battle",
-        title: "Shoebill vs Great Blue Heron: Which Wetland Hunter Has the Edge?",
+        title: "Shoebill vs Great Blue Heron: Who Would Win in a Fight?",
         description: "A shoebill vs great blue heron comparison covering size, strike style, marsh habitat fit, and what changes when a wetland standoff becomes a real clash.",
         quickVerdict: "Shoebill usually has the edge because it is heavier, more imposing, and built for a more forceful strike package. Great blue heron is still the cleaner light-frame specialist in shallower, more delicate hunting situations.",
         shortAnswer: [
@@ -6876,7 +6937,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "rhinoceros-hornbill",
         animalBSlug: "toco-toucan",
         comparisonType: "battle",
-        title: "Rhinoceros Hornbill vs Toco Toucan: Which Bill Specialist Has the Edge?",
+        title: "Rhinoceros Hornbill vs Toco Toucan: Who Would Win?",
         description: "A rhinoceros hornbill vs toco toucan comparison covering bill design, forest movement, body size, and what changes between intimidation and actual contact.",
         quickVerdict: "Rhinoceros hornbill usually has the stronger overall edge because it is larger, heavier, and built for more forceful canopy movement. Toco toucan has an exceptional bill, but it is not the same kind of heavy forest bird.",
         shortAnswer: [
@@ -6959,7 +7020,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "scarlet-macaw",
         animalBSlug: "rhinoceros-hornbill",
         comparisonType: "battle",
-        title: "Scarlet Macaw vs Rhinoceros Hornbill: Which Tropical Bird Has the Stronger Edge?",
+        title: "Scarlet Macaw vs Rhinoceros Hornbill: Who Would Win?",
         description: "A scarlet macaw vs rhinoceros hornbill comparison covering bill force, climbing control, canopy authority, and why these tropical icons are built for different kinds of leverage.",
         quickVerdict: "Rhinoceros hornbill usually has the stronger physical edge because of size and body authority. Scarlet macaw remains highly capable thanks to climbing control and a powerful hooked bill at close range.",
         shortAnswer: [
@@ -7042,7 +7103,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "southern-cassowary",
         animalBSlug: "secretary-bird",
         comparisonType: "battle",
-        title: "Southern Cassowary vs Secretary Bird: Which Ground Bird Wins the Clash?",
+        title: "Southern Cassowary vs Secretary Bird: Who Would Win?",
         description: "A southern cassowary vs secretary bird comparison covering leg strikes, body mass, open-ground control, and how forest space changes the answer.",
         quickVerdict: "Cassowary usually has the edge in a direct close clash because it is heavier, more explosive, and armed with more dangerous close-range leg weaponry. Secretary bird improves when it can keep the fight open and avoid body contact.",
         shortAnswer: [
@@ -7125,7 +7186,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "laughing-kookaburra",
         animalBSlug: "common-kingfisher",
         comparisonType: "battle",
-        title: "Laughing Kookaburra vs Common Kingfisher: Which Perch Hunter Has the Better Edge?",
+        title: "Laughing Kookaburra vs Common Kingfisher: Who Would Win?",
         description: "A laughing kookaburra vs common kingfisher comparison covering body size, prey style, perch hunting, and why a bigger kingfisher-relative changes the equation.",
         quickVerdict: "Laughing kookaburra usually has the edge because it is much larger, more forceful, and built to handle bigger prey. Common kingfisher is the finer precision specialist around small fish and tight-water strikes.",
         shortAnswer: [
@@ -7208,7 +7269,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "rainbow-bee-eater",
         animalBSlug: "barn-swallow",
         comparisonType: "speed",
-        title: "Rainbow Bee-Eater vs Barn Swallow Speed: Which Aerial Insect Hunter Is Faster?",
+        title: "Rainbow Bee-Eater vs Barn Swallow: Which Is Faster?",
         description: "A rainbow bee-eater vs barn swallow speed comparison covering pursuit style, turning, wing shape, and what 'faster' means in small-bird flight.",
         quickVerdict: "Barn swallow usually gets the cleaner speed verdict in sustained fast flight. Rainbow bee-eater stays more specialized for agile insect intercepts and short aerial adjustments around feeding space.",
         shortAnswer: [
@@ -7291,7 +7352,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "ruby-throated-hummingbird",
         animalBSlug: "rainbow-bee-eater",
         comparisonType: "agility",
-        title: "Ruby-Throated Hummingbird vs Rainbow Bee-Eater: Which Bird Is More Agile?",
+        title: "Ruby-Throated Hummingbird vs Rainbow Bee-Eater: Which Is More Agile?",
         description: "A ruby-throated hummingbird vs rainbow bee-eater agility comparison covering hovering, tight turning, flight reversals, and prey-focused maneuvering.",
         quickVerdict: "Hummingbird wins the pure agility question because hovering, reverse flight, and tiny-space control are its entire design brief. Bee-eater is still the better fast intercept bird over slightly broader feeding airspace.",
         shortAnswer: [
@@ -7374,7 +7435,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "greater-bird-of-paradise",
         animalBSlug: "indian-peafowl",
         comparisonType: "agility",
-        title: "Greater Bird-of-Paradise vs Indian Peafowl: Which Display Bird Is More Agile?",
+        title: "Greater Bird-of-Paradise vs Indian Peafowl: Which Is More Agile?",
         description: "A greater bird-of-paradise vs Indian peafowl agility comparison covering display movement, perch control, body weight, and how ornament changes maneuverability.",
         quickVerdict: "Greater bird-of-paradise usually has the agility edge because it stays lighter, more arboreal, and more maneuverable through display space. Indian peafowl carries more size and ground-based presence than fine aerial or branch agility.",
         shortAnswer: [
@@ -7457,7 +7518,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "pig",
         animalBSlug: "dolphin",
         comparisonType: "intelligence",
-        title: "Pig vs Dolphin Intelligence: Which Animal Thinks Better?",
+        title: "Pig vs Dolphin: Which Is Smarter?",
         description: "A grounded pig vs dolphin intelligence comparison covering social learning, memory, problem solving, and why land and marine smarts do not show up in the same way.",
         quickVerdict: "Dolphin gets the broader intelligence edge through communication, social coordination, and flexible group learning. Pig remains far smarter than many people expect, especially in curiosity-driven tasks, memory, and practical problem solving close to the ground.",
         shortAnswer: [
@@ -7542,7 +7603,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "dolphin",
         animalBSlug: "orangutan",
         comparisonType: "intelligence",
-        title: "Dolphin vs Orangutan Intelligence: Which Animal Thinks Better?",
+        title: "Dolphin vs Orangutan: Which Is Smarter?",
         description: "A grounded dolphin vs orangutan intelligence comparison covering social cognition, planning, tool use, and why marine and arboreal minds solve different problems.",
         quickVerdict: "Dolphin gets the broader intelligence edge through communication, social learning, and fluid group coordination. Orangutan remains exceptional in deliberate problem solving, memory, and tool-oriented planning, especially in structured tasks.",
         shortAnswer: [
@@ -7627,7 +7688,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "gorilla",
         animalBSlug: "honey-badger",
         comparisonType: "battle",
-        title: "Gorilla vs Honey Badger: Which Animal Has the Edge?",
+        title: "Gorilla vs Honey Badger: Who Would Win in a Fight?",
         description: "A grounded gorilla vs honey badger comparison covering mass, reach, toughness, and why fearlessness is not the same as winning a direct fight.",
         quickVerdict: "Gorilla gets the overwhelming overall edge through immense size, reach, and raw power. Honey badger keeps the page interesting because it is tough, aggressive, and comfortable in ugly contact, but it is still operating from a far smaller frame.",
         shortAnswer: [
@@ -7712,7 +7773,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "honey-badger",
         animalBSlug: "giant-tortoise",
         comparisonType: "battle",
-        title: "Honey Badger vs Giant Tortoise: Which Animal Has the Edge?",
+        title: "Honey Badger vs Giant Tortoise: Who Would Win in a Fight?",
         description: "A grounded honey badger vs giant tortoise comparison covering armor, persistence, attack access, and why 'winning' depends on whether the shell can be breached at all.",
         quickVerdict: "Honey badger controls the pace and pressure of the encounter, but giant tortoise can make clean defeat extremely difficult through sheer shell protection and size. If the question is who dictates contact, it leans honey badger. If the question is who is harder to actually finish, the tortoise makes the page much messier.",
         shortAnswer: [
@@ -7797,7 +7858,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lappet-faced-vulture",
         animalBSlug: "honey-badger",
         comparisonType: "battle",
-        title: "Lappet-faced Vulture vs Honey Badger: Which Animal Has the Edge?",
+        title: "Lappet-faced Vulture vs Honey Badger: Who Would Win?",
         description: "A grounded lappet-faced vulture vs honey badger comparison covering beak reach, ground pressure, durability, and why scavenger hardware is not the same as predator hardware.",
         quickVerdict: "Honey badger gets the clear overall edge in a ground fight. Lappet-faced vulture is a massive, intimidating bird with a brutal bill, but it is still not designed to absorb or win sustained close contact against an aggressive mammal built for chaos.",
         shortAnswer: [
@@ -7882,7 +7943,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lappet-faced-vulture",
         animalBSlug: "giant-tortoise",
         comparisonType: "battle",
-        title: "Lappet-faced Vulture vs Giant Tortoise: Which Animal Has the Edge?",
+        title: "Lappet-faced Vulture vs Giant Tortoise: Who Would Win?",
         description: "A grounded lappet-faced vulture vs giant tortoise comparison covering shell armor, soft-tissue access, and why a scavenger's brutal bill still has limits against a live armored reptile.",
         quickVerdict: "Giant tortoise gets the overall edge because the vulture has no reliable path through the shell. The bird becomes dangerous only if vulnerable tissue stays exposed for too long, which makes this more about opportunity than clean superiority.",
         shortAnswer: [
@@ -7967,7 +8028,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lappet-faced-vulture",
         animalBSlug: "lion",
         comparisonType: "battle",
-        title: "Lappet-faced Vulture vs Lion: Which Animal Has the Edge?",
+        title: "Lappet-faced Vulture vs Lion: Who Would Win in a Fight?",
         description: "A grounded lappet-faced vulture vs lion comparison covering size, predatory hardware, and why a powerful scavenger is still not built for direct combat with a big cat.",
         quickVerdict: "Lion gets the overwhelming overall edge. Lappet-faced vulture is massive for a bird and can be bold around carcasses, but it is not designed to stop or survive a committed attack from a top-tier large predator.",
         shortAnswer: [
@@ -8052,7 +8113,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "lappet-faced-vulture",
         animalBSlug: "black-vulture",
         comparisonType: "battle",
-        title: "Lappet-faced Vulture vs Black Vulture: Which Bird Has the Edge?",
+        title: "Lappet-faced Vulture vs Black Vulture: Who Would Win?",
         description: "A grounded lappet-faced vulture vs black vulture comparison covering size, bill power, scavenger confidence, and why not all vultures operate at the same scale.",
         quickVerdict: "Lappet-faced vulture gets the clear overall edge through much greater size, heavier bill, and a carcass-opening design built for far harsher competition. Black vulture is tough and socially bold, but it is operating from a much smaller frame.",
         shortAnswer: [
@@ -8137,7 +8198,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "king-cobra",
         animalBSlug: "black-vulture",
         comparisonType: "battle",
-        title: "King Cobra vs Black Vulture: Which Animal Has the Edge?",
+        title: "King Cobra vs Black Vulture: Who Would Win in a Fight?",
         description: "A grounded king cobra vs black vulture comparison covering strike threat, spacing, and why scavenger boldness does not equal snake-fighting specialization.",
         quickVerdict: "King cobra gets the overall edge because the black vulture lacks the dedicated leg reach, speed pattern, and strike-management hardware of true snake specialists. The vulture can still harass from above, but the closer the contact gets, the more dangerous the cobra answer becomes.",
         shortAnswer: [
@@ -8222,7 +8283,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "tasmanian-devil",
         animalBSlug: "black-mamba",
         comparisonType: "battle",
-        title: "Tasmanian Devil vs Black Mamba: Which Animal Has the Edge?",
+        title: "Tasmanian Devil vs Black Mamba: Who Would Win in a Fight?",
         description: "A grounded Tasmanian devil vs black mamba comparison covering bite power, strike speed, venom, and why close-range chaos can still favor the animal that lands first.",
         quickVerdict: "Black mamba gets the slight overall edge because one clean venom-delivery event can decide the encounter before the devil turns toughness into contact. Tasmanian devil remains dangerous through jaw power, commitment, and refusal to back off once it closes distance.",
         shortAnswer: [
@@ -8307,7 +8368,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "polar-bear",
         animalBSlug: "black-vulture",
         comparisonType: "battle",
-        title: "Polar Bear vs Black Vulture: Which Animal Has the Edge?",
+        title: "Polar Bear vs Black Vulture: Who Would Win in a Fight?",
         description: "A grounded polar bear vs black vulture comparison covering scale, contact risk, and why scavenger mobility does not make a bird a serious answer to an apex bear on the ground.",
         quickVerdict: "Polar bear gets the overwhelming overall edge. Black vulture can only stay relevant by staying away, watching, or exploiting scraps. The moment the question becomes direct physical conflict, the size and power gap is extreme.",
         shortAnswer: [
@@ -8392,7 +8453,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "honey-badger",
         animalBSlug: "kangal",
         comparisonType: "battle",
-        title: "Honey Badger vs Kangal: Which Animal Has the Edge?",
+        title: "Honey Badger vs Kangal: Who Would Win in a Fight?",
         description: "A grounded honey badger vs kangal comparison covering size, bite, defensive purpose, and why the nastier temperament does not always belong to the side with the better overall fight odds.",
         quickVerdict: "Kangal gets the clear overall edge through massive size, stronger total bite package, and a livestock-guardian body built to confront large threats. Honey badger remains dangerous because it is fearless, awkward to control, and willing to create a miserable fight.",
         shortAnswer: [
@@ -8477,7 +8538,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "alligator-snapping-turtle",
         animalBSlug: "polar-bear",
         comparisonType: "battle",
-        title: "Alligator Snapping Turtle vs Polar Bear: Which Animal Has the Edge?",
+        title: "Alligator Snapping Turtle vs Polar Bear: Who Would Win?",
         description: "A grounded alligator snapping turtle vs polar bear comparison covering bite threat, armor, environment, and why a powerful ambush turtle still cannot erase an enormous mammalian size gap.",
         quickVerdict: "Polar bear gets the overwhelming overall edge through sheer mass, strength, and the ability to dominate most contact scenarios. Alligator snapping turtle stays dangerous only in a narrow front-facing water-side bite window where its jaws can punish a mistake.",
         shortAnswer: [
@@ -8562,7 +8623,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "great-white-shark",
         animalBSlug: "alligator-snapping-turtle",
         comparisonType: "battle",
-        title: "Great White Shark vs Alligator Snapping Turtle: Which Predator Has the Edge?",
+        title: "Great White Shark vs Alligator Snapping Turtle: Who Wins?",
         description: "A grounded great white shark vs alligator snapping turtle comparison covering open-water mobility, bite windows, and why a giant marine predator and a freshwater ambush turtle only overlap in very narrow scenarios.",
         quickVerdict: "Great white shark gets the overwhelming overall edge in any true open-water contest because it is vastly larger, faster, and built for fully aquatic pursuit. Alligator snapping turtle only becomes dangerous in a narrow front-end bite window where the shark makes a major positioning mistake in confined water.",
         shortAnswer: [
@@ -8647,7 +8708,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "elephant",
         animalBSlug: "polar-bear",
         comparisonType: "battle",
-        title: "Elephant vs Polar Bear: Which Giant Has the Edge?",
+        title: "Elephant vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded elephant vs polar bear comparison covering mass, reach, predatory intent, and why one of these giants still operates from a much larger physical frame.",
         quickVerdict: "Elephant gets the overwhelming overall edge through enormous size, reach, and space control. Polar bear remains dangerous because it is an apex predator with serious bite and commitment, but it is still far too outscaled in a clean direct clash.",
         shortAnswer: [
@@ -8732,7 +8793,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "hippopotamus",
         animalBSlug: "polar-bear",
         comparisonType: "battle",
-        title: "Hippopotamus vs Polar Bear: Which Heavyweight Wins?",
+        title: "Hippopotamus vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded hippo vs polar bear comparison covering bite danger, body shape, terrain, and why one of these animals becomes much worse the closer the fight gets to water-linked chaos.",
         quickVerdict: "Hippopotamus gets the overall edge because it carries huge mass, terrifying bite potential, and a body built for ugly close-range violence. Polar bear remains dangerous through mobility and predatory intent, but the hippo's mouth and bulk make the direct clash extremely difficult.",
         shortAnswer: [
@@ -8817,11 +8878,11 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "white-rhinoceros",
         animalBSlug: "polar-bear",
         comparisonType: "battle",
-        title: "Rhino vs Polar Bear: Which Heavyweight Has the Edge?",
+        title: "Rhino vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded rhino vs polar bear comparison covering charge structure, bite pressure, and why horn-first mass changes the matchup sharply.",
-        quickVerdict: "White rhinoceros gets the clear overall edge through huge size, horn-led charge pressure, and the ability to make the bear deal with forward-driving mass it cannot comfortably stop. Polar bear stays dangerous, but it is fighting uphill against a much heavier armored grazer with a cleaner lane weapon.",
+        quickVerdict: "A rhino would win: an adult white rhino weighs around two tonnes, several times a large male polar bear, and charges with its horn. In reality the two never meet in the wild.",
         shortAnswer: [
-            "This is one of the better strange-heavyweight pages because the answer is not just 'bigger animal wins.' It is also about whether the bear has any clean response to horn-and-charge geometry."
+            "Realistically, the rhino wins. An adult white rhinoceros commonly weighs 1,800 to 2,500 kg, while a big male polar bear is around 350 to 700 kg, so the bear would face an animal several times its size with thick skin and a horn it charges with. Polar bears are built to ambush seals on sea ice, not to bring down a healthy adult rhino. The matchup is purely hypothetical: polar bears live in the Arctic and rhinos in Africa and southern Asia, so the two never meet."
         ],
         whyThisMatchupIsInteresting: [
             "It compares predatory danger with one of the strongest lane-control herbivore body plans in the catalog."
@@ -8881,7 +8942,19 @@ const challengeData: ChallengeEntry[] = [
         faq: [
             {
                 question: "Who wins, rhino or polar bear?",
-                answer: "White rhinoceros overall."
+                answer: "The rhino, realistically. It is several times heavier and charges with a horn, while the polar bear's hunting style is built around seals rather than giant herbivores."
+            },
+            {
+                question: "Would a polar bear beat a rhino?",
+                answer: "Very unlikely. The polar bear is the largest land carnivore, but an adult white rhino is still several times heavier, has thick, tough skin and charges with a long front horn. Polar bears specialise in hunting seals, prey far smaller than a rhino. A bear might injure a rhino with bites and claws, but it has no reliable way to stop one, so the rhino is the realistic winner."
+            },
+            {
+                question: "Do rhinos and polar bears ever meet?",
+                answer: "No. Polar bears live on Arctic sea ice and coasts in Canada, Alaska, Greenland, Norway and Russia, while the five rhino species live in sub-Saharan Africa and southern Asia. Their ranges are thousands of kilometres apart and their climates are opposites, so any matchup is hypothetical. It is still a useful way to compare a large predator with a large, well-defended herbivore."
+            },
+            {
+                question: "How much heavier is a rhino than a polar bear?",
+                answer: "Much heavier. A white rhinoceros, the largest rhino, commonly weighs 1,800 to 2,500 kg, and big males can be heavier still. Adult male polar bears usually weigh about 350 to 700 kg, and females roughly half that. Even a very large polar bear would be giving away well over a tonne, which is why the rhino's charge is so hard for the bear to handle."
             },
             {
                 question: "Why does the polar bear still improve in some scenarios?",
@@ -8892,7 +8965,9 @@ const challengeData: ChallengeEntry[] = [
             "rhino vs polar bear",
             "white rhino vs polar bear",
             "polar bear vs rhino who wins",
-            "can a polar bear beat a rhino"
+            "can a polar bear beat a rhino",
+            "rhino vs polar bear who would win",
+            "polar bear vs rhino fight"
         ],
         systemsSpeciesSlugs: ["white-rhinoceros", "polar-bear"],
         relatedChallengeSlugs: ["elephant-vs-rhino", "elephant-vs-polar-bear"]
@@ -8902,7 +8977,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "crocodile",
         animalBSlug: "polar-bear",
         comparisonType: "battle",
-        title: "Crocodile vs Polar Bear: Which Predator Has the Edge?",
+        title: "Crocodile vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded crocodile vs polar bear comparison covering ambush control, terrain, and why this is really a battle between edge-trap geometry and brute land authority.",
         quickVerdict: "Polar bear gets the overall edge on land or partial land because it is larger, more mobile out of water, and better at sustained violent contact once the crocodile loses ambush shape. Crocodile becomes far more dangerous in water-linked ambush where the bite starts first and the bear does not control footing.",
         shortAnswer: [
@@ -8987,7 +9062,7 @@ const challengeData: ChallengeEntry[] = [
         animalASlug: "great-white-shark",
         animalBSlug: "hippopotamus",
         comparisonType: "battle",
-        title: "Great White Shark vs Hippopotamus: Which Dangerous Animal Has the Edge?",
+        title: "Great White Shark vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded great white shark vs hippo comparison covering open-water movement, bite mechanics, and why a giant river heavyweight does not automatically translate into a marine fight answer.",
         quickVerdict: "Great white shark gets the overall edge in true saltwater because it is fully built for sustained aquatic attack and maneuvering. Hippopotamus stays extremely dangerous in surf-line or shallow chaotic contact where its mouth and sheer short-range violence can punish a bad approach.",
         shortAnswer: [
@@ -9074,7 +9149,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "orca-vs-crocodile",
         animalASlug: "orca",
         animalBSlug: "crocodile",
-        title: "Orca vs Crocodile: Which Predator Has the Edge?",
+        title: "Orca vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded orca vs crocodile comparison covering size, water control, and why coastal ambush is not the same as open-water authority.",
         quickVerdict: "Orca gets the overwhelming overall edge in true open water through size, intelligence, and sustained aquatic control. Crocodile only improves if the clash compresses into a shoreline ambush problem.",
         shortAnswer: "The crocodile is dangerous at the edge. The orca is dangerous across the whole water column.",
@@ -9097,7 +9172,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "orca-vs-bull-shark",
         animalASlug: "orca",
         animalBSlug: "bull-shark",
-        title: "Orca vs Bull Shark: Which Dangerous Swimmer Has the Edge?",
+        title: "Orca vs Bull Shark: Who Would Win in a Fight?",
         description: "A grounded orca vs bull shark comparison covering size, flexibility, and what happens when a powerful coastal shark meets a much larger marine hunter.",
         quickVerdict: "Orca gets the clear overall edge through size, coordination, and total attack control. Bull shark stays relevant only because it is unusually aggressive and comfortable in messy nearshore water.",
         shortAnswer: "Bull shark is dangerous in bad water. Orca is still the much more complete predator.",
@@ -9120,7 +9195,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "orca-vs-hippopotamus",
         animalASlug: "orca",
         animalBSlug: "hippopotamus",
-        title: "Orca vs Hippopotamus: Which Heavyweight Has the Edge?",
+        title: "Orca vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded orca vs hippo comparison covering open-water movement, bite danger, and why a river heavyweight does not automatically translate into a marine fight answer.",
         quickVerdict: "Orca gets the overall edge in true water because it is fully built for sustained aquatic attack and control. Hippo only becomes truly dangerous if the fight collapses into very short-range chaotic contact near shallows.",
         shortAnswer: "Hippo is brutal at the waterline. Orca is brutal in the water itself.",
@@ -9143,7 +9218,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "tiger-vs-polar-bear",
         animalASlug: "tiger",
         animalBSlug: "polar-bear",
-        title: "Tiger vs Polar Bear: Which Apex Mammal Has the Edge?",
+        title: "Tiger vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded tiger vs polar bear comparison covering size, predatory hardware, and why ambush skill does not erase a major heavyweight gap.",
         quickVerdict: "Polar bear gets the slight overall edge through larger size, heavier frame, and brutal close-range power. Tiger remains fully dangerous because it is the more explosive ambush specialist with sharper first-contact mechanics.",
         shortAnswer: "Tiger is the better opener. Polar bear is the harder animal to stop once the clash becomes a full heavyweight fight.",
@@ -9166,7 +9241,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "tiger-vs-hippopotamus",
         animalASlug: "tiger",
         animalBSlug: "hippopotamus",
-        title: "Tiger vs Hippopotamus: Which Animal Has the Edge?",
+        title: "Tiger vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded tiger vs hippo comparison covering ambush quality, size, and why a giant river animal is a terrible direct target for a lone cat.",
         quickVerdict: "Hippopotamus gets the overwhelming overall edge because the size and mouth-danger gap are too large for tiger to solve cleanly. Tiger only improves if the question becomes a perfect ambush on a compromised target rather than a true direct clash.",
         shortAnswer: "Tiger is dangerous to almost everything. Hippo is still too much in a clean heavyweight confrontation.",
@@ -9189,7 +9264,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "tiger-vs-white-rhinoceros",
         animalASlug: "tiger",
         animalBSlug: "white-rhinoceros",
-        title: "Tiger vs Rhino: Which Heavy Animal Has the Edge?",
+        title: "Tiger vs Rhino: Who Would Win in a Fight?",
         description: "A grounded tiger vs rhino comparison covering ambush, horn-first pressure, and what happens when a solo cat meets a giant armored grazer.",
         quickVerdict: "White rhinoceros gets the overwhelming overall edge because the mass and horn-forward pressure are too much for a tiger in any clean clash. Tiger only improves if the question is reduced to a perfect opportunistic attack on a vulnerable angle.",
         shortAnswer: "Tiger is elite at punishing openings. Rhino is built to make the opening problem extremely hard.",
@@ -9212,7 +9287,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "tiger-vs-crocodile",
         animalASlug: "tiger",
         animalBSlug: "crocodile",
-        title: "Tiger vs Crocodile: Which Predator Has the Better Edge?",
+        title: "Tiger vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded tiger vs crocodile comparison covering ambush, land control, and why the answer changes sharply at the waterline.",
         quickVerdict: "Tiger gets the slight overall edge on land through mobility and attack quality. Crocodile becomes more dangerous the closer the fight gets to shallow water, stillness, and first-bite ambush control.",
         shortAnswer: "Tiger wants land and motion. Crocodile wants the waterline and one brutal start.",
@@ -9235,7 +9310,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "lion-vs-polar-bear",
         animalASlug: "lion",
         animalBSlug: "polar-bear",
-        title: "Lion vs Polar Bear: Which Apex Mammal Has the Edge?",
+        title: "Lion vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded lion vs polar bear comparison covering coalition logic, solo fighting, and why one-on-one matters more than reputation here.",
         quickVerdict: "Polar bear gets the overall one-on-one edge through size and punishing close-range power. Lion only improves if the scenario stops being a duel and starts rewarding multiple-angle pressure or coalition help.",
         shortAnswer: "A solo lion faces a size problem. A supported lion becomes a more dangerous tactical problem.",
@@ -9258,7 +9333,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "lion-vs-crocodile",
         animalASlug: "lion",
         animalBSlug: "crocodile",
-        title: "Lion vs Crocodile: Which Predator Has the Edge?",
+        title: "Lion vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded lion vs crocodile comparison covering land pressure, ambush danger, and why waterline encounters refuse easy answers.",
         quickVerdict: "Lion gets the slight overall edge on land because it can move, angle, and attack more freely. Crocodile becomes much more dangerous in shallow water or a still ambush start where the first clamp defines the fight.",
         shortAnswer: "Lion wants land and initiative. Crocodile wants the trap.",
@@ -9281,7 +9356,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "lion-vs-hippopotamus",
         animalASlug: "lion",
         animalBSlug: "hippopotamus",
-        title: "Lion vs Hippopotamus: Which Animal Has the Edge?",
+        title: "Lion vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded lion vs hippo comparison covering size, bite danger, and why lions are more credible as coordinated pressure than as a clean solo answer here.",
         quickVerdict: "Hippopotamus gets the overwhelming one-on-one edge through massive size and brutal mouth danger. Lion only becomes much more credible if the question includes group pressure, target vulnerability, or attritional harassment rather than a clean duel.",
         shortAnswer: "Solo lion faces a terrible short-range problem. Coalition lion becomes a different question.",
@@ -9304,7 +9379,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "gorilla-vs-polar-bear",
         animalASlug: "gorilla",
         animalBSlug: "polar-bear",
-        title: "Gorilla vs Polar Bear: Which Giant Mammal Has the Edge?",
+        title: "Gorilla vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded gorilla vs polar bear comparison covering power, bite, and why calm force is not the same as apex-predator finishing ability.",
         quickVerdict: "Polar bear gets the clear overall edge through larger size, bite pressure, and a more complete predatory weapon set. Gorilla remains formidable in strength and close-range power, but it is still not the safer fight answer against a giant bear.",
         shortAnswer: "Gorilla is powerful enough to matter. Polar bear still has the cleaner total violence package.",
@@ -9327,7 +9402,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "gorilla-vs-crocodile",
         animalASlug: "gorilla",
         animalBSlug: "crocodile",
-        title: "Gorilla vs Crocodile: Which Dangerous Animal Has the Edge?",
+        title: "Gorilla vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded gorilla vs crocodile comparison covering waterline danger, grappling force, and why the opening position decides far too much.",
         quickVerdict: "Gorilla gets the slight overall edge on dry land because the crocodile loses ambush shape and the primate gains mobility and arm-driven force. Crocodile becomes much more dangerous if the fight starts at the waterline with the first clamp already happening.",
         shortAnswer: "Gorilla wants land and immediate force. Crocodile wants the first bite and the edge of the water.",
@@ -9350,7 +9425,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "gorilla-vs-jaguar",
         animalASlug: "gorilla",
         animalBSlug: "jaguar",
-        title: "Gorilla vs Jaguar: Which Powerful Animal Has the Edge?",
+        title: "Gorilla vs Jaguar: Who Would Win in a Fight?",
         description: "A grounded gorilla vs jaguar comparison covering ambush quality, power, and why one of the cleanest predator tools still has to solve a giant primate problem.",
         quickVerdict: "Gorilla gets the slight overall edge in a face-up clash through size and blunt-force power. Jaguar remains fully dangerous because it may be the better ambush starter and carries one of the nastiest bite profiles in the dataset.",
         shortAnswer: "Jaguar gets the cleaner start. Gorilla gets the cleaner fight if the clash becomes obvious and direct.",
@@ -9373,7 +9448,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "jaguar-vs-bull-shark",
         animalASlug: "jaguar",
         animalBSlug: "bull-shark",
-        title: "Jaguar vs Bull Shark: Which Predator Has the Edge?",
+        title: "Jaguar vs Bull Shark: Who Would Win in a Fight?",
         description: "A grounded jaguar vs bull shark comparison covering shoreline geometry, bite danger, and why both animals become much better at the exact boundary between land and water.",
         quickVerdict: "Bull shark gets the slight overall edge in true water through stronger aquatic authority. Jaguar improves sharply at the shoreline where explosive land-linked attack mechanics can break the shark's cleaner movement profile.",
         shortAnswer: "Bull shark wants water. Jaguar wants the edge where water stops being enough.",
@@ -9396,7 +9471,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "jaguar-vs-green-anaconda",
         animalASlug: "jaguar",
         animalBSlug: "green-anaconda",
-        title: "Jaguar vs Green Anaconda: Which Predator Has the Edge?",
+        title: "Jaguar vs Green Anaconda: Who Would Win in a Fight?",
         description: "A grounded jaguar vs green anaconda comparison covering bite placement, constriction, and what changes in water versus partial land.",
         quickVerdict: "Jaguar gets the slight overall edge because it carries the cleaner direct-kill mechanics on land or partial land. Green anaconda becomes much more dangerous in water or tight body-control positions where constriction can start before the cat gets a clean bite.",
         shortAnswer: "Jaguar wants decisive bite placement. Anaconda wants body position first.",
@@ -9419,7 +9494,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "jaguar-vs-black-mamba",
         animalASlug: "jaguar",
         animalBSlug: "black-mamba",
-        title: "Jaguar vs Black Mamba: Which Dangerous Animal Has the Edge?",
+        title: "Jaguar vs Black Mamba: Who Would Win in a Fight?",
         description: "A grounded jaguar vs black mamba comparison covering first strike, bite danger, and whether the cat can survive the venom window long enough to finish.",
         quickVerdict: "Jaguar gets the slight overall edge because one clean cat strike can end the fight fast. Black mamba stays fully dangerous because the first venom event could still decide everything before the cat gets stable contact.",
         shortAnswer: "The cat has the simpler physical finish. The snake has the more decisive first interrupt.",
@@ -9442,7 +9517,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "komodo-dragon-vs-wolverine",
         animalASlug: "komodo-dragon",
         animalBSlug: "wolverine",
-        title: "Komodo Dragon vs Wolverine: Which Dangerous Animal Has the Edge?",
+        title: "Komodo Dragon vs Wolverine: Who Would Win in a Fight?",
         description: "A grounded Komodo dragon vs wolverine comparison covering size, persistence, and whether smaller chaos can overcome a major reptilian mass advantage.",
         quickVerdict: "Komodo dragon gets the clear overall edge through much larger size, heavy body authority, and brutal close-range power. Wolverine stays interesting because it is relentless, hard to discourage, and comfortable in ugly contact.",
         shortAnswer: "Wolverine brings chaos. Komodo dragon brings too much body for chaos alone to be enough.",
@@ -9465,7 +9540,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "komodo-dragon-vs-black-mamba",
         animalASlug: "komodo-dragon",
         animalBSlug: "black-mamba",
-        title: "Komodo Dragon vs Black Mamba: Which Dangerous Reptile Has the Edge?",
+        title: "Komodo Dragon vs Black Mamba: Who Would Win in a Fight?",
         description: "A grounded Komodo dragon vs black mamba comparison covering size, strike speed, and whether venom can solve an enormous lizard before contact closes.",
         quickVerdict: "Komodo dragon gets the slight overall edge because the size and direct-contact threat are so overwhelming once the mamba is caught. Black mamba stays extremely dangerous because its first-strike speed is the clearest single interrupt on the page.",
         shortAnswer: "The mamba has the sharper interrupt. The dragon has the larger body problem.",
@@ -9488,7 +9563,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "komodo-dragon-vs-alligator-snapping-turtle",
         animalASlug: "komodo-dragon",
         animalBSlug: "alligator-snapping-turtle",
-        title: "Komodo Dragon vs Alligator Snapping Turtle: Which Reptile Has the Edge?",
+        title: "Komodo Dragon vs Alligator Snapping Turtle: Who Would Win?",
         description: "A grounded Komodo dragon vs alligator snapping turtle comparison covering armor, bite windows, and whether the shell can stall the dragon's overall control.",
         quickVerdict: "Komodo dragon gets the overall edge through size, mobility, and the ability to pressure from more angles. Alligator snapping turtle remains dangerous because the bite zone is severe and the shell makes quick finishing harder than it first looks.",
         shortAnswer: "The turtle has the nastier trap mouth. The dragon has more ways to control the rest of the fight.",
@@ -9511,7 +9586,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "rhino-vs-crocodile",
         animalASlug: "white-rhinoceros",
         animalBSlug: "crocodile",
-        title: "Rhino vs Crocodile: Which Dangerous Animal Has the Edge?",
+        title: "Rhino vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded rhino vs crocodile comparison covering charge lanes, ambush, and whether a water-edge bite can overcome a giant horned grazer.",
         quickVerdict: "White rhinoceros gets the clear overall edge because the size, horn pressure, and land authority are too much in any clean clash. Crocodile only improves if the encounter begins with a strong waterline ambush on a compromised angle.",
         shortAnswer: "Rhino owns the open lane. Crocodile only stays live through the trap.",
@@ -9534,7 +9609,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "bull-shark-vs-alligator-snapping-turtle",
         animalASlug: "bull-shark",
         animalBSlug: "alligator-snapping-turtle",
-        title: "Bull Shark vs Alligator Snapping Turtle: Which Water Hunter Has the Edge?",
+        title: "Bull Shark vs Alligator Snapping Turtle: Who Would Win?",
         description: "A grounded bull shark vs alligator snapping turtle comparison covering mobility, bite windows, and what happens when a boundary-crossing shark meets a bottom ambush turtle.",
         quickVerdict: "Bull shark gets the overall edge through movement, size, and broader aquatic control. Alligator snapping turtle remains dangerous only in a narrow front-end bite trap where the shark enters the wrong angle in confined water.",
         shortAnswer: "The shark controls the water. The turtle controls one very dangerous doorway.",
@@ -9557,7 +9632,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "green-anaconda-vs-polar-bear",
         animalASlug: "green-anaconda",
         animalBSlug: "polar-bear",
-        title: "Green Anaconda vs Polar Bear: Which Dangerous Animal Has the Edge?",
+        title: "Green Anaconda vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded green anaconda vs polar bear comparison covering constriction, size, and whether the snake can ever secure the body position it needs against a giant bear.",
         quickVerdict: "Polar bear gets the overwhelming overall edge because the size, power, and contact authority gap are too large. Green anaconda only becomes serious if it somehow secures ideal wrap geometry before the bear can fully engage.",
         shortAnswer: "The anaconda needs perfect body position. The bear only needs the fight to become direct.",
@@ -9580,7 +9655,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "green-anaconda-vs-rhino",
         animalASlug: "green-anaconda",
         animalBSlug: "white-rhinoceros",
-        title: "Green Anaconda vs Rhino: Which Dangerous Animal Has the Edge?",
+        title: "Green Anaconda vs Rhino: Who Would Win in a Fight?",
         description: "A grounded green anaconda vs rhino comparison covering constriction geometry, mass, and whether the snake can realistically solve an enormous horned body.",
         quickVerdict: "White rhinoceros gets the overwhelming overall edge because the size, thickness, and forward-driving mass are too much for the anaconda to manage in any broad realistic matchup. The snake only becomes relevant through a highly specific positional miracle.",
         shortAnswer: "Anaconda needs a fantasy-perfect wrap. Rhino only needs to stay a rhino.",
@@ -9603,7 +9678,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "reticulated-python-vs-alligator-snapping-turtle",
         animalASlug: "reticulated-python",
         animalBSlug: "alligator-snapping-turtle",
-        title: "Reticulated Python vs Alligator Snapping Turtle: Which Reptile Has the Edge?",
+        title: "Reticulated Python vs Alligator Snapping Turtle: Who Wins?",
         description: "A grounded reticulated python vs alligator snapping turtle comparison covering constriction, shell protection, and how the whole page turns on exposed openings.",
         quickVerdict: "Reticulated python gets the slight overall edge because it can pressure from more angles and potentially secure positional control. Alligator snapping turtle remains a severe danger because the shell limits clean access and the bite trap punishes bad commitment.",
         shortAnswer: "Python has more body options. The turtle has the scariest single mistake penalty.",
@@ -9626,7 +9701,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "reticulated-python-vs-polar-bear",
         animalASlug: "reticulated-python",
         animalBSlug: "polar-bear",
-        title: "Reticulated Python vs Polar Bear: Which Dangerous Animal Has the Edge?",
+        title: "Reticulated Python vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded reticulated python vs polar bear comparison covering constriction, size, and whether the snake can ever secure enough body control against a giant bear.",
         quickVerdict: "Polar bear gets the overwhelming overall edge because the body-size gap and direct-contact violence are too steep. Reticulated python only becomes serious through perfect wrap geometry before the bear can fully express its strength.",
         shortAnswer: "Python needs a perfect start. Polar bear just needs the fight to become real.",
@@ -9649,7 +9724,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "king-cobra-vs-wolverine",
         animalASlug: "king-cobra",
         animalBSlug: "wolverine",
-        title: "King Cobra vs Wolverine: Which Dangerous Animal Has the Edge?",
+        title: "King Cobra vs Wolverine: Who Would Win in a Fight?",
         description: "A grounded king cobra vs wolverine comparison covering strike speed, anti-snake specialization, and whether mammalian chaos can overcome a lethal opening threat.",
         quickVerdict: "King cobra gets the slight overall edge because one clean venom strike can decide the encounter quickly. Wolverine remains dangerous because it is relentless, fast to close, and built to turn the fight ugly if it survives the first danger window.",
         shortAnswer: "The snake owns the first interrupt. The wolverine owns the ugly scramble.",
@@ -9672,7 +9747,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "black-mamba-vs-wolverine",
         animalASlug: "black-mamba",
         animalBSlug: "wolverine",
-        title: "Black Mamba vs Wolverine: Which Dangerous Animal Has the Edge?",
+        title: "Black Mamba vs Wolverine: Who Would Win in a Fight?",
         description: "A grounded black mamba vs wolverine comparison covering venom speed, close-range grit, and whether the mammal can close fast enough to cancel the snake.",
         quickVerdict: "Black mamba gets the slight overall edge because the first-strike venom threat is so strong. Wolverine remains fully live because it is unusually hard to intimidate and excellent at ugly contact once it closes.",
         shortAnswer: "The mamba wants distance and the first hit. The wolverine wants a scramble immediately.",
@@ -9695,7 +9770,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "honey-badger-vs-polar-bear",
         animalASlug: "honey-badger",
         animalBSlug: "polar-bear",
-        title: "Honey Badger vs Polar Bear: Which Dangerous Mammal Has the Edge?",
+        title: "Honey Badger vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded honey badger vs polar bear comparison covering size, toughness, and why fearless behavior does not erase an extreme heavyweight gap.",
         quickVerdict: "Polar bear gets the overwhelming overall edge through sheer size, strength, and complete predatory hardware. Honey badger remains interesting only because it is unusually hard to discourage and can make even bad matchups ugly.",
         shortAnswer: "Honey badger brings absurd grit. Polar bear still brings too much everything else.",
@@ -9718,10 +9793,10 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "honey-badger-vs-crocodile",
         animalASlug: "honey-badger",
         animalBSlug: "crocodile",
-        title: "Honey Badger vs Crocodile: Which Dangerous Animal Has the Edge?",
+        title: "Honey Badger vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded honey badger vs crocodile comparison covering ambush, bite danger, and whether chaos on land can offset a brutal water-edge trap.",
-        quickVerdict: "Crocodile gets the overall edge because one clean ambush bite or clamp is so punishing. Honey badger only improves if the reptile loses ideal position and the fight becomes a land-based scramble.",
-        shortAnswer: "The crocodile wants one terrible start. The badger wants the fight to become wrong for the crocodile immediately.",
+        quickVerdict: "A crocodile would win: an adult Nile crocodile outweighs a honey badger many times over and has one of the strongest bites of any animal. The badger only stands a chance against a small crocodile on land.",
+        shortAnswer: "Realistically, the crocodile wins. Honey badgers weigh roughly 5 to 16 kg, while an adult Nile crocodile, the species a badger could actually meet in Africa, commonly weighs several hundred kilograms and has one of the strongest bite forces ever measured. A badger's thick, loose skin helps against snakes and smaller predators, not against a crocodile's crushing bite. The badger's only realistic edge is against a small crocodile caught away from the water.",
         whyInteresting: "It compares one of the best small chaos fighters with one of the most dangerous ambush-edge predators.",
         statCategories: [
             {key: "ambush", label: "Ambush bite", animalAValue: "Does not want to absorb the first clamp", animalBValue: "Elite at hidden starts near water", advantage: "animalB", takeaway: "The crocodile owns the single worst event on the page."},
@@ -9734,6 +9809,20 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
             {slug: "broad-matchup", title: "Broad matchup", winner: "animalB", verdict: "Crocodile overall", explanation: "The ambush threat is simply too serious."}
         ],
         finalTake: "Honey badger remains dangerous if the crocodile loses ideal shape fast. Crocodile still gets the overall verdict because the first clamp is such a decisive problem.",
+        extraFaq: [
+            {
+                question: "Can a honey badger kill a crocodile?",
+                answer: "Only a small one. Honey badgers are bold generalist predators that eat many kinds of reptile, and a badger could plausibly kill a young crocodile caught on land. An adult Nile crocodile is a different matter: it outweighs the badger many times over and its bite can crush bone. A badger that picked that fight near water would very likely be killed."
+            },
+            {
+                question: "Do honey badgers and crocodiles live in the same places?",
+                answer: "Yes. Both occur widely across sub-Saharan Africa, and honey badgers also range into the Middle East and India, where mugger crocodiles live. Their paths can cross around rivers and waterholes, but honey badgers are land animals that forage mostly by digging, while crocodiles hunt from the water's edge, so serious fights between adults are rarely recorded."
+            },
+            {
+                question: "Is a honey badger's skin tough enough to stop a crocodile bite?",
+                answer: "No. Honey badger skin is thick and loose, which helps the badger twist when grabbed and resist bites from snakes, dogs and other small to mid-sized predators. A crocodile's bite works differently: it clamps with enormous force and drags prey into the water. Thick skin cannot stop that pressure, so the badger's famous toughness gives it little protection against an adult crocodile."
+            }
+        ],
         relatedChallengeSlugs: ["honey-badger-vs-snake", "crocodile-vs-polar-bear"],
         systemsSpeciesSlugs: ["honey-badger", "crocodile"]
     }),
@@ -9741,7 +9830,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "honey-badger-vs-jaguar",
         animalASlug: "honey-badger",
         animalBSlug: "jaguar",
-        title: "Honey Badger vs Jaguar: Which Dangerous Animal Has the Edge?",
+        title: "Honey Badger vs Jaguar: Who Would Win in a Fight?",
         description: "A grounded honey badger vs jaguar comparison covering size, bite placement, and how much grit can really close against a major cat advantage.",
         quickVerdict: "Jaguar gets the clear overall edge through larger size, stronger bite, and a cleaner finishing route. Honey badger keeps the page interesting because it is notoriously hard to intimidate and capable of creating a miserable close-range fight.",
         shortAnswer: "Honey badger can make the fight nasty. Jaguar still brings too much cat hardware and size.",
@@ -9764,7 +9853,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-polar-bear",
         animalASlug: "grizzly-bear",
         animalBSlug: "polar-bear",
-        title: "Grizzly Bear vs Polar Bear: Which Bear Has the Edge?",
+        title: "Grizzly Bear vs Polar Bear: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs polar bear comparison covering size, endurance, and why two giant bears still solve violence through slightly different body priorities.",
         quickVerdict: "Polar bear gets the slight overall edge through larger average size and a more predation-focused heavyweight frame. Grizzly bear remains fully dangerous because it is explosively strong, highly aggressive at short range, and built for ugly land contact.",
         shortAnswer: "The grizzly makes the page close. The polar bear still gets the safer total heavyweight answer.",
@@ -9787,7 +9876,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-tiger",
         animalASlug: "grizzly-bear",
         animalBSlug: "tiger",
-        title: "Grizzly Bear vs Tiger: Which Predator Has the Edge?",
+        title: "Grizzly Bear vs Tiger: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs tiger comparison covering ambush, size, and what happens when stealth-first cat design meets raw bear mass and toughness.",
         quickVerdict: "Grizzly bear gets the slight overall edge through larger frame, close-range durability, and brutal land-contact power. Tiger remains the better ambush starter and can look stronger if the fight begins from concealment with a clean opening lane.",
         shortAnswer: "Tiger wants the first violent surprise. Grizzly wants the fight to become a full heavyweight contest.",
@@ -9810,7 +9899,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-lion",
         animalASlug: "grizzly-bear",
         animalBSlug: "lion",
-        title: "Grizzly Bear vs Lion: Which Predator Has the Edge?",
+        title: "Grizzly Bear vs Lion: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs lion comparison covering solo combat, mass, and why coalition logic does not help the lion in a clean one-on-one page.",
         quickVerdict: "Grizzly bear gets the clear overall one-on-one edge through heavier frame, greater close-contact resilience, and more punishing brute-force geometry. Lion only improves if the question shifts away from a duel and starts rewarding multiple attackers or wider social pressure.",
         shortAnswer: "The lion is dangerous. The grizzly is the safer solo heavyweight answer.",
@@ -9833,7 +9922,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-gorilla",
         animalASlug: "grizzly-bear",
         animalBSlug: "gorilla",
-        title: "Grizzly Bear vs Gorilla: Which Mammal Has the Edge?",
+        title: "Grizzly Bear vs Gorilla: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs gorilla comparison covering raw strength, bite-and-claw hardware, and why primate power still runs into a severe bear problem.",
         quickVerdict: "Grizzly bear gets the clear overall edge through heavier size, stronger bite-and-claw package, and a body built for brutal land violence. Gorilla remains impressive in raw force and scramble power, but it does not bring the same total weapon set.",
         shortAnswer: "Gorilla is strong enough to matter. Grizzly still brings the nastier full-contact toolkit.",
@@ -9856,7 +9945,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-hippopotamus",
         animalASlug: "grizzly-bear",
         animalBSlug: "hippopotamus",
-        title: "Grizzly Bear vs Hippopotamus: Which Heavyweight Has the Edge?",
+        title: "Grizzly Bear vs Hippopotamus: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs hippo comparison covering size, bite danger, and why one of these animals carries a much worse short-range mouth problem.",
         quickVerdict: "Hippopotamus gets the overwhelming overall edge because the mouth danger and body mass gap are too large for the grizzly to solve cleanly. Grizzly only improves if the fight somehow stays mobile and avoids the hippo's best collision shape.",
         shortAnswer: "Grizzly is dangerous. Hippo is still a much worse direct heavyweight problem.",
@@ -9879,7 +9968,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-rhino",
         animalASlug: "grizzly-bear",
         animalBSlug: "white-rhinoceros",
-        title: "Grizzly Bear vs Rhino: Which Heavy Animal Has the Edge?",
+        title: "Grizzly Bear vs Rhino: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs rhino comparison covering charge geometry, horn pressure, and whether the bear can solve a much larger lane-control body.",
         quickVerdict: "White rhinoceros gets the overwhelming overall edge because the size, thick skin, and horn-first lane pressure are too much for the grizzly in any broad realistic clash. The bear only improves if the shape breaks apart before the rhino gets clean forward pressure.",
         shortAnswer: "Grizzly needs broken geometry. Rhino wants the lane.",
@@ -9902,7 +9991,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-crocodile",
         animalASlug: "grizzly-bear",
         animalBSlug: "crocodile",
-        title: "Grizzly Bear vs Crocodile: Which Dangerous Animal Has the Edge?",
+        title: "Grizzly Bear vs Crocodile: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs crocodile comparison covering land force, ambush starts, and whether the bear can avoid the worst water-edge geometry.",
         quickVerdict: "Grizzly bear gets the slight overall edge on land because it is heavier, more mobile away from water, and excellent in brutal ground contact. Crocodile becomes much more dangerous if the encounter starts with a hidden clamp at the waterline.",
         shortAnswer: "The grizzly wants land and visibility. The crocodile wants one awful first moment.",
@@ -9925,7 +10014,7 @@ const extremeDangerousBattleChallenges: ChallengeEntry[] = [
         slug: "grizzly-bear-vs-wolverine",
         animalASlug: "grizzly-bear",
         animalBSlug: "wolverine",
-        title: "Grizzly Bear vs Wolverine: Which Dangerous Mammal Has the Edge?",
+        title: "Grizzly Bear vs Wolverine: Who Would Win in a Fight?",
         description: "A grounded grizzly bear vs wolverine comparison covering size, grit, and why one of these famous tough animals is still operating in the wrong weight class.",
         quickVerdict: "Grizzly bear gets the overwhelming overall edge through huge size, crushing land power, and too much total force. Wolverine stays interesting only because it is relentless, hard to bully psychologically, and excellent at creating ugly close-range friction.",
         shortAnswer: "Wolverine is tougher than its size. Grizzly is still too big and too violent overall.",

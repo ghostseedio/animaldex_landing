@@ -9,6 +9,7 @@ import {
 } from "@/data/legendary-earth-beasts-catalog-seed";
 import {enrichLegendaryEarthBeastSpeciesEntry, legendaryEarthBeastSpeciesSlugs} from "@/data/legendary-earth-beasts-species";
 import {mergeCatalogMetadata} from "@/lib/animaldex-number";
+import {applyStaticSpeciesOverlay} from "@/lib/static-species-overlay";
 import {dedupeCatalogSpeciesEntries, speciesCatalogIdentityKey} from "@/lib/catalog-species-dedupe";
 import {resolveCollectionIdentityToken, setRuntimeSpeciesIdentityAliases} from "@/lib/collection-identity-aliases";
 import {isNonCanonicalLifeStageCatalogIdentity, resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
@@ -1212,7 +1213,7 @@ async function resolveSpeciesBySlugOnce(normalized: string): Promise<SpeciesEntr
             return resolveLegendaryCatalogEntryFromSnapshot(staticEntry);
         }
         if (staticEntry) {
-            return withCatalogIdentity(staticEntry);
+            return withCatalogIdentity(applyStaticSpeciesOverlay(staticEntry));
         }
 
         const biologySeed = getLegendaryCatalogSeedByBiologyLandingSlug(candidate);

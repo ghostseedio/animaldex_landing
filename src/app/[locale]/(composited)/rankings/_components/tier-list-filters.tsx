@@ -11,6 +11,8 @@ type TierListFiltersProps = {
     resultSingularLabel: string;
     resultPluralLabel: string;
     actionLabel: string;
+    rankedSpeciesLabel?: string;
+    methodLabel?: string;
 };
 
 export default function TierListFilters({
@@ -20,7 +22,9 @@ export default function TierListFilters({
     searchPlaceholder,
     resultSingularLabel,
     resultPluralLabel,
-    actionLabel
+    actionLabel,
+    rankedSpeciesLabel,
+    methodLabel
 }: TierListFiltersProps) {
     const [query, setQuery] = useState("");
     const [category, setCategory] = useState("all");
@@ -95,6 +99,8 @@ export default function TierListFilters({
                         href={`/tier-list/${item.slug}`}
                         actionLabel={actionLabel}
                         priority={index < 2}
+                        rankedSpeciesLabel={rankedSpeciesLabel}
+                        methodLabel={methodLabel}
                     />
                 ))}
             </div>

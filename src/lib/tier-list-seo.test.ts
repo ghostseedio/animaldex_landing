@@ -100,7 +100,7 @@ test("hub metadata drops the double AnimalDex suffix and surfaces GSC winners fi
     const hub = readRepo("src/app/[locale]/(composited)/rankings/page.tsx");
     const detail = readRepo("src/app/[locale]/(composited)/rankings/[slug]/page.tsx");
 
-    assert.match(en, /"metaTitle": "Animal Tier List — Animal Rankings & Top 100 Lists"/);
+    assert.match(en, /"metaTitle": "Animal Tier List: Fastest, Strongest & Smartest Animals"/);
     assert.match(en, /"title": "Animal Tier Lists"/);
     assert.doesNotMatch(en, /"metaTitle": "Animal Tier Lists \| AnimalDex"/);
     assert.match(hub, /sortRankingPagesForHub/);

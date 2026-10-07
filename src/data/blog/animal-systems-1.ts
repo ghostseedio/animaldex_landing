@@ -40,11 +40,11 @@ export const animalSystemsPosts1: BlogPost[] = [
                 media: {
                     type: "image",
                     image: {
-                        src: "/images/blog/what-makes-crows-so-intelligent/new-caledonian-crow-tool.webp",
-                        alt: "New Caledonian crow (Corvus moneduloides) perched on a branch, the species famous for making hooked tools",
+                        src: "/images/blog/what-makes-crows-so-intelligent/new-caledonian-crow.webp",
+                        alt: "New Caledonian crow (Corvus moneduloides) foraging on the ground at Bourail, New Caledonia",
                         width: 1400,
-                        height: 1120,
-                        caption: "A New Caledonian crow (Corvus moneduloides), the species that makes hooked twig tools in the wild. Photo: MD sajjad hossain photography, CC BY-SA 4.0, via Wikimedia Commons."
+                        height: 1054,
+                        caption: "A New Caledonian crow (Corvus moneduloides) at Bourail, New Caledonia, the species that makes hooked twig tools in the wild. Photo: benkeen, CC0, via Wikimedia Commons."
                     }
                 }
             },

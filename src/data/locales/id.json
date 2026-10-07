@@ -380,11 +380,60 @@
     "eyebrow": "Tier List AnimalDex",
     "title": "Tier list hewan yang dibangun dengan biologi nyata, metodologi jelas, dan konteks yang berguna",
     "description": "Jelajahi tier list hewan AnimalDex yang terstruktur untuk speed, strength, intelligence, danger, bite force, dan lainnya dengan jawaban langsung, metodologi, serta tautan ke halaman spesies dan comparison.",
-    "metaTitle": "Daftar Peringkat Hewan",
-    "metaDescription": "Telusuri halaman tier list hewan AnimalDex untuk hewan tercepat, terkuat, terpintar, paling berbahaya, dan dengan bite force terkuat dengan konteks ahli dan internal linking yang terstruktur.",
+    "metaTitle": "Tier List Hewan: Tercepat, Terkuat & Terpintar",
+    "metaDescription": "Tier list hewan dari tier S sampai D. Tercepat: {fastest}. Terkuat: {strongest}. Terpintar: {smartest}. Paling berbahaya: {dangerous}. Lebih dari 100 spesies per daftar.",
     "credibilityEvidence": "Ranking berbasis bukti",
     "credibilityMethodology": "Metodologi transparan",
     "credibilitySpecies": "Perbandingan tingkat spesies",
+    "introTitle": "Apa itu tier list hewan?",
+    "introParagraphOne": "Tier list hewan mengelompokkan spesies ke dalam beberapa tingkatan, bukan satu skor tunggal: tier S berisi hewan yang paling menonjol, lalu tier A, B, C, dan D berisi hewan yang makin kurang sesuai dengan kriterianya. Format ini lebih jujur daripada sekadar top 10 karena memperlihatkan kapan beberapa hewan nyaris setara.",
+    "introParagraphTwo": "Setiap tier list AnimalDex memeringkat 100 spesies atau lebih berdasarkan satu sifat — kecepatan, kekuatan, kecerdasan, bahaya, kelincahan, kemampuan beradaptasi, dan lainnya — serta menjelaskan metodologi di balik urutannya. Jawaban cepat di bawah ini diambil langsung dari data yang sama dengan daftar lengkapnya.",
+    "quickAnswersTitle": "Jawaban cepat",
+    "quickAnswersDescription": "Hewan peringkat 1 di setiap tier list unggulan, beserta dua hewan di belakangnya.",
+    "quickAnswerFollowedBy": "Disusul {second} dan {third}",
+    "quickAnswerViewList": "Lihat tier list lengkap",
+    "hubFaqTitle": "Tanya jawab tier list hewan",
+    "hubFaqWhatIsQuestion": "Apa itu tier list hewan?",
+    "hubFaqAnswer": "{first} adalah pilihan peringkat 1 dalam tier list {list} AnimalDex, disusul {second} dan {third}.",
+    "otherLanguages": "Halaman ini dalam bahasa lain",
+    "quickAnswers": {
+      "fastest-animals": {
+        "label": "Hewan tercepat",
+        "question": "Apa hewan tercepat di dunia?",
+        "list": "hewan tercepat",
+        "note": "Kecepatan di udara, di darat, dan di air diperlakukan sebagai pertanyaan yang berbeda, jadi tukikan seekor elang tidak dibandingkan langsung dengan lari di darat."
+      },
+      "strongest-animals": {
+        "label": "Hewan terkuat",
+        "question": "Apa hewan terkuat di dunia?",
+        "list": "hewan terkuat",
+        "note": "Daftar ini menimbang ukuran tubuh, tenaga yang dihasilkan, dan penggunaan kekuatan itu di alam liar."
+      },
+      "smartest-animals": {
+        "label": "Hewan terpintar",
+        "question": "Apa hewan terpintar di dunia?",
+        "list": "hewan terpintar",
+        "note": "Kecerdasan sosial, penggunaan alat, komunikasi, dan pemecahan masalah dinilai bersama tanpa berpura-pura ada satu IQ yang berlaku untuk semua hewan."
+      },
+      "most-dangerous-animals": {
+        "label": "Hewan paling berbahaya",
+        "question": "Apa hewan paling berbahaya di dunia?",
+        "list": "hewan paling berbahaya",
+        "note": "Tingkat bahaya dinilai dari risiko terdokumentasi bagi manusia, yang bergantung pada konteks pertemuan, wilayah, dan paparan."
+      },
+      "most-agile-animals": {
+        "label": "Hewan paling lincah",
+        "question": "Apa hewan paling lincah di dunia?",
+        "list": "hewan paling lincah",
+        "note": "Kelincahan di sini berarti kendali tubuh, perubahan arah, dan manuver pada kecepatan tinggi."
+      },
+      "most-adaptable-animals": {
+        "label": "Hewan paling mudah beradaptasi",
+        "question": "Apa hewan yang paling mudah beradaptasi di dunia?",
+        "list": "hewan paling mudah beradaptasi",
+        "note": "Kemampuan beradaptasi mengukur seberapa baik hewan bertahan di berbagai habitat, termasuk lingkungan yang sudah diubah manusia."
+      }
+    },
     "filterAll": "Semua",
     "searchLabel": "Cari tier list",
     "searchPlaceholder": "Cari tier list",

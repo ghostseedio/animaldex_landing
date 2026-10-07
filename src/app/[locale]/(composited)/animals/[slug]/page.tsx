@@ -85,6 +85,23 @@ type SpeciesTextLink = {
     slug: string;
 };
 
+/** "What is a tayra?" / "What is an aardwolf?" — the lookup the page answers. */
+function whatIsQuestion(name: string) {
+    const article = /^[aeiou]/i.test(name) ? "an" : "a";
+    return `What is ${article} ${name}?`;
+}
+
+/** The DB spotlight is the answer, so it leads; trimmed at a word boundary. */
+function buildSpeciesMetaDescription(name: string, summary: string) {
+    const text = summary.replace(/\s+/g, " ").trim();
+    const lead = text.toLowerCase().includes(name.toLowerCase()) ? text : `${name}: ${text}`;
+    if (lead.length <= 155) {
+        return lead.length < 110 ? `${lead} Habitat, diet, range and how to identify it.` : lead;
+    }
+    const cut = lead.slice(0, 152);
+    return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
+}
+
 function toQualitySlug(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -288,12 +305,13 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
     }
 
     // Species-lookup intent ("tenkile", "arabian sand boa") wants facts first;
-    // the symbolism/lesson angle stays in the description and on-page.
+    // the symbolism/lesson angle stays on-page. Diet comes from the DB field guide.
     const scientificName = entry.analysis.scientificName?.trim();
-    const title = scientificName && scientificName.toLowerCase() !== entry.name.toLowerCase()
-        ? `${entry.name} (${scientificName}): Facts, Habitat, Range & Lessons`
-        : `${entry.name}: Facts, Habitat, Range & Lessons`;
-    const description = `${entry.name}: ${entry.analysis.summary} Explore biology-backed ${entry.name.toLowerCase()} meaning, symbolism, lessons, behavior, habitat, and related animals with AnimalDex.`;
+    const factsLabel = entry.databaseSource?.fieldGuide.dietSummary ? "Facts, Habitat, Diet & Range" : "Facts, Habitat, Range & Lessons";
+    const title = scientificName && scientificName.toLowerCase() !== entry.name.toLowerCase() && !/under review/i.test(scientificName)
+        ? `${entry.name} (${scientificName}): ${factsLabel}`
+        : `${entry.name}: ${factsLabel}`;
+    const description = buildSpeciesMetaDescription(entry.name, entry.analysis.summary);
 
     const metadata = buildContentMetadata({
         locale,
@@ -619,7 +637,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         {
             id: "overview",
             navLabel: t("understandOverview"),
-            title: t("fieldGuideIntroductionTitle", {animal: entry.name}),
+            // Animal pages are English-only (/id collapses to English), and the
+            // heading answers the "what is a tayra?" lookup the page ranks for.
+            title: whatIsQuestion(entry.name),
             whyQuestion: `Why is ${entry.name} built this way?`,
             content: (
                 <div className="flex flex-col gap-5">
@@ -658,7 +678,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <SpeciesStatMeters stats={canonicalStats} />
             )
         }] : []),
-        {
+        ...((entry.premiumDetails.behaviorTraits.length > 0 || databaseFieldGuide?.sleepPattern) ? [{
             id: "behavior",
             navLabel: t("understandBehavior"),
             title: t("fieldGuideBehaviorTitle", {animal: entry.name}),
@@ -675,7 +695,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     ) : null}
                 </div>
             )
-        },
+        }] : []),
         {
             id: "habitat",
             navLabel: t("understandHabitat"),

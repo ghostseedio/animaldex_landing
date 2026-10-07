@@ -1,7 +1,8 @@
 import {CanonicalContentMetadata} from "@/data/content-schema";
 import {contentThumb} from "@/data/content-thumbnails";
 import {isLegendaryEarthBeastSpeciesSlug} from "@/data/legendary-earth-beasts";
-import {buildDeterministicCanonicalStats, SpeciesStats} from "@/data/species-stats";
+import {buildDeterministicCanonicalStats} from "@/data/species-stats-deterministic";
+import type {SpeciesStats} from "@/lib/battle-tier";
 import {speciesEntries, SpeciesEntry} from "@/data/species";
 
 export type RankingCategory =
@@ -333,6 +334,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "smartest-animals",
         title: "Smartest Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "what-is-the-smartest-animal",
+                title: "What Is the Smartest Animal? The 10 Smartest Animals",
+                description: "Chimpanzees, dolphins, orcas, octopuses and corvids: the research behind each and how animal intelligence is tested."
+            }
+        ],
         headline: "100 Smartest Animals Ranked",
         seoTitle: "Top 100 Smartest Animals — Animal Intelligence Ranked",
         immediateQuestion: "What are the smartest animals?",
@@ -401,6 +409,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-dangerous-animals",
         title: "Most Dangerous Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "what-is-the-most-dangerous-animal",
+                title: "What Is the Most Dangerous Animal? Deadliest Animals Ranked",
+                description: "Mosquitoes by deaths, crocodiles and hippos by encounter: venomous vs dangerous vs aggressive, with the numbers."
+            }
+        ],
         headline: "100 Most Dangerous Animals in the World",
         seoTitle: "Top 100 Most Dangerous Animals in the World, Ranked",
         immediateQuestion: "What are the most dangerous animals?",
@@ -523,6 +538,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-agile-animals",
         title: "Most Agile Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "what-is-the-most-agile-animal",
+                title: "What Is the Most Agile Animal? 10 Most Agile Animals",
+                description: "Octopus, peregrine falcon, dragonfly and cheetah: what agility means, the category winners and how it is measured."
+            }
+        ],
         headline: "100 Most Agile Animals",
         seoTitle: "Most Agile Animals — Top 100 Ranked",
         immediateQuestion: "What is the most agile animal?",
@@ -699,6 +721,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-resilient-animals",
         title: "Most Resilient Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "what-is-the-most-resilient-animal",
+                title: "What Is the Most Resilient Animal? 10 Toughest Survivors",
+                description: "Tardigrades, crocodiles, polar bears and axolotls: surviving extremes, recovering from damage, and why resilience is not strength."
+            }
+        ],
         headline: "100 Most Resilient Animals",
         seoTitle: "Most Resilient Animals — Top 100 Ranked",
         immediateQuestion: "What is the most resilient animal?",
@@ -947,6 +976,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "most-adaptable-animals",
         title: "Most Adaptable Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "what-is-the-most-adaptable-animal",
+                title: "What Is the Most Adaptable Animal? 10 Most Adaptable Animals",
+                description: "Red fox, crow, wolf and peregrine: why generalists thrive from tundra to city streets, and how adaptability is measured."
+            }
+        ],
         headline: "100 Most Adaptable Animals",
         seoTitle: "Most Adaptable Animals — Top 100 Ranked",
         immediateQuestion: "What is the most adaptable animal?",
@@ -1816,11 +1852,22 @@ function getStatRankingEntries(page: RankingPage, entries: SpeciesEntry[]): Reso
         return [];
     }
 
-    return entries
+    const limit = Math.min(page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES, entries.length);
+    // The curated top ten leads, as on category lists: sorting by the stat alone
+    // put Xantus's Murrelet at #1 of "fastest animals" under a headline that
+    // names the peregrine falcon.
+    const entriesBySlug = new Map(entries.map((entry) => [entry.slug, entry]));
+    const pinned = page.entries
+        .filter((entry) => entriesBySlug.has(entry.speciesSlug))
+        .map((entry): ResolvedRankingEntry => ({...entry, tier: getCuratedRankingTier(entry.rank)}));
+    const pinnedSlugs = new Set(pinned.map((entry) => entry.speciesSlug));
+
+    const generated = entries
+        .filter((entry) => !pinnedSlugs.has(entry.slug))
         .map((entry) => {
             const stats = readRankingStats(entry);
             const score = stats[statKey];
-            const tier = getRankingTier(score);
+            const tier = pinned.length ? capGeneratedRankingTier(getRankingTier(score)) : getRankingTier(score);
 
             return {entry, stats, score, tier};
         })
@@ -1830,14 +1877,21 @@ function getStatRankingEntries(page: RankingPage, entries: SpeciesEntry[]): Reso
             || right.stats.dominance - left.stats.dominance
             || left.entry.name.localeCompare(right.entry.name)
         )
-        .slice(0, Math.min(page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES, entries.length))
-        .map((item, index): ResolvedRankingEntry => ({
-            rank: index + 1,
+        .slice(0, Math.max(0, limit - pinned.length))
+        .map((item): ResolvedRankingEntry => ({
+            rank: 0,
             speciesSlug: item.entry.slug,
             tier: item.tier,
             primaryMetric: formatStatMetric(statKey, item.score),
             shortReason: buildStatRankingReason(item.entry, statKey, item.score, item.tier)
         }));
+
+    return renumberRankingEntries([...pinned, ...generated].slice(0, limit));
+}
+
+/** Ranks are positions in the rendered table: 1..n, no gaps, no repeats. */
+function renumberRankingEntries(entries: ResolvedRankingEntry[]): ResolvedRankingEntry[] {
+    return entries.map((entry, index) => ({...entry, rank: index + 1}));
 }
 
 function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry: SpeciesEntry) {
@@ -1946,9 +2000,12 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
                 score,
                 tier: getRankingTier(score)
             };
-        })
-        .filter((item) => page.category !== "danger" || qualifiesForDangerRanking(item.entry, item.score));
+        });
+    // Curated picks are editorial, so the danger filter (which dropped the
+    // elephant from #3 and left the table with two #9s) only gates auto-fill.
     const scoredBySlug = new Map(scoredSpecies.map((item) => [item.entry.slug, item]));
+    const fillableSpecies = scoredSpecies
+        .filter((item) => page.category !== "danger" || qualifiesForDangerRanking(item.entry, item.score));
     const pinnedEntries = page.entries
         .map((entry): ResolvedRankingEntry | null => {
             const scored = scoredBySlug.get(entry.speciesSlug);
@@ -1963,7 +2020,7 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
             };
         })
         .filter((entry): entry is ResolvedRankingEntry => Boolean(entry));
-    const generatedEntries = scoredSpecies
+    const generatedEntries = fillableSpecies
         .filter((item) => !pinnedSlugs.has(item.entry.slug))
         .sort((left, right) =>
             right.score - left.score
@@ -1983,7 +2040,7 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
             };
         });
 
-    return [...pinnedEntries, ...generatedEntries].slice(0, targetCount);
+    return renumberRankingEntries([...pinnedEntries, ...generatedEntries].slice(0, targetCount));
 }
 
 export function getRelatedRankings(slug: string, limit = 3) {

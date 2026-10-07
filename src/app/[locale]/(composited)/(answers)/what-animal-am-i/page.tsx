@@ -10,7 +10,10 @@ import {
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
+import {quizAnimals, quizQuestions} from "@/data/what-animal-am-i-quiz";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import CelebrityWildProfileCarousel from "./celebrity-wild-profile-carousel";
+import WhatAnimalQuiz from "./what-animal-quiz";
 
 type WhatAnimalAmIPageProps = {
     params: {
@@ -127,21 +130,26 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         </div>
                         <div className="mt-8 grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
-                                <strong className="block text-2xl text-white">{page.roleRows.length}</strong>
-                                <span>Wild roles</span>
+                                <strong className="block text-2xl text-white">{quizQuestions.length}</strong>
+                                <span>Quiz questions</span>
                             </div>
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
-                                <strong className="block text-2xl text-white">{page.howItWorks.length}</strong>
-                                <span>Profile steps</span>
+                                <strong className="block text-2xl text-white">{quizAnimals.length}</strong>
+                                <span>Possible animals</span>
                             </div>
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{celebrityWildProfiles.length}</strong>
                                 <span>Example profiles</span>
                             </div>
                         </div>
-                        <div className="mt-8 flex flex-wrap gap-3">
-                            <StoreLinks />
-                            <Link href={`/blog/${page.blogSlug}`} underline className="self-center text-lg text-primary-200 hover:text-primary-100">
+                        <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+                            <a
+                                href="#quiz"
+                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+                            >
+                                Start the quiz
+                            </a>
+                            <Link href={`/blog/${page.blogSlug}`} underline className="text-lg text-primary-200 hover:text-primary-100">
                                 {t("readDeepGuide")}
                             </Link>
                         </div>
@@ -162,6 +170,42 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <WhatAnimalQuiz copy={page.quiz} />
+
+            <section aria-labelledby="quiz-results-title" className="border-t border-line-300 pt-8">
+                <div className="mb-6 max-w-4xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{page.quiz.resultsEyebrow}</p>
+                    <h2 id="quiz-results-title" className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">
+                        All {quizAnimals.length} possible results
+                    </h2>
+                    <p className="mt-3 text-lg leading-8 text-ink-200 md:text-xl">{page.quiz.resultsDescription}</p>
+                </div>
+                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {quizAnimals.map((animal) => (
+                        <li key={animal.slug} className="flex gap-4 rounded-lg border border-line-300 bg-surface-900/70 p-4">
+                            <SpeciesArtworkImage
+                                slug={animal.slug}
+                                alt={`${animal.name} artwork`}
+                                className="h-16 w-16 shrink-0 rounded-md border border-line-300"
+                                sizes="64px"
+                            />
+                            <div className="flex min-w-0 flex-col gap-1">
+                                <h3 className="font-display text-xl font-bold text-white">
+                                    <Link href={`/animals/${animal.slug}`} className="hover:text-primary-100">
+                                        {animal.name}
+                                    </Link>
+                                </h3>
+                                <p className="text-sm font-semibold text-primary-200">{animal.archetype}</p>
+                                <p className="text-sm leading-6 text-ink-300 md:text-base">{animal.oneLiner}</p>
+                                <Link href={`/animal-lessons/${animal.slug}`} underline className="w-fit text-sm text-primary-200 hover:text-primary-100">
+                                    {page.quiz.lessonLinkLabel}
+                                </Link>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             </section>
 
             <section className="border-t border-line-300 pt-8">

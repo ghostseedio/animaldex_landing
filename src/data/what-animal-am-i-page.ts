@@ -15,21 +15,42 @@ export type CelebrityWildProfile = {
 };
 
 export const WHAT_ANIMAL_AM_I_SLUG = "what-animal-am-i";
-export const WHAT_ANIMAL_AM_I_UPDATED_AT = "2026-06-16";
+export const WHAT_ANIMAL_AM_I_UPDATED_AT = "2026-10-07";
 
 export const whatAnimalAmIPage = {
     slug: WHAT_ANIMAL_AM_I_SLUG,
-    metaTitle: "What Animal Am I? Spirit Animal Quiz & Wild Profile | AnimalDex",
-    metaDescription: "Find out what animal you are with AnimalDex Wild Profile. Get Origin, Apex, and Active spirit-animal patterns through an adaptive interview — not a generic one-result quiz.",
+    // The root layout's title template appends " | AnimalDex".
+    metaTitle: "What Animal Am I? Free Animal Personality Quiz",
+    metaDescription: "Take the free 10-question animal personality quiz and get your animal instantly — plus your secondary animal, grounded in how 14 real species actually behave.",
     heroTitle: "What animal am I?",
-    heroSubtitle: "AnimalDex answers with a Wild Profile: three animals for your root pattern, pressure pattern, and current season — then the app gives you the real diagnosis.",
-    intro: "Most spirit-animal quizzes give one cute label and stop. AnimalDex uses adaptive interview signal, catalog-backed animal matching, and a three-part Wild Profile so your answer feels personal, explainable, and useful.",
+    heroSubtitle: "Take the free 10-question animal personality quiz below and get your answer instantly: a main animal, a secondary animal, and why they fit.",
+    intro: "Every result is a real species, matched on how you recharge, handle conflict, work with others and react under pressure. Want the deeper version? The AnimalDex app builds a full Wild Profile — Origin, Apex and Active animals — from an adaptive interview.",
+    quiz: {
+        eyebrow: "Spirit animal quiz",
+        title: "Take the animal personality quiz",
+        description: "10 quick questions, no sign-up. Pick the answer that sounds most like you — not who you'd like to be.",
+        submitLabel: "Show my animal",
+        answeredLabel: "answered",
+        incompleteHint: "Answer every question to see your animal.",
+        resultEyebrow: "Your animal",
+        secondaryLabel: "Your secondary animal",
+        speciesLinkLabel: "Meet the species",
+        lessonLinkLabel: "Read its life lessons",
+        retakeLabel: "Retake the quiz",
+        fullProfileTitle: "Want the full Wild Profile?",
+        fullProfileDescription: "This quiz gives you one snapshot. In the AnimalDex app, an adaptive interview builds three animals — Origin (your root pattern), Apex (you under pressure) and Active (your current season) — matched against the AnimalDex species catalog.",
+        resultsEyebrow: "Every possible result",
+        resultsDescription: "The quiz scores you against these real species. Each description is based on documented behaviour of the animal — not astrology.",
+        progressLabel: "Quiz progress"
+    },
     searchIntents: [
         "what animal am I",
         "what animal are you",
         "spirit animal quiz",
         "what is my spirit animal",
         "animal personality quiz",
+        "what animal are you quiz",
+        "free spirit animal quiz",
         "find out which animal you are",
         "animal identity app",
         "AnimalDex Wild Profile",
@@ -62,20 +83,32 @@ export const whatAnimalAmIPage = {
     ],
     faq: [
         {
-            question: "What animal am I in AnimalDex?",
-            answer: "AnimalDex answers with a Wild Profile: Origin, Apex, and Active animals. Origin is your root pattern, Apex is your pressure pattern, and Active is your current actionable pattern."
+            question: "What animal am I?",
+            answer: "Take the 10-question quiz on this page to find out instantly. It scores your answers about how you recharge, handle conflict, plan, learn and react under pressure against 14 real animals — from the Gray Wolf and Octopus to the Honey Badger and Galápagos Tortoise — and shows your main animal plus a secondary animal."
         },
         {
-            question: "Is this a spirit animal quiz?",
-            answer: "It can feel like a spirit animal experience, but Wild Profile is built on adaptive interview signal and catalog-backed animal matching rather than a single entertainment result."
+            question: "How does the spirit animal quiz work?",
+            answer: "Each of the 10 questions has four answers, and every answer adds points to the animals whose real-world behaviour matches it. Your main animal is the one with the most points and your secondary animal is the runner-up. Scoring is fixed, so the same answers always give the same result."
         },
         {
-            question: "How do I get my real result?",
+            question: "Is this quiz scientific?",
+            answer: "No. It is a fun, self-report personality reflection, not a validated psychological test. What is grounded in science is the animal side: each description is based on documented behaviour of that species, such as wolf pack cooperation, crow face recognition or bear hyperphagia before winter."
+        },
+        {
+            question: "What is my spirit animal based on my personality?",
+            answer: "Your quiz result is the animal whose habits best mirror yours — for example, a team-first planner tends to land on the Wolf, a curious improviser on the Octopus, and a calm, routine-loving loner on the Domestic Cat or Galápagos Tortoise. For a deeper three-animal answer, the AnimalDex app builds a full Wild Profile."
+        },
+        {
+            question: "What is the AnimalDex Wild Profile?",
+            answer: "Wild Profile is the full version inside the AnimalDex app: Origin, Apex, and Active animals. Origin is your root pattern, Apex is your pressure pattern, and Active is your current actionable pattern. It uses an adaptive interview and catalog-backed matching rather than a fixed quiz."
+        },
+        {
+            question: "How do I get my full Wild Profile?",
             answer: "Download AnimalDex on the App Store or Google Play, open Identity, and complete the Wild Profile interview. The app generates your personal Origin, Apex, and Active diagnosis there."
         },
         {
             question: "Can my animal change?",
-            answer: "Active can shift as your current season changes. Apex can be refreshed from newer reflection data. Origin only changes if you retake the full questionnaire."
+            answer: "Yes. On this quiz your result changes if your answers do. In the app, Active can shift as your current season changes, Apex can be refreshed from newer reflection data, and Origin only changes if you retake the full questionnaire."
         },
         {
             question: "Are the celebrity examples real app results?",

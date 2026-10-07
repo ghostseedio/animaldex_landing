@@ -76,6 +76,39 @@ function getReadMinutes(parts: string[]) {
     return Math.max(4, Math.ceil(parts.join(" ").trim().split(/\s+/).length / 210));
 }
 
+const META_DESCRIPTION_MAX = 155;
+
+/**
+ * Search snippets should lead with the answer ("who would win"), so the meta
+ * description is the data-driven verdict, trimmed at a sentence boundary when
+ * one fits (else a word boundary + ellipsis). Falls back to the row summary.
+ */
+function buildVerdictMetaDescription(quickVerdict: string | undefined, fallback: string) {
+    const verdict = (quickVerdict ?? "").replace(/\s+/g, " ").trim();
+    if (!verdict) {
+        return fallback;
+    }
+    if (verdict.length <= META_DESCRIPTION_MAX) {
+        return verdict;
+    }
+
+    const head = verdict.slice(0, META_DESCRIPTION_MAX + 1);
+    const sentenceStop = /[.!?](?=\s|$)/g;
+    let sentenceEnd = -1;
+    let match: RegExpExecArray | null;
+    while ((match = sentenceStop.exec(head)) !== null && match.index < META_DESCRIPTION_MAX) {
+        sentenceEnd = match.index;
+    }
+    if (sentenceEnd >= 40) {
+        return verdict.slice(0, sentenceEnd + 1);
+    }
+
+    const cut = verdict.slice(0, META_DESCRIPTION_MAX - 1);
+    const lastSpace = cut.lastIndexOf(" ");
+    const trimmed = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s,;:\-–—]+$/, "");
+    return `${trimmed}…`;
+}
+
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     redirectPublishedReverse(params.locale, params.slug);
     const data = await getComparisonPageData(params.slug);
@@ -102,7 +135,7 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
         locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
         title: challenge.title,
-        description: challenge.description,
+        description: buildVerdictMetaDescription(challenge.quickVerdict, challenge.description),
         keywords: [...challenge.searchIntents, challenge.comparisonType, animalA.name, animalB.name],
         featuredImage: challenge.featuredImage,
         publishedAt: challenge.publishedAt,

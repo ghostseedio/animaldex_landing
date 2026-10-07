@@ -380,11 +380,54 @@
     "eyebrow": "AnimalDex Tier Lists",
     "title": "Animal Tier Lists",
     "description": "Explore AnimalDex animal tier lists and rankings. See how animals rank for strength, intelligence, speed, danger, adaptability, agility, defense, and more.",
-    "metaTitle": "Animal Tier List — Animal Rankings & Top 100 Lists",
-    "metaDescription": "Animal tier lists and rankings for fastest, strongest, smartest, most dangerous, most adaptable, and most agile animals, with methodology and links into species pages.",
+    "metaTitle": "Animal Tier List: Fastest, Strongest & Smartest Animals",
+    "metaDescription": "Animal tier list from S to D tier. Fastest: {fastest}. Strongest: {strongest}. Smartest: {smartest}. Most dangerous: {dangerous}. 100+ species ranked per list.",
     "credibilityEvidence": "Evidence-informed rankings",
     "credibilityMethodology": "Transparent methodology",
     "credibilitySpecies": "Species-level comparisons",
+    "introTitle": "What is an animal tier list?",
+    "introParagraphOne": "An animal tier list sorts species into bands instead of one score: S tier holds the standout animals, and the A, B, C and D tiers hold animals that fit the trait less and less. It is a more honest format than a single top 10, because it shows when several animals are effectively tied.",
+    "introParagraphTwo": "Every AnimalDex tier list ranks 100 or more species on one trait — speed, strength, intelligence, danger, agility, adaptability and more — and explains the methodology behind the order. The quick answers below come straight from the same data as the full lists.",
+    "quickAnswersTitle": "Quick answers",
+    "quickAnswersDescription": "The #1 animal on each featured tier list, with the next two behind it.",
+    "quickAnswerFollowedBy": "Followed by {second} and {third}",
+    "quickAnswerViewList": "See the full tier list",
+    "hubFaqTitle": "Animal tier list FAQ",
+    "hubFaqWhatIsQuestion": "What is an animal tier list?",
+    "hubFaqAnswer": "{first} is the #1 pick in the AnimalDex {list} tier list, followed by {second} and {third}.",
+    "otherLanguages": "This page in other languages",
+    "quickAnswers": {
+      "fastest-animals": {
+        "label": "Fastest animal",
+        "question": "What is the fastest animal in the world?",
+        "list": "fastest animals"
+      },
+      "strongest-animals": {
+        "label": "Strongest animal",
+        "question": "What is the strongest animal in the world?",
+        "list": "strongest animals"
+      },
+      "smartest-animals": {
+        "label": "Smartest animal",
+        "question": "What is the smartest animal in the world?",
+        "list": "smartest animals"
+      },
+      "most-dangerous-animals": {
+        "label": "Most dangerous animal",
+        "question": "What is the most dangerous animal in the world?",
+        "list": "most dangerous animals"
+      },
+      "most-agile-animals": {
+        "label": "Most agile animal",
+        "question": "What is the most agile animal in the world?",
+        "list": "most agile animals"
+      },
+      "most-adaptable-animals": {
+        "label": "Most adaptable animal",
+        "question": "What is the most adaptable animal in the world?",
+        "list": "most adaptable animals"
+      }
+    },
     "filterAll": "All",
     "searchLabel": "Search tier lists",
     "searchPlaceholder": "Search tier lists",

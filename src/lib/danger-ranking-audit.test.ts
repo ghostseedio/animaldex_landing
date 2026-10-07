@@ -12,7 +12,7 @@ function readRepo(...parts: string[]) {
 
 test("most-dangerous-animals uses threat-aware danger scoring instead of generic claw boosts", () => {
     const rankings = readRepo("src/data/rankings.ts");
-    const speciesStats = readRepo("src/data/species-stats.ts");
+    const speciesStats = readRepo("src/data/species-stats-deterministic.ts");
 
     assert.match(rankings, /function getDangerCategoryScore\(stats: SpeciesStats, entry: SpeciesEntry\)/);
     assert.match(rankings, /function isGentleOrLowThreatSpecies\(entry: SpeciesEntry\)/);
