@@ -13,13 +13,35 @@ type ArtworkIndex = {
     bySlug: Map<string, string>;
     /** Candidate file names keyed by each hyphen-delimited token they contain. */
     byToken: Map<string, string[]>;
+    byCompact: Map<string, string>;
 };
 
 let indexPromise: Promise<ArtworkIndex> | null = null;
 let indexExpiresAt = 0;
 const resolved = new Map<string, string | null>();
 
-const EMPTY_INDEX: ArtworkIndex = {bySlug: new Map(), byToken: new Map()};
+const EMPTY_INDEX: ArtworkIndex = {bySlug: new Map(), byToken: new Map(), byCompact: new Map()};
+
+/** Letters only: "secretary-bird" and "secretarybird", "harriss-hawk" and "harris-s-hawk" meet. */
+function compactKey(value: string) {
+    return value.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+/**
+ * Catalog slugs whose artwork file uses another spelling or name: possessives
+ * the catalog drops ("Pallas's cat" → pallass-cat), single-word file names and
+ * common synonyms. Value is the file name without ".webp".
+ */
+const ARTWORK_ALIASES: Record<string, string> = {
+    "pallas-cat": "pallass-cat",
+    "xantus-murrelet": "xantuss-murrelet",
+    "kirk-dik-dik": "kirks-dik-dik",
+    "reeves-muntjac": "reevess-muntjac",
+    "common-tailorbird": "tailorbird",
+    "drill-monkey": "drill",
+    "striped-polecat": "zorilla",
+    "domestic-pig": "pig"
+};
 
 function tokenize(value: string) {
     return value.split("-").filter(Boolean);
@@ -72,13 +94,14 @@ async function buildIndex(): Promise<ArtworkIndex> {
     const files = await listBucketFiles();
     if (files.length === 0) return EMPTY_INDEX;
 
-    const index: ArtworkIndex = {bySlug: new Map(), byToken: new Map()};
+    const index: ArtworkIndex = {bySlug: new Map(), byToken: new Map(), byCompact: new Map()};
 
     for (const file of files) {
         if (!isSpeciesArtwork(file)) continue;
 
         const slug = file.slice(0, -".webp".length);
         index.bySlug.set(slug, file);
+        if (!index.byCompact.has(compactKey(slug))) index.byCompact.set(compactKey(slug), file);
 
         for (const token of Array.from(new Set(tokenize(slug)))) {
             const bucket = index.byToken.get(token);
@@ -141,7 +164,10 @@ export async function resolveSpeciesArtworkFile(slug: string): Promise<string | 
     if (cached !== undefined) return cached;
 
     const index = await getIndex();
-    const exact = index.bySlug.get(normalized);
+    const alias = ARTWORK_ALIASES[normalized];
+    const exact = index.bySlug.get(normalized)
+        ?? (alias ? index.bySlug.get(alias) : undefined)
+        ?? index.byCompact.get(compactKey(normalized));
 
     if (exact) {
         resolved.set(normalized, exact);

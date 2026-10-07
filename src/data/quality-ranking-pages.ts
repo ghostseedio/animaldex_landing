@@ -18,24 +18,11 @@
  * quality); the `primaryMetric` written here is replaced at resolve time by
  * the matched quality. Pinned by src/lib/quality-rankings.test.ts.
  */
-import type {ContentImage} from "@/data/content-schema";
-import {contentThumb} from "@/data/content-thumbnails";
 import type {RankingBlogLink, RankingPage} from "@/data/rankings";
+import {tierListHeroImage} from "@/data/tier-list-hero-images";
 
 const QUALITY_RANKING_DATE = "2026-10-07";
 const QUALITY_RANKING_LIMIT = 50;
-const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
-
-/** Reuses a ranking image an existing list already publishes on the CDN. */
-function existingRankingImage(imageSlug: string, alt: string): ContentImage {
-    return {
-        src: `${RANKING_IMAGE_BASE_URL}/${imageSlug}.webp`,
-        alt,
-        width: 1672,
-        height: 941,
-        caption: "Ranking image source: AnimalDex CDN."
-    };
-}
 
 const SELF_IMPROVEMENT_POST: RankingBlogLink = {
     slug: "what-animals-can-teach-us-about-self-improvement",
@@ -161,7 +148,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["calmest-animals", "stealthiest-hunters", "best-hunters"],
-        featuredImage: contentThumb("why-every-wildlife-photographer-should-track-the-species-they-photograph")
+        featuredImage: tierListHeroImage("most-patient-animals")
     }),
     createQualityRankingPage({
         slug: "most-loyal-animals",
@@ -248,7 +235,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["animals-that-work-together", "most-protective-animals", "animals-with-best-teamwork"],
-        featuredImage: contentThumb("id-lessons")
+        featuredImage: tierListHeroImage("most-loyal-animals")
     }),
     createQualityRankingPage({
         slug: "bravest-animals",
@@ -335,7 +322,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-protective-animals", "most-dangerous-animals", "strongest-animals"],
-        featuredImage: contentThumb("comparisons-hub")
+        featuredImage: tierListHeroImage("bravest-animals")
     }),
     createQualityRankingPage({
         slug: "most-curious-animals",
@@ -422,7 +409,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-resourceful-animals", "smartest-animals", "most-adaptable-animals"],
-        featuredImage: contentThumb("monkey-pillar")
+        featuredImage: tierListHeroImage("most-curious-animals")
     }),
     createQualityRankingPage({
         slug: "most-gentle-animals",
@@ -509,7 +496,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["calmest-animals", "most-protective-animals", "biggest-animals"],
-        featuredImage: contentThumb("what-makes-a-great-ethical-wildlife-guide")
+        featuredImage: tierListHeroImage("most-gentle-animals")
     }),
     createQualityRankingPage({
         slug: "most-protective-animals",
@@ -596,7 +583,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-loyal-animals", "bravest-animals", "animals-with-strongest-armor"],
-        featuredImage: contentThumb("wildlife-photography-searchable-body-of-work")
+        featuredImage: tierListHeroImage("most-protective-animals")
     }),
     createQualityRankingPage({
         slug: "animals-that-work-together",
@@ -687,7 +674,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["animals-with-best-teamwork", "most-communicative-animals-in-the-wild", "most-loyal-animals"],
-        featuredImage: existingRankingImage("animals-with-the-best-teamwork", "Animals That Work Together ranking page on AnimalDex")
+        featuredImage: tierListHeroImage("animals-that-work-together")
     }),
     createQualityRankingPage({
         slug: "most-disciplined-animals",
@@ -774,7 +761,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-patient-animals", "most-resilient-animals", "animals-that-work-together"],
-        featuredImage: existingRankingImage("most-resilient-animals-in-the-world", "Most Disciplined Animals ranking page on AnimalDex")
+        featuredImage: tierListHeroImage("most-disciplined-animals")
     }),
     createQualityRankingPage({
         slug: "calmest-animals",
@@ -861,7 +848,7 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-gentle-animals", "most-patient-animals", "most-resilient-animals"],
-        featuredImage: contentThumb("wildlife-photos-sitting-on-instagram")
+        featuredImage: tierListHeroImage("calmest-animals")
     }),
     createQualityRankingPage({
         slug: "most-resourceful-animals",
@@ -948,6 +935,6 @@ export const qualityRankingPages: RankingPage[] = [
             ]
         },
         relatedRankingSlugs: ["most-curious-animals", "smartest-animals", "most-adaptable-animals"],
-        featuredImage: existingRankingImage("smartest-animals-in-the-world", "Most Resourceful Animals ranking page on AnimalDex")
+        featuredImage: tierListHeroImage("most-resourceful-animals")
     })
 ];

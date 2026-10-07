@@ -34,7 +34,7 @@ import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
 import {commonNameInSentence} from "@/lib/animal-dream-reading";
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
 type RankingPageProps = {
@@ -58,12 +58,6 @@ type RelatedChallengeCard = {
 
 function formatDate(locale: string, date: string) {
     return new Intl.DateTimeFormat(locale, {dateStyle: "long"}).format(new Date(date));
-}
-
-function getSchemaImageUrl(locale: string, imageSrc: string) {
-    return imageSrc.startsWith("http://") || imageSrc.startsWith("https://")
-        ? imageSrc
-        : getAbsoluteUrl(locale, imageSrc);
 }
 
 function getMovementDomain(entry: SpeciesEntry, labels: {air: string; water: string; land: string; mixed: string}) {
@@ -252,7 +246,8 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
         dateModified: ranking.updatedAt,
         inLanguage: locale,
         url: pageUrl,
-        image: getSchemaImageUrl(locale, ranking.featuredImage.src),
+        // Static assets are never locale-prefixed, so local heroes resolve against the site root.
+        image: getAbsoluteAssetUrl(ranking.featuredImage.src),
         keywords: ranking.searchIntents.join(", "),
         author: {"@type": "Organization", name: "AnimalDex"},
         publisher: {"@type": "Organization", name: "AnimalDex"}

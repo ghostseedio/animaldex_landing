@@ -18,7 +18,12 @@ export async function GET(request: NextRequest, {params}: {params: {slug: string
     const artworkFile = await resolveSpeciesArtworkFile(params.slug).catch(() => null);
 
     if (!artworkFile) {
-        return NextResponse.redirect(new URL(SPECIES_NO_IMAGE_SRC, request.url), 307);
+        // Relative Location: behind the proxy request.url is the container's
+        // internal origin (http://localhost:3000), which browsers can't reach.
+        return new NextResponse(null, {
+            status: 307,
+            headers: {Location: SPECIES_NO_IMAGE_SRC, "Cache-Control": "public, max-age=3600"}
+        });
     }
 
     const target = Number.isFinite(size) && size > 0

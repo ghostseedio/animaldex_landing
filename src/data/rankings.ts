@@ -1,4 +1,4 @@
-import {CanonicalContentMetadata} from "@/data/content-schema";
+import {CanonicalContentMetadata, type ContentImage} from "@/data/content-schema";
 import type {RankingLifeLessons} from "@/data/ranking-life-lessons";
 import {contentThumb} from "@/data/content-thumbnails";
 import {isLegendaryEarthBeastSpeciesSlug} from "@/data/legendary-earth-beasts";
@@ -7,6 +7,7 @@ import {getQualityRankingCandidates, type QualityRankingConfig} from "@/data/qua
 import {buildDeterministicCanonicalStats} from "@/data/species-stats-deterministic";
 import type {SpeciesStats} from "@/lib/battle-tier";
 import {speciesEntries, SpeciesEntry} from "@/data/species";
+import {tierListHeroImage} from "@/data/tier-list-hero-images";
 
 export type RankingCategory =
     | "speed"
@@ -96,7 +97,10 @@ export type RankingPage = CanonicalContentMetadata & {
     qualityRanking?: QualityRankingConfig;
 };
 
-type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
+type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage"> & {
+    /** Explicit hero (e.g. a local tierListHeroImage); defaults to the AnimalDex CDN image named after the title. */
+    featuredImage?: ContentImage;
+};
 
 const RANKING_IMAGE_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals";
 export const RANKING_CANONICAL_BASE_PATH = "/tier-list";
@@ -129,7 +133,7 @@ function createRankingPage(page: RankingPageInput): RankingPage {
         ...page,
         publishedAt: "2026-04-12",
         updatedAt: "2026-04-12",
-        featuredImage: {
+        featuredImage: page.featuredImage ?? {
             src: `${RANKING_IMAGE_BASE_URL}/${getRankingImageSlug(page)}.webp`,
             alt: `${page.title} ranking page on AnimalDex`,
             width: 1672,
@@ -293,6 +297,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "biggest-animals",
+        featuredImage: tierListHeroImage("biggest-animals"),
         title: "Biggest Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the biggest animals in the world, using the AnimalDex size stat to compare body scale across sea, land, and air.",
         category: "size",
@@ -1172,6 +1177,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "largest-introduced-and-invasive-animals",
+        featuredImage: tierListHeroImage("largest-introduced-and-invasive-animals"),
         title: "Largest Introduced and Invasive Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the largest introduced and invasive animals, prioritizing body size first while still accounting for how disruptive those animals can become outside their native range.",
         category: "invasive",
@@ -1223,6 +1229,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "most-invasive-species",
+        featuredImage: tierListHeroImage("most-invasive-species"),
         title: "Most Invasive Species in the World: Top 10 Ranked",
         description: "A structured ranking of the most invasive species in the world, balancing establishment success, ecological disruption, spread potential, and how difficult the species is to remove once it takes hold.",
         category: "invasive",
@@ -1274,6 +1281,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "animals-with-highest-mating-drive",
+        featuredImage: tierListHeroImage("animals-with-highest-mating-drive"),
         title: "Animals with the Highest Mating Drive: Top 10 Ranked",
         headline: "Which Animal Has the Most Sex? The Most Sexually Active Animals, Ranked",
         seoTitle: "Which Animal Has the Most Sex? Most Sexually Active Animals Ranked",
@@ -1356,6 +1364,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "most-reviled-animals",
+        featuredImage: tierListHeroImage("most-reviled-animals"),
         title: "Most Reviled Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the animals people most often treat as the worst, balancing fear, disgust, nuisance reputation, and how strongly the species triggers negative human reactions.",
         category: "reputation",
@@ -1460,6 +1469,7 @@ const rankingPagesData: RankingPage[] = [
     },
     createRankingPage({
         slug: "rarest-animals",
+        featuredImage: tierListHeroImage("rarest-animals"),
         title: "Rarest Animals in the World: Top 10 Ranked",
         description: "A structured ranking of the rarest animals in the world, blending scarcity, vulnerability, and conservation pressure to answer the overlap between rarest and most endangered wildlife.",
         category: "rarity",
@@ -1513,6 +1523,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "deadliest-animals-to-humans-in-the-wild",
+        featuredImage: tierListHeroImage("deadliest-animals-to-humans-in-the-wild"),
         title: "Deadliest Animals to Humans in the Wild: Top 10 Ranked",
         description: "A structured ranking of the deadliest animals to humans in the wild, focusing on direct encounter lethality rather than disease-vector statistics.",
         category: "fatality",
@@ -1564,6 +1575,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "most-sacred-animals-in-history",
+        featuredImage: tierListHeroImage("most-sacred-animals-in-history"),
         title: "Most Sacred Animals in History: Top 10 Ranked",
         description: "A structured ranking of the most sacred animals in history, balancing long-term worship, ritual symbolism, divine association, and cultural persistence across civilizations.",
         category: "culture",
@@ -1615,6 +1627,7 @@ const rankingPagesData: RankingPage[] = [
     }),
     createRankingPage({
         slug: "most-communicative-animals-in-the-wild",
+        featuredImage: tierListHeroImage("most-communicative-animals-in-the-wild"),
         title: "Most Communicative Animals in the Wild: Top 10 Ranked",
         description: "A structured ranking of the most communicative animals in the wild, balancing vocal range, signal diversity, social coordination, and how heavily the species depends on information exchange.",
         category: "communication",
