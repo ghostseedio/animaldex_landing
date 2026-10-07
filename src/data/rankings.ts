@@ -49,6 +49,13 @@ export type RankingFAQ = {
     answer: string;
 };
 
+/** Static link; the target may be a Content Studio post with no code entry. */
+export type RankingBlogLink = {
+    slug: string;
+    title: string;
+    description: string;
+};
+
 export type RankingPage = CanonicalContentMetadata & {
     slug: string;
     category: RankingCategory;
@@ -65,9 +72,16 @@ export type RankingPage = CanonicalContentMetadata & {
     faq?: RankingFAQ[];
     relatedChallengeSlugs?: string[];
     relatedRankingSlugs?: string[];
+    blogLinks?: RankingBlogLink[];
     systemsSpeciesSlugs?: string[];
     statRankingKey?: RankingStatKey;
     statRankingLimit?: number;
+    /**
+     * Cap on the expanded table for category lists whose score formula cannot
+     * separate species (reproduction, culture…): the auto-filled entries read as
+     * templated filler, so the page stops at the curated ones.
+     */
+    expandedEntryLimit?: number;
 };
 
 type RankingPageInput = Omit<RankingPage, "publishedAt" | "updatedAt" | "featuredImage">;
@@ -115,6 +129,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "fastest-animals",
         title: "Fastest Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "fastest-animal-in-the-world",
+                title: "Fastest Animal in the World: 15 Fastest Animals Ranked",
+                description: "Peregrine falcon, cheetah, sailfish and the rest, with the measured speeds and how they were recorded."
+            }
+        ],
         headline: "100 Fastest Animals in the World",
         seoTitle: "Fastest Animals in the World — Top 100 Ranked",
         immediateQuestion: "What is the fastest animal in the world?",
@@ -187,6 +208,13 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "strongest-animals",
         title: "Strongest Animals in the World: Top 10 Ranked",
+        blogLinks: [
+            {
+                slug: "strongest-animal-in-the-world",
+                title: "Strongest Animal in the World: Raw Power vs Size",
+                description: "Elephants, crocodiles, gorillas and the dung beetle: absolute strength versus strength for size, with the numbers."
+            }
+        ],
         headline: "100 Strongest Animals in the World",
         seoTitle: "Top 100 Strongest Animals in the World, Ranked",
         immediateQuestion: "What is the strongest animal in the world?",
@@ -1198,9 +1226,21 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "animals-with-highest-mating-drive",
         title: "Animals with the Highest Mating Drive: Top 10 Ranked",
-        description: "A structured ranking of animals with the highest mating drive, balancing mating frequency, reproductive intensity, courtship persistence, and how central breeding behavior is to the animal's life strategy.",
+        headline: "Which Animal Has the Most Sex? The Most Sexually Active Animals, Ranked",
+        seoTitle: "Which Animal Has the Most Sex? Most Sexually Active Animals Ranked",
+        immediateQuestion: "Which animal has the most sex?",
+        rankingFactors: [
+            "Mating frequency and how often sexual behavior appears outside breeding windows",
+            "Intensity of courtship, competition, and breeding-season urgency",
+            "How central reproduction is to the species' social life or life cycle"
+        ],
+        description: "Bonobos, lions and dolphins top our ranking of the most sexually active animals — ranked by mating frequency, intensity and drive, with the reasoning behind each entry.",
         category: "reproduction",
+        expandedEntryLimit: 10,
         searchIntents: [
+            "which animal has the most sex",
+            "most sexually active animal",
+            "animal with the highest sex drive",
             "animals with the highest libido",
             "animals with highest mating drive",
             "most sexual animals",
@@ -1235,6 +1275,18 @@ const rankingPagesData: RankingPage[] = [
         ],
         faq: [
             {
+                question: "Which animal has the most sex?",
+                answer: "Bonobos. Sexual behavior runs through bonobo social life as greeting, bonding, and conflict resolution, so they mate far more often than reproduction alone would require. Lions mate the most intensely over a short window, with pairs copulating dozens of times a day for several days while a female is in estrus."
+            },
+            {
+                question: "What is the most sexually active animal?",
+                answer: "Bonobos for frequency across everyday life, lions for the most concentrated mating bouts, and dolphins for how often sexual behavior shows up in social play. Which one is 'most active' depends on whether you measure frequency, intensity, or how much of the animal's life revolves around mating."
+            },
+            {
+                question: "Which animal has the highest sex drive?",
+                answer: "Bonobo is the strongest single answer, because sexual behavior is unusually central to its social system rather than limited to a breeding season. Among seasonal breeders, lions, bullfrogs, and cane toads show the most relentless drive while the window is open."
+            },
+            {
                 question: "Which animal has the highest libido?",
                 answer: "Bonobo is one of the strongest headline answers because sexual behavior is unusually central to everyday social life."
             },
@@ -1244,6 +1296,13 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         relatedRankingSlugs: ["animals-with-best-teamwork", "most-communicative-animals-in-the-wild"],
+        blogLinks: [
+            {
+                slug: "which-animal-has-the-most-sex",
+                title: "Which Animal Has the Most Sex?",
+                description: "The long-form answer: how bonobos, lions, dolphins and explosive breeders compare on frequency, intensity and drive."
+            }
+        ],
         systemsSpeciesSlugs: ["bonobo", "dolphin", "lion"]
     }),
     createRankingPage({
@@ -1579,7 +1638,11 @@ export function getRankingPage(slug: string) {
 }
 
 export function getRankingTableSize(page: RankingPage) {
-    return page.statRankingKey ? page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES : MIN_RANKING_TABLE_ENTRIES;
+    if (page.statRankingKey) {
+        return page.statRankingLimit ?? STAT_RANKING_TABLE_ENTRIES;
+    }
+
+    return page.expandedEntryLimit ?? MIN_RANKING_TABLE_ENTRIES;
 }
 
 export function getRankingHeadline(page: RankingPage) {
@@ -1838,6 +1901,25 @@ function getCategoryScore(category: RankingCategory, stats: SpeciesStats, entry:
     }
 }
 
+const TIER_ORDER: RankingTier[] = ["S", "A", "B", "C", "D", "E"];
+
+/**
+ * Curated entries are tiered by their editorial rank. The category score
+ * formulas top out well below the S/A thresholds for some categories, which
+ * labelled the hand-picked #1 (Bonobo, mating drive) as E.
+ */
+function getCuratedRankingTier(rank: number): RankingTier {
+    if (rank <= 2) return "S";
+    if (rank <= 5) return "A";
+    if (rank <= 10) return "B";
+    return "C";
+}
+
+/** Auto-filled entries sit below the curated ones, so they never out-tier them. */
+function capGeneratedRankingTier(tier: RankingTier, ceiling: RankingTier = "C"): RankingTier {
+    return TIER_ORDER.indexOf(tier) < TIER_ORDER.indexOf(ceiling) ? ceiling : tier;
+}
+
 function buildGeneratedRankingReason(page: RankingPage, entry: SpeciesEntry, tier: RankingTier) {
     const category = page.category.replace(/_/g, " ");
     const context = entry.analysis.summary.split(".")[0].trim();
@@ -1853,7 +1935,7 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
     }
 
     const pinnedSlugs = new Set(page.entries.map((entry) => entry.speciesSlug));
-    const targetCount = Math.min(Math.max(page.entries.length, minEntries), rankableEntries.length);
+    const targetCount = Math.min(Math.max(page.entries.length, page.expandedEntryLimit ?? minEntries), rankableEntries.length);
     const scoredSpecies = rankableEntries
         .map((entry) => {
             const stats = readRankingStats(entry);
@@ -1877,7 +1959,7 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
 
             return {
                 ...entry,
-                tier: scored.tier
+                tier: getCuratedRankingTier(entry.rank)
             };
         })
         .filter((entry): entry is ResolvedRankingEntry => Boolean(entry));
@@ -1889,13 +1971,17 @@ export function getExpandedRankingEntries(page: RankingPage, minEntries = MIN_RA
             || left.entry.name.localeCompare(right.entry.name)
         )
         .slice(0, Math.max(0, targetCount - pinnedEntries.length))
-        .map((item, index): ResolvedRankingEntry => ({
-            rank: pinnedEntries.length + index + 1,
-            speciesSlug: item.entry.slug,
-            tier: item.tier,
-            primaryMetric: `${item.score}/100 category fit`,
-            shortReason: buildGeneratedRankingReason(page, item.entry, item.tier)
-        }));
+        .map((item, index): ResolvedRankingEntry => {
+            const tier = capGeneratedRankingTier(item.tier);
+
+            return {
+                rank: pinnedEntries.length + index + 1,
+                speciesSlug: item.entry.slug,
+                tier,
+                primaryMetric: `${item.score}/100 category fit`,
+                shortReason: buildGeneratedRankingReason(page, item.entry, tier)
+            };
+        });
 
     return [...pinnedEntries, ...generatedEntries].slice(0, targetCount);
 }

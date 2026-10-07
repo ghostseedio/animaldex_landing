@@ -123,6 +123,24 @@ module.exports = withNextIntl({
                 permanent: true
             },
             ...reversedComparisonRedirects(),
+            // "tiger vs cheetah" has no battle page yet; the speed matchup is the
+            // closest published answer (Search Console, Oct 2026).
+            ...["", "/id"].map((prefix) => ({
+                source: `${prefix}/comparisons/tiger-vs-cheetah`,
+                destination: "/comparisons/tiger-vs-cheetah-speed",
+                permanent: true
+            })),
+            // Indexed misspellings of the mating-drive tier list (Search Console, Oct 2026).
+            ...[
+                "animals-highest-mating-drive",
+                "animals-with-highest-le-mating-drive",
+                "animals-highest-mating-drive-top-100-ranked",
+                "animals-with-highest-mouse-mating-drive"
+            ].flatMap((slug) => ["", "/id"].map((prefix) => ({
+                source: `${prefix}/tier-list/${slug}`,
+                destination: "/tier-list/animals-with-highest-mating-drive",
+                permanent: true
+            }))),
             {
                 source: "/rankings",
                 destination: "/tier-list",
@@ -139,8 +157,14 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
+                // Straight to English: /id/tier-list/<slug> itself 308s there.
                 source: "/id/rankings/:path*",
-                destination: "/id/tier-list/:path*",
+                destination: "/tier-list/:path*",
+                permanent: true
+            },
+            {
+                source: "/id/tier-list/:slug",
+                destination: "/tier-list/:slug",
                 permanent: true
             },
             {

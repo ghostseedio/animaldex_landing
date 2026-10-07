@@ -287,7 +287,12 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         return {};
     }
 
-    const title = `${entry.name} Meaning, Symbolism, Lessons, Habitat & Facts`;
+    // Species-lookup intent ("tenkile", "arabian sand boa") wants facts first;
+    // the symbolism/lesson angle stays in the description and on-page.
+    const scientificName = entry.analysis.scientificName?.trim();
+    const title = scientificName && scientificName.toLowerCase() !== entry.name.toLowerCase()
+        ? `${entry.name} (${scientificName}): Facts, Habitat, Range & Lessons`
+        : `${entry.name}: Facts, Habitat, Range & Lessons`;
     const description = `${entry.name}: ${entry.analysis.summary} Explore biology-backed ${entry.name.toLowerCase()} meaning, symbolism, lessons, behavior, habitat, and related animals with AnimalDex.`;
 
     const metadata = buildContentMetadata({

@@ -50,6 +50,8 @@ export type ChallengeEntry = CanonicalContentMetadata & {
     speciesSlugs: [string, string];
     systemsSpeciesSlugs?: string[];
     relatedChallengeSlugs?: string[];
+    /** Static links; targets may be Content Studio posts with no code entry. */
+    relatedArticles?: Array<{slug: string; title: string; description: string}>;
     /** Populated for AI/DB comparisons when static SI catalog has no entry. */
     systemsIntelligenceEntries?: Array<{slug: string; entry: SystemsIntelligenceEntry}>;
 };
@@ -290,6 +292,13 @@ const challengeData: ChallengeEntry[] = [
     }),
     createChallengeEntry({
         slug: "tiger-vs-cheetah-speed",
+        relatedArticles: [
+            {
+                slug: "tiger-vs-cheetah",
+                title: "Tiger vs Cheetah: Who Would Win?",
+                description: "Beyond the sprint: size, strength, hunting style, and what happens if the two cats actually meet."
+            }
+        ],
         animalASlug: "tiger",
         animalBSlug: "cheetah",
         comparisonType: "speed",
@@ -960,7 +969,15 @@ const challengeData: ChallengeEntry[] = [
         title: "Leopard vs Cheetah: Which Big Cat Has the Real Edge?",
         description: "A realistic leopard vs cheetah comparison covering power, speed, tree use, stealth, and why the faster cat is not usually the better fighter.",
         quickVerdict: "Leopard usually has the edge in a direct fight. Cheetah is faster in open ground, but leopard is stronger, more durable, and better built for close-range violence.",
+        relatedArticles: [
+            {
+                slug: "cheetah-vs-leopard-differences",
+                title: "Cheetah vs Leopard: 7 Easy Ways to Tell Them Apart",
+                description: "Spots versus rosettes, tear lines, build, and behavior — the identification guide with photos."
+            }
+        ],
         shortAnswer: [
+            "Telling them apart first: a cheetah has solid black spots, black tear lines running from the eyes to the mouth, a small head, and a lean, long-legged sprinter's frame. A leopard has rosettes instead of spots, no tear lines, a heavier head and neck, and a stockier build made for climbing and grappling.",
             "This matchup is a classic case of speed being mistaken for overall combat power. Cheetah is the cleaner sprint specialist, but leopard is the more complete fighting package in terms of strength, grip, stealth, and durability.",
             "If the question is which cat would usually control a direct clash, leopard is the safer answer. If the question is which cat wins open-ground speed, the answer flips immediately to cheetah."
         ],

@@ -38,6 +38,21 @@ test("comparison detail articles are English DB bodies, so /id twins may consoli
     });
 });
 
+test("tier-list bodies are English ranking data, so /id twins consolidate on English", () => {
+    const page = read("app/[locale]/(composited)/rankings/[slug]/page.tsx");
+    const wrapper = read("app/[locale]/(composited)/tier-list/[slug]/page.tsx");
+
+    // Title/description come from rankings.ts, not locale JSON.
+    assert.match(page, /title: getRankingSeoTitle\(ranking\)/);
+    assert.match(page, /description: ranking\.description/);
+    assert.doesNotMatch(wrapper, /locale: "id"/);
+    assert.equal(isCollapsedEnglishDetailPath("/tier-list/strongest-animals"), true);
+    assert.deepEqual(matchCollapsedIdDetailPath("/id/tier-list/strongest-animals"), {
+        family: "tier-list",
+        englishPath: "/tier-list/strongest-animals"
+    });
+});
+
 test("power detail title and intro are localized, so /id/powers must stay", () => {
     const page = read("app/[locale]/(composited)/qualities/[slug]/page.tsx");
     const idLocale = read("data/locales/id.json");

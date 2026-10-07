@@ -667,7 +667,8 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                         {post.sections.map((section) => {
                             if (section.html !== undefined) {
                                 return (
-                                    <section key={section.title} className="span-wide my-10 overflow-hidden rounded-sm bg-white">
+                                    // The frame is transparent and defaults its text to white, so the backdrop must stay dark.
+                                    <section key={section.title} className="span-wide my-10 overflow-hidden rounded-sm bg-[color:var(--paper-950)]">
                                         <RenderedCodeFrame title={section.title || "Custom page section"} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} />
                                     </section>
                                 );

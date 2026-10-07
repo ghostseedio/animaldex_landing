@@ -432,6 +432,30 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 items={relatedChallenges}
             />
 
+            {ranking.blogLinks && ranking.blogLinks.length > 0 && (
+                <section className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                        <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("relatedBlogTitle")}</h2>
+                        <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("relatedBlogDescription")}</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        {ranking.blogLinks.map((post) => (
+                            <article key={post.slug} className="flex flex-col gap-3 rounded-lg border border-line-300 bg-surface-900/75 p-5">
+                                <h3 className="break-words font-display text-2xl font-bold leading-tight text-white">
+                                    <Link href={`/blog/${post.slug}`} className="transition-colors hover:text-primary-100">
+                                        {post.title}
+                                    </Link>
+                                </h3>
+                                <p className="text-sm leading-6 text-ink-200">{post.description}</p>
+                                <Link href={`/blog/${post.slug}`} className="mt-auto w-fit text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100" underline>
+                                    {t("readBlog")}
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {ranking.faq && ranking.faq.length > 0 && (
                 <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2>

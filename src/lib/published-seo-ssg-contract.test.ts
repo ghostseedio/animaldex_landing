@@ -27,8 +27,9 @@ test("published EN animal and lesson static params cover the slug index", () => 
 
     assert.ok(publishedSeoSlugs.animals.length >= 2300);
     assert.ok(publishedSeoSlugs.lessons.length >= 2400);
-    assert.equal(animalSnapshot.entries.length, 1334);
-    assert.equal(lessonSnapshot.entries.length, 1477);
+    // Pinned to the last operator refresh (2026-10-07); bump when re-running refresh:published-seo.
+    assert.equal(animalSnapshot.entries.length, 1527);
+    assert.equal(lessonSnapshot.entries.length, 1564);
     assert.deepEqual(
         animalSnapshot.entries.map((entry) => entry.slug),
         [...animalSnapshot.entries.map((entry) => entry.slug)].sort((a, b) => a.localeCompare(b))
@@ -125,6 +126,8 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.match(nextConfig, /source: "\/id\/animal-hybrids\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/comparisons\/:slug"/);
     assert.match(nextConfig, /destination: "\/comparisons\/:slug"/);
+    assert.match(nextConfig, /source: "\/id\/tier-list\/:slug"/);
+    assert.match(nextConfig, /destination: "\/tier-list\/:slug"/);
     assert.doesNotMatch(nextConfig, /source: "\/id\/powers\/:slug"/);
     assert.match(middleware, /matchCollapsedIdDetailPath/);
     assert.match(middleware, /NextResponse.redirect\(destination, 308\)/);
@@ -156,6 +159,14 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.equal(isCollapsedEnglishDetailPath("/powers/resilience"), false);
     assert.equal(isCollapsedEnglishDetailPath("/comparisons/aardwolf-vs-nurse-shark"), true);
     assert.equal(matchCollapsedIdDetailPath("/id/animals"), null);
+    assert.deepEqual(matchCollapsedIdDetailPath("/id/tier-list/strongest-animals"), {
+        family: "tier-list",
+        englishPath: "/tier-list/strongest-animals"
+    });
+    assert.equal(isCollapsedEnglishDetailPath("/tier-list/strongest-animals"), true);
+    // The hub keeps /id: its labels are localized.
+    assert.equal(matchCollapsedIdDetailPath("/id/tier-list"), null);
+    assert.equal(isCollapsedEnglishDetailPath("/tier-list"), false);
 });
 
 test("operator SEO snapshot refresh is not part of prebuild", () => {

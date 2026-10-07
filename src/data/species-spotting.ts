@@ -35,7 +35,8 @@ function getLocationExamples(entry: SpeciesEntry) {
     const nameKey = `${entry.slug} ${entry.name} ${entry.analysis.summary} ${entry.analysis.identification.join(" ")}`.toLowerCase();
     const examples: string[] = [];
 
-    if (hasKeyword(habitat, /(marsh|wetland|swamp|reedbed|floodplain|estuary|mangrove|river|lake|pond|lagoon)/)) {
+    // "swamp forest" is a forest type (bonobo, orangutan), not a reedbed habitat.
+    if (hasKeyword(habitat, /(marsh|wetland|swamp(?!\s+forest)|reedbed|floodplain|estuary|mangrove|river|lake|pond|lagoon)/)) {
         examples.push("quiet marsh edges, reedbeds, river bends, or shallow wetland margins");
     }
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05",
+  "generatedAt": "2026-10-07",
   "source": "local challengeEntries plus ready species_comparisons rows not already editorial",
   "note": "Used for English comparison SSG. Refresh with yarn refresh:published-seo. Do not add to prebuild.",
   "entries": [
@@ -1185,6 +1185,135 @@
       }
     },
     {
+      "slug": "basking-shark-vs-broad-snouted-crocodile",
+      "animalASlug": "basking-shark",
+      "animalBSlug": "broad-snouted-crocodile",
+      "animalADisplayName": "Basking Shark",
+      "animalBDisplayName": "Mugger Crocodile",
+      "comparisonType": "battle",
+      "title": "Basking Shark vs Mugger Crocodile: Who Actually Wins?",
+      "description": "Explore the battle between the Basking Shark and the Mugger Crocodile to find out who has the upper hand in a face-off.",
+      "quickVerdict": "In a battle between the Basking Shark and the Mugger Crocodile, the Mugger Crocodile emerges as the clear winner. Its superior dominance and physical attributes, combined with its ambush tactics, give it a decisive edge over the relatively passive Basking Shark.",
+      "shortAnswer": [
+        "Mugger Crocodile has higher dominance and ambush skills.",
+        "Basking Shark relies on size but lacks aggression.",
+        "In most scenarios, the crocodile's predatory instincts prevail."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue that size alone makes the Basking Shark formidable.",
+        "Others believe the Basking Shark's swimming ability allows it to evade danger.",
+        "Debates arise regarding the environments in which these animals operate."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Low-energy filter feeder",
+          "animalBValue": "Powerful ambush predator",
+          "advantage": "animalB",
+          "takeaway": "The Mugger Crocodile's explosive power allows it to effectively take down prey, while the Basking Shark's feeding strategy makes it less aggressive."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Ambush control",
+          "animalAValue": "Minimal ambush strategy",
+          "animalBValue": "Expert ambush predator",
+          "advantage": "animalB",
+          "takeaway": "The Mugger Crocodile's ability to remain hidden until the perfect moment to strike is crucial in its predatory success."
+        },
+        {
+          "key": "size_advantage",
+          "label": "Size advantage",
+          "animalAValue": "Large but passive",
+          "animalBValue": "Moderate but aggressive",
+          "advantage": "animalA",
+          "takeaway": "While the Basking Shark is larger, its size does not equate to fighting capability against an aggressive predator."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalB",
+          "verdict": "The Mugger Crocodile wins.",
+          "explanation": "In a cover duel, the Mugger Crocodile can leverage its ambush tactics, hiding in shallow water or vegetation, waiting for the Basking Shark to come into range."
+        },
+        {
+          "slug": "open-water",
+          "title": "Open water encounter",
+          "winner": "animalB",
+          "verdict": "The Mugger Crocodile wins.",
+          "explanation": "While the Basking Shark is larger, the Mugger Crocodile's ability to swiftly attack can outpace any evasive maneuvers the shark might employ."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource scenario",
+          "winner": "animalB",
+          "verdict": "The Mugger Crocodile wins.",
+          "explanation": "In a situation where food sources are contested, the Mugger Crocodile's aggression and dominance allow it to claim the resource over the passive Basking Shark."
+        }
+      ],
+      "finalTake": [
+        "Ultimately, the Mugger Crocodile's predatory nature, combined with its ambush strategy and dominance, makes it a formidable opponent against the Basking Shark. While the shark may be larger, it is primarily a filter feeder and lacks the aggressive instincts required for survival in a competitive environment. Thus, in a hypothetical confrontation, the Mugger Crocodile stands victorious.",
+        "Regardless of their differences in habitat and behavior, both species play vital roles in their respective ecosystems. Understanding these roles can provide insights into their behaviors and interactions with other species.",
+        "While the Basking Shark may seem less threatening due to its feeding habits, it remains a critical component of marine ecosystems, serving as a reminder of the diverse ways animals adapt to their environments."
+      ],
+      "faq": [
+        {
+          "question": "Would a Basking Shark beat a Mugger Crocodile?",
+          "answer": "No, the Mugger Crocodile would likely win due to its aggressive predatory behavior and dominance."
+        },
+        {
+          "question": "Is the Basking Shark strong?",
+          "answer": "The Basking Shark is large but not aggressive; it primarily feeds on plankton and lacks the fighting strength of the Mugger Crocodile."
+        },
+        {
+          "question": "Why is the Mugger Crocodile dangerous?",
+          "answer": "The Mugger Crocodile is dangerous due to its powerful jaws, ambush tactics, and ability to dominate its environment."
+        }
+      ],
+      "searchIntents": [
+        "basking shark vs mugger crocodile who wins"
+      ],
+      "speciesSlugs": [
+        "basking-shark",
+        "broad-snouted-crocodile"
+      ],
+      "systemsSpeciesSlugs": [
+        "basking-shark",
+        "broad-snouted-crocodile"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "basking-shark",
+          "entry": {
+            "roleTitle": "The Filter-Feeding Ocean Giant",
+            "specializedHardware": "Large size and gill rakers for filtering plankton",
+            "systemsScript": "Plays a crucial role in maintaining marine ecosystem balance by controlling plankton populations.",
+            "strategicInsight": "Understanding the Basking Shark's role can enhance conservation efforts for marine biodiversity."
+          }
+        },
+        {
+          "slug": "broad-snouted-crocodile",
+          "entry": {
+            "roleTitle": "The Mugger Crocodile Field Operator",
+            "specializedHardware": "Mugger Crocodile morphology and senses concentrate force where timing matters most.",
+            "systemsScript": "Mugger Crocodile reshapes prey behavior and local risk patterns across its habitat.",
+            "strategicInsight": "Save force for the window where position makes the cost worth paying."
+          }
+        }
+      ],
+      "publishedAt": "2026-10-03T22:22:14.373+00:00",
+      "updatedAt": "2026-10-03T22:22:14.541685+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/basking-shark-vs-broad-snouted-crocodile.webp",
+        "alt": "basking-shark-vs-broad-snouted-crocodile comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
       "slug": "black-rat-vs-culicidae",
       "animalASlug": "black-rat",
       "animalBSlug": "culicidae",
@@ -1707,6 +1836,135 @@
       "featuredImage": {
         "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/chinese-mantis-vs-may-beetle.webp",
         "alt": "chinese-mantis-vs-may-beetle comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "common-house-gecko-vs-moth",
+      "animalASlug": "common-house-gecko",
+      "animalBSlug": "moth",
+      "animalADisplayName": "Common House Gecko",
+      "animalBDisplayName": "Moth",
+      "comparisonType": "battle",
+      "title": "Common House Gecko vs Moth: Who Actually Wins?",
+      "description": "Explore the battle between the Common House Gecko and the Moth, comparing their strengths and weaknesses in a vivid showdown.",
+      "quickVerdict": "In a battle between the Common House Gecko and the Moth, the Common House Gecko emerges as the clear winner. With superior dominance, intelligence, and size, the Gecko's predatory adaptability gives it the upper hand in most scenarios, despite the Moth's speed and evasive abilities.",
+      "shortAnswer": [
+        "The Common House Gecko dominates with better intelligence and size.",
+        "Moths may evade but lack offensive capabilities.",
+        "Geckos can effectively ambush and capture Moths."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue Moths can escape due to their speed.",
+        "Others believe Moths' camouflage provides an advantage.",
+        "Geckos are often underestimated due to their size."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Quick strikes to capture prey",
+          "animalBValue": "Evasive fluttering movements",
+          "advantage": "animalA",
+          "takeaway": "The Gecko's ability to quickly seize prey is critical in predatory encounters."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Ambush control",
+          "animalAValue": "Expert ambush predator",
+          "animalBValue": "Limited ambush potential",
+          "advantage": "animalA",
+          "takeaway": "The Gecko's ambush skills allow it to catch Moths off-guard effectively."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Resilient and agile",
+          "animalBValue": "Fragile and vulnerable",
+          "advantage": "animalA",
+          "takeaway": "The Gecko's robust physique helps it withstand close encounters."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "The Gecko wins in a cover duel.",
+          "explanation": "In a scenario where both animals are concealed, the Gecko's superior ambush capabilities allow it to effectively stalk and capture the Moth, utilizing its quick strikes and adaptable hunting strategies."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "The Gecko dominates in open ground.",
+          "explanation": "On open terrain, the Gecko can leverage its speed and intelligence to chase down the Moth, outmaneuvering it with calculated precision."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "The Gecko prevails over a food source.",
+          "explanation": "When competing for a food resource, the Gecko's dominance and ambush tactics enable it to secure the advantage, often catching the Moth unprepared."
+        }
+      ],
+      "finalTake": [
+        "Ultimately, the Common House Gecko's combination of intelligence, agility, and predatory skills makes it the victor in most confrontations with the Moth. While Moths possess speed and camouflage, they lack the offensive capabilities and resilience needed to compete effectively against the Gecko's prowess.",
+        "Therefore, while both creatures have unique adaptations for survival in their respective niches, the Gecko's predatory efficiency solidifies its status as the overall winner in this matchup."
+      ],
+      "faq": [
+        {
+          "question": "Would a Common House Gecko beat a Moth?",
+          "answer": "Yes, the Common House Gecko would beat a Moth due to its superior predatory skills and overall physical advantages."
+        },
+        {
+          "question": "What strength does the Moth have against the Gecko?",
+          "answer": "The Moth's strengths lie in its speed and ability to evade capture, but it lacks the offensive capabilities to compete effectively."
+        },
+        {
+          "question": "Why is the Gecko considered dangerous despite its size?",
+          "answer": "The Gecko is dangerous due to its quick reflexes, ambush tactics, and adaptability, making it an effective predator."
+        }
+      ],
+      "searchIntents": [
+        "common house gecko vs moth who wins",
+        "who would win gecko or moth"
+      ],
+      "speciesSlugs": [
+        "common-house-gecko",
+        "moth"
+      ],
+      "systemsSpeciesSlugs": [
+        "common-house-gecko",
+        "moth"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "common-house-gecko",
+          "entry": {
+            "roleTitle": "The Solitary Ambush Accountant",
+            "specializedHardware": "Sticky toe pads for climbing and capturing prey.",
+            "systemsScript": "Ecological role as a pest controller in urban and natural environments.",
+            "strategicInsight": "Humans can appreciate the Gecko's role in controlling insect populations, highlighting its importance in maintaining ecological balance."
+          }
+        },
+        {
+          "slug": "moth",
+          "entry": {
+            "roleTitle": "The Nocturnal Evasive Specialist",
+            "specializedHardware": "Camouflaged wings for hiding from predators.",
+            "systemsScript": "Key ecological function as a pollinator and part of the food web.",
+            "strategicInsight": "Moths demonstrate the importance of adaptability, using their speed and camouflage to survive in diverse environments."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-19T23:35:30.439+00:00",
+      "updatedAt": "2026-09-19T23:35:30.517272+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/common-house-gecko-vs-moth.webp",
+        "alt": "common-house-gecko-vs-moth comparison image on AnimalDex",
         "width": 1672,
         "height": 941,
         "caption": "Comparison image source: AnimalDex CDN."
@@ -2913,6 +3171,136 @@
       }
     },
     {
+      "slug": "eupterote-fabia-vs-field-cricket",
+      "animalASlug": "eupterote-fabia",
+      "animalBSlug": "field-cricket",
+      "animalADisplayName": "Eupterote fabia caterpillar",
+      "animalBDisplayName": "Two-spotted Cricket",
+      "comparisonType": "battle",
+      "title": "Eupterote fabia Caterpillar vs Two-spotted Cricket: Who Actually Wins?",
+      "description": "Explore the battle comparison between Eupterote fabia caterpillar and Two-spotted Cricket, analyzing their strengths and weaknesses.",
+      "quickVerdict": "In a contest of survival and combat, the Eupterote fabia caterpillar emerges as the clear winner thanks to its superior intelligence and rarity, enabling it to utilize its environment effectively against the agile Two-spotted Cricket.",
+      "shortAnswer": [
+        "Eupterote fabia has higher intelligence and rarity.",
+        "Two-spotted Cricket excels in speed.",
+        "The caterpillar's ability to blend in and ambush gives it an edge."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue that the Cricket's speed could allow it to escape and avoid confrontation.",
+        "Debates exist regarding the caterpillar's ability to defend itself without mobility.",
+        "Others believe the Cricket's aggression outweighs the caterpillar's stealth."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Clever ambush tactics",
+          "animalBValue": "Quick, evasive jumps",
+          "advantage": "animalA",
+          "takeaway": "The caterpillar's ambush strategy is often more effective than the Cricket's evasive maneuvers."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Camouflaged and protected",
+          "animalBValue": "Fragile body structure",
+          "advantage": "animalA",
+          "takeaway": "The caterpillar's ability to blend in provides it a defensive advantage."
+        },
+        {
+          "key": "intelligence",
+          "label": "Intelligence",
+          "animalAValue": "Adaptable and strategic",
+          "animalBValue": "Reactive and instinctive",
+          "advantage": "animalA",
+          "takeaway": "The caterpillar's intelligence allows for better survival tactics in conflict."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "The Eupterote fabia caterpillar wins due to its camouflage.",
+          "explanation": "In a cover duel, the caterpillar can blend into its environment, allowing it to ambush the Cricket, which relies on speed. The caterpillar's strategic hiding gives it the upper hand."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalB",
+          "verdict": "The Two-spotted Cricket takes the lead.",
+          "explanation": "In open ground, the Cricket's speed becomes a strong advantage, allowing it to escape threats and dart away from the caterpillar before it can launch an ambush."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "The caterpillar secures the resource.",
+          "explanation": "In a scenario where food is contested, the caterpillar can employ stealth and intelligence to outmaneuver the Cricket, securing the resource through strategic planning."
+        }
+      ],
+      "finalTake": [
+        "While the Two-spotted Cricket boasts remarkable speed, the Eupterote fabia caterpillar's intelligence and camouflage provide it a decisive advantage in many scenarios. The caterpillar's ability to adapt to different environments and ambush its prey makes it a formidable opponent, despite its seemingly vulnerable appearance.",
+        "Ultimately, in a head-to-head comparison, the caterpillar's strategic approach to survival and combat gives it the upper hand over the agile yet reactive Cricket.",
+        "Understanding the strengths and weaknesses of these two creatures highlights the intricate balance of survival tactics in the animal kingdom."
+      ],
+      "faq": [
+        {
+          "question": "Would Eupterote fabia beat Gryllus bimaculatus?",
+          "answer": "Yes, the Eupterote fabia caterpillar generally has the advantage due to its intelligence and camouflage."
+        },
+        {
+          "question": "What makes the Two-spotted Cricket dangerous?",
+          "answer": "The Cricket's speed and aggressive nature can make it a formidable opponent, especially if it manages to avoid ambush tactics."
+        },
+        {
+          "question": "Why is the caterpillar considered weak?",
+          "answer": "While it may seem weak due to its slow movement, the caterpillar's strategic intelligence and camouflage provide it with effective defense mechanisms."
+        }
+      ],
+      "searchIntents": [
+        "eupterote fabia vs two-spotted cricket who wins",
+        "who would win eupterote fabia or gryllus bimaculatus"
+      ],
+      "speciesSlugs": [
+        "eupterote-fabia",
+        "field-cricket"
+      ],
+      "systemsSpeciesSlugs": [
+        "eupterote-fabia",
+        "field-cricket"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "eupterote-fabia-caterpillar",
+          "entry": {
+            "roleTitle": "The Stealthy Resource Strategist",
+            "specializedHardware": "Camouflaged body with adaptive coloration",
+            "systemsScript": "Functions within the ecosystem by blending into surroundings to avoid predation and capitalize on food sources.",
+            "strategicInsight": "Utilizes intelligence to navigate threats and secure resources in a dynamic environment."
+          }
+        },
+        {
+          "slug": "field-cricket",
+          "entry": {
+            "roleTitle": "The Agile Escape Artist",
+            "specializedHardware": "Powerful hind legs for jumping and evading threats",
+            "systemsScript": "Acts as a forager and mate attractor, relying on speed to navigate its habitat.",
+            "strategicInsight": "Leverages rapid movement to escape predators, though can be less effective against stealthy ambushers."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-26T04:00:07.546+00:00",
+      "updatedAt": "2026-09-26T04:00:07.623924+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/eupterote-fabia-vs-field-cricket.webp",
+        "alt": "eupterote-fabia-vs-field-cricket comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
       "slug": "fancy-guppy-vs-american-robin",
       "animalASlug": "fancy-guppy",
       "animalBSlug": "american-robin",
@@ -4099,6 +4487,153 @@
       }
     },
     {
+      "slug": "hemithea-tritonaria-vs-moth",
+      "animalASlug": "hemithea-tritonaria",
+      "animalBSlug": "moth",
+      "animalADisplayName": "Emerald Moth",
+      "animalBDisplayName": "Moth",
+      "comparisonType": "battle",
+      "title": "Emerald Moth vs Moth: Who Actually Wins?",
+      "description": "Explore the fascinating comparison between the Emerald Moth and the common Moth. Discover insights into their traits, scenarios, and which one comes out on top.",
+      "quickVerdict": "In a direct comparison, the Emerald Moth (Hemithea tritonaria) emerges as the overall winner against the common Moth (Lepidoptera). While the common Moth boasts higher speed and lower rarity, the Emerald Moth's unique adaptations for survival and camouflage give it a decisive edge in numerous scenarios, particularly in environments with ample cover.",
+      "shortAnswer": [
+        "Emerald Moth has superior camouflage.",
+        "Common Moth is faster but less dominant.",
+        "Emerald Moth is rarer and more specialized."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue speed is the most crucial factor in survival and evasion.",
+        "Others believe rarity indicates a stronger evolutionary advantage.",
+        "Many overlook the environmental context affecting their performance."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Camouflaged ambush tactics",
+          "animalBValue": "Quick escape maneuvers",
+          "advantage": "animalA",
+          "takeaway": "The Emerald Moth's ability to blend in with its surroundings allows it to ambush predators effectively."
+        },
+        {
+          "key": "speed",
+          "label": "Speed",
+          "animalAValue": "Moderate and calculated movements",
+          "animalBValue": "Quick and evasive flight",
+          "advantage": "animalB",
+          "takeaway": "The common Moth's speed aids in evading threats, but it lacks the strategic advantage of the Emerald Moth."
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "animalAValue": "Consistently small",
+          "animalBValue": "Similarly sized",
+          "advantage": "animalA",
+          "takeaway": "Both species are similar in size, minimizing size as a factor in their confrontation."
+        },
+        {
+          "key": "intelligence",
+          "label": "Intelligence",
+          "animalAValue": "Moderate adaptive behavior",
+          "animalBValue": "Similar cognitive abilities",
+          "advantage": "animalA",
+          "takeaway": "Both moths exhibit comparable intelligence levels, focusing more on instinctual survival rather than strategic planning."
+        },
+        {
+          "key": "rarity",
+          "label": "Rarity",
+          "animalAValue": "Less common species",
+          "animalBValue": "Widely distributed",
+          "advantage": "animalA",
+          "takeaway": "The Emerald Moth's rarity suggests it has specialized adaptations that provide advantages in specific environments."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Emerald Moth wins due to superior camouflage.",
+          "explanation": "In a setting with plenty of cover, the Emerald Moth's ability to blend into its surroundings allows it to ambush predators or evade detection effectively, while the common Moth's speed becomes less relevant."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalB",
+          "verdict": "Common Moth takes the advantage in open spaces.",
+          "explanation": "On open ground, the common Moth's superior speed allows it to evade threats quickly, making it harder for the Emerald Moth to take advantage of ambush tactics."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "Emerald Moth claims the resource.",
+          "explanation": "When resources are contested, the Emerald Moth's rarity and unique adaptations enable it to outmaneuver the common Moth, exploiting its camouflage to secure the resource."
+        }
+      ],
+      "finalTake": [
+        "Ultimately, while the common Moth exhibits speed and a wider distribution, the Emerald Moth's specialized adaptations and camouflage strategies grant it a significant advantage in many scenarios. This makes it a formidable survivor in its niche, capable of outsmarting its more common counterpart when the environment allows.",
+        "The debate over which moth would win is nuanced, with different factors coming into play depending on the context. However, when considering the Emerald Moth's unique traits, it stands out as the more strategically equipped species in most situations."
+      ],
+      "faq": [
+        {
+          "question": "Would the Emerald Moth beat the common Moth?",
+          "answer": "Yes, in many contexts, especially where camouflage and stealth are advantageous."
+        },
+        {
+          "question": "Is the common Moth dangerous?",
+          "answer": "While not predatory, the common Moth's speed allows it to evade many threats, making it a resilient survivor."
+        },
+        {
+          "question": "What factors contribute to their survival?",
+          "answer": "Adaptations like camouflage, speed, and rarity all play significant roles in their respective survival strategies."
+        }
+      ],
+      "searchIntents": [
+        "emerald moth vs moth who wins"
+      ],
+      "speciesSlugs": [
+        "hemithea-tritonaria",
+        "moth"
+      ],
+      "systemsSpeciesSlugs": [
+        "hemithea-tritonaria",
+        "moth"
+      ],
+      "relatedChallengeSlugs": [
+        "common-house-gecko-vs-moth"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "emerald-moth",
+          "entry": {
+            "roleTitle": "The Solitary Camouflage Specialist",
+            "specializedHardware": "Adapted scales for hiding in foliage",
+            "systemsScript": "The Emerald Moth plays a crucial role in its ecosystem, serving as both prey and pollinator, contributing to plant reproduction.",
+            "strategicInsight": "Humans can learn from the Emerald Moth's ability to blend into its environment, emphasizing the importance of adaptation in survival."
+          }
+        },
+        {
+          "slug": "moth",
+          "entry": {
+            "roleTitle": "The Widespread Evader",
+            "specializedHardware": "High-speed flight mechanics",
+            "systemsScript": "Common Moths are vital for pollination and are often prey for various predators, showcasing their role in the food web.",
+            "strategicInsight": "The common Moth's speed highlights the value of quick reflexes and adaptability in survival situations."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-19T23:36:14.463+00:00",
+      "updatedAt": "2026-09-19T23:36:14.549905+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/hemithea-tritonaria-vs-moth.webp",
+        "alt": "hemithea-tritonaria-vs-moth comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
       "slug": "jackdaw-vs-purple-crowned-fairywren",
       "animalASlug": "jackdaw",
       "animalBSlug": "purple-crowned-fairywren",
@@ -4354,6 +4889,523 @@
       "featuredImage": {
         "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/junglefowl-vs-culicidae.webp",
         "alt": "junglefowl-vs-culicidae comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "marsh-bluet-vs-land-slug",
+      "animalASlug": "marsh-bluet",
+      "animalBSlug": "land-slug",
+      "animalADisplayName": "Damselfly",
+      "animalBDisplayName": "Slug",
+      "comparisonType": "battle",
+      "title": "Damselfly vs Slug: Who Actually Wins?",
+      "description": "Explore the intriguing battle between the Damselfly and the Slug. Discover which creature reigns supreme in different scenarios.",
+      "quickVerdict": "In a matchup between the Damselfly and the Slug, the Damselfly emerges as the overall winner. Despite the Slug's size and apparent dominance, the Damselfly's speed and agility allow it to outmaneuver and evade the Slug, and its predatory instincts make it a formidable opponent in various environments.",
+      "shortAnswer": [
+        "The Damselfly's speed and agility give it a crucial advantage.",
+        "The Slug, while larger, is slower and less capable of defense.",
+        "In aquatic and aerial scenarios, the Damselfly has the upper hand."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue the Slug's size could help it overpower smaller creatures.",
+        "Others believe the Slug's ability to hide offers it an advantage in certain situations.",
+        "Many underestimate the Damselfly's predatory skills and aerial capabilities."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Quick bursts of speed to evade and attack.",
+          "animalBValue": "Low momentum but can exert pressure with mass.",
+          "advantage": "animalA",
+          "takeaway": "The Damselfly's ability to accelerate rapidly is crucial in avoiding larger threats."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Ambush control",
+          "animalAValue": "Excellent aerial ambush tactics.",
+          "animalBValue": "Limited to ground concealment.",
+          "advantage": "animalA",
+          "takeaway": "The Damselfly can control encounters by surprising its prey from above."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Fragile but evasive.",
+          "animalBValue": "Soft-bodied and vulnerable.",
+          "advantage": "animalB",
+          "takeaway": "The Slug can endure a bit longer due to its size, but cannot counterattack effectively."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Damselfly wins in cover.",
+          "explanation": "In a cover duel, the Damselfly utilizes its speed and agility to dart around and strike before the Slug can react. The Slug's slower movements hinder its ability to defend itself effectively."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "Damselfly wins in open ground.",
+          "explanation": "In open ground, the Damselfly can take to the air, keeping itself out of reach of the Slug. Its flight capabilities allow it to evade any potential attack and strike from above."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "Damselfly wins over resources.",
+          "explanation": "When competing for resources, the Damselfly's speed enables it to claim food sources quickly and evade the Slug, which relies on a slower foraging method."
+        }
+      ],
+      "finalTake": [
+        "While the Slug may seem like a formidable opponent due to its size and strength, the Damselfly’s agility and predatory nature give it the edge in almost any scenario.",
+        "The Damselfly's ability to control its environment through aerial maneuvers allows it to effectively outsmart the Slug.",
+        "In the diverse ecosystems where these creatures exist, the Damselfly's specialized adaptations make it a more successful survivor."
+      ],
+      "faq": [
+        {
+          "question": "Would Damselfly beat Slug?",
+          "answer": "Yes, the Damselfly's speed and agility allow it to outmaneuver the Slug."
+        },
+        {
+          "question": "Is the Slug dangerous?",
+          "answer": "Though slower, the Slug can be dangerous due to its size and potential for surprising predators with its ability to retreat into its shell."
+        },
+        {
+          "question": "Why do some think the Slug could win?",
+          "answer": "Some believe the Slug's size gives it a physical advantage, but it lacks the speed and agility needed to effectively engage the Damselfly."
+        }
+      ],
+      "searchIntents": [
+        "damselfly vs slug who wins"
+      ],
+      "speciesSlugs": [
+        "marsh-bluet",
+        "land-slug"
+      ],
+      "systemsSpeciesSlugs": [
+        "marsh-bluet",
+        "land-slug"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "marsh-bluet",
+          "entry": {
+            "roleTitle": "The Damselfly Field Operator",
+            "specializedHardware": "Damselfly morphology and senses concentrate force where timing matters most.",
+            "systemsScript": "Damselfly reshapes prey behavior and local risk patterns across its habitat.",
+            "strategicInsight": "Save force for the window where position makes the cost worth paying."
+          }
+        },
+        {
+          "slug": "land-slug",
+          "entry": {
+            "roleTitle": "The Slug Field Operator",
+            "specializedHardware": "Slug morphology and senses concentrate force where timing matters most.",
+            "systemsScript": "Slug reshapes prey behavior and local risk patterns across its habitat.",
+            "strategicInsight": "Save force for the window where position makes the cost worth paying."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-16T13:38:15.506+00:00",
+      "updatedAt": "2026-09-16T13:38:15.581319+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/marsh-bluet-vs-land-slug.webp",
+        "alt": "marsh-bluet-vs-land-slug comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "northern-mockingbird-vs-black-ant",
+      "animalASlug": "northern-mockingbird",
+      "animalBSlug": "black-ant",
+      "animalADisplayName": "Northern Mockingbird",
+      "animalBDisplayName": "Black Ant",
+      "comparisonType": "battle",
+      "title": "Northern Mockingbird vs Black Ant: Who Actually Wins?",
+      "description": "Explore the fascinating showdown between the Northern Mockingbird and the Black Ant, analyzing who would triumph in various scenarios.",
+      "quickVerdict": "In a battle scenario, the Northern Mockingbird emerges as the clear winner over the Black Ant due to its superior speed, intelligence, and overall dominance in the avian realm. While the Black Ant may be formidable in numbers and teamwork, the Mockingbird's agility and predatory instincts give it the upper hand in most confrontations.",
+      "shortAnswer": [
+        "Northern Mockingbird has greater speed and intelligence.",
+        "Black Ants excel in teamwork but lack individual strength.",
+        "Mockingbird's size and agility provide significant advantages."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue that Black Ants can overwhelm with numbers in a swarm.",
+        "Others believe in the potential of the Black Ant's defensive strategies.",
+        "A few suggest environmental factors could favor the ant."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Swift aerial attacks",
+          "animalBValue": "Coordinated group defense",
+          "advantage": "animalA",
+          "takeaway": "Swift attacks allow the Mockingbird to control the engagement."
+        },
+        {
+          "key": "intelligence",
+          "label": "Intelligence",
+          "animalAValue": "Problem-solving and adaptability",
+          "animalBValue": "Basic instinctual behavior",
+          "advantage": "animalA",
+          "takeaway": "Higher intelligence allows the Mockingbird to strategize effectively."
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "animalAValue": "Medium-sized bird",
+          "animalBValue": "Tiny insect",
+          "advantage": "animalA",
+          "takeaway": "Size contributes to the Mockingbird's physical advantage."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Mockingbird wins with aerial advantage.",
+          "explanation": "In a cover duel, the Northern Mockingbird can utilize its flying capability to evade the Black Ant's attempts to swarm it. The Mockingbird's speed allows it to strike from above, making it difficult for the ant to mount a successful defense."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "Mockingbird dominates with speed.",
+          "explanation": "On open ground, the Northern Mockingbird's agility and quick escape capabilities outmatch the slow-moving Black Ant. The bird can easily evade any attack and retaliate from the air."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "Mockingbird claims the resource.",
+          "explanation": "When competing for food, the Northern Mockingbird can outmaneuver the Black Ants. Its ability to fly allows it to access food sources that ants cannot reach, solidifying its dominance in resource contention."
+        }
+      ],
+      "finalTake": [
+        "In conclusion, while the Black Ant is a remarkable creature that thrives in its own right with its social structure and teamwork, the Northern Mockingbird's advantages in speed, intelligence, and size make it the undeniable victor in most confrontational scenarios. The bird's ability to adapt and strategize in various environments further cements its status as a superior competitor.",
+        "Ultimately, understanding these creatures highlights the complexity of nature's design, where each species excels in its niche, yet in a direct confrontation, the Northern Mockingbird's attributes are hard to surpass."
+      ],
+      "faq": [
+        {
+          "question": "Would a Northern Mockingbird beat a Black Ant?",
+          "answer": "Yes, the Northern Mockingbird would defeat a Black Ant in a direct confrontation due to its superior speed, intelligence, and physical size."
+        },
+        {
+          "question": "How strong is a Black Ant compared to a Northern Mockingbird?",
+          "answer": "While Black Ants are strong for their size and can work together to defend against predators, they cannot match the individual strength and agility of a Northern Mockingbird."
+        },
+        {
+          "question": "Why is the Black Ant still dangerous?",
+          "answer": "Black Ants remain dangerous through their ability to swarm and overwhelm larger animals, utilizing their numbers to defend their colony effectively."
+        }
+      ],
+      "searchIntents": [
+        "northern mockingbird vs black ant who wins"
+      ],
+      "speciesSlugs": [
+        "northern-mockingbird",
+        "black-ant"
+      ],
+      "systemsSpeciesSlugs": [
+        "northern-mockingbird",
+        "black-ant"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "northern-mockingbird",
+          "entry": {
+            "roleTitle": "The Aerial Tactician",
+            "specializedHardware": "Sharp beak and agile wings for predation",
+            "systemsScript": "Key predator in the ecosystem, controlling insect populations.",
+            "strategicInsight": "Humans can learn about adaptability in dynamic environments from the Mockingbird."
+          }
+        },
+        {
+          "slug": "black-ant",
+          "entry": {
+            "roleTitle": "The Collective Worker",
+            "specializedHardware": "Strong mandibles and cooperative behavior",
+            "systemsScript": "Essential for soil aeration and seed dispersal, impacting plant growth.",
+            "strategicInsight": "The Black Ant teaches us the power of teamwork and organization in achieving complex tasks."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-06T21:11:20.347+00:00",
+      "updatedAt": "2026-09-06T21:11:20.46257+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/northern-mockingbird-vs-black-ant.webp",
+        "alt": "northern-mockingbird-vs-black-ant comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "northern-mockingbird-vs-snail",
+      "animalASlug": "northern-mockingbird",
+      "animalBSlug": "snail",
+      "animalADisplayName": "Northern Mockingbird",
+      "animalBDisplayName": "Snail",
+      "comparisonType": "battle",
+      "title": "Northern Mockingbird vs Snail: Who Actually Wins?",
+      "description": "Explore the battle of wits and survival between the Northern Mockingbird and the Snail, and discover who comes out on top in this unique matchup.",
+      "quickVerdict": "In a clear contest between the Northern Mockingbird and the Snail, the Northern Mockingbird emerges as the decisive winner due to its superior speed, intelligence, and predatory capabilities. While the Snail has its own defensive adaptations, it simply cannot compete with the Mockingbird's agility and strategic hunting skills.",
+      "shortAnswer": [
+        "Northern Mockingbird has superior speed and intelligence.",
+        "Snails possess strong defenses but lack offensive capabilities.",
+        "Mockingbirds can outmaneuver and capture Snails easily."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue that Snails have effective defensive strategies against predators.",
+        "Others believe that the environment plays a significant role in determining the outcome.",
+        "A few claim Snails can evade capture through their slow, stealthy movements."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "High agility and speed",
+          "animalBValue": "Limited movement",
+          "advantage": "animalA",
+          "takeaway": "The Mockingbird's ability to rapidly change direction and speed allows it to evade threats and hunt effectively."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Ambush control",
+          "animalAValue": "Strategic ambush capabilities",
+          "animalBValue": "No ambush potential",
+          "advantage": "animalA",
+          "takeaway": "Mockingbirds can effectively plan and execute ambushes on unsuspecting prey, while Snails lack any form of offensive strategy."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Nimble and evasive",
+          "animalBValue": "Shell protection",
+          "advantage": "animalB",
+          "takeaway": "While Snails have a protective shell, the Mockingbird's speed and agility make it difficult for them to be threatened in close encounters."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Mockingbird prevails easily.",
+          "explanation": "In a cover duel, the Northern Mockingbird can leverage its speed and strategic maneuvering to effectively navigate around the Snail, targeting it swiftly before it has a chance to retreat into its shell."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground encounter",
+          "winner": "animalA",
+          "verdict": "Mockingbird dominates the open field.",
+          "explanation": "On open ground, the Mockingbird's rapid movement allows it to cover distance quickly, easily catching up to the Snail, which moves at a snail's pace and is left vulnerable."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource scenario",
+          "winner": "animalA",
+          "verdict": "Mockingbird claims the resource.",
+          "explanation": "In a scenario where food resources are contested, the Northern Mockingbird can outpace the Snail to claim the resource, showcasing its adaptability and hunting prowess."
+        }
+      ],
+      "finalTake": [
+        "Overall, the Northern Mockingbird clearly outmatches the Snail in a variety of scenarios due to its remarkable speed, intelligence, and agility. While the Snail offers a unique defensive mechanism with its shell, it is simply not equipped to fend off the active predation style of the Mockingbird. Each species plays an important role in their own ecosystem, but in a direct comparison, the Mockingbird is the clear victor.",
+        "This matchup emphasizes the importance of speed and adaptability in the animal kingdom. The Northern Mockingbird's predatory instincts combined with its swift movements solidify its place as the superior species in this battle of survival."
+      ],
+      "faq": [
+        {
+          "question": "Would a Northern Mockingbird beat a Snail?",
+          "answer": "Yes, the Northern Mockingbird would easily defeat a Snail due to its speed, predatory behavior, and intelligence."
+        },
+        {
+          "question": "What makes the Snail dangerous?",
+          "answer": "While the Snail is not a predator, its ability to retreat into its shell provides a form of defense against larger animals."
+        },
+        {
+          "question": "Why do people think Snails could win?",
+          "answer": "Some believe that Snails can evade capture due to their slow and cautious movement, but they lack the offensive capabilities to truly pose a threat."
+        }
+      ],
+      "searchIntents": [
+        "northern mockingbird vs snail who wins"
+      ],
+      "speciesSlugs": [
+        "northern-mockingbird",
+        "snail"
+      ],
+      "systemsSpeciesSlugs": [
+        "northern-mockingbird",
+        "snail"
+      ],
+      "relatedChallengeSlugs": [
+        "northern-mockingbird-vs-black-ant"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "northern-mockingbird",
+          "entry": {
+            "roleTitle": "The Agile Predator",
+            "specializedHardware": "Sharp beak and keen eyesight",
+            "systemsScript": "A skilled forager and predator, the Northern Mockingbird plays a vital role in controlling insect populations and dispersing seeds.",
+            "strategicInsight": "Understanding the Mockingbird's predatory tactics can enhance our appreciation for its role in ecosystems."
+          }
+        },
+        {
+          "slug": "snail",
+          "entry": {
+            "roleTitle": "The Slow Defender",
+            "specializedHardware": "Protective shell and mucus secretion",
+            "systemsScript": "As a herbivore, the Snail contributes to soil health and nutrient cycling, while its slow movement provides a unique form of survival.",
+            "strategicInsight": "Exploring the Snail's adaptations can provide insights into evolutionary strategies for defense and survival."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-06T21:11:53.074+00:00",
+      "updatedAt": "2026-09-06T21:11:53.195225+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/northern-mockingbird-vs-snail.webp",
+        "alt": "northern-mockingbird-vs-snail comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "oriental-latrine-fly-vs-house-fly",
+      "animalASlug": "oriental-latrine-fly",
+      "animalBSlug": "house-fly",
+      "animalADisplayName": "Oriental Latrine Fly",
+      "animalBDisplayName": "House Fly",
+      "comparisonType": "battle",
+      "title": "Oriental Latrine Fly vs House Fly: Who Actually Wins?",
+      "description": "Explore the battle between the Oriental Latrine Fly and House Fly, comparing their traits and determining which fly comes out on top.",
+      "quickVerdict": "In the contest between the Oriental Latrine Fly and the House Fly, the Oriental Latrine Fly emerges as the clear winner due to its superior speed and adaptability in various environments, which give it a decisive edge in survival and competition.",
+      "shortAnswer": [
+        "Oriental Latrine Fly is faster and more adaptable.",
+        "Both flies have similar dominance and intelligence.",
+        "House Fly is more common but less versatile."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Some argue House Flies are more resilient due to their ubiquity.",
+        "Others believe the Oriental Latrine Fly is less known, leading to underestimation.",
+        "Debates exist on how environmental factors can alter outcomes."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Quick and agile in flight",
+          "animalBValue": "Decent but less impressive",
+          "advantage": "animalA",
+          "takeaway": "The Oriental Latrine Fly's speed allows for better evasion and rapid positioning."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Ambush control",
+          "animalAValue": "Highly adaptable to environments",
+          "animalBValue": "Limited by urban settings",
+          "advantage": "animalA",
+          "takeaway": "The ability to thrive in diverse habitats gives the Oriental Latrine Fly an edge."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Moderate durability",
+          "animalBValue": "Moderate durability",
+          "advantage": "animalA",
+          "takeaway": "Both species share similar durability, making this trait less of a deciding factor."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel",
+          "winner": "animalA",
+          "verdict": "Oriental Latrine Fly prevails in cover.",
+          "explanation": "In a cover duel, the Oriental Latrine Fly's speed allows it to evade attacks while utilizing its agility to navigate through obstacles, making it harder for the House Fly to land a successful encounter."
+        },
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "Oriental Latrine Fly dominates open spaces.",
+          "explanation": "On open ground, the Oriental Latrine Fly's faster flight speed gives it a significant advantage, enabling quick escapes and positioning advantages over the House Fly."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource",
+          "winner": "animalA",
+          "verdict": "Oriental Latrine Fly secures resources effectively.",
+          "explanation": "When competing for resources, the Oriental Latrine Fly's adaptability and speed allow it to claim prime spots before the House Fly can react, ensuring it outmaneuvers its competitor."
+        }
+      ],
+      "finalTake": [
+        "Ultimately, while both flies exhibit similar dominance and intelligence, the Oriental Latrine Fly's superior speed and adaptability in various environments make it the stronger contender. Its ability to thrive in diverse habitats and quickly navigate through obstacles gives it a notable advantage in most competitive scenarios.",
+        "Understanding these differences not only highlights the ecological roles these flies play but also emphasizes the importance of adaptability and speed in the animal kingdom.",
+        "In conclusion, the Oriental Latrine Fly stands out as the more formidable opponent in this matchup, capable of outmaneuvering and outsmarting the House Fly."
+      ],
+      "faq": [
+        {
+          "question": "Would the Oriental Latrine Fly beat the House Fly?",
+          "answer": "Yes, the Oriental Latrine Fly would likely win due to its superior speed and adaptability."
+        },
+        {
+          "question": "Are House Flies dangerous?",
+          "answer": "While House Flies can carry pathogens, their danger is more related to hygiene than physical confrontation with other flies."
+        },
+        {
+          "question": "What makes the Oriental Latrine Fly a better fighter?",
+          "answer": "Its faster flight and ability to thrive in diverse environments give it an edge in competitive scenarios."
+        }
+      ],
+      "searchIntents": [
+        "oriental latrine fly vs house fly who wins"
+      ],
+      "speciesSlugs": [
+        "oriental-latrine-fly",
+        "house-fly"
+      ],
+      "systemsSpeciesSlugs": [
+        "oriental-latrine-fly",
+        "house-fly"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "oriental-latrine-fly",
+          "entry": {
+            "roleTitle": "The Versatile Resource Gatherer",
+            "specializedHardware": "Enhanced flight capabilities and sensory adaptations.",
+            "systemsScript": "Thrives in diverse environments, playing a key role in decomposition and nutrient cycling.",
+            "strategicInsight": "Human takeaway: Adaptability and speed are crucial for survival in varying ecosystems."
+          }
+        },
+        {
+          "slug": "house-fly",
+          "entry": {
+            "roleTitle": "The Urban Resilient Scavenger",
+            "specializedHardware": "Robust survival skills in human-dominated environments.",
+            "systemsScript": "Commonly found in urban areas, contributing to waste decomposition but limited in habitat flexibility.",
+            "strategicInsight": "Human takeaway: While ubiquitous, House Flies may be more predictable and less adaptable."
+          }
+        }
+      ],
+      "publishedAt": "2026-09-19T23:37:54.797+00:00",
+      "updatedAt": "2026-09-19T23:37:54.880158+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/oriental-latrine-fly-vs-house-fly.webp",
+        "alt": "oriental-latrine-fly-vs-house-fly comparison image on AnimalDex",
         "width": 1672,
         "height": 941,
         "caption": "Comparison image source: AnimalDex CDN."

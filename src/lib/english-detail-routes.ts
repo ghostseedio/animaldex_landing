@@ -3,10 +3,11 @@ const COLLAPSED_DETAIL_PREFIXES = [
     "/animal-lessons/",
     "/pokemon-animals/",
     "/animal-hybrids/",
-    "/comparisons/"
+    "/comparisons/",
+    "/tier-list/"
 ] as const;
 
-const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/[a-z0-9-]+\/?$/i;
+const COLLAPSED_DETAIL_RE = /^\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|tier-list)\/[a-z0-9-]+\/?$/i;
 
 export const CLOSED_SEO_NAMESPACE_FAMILIES = [
     "animals",
@@ -18,13 +19,17 @@ export const CLOSED_SEO_NAMESPACE_FAMILIES = [
 ] as const;
 
 // Only untranslated article bodies may 308 to English. /powers keeps /id
-// because title, meta, and cluster intro are genuinely localized.
+// because title, meta, and cluster intro are genuinely localized. Tier-list
+// bodies (title, description, entries, FAQ) are English data in rankings.ts,
+// so /id/tier-list/<slug> was an exact duplicate that Google chose over the
+// English URL for English queries.
 export const COLLAPSED_ID_DETAIL_FAMILIES = [
     "animals",
     "animal-lessons",
     "pokemon-animals",
     "animal-hybrids",
-    "comparisons"
+    "comparisons",
+    "tier-list"
 ] as const;
 
 export type CollapsedIdDetailFamily = typeof COLLAPSED_ID_DETAIL_FAMILIES[number];
@@ -44,7 +49,7 @@ export function isCollapsedEnglishDetailPath(path: string) {
 
 export function matchCollapsedIdDetailPath(path: string): {family: CollapsedIdDetailFamily; englishPath: string} | null {
     const normalized = pathnameOnly(path);
-    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons)\/([a-z0-9-]+)\/?$/i);
+    const match = normalized.match(/^\/id\/(animals|animal-lessons|pokemon-animals|animal-hybrids|comparisons|tier-list)\/([a-z0-9-]+)\/?$/i);
     if (!match) {
         return null;
     }

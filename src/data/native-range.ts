@@ -491,7 +491,7 @@ function buildDescriptor(entry: SpeciesEntry, habitatText: string | null): Nativ
         [["african elephant", "loxodonta africana"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
         [["white rhinoceros", "black rhinoceros", "ceratotherium", "diceros"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
         [["zebra", "equus quagga"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
-        [["gorilla", "pan troglodytes", "chimpanzee", "okapia"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
+        [["gorilla", "pan troglodytes", "chimpanzee", "bonobo", "pan paniscus", "okapia"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
         [["meerkat", "suricata suricatta", "suricata"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
         [["panthera tigris", "tiger"], nativeRangeMapping({broad: ["south_asia", "southeast_asia", "east_asia"]})],
         [["elephas maximus", "asian elephant"], nativeRangeMapping({broad: ["south_asia", "southeast_asia"]})],
@@ -595,7 +595,7 @@ function buildDescriptor(entry: SpeciesEntry, habitatText: string | null): Nativ
         [["south america", "amazon", "andes", "patagonia"], nativeRangeMapping({broad: ["south_america"]})],
         [["europe", "scandinavia", "iberian", "mediterranean europe"], nativeRangeMapping({broad: ["europe"]})],
         [["north africa", "middle east", "arabian peninsula", "sahara"], nativeRangeMapping({broad: ["north_africa_middle_east"]})],
-        [["sub-saharan africa", "savanna", "serengeti", "congo basin", "southern africa", "kalahari", "namib"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
+        [["sub-saharan africa", "savanna", "serengeti", "congo", "southern africa", "kalahari", "namib"], nativeRangeMapping({broad: ["sub_saharan_africa"]})],
         [
             ["tropical rainforest", "tropical rainforests", "lowland forest", "lowland forests"],
             nativeRangeMapping({

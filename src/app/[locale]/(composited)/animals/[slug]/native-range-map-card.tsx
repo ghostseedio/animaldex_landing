@@ -138,23 +138,11 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
     const shouldShowWildCaptureHint = settingTag?.trim().toLowerCase() === "zoo"
         || humanContext?.trim().toLowerCase() === "captive";
 
+    // "Hidden" means the range text could not be mapped to a region. The text
+    // itself still renders in the facts, so a "Location unknown" card next to
+    // "Native range: Democratic Republic of the Congo" only contradicts it.
     if (presentation.kind === "hidden") {
-        if (variant !== "animal-card") return null;
-        return (
-            <AnimalCardShell wide={wide}>
-                <div className="flex items-center gap-2">
-                    <svg aria-hidden="true" className="h-[17px] w-[17px] shrink-0 text-white/[0.62]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M3.5 12h17M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21C9.5 18.4 8.2 15.4 8.2 12S9.5 5.6 12 3Z" />
-                    </svg>
-                    <div>
-                        <h3 className="text-xs font-medium text-white">Native range</h3>
-                        <p className="text-[11px] font-semibold text-white/[0.42]">Location unknown</p>
-                    </div>
-                </div>
-                <p className="text-[15px] font-medium leading-5 text-white/[0.62]">AnimalDex does not have a mapped native range region for this profile yet.</p>
-            </AnimalCardShell>
-        );
+        return null;
     }
 
     if (variant === "animal-card") {

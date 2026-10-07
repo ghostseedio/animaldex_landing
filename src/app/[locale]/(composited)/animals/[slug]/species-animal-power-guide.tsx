@@ -129,9 +129,6 @@ export default function SpeciesAnimalPowerGuide({
                             <p>{profile.applicationExample}</p>
                         </PowerBlock>
                     ) : null}
-                    <p className="text-sm text-ink-400">
-                        {animalName} still has a catalog Animal Power. The enhanced guide fills in as species profiles are prepared.
-                    </p>
                 </div>
             )}
         </section>
