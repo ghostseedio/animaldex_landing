@@ -92,7 +92,7 @@ export const contentThumbs = {
 } satisfies Record<string, ContentImage>;
 
 export function contentThumb(slug: string): ContentImage {
-    const image = contentThumbs[slug];
+    const image = (contentThumbs as Record<string, ContentImage | undefined>)[slug];
     if (!image) throw new Error(`Missing content thumbnail: ${slug}`);
     return image;
 }

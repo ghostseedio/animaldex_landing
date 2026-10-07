@@ -98,7 +98,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             items={rankingItems}
             currentCaptureId={capture.id}
             currentCaptureGrade={capture.captureGrade}
-            currentCaptureIsPrivate={owned && capture.isDiscoverable !== true}
+            currentCaptureIsPrivate={owned !== null && capture.isDiscoverable !== true}
             currentCaptureImageSrc={owned ? `/api/capture-images/${encodeURIComponent(capture.id)}` : null}
             labels={{
                 title: t("rankingsTitle", {animal: entry.name}),

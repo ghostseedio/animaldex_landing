@@ -134,7 +134,7 @@ test("databaseByIdentityKey is constructed in O(databaseEntries) not O(databaseE
     const staticCount = 100;
     for (let i = 0; i < staticCount; i++) {
         const staticEntry = syntheticSpeciesEntry(`static-${i}`);
-        const directMatch = databaseByIdentityKey.get(identityCalls, speciesCatalogIdentityKey(staticEntry));
+        const directMatch = databaseByIdentityKey.get(speciesCatalogIdentityKey(staticEntry));
     }
 
     assert.equal(identityCalls, 0,
