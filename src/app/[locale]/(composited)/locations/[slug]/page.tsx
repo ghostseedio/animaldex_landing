@@ -8,10 +8,12 @@ import LocationHero from "@/app/[locale]/(composited)/locations/_components/loca
 import LocationAnimalsList from "@/app/[locale]/(composited)/locations/_components/location-animals-list";
 import LocationBestFor from "@/app/[locale]/(composited)/locations/_components/location-best-for";
 import LocationSpottingTips from "@/app/[locale]/(composited)/locations/_components/location-spotting-tips";
+import LocationGuideListings from "@/app/[locale]/(composited)/locations/_components/location-guide-listings";
 import RelatedLocationsSection from "@/app/[locale]/(composited)/locations/_components/related-locations-section";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import {getBlogPost} from "@/data/blog";
+import {blogHrefs, earnPaths} from "@/data/earn-economy";
 import {getChallenge} from "@/data/challenges";
 import {DATABASE_BACKED_LOCATION_SPECIES, getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
 import {getLocationMap, getLocationMapSpeciesSlugs} from "@/data/location-maps";
@@ -140,9 +142,9 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
         };
     }));
 
-    if (resolvedAnimals.some((entry) => !entry)) {
-        notFound();
-    }
+    // One stale roster slug (a renamed or unindexed catalog species) used to
+    // 404 the whole page — 12 of 40 locations went dark that way. Skip it; the
+    // locations roster test catches stale slugs before deploy.
 
     const animals = resolvedAnimals.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
@@ -250,10 +252,16 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             url: getAbsoluteUrl(locale, `/animals/${animal.species.slug}`)
         }))
     };
-    const faqSchema = location.faq && location.faq.length > 0 ? {
+    // Always true whatever the live Guide inventory is, so it can sit in static HTML.
+    const findGuideFaq = {
+        question: t("findGuideFaqQuestion", {location: location.name}),
+        answer: t("findGuideFaqAnswer", {location: location.name})
+    };
+    const faqItems = location.faq && location.faq.length > 0 ? [...location.faq, findGuideFaq] : [];
+    const faqSchema = faqItems.length > 0 ? {
         "@context": "https://schema.org",
         "@type": "FAQPage",
-        mainEntity: location.faq.map((item) => ({
+        mainEntity: faqItems.map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: {
@@ -455,6 +463,46 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 items={location.spottingTips}
             />
 
+            {/* Live Guide inventory is read at view time: this page is static and never
+                revalidates, and SEO SSG may not make remote reads. */}
+            <section id="wildlife-guides" className="scroll-mt-28 rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6" aria-labelledby="location-wildlife-guides">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("wildlifeGuidesEyebrow")}</p>
+                <h2 id="location-wildlife-guides" className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
+                    {t("wildlifeGuidesTitle", {location: location.name})}
+                </h2>
+                <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("wildlifeGuidesDescription")}</p>
+                <div className="mt-5">
+                    <LocationGuideListings
+                        slug={location.slug}
+                        locale={locale}
+                        labels={{
+                            checking: t("wildlifeGuidesChecking", {location: location.name}),
+                            found: t("wildlifeGuidesFound", {location: location.name}),
+                            none: t("wildlifeGuidesNone", {location: location.name}),
+                            unavailable: t("wildlifeGuidesUnavailable"),
+                            browseAll: t("wildlifeGuidesBrowseAll")
+                        }}
+                    />
+                </div>
+                <h3 className="mt-8 font-display text-2xl font-bold text-white">{t("chooseGuideTitle", {location: location.name})}</h3>
+                <ul className="mt-4 grid max-w-4xl list-disc gap-2 pl-5 text-base leading-7 text-ink-200">
+                    <li>{t("chooseGuideTipOne")}</li>
+                    <li>{t("chooseGuideTipTwo")}</li>
+                    <li>{t("chooseGuideTipThree")}</li>
+                </ul>
+                <Link href={blogHrefs.chooseLocalGuide} className="mt-4 inline-block text-sm font-semibold text-primary-200 hover:text-primary-100" underline>
+                    {t("chooseGuideReadMore")}
+                </Link>
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <Link href={earnPaths.wildlifeExperiences} className="inline-flex min-h-11 items-center rounded-full bg-primary-400 px-5 py-2.5 text-sm font-bold text-black hover:bg-primary-300">
+                        {t("wildlifeGuidesCta")}
+                    </Link>
+                    <Link href={earnPaths.becomeGuide} className="inline-flex min-h-11 items-center rounded-full border border-primary-400/50 px-5 py-2.5 text-sm font-bold text-primary-200 hover:bg-primary-400/10">
+                        {t("becomeGuideCta")}
+                    </Link>
+                </div>
+            </section>
+
             <IntentCtaCard
                 title={t("ctaTitle", {location: location.name})}
                 description={t("ctaDescription", {location: location.name})}
@@ -514,12 +562,12 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 items={relatedLocations}
             />
 
-            {location.faq && location.faq.length > 0 && (
+            {faqItems.length > 0 && (
                 <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("faqTitle")}</h2>
                     <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("faqDescription")}</p>
                     <div className="mt-5 grid gap-3">
-                        {location.faq.map((item) => (
+                        {faqItems.map((item) => (
                             <div key={item.question} className="rounded-md border border-line-400 bg-canvas-900/40 p-4">
                                 <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                                 <p className="mt-2 text-base leading-7 text-ink-200">{item.answer}</p>

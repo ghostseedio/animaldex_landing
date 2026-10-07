@@ -90,7 +90,7 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "ocean-sunfish",
     "hawksbill-sea-turtle",
     "olive-ridley-sea-turtle",
-    "flying-fox",
+    "large-flying-fox",
     "addax",
     "african-bullfrog",
     "african-bush-elephant",
@@ -102,7 +102,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "alpine-ibex",
     "amazon-milk-frog",
     "american-bison",
-    "american-cockroach",
     "american-crocodile",
     "american-marten",
     "american-robin",
@@ -112,7 +111,7 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "arabian-sand-boa",
     "arctic-fox",
     "arctic-tern",
-    "armadillidium-vulgare",
+    "common-pill-woodlouse",
     "asian-glossy-starling",
     "asian-honey-bee",
     "asian-weaver-ant",
@@ -136,7 +135,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "bronze-ground-beetle",
     "brown-anole",
     "brown-bear",
-    "brown-marmorated-stink-bug",
     "brown-pelican",
     "brown-recluse",
     "brush-tailed-mulgara",
@@ -160,7 +158,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "common-basilisk",
     "common-blackbird",
     "common-buzzard",
-    "common-eastern-bumble-bee",
     "common-frog",
     "common-genet",
     "common-house-spider",
@@ -181,7 +178,7 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "desert-hedgehog",
     "desert-horned-viper",
     "desert-locust",
-    "didelphis-marsupialis",
+    "opossum",
     "diving-bell-spider",
     "earwig",
     "eastern-cottontail",
@@ -270,7 +267,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "lycaenid-butterfly",
     "madagascar-day-gecko",
     "madagascar-ground-boa",
-    "madagascar-hissing-cockroach",
     "madagascar-pochard",
     "manatee",
     "mandarin-duck",
@@ -297,7 +293,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "northern-flicker",
     "northern-fulmar",
     "northern-hawk-owl",
-    "northern-walkingstick",
     "ocelot",
     "orb-weaver-spider",
     "orca",
@@ -306,7 +301,7 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "otter",
     "pallass-cat",
     "paper-wasp",
-    "pecari-tajacu",
+    "collared-peccary",
     "perentie",
     "pied-crow",
     "pied-fantail",
@@ -335,7 +330,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "sika-deer",
     "silverfish",
     "sloth-bear",
-    "small-bicolored-house-ant",
     "smooth-coated-otter",
     "snail",
     "snow-bunting",
@@ -361,7 +355,6 @@ export const DATABASE_BACKED_LOCATION_SPECIES = new Set([
     "tree-frog",
     "turquoise-browed-motmot",
     "vervet-monkey",
-    "vespula-vulgaris",
     "walrus",
     "water-deer",
     "water-scorpion",
@@ -398,7 +391,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "reticulated-python", "crocodile", "monarch-butterfly", "clownfish",
         "white-bellied-sea-eagle", "common-sun-skink", "common-house-gecko", "tree-frog",
         "water-monitor", "javan-myna", "common-myna", "asian-palm-civet",
-        "flying-fox", "sunda-pangolin", "javan-slow-loris", "house-sparrow",
+        "large-flying-fox", "sunda-pangolin", "javan-slow-loris", "house-sparrow",
         "house-fly", "house-centipede"
     ],
     "komodo-national-park": [
@@ -447,8 +440,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
     "china": [
         "red-crowned-crane", "golden-pheasant", "red-panda", "chinese-giant-salamander",
         "mandarin-duck", "chinese-crocodile-lizard", "eurasian-tree-sparrow", "oriental-magpie-robin",
-        "chinese-pond-heron", "asian-common-toad", "eurasian-magpie", "common-myna",
-        "brown-marmorated-stink-bug", "chinese-mantis", "chinese-hwamei", "chinese-softshell-turtle",
+        "chinese-pond-heron", "asian-common-toad", "eurasian-magpie", "common-myna", "chinese-mantis", "chinese-hwamei", "chinese-softshell-turtle",
         "chinese-cobra", "common-house-gecko", "red-fox", "water-deer",
         "asiatic-black-bear", "tree-frog", "chinese-water-dragon"
     ],
@@ -456,7 +448,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "european-hedgehog", "european-robin", "red-deer", "white-stork",
         "european-badger", "common-raven", "common-blackbird", "great-tit",
         "common-buzzard", "eurasian-jay", "european-goldfinch", "western-honey-bee",
-        "asian-common-toad", "vespula-vulgaris", "common-frog", "snail",
+        "asian-common-toad", "common-frog", "snail",
         "paper-wasp", "tree-frog", "earwig", "european-nightjar",
         "common-house-spider"
     ],
@@ -492,9 +484,8 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "moose", "canada-goose", "common-loon", "harbor-seal",
         "beluga-whale", "north-american-beaver", "american-robin", "northern-flicker",
         "common-raven", "great-blue-heron", "pileated-woodpecker", "bronze-ground-beetle",
-        "common-nighthawk", "red-squirrel", "common-eastern-bumble-bee", "eastern-gray-squirrel",
-        "white-tailed-deer", "wood-frog", "asiatic-black-bear", "american-marten",
-        "northern-walkingstick", "wolverine", "common-house-spider", "house-fly"
+        "common-nighthawk", "red-squirrel", "eastern-gray-squirrel",
+        "white-tailed-deer", "wood-frog", "asiatic-black-bear", "american-marten", "wolverine", "common-house-spider", "house-fly"
     ],
     "united-states": [
         "american-bison", "north-american-raccoon", "great-blue-heron", "north-american-beaver",
@@ -525,7 +516,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "andean-condor", "squirrel-monkey", "poison-dart-frog", "giant-anteater",
         "green-anaconda", "hoatzin", "blue-crowned-motmot", "harpy-eagle",
         "mantled-howler-monkey", "green-iguana", "common-house-gecko", "north-american-river-otter",
-        "didelphis-marsupialis", "house-fly", "amazon-milk-frog", "jaguarundi",
+        "opossum", "house-fly", "amazon-milk-frog", "jaguarundi",
         "toco-toucan"
     ],
     "kenya": [
@@ -534,14 +525,13 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "house-crow", "african-grey-hornbill", "african-harrier-hawk", "bushbuck",
         "vervet-monkey", "rock-hyrax", "african-civet", "common-genet",
         "african-wild-dog", "honey-badger", "egyptian-mongoose", "african-rock-python",
-        "green-mamba", "african-bullfrog", "american-cockroach", "house-fly",
+        "green-mamba", "african-bullfrog", "house-fly",
         "giant-african-millipede", "common-house-gecko", "house-centipede", "emperor-scorpion"
     ],
     "madagascar": [
         "aye-aye", "fossa", "satanic-leaf-tailed-gecko", "madagascar-day-gecko",
         "tomato-frog", "humpback-whale", "indri", "common-house-gecko",
-        "madagascar-ground-boa", "madagascar-pochard", "ploughshare-tortoise", "madagascar-hissing-cockroach",
-        "giant-african-millipede"
+        "madagascar-ground-boa", "madagascar-pochard", "ploughshare-tortoise", "giant-african-millipede"
     ],
     "sri-lanka": [
         "elephant", "leopard", "sloth-bear", "hawksbill-sea-turtle",
@@ -561,7 +551,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "eyelash-viper", "poison-dart-frog", "great-kiskadee", "keel-billed-toucan",
         "emerald-toucanet", "great-curassow", "central-american-agouti", "spectacled-owl",
         "white-nosed-coati", "green-iguana", "three-toed-sloth", "green-basilisk",
-        "pecari-tajacu", "spider-monkey", "leafcutter-ant", "common-house-gecko",
+        "collared-peccary", "spider-monkey", "leafcutter-ant", "common-house-gecko",
         "ocelot", "tarantula-hawk-wasp", "turquoise-browed-motmot", "jaguarundi",
         "house-fly", "brown-anole"
     ],
@@ -585,8 +575,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "seahorse", "reticulated-python", "javan-myna", "asian-glossy-starling",
         "house-crow", "pied-fantail", "common-myna", "oriental-pied-hornbill",
         "water-monitor", "long-tailed-macaque", "common-sun-skink", "asian-weaver-ant",
-        "smooth-coated-otter", "asian-common-toad", "common-house-gecko", "asian-palm-civet",
-        "american-cockroach", "small-bicolored-house-ant", "house-fly", "mosquito"
+        "smooth-coated-otter", "asian-common-toad", "common-house-gecko", "asian-palm-civet", "house-fly", "mosquito"
     ],
     "tanzania": [
         "spotted-hyena", "cheetah", "secretary-bird", "white-headed-vulture",
@@ -630,13 +619,13 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "common-buzzard", "european-goldfinch", "common-swift", "european-robin",
         "european-bee-eater", "little-owl", "egyptian-mongoose", "striped-hyena",
         "european-badger", "common-house-gecko", "house-mouse", "australian-green-tree-frog",
-        "house-centipede", "house-fly", "desert-locust", "armadillidium-vulgare",
+        "house-centipede", "house-fly", "desert-locust", "common-pill-woodlouse",
         "european-hedgehog", "silverfish", "european-hornet"
     ],
     "colombia": [
         "toco-toucan", "glass-frog", "three-toed-sloth", "harpy-eagle",
         "giant-anteater", "kinkajou", "great-kiskadee", "central-american-agouti",
-        "didelphis-marsupialis", "spectacled-bear", "ocelot", "tayra",
+        "opossum", "spectacled-bear", "ocelot", "tayra",
         "spectacled-owl", "common-basilisk", "common-house-gecko", "boa-constrictor",
         "house-fly", "white-faced-capuchin", "emerald-toucanet", "green-anole",
         "tree-frog"
@@ -655,8 +644,7 @@ const LOCATION_EXTRA_ANIMAL_SPECIES_SLUGS: Record<string, string[]> = {
         "great-egret", "clownfish", "house-sparrow", "eurasian-collared-dove",
         "common-myna", "house-crow", "greater-flamingo", "arabian-oryx",
         "desert-horned-viper", "arabian-sand-boa", "red-fox", "damselfly",
-        "common-house-gecko", "desert-hedgehog", "desert-locust", "american-cockroach",
-        "house-fly", "silverfish"
+        "common-house-gecko", "desert-hedgehog", "desert-locust", "house-fly", "silverfish"
     ],
     "russia": [
         "wolverine", "polar-bear", "beluga-whale", "walrus",
@@ -747,11 +735,11 @@ const locationPagesData: LocationPage[] = [
         name: "Indonesia",
         regionType: "country",
         featuredImage: {
-            src: "https://img.jakpost.net/c/2016/10/27/2016_10_27_14766_1477565235._large.jpg",
-            alt: "Indonesia tropical forest landscape featured image for the AnimalDex location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: The Jakarta Post."
+            src: "/images/blog/locations-indonesia/hero.webp",
+            alt: "A wild Sulawesi hornbill perched in rainforest canopy on Sulawesi, Indonesia",
+            width: 1400,
+            height: 933,
+            caption: "A wild Sulawesi hornbill perched in rainforest canopy on Sulawesi, Indonesia. Photo: Raynton Rare'a, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Indonesia: What You Can Spot, Learn, and Collect",
         description: "A practical guide to animals in Indonesia, from accessible birds and coastal wildlife to headline species that make the country one of the world's strongest wildlife-travel destinations.",
@@ -839,11 +827,11 @@ const locationPagesData: LocationPage[] = [
         name: "Bali",
         regionType: "island",
         featuredImage: {
-            src: "https://miro.medium.com/v2/resize:fit:1400/1*S53Y54GWjDDKGjxcHSsT1A.jpeg",
-            alt: "Bali tropical landscape featured image for the AnimalDex location guide",
+            src: "/images/blog/locations-bali/hero.webp",
+            alt: "A long-tailed macaque walking along a path in the Ubud Monkey Forest, Bali",
             width: 1400,
-            height: 788,
-            caption: "Featured image source: Medium."
+            height: 933,
+            caption: "A long-tailed macaque walking along a path in the Ubud Monkey Forest, Bali. Photo: mckaysavage, CC BY 2.0, via Wikimedia Commons."
         },
         title: "Animals in Bali: What You Can Spot, Learn, and Collect",
         description: "A practical Bali wildlife guide built around animals travelers can realistically spot, from birds and coastal species to high-value sightings that make the island feel richer than a resort-only trip.",
@@ -1201,11 +1189,11 @@ const locationPagesData: LocationPage[] = [
         name: "Jakarta",
         regionType: "city",
         featuredImage: {
-            src: "https://www.ujungkulon.net/wp-content/uploads/2025/11/Milky-Stork-Mycteria-cinerea.webp",
-            alt: "Milky stork featured image for the AnimalDex Jakarta wildlife location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Ujung Kulon."
+            src: "/images/blog/locations-jakarta/hero.webp",
+            alt: "A racket-tailed treepie perched in mangroves at Muara Angke Wildlife Reserve, Jakarta",
+            width: 1400,
+            height: 933,
+            caption: "A racket-tailed treepie perched in mangroves at Muara Angke Wildlife Reserve, Jakarta. Photo: DSghe, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Wildlife in Jakarta: Best Animals to Spot Near the City",
         description: "A structured Jakarta wildlife guide focused on realistic city and near-city animal spotting, with practical routes for urban travelers, families, and zoo visitors.",
@@ -1292,11 +1280,11 @@ const locationPagesData: LocationPage[] = [
         name: "West Java",
         regionType: "region",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Green_sea_turtle_%28Chelonia_mydas%29_Moorea.jpg",
-            alt: "Green sea turtle featured image for the AnimalDex West Java location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-west-java/hero.webp",
+            alt: "A Javan gibbon climbing through rainforest trees on Java, Indonesia",
+            width: 1400,
+            height: 933,
+            caption: "A Javan gibbon climbing through rainforest trees on Java, Indonesia. Photo: A.Baihaqi, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals You Can Spot in West Java",
         description: "A practical West Java location guide built around realistic spotting opportunities across city edges, wetlands, coasts, and everyday green space.",
@@ -1380,11 +1368,11 @@ const locationPagesData: LocationPage[] = [
         name: "Komodo National Park",
         regionType: "park",
         featuredImage: {
-            src: "https://thesevenseas.net/storage/2023/10/herokomodonationalnew.jpg",
-            alt: "Komodo National Park featured image for the AnimalDex location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: The Seven Seas."
+            src: "/images/blog/locations-komodo-national-park/hero.webp",
+            alt: "A wild Komodo dragon walking across the sand on Komodo Island, Komodo National Park",
+            width: 1400,
+            height: 935,
+            caption: "A wild Komodo dragon walking across the sand on Komodo Island, Komodo National Park. Photo: Jakub Hałun, CC BY 4.0, via Wikimedia Commons."
         },
         title: "Animals in Komodo National Park: What You Can Realistically Spot",
         description: "A structured guide to Komodo National Park focused on what visitors can realistically spot, from Komodo dragons and marine life to smaller species that reward patient observation.",
@@ -1471,11 +1459,11 @@ const locationPagesData: LocationPage[] = [
         name: "Ujung Kulon",
         regionType: "park",
         featuredImage: {
-            src: "https://www.indonesia.travel/contentassets/36cf809eda1047669e52dc0d3644f1c1/taman-nasional-ujung-kulon.jpeg",
-            alt: "Ujung Kulon National Park featured image for the AnimalDex location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Indonesia Travel."
+            src: "/images/blog/locations-ujung-kulon/hero.webp",
+            alt: "A wild banteng among palms in Ujung Kulon National Park, West Java",
+            width: 1400,
+            height: 933,
+            caption: "A wild banteng among palms in Ujung Kulon National Park, West Java. Photo: Muhammad Adimaja, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Ujung Kulon: A Practical Wildlife Guide",
         description: "A practical Ujung Kulon wildlife page that avoids overpromising rare flagship animals and instead focuses on realistic spotting around coasts, forests, and quieter habitat edges.",
@@ -1559,11 +1547,11 @@ const locationPagesData: LocationPage[] = [
         name: "Borneo",
         regionType: "region",
         featuredImage: {
-            src: "https://www.regent-holidays.co.uk/upload-files/blog-sections/section-298_3247.jpg",
-            alt: "Borneo rainforest river landscape featured image for the AnimalDex location guide",
-            width: 1100,
-            height: 639,
-            caption: "Featured image source: Regent Holidays."
+            src: "/images/blog/locations-borneo/hero.webp",
+            alt: "A Bornean orangutan mother and infant in Tanjung Puting National Park, Borneo",
+            width: 1400,
+            height: 933,
+            caption: "A Bornean orangutan mother and infant in Tanjung Puting National Park, Borneo. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Borneo: What You Can Spot and Why the Region Matters",
         description: "A structured Borneo wildlife guide focused on realistic rainforest, river, and sanctuary-linked spotting with strong links into species pages and broader AnimalDex discovery.",
@@ -1650,11 +1638,11 @@ const locationPagesData: LocationPage[] = [
         name: "Singapore Zoo",
         regionType: "zoo",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/5/50/Singapore_Zoo_entrance-15Feb2010.jpg",
-            alt: "Singapore Zoo entrance featured image for the AnimalDex location guide",
-            width: 1600,
-            height: 1063,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-singapore-zoo/hero.webp",
+            alt: "Asian elephants in their enclosure at Singapore Zoo",
+            width: 1400,
+            height: 935,
+            caption: "Asian elephants in their enclosure at Singapore Zoo. Photo: Jakub Hałun, CC BY 4.0, via Wikimedia Commons."
         },
         title: "Animals at Singapore Zoo: Best Species to See, Scan, and Learn",
         description: "A practical Singapore Zoo page for families, travelers, and collectors who want a reliable animal day with strong species variety and useful links into AnimalDex guides.",
@@ -1741,11 +1729,11 @@ const locationPagesData: LocationPage[] = [
         name: "London Zoo",
         regionType: "zoo",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/London-zoo-entrance.webp/1280px-London-zoo-entrance.webp.png",
-            alt: "London Zoo entrance featured image for the AnimalDex location guide",
-            width: 1280,
-            height: 822,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-london-zoo/hero.webp",
+            alt: "Giraffes outside the historic Giraffe House at ZSL London Zoo",
+            width: 1400,
+            height: 1050,
+            caption: "Giraffes outside the historic Giraffe House at ZSL London Zoo. Photo: Peter Smith, CC BY 2.0, via Wikimedia Commons."
         },
         title: "Animals at London Zoo: Best Species to See and Scan",
         description: "A structured London Zoo page for travelers and families who want a practical, species-rich day with strong learning value and clean links into AnimalDex guides.",
@@ -1832,11 +1820,11 @@ const locationPagesData: LocationPage[] = [
         name: "African Safari",
         regionType: "safari",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Feeding_Time_%287903356458%29.jpg",
-            alt: "African safari feeding scene featured image for the AnimalDex location guide",
-            width: 3648,
-            height: 2736,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-african-safari/hero.webp",
+            alt: "A pride of lions resting together in the Masai Mara, Kenya",
+            width: 1400,
+            height: 933,
+            caption: "A pride of lions resting together in the Masai Mara, Kenya. Photo: Benh LIEU SONG, CC BY-SA 3.0, via Wikimedia Commons."
         },
         title: "African Safari Animals: What You Can Spot and Why It Matters",
         description: "A structured African safari guide built around practical safari species, real spotting expectations, and the animals that make open-country wildlife travel so iconic.",
@@ -1932,11 +1920,11 @@ const locationPagesData: LocationPage[] = [
         slug: "china",
         name: "China",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/1/1a/1_panda_trio_sichuan_china_2011.jpg",
-            alt: "Giant panda trio in Sichuan featured image for the AnimalDex China location guide",
-            width: 4256,
-            height: 2832,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-china/hero.webp",
+            alt: "A giant panda climbing over logs at Wolong, Sichuan, China",
+            width: 1400,
+            height: 989,
+            caption: "A giant panda climbing over logs at Wolong, Sichuan, China. Photo: Chi King, CC BY 2.0, via Wikimedia Commons."
         },
         title: "Animals in China: What You Can Spot, Learn, and Collect",
         description: "A practical China wildlife guide built around iconic mountain species, river-edge birds, and the broader habitat variety that makes the country more than a panda-only destination.",
@@ -1977,11 +1965,11 @@ const locationPagesData: LocationPage[] = [
         slug: "germany",
         name: "Germany",
         featuredImage: {
-            src: "https://a-z-animals.com/media/2022/11/shutterstock_2190969351-1024x683.jpg",
-            alt: "European forest wildlife featured image for the AnimalDex Germany location guide",
-            width: 1024,
-            height: 683,
-            caption: "Featured image source: A-Z Animals."
+            src: "/images/blog/locations-germany/hero.webp",
+            alt: "A red deer stag crossing a misty meadow in the Duvenstedter Brook nature reserve, Hamburg, Germany",
+            width: 1400,
+            height: 1050,
+            caption: "A red deer stag crossing a misty meadow in the Duvenstedter Brook nature reserve, Hamburg, Germany. Photo: Verena Stenzel-Harbaum, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Germany: What You Can Spot, Learn, and Collect",
         description: "A practical Germany wildlife guide for forest edges, rivers, farmland margins, and the kind of steady species list that rewards patience instead of spectacle.",
@@ -2022,11 +2010,11 @@ const locationPagesData: LocationPage[] = [
         slug: "india",
         name: "India",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/4/4d/12_-_The_Mystical_King_Cobra_and_Coffee_Forests.jpg",
-            alt: "King cobra in Indian coffee forest featured image for the AnimalDex India location guide",
-            width: 1080,
-            height: 808,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-india/hero.webp",
+            alt: "A Bengal tiger at a forest pool in Ranthambore National Park, India",
+            width: 1400,
+            height: 933,
+            caption: "A Bengal tiger at a forest pool in Ranthambore National Park, India. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in India: What You Can Spot, Learn, and Collect",
         description: "A practical India wildlife guide built around both headline species and the more realistic birds, reptiles, and river-edge animals that keep a trip productive.",
@@ -2067,11 +2055,11 @@ const locationPagesData: LocationPage[] = [
         slug: "japan",
         name: "Japan",
         featuredImage: {
-            src: "https://p.potaufeu.asahi.com/54c8-p/picture/30015427/8941d7bed30c09201cae41a317603729.jpg",
-            alt: "Japan wildlife featured image for the AnimalDex location guide",
-            width: 660,
-            height: 528,
-            caption: "Featured image source: The Asahi Shimbun."
+            src: "/images/blog/locations-japan/hero.webp",
+            alt: "A Japanese macaque (snow monkey) at Jigokudani Monkey Park, Nagano, Japan",
+            width: 1400,
+            height: 1050,
+            caption: "A Japanese macaque (snow monkey) at Jigokudani Monkey Park, Nagano, Japan. Photo: Lupe, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Japan: What You Can Spot, Learn, and Collect",
         description: "A practical Japan wildlife guide focused on birds, coasts, smaller seasonal animals, and the quieter observation style that makes the country rewarding for careful travelers.",
@@ -2112,11 +2100,11 @@ const locationPagesData: LocationPage[] = [
         slug: "australia",
         name: "Australia",
         featuredImage: {
-            src: "https://www.medibank.com.au/content/dam/livebetter/en/images/migrated/a91cb463f62517fac4326e7d89f9e975/iStock-519731334.jpg",
-            alt: "Australia wildlife featured image for the AnimalDex location guide",
-            width: 2718,
-            height: 1809,
-            caption: "Featured image source: Medibank."
+            src: "/images/blog/locations-australia/hero.webp",
+            alt: "A male western grey kangaroo in open grassland on Kangaroo Island, Australia",
+            width: 1400,
+            height: 933,
+            caption: "A male western grey kangaroo in open grassland on Kangaroo Island, Australia. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Australia: What You Can Spot, Learn, and Collect",
         description: "A practical Australia wildlife guide built around distinctive mammals, coastal species, and the kind of animal list that feels unlike almost anywhere else.",
@@ -2157,11 +2145,11 @@ const locationPagesData: LocationPage[] = [
         slug: "brazil",
         name: "Brazil",
         featuredImage: {
-            src: "https://brazilgreentravel.com/wp-content/uploads/capybara-brazil-1000x500.jpg",
-            alt: "Capybara in Brazil featured image for the AnimalDex location guide",
-            width: 1000,
-            height: 500,
-            caption: "Featured image source: Brazil Green Travel."
+            src: "/images/blog/locations-brazil/hero.webp",
+            alt: "A male jaguar walking a riverbank on the Three Brothers River in the Pantanal, Brazil",
+            width: 1400,
+            height: 933,
+            caption: "A male jaguar walking a riverbank on the Three Brothers River in the Pantanal, Brazil. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Brazil: What You Can Spot, Learn, and Collect",
         description: "A practical Brazil wildlife guide built around wetlands, rainforest color, and the species that make the country feel big, alive, and worth collecting carefully.",
@@ -2202,11 +2190,11 @@ const locationPagesData: LocationPage[] = [
         slug: "canada",
         name: "Canada",
         featuredImage: {
-            src: "https://cdn.wisemove.ca/image/blog/07102cdc57e7f99b95852b74329cf01c.webp",
-            alt: "Canada wildlife featured image for the AnimalDex location guide",
-            width: 2121,
-            height: 1414,
-            caption: "Featured image source: Wise Move."
+            src: "/images/blog/locations-canada/hero.webp",
+            alt: "A bull moose feeding at the water's edge in Algonquin Provincial Park, Ontario, Canada",
+            width: 1400,
+            height: 788,
+            caption: "A bull moose feeding at the water's edge in Algonquin Provincial Park, Ontario, Canada. Photo: Ryan Hodnett, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Canada: What You Can Spot, Learn, and Collect",
         description: "A practical Canada wildlife guide built around coasts, forests, migration, and the cold-region species that make the country feel spacious and serious.",
@@ -2247,11 +2235,11 @@ const locationPagesData: LocationPage[] = [
         slug: "united-states",
         name: "United States",
         featuredImage: {
-            src: "https://a-z-animals.com/media/2022/10/shutterstock_2048601443-1024x576.jpg",
-            alt: "United States wildlife featured image for the AnimalDex location guide",
-            width: 1024,
-            height: 576,
-            caption: "Featured image source: A-Z Animals."
+            src: "/images/blog/locations-united-states/hero.webp",
+            alt: "An American bison grazing in Yellowstone National Park, United States",
+            width: 1400,
+            height: 875,
+            caption: "An American bison grazing in Yellowstone National Park, United States. Photo: Frank Schulenburg, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in the United States: What You Can Spot, Learn, and Collect",
         description: "A practical United States wildlife guide built around habitat variety, from wetlands and coastlines to migration corridors and iconic American species.",
@@ -2292,11 +2280,11 @@ const locationPagesData: LocationPage[] = [
         slug: "thailand",
         name: "Thailand",
         featuredImage: {
-            src: "https://j6m3f5v5.delivery.rocketcdn.me/wp-content/uploads/2023/07/elephants-the-most-popular-animal-in-thailand-1024x683.jpg",
-            alt: "Thailand wildlife featured image for the AnimalDex location guide",
-            width: 1024,
-            height: 683,
-            caption: "Featured image source: RocketCDN."
+            src: "/images/blog/locations-thailand/hero.webp",
+            alt: "A herd of wild Asian elephants in Khao Yai National Park, Thailand",
+            width: 1400,
+            height: 933,
+            caption: "A herd of wild Asian elephants in Khao Yai National Park, Thailand. Photo: Pailoolom, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Thailand: What You Can Spot, Learn, and Collect",
         description: "A practical Thailand wildlife guide built around forests, coasts, reptiles, and the travel-friendly species that make the country feel biologically rewarding without extreme logistics.",
@@ -2337,11 +2325,11 @@ const locationPagesData: LocationPage[] = [
         slug: "mexico",
         name: "Mexico",
         featuredImage: {
-            src: "https://images.christineabroad.com/2019/03/Quetzal.jpg",
-            alt: "Quetzal featured image for the AnimalDex Mexico location guide",
-            width: 750,
-            height: 500,
-            caption: "Featured image source: Christine Abroad."
+            src: "/images/blog/locations-mexico/hero.webp",
+            alt: "A monarch butterfly on a fir trunk at the Piedra Herrada Monarch Butterfly Sanctuary, Mexico",
+            width: 1400,
+            height: 1050,
+            caption: "A monarch butterfly on a fir trunk at the Piedra Herrada Monarch Butterfly Sanctuary, Mexico. Photo: Adam Jones from Kelowna, BC, Canada, CC BY-SA 2.0, via Wikimedia Commons."
         },
         title: "Animals in Mexico: What You Can Spot, Learn, and Collect",
         description: "A practical Mexico wildlife guide built around wetlands, coasts, colorful birds, and the species that make the country strong for flexible animal discovery.",
@@ -2382,11 +2370,11 @@ const locationPagesData: LocationPage[] = [
         slug: "peru",
         name: "Peru",
         featuredImage: {
-            src: "https://www.machutravelperu.com/wp-content/uploads/2020/09/portrait-animals-peru-1.webp",
-            alt: "Peru wildlife featured image for the AnimalDex location guide",
-            width: 824,
-            height: 463,
-            caption: "Featured image source: Machu Travel Peru."
+            src: "/images/blog/locations-peru/hero.webp",
+            alt: "An Andean condor soaring over Colca Canyon, Peru",
+            width: 1400,
+            height: 933,
+            caption: "An Andean condor soaring over Colca Canyon, Peru. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Peru: What You Can Spot, Learn, and Collect",
         description: "A practical Peru wildlife guide built around tropical birds, wetlands, coast-linked species, and the layered habitat value that makes the country feel bigger than one simple nature stereotype.",
@@ -2427,11 +2415,11 @@ const locationPagesData: LocationPage[] = [
         slug: "kenya",
         name: "Kenya",
         featuredImage: {
-            src: "https://cheetahsafaris.com/wp-content/uploads/2022/05/10-endangered-animals-you-might-see-on-a-safari-in-kenya-cheetah-safaris-5.jpg",
-            alt: "Kenya safari wildlife featured image for the AnimalDex location guide",
-            width: 1280,
-            height: 720,
-            caption: "Featured image source: Cheetah Safaris."
+            src: "/images/blog/locations-kenya/hero.webp",
+            alt: "Zebras charging down the bank during a Mara River crossing in the Masai Mara, Kenya",
+            width: 1400,
+            height: 933,
+            caption: "Zebras charging down the bank during a Mara River crossing in the Masai Mara, Kenya. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Kenya: What You Can Spot, Learn, and Collect",
         description: "A practical Kenya wildlife guide built around open-country species, clean visibility, and the animals that make East African travel feel immediately iconic.",
@@ -2472,11 +2460,11 @@ const locationPagesData: LocationPage[] = [
         slug: "madagascar",
         name: "Madagascar",
         featuredImage: {
-            src: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Maki.jpg",
-            alt: "Lemur featured image for the AnimalDex Madagascar location guide",
-            width: 800,
-            height: 600,
-            caption: "Featured image source: Wikimedia Commons."
+            src: "/images/blog/locations-madagascar/hero.webp",
+            alt: "A ring-tailed lemur in a tree in Madagascar",
+            width: 1400,
+            height: 944,
+            caption: "A ring-tailed lemur in a tree in Madagascar. Photo: Bernard Gagnon, CC BY-SA 3.0, via Wikimedia Commons."
         },
         title: "Animals in Madagascar: What You Can Spot, Learn, and Collect",
         description: "A practical Madagascar wildlife guide built around endemism, smaller-animal curiosity, and the species that make the island feel unlike anywhere else.",
@@ -2517,11 +2505,11 @@ const locationPagesData: LocationPage[] = [
         slug: "sri-lanka",
         name: "Sri Lanka",
         featuredImage: {
-            src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbGyfManxfJneqLYD37syza1RGxVzMkiR-dA&s",
-            alt: "Sri Lanka wildlife featured image for the AnimalDex location guide",
-            width: 349,
-            height: 144,
-            caption: "Featured image source: Google image cache."
+            src: "/images/blog/locations-sri-lanka/hero.webp",
+            alt: "A Sri Lankan leopard at the forest edge in Yala National Park, Sri Lanka",
+            width: 1400,
+            height: 934,
+            caption: "A Sri Lankan leopard at the forest edge in Yala National Park, Sri Lanka. Photo: Casey Klebba, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Sri Lanka: What You Can Spot, Learn, and Collect",
         description: "A practical Sri Lanka wildlife guide built around birds, reptiles, coasts, and the concentrated habitat variety that makes the island feel rewarding fast.",
@@ -2562,11 +2550,11 @@ const locationPagesData: LocationPage[] = [
         slug: "ecuador",
         name: "Ecuador",
         featuredImage: {
-            src: "https://cdn.kimkim.com/files/a/content_articles/featured_photos/8b08f242619fa890450dd1146ee0d71512c41206/big-15dde3d0482d91122fd98e03eea4c9df.jpg",
-            alt: "Ecuador wildlife featured image for the AnimalDex location guide",
-            width: 1024,
-            height: 683,
-            caption: "Featured image source: Kimkim."
+            src: "/images/blog/locations-ecuador/hero.webp",
+            alt: "A marine iguana at Tortuga Bay on Santa Cruz Island in the Galápagos, Ecuador",
+            width: 1400,
+            height: 933,
+            caption: "A marine iguana at Tortuga Bay on Santa Cruz Island in the Galápagos, Ecuador. Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Ecuador: What You Can Spot, Learn, and Collect",
         description: "A practical Ecuador wildlife guide built around tropical color, coast-linked species, and the short-distance habitat shifts that make the country feel dense with animal possibility.",
@@ -2607,11 +2595,11 @@ const locationPagesData: LocationPage[] = [
         slug: "costa-rica",
         name: "Costa Rica",
         featuredImage: {
-            src: "https://s7g10.scene7.com/is/image/barcelo/costa-rica-animals_wild-animals-in-costa-rica?&&fmt=webp-alpha&qlt=75&wid=1200&fit=crop,1",
-            alt: "Costa Rica wildlife featured image for the AnimalDex location guide",
-            width: 1200,
-            height: 845,
-            caption: "Featured image source: Barcelo."
+            src: "/images/blog/locations-costa-rica/hero.webp",
+            alt: "A red-eyed tree frog clinging to a twig in Costa Rica",
+            width: 1400,
+            height: 933,
+            caption: "A red-eyed tree frog clinging to a twig in Costa Rica. Photo: Bernard Gagnon, CC0, via Wikimedia Commons."
         },
         title: "Animals in Costa Rica: What You Can Spot, Learn, and Collect",
         description: "A practical Costa Rica wildlife guide built around tropical accessibility, marine add-ons, and the species that make the country so good for travel-friendly animal discovery.",
@@ -2652,11 +2640,11 @@ const locationPagesData: LocationPage[] = [
         slug: "norway",
         name: "Norway",
         featuredImage: {
-            src: "https://a-z-animals.com/media/2022/11/shutterstock_1043297113-1024x683.jpg",
-            alt: "Norway wildlife featured image for the AnimalDex location guide",
-            width: 1024,
-            height: 683,
-            caption: "Featured image source: A-Z Animals."
+            src: "/images/blog/locations-norway/hero.webp",
+            alt: "A male musk ox resting on the tundra in Dovrefjell National Park, Norway",
+            width: 1400,
+            height: 933,
+            caption: "A male musk ox resting on the tundra in Dovrefjell National Park, Norway. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Norway: What You Can Spot, Learn, and Collect",
         description: "A practical Norway wildlife guide built around cold coasts, northern atmosphere, and the species that make the country feel clean, open, and seasonally distinctive.",
@@ -2697,11 +2685,11 @@ const locationPagesData: LocationPage[] = [
         slug: "south-africa",
         name: "South Africa",
         featuredImage: {
-            src: "https://a.storyblok.com/f/108167/2000x900/49c05ebdcf/dbc6fa08-860b-4acf-b96c-787268e12648.jpg/m/1920x0/filters:quality(50)",
-            alt: "South Africa wildlife featured image for the AnimalDex location guide",
-            width: 1920,
-            height: 864,
-            caption: "Featured image source: Storyblok."
+            src: "/images/blog/locations-south-africa/hero.webp",
+            alt: "An African elephant and calf crossing a road in Kruger National Park, South Africa",
+            width: 1400,
+            height: 933,
+            caption: "An African elephant and calf crossing a road in Kruger National Park, South Africa. Photo: Dietmar Rabich, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in South Africa: What You Can Spot, Learn, and Collect",
         description: "A practical South Africa wildlife guide built around safari-scale visibility, strong mammal encounters, and the supporting species that keep trips rich even between predator moments.",
@@ -2742,11 +2730,11 @@ const locationPagesData: LocationPage[] = [
         slug: "singapore",
         name: "Singapore",
         featuredImage: {
-            src: "https://cdn-imgix.headout.com/blog-content/image/b7e16dd070634726d88db6ca58d8ae71-otters.jpg?fm=pjpg&auto=compress&w=750&h=300&crop=faces&fit=min",
-            alt: "Singapore otters featured image for the AnimalDex location guide",
-            width: 750,
-            height: 300,
-            caption: "Featured image source: Headout."
+            src: "/images/blog/locations-singapore/hero.webp",
+            alt: "A family of smooth-coated otters foraging on the bank at Jurong Lake Gardens, Singapore",
+            width: 1400,
+            height: 933,
+            caption: "A family of smooth-coated otters foraging on the bank at Jurong Lake Gardens, Singapore. Photo: Tan Jun An, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Singapore: What You Can Spot, Learn, and Collect",
         description: "A practical Singapore wildlife guide built around urban-edge nature, parks, coasts, and the kind of compact travel that can still produce a satisfying animal list.",
@@ -2787,11 +2775,11 @@ const locationPagesData: LocationPage[] = [
         slug: "tanzania",
         name: "Tanzania",
         featuredImage: {
-            src: "https://www.outlooktravelmag.com/media/tanzania-1-1582298839.profileImage.2x-scaled-webp.webp",
-            alt: "Tanzania wildlife featured image for the AnimalDex location guide",
-            width: 1536,
-            height: 884,
-            caption: "Featured image source: Outlook Travel Magazine."
+            src: "/images/blog/locations-tanzania/hero.webp",
+            alt: "A Masai giraffe in golden grassland in Serengeti National Park, Tanzania",
+            width: 1400,
+            height: 933,
+            caption: "A Masai giraffe in golden grassland in Serengeti National Park, Tanzania. Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Tanzania: What You Can Spot, Learn, and Collect",
         description: "A practical Tanzania wildlife guide built around open-country density, famous safari mammals, and the supporting species that make the trip feel biologically complete.",
@@ -2832,11 +2820,11 @@ const locationPagesData: LocationPage[] = [
         slug: "united-kingdom",
         name: "United Kingdom",
         featuredImage: {
-            src: "https://d4g0cdul6yygp.cloudfront.net/uploads/2022/01/red-fox-in-england-.jpg",
-            alt: "Red fox in England featured image for the AnimalDex UK location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Cloudfront-hosted editorial image."
+            src: "/images/blog/locations-united-kingdom/hero.webp",
+            alt: "A red deer stag on the Ardnamurchan peninsula in the Scottish Highlands, United Kingdom",
+            width: 1400,
+            height: 920,
+            caption: "A red deer stag on the Ardnamurchan peninsula in the Scottish Highlands, United Kingdom. Photo: FieldsportsChannel.tv, CC BY 2.0, via Wikimedia Commons."
         },
         title: "Animals in the UK: What You Can Spot, Learn, and Collect",
         description: "A practical UK wildlife guide built around coasts, woodlands, wetlands, and the familiar-but-rewarding species that make local observation richer than many travelers expect.",
@@ -2877,11 +2865,11 @@ const locationPagesData: LocationPage[] = [
         slug: "spain",
         name: "Spain",
         featuredImage: {
-            src: "https://www.worldatlas.com/r/w1200/upload/70/6a/b1/shutterstock-1100475962.jpg",
-            alt: "Spain wildlife featured image for the AnimalDex Spain location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: WorldAtlas."
+            src: "/images/blog/locations-spain/hero.webp",
+            alt: "An Iberian lynx at Almuradiel, Ciudad Real, Spain",
+            width: 1400,
+            height: 1400,
+            caption: "An Iberian lynx at Almuradiel, Ciudad Real, Spain. Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Spain: What You Can Spot, Learn, and Collect",
         description: "A practical Spain wildlife guide built around Mediterranean coasts, dry-country birds, wetlands, and the broad habitat mix that makes the country stronger than beach-only travel suggests.",
@@ -2922,11 +2910,11 @@ const locationPagesData: LocationPage[] = [
         slug: "jamaica",
         name: "Jamaica",
         featuredImage: {
-            src: "https://blog.padi.com/wp-content/uploads/2021/11/shutterstock_1464626822.jpg",
-            alt: "Jamaica marine wildlife featured image for the AnimalDex Jamaica location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: PADI Blog."
+            src: "/images/blog/locations-jamaica/hero.webp",
+            alt: "A red-billed streamertail, Jamaica's national bird, perched in forest",
+            width: 1400,
+            height: 933,
+            caption: "A red-billed streamertail, Jamaica's national bird, perched in forest. Photo: dominic sherony, CC BY-SA 2.0, via Wikimedia Commons."
         },
         title: "Animals in Jamaica: What You Can Spot, Learn, and Collect",
         description: "A practical Jamaica wildlife guide built around coasts, tropical edges, wetlands, and the smaller-but-rewarding species that make island travel feel more biologically alive.",
@@ -2967,11 +2955,11 @@ const locationPagesData: LocationPage[] = [
         slug: "afghanistan",
         name: "Afghanistan",
         featuredImage: {
-            src: "https://a-z-animals.com/media/2022/03/Griffon-Vulture-header-768x461.jpg",
-            alt: "Griffon vulture featured image for the AnimalDex Afghanistan location guide",
-            width: 768,
-            height: 461,
-            caption: "Featured image source: A-Z Animals."
+            src: "/images/blog/locations-afghanistan/hero.webp",
+            alt: "A snow leopard on a grassy rocky slope in Afghanistan",
+            width: 1033,
+            height: 752,
+            caption: "A snow leopard on a grassy rocky slope in Afghanistan. Photo: USAID Afghanistan, Public domain, via Wikimedia Commons."
         },
         title: "Animals in Afghanistan: What You Can Spot, Learn, and Collect",
         description: "A practical Afghanistan wildlife guide built around mountain species, dry-country survival, and the animals that make the region more ecologically layered than most travel summaries suggest.",
@@ -3012,11 +3000,11 @@ const locationPagesData: LocationPage[] = [
         slug: "israel",
         name: "Israel",
         featuredImage: {
-            src: "https://www.goeco.org/wp-content/uploads/2020/08/article-desert-animals-of-israel2.jpg",
-            alt: "Desert animals of Israel featured image for the AnimalDex Israel location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: GoEco."
+            src: "/images/blog/locations-israel/hero.webp",
+            alt: "Two Nubian ibex on a desert slope in the Ein Gedi Nature Reserve, Israel",
+            width: 1400,
+            height: 933,
+            caption: "Two Nubian ibex on a desert slope in the Ein Gedi Nature Reserve, Israel. Photo: Yuvalr, CC BY-SA 3.0, via Wikimedia Commons."
         },
         title: "Animals in Israel: What You Can Spot, Learn, and Collect",
         description: "A practical Israel wildlife guide built around migration routes, coasts, wetlands, and the compact habitat variety that gives the country strong observation value.",
@@ -3057,11 +3045,11 @@ const locationPagesData: LocationPage[] = [
         slug: "colombia",
         name: "Colombia",
         featuredImage: {
-            src: "https://media.gadventures.com/media-server/cache/10/00/1000b8eb44b6cfe246907309e950fe4a.webp",
-            alt: "Colombia wildlife featured image for the AnimalDex Colombia location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: G Adventures."
+            src: "/images/blog/locations-colombia/hero.webp",
+            alt: "A male Andean cock-of-the-rock perched in cloud forest in Antioquia, Colombia",
+            width: 1400,
+            height: 933,
+            caption: "A male Andean cock-of-the-rock perched in cloud forest in Antioquia, Colombia. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Colombia: What You Can Spot, Learn, and Collect",
         description: "A practical Colombia wildlife guide built around tropical birds, forests, wetlands, and the layered species mix that makes the country one of South America's richest wildlife destinations.",
@@ -3102,11 +3090,11 @@ const locationPagesData: LocationPage[] = [
         slug: "iceland",
         name: "Iceland",
         featuredImage: {
-            src: "https://www.campervaniceland.com/assets/img/blog/562/iceland-animals-seals.jpg",
-            alt: "Iceland seals featured image for the AnimalDex Iceland location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Campervan Iceland."
+            src: "/images/blog/locations-iceland/hero.webp",
+            alt: "An Atlantic puffin stretching its wings on the Látrabjarg sea cliffs, Iceland",
+            width: 1400,
+            height: 933,
+            caption: "An Atlantic puffin stretching its wings on the Látrabjarg sea cliffs, Iceland. Photo: Boaworm, CC BY 3.0, via Wikimedia Commons."
         },
         title: "Animals in Iceland: What You Can Spot, Learn, and Collect",
         description: "A practical Iceland wildlife guide built around seabirds, marine mammals, cold coasts, and the smaller but high-quality species list that makes the island feel distinctive.",
@@ -3148,11 +3136,11 @@ const locationPagesData: LocationPage[] = [
         name: "Dubai",
         regionType: "city",
         featuredImage: {
-            src: "https://www.visitdubai.com/-/media/gathercontent/article/g/guide-to-desert-wildlife/fallback-image/call-of-the-wild-dubais-desert-wildlifeherodtcm.jpg",
-            alt: "Dubai desert wildlife featured image for the AnimalDex Dubai location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Visit Dubai."
+            src: "/images/blog/locations-dubai/hero.webp",
+            alt: "An Arabian oryx in the Dubai Desert Conservation Reserve, United Arab Emirates",
+            width: 1400,
+            height: 934,
+            caption: "An Arabian oryx in the Dubai Desert Conservation Reserve, United Arab Emirates. Photo: Josephyousry, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Dubai: What You Can Spot, Learn, and Collect",
         description: "A practical Dubai wildlife guide built around urban-edge nature, coast, desert context, and the species that make the city more biologically interesting than a skyline-first stereotype suggests.",
@@ -3193,11 +3181,11 @@ const locationPagesData: LocationPage[] = [
         slug: "russia",
         name: "Russia",
         featuredImage: {
-            src: "https://www.leonetwork.org/attachments/resized/A4687545-8A17-46E9-91D7-E0D1263B920E",
-            alt: "Russia wildlife featured image for the AnimalDex Russia location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: LEO Network."
+            src: "/images/blog/locations-russia/hero.webp",
+            alt: "A Kamchatka brown bear standing in a salmon river in Kamchatka, Russia",
+            width: 1400,
+            height: 1050,
+            caption: "A Kamchatka brown bear standing in a salmon river in Kamchatka, Russia. Photo: Robert F. Tobler, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Russia: What You Can Spot, Learn, and Collect",
         description: "A practical Russia wildlife guide built around scale, cold-region animals, forests, and the species that make the country feel ecologically vast rather than easy to summarize.",
@@ -3238,11 +3226,11 @@ const locationPagesData: LocationPage[] = [
         slug: "pakistan",
         name: "Pakistan",
         featuredImage: {
-            src: "https://www.envpk.com/wp-content/uploads/2021/02/markhor.jpg",
-            alt: "Markhor featured image for the AnimalDex Pakistan location guide",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Environment Pakistan."
+            src: "/images/blog/locations-pakistan/hero.webp",
+            alt: "A snow leopard resting on rocky ground in Pakistan",
+            width: 1400,
+            height: 933,
+            caption: "A snow leopard resting on rocky ground in Pakistan. Photo: Ilm naseer, CC BY-SA 4.0, via Wikimedia Commons."
         },
         title: "Animals in Pakistan: What You Can Spot, Learn, and Collect",
         description: "A practical Pakistan wildlife guide built around mountain species, river systems, and the mix of birds, reptiles, and highland mammals that make the country ecologically stronger than many summaries suggest.",

@@ -50,10 +50,11 @@ if (!url || !key) throw new Error("SUPABASE_URL and a read key are required.");
 
 const PAGE = 1000;
 
-async function fetchAll(table: string, select: string) {
+/** `order` must be a unique column: unordered Range pages skip and repeat rows. */
+async function fetchAll(table: string, select: string, order: string) {
     const rows: Record<string, unknown>[] = [];
     for (let from = 0; ; from += PAGE) {
-        const response = await fetch(`${url}/rest/v1/${table}?select=${select}`, {
+        const response = await fetch(`${url}/rest/v1/${table}?select=${select}&order=${order}`, {
             headers: {
                 apikey: key as string,
                 Authorization: `Bearer ${key}`,
@@ -80,15 +81,38 @@ function closingLine(value: unknown) {
     return sentences?.length ? sentences[sentences.length - 1].trim() : explanation;
 }
 
-const published = JSON.parse(readFileSync(join(root, "src/data/published-seo-animal-pages.json"), "utf8"));
+/*
+ * Map catalog profile → published animal page. This used to read only
+ * published-seo-animal-pages.json, which by design omits the ~1,000
+ * hand-coded species, so their dynamics and Trials (tiger, wolf, octopus…)
+ * never reached /animal-behaviours or /challenge-yourself. Read the indexed
+ * catalog instead and keep every profile whose slug has a published page.
+ */
+const publishedAnimals = new Set<string>(JSON.parse(readFileSync(join(root, "src/data/published-seo-slugs.json"), "utf8")).animals);
+const {speciesEntries} = await import("../src/data/species.ts");
+const staticNames = new Map(speciesEntries.map((entry) => [entry.slug, entry.name]));
+const catalogRows = await fetchAll(
+    "species_catalog_v1",
+    "species_profile_id,display_name,landing_page_slug,normalized_identity_key,animaldex_number",
+    "species_profile_id.asc"
+);
 const speciesBySeoId = new Map<string, {slug: string; name: string}>();
-for (const entry of published.entries as Array<{slug: string; name: string; speciesProfileId?: string}>) {
-    if (entry.speciesProfileId) speciesBySeoId.set(entry.speciesProfileId, {slug: entry.slug, name: entry.name});
+for (const row of catalogRows) {
+    const profileId = String(row.species_profile_id ?? "");
+    const number = Number(row.animaldex_number) || null;
+    if (!profileId || !number || speciesBySeoId.has(profileId)) continue;
+    const landing = text(row.landing_page_slug) ?? "";
+    const stripped = landing.endsWith(`-${number}`) ? landing.slice(0, -`-${number}`.length) : landing;
+    const slug = (stripped || (text(row.normalized_identity_key) ?? "").replace(/_/g, "-"))
+        .toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    if (!slug || !publishedAnimals.has(slug)) continue;
+    speciesBySeoId.set(profileId, {slug, name: staticNames.get(slug) ?? text(row.display_name) ?? slug});
 }
 
 const dynamicsRows = await fetchAll(
     "species_system_dynamics",
-    "species_profile_id,archetype,frequency_profile,waveform,signature_explanation"
+    "species_profile_id,archetype,frequency_profile,waveform,signature_explanation",
+    "species_profile_id.asc"
 );
 
 const behaviours = dynamicsRows.flatMap((row) => {
@@ -120,7 +144,8 @@ const behaviours = dynamicsRows.flatMap((row) => {
 const trialRows = await fetchAll(
     "animal_trials_for_viewer_v1",
     "species_profile_id,species_display_name,title,objective,animal_rule,user_benefit,principle_name,"
-    + "principle_link,mechanism_connection,frequency,difficulty,estimated_minutes,completion_count"
+    + "principle_link,mechanism_connection,frequency,difficulty,estimated_minutes,completion_count",
+    "species_profile_id.asc,frequency.asc,title.asc"
 );
 
 const trials = trialRows.flatMap((row) => {
@@ -146,9 +171,10 @@ const trials = trialRows.flatMap((row) => {
 }).sort((left, right) => left.title.localeCompare(right.title));
 
 /**
- * The view returns byte-identical duplicates for some species — 711 rows reduce
- * to 576 distinct Trials. Left in, the page would print the same Trial twice,
- * which is a duplicate-content signal as well as a visible repeat.
+ * Guard against duplicate rows. The ~135 "duplicates" this used to remove came
+ * from paging the view without an ORDER BY (pages overlapped and skipped rows);
+ * with stable ordering there are none, but a repeated Trial would still print
+ * twice, so keep the check.
  */
 const seenTrials = new Set<string>();
 const uniqueTrials = trials.filter((trial) => {

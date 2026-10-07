@@ -119,9 +119,10 @@ export const earnProductPageMeta = {
             "See how AnimalDex Credits and real-money Earnings differ. Wildlife Guides are in live beta. Creator Rewards are paused. Sponsored Challenge cash is not live."
     },
     becomeGuide: {
-        title: "Become an AnimalDex Wildlife Guide | Lead Local Wildlife Experiences",
+        // The layout template appends " | AnimalDex", so titles here never carry the brand.
+        title: "Become a Wildlife Tour Guide: Lead Nature Tours",
         description:
-            "Turn local wildlife knowledge into bookable AnimalDex Wildlife Guide experiences. Apply after 45 wild captures, 20 wild species, and a 30-day account. Cash on the day."
+            "Become a wildlife or nature tour guide. List birding, herping, or night walks on AnimalDex, set your price and group size, and get paid cash on the day."
     },
     creatorRewards: {
         title: "AnimalDex Creator Rewards | Rewarding Wildlife Contribution",
@@ -129,9 +130,9 @@ export const earnProductPageMeta = {
             "Creator Rewards is a company-funded program for eligible live wildlife contribution during open reward periods. It is currently paused and not open for payouts."
     },
     wildlifeExperiences: {
-        title: "Wildlife Experiences & Local Guides | AnimalDex",
+        title: "Find a Wildlife Guide: Birding & Nature Tours",
         description:
-            "Find local wildlife experiences with approved AnimalDex Guides — herping, birding, night walks, photography, and other guided time in the field. Requests are not instant bookings."
+            "Find a local wildlife guide for birding, herping, night walks, and nature tours. Approved Guides set the price; request in the app and pay cash on the day."
     },
     sponsor: {
         title: "Sponsor an AnimalDex Challenge | Wildlife Campaigns & Partnerships",

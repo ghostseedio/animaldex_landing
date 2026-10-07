@@ -29,6 +29,10 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             "wildlife guiding app",
             "birding guide marketplace",
             "local nature guide",
+            "become a tour guide",
+            "how to become a nature guide",
+            "wildlife tour organizer",
+            "start a wildlife tour business",
             "AnimalDex Wildlife Guide"
         ]
     });
@@ -42,6 +46,18 @@ const faqs = [
     {
         question: "Does AnimalDex pay me for bookings?",
         answer: "No. The collector pays you in cash on the day. AnimalDex does not collect or process that cash. When you mark the outing complete, seller net is recorded on Earnings."
+    },
+    {
+        question: "How do I become a nature guide or wildlife tour guide on AnimalDex?",
+        answer: `Build a real record in the app first: ${earnFacts.wildCaptures} qualifying wild captures across ${earnFacts.wildSpecies} wild species, on an account at least ${earnFacts.accountAgeDays} days old. Then apply, confirm you are 18 or older, accept the current Guide Seller Terms, and wait for a person to review your application. Approval lets you publish listings. It does not make you an AnimalDex employee.`
+    },
+    {
+        question: "Can I start a wildlife tour business with AnimalDex?",
+        answer: "AnimalDex can be one place where people find your outings, but it is not a business in a box. You stay an independent seller and handle your own local rules, permits, and insurance. AnimalDex publishes approved listings and passes requests to you. It does not set your schedule, collect payment, or run the tours."
+    },
+    {
+        question: "Do I need a tour guide license?",
+        answer: "AnimalDex does not issue licenses. Some places require a guiding license, a park permit, or insurance for paid outings. Checking and meeting those rules where you guide is your responsibility before you publish a listing."
     },
     {
         question: "Is this the same as a Bali wildlife guide article?",
@@ -86,6 +102,30 @@ export default async function BecomeAWildlifeGuidePage({params}: {params: {local
                     An AnimalDex Wildlife Guide is a person who lists a real-money local experience — birding, herping, macro, coast, or night wildlife — and meets collectors in the field. Sightings are never guaranteed.
                 </p>
             </header>
+
+            <section aria-labelledby="organizer" className="grid gap-8 md:grid-cols-[14rem_1fr] md:items-start">
+                <h2 id="organizer" className="font-display text-2xl font-black uppercase tracking-[0.06em] text-primary-200">
+                    Run wildlife tours as an organizer
+                </h2>
+                <div className="max-w-3xl">
+                    <p className="text-ink-300">
+                        If you want to become a tour guide or organize small wildlife tours, AnimalDex gives you a listing, not a company. You stay independent and decide what you offer, where you meet, and what it costs.
+                    </p>
+                    <ul className="mt-6 space-y-3 text-ink-200">
+                        {[
+                            "List an experience: a birding morning, a herping or night wildlife walk, a macro or coast session, or field time for photographers.",
+                            "Set your own per-person price, duration, and maximum group size. People see the public area. Your exact meeting point stays private until you accept a request.",
+                            "Guests send a request for a date and group size in the app. You accept or decline each one.",
+                            "The people you guide pay you in cash on the day. AnimalDex does not collect that payment or run the outing, and Credits are never used."
+                        ].map((item) => (
+                            <li key={item} className="border-l border-primary-200/25 pl-4">{item}</li>
+                        ))}
+                    </ul>
+                    <p className="mt-6 text-sm text-ink-400">
+                        Guides are in beta. You handle what any independent nature guide handles where you work: permits, licenses, insurance, and safety. A person reviews every application.
+                    </p>
+                </div>
+            </section>
 
             <section aria-labelledby="qualify" className="grid gap-8 md:grid-cols-[14rem_1fr] md:items-start">
                 <h2 id="qualify" className="font-display text-2xl font-black uppercase tracking-[0.06em] text-primary-200">
