@@ -732,9 +732,9 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
 
                                     {section.inlineLinks && section.inlineLinks.length > 0 ? (
                                         <p className="flex flex-wrap gap-x-5 gap-y-2 text-[14px]">
-                                            {section.inlineLinks.map((link) => (
+                                            {section.inlineLinks.map((link, linkIndex) => (
                                                 <EarnContentLink
-                                                    key={`${section.title}-${link.slug}`}
+                                                    key={`${section.title}-${link.slug}-${linkIndex}`}
                                                     href={resolveBlogLinkHref(link)}
                                                     source="blog"
                                                     className="font-semibold"

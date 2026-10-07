@@ -8,6 +8,10 @@ import {biomimicryInAnimalsPost} from "@/data/blog/biomimicry-in-animals";
 import {captureAnimalsAppPost} from "@/data/blog/capture-animals-app";
 import {howAnimalDexIndexesAnimalsPost} from "@/data/blog/how-animaldex-indexes-animals";
 import {instagramWildlifeArchivePosts} from "@/data/blog/instagram-wildlife-archive";
+import {instagramWildlifeArchivePosts2} from "@/data/blog/instagram-wildlife-archive-2";
+import {animalSystemsPosts1} from "@/data/blog/animal-systems-1";
+import {animalSystemsPosts2} from "@/data/blog/animal-systems-2";
+import {animalSystemsPosts3} from "@/data/blog/animal-systems-3";
 import {earnEconomyBlogPosts} from "@/data/blog/earn";
 import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
 import {
@@ -2888,9 +2892,9 @@ const blogPostsData: BlogPost[] = [
     {
         slug: "how-to-identify-animals-in-the-wild-2026-guide",
         title: "How to identify animals in the wild (2026 guide)",
-        description: "A practical 2026 guide for identifying animals in the wild using body shape, behavior, habitat context, and respectful observation habits.",
+        description: "How to identify animals in the wild: silhouette, size against known objects, behaviour, habitat and range maps, lookalike pairs and verifying AI scans.",
         publishedAt: "2026-04-09",
-        updatedAt: "2026-04-09",
+        updatedAt: "2026-10-07",
         featuredImage: {
             src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-capturing-an-alpaca-in-the-wild.webp",
             alt: "AnimalDex featured image showing an alpaca in the wild for the animal identification guide",
@@ -2898,34 +2902,119 @@ const blogPostsData: BlogPost[] = [
             height: 675,
             caption: "Featured image source: AnimalDex CDN."
         },
-        readingMinutes: 7,
+        readingMinutes: 8,
         author: "AnimalDex Field Team",
         tags: ["Animal identification", "Wildlife learning", "Field guide"],
-        searchIntents: ["animal identification app", "animal scanner AI", "wildlife app", "educational animal app"],
-        speciesSlugs: ["white-headed-vulture", "bald-eagle", "komodo-dragon"],
+        searchIntents: ["how to identify animals in the wild", "animal identification app", "animal scanner AI", "wildlife identification tips", "how to tell similar animals apart", "educational animal app"],
+        speciesSlugs: ["white-headed-vulture", "bald-eagle", "komodo-dragon", "crow", "red-deer", "peregrine-falcon"],
         systemsSpeciesSlugs: ["bald-eagle", "white-headed-vulture"],
+        tableOfContents: [
+            "Start with silhouette, movement and context",
+            "Size against things you already know",
+            "Behaviour gives the animal away",
+            "Habitat and range maps remove most wrong answers",
+            "Lookalike pairs and how to split them",
+            "Use AI to narrow possibilities, then verify with traits",
+            "Respectful observation leads to better IDs and better outcomes"
+        ],
+        relatedSlugs: ["wildlife-photography-without-disturbing-animals", "what-makes-an-animal-rare", "zoo-safari-and-family-animal-spotting-guide"],
         sections: [
             {
-                title: "Start with silhouette, movement, and context",
+                title: "Start with silhouette, movement and context",
                 paragraphs: [
-                    "The fastest path to a useful ID is not guessing a species name immediately. Start broader: shape, size, movement pattern, and where the sighting happened.",
-                    "A bird gliding on thermals, a reptile hugging warm ground, and a canid moving in coordinated group patterns each point to different identification paths."
+                    "The fastest path to a correct ID is not guessing a species name immediately. Start broader: what shape is it, how big is it, how does it move, and where are you. Cornell's bird-identification method boils this down to four keys, size and shape, colour pattern, behaviour, and habitat, and the same four work for mammals, reptiles and fish.",
+                    "Silhouette comes first because it survives bad light. A raptor overhead with a deeply forked tail and long, angled wings is a kite before you see a single colour; a bird with a short fan tail and broad wings held in a shallow V is a buzzard. A heron flies with its neck folded, a stork and a crane with the neck straight out. A canid with a bushy tail held low and straight is a fox; a wild dog carries a thinner tail with a white tip and moves as part of a group."
                 ],
-                speciesSlugs: ["bald-eagle", "komodo-dragon", "african-wild-dog"]
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-identify-animals-in-the-wild-2026-guide/red-kite-flying.webp",
+                        alt: "Red kite in flight seen from below, showing the forked tail and long angled wings",
+                        width: 1400,
+                        height: 788,
+                        caption: "Silhouette first: a red kite's forked tail and long, angled wings identify it before any colour does. Photo: Joselodos, CC0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["bald-eagle", "african-wild-dog", "red-fox"]
             },
             {
-                title: "Habitat clues are often as important as visual traits",
+                title: "Size against things you already know",
                 paragraphs: [
-                    "Habitat can remove many false matches quickly. Water-heavy areas, open savannah, dry scrub, and managed urban spaces all shape what species are likely.",
-                    "When users combine habitat logic with scan output, confidence rises and misidentification usually drops."
+                    "Size is the clue beginners misjudge most, because a lone animal against the sky or open water has nothing to scale it. Fix that by comparing it with an object or a species you know, and keep a few yardsticks in your head. Field guides do this too: most describe birds as sparrow-sized, pigeon-sized or crow-sized before giving measurements.",
+                    "Fence posts, gate bars, kerb stones and road markings are reliable rulers. A standard fence post stands about 1.2 m; a brick is 215 mm long; a mallard is 55 cm from bill to tail. If a bird on a post is half the post's height, you are not looking at a sparrow."
                 ],
-                speciesSlugs: ["white-headed-vulture", "komodo-dragon"]
+                table: {
+                    columns: ["Yardstick", "Length", "Use it for"],
+                    rows: [
+                        {cells: ["House sparrow", "15 cm", "Small songbirds, finches, warblers"]},
+                        {cells: ["Feral pigeon", "33 cm", "Thrushes, doves, small raptors"]},
+                        {cells: ["Carrion crow", "45 to 50 cm", "Medium raptors, ducks, gulls"]},
+                        {cells: ["Grey heron", "90 to 100 cm tall", "Large waterbirds, storks, cranes"]},
+                        {cells: ["Domestic cat", "45 cm body, 4 kg", "Foxes, martens, small wild cats"]},
+                        {cells: ["Labrador-sized dog", "55 to 60 cm at the shoulder, 30 kg", "Coyotes, jackals, young deer"]},
+                        {cells: ["Fence post", "About 1.2 m", "Anything perched or standing beside it"]}
+                    ]
+                },
+                speciesSlugs: ["crow", "red-deer"]
+            },
+            {
+                title: "Behaviour gives the animal away",
+                paragraphs: [
+                    "Many species have one behaviour that is close to diagnostic. A small falcon hanging motionless in the wind over a verge is a kestrel; peregrines never hover. A black-and-white bird constantly pumping its tail on a riverbank is a wagtail. A gliding bird on thermals that circles for minutes without a wingbeat is a vulture or a buzzard, not an eagle in a hurry. A lizard flattening itself on a warm rock in the morning is basking to raise its body temperature, which tells you the time of day it is easiest to find.",
+                    "Group behaviour is just as useful. Wild dogs and wolves move in coordinated packs; foxes and jackals are usually alone or in pairs. Starlings wheel in dense flocks, crows fly in loose straggles, geese in a V."
+                ],
+                cards: [
+                    {label: "Hovering", body: "Kestrels, terns, kingfishers and hummingbirds hover. Peregrines, sparrowhawks and buzzards do not."},
+                    {label: "Tail movement", body: "Wagtails pump, redstarts quiver, squirrels flick, deer flag a white rump when alarmed."},
+                    {label: "Foraging style", body: "Woodpeckers climb trunks head-up, nuthatches head-down; dabbling ducks up-end, diving ducks disappear."},
+                    {label: "Flight pattern", body: "Woodpeckers and finches bound in deep undulations; pigeons and raptors fly straight; swifts never land on branches."},
+                    {label: "Time of day", body: "Owls, badgers, hedgehogs and most snakes at dusk or night; reptiles and butterflies in warm morning sun."},
+                    {label: "Social structure", body: "Pack, pair or solitary narrows canids, cats and primates quickly."}
+                ],
+                speciesSlugs: ["peregrine-falcon", "white-headed-vulture", "barn-owl"]
+            },
+            {
+                title: "Habitat and range maps remove most wrong answers",
+                paragraphs: [
+                    "Habitat eliminates more candidates than any single marking. A dipper lives only on fast, clean rivers; a sand lizard on heath and dunes; a water monitor within reach of water. Mangrove edges, open savannah, dry scrub and city parks each have a short list of likely species, and an animal that seems out of place is usually a lookalike that belongs there.",
+                    "Range maps do the same job at a larger scale. Before you settle on a name, check that the species occurs where you are, in this season. Cornell's All About Birds, eBird and iNaturalist show year-round, breeding and wintering ranges, and a species recorded nowhere within 500 km of you is far more likely to be a common relative than a vagrant. A Komodo dragon exists on five Indonesian islands; a monitor lizard seen anywhere else is a different species."
+                ],
+                speciesSlugs: ["komodo-dragon", "white-headed-vulture"]
+            },
+            {
+                title: "Lookalike pairs and how to split them",
+                paragraphs: [
+                    "Most wrong identifications are not wild guesses. They are the right family and the wrong species, because two animals share a shape and differ in one or two details. Learn the splitting feature for the pairs common where you live and you will fix most of your own errors."
+                ],
+                table: {
+                    columns: ["Pair", "Split them by", "Detail"],
+                    rows: [
+                        {cells: ["Carrion crow vs rook", "Face", "Adult rook has a bare grey-white patch at the base of the bill and a peaked crown; crow is all black with a feathered bill base"]},
+                        {cells: ["Red kite vs common buzzard", "Tail", "Kite: deeply forked tail, long angled wings, buoyant twisting flight. Buzzard: rounded fan tail, broad wings, circles steadily"]},
+                        {cells: ["Peregrine vs kestrel", "Hovering", "Kestrel hovers and has a long tail; peregrine is stocky, anchor-shaped, never hovers"]},
+                        {cells: ["Red deer vs fallow deer", "Antlers and rump", "Red: branched round antlers, cream rump patch with no black border. Fallow: flattened palmate antlers, white rump with black horseshoe"]},
+                        {cells: ["Harbour seal vs grey seal", "Head profile", "Harbour: rounded dog-like head, V-shaped nostrils. Grey: long flat Roman nose, parallel nostrils"]},
+                        {cells: ["Dolphin vs porpoise", "Dorsal fin", "Dolphin: curved, sickle-shaped fin and a beak. Porpoise: small triangular fin, no beak"]},
+                        {cells: ["Juvenile bald eagle vs golden eagle", "Legs and head", "Golden has feathered legs to the toes and a smaller head; young bald has bare lower legs and blotchy white underwings"]}
+                    ]
+                },
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-identify-animals-in-the-wild-2026-guide/rook-bare-face.webp",
+                        alt: "Adult rook with a bare pale face beside a juvenile rook on a roof",
+                        width: 1400,
+                        height: 790,
+                        caption: "Adult rook (left) with the bare grey-white face that separates it from a carrion crow; the juvenile beside it has not grown the patch yet. Photo: nottsexminer, CC BY-SA 2.0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["crow", "red-deer", "bald-eagle"]
             },
             {
                 title: "Use AI to narrow possibilities, then verify with traits",
                 paragraphs: [
-                    "A good animal scanner should support your judgment, not replace it. Treat AI output as a shortlist, then verify with distinguishing traits.",
-                    "The goal is not only a fast answer. It is becoming better at recognition over repeated sightings."
+                    "A good animal scanner should support your judgment, not replace it. Treat the output as a shortlist of two or three candidates, then run the checks above: does the size fit, does the behaviour fit, is the species on the range map for this place and season, and which splitting feature can you actually see in your photo. If none is visible, record the genus or the lookalike group rather than forcing a species.",
+                    "Photograph for identification, not for beauty. A side-on shot showing the whole body, a second frame of the head, and a third with the animal beside something of known size will resolve more IDs than one frame-filling portrait. The goal is not only a fast answer. It is becoming better at recognition over repeated sightings."
                 ],
                 media: {
                     type: "image",
@@ -2937,34 +3026,59 @@ const blogPostsData: BlogPost[] = [
                         caption: "A phone camera is all you need to scan and log a species. Photo: PantheraLeo1359531, CC BY 4.0, via Wikimedia Commons."
                     }
                 },
-                speciesSlugs: ["bald-eagle", "maine-coon-cat"]
+                inlineLinks: [
+                    {text: "AI animal scanner and identification app", slug: "ai-animal-scanner-identification-app", href: "/use-cases/ai-animal-scanner-identification-app"},
+                    {text: "How AnimalDex indexes animals", slug: "how-animaldex-indexes-animals", href: "/blog/how-animaldex-indexes-animals"}
+                ],
+                speciesSlugs: ["bald-eagle"]
             },
             {
                 title: "Respectful observation leads to better IDs and better outcomes",
                 paragraphs: [
-                    "Stressing wildlife usually creates worse photos and worse behavior signals. Distance, patience, and calm observation produce better data and safer encounters.",
-                    "Curiosity over cruelty is practical fieldcraft, not just a value statement."
+                    "Stressing wildlife produces worse photos and worse behaviour clues. An animal that has noticed you stops feeding, stops displaying and starts leaving, which removes the very behaviour you need for an identification. Distance, patience and calm observation produce longer views, more natural behaviour and safer encounters.",
+                    "Keep at least 25 m from most wildlife, more from anything with young, and let the animal leave first. Curiosity over cruelty is practical fieldcraft, not just a value statement."
+                ],
+                pullQuote: "Shape, size, behaviour, place. Run those four before you reach for a name, and the name usually arrives on its own.",
+                inlineLinks: [
+                    {text: "Wildlife photography without disturbing animals", slug: "wildlife-photography-without-disturbing-animals", href: "/blog/wildlife-photography-without-disturbing-animals"}
                 ],
                 speciesSlugs: ["african-wild-dog", "white-headed-vulture"]
             }
         ],
         faq: [
             {
+                question: "What is the easiest way to identify an animal you do not recognise?",
+                answer: "Work through four questions in order: what shape is it, how big is it compared with something you know, what is it doing, and where are you. Those four narrow most sightings to a family or a pair of species before you open a field guide or an app, and the remaining choice usually turns on one visible feature."
+            },
+            {
+                question: "How do you judge the size of a wild animal?",
+                answer: "Compare it with a reference you can measure, such as a fence post (about 1.2 m), a brick or a species you know well. Birders describe birds as sparrow-sized (15 cm), pigeon-sized (33 cm) or crow-sized (45 to 50 cm). A lone animal against sky or water has no scale, so wait for it to land or pass something."
+            },
+            {
+                question: "Can you identify animals by their behaviour alone?",
+                answer: "Often, yes, or at least to a small group. Hovering points to a kestrel, tail-pumping to a wagtail, circling without wingbeats to a vulture or buzzard, pack movement to wild dogs or wolves. Combined with habitat and time of day, a single behaviour frequently settles an ID that colour alone could not."
+            },
+            {
                 question: "Should I trust an AI animal scan result without checking traits?",
-                answer: "Use AI as a shortlist, then confirm with visual traits, movement, and habitat context before finalizing your ID."
+                answer: "No. Use the scan as a shortlist, then confirm it with size, behaviour, habitat and the species' range map for your location and season. If the splitting feature between two lookalikes is not visible in your photo, record the group rather than guessing the species."
             },
             {
                 question: "What is the safest way to improve identification accuracy in the field?",
-                answer: "Keep distance, observe longer, and capture multiple angles when possible. Calm, respectful observation usually improves both safety and ID quality."
+                answer: "Keep your distance, observe for longer, and capture several angles: a full side view, a head shot and a frame with a size reference. Calm observation keeps the animal behaving naturally, and natural behaviour is one of your four main identification clues."
             }
+        ],
+        sources: [
+            {label: "Cornell Lab of Ornithology: the four keys to bird identification", href: "https://www.allaboutbirds.org/news/building-skills-the-4-keys-to-bird-identification/"},
+            {label: "iNaturalist species range and observation maps", href: "https://www.inaturalist.org/"},
+            {label: "National Park Service: 7 ways to safely watch wildlife", href: "https://www.nps.gov/subjects/watchingwildlife/7ways.htm"}
         ]
     },
     {
         slug: "best-animals-to-spot-in-bali-2026",
         title: "Best animals to spot in Bali (2026)",
-        description: "A practical Bali animal-spotting guide for 2026 covering where to look, what to notice, and how to keep wildlife discovery respectful and useful.",
+        description: "The best animals to spot in Bali and where: Bali myna in West Bali National Park, macaques at Ubud and Uluwatu, mantas at Nusa Penida, reef fish and more.",
         publishedAt: "2026-04-09",
-        updatedAt: "2026-04-09",
+        updatedAt: "2026-10-07",
         featuredImage: {
             src: "https://www.balitecturerealty.com/wp-content/uploads/2025/05/Animals-in-Bali.webp",
             alt: "Animals in Bali featured image for the AnimalDex 2026 Bali spotting guide",
@@ -2972,18 +3086,29 @@ const blogPostsData: BlogPost[] = [
             height: 675,
             caption: "Featured image source: Balitecture Realty."
         },
-        readingMinutes: 6,
+        readingMinutes: 8,
         author: "AnimalDex Travel Desk",
         tags: ["Travel animals", "Bali wildlife", "Safari and zoo learning"],
-        searchIntents: ["best animals to spot in Bali", "Bali wildlife app", "travel animal app", "wildlife photography app"],
-        speciesSlugs: ["komodo-dragon", "bald-eagle", "maine-coon-cat"],
+        searchIntents: ["best animals to spot in Bali", "Bali wildlife", "where to see Bali myna", "Bali monkey forest animals", "Bali snorkelling marine life", "travel animal app"],
+        speciesSlugs: ["bali-myna", "komodo-dragon", "green-sea-turtle", "hawksbill-sea-turtle", "clownfish", "ocean-sunfish"],
         systemsSpeciesSlugs: ["komodo-dragon"],
+        tableOfContents: [
+            "Build your trip around habitats, not just checklists",
+            "Bali myna: the island's own bird, back from the brink",
+            "Long-tailed macaques at Ubud and Uluwatu",
+            "Reef life: Menjangan, Nusa Penida and the turtle beaches",
+            "Kingfishers, herons and the rice-field birds",
+            "Water monitors and the reptiles you will actually meet",
+            "Where the Komodo dragon fits",
+            "Keep family and photography goals aligned"
+        ],
+        relatedSlugs: ["how-to-identify-animals-in-the-wild-2026-guide", "wildlife-photography-without-disturbing-animals", "what-makes-an-animal-rare"],
         sections: [
             {
                 title: "Build your trip around habitats, not just checklists",
                 paragraphs: [
-                    "Travelers usually see more species when they think in habitats: mangrove edges, forest trails, coastal zones, and managed sanctuary environments.",
-                    "A habitat-first mindset also helps you understand why certain animals are visible in one area and absent in another."
+                    "Travellers see more species in Bali when they think in habitats rather than famous names. The island packs six very different ones into 5,780 square kilometres: the dry monsoon forest and mangroves of the north-west, the wet volcanic forest around Ubud and Bedugul, flooded rice terraces, the limestone cliffs of the Bukit peninsula, coral reefs on the north and east coasts, and the deep, cold channel between Bali and Nusa Penida. Each one has a short list of animals you can plan for.",
+                    "A habitat-first plan also explains absence. There are no wild tigers (the Bali tiger was extinct by the 1940s), no elephants outside parks, and very few large mammals at all. What Bali has instead is birds, primates, reptiles and some of the richest reef life in reach of a day trip."
                 ],
                 media: {
                     type: "gallery",
@@ -3007,31 +3132,135 @@ const blogPostsData: BlogPost[] = [
                 }
             },
             {
-                title: "Use high-value flagship species to anchor your spotting plan",
+                title: "Bali myna: the island's own bird, back from the brink",
                 paragraphs: [
-                    "For many visitors, iconic species anchor the trip narrative. In Indonesia-wide planning, reptiles like the Komodo dragon often become educational milestones.",
-                    "Even when your route is primarily Bali, studying flagship species sharpens your identification habits and keeps your app collection goals focused."
+                    "The Bali myna (Leucopsar rothschildi), also sold on postcards as the Bali starling, is the only bird species endemic to Bali and the one most worth a detour. It is about 25 cm long, pure white with black wing and tail tips, a drooping crest and a patch of bare blue skin around each eye. Trapping for the cage-bird trade drove the wild population down to a handful of birds in the early 2000s, and the species remains Critically Endangered on the IUCN Red List.",
+                    "Recovery has come from captive breeding and releases. The core wild population is in West Bali National Park (Taman Nasional Bali Barat), particularly around the park headquarters area near Labuan Lalang, Brumbun and Menjangan, and a second released population lives on Nusa Penida. Go with a park guide, early in the morning, and look for a flash of white in the dry forest canopy. If you cannot reach the north-west, Bali Bird Park near Ubud keeps mynas in aviaries, which is a good way to learn the bird before you search for it."
+                ],
+                speciesSlugs: ["bali-myna"]
+            },
+            {
+                title: "Long-tailed macaques at Ubud and Uluwatu",
+                paragraphs: [
+                    "The long-tailed macaque (Macaca fascicularis), sometimes called the crab-eating macaque, is the animal most visitors meet first. The Sacred Monkey Forest in Ubud holds well over a thousand of them in several troops, living among temple ruins and banyan trees. At Pura Luhur Uluwatu, troops patrol the cliff-top temple walls 70 m above the sea and are notorious for snatching sunglasses, hats and phones, then trading them back for fruit.",
+                    "That behaviour is learned, and it is the reason the rules matter. Do not carry food, do not make eye contact with a male that is staring, keep loose items zipped away, and never hand anything over to retrieve a stolen object. Despite how common they look in Bali, the species was reassessed as Endangered by the IUCN in 2022 because of trapping and habitat loss across its wider Southeast Asian range. Watch for grooming chains, infants clinging to their mothers, and the way a troop crosses a path in order of rank."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/best-animals-to-spot-in-bali-2026/long-tailed-macaque-uluwatu.webp",
+                        alt: "Long-tailed macaques on the temple wall at Uluwatu above the sea cliffs",
+                        width: 1400,
+                        height: 935,
+                        caption: "A troop of long-tailed macaques on the cliff wall at Pura Luhur Uluwatu, including a mother carrying an infant. Photo: Jakub Hałun, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                }
+            },
+            {
+                title: "Reef life: Menjangan, Nusa Penida and the turtle beaches",
+                paragraphs: [
+                    "Menjangan Island, inside West Bali National Park, has the calmest and clearest reef on the island. A wall drops away a short swim from the shore, and snorkellers reliably see butterflyfish, angelfish, parrotfish, clownfish in their anemones and, with some luck, a green or hawksbill turtle. Tulamben and Amed on the east coast add the USAT Liberty wreck and black-sand reefs where schooling jacks and bumphead parrotfish are the draw.",
+                    "The channel to Nusa Penida is colder, deeper and rougher, and that is why its two headline animals are there. Reef manta rays (Mobula alfredi), with wingspans of 3 to 4 m, visit the cleaning station at Manta Point year-round, and the ocean sunfish (Mola) rises to Crystal Bay to be cleaned between roughly July and October, when cold upwelling arrives. Both are boat trips with dive or snorkel operators, and the swell can be serious. Back on the mainland, olive ridley, green and hawksbill turtles nest on the Kuta and Seminyak beaches, and the Turtle Conservation and Education Centre on Serangan runs releases."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Under the surface",
+                    images: [
+                        {
+                            src: "/images/blog/best-animals-to-spot-in-bali-2026/manta-nusa-penida.webp",
+                            alt: "Reef manta ray swimming over a coral reef",
+                            width: 1400,
+                            height: 1050,
+                            caption: "A reef manta ray over coral. Manta Point off Nusa Penida is Bali's reliable site for them. Photo: Rilando June Lamadjido, CC BY-SA 4.0, via Wikimedia Commons."
+                        },
+                        {
+                            src: "/images/blog/best-animals-to-spot-in-bali-2026/menjangan-reef.webp",
+                            alt: "Clear shallow water off Menjangan Island with the mountains of West Bali behind",
+                            width: 1400,
+                            height: 788,
+                            caption: "The shallows of Menjangan Island, inside West Bali National Park; the reef wall begins a short swim out. Photo: Noirperspective, CC BY-SA 4.0, via Wikimedia Commons."
+                        }
+                    ]
+                },
+                speciesSlugs: ["green-sea-turtle", "hawksbill-sea-turtle", "clownfish", "ocean-sunfish"]
+            },
+            {
+                title: "Kingfishers, herons and the rice-field birds",
+                paragraphs: [
+                    "Rice terraces are Bali's most accessible wildlife habitat and the easiest place to add birds to a trip without a guide. The Javan kingfisher, found only on Java and Bali, is a large, dark-blue and purple bird with a heavy red bill that hunts from posts along irrigation channels; the smaller collared kingfisher, turquoise above and white below, is common along the coast and in gardens. Javan pond herons and cattle egrets stalk the flooded paddies, and the village of Petulu near Ubud fills with thousands of egrets and herons each evening from about 5 pm, when they return to roost in the trees along the main street.",
+                    "Elsewhere, look for black-naped orioles calling from tall trees, white-bellied sea eagles and brahminy kites along the cliffs at Uluwatu, and the Java sparrow, an Endangered finch that still turns up around villages and the north coast."
+                ],
+                cards: [
+                    {label: "Javan kingfisher", body: "Endemic to Java and Bali. Dark blue and purple with a red bill; perches on posts over rice-field channels. Tegallalang and the Jatiluwih terraces are good."},
+                    {label: "Petulu heron village", body: "Thousands of egrets and herons roost here nightly. Arrive by 5 pm, watch from the road, and expect to be charged a small village fee."},
+                    {label: "Bali Barat forest birds", body: "Green junglefowl, hornbills (the oriental pied hornbill) and the Bali myna; a guide is required inside the park."},
+                    {label: "Coastal raptors", body: "White-bellied sea eagle and brahminy kite patrol the Bukit cliffs; Uluwatu's temple terraces give eye-level views."}
+                ]
+            },
+            {
+                title: "Water monitors and the reptiles you will actually meet",
+                paragraphs: [
+                    "The Asian water monitor (Varanus salvator) is the big lizard of Bali's rivers, mangroves and rice-field canals. Adults commonly reach 1.5 m and occasionally over 2 m, which makes it one of the largest lizards in the world after the Komodo dragon. They swim well, climb when pushed, and are mostly seen basking on a bank or crossing a road near water in the morning. Give them room; they are not aggressive but a tail swipe or bite from a 2 m animal is a hospital visit.",
+                    "Smaller reptiles are everywhere. Tokay geckos bark their name from villa walls at night; the small house gecko hunts insects around every porch light; flying lizards (Draco) glide between coconut palms; and the reticulated python, though rarely seen, is present in forest and farmland. Snakes are mostly nocturnal and avoid people, but wear closed shoes on night walks and use a torch."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/best-animals-to-spot-in-bali-2026/water-monitor-bali.webp",
+                        alt: "Close-up of an Asian water monitor's head and forequarters on a rock ledge",
+                        width: 1400,
+                        height: 933,
+                        caption: "Asian water monitor: the big lizard you may meet along Bali's rivers, mangroves and rice-field canals. Photo: Mira Meijer Burgers' Zoo, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                }
+            },
+            {
+                title: "Where the Komodo dragon fits",
+                paragraphs: [
+                    "The Komodo dragon does not live on Bali. It occurs only on Komodo, Rinca, Flores and two small neighbouring islands in Komodo National Park, roughly 500 km east and reached by a flight to Labuan Bajo. Many Bali itineraries add it as a two- or three-day extension, and for most visitors it becomes the trip's single most memorable animal: a 2.5 m, 70 kg lizard walking past a ranger with a forked stick.",
+                    "Studying the dragon before you go sharpens your eye for its Balinese cousin. Both are monitors with the same walk, the same tongue-flicking and the same basking rhythm; the difference is scale. If your route stays on Bali, the water monitor is the closest thing to the real experience and far easier to find."
                 ],
                 speciesSlugs: ["komodo-dragon"]
             },
             {
                 title: "Keep family and photography goals aligned",
                 paragraphs: [
-                    "Families and photographers often want different pacing. Shared mini-goals help: one clean ID shot, one behavior note, one habitat note, and one collection entry per stop.",
-                    "This keeps everyone engaged while turning each location into useful discovery data."
+                    "Families and photographers want different pacing, and a few shared mini-goals keep both happy: one clean ID shot, one behaviour note, one habitat note and one collection entry per stop. At the Monkey Forest that might be a photo of a grooming pair, a note that infants ride under the belly rather than on the back, and the observation that the troop stays near the stream in the heat.",
+                    "A live capture in AnimalDex turns each of those stops into a species card with the location attached, so the trip ends with a list of what you actually saw rather than a camera roll. Zoo and bird-park sightings count too, which is a sensible way to learn the Bali myna before you look for it in the wild."
                 ],
-                speciesSlugs: ["bald-eagle", "maine-coon-cat"]
+                inlineLinks: [
+                    {text: "Family zoo and safari learning", slug: "family-zoo-safari-animal-learning-app", href: "/use-cases/family-zoo-safari-animal-learning-app"},
+                    {text: "Wildlife photography without disturbing animals", slug: "wildlife-photography-without-disturbing-animals", href: "/blog/wildlife-photography-without-disturbing-animals"}
+                ]
             }
         ],
         faq: [
             {
-                question: "Can beginners still use this Bali spotting approach?",
-                answer: "Yes. A habitat-first plan works for beginners and helps avoid random guessing even before you know many species names."
+                question: "Where can you see the Bali myna in the wild?",
+                answer: "West Bali National Park in the island's north-west, especially the forest around Labuan Lalang, Brumbun and Menjangan Island, holds the core wild population, and a released population lives on Nusa Penida. A park guide is required and early morning is best. Bali Bird Park near Ubud keeps the species in aviaries if you cannot travel that far."
             },
             {
-                question: "Do zoo and sanctuary visits still help with wild spotting goals?",
-                answer: "Yes. Controlled environments can build recognition basics that improve confidence when you later spot animals in less predictable wild settings."
+                question: "Are the monkeys in Bali dangerous?",
+                answer: "Long-tailed macaques are not dangerous if you follow the rules, but bites happen when people carry food, stare at males or try to grab back stolen items. Keep food out of sight, zip away sunglasses and phones, do not touch or feed them, and let staff retrieve anything taken. Any bite should be checked because of rabies risk."
+            },
+            {
+                question: "When is the best time to see mola (sunfish) in Bali?",
+                answer: "Roughly July to October, when cold upwelling reaches the channel between Bali and Nusa Penida and sunfish rise to cleaning stations at Crystal Bay. Reef manta rays at Manta Point are present year-round. Both sites involve boat trips with strong currents, so go with an established dive or snorkel operator."
+            },
+            {
+                question: "Can you see sea turtles in Bali?",
+                answer: "Yes. Green and hawksbill turtles are regularly seen by snorkellers at Menjangan, Amed and Nusa Penida, and olive ridley, green and hawksbill turtles nest on the Kuta and Seminyak beaches. The Turtle Conservation and Education Centre on Serangan runs hatchling releases that are open to visitors."
+            },
+            {
+                question: "Does Bali have Komodo dragons?",
+                answer: "No. Komodo dragons live only on Komodo, Rinca, Flores and two small nearby islands in Komodo National Park, about 500 km east of Bali. Many visitors add a short extension via Labuan Bajo. On Bali itself the Asian water monitor, a related lizard that reaches 2 m, is common along rivers and rice-field canals."
             }
+        ],
+        sources: [
+            {label: "IUCN Red List of Threatened Species", href: "https://www.iucnredlist.org/"},
+            {label: "Britannica: Bali myna", href: "https://www.britannica.com/animal/Bali-myna"},
+            {label: "Britannica: macaque", href: "https://www.britannica.com/animal/macaque"},
+            {label: "Britannica: Komodo dragon", href: "https://www.britannica.com/animal/Komodo-dragon"}
         ]
     },
     {
@@ -3331,10 +3560,10 @@ const blogPostsData: BlogPost[] = [
     },
     {
         slug: "what-makes-an-animal-rare",
-        title: "What makes an animal rare?",
-        description: "A practical explanation of rarity drivers in wildlife: range limits, population pressure, habitat fragmentation, breeding constraints, and human impact.",
+        title: "What makes an animal rare? Range, population and endemism",
+        description: "What makes an animal rare: IUCN Red List categories, range size versus population, endemism, fragmentation, and why rare to see is not always rare.",
         publishedAt: "2026-04-09",
-        updatedAt: "2026-04-09",
+        updatedAt: "2026-10-07",
         featuredImage: {
             src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-rarity-of-ostrich-shot.webp",
             alt: "AnimalDex featured image for the article explaining what makes an animal rare",
@@ -3342,33 +3571,128 @@ const blogPostsData: BlogPost[] = [
             height: 675,
             caption: "Featured image source: AnimalDex CDN."
         },
-        readingMinutes: 7,
+        readingMinutes: 8,
         author: "AnimalDex Research Notes",
         tags: ["Animal rarity", "Conservation learning", "Species discovery"],
-        searchIntents: ["what makes an animal rare", "animal rarity explained", "animal grading app", "wildlife learning app"],
-        speciesSlugs: ["white-headed-vulture", "african-wild-dog", "komodo-dragon"],
+        searchIntents: ["what makes an animal rare", "animal rarity explained", "IUCN Red List categories explained", "rare vs endangered difference", "endemic species meaning", "wildlife learning app"],
+        speciesSlugs: ["white-headed-vulture", "african-wild-dog", "komodo-dragon", "kakapo", "bali-myna", "red-fox"],
         systemsSpeciesSlugs: ["white-headed-vulture", "african-wild-dog"],
+        tableOfContents: [
+            "Rarity is usually about constraints, not popularity",
+            "The three axes of rarity",
+            "How the IUCN Red List measures it",
+            "Range size versus population: the kakapo and the pupfish",
+            "Endemism: rare because of where, not how many",
+            "Range fragmentation is a major factor",
+            "Rare to see is not the same as rare",
+            "How this helps in an app context"
+        ],
+        relatedSlugs: ["why-real-animal-collecting-feels-so-good", "best-animals-to-spot-in-bali-2026", "zoo-vs-wild-animals-whats-the-difference"],
         sections: [
             {
                 title: "Rarity is usually about constraints, not popularity",
                 paragraphs: [
-                    "In wildlife contexts, rarity often comes from ecological constraints: narrow range, low population size, slow reproduction, or unstable habitat conditions.",
-                    "It is less about how famous a species is and more about how resilient its population is under real pressure."
-                ]
+                    "In wildlife terms, rarity comes from ecological constraints: a narrow range, a small or thinly spread population, slow reproduction, a specialised habitat, or a combination of those. It has nothing to do with how famous a species is. Giant pandas are globally recognisable and number around 1,900 in the wild; the Devils Hole pupfish is unknown to most people and has at times numbered fewer than 40.",
+                    "The useful question is not \"is it rare\" but \"rare in which way\". A species can be scarce everywhere, common in one tiny place, or widespread but never numerous. Each pattern has different causes and different risks."
+                ],
+                speciesSlugs: ["giant-panda"]
+            },
+            {
+                title: "The three axes of rarity",
+                paragraphs: [
+                    "Ecologist Deborah Rabinowitz set out the standard framework in 1981: rarity is a mix of three independent measures, geographic range (wide or narrow), habitat specificity (broad or narrow) and local population size (large or small). Seven of the eight combinations count as some form of rarity. Only a species that is widespread, lives in many habitats and is locally abundant is truly common, which describes the red fox, the house sparrow and not much else."
+                ],
+                table: {
+                    columns: ["Range", "Habitat needs", "Local numbers", "Example", "Kind of rarity"],
+                    rows: [
+                        {cells: ["Wide", "Broad", "Large", "Red fox, carrion crow", "Not rare"]},
+                        {cells: ["Wide", "Broad", "Small", "Peregrine falcon", "Thin on the ground everywhere"]},
+                        {cells: ["Wide", "Narrow", "Large", "Dipper (fast clean rivers)", "Common where its habitat exists"]},
+                        {cells: ["Wide", "Narrow", "Small", "Snow leopard", "Sparse specialist"]},
+                        {cells: ["Narrow", "Broad", "Large", "Island birds such as the Galápagos finches", "Locally abundant endemic"]},
+                        {cells: ["Narrow", "Broad", "Small", "Kakapo", "Few individuals, few places"]},
+                        {cells: ["Narrow", "Narrow", "Large", "Devils Hole pupfish", "One habitat patch, whole species"]},
+                        {cells: ["Narrow", "Narrow", "Small", "Vaquita, Javan rhinoceros", "Rarest of all"]}
+                    ]
+                },
+                speciesSlugs: ["red-fox", "peregrine-falcon", "snow-leopard"]
+            },
+            {
+                title: "How the IUCN Red List measures it",
+                paragraphs: [
+                    "The IUCN Red List is the global standard for extinction risk, which overlaps with rarity but is not the same thing. Its categories run from Least Concern through Near Threatened, Vulnerable, Endangered and Critically Endangered to Extinct in the Wild and Extinct, with Data Deficient for species nobody has counted. A species is placed in a threatened category by meeting any one of five criteria: a rapid population decline, a small and shrinking range, a small and declining population, a very small population, or a quantitative extinction model.",
+                    "The thresholds make the abstract concrete. Critically Endangered can mean a range under 100 square kilometres, fewer than 250 mature individuals with ongoing decline, or fewer than 50 mature individuals at all. Endangered uses 5,000 square kilometres, 2,500 and 250; Vulnerable uses 20,000 square kilometres, 10,000 and 1,000. A species with a healthy population can still be listed if it is confined to one site that could be destroyed in a single event."
+                ],
+                cards: [
+                    {label: "Least Concern", body: "Widespread and abundant. Most garden birds, deer and the long-tailed macaque until its 2022 reassessment."},
+                    {label: "Vulnerable", body: "High risk in the medium term. Snow leopard, giant panda since 2016, most sharks."},
+                    {label: "Endangered", body: "Very high risk. African wild dog, Komodo dragon since 2021, long-tailed macaque since 2022."},
+                    {label: "Critically Endangered", body: "Extremely high risk. Bali myna, kakapo, white-headed vulture, vaquita."}
+                ],
+                speciesSlugs: ["african-wild-dog", "komodo-dragon", "white-headed-vulture"]
+            },
+            {
+                title: "Range size versus population: the kakapo and the pupfish",
+                paragraphs: [
+                    "Two animals show how the axes separate. The kakapo, a flightless, nocturnal parrot from New Zealand, once lived across both main islands. Introduced cats, stoats and rats removed it from the mainland entirely, and the entire species, around 250 birds, now lives on a few predator-free offshore islands where every individual is named, tagged and weighed. Its range is tiny because people made it tiny, and it breeds only in years when the rimu tree fruits heavily, roughly every two to four years, so recovery is slow even with no predators.",
+                    "The Devils Hole pupfish is rare the other way round. Its natural range is a single limestone pool in the Mojave Desert, where the fish feed and spawn on a shallow rock shelf about the size of a large living room. Counts have swung between a few dozen and a few hundred. Nothing about the pupfish's biology is fragile; the pool is simply the smallest known range of any vertebrate, so the whole species can be affected by one earthquake, one drought or one change in the water table."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Two kinds of narrow range",
+                    images: [
+                        {
+                            src: "/images/blog/what-makes-an-animal-rare/kakapo-wild.webp",
+                            alt: "Kakapo, a large green flightless parrot, sitting among leaves",
+                            width: 1400,
+                            height: 788,
+                            caption: "Sirocco, one of around 250 living kakapo. The species survives only on predator-free New Zealand islands. Photo: Department of Conservation, CC BY 2.0, via Wikimedia Commons."
+                        },
+                        {
+                            src: "/images/blog/what-makes-an-animal-rare/devils-hole-pupfish.webp",
+                            alt: "Small iridescent blue Devils Hole pupfish over algae-covered rock",
+                            width: 1400,
+                            height: 896,
+                            caption: "A Devils Hole pupfish, roughly 2.5 cm long, on the shallow shelf of the only pool where the species occurs naturally. Photo: Olin Feuerbacher / USFWS, Public domain, via Wikimedia Commons."
+                        }
+                    ]
+                },
+                speciesSlugs: ["kakapo"]
+            },
+            {
+                title: "Endemism: rare because of where, not how many",
+                paragraphs: [
+                    "An endemic species is one found naturally in a single defined area and nowhere else. Islands produce endemics because populations that arrive by chance evolve in isolation: the Bali myna on one Indonesian island, the Komodo dragon on five, lemurs across Madagascar, kiwi in New Zealand. Mountains, isolated lakes and cave systems do the same thing on land.",
+                    "Endemism makes a species rare in the global sense even when it is locally common. The Komodo dragon numbers a few thousand and is easy to see on Rinca, yet it is Endangered because the entire species occupies a few islands where rising seas and habitat loss act on all of it at once. The Bali myna is the sharper case: a bird that looked secure in captivity, with thousands in aviaries, fell to a handful of wild individuals in its only natural home."
+                ],
+                speciesSlugs: ["bali-myna", "komodo-dragon"]
             },
             {
                 title: "Range fragmentation is a major factor",
                 paragraphs: [
-                    "Species spread across disconnected pockets are often harder to maintain than species with continuous healthy ranges.",
-                    "Fragmentation affects feeding, breeding, migration, and resilience to local shocks."
+                    "A species spread across disconnected pockets is harder to keep than one with a continuous range, even at the same total population. Fragmentation cuts off dispersal, shrinks the gene pool in each pocket, and means a local disaster cannot be refilled from next door. African wild dogs are the textbook example: packs need hundreds of square kilometres each, so roads, fences and farms that slice a landscape into pieces remove whole packs even where no dog is shot.",
+                    "Vultures show a different route to the same result. White-headed vultures were once spread across sub-Saharan Africa; poisoning at carcasses and the loss of large mammals have reduced them to scattered protected areas, each too small to hold a self-sustaining population on its own."
                 ],
                 speciesSlugs: ["african-wild-dog", "white-headed-vulture"]
             },
             {
+                title: "Rare to see is not the same as rare",
+                paragraphs: [
+                    "For a wildlife watcher, the rarity that matters day to day is detectability, and it is only loosely related to population. Badgers, barn owls, otters, most snakes and almost every moth are widespread and not threatened, yet most people have never seen one because they are nocturnal, shy or well camouflaged. A kingfisher lives on most clean rivers in Europe and still ranks as a prized sighting.",
+                    "The reverse is also true. A Critically Endangered animal can be easy to see in the one place it survives, like a Bali myna at a release site or a kakapo on a monitored island. So when a collection app labels an animal rare, it is worth asking which rarity it means: hard to find, few in number, or confined to a small range. Those are three different facts, and a good field guide keeps them apart."
+                ],
+                pullQuote: "Three questions separate every kind of rarity: how many are there, how much of the world do they live in, and how hard are they to see.",
+                speciesSlugs: ["barn-owl", "common-kingfisher"]
+            },
+            {
                 title: "How this helps in an app context",
                 paragraphs: [
-                    "Rarity signals can make collection more engaging, but they should also teach users why rarity exists.",
-                    "When rarity is linked to habitat and behavior context, users get both game value and conservation awareness."
+                    "Rarity tiers make a collection more engaging, but they should also teach why rarity exists. In AnimalDex a species card's rarity reflects conservation status and how often the animal is actually captured, so a common but elusive animal can still be a satisfying find and a Critically Endangered one is never a casual pull. Linking that tier to habitat, range and behaviour gives players both the game value and the conservation context.",
+                    "The practical payoff is in the field. Knowing that a species is range-restricted tells you to travel; knowing it is nocturnal tells you to go out at dusk; knowing it is fragmented tells you which protected area to visit. Rarity, understood properly, is a set of directions."
+                ],
+                inlineLinks: [
+                    {text: "Why real-animal collecting feels so good", slug: "why-real-animal-collecting-feels-so-good", href: "/blog/why-real-animal-collecting-feels-so-good"},
+                    {text: "Wildlife collection and animal card app", slug: "wildlife-collection-animal-card-app", href: "/use-cases/wildlife-collection-animal-card-app"}
                 ],
                 speciesSlugs: ["komodo-dragon"]
             }
@@ -3376,20 +3700,38 @@ const blogPostsData: BlogPost[] = [
         faq: [
             {
                 question: "Does rare always mean endangered?",
-                answer: "Not always. Rarity and conservation status are related but different; rarity can come from limited range, low density, or fragmented habitat."
+                answer: "No. Rarity describes how many animals there are, how small their range is or how hard they are to see; endangered is an IUCN Red List assessment of extinction risk based on decline, range and population thresholds. A naturally scarce species with a stable population can be rare without being threatened, and a once-common species in steep decline can be Endangered while still outnumbering it."
+            },
+            {
+                question: "What are the IUCN Red List categories?",
+                answer: "From lowest to highest risk: Least Concern, Near Threatened, Vulnerable, Endangered, Critically Endangered, Extinct in the Wild and Extinct, plus Data Deficient and Not Evaluated for species without an assessment. Vulnerable, Endangered and Critically Endangered are the three threatened categories, assigned when a species meets one of five criteria on decline, range size or population size."
+            },
+            {
+                question: "What is an endemic species?",
+                answer: "An endemic species occurs naturally in one defined area and nowhere else, such as the Bali myna on Bali, the kakapo in New Zealand or lemurs in Madagascar. Endemics are often rare in the global sense even when locally common, because the whole species is exposed to anything that happens in that one place."
             },
             {
                 question: "Can an animal be common globally but rare in my area?",
-                answer: "Yes. Local habitat conditions and geography can make a species uncommon in one region even if it is more common elsewhere."
+                answer: "Yes. Local habitat, climate and geography can make a species scarce at the edge of its range while it is abundant elsewhere, and the opposite also happens. That is why range maps on eBird or iNaturalist matter for identification: a species with no records within hundreds of kilometres is more likely to be a common lookalike."
+            },
+            {
+                question: "Why are some common animals so hard to see?",
+                answer: "Because detectability depends on behaviour, not numbers. Nocturnal animals such as badgers and barn owls, shy ones such as otters and most snakes, and well-camouflaged ones such as moths and nightjars are widespread but rarely seen. Going out at the right time of day and sitting still at one spot does more than travelling to find them."
             }
+        ],
+        sources: [
+            {label: "IUCN Red List of Threatened Species", href: "https://www.iucnredlist.org/"},
+            {label: "New Zealand Department of Conservation: kakapo", href: "https://www.doc.govt.nz/nature/native-animals/birds/birds-a-z/kakapo/"},
+            {label: "National Park Service: Devils Hole, Death Valley", href: "https://www.nps.gov/deva/learn/nature/devils-hole.htm"},
+            {label: "Britannica: Komodo dragon", href: "https://www.britannica.com/animal/Komodo-dragon"}
         ]
     },
     {
         slug: "zoo-vs-wild-animals-whats-the-difference",
         title: "Zoo vs wild animals: what’s the difference?",
-        description: "A practical guide to understanding how zoo and wild contexts differ for behavior, spotting expectations, learning, and respectful observation.",
+        description: "Zoo vs wild animals: how behaviour, activity, diet and lifespan differ, what enrichment is for, and how to watch animals well in either setting.",
         publishedAt: "2026-04-09",
-        updatedAt: "2026-04-09",
+        updatedAt: "2026-10-07",
         featuredImage: {
             src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/animaldex-comparison-for-zoo-vs-wild.webp",
             alt: "AnimalDex featured image comparing zoo and wild animals for the observation guide",
@@ -3397,1286 +3739,296 @@ const blogPostsData: BlogPost[] = [
             height: 675,
             caption: "Featured image source: AnimalDex CDN."
         },
-        readingMinutes: 6,
+        readingMinutes: 7,
         tags: ["Zoo animals", "Wild animals", "Family-friendly animal learning"],
-        searchIntents: ["zoo vs wild animals difference", "zoo animal app", "wild animal learning app", "family-friendly animal learning app"],
-        speciesSlugs: ["komodo-dragon", "bald-eagle", "african-wild-dog"],
+        searchIntents: ["zoo vs wild animals difference", "how do zoo animals behave differently", "what is zoo enrichment", "do zoo animals live longer", "zoo animal app", "family-friendly animal learning app"],
+        speciesSlugs: ["komodo-dragon", "bald-eagle", "african-wild-dog", "giraffe", "lion", "elephant"],
         systemsSpeciesSlugs: ["bald-eagle", "african-wild-dog"],
+        tableOfContents: [
+            "Observation conditions are fundamentally different",
+            "Five ways behaviour changes in an enclosure",
+            "Enrichment: what it is and what it tells you",
+            "Behaviour interpretation needs context",
+            "How to watch a zoo animal well",
+            "How to watch a wild animal well",
+            "Use both contexts to build better animal literacy"
+        ],
+        relatedSlugs: ["zoo-safari-and-family-animal-spotting-guide", "how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
         sections: [
             {
                 title: "Observation conditions are fundamentally different",
                 paragraphs: [
-                    "Zoo settings offer higher visibility and controlled proximity, while wild settings demand patience, distance, and uncertainty tolerance.",
-                    "Neither is automatically better. They are different learning environments with different strengths."
-                ]
+                    "A zoo gives you proximity, predictability and time. The animal is within 20 m, it will be there tomorrow, and you can watch it for an hour. The wild gives you none of that and, in exchange, shows you the behaviour the animal evolved: hunting, long-distance movement, real predator avoidance and social life at natural group sizes.",
+                    "Neither is automatically better. A zoo is where most people first learn what a giraffe's ossicones look like up close or how an eagle's talons lock; the wild is where you learn that giraffes browse for most of the day and that an eagle spends most of it perched. The two settings teach different halves of the same animal."
+                ],
+                media: {
+                    type: "gallery",
+                    title: "Same species, different day",
+                    images: [
+                        {
+                            src: "/images/blog/zoo-vs-wild-animals-whats-the-difference/giraffe-zoo-enclosure.webp",
+                            alt: "Giraffe walking across a sandy zoo enclosure with planted banks behind",
+                            width: 1400,
+                            height: 970,
+                            caption: "A giraffe in its enclosure at Dublin Zoo: close, well lit and reliably there. Photo: William Murphy from Dublin, Ireland, CC BY-SA 2.0, via Wikimedia Commons."
+                        },
+                        {
+                            src: "/images/blog/zoo-vs-wild-animals-whats-the-difference/giraffe-serengeti.webp",
+                            alt: "Group of wild giraffes beneath an acacia tree on the Serengeti plains",
+                            width: 1400,
+                            height: 933,
+                            caption: "Wild giraffes under an acacia in the Serengeti: distant, in a group, and feeding for most of the day. Photo: Naturedata, CC0, via Wikimedia Commons."
+                        }
+                    ]
+                },
+                speciesSlugs: ["giraffe", "bald-eagle"]
             },
             {
-                title: "Behavior interpretation needs context",
+                title: "Five ways behaviour changes in an enclosure",
                 paragraphs: [
-                    "In managed environments, behavior may reflect enclosure design, enrichment cycles, and human presence. In the wild, behavior is shaped more directly by ecological pressures.",
-                    "Understanding that context makes your notes and IDs more accurate."
+                    "Captive animals are the same species with a different daily budget. Food arrives on a schedule, there are no predators, space is fixed and the same people pass every day. Those four facts explain most of what you see."
+                ],
+                table: {
+                    columns: ["Behaviour", "In the wild", "In a zoo", "What to notice"],
+                    rows: [
+                        {cells: ["Foraging time", "Elephants and giraffes feed 16 to 18 hours a day; wild dogs hunt twice daily", "Minutes to an hour per feed unless food is hidden or puzzle-fed", "Look for scatter feeds, browse hung high, and animals still searching after a feed"]},
+                        {cells: ["Activity rhythm", "Set by heat, light and prey: dawn and dusk peaks, midday rest", "Set by the keeper timetable: active at opening, feeds and talks", "Plan visits around the posted schedule"]},
+                        {cells: ["Vigilance", "Constant scanning; herds post lookouts; sleep is short and light", "Much reduced; lions in a zoo sleep as much as wild ones but rarely look up", "A relaxed captive animal lying in the open is normal, not sick"]},
+                        {cells: ["Movement", "Wild dogs range over 500 square kilometres or more; polar bears walk tens of kilometres", "Fixed enclosure; repeated routes", "Varied routes and use of the whole enclosure are good signs"]},
+                        {cells: ["Lifespan", "Shorter: predation, injury, drought, disease", "Often longer: lions, elephants and many primates outlive wild averages with veterinary care", "Age signs such as worn teeth or grey muzzles are more common in zoos"]}
+                    ]
+                },
+                speciesSlugs: ["elephant", "african-wild-dog", "lion"]
+            },
+            {
+                title: "Enrichment: what it is and what it tells you",
+                paragraphs: [
+                    "Enrichment is the deliberate work a zoo does to give animals choices and problems to solve: food hidden in logs or frozen into ice, scents from other species sprayed on rocks, climbing frames and pools, novel objects, training sessions that let a keeper check teeth or feet without sedation. Accredited zoos, including those under the Association of Zoos and Aquariums, treat it as a welfare requirement rather than a show.",
+                    "Enrichment is also a window for visitors. A leopard working a meat-filled puzzle on a climbing frame shows you the stalking, reaching and gripping it would use on a kill. The absence of enrichment shows too. Stereotypies, the repetitive pacing, swaying or route-tracing that can develop in under-stimulated animals, are a recognised welfare signal, and modern enclosure design exists largely to prevent them. If you see an animal walking the same loop over and over, you are looking at a problem the keepers are probably already working on."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/zoo-vs-wild-animals-whats-the-difference/zoo-enrichment.webp",
+                        alt: "Leopard standing on a climbing frame of branches in a zoo enclosure during an enrichment session",
+                        width: 1400,
+                        height: 928,
+                        caption: "A leopard on a branch climbing frame during a food-enrichment session: the reaching and gripping are the same moves it would use on a kill. Photo: Kongkham6211, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                }
+            },
+            {
+                title: "Behaviour interpretation needs context",
+                paragraphs: [
+                    "In a managed environment, behaviour reflects enclosure design, enrichment cycles and human presence as much as instinct. A Komodo dragon basking under a heat lamp at 10 am is doing what the lamp timer tells it; in the wild the same animal basks where the morning sun hits a trail and then goes hunting. African wild dogs in a zoo greet, rally and play like a wild pack, but the pack is usually smaller than the wild average of around ten adults and it never has to run down an impala.",
+                    "Understanding that context makes your notes more accurate. Record a zoo observation as what the animal can do; record a wild observation as what it does when nothing is arranged for it."
                 ],
                 speciesSlugs: ["komodo-dragon", "african-wild-dog"]
             },
             {
+                title: "How to watch a zoo animal well",
+                paragraphs: [
+                    "Most visitors spend under a minute at each enclosure and leave with a photograph of an animal asleep. The fix is to treat the zoo like a hide: arrive at opening, read the day's feed and talk times, and give three or four animals twenty minutes each instead of forty animals thirty seconds each."
+                ],
+                cards: [
+                    {label: "Go early or late", body: "Animals are let out at opening and are often most active in the first hour; late afternoon feeds bring them to the front again."},
+                    {label: "Use the keeper talk", body: "Keepers know individual animals by name, age and temperament, and will tell you which behaviours to look for in the next ten minutes."},
+                    {label: "Watch, then name", body: "Spend the first minute describing what the animal is doing before you check the sign. It builds the habit you need in the wild."},
+                    {label: "No glass tapping, no flash", body: "Both push animals to the back of the enclosure. Quiet, still visitors at the barrier get the long look."},
+                    {label: "Count and compare", body: "Group size, who eats first, who grooms whom, and which individual is on watch are all visible in a zoo and hard to see in the wild."}
+                ],
+                inlineLinks: [
+                    {text: "Family zoo and safari learning", slug: "family-zoo-safari-animal-learning-app", href: "/use-cases/family-zoo-safari-animal-learning-app"}
+                ]
+            },
+            {
+                title: "How to watch a wild animal well",
+                paragraphs: [
+                    "In the field the animal sets the terms. Arrive before it does, stay low and still, and keep enough distance that its behaviour never changes because of you; wildlife agencies such as the US National Park Service use 25 m from most animals and 100 m from bears and wolves as the minimum. A car, a hide or a bench you have sat on for half an hour all work better than walking toward anything.",
+                    "Expect to see less, and to understand more of what you see. A wild giraffe herd spreading out to browse, lookouts facing different directions, tells you about predation pressure in a way no enclosure can. One clean sighting of a wild animal behaving naturally is worth a dozen close views of a captive one, and the captive views are what prepare you to recognise it."
+                ],
+                pullQuote: "The zoo teaches you what an animal looks like. The wild teaches you what it does. You need both to read either one.",
+                inlineLinks: [
+                    {text: "How to identify animals in the wild", slug: "how-to-identify-animals-in-the-wild-2026-guide", href: "/blog/how-to-identify-animals-in-the-wild-2026-guide"},
+                    {text: "Wildlife photography without disturbing animals", slug: "wildlife-photography-without-disturbing-animals", href: "/blog/wildlife-photography-without-disturbing-animals"}
+                ]
+            },
+            {
                 title: "Use both contexts to build better animal literacy",
                 paragraphs: [
-                    "Zoo encounters can help beginners learn visual traits; wild encounters test recognition under real conditions.",
-                    "When you log both in one collection system, your field awareness improves faster."
+                    "Zoo encounters give beginners the visual traits: the eagle's yellow cere, the wild dog's four-toed feet and mottled coat, the dragon's forked tongue. Wild encounters test that recognition under real conditions, at distance, in poor light, for a few seconds. Logging both in one collection keeps the two linked.",
+                    "In AnimalDex, a live capture of a zoo animal and a live capture of the same species in the wild both become cards, with the place recorded on each. The zoo card is where many people learn a species; the wild card is the one that feels earned."
                 ],
                 speciesSlugs: ["bald-eagle", "white-headed-vulture"]
             }
         ],
         faq: [
             {
-                question: "Do zoo observations still count for learning?",
-                answer: "Yes. Zoo contexts can help beginners learn visual traits and baseline behavior cues before applying them in wild settings."
+                question: "Do zoo animals behave differently from wild animals?",
+                answer: "Yes, mainly in how they spend their time. Scheduled food cuts foraging from most of the day to minutes, there are no predators to watch for, and the enclosure fixes how far they can travel. Core behaviours such as grooming, play, dominance and parental care stay the same, which is why zoos are a good place to learn them."
+            },
+            {
+                question: "What is enrichment in a zoo?",
+                answer: "Enrichment is anything a zoo adds to give animals choices and problems to solve: hidden or frozen food, scents, climbing structures, pools, novel objects and training sessions. Accredited zoos treat it as a welfare standard. It also lets visitors see natural behaviours, such as a leopard working a food puzzle on a climbing frame."
+            },
+            {
+                question: "Do zoo animals live longer than wild animals?",
+                answer: "Often, yes. Veterinary care, steady food and no predators mean lions, elephants and many primates in accredited zoos outlive wild averages. There are exceptions, and lifespan on its own is not a welfare measure, but it is one reason you see more visibly old animals in zoos than in the wild."
+            },
+            {
+                question: "Why do zoo animals pace back and forth?",
+                answer: "Repetitive pacing, swaying or route-tracing is called stereotypic behaviour and is a recognised sign that an animal is under-stimulated or stressed. Modern enclosure design and enrichment programmes exist largely to prevent it. If you see it, the keepers are usually already aware and working on it."
             },
             {
                 question: "How can families use both zoo and wild experiences well?",
-                answer: "Use a shared checklist: one clear ID clue, one behavior note, and one habitat note per sighting across both contexts."
+                answer: "Use the same checklist in both: one clear identification clue, one behaviour note and one habitat note per sighting. Learn the species at the zoo, where it is close and still, then look for it in the wild, where the same animal is distant and brief. Logging both in one collection keeps the lessons connected."
             }
+        ],
+        sources: [
+            {label: "Smithsonian's National Zoo: animal enrichment", href: "https://nationalzoo.si.edu/animals/enrichment"},
+            {label: "Association of Zoos and Aquariums", href: "https://www.aza.org/"},
+            {label: "National Park Service: 7 ways to safely watch wildlife", href: "https://www.nps.gov/subjects/watchingwildlife/7ways.htm"}
         ]
     },
-    createAnimalSystemsPost({
-        speciesSlug: "crow",
-        slug: "what-makes-crows-so-intelligent",
-        title: "What Makes Crows So Intelligent? Systems, Behavior, and Survival Strategy",
-        description: "Learn what makes crows so intelligent, from memory and tool use to adaptive behavior, survival strategy, and their ecosystem role in changing environments.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/intelligent-crow-holding-ring.webp",
-            alt: "Intelligent crow holding a ring, illustrating tool use, memory, and adaptive crow behavior for AnimalDex",
-            width: 1200,
-            height: 675,
-            caption: "A crow holding a ring captures the mix of object curiosity, memory, and experimentation that makes crow intelligence so effective."
-        },
-        readingMinutes: 7,
-        tags: ["Crow intelligence", "Animal behavior", "Tool use", "Ecosystem role"],
-        searchIntents: ["crow intelligence", "crow animal behavior", "what makes crows intelligent", "crow ecosystem role", "why are crows so intelligent"],
-        sections: [
-            {
-                title: "Why crows keep showing up in animal intelligence conversations",
-                paragraphs: [
-                    "Crows matter because they keep solving problems in public. They remember faces, test objects, exploit traffic, and adjust quickly when the environment changes.",
-                    "That makes them useful for more than curiosity. If you want to understand animal intelligence in a real-world, messy-environment context, crows are one of the strongest case studies available."
-                ]
-            },
-            {
-                title: "What makes a crow unique?",
-                paragraphs: [
-                    "A crow is not the fastest flier, strongest predator, or most specialized for one niche. Its edge comes from flexible cognition, strong visual memory, and social learning that lets one bird benefit from what another bird already discovered.",
-                    "That combination turns ordinary urban and rural environments into a constant stream of testable inputs. Crows do not need a perfect system. They are good at finding the leverage hidden inside an imperfect one."
-                ]
-            },
-            {
-                title: "How crows survive in changing environments",
-                paragraphs: [
-                    "Crow survival strategy is built on behavioral range. They scavenge, hunt, cache food, observe threats, and revise routines quickly when humans or predators change the rules.",
-                    "In animal behavior terms, that means crows treat uncertainty as data rather than paralysis. They are rarely the cleanest system in the landscape, but they are often the fastest to adapt when the landscape gets weird."
-                ]
-            },
-            {
-                title: "The ecosystem role of a crow",
-                paragraphs: [
-                    "Crows sit in a useful middle layer of the environmental operating system. They remove waste, prey on smaller animals, move seeds, and respond quickly to disturbance across urban edges, farmland, woodland, and coastline.",
-                    "That ecosystem role is why they matter beyond intelligence headlines. A crow is not just clever; it is functional hardware for volatile, human-influenced habitats."
-                ]
-            },
-            {
-                title: "What humans can learn from crows",
-                paragraphs: [
-                    "Crows show that adaptable systems do not wait for perfect clarity. They observe, test, remember, and circulate useful signal through the group.",
-                    "That is the durable lesson. Intelligence is not just raw processing power. It is the ability to keep updating the model while the world keeps moving."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/why-crows-matter-infographic.png",
-                        alt: "Why crows matter infographic summarizing crow intelligence, adaptive behavior, survival strategy, and ecosystem role",
-                        width: 1024,
-                        height: 1536,
-                        caption: "Infographic summary: why crows matter as adaptive, socially intelligent animals in human-shaped environments."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "octopus",
-        slug: "how-octopus-intelligence-works",
-        title: "How Octopus Intelligence Works: Nature’s Most Advanced Problem Solver",
-        description: "Explore octopus intelligence through animal behavior, flexible nervous systems, camouflage, survival strategy, and the octopus ecosystem role.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/octopus-in-blue-ocean.jpg",
-            alt: "Octopus in blue ocean water, illustrating octopus intelligence, camouflage, and marine survival strategy for AnimalDex",
-            width: 1500,
-            height: 843,
-            caption: "An octopus in open blue water captures the flexibility, perception, and camouflage-driven survival strategy that make the species so distinctive."
-        },
-        readingMinutes: 8,
-        tags: ["Octopus intelligence", "Marine biology", "Animal behavior"],
-        searchIntents: ["octopus intelligence", "how octopus survives", "octopus animal behavior", "octopus ecosystem role"],
-        sections: [
-            {
-                title: "Why the octopus feels so different from most animals",
-                paragraphs: [
-                    "The octopus stands out because it does not look or behave like a standard vertebrate success story. It solves problems with a soft body, decentralized sensing, and rapid physical adaptation instead of armor, speed, or social backup.",
-                    "That makes it one of the cleanest examples of how animal intelligence can emerge from an entirely different hardware stack."
-                ]
-            },
-            {
-                title: "What makes an octopus unique?",
-                paragraphs: [
-                    "An octopus combines a distributed nervous system, arms that sense while they move, and camouflage that can rewrite its visible identity in seconds. It is less like a single rigid machine and more like a networked set of local processors.",
-                    "That design gives the animal unusual freedom. It can inspect, manipulate, hide, and escape without funneling every problem through one slow central pipeline."
-                ]
-            },
-            {
-                title: "How octopus survival strategy actually works",
-                paragraphs: [
-                    "Octopus survival is built around option density. If one tactic fails, it can switch shape, texture, coloration, route, or shelter almost immediately.",
-                    "In animal behavior terms, that makes it hard to predict and hard to trap. The octopus does not depend on one dominant response. It survives by keeping several viable responses live at once."
-                ]
-            },
-            {
-                title: "The ecosystem role of an octopus",
-                paragraphs: [
-                    "Octopuses regulate crustaceans, mollusks, and other benthic prey while also serving as prey for larger marine hunters. Their ecosystem role sits inside the reef and seafloor control layer, where pressure on one level quickly affects the next.",
-                    "Because they exploit crevices and tight spaces other predators cannot use efficiently, they also help define which niches stay crowded and which stay open."
-                ]
-            },
-            {
-                title: "What humans can learn from octopus intelligence",
-                paragraphs: [
-                    "The octopus is a reminder that smart systems do not always look centralized or symmetrical. Sometimes performance comes from placing sensing and decision-making closer to the point of action.",
-                    "That is why the octopus keeps showing up in biomimicry and systems design conversations. Flexibility is not a luxury feature. In unstable environments, it is the survival engine."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/the-intelligence-of-an-octopus-infographic%20(1).png",
-                        alt: "The intelligence of an octopus infographic summarizing octopus cognition, camouflage, distributed sensing, and survival strategy",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: the octopus combines distributed sensing, flexible movement, and rapid adaptation into a distinctive intelligence system."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "mantis-shrimp",
-        slug: "mantis-shrimp-superpower-vision-and-strike",
-        title: "Mantis Shrimp Vision and Strike Power: How This Animal Sees and Hits So Fast",
-        description: "See how mantis shrimp combine extreme animal vision, explosive strike mechanics, reef survival strategy, and a powerful ecosystem role.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp-close-up.png",
-            alt: "Close-up of a mantis shrimp illustrating extreme vision, strike mechanics, and reef survival strategy for AnimalDex",
-            width: 1536,
-            height: 1024,
-            caption: "A mantis shrimp close-up captures the sensory precision and stored-power strike system that make the animal so distinctive."
-        },
-        readingMinutes: 7,
-        tags: ["Mantis shrimp", "Animal vision", "Reef behavior"],
-        searchIntents: ["mantis shrimp vision", "mantis shrimp strike", "mantis shrimp animal behavior", "how mantis shrimp survives"],
-        sections: [
-            {
-                title: "Why mantis shrimp keep breaking people’s mental models",
-                paragraphs: [
-                    "Mantis shrimp are compelling because the same animal carries two extreme systems at once: unusually advanced visual processing and a strike mechanism built for brutal speed.",
-                    "That pairing makes them more than a fun marine biology fact. They are a serious example of how sensing and force production can be co-designed for one job."
-                ]
-            },
-            {
-                title: "What makes a mantis shrimp unique?",
-                paragraphs: [
-                    "The eyes are famous for good reason. Mantis shrimp detect polarized and complex light in ways most animals do not, which gives them a different read on their environment and on each other.",
-                    "Then there is the strike hardware: spring-loaded appendages that store energy before releasing it almost instantly. They do not just hit hard. They hit through smart mechanical staging."
-                ]
-            },
-            {
-                title: "How mantis shrimp survive on a crowded reef",
-                paragraphs: [
-                    "Reef survival punishes hesitation. A mantis shrimp survives by sensing fast, defending a tight burrow, and ending certain interactions before they turn into prolonged contests.",
-                    "That is why its animal behavior feels so compact and decisive. It is not built to drift through the reef casually. It is built to read the signal and convert it into a short, violent answer."
-                ]
-            },
-            {
-                title: "The ecosystem role of a mantis shrimp",
-                paragraphs: [
-                    "Mantis shrimp pressure shelled prey, crustaceans, and small reef organisms while also contributing to reef competition around burrows and hiding space.",
-                    "Their ecosystem role matters because they force local armor races. Shells, defenses, and hiding strategies are not abstract traits; they are responses to real mechanical pressure."
-                ]
-            },
-            {
-                title: "What humans can learn from mantis shrimp design",
-                paragraphs: [
-                    "The mantis shrimp shows that output quality often depends on what happens before the visible action. Load the spring, align the signal, and let structure do the hard work.",
-                    "That is a useful systems lesson. Fast results usually come from smart preparation, not frantic improvisation."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp-infographic.png",
-                        alt: "Mantis shrimp infographic summarizing vision, strike power, reef behavior, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: mantis shrimp combine unusual visual processing with explosive strike mechanics to control tight reef interactions."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "honey-bee",
-        slug: "how-honey-bees-keep-ecosystems-running",
-        title: "How Honey Bees Keep Ecosystems Running: Pollination, Behavior, and Survival Strategy",
-        description: "Understand honey bee behavior, pollination logistics, colony intelligence, ecosystem role, and how honey bees survive as one of nature’s most important networks.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/honey-bees.png",
-            alt: "Honey bees on flowers illustrating pollination behavior, colony coordination, and ecosystem role for AnimalDex",
-            width: 1536,
-            height: 1024,
-            caption: "Honey bees in action show how pollination, movement, and colony coordination keep plant reproduction and food systems moving."
-        },
-        readingMinutes: 7,
-        tags: ["Honey bee", "Pollination", "Animal behavior"],
-        searchIntents: ["honey bee behavior", "honey bee ecosystem role", "how honey bees survive", "honey bee intelligence"],
-        sections: [
-            {
-                title: "Why honey bees matter beyond honey",
-                paragraphs: [
-                    "Honey bees matter because they sit at the intersection of animal behavior, plant reproduction, and food systems. They are easy to romanticize, but the more useful view is operational: they are logistics hardware for pollen and plant success.",
-                    "That makes them one of the clearest examples of a species whose ecosystem role spills directly into human agriculture and landscape stability."
-                ]
-            },
-            {
-                title: "What makes a honey bee unique?",
-                paragraphs: [
-                    "A honey bee is not powerful as an individual unit. Its edge comes from sensory precision, electrostatic pollen capture, ultraviolet vision, and communication that turns one food discovery into a colony-wide route update.",
-                    "The waggle dance matters here because it converts private knowledge into shared movement. That is rare, efficient, and very easy to underestimate."
-                ]
-            },
-            {
-                title: "How honey bees survive as a colony system",
-                paragraphs: [
-                    "Honey bee survival is collective. Workers, drones, brood, and queen are not interchangeable parts; they are specialized roles inside one living operational stack.",
-                    "That changes how we should read bee behavior. A bee foraging, cooling the hive, guarding an entrance, or feeding larvae is not performing random busyness. It is keeping the larger system from degrading."
-                ]
-            },
-            {
-                title: "The ecosystem role of honey bees",
-                paragraphs: [
-                    "Honey bees help move pollen between flowering plants, which supports seed set, fruit production, and downstream food-web stability. Their ecosystem role is especially visible where plant density and agricultural yield depend on consistent pollination.",
-                    "They are not the only pollinators and should not be mistaken for the whole pollination story, but they are a major part of the reproductive logistics layer that keeps landscapes productive."
-                ]
-            },
-            {
-                title: "What humans can learn from honey bee systems",
-                paragraphs: [
-                    "Honey bees show the advantage of routing useful signal quickly. When a worker finds a strong resource patch, the colony benefits because the information does not stay trapped in one body.",
-                    "That is the practical lesson: high-performing systems scale when discovery, location, and quality data move faster than ego."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/honey-bees-educational-infographic.png",
-                        alt: "Honey bees educational infographic summarizing pollination, colony behavior, survival strategy, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: honey bees keep ecosystems productive through pollination logistics, colony coordination, and shared behavioral roles."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "wolf",
-        slug: "how-wolves-hunt-survive-and-shape-ecosystems",
-        title: "How Wolves Hunt, Survive, and Shape Ecosystems",
-        description: "A clear guide to wolf behavior, pack intelligence, survival strategy, and ecosystem role, with a systems view of how wolves reshape landscapes.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wolves-close-up-wildlife.webp",
-            alt: "Close-up of wolves in the wild illustrating pack coordination, survival strategy, and ecosystem influence for AnimalDex",
-            width: 1200,
-            height: 801,
-            caption: "A close-up wolf image captures the coordination, vigilance, and pack-level intelligence that make wolves such influential predators."
-        },
-        readingMinutes: 8,
-        tags: ["Wolf behavior", "Predator ecology", "Animal intelligence"],
-        searchIntents: ["wolf behavior", "how wolves survive", "wolf ecosystem role", "wolf pack intelligence"],
-        sections: [
-            {
-                title: "Why wolves attract so much attention",
-                paragraphs: [
-                    "Wolves matter because they are one of the clearest examples of how animal behavior scales from individual action to landscape-level impact. A pack is not just a social group. It is a moving decision system.",
-                    "That is why wolf discussions keep returning to intelligence, coordination, and ecosystem role. Few predators make those connections so visible."
-                ]
-            },
-            {
-                title: "What makes a wolf unique?",
-                paragraphs: [
-                    "A wolf combines endurance movement, long-range scenting, social communication, and role-based hunting behavior without needing the rigid specialization of social insects.",
-                    "That balance matters. Wolves are coordinated, but they remain flexible enough to hunt different prey, move across huge territory, and adjust to changing conditions."
-                ]
-            },
-            {
-                title: "How wolves survive and hunt",
-                paragraphs: [
-                    "Wolf survival is built on cooperation, patience, and attrition. They test prey, read weakness, and let distance and pressure do part of the work before the final commitment.",
-                    "In animal behavior terms, that means wolves often win by making the prey system spend more energy than it wanted to spend. The hunt is not just force. It is managed fatigue."
-                ]
-            },
-            {
-                title: "The ecosystem role of wolves",
-                paragraphs: [
-                    "Wolves shape herbivore movement, browsing pressure, and risk distribution across forests, valleys, and river corridors. Their ecosystem role is partly about what they kill and partly about what they make other animals stop doing so casually.",
-                    "That is why wolves can influence vegetation and habitat recovery without needing to erase prey populations. They alter behavior, and behavior changes landscapes."
-                ]
-            },
-            {
-                title: "What humans can learn from wolf systems",
-                paragraphs: [
-                    "Wolves are a good reminder that disciplined coordination beats isolated brilliance over time. Clear roles, good signaling, and patient pressure can outperform raw intensity.",
-                    "The deeper lesson is strategic: some systems win by staying synchronized long enough for the terrain itself to start helping."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wolves-educational-infographic.png",
-                        alt: "Wolves educational infographic summarizing pack hunting, survival strategy, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: wolves shape ecosystems through pack coordination, prey pressure, and landscape-level behavior effects."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "barn-owl",
-        slug: "how-barn-owls-hunt-in-the-dark",
-        title: "How Barn Owls Hunt in the Dark: Sound, Silence, and Survival Strategy",
-        description: "Learn how barn owl behavior, hearing, silent flight, and ecosystem role make this nocturnal predator one of nature’s sharpest intercept systems.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/owl-hunting-in-the-dark.webp",
-            alt: "Barn owl hunting in the dark, illustrating silent flight, hearing, and nocturnal survival strategy for AnimalDex",
-            width: 1400,
-            height: 788,
-            caption: "A barn owl hunting at night captures the quiet precision, hearing, and silent flight that make darkness usable."
-        },
-        readingMinutes: 6,
-        tags: ["Barn owl", "Animal behavior", "Nocturnal predators"],
-        searchIntents: ["barn owl behavior", "how barn owls hunt", "barn owl ecosystem role", "barn owl survival strategy"],
-        sections: [
-            {
-                title: "Why the barn owl feels almost engineered for night work",
-                paragraphs: [
-                    "Barn owls stand out because their animal behavior is built around low-light efficiency rather than visual dominance. They hunt in spaces where most animals become less certain and less precise.",
-                    "That makes them useful for understanding how survival strategy changes when the environment becomes acoustically rich and visually poor."
-                ]
-            },
-            {
-                title: "What makes a barn owl unique?",
-                paragraphs: [
-                    "The barn owl’s facial disc is not decorative. It functions as acoustic hardware that funnels sound toward asymmetrical ears capable of three-dimensional prey localization.",
-                    "Add silent flight feathers and the result is unusually clean interception. The owl hears movement, approaches without announcing itself, and closes the gap before the prey has much time to revise its plan."
-                ]
-            },
-            {
-                title: "How barn owls survive",
-                paragraphs: [
-                    "Barn owl survival depends on converting darkness into confidence. They patrol grassland, field margins, and open country where small mammals create audio clues that are more reliable than quick visual snapshots.",
-                    "That means the owl’s hunting success comes from patient sensing and efficient execution rather than frantic searching."
-                ]
-            },
-            {
-                title: "The ecosystem role of a barn owl",
-                paragraphs: [
-                    "Barn owls help regulate rodent populations across agricultural and semi-open habitats. Their ecosystem role matters because they remove persistent prey pressure without needing the heavy, visible footprint of larger predators.",
-                    "They are a reminder that quiet predators can do significant structural work in a system without looking dramatic while they do it."
-                ]
-            },
-            {
-                title: "What humans can learn from barn owls",
-                paragraphs: [
-                    "The barn owl teaches the value of reducing your own noise. Quiet systems perceive more, and perception quality often matters more than motion volume.",
-                    "That is the practical insight: if you improve signal capture and lower operational noise, the right move becomes easier to see."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/hunting-owl-educational-infographic.png",
-                        alt: "Barn owl educational infographic summarizing silent flight, hearing, hunting behavior, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: barn owls hunt by pairing low-noise flight with precise sound localization in low-light environments."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "jumping-spider",
-        slug: "why-jumping-spiders-are-so-precise",
-        title: "Why Jumping Spiders Are So Precise: Vision, Behavior, and Survival Strategy",
-        description: "See how jumping spider behavior, animal vision, hunting precision, and ecosystem role make this tiny predator unusually intelligent and effective.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/jumping-spider-birds-eye-view.jpg",
-            alt: "Jumping spider viewed from above, illustrating precision vision, targeting behavior, and survival strategy for AnimalDex",
-            width: 1000,
-            height: 667,
-            caption: "A jumping spider from above captures the visual focus and movement precision that make this tiny hunter so effective."
-        },
-        readingMinutes: 6,
-        tags: ["Jumping spider", "Animal behavior", "Predator strategy"],
-        searchIntents: ["jumping spider behavior", "jumping spider intelligence", "how jumping spiders survive", "jumping spider ecosystem role"],
-        sections: [
-            {
-                title: "Why jumping spiders feel smarter than their size suggests",
-                paragraphs: [
-                    "Jumping spiders are compelling because they act less like passive web-builders and more like compact visual hunters making deliberate targeting choices.",
-                    "That changes the whole emotional read of the animal. Even people who normally ignore spiders notice that a jumping spider seems to look back, calculate, and commit."
-                ]
-            },
-            {
-                title: "What makes a jumping spider unique?",
-                paragraphs: [
-                    "Large forward-facing eyes give jumping spiders unusually good depth judgment for their size, and that visual quality matters because they hunt without depending on a trap web to do the hard part.",
-                    "They also convert hydraulic force into fast, accurate jumps. So the system is not only about seeing well. It is about seeing well enough to make movement precise."
-                ]
-            },
-            {
-                title: "How jumping spiders survive",
-                paragraphs: [
-                    "Jumping spider survival strategy depends on reading distance, angle, and motion correctly before the leap. Miss too often and the energy budget gets ugly fast.",
-                    "That is why their animal behavior feels measured rather than reckless. They pause, track, adjust, and then launch when the geometry starts favoring them."
-                ]
-            },
-            {
-                title: "The ecosystem role of a jumping spider",
-                paragraphs: [
-                    "Jumping spiders regulate insects across bark, leaves, walls, and understory surfaces. Their ecosystem role is local but constant, especially in places where many tiny interactions add up to meaningful pressure.",
-                    "They also show that effective predator control does not require large size. Sometimes it requires better targeting at the right scale."
-                ]
-            },
-            {
-                title: "What humans can learn from jumping spiders",
-                paragraphs: [
-                    "A jumping spider is a good lesson in precision over drama. Better depth perception, better timing, and cleaner commitment beat random volume.",
-                    "In systems terms, the point is simple: if you improve targeting enough, you often need less force than you thought."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/why-jumping-spiders-are-so-precise.png",
-                        alt: "Jumping spider infographic summarizing vision, hunting precision, behavior, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: jumping spiders pair sharp visual targeting with measured movement to hunt efficiently at small scale."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "elephant",
-        slug: "why-elephants-never-stop-reshaping-landscapes",
-        title: "Why Elephants Never Stop Reshaping Landscapes",
-        description: "Explore elephant behavior, memory, survival strategy, ecosystem role, and the systems biology behind how elephants reshape habitats over time.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/african-elephant-in-the-wild-credit-elie-wolf.jpg",
-            alt: "African elephant in the wild illustrating habitat engineering, memory, and ecosystem role for AnimalDex",
-            width: 2048,
-            height: 1536,
-            caption: "An elephant in the wild shows how memory, movement, and sheer physical presence reshape landscapes over time."
-        },
-        readingMinutes: 8,
-        tags: ["Elephant behavior", "Ecosystem role", "Animal intelligence"],
-        searchIntents: ["elephant behavior", "elephant ecosystem role", "how elephants survive", "elephant intelligence"],
-        sections: [
-            {
-                title: "Why elephants matter at system scale",
-                paragraphs: [
-                    "Elephants matter because they operate above the scale of a single feeding event or single trail. When an elephant moves, digs, strips bark, opens a path, or remembers a water route, the surrounding habitat changes with it.",
-                    "That makes elephants one of the clearest examples of animal behavior translating into environmental infrastructure."
-                ]
-            },
-            {
-                title: "What makes an elephant unique?",
-                paragraphs: [
-                    "The trunk alone is extraordinary hardware: tool, sensor, manipulator, drink tube, feeding arm, and social signal interface in one structure. Pair that with long-term memory and low-frequency communication, and the result is far more than raw size.",
-                    "Elephants are powerful because they combine force with information. They do not just occupy space; they read and reuse it."
-                ]
-            },
-            {
-                title: "How elephants survive across difficult terrain",
-                paragraphs: [
-                    "Elephant survival depends on route memory, group knowledge, and the ability to keep finding food and water across large, seasonally unstable ranges.",
-                    "In that sense, their animal behavior is logistics-heavy. The herd survives because it remembers where the system still works when conditions get thin."
-                ]
-            },
-            {
-                title: "The ecosystem role of elephants",
-                paragraphs: [
-                    "Elephants disperse seeds, open vegetation, create paths, modify woodland structure, and expose water sources that smaller species later use. Their ecosystem role is therefore both biological and architectural.",
-                    "They do not just live in a habitat. They help determine which habitats stay closed, which become accessible, and which resources remain reachable under stress."
-                ]
-            },
-            {
-                title: "What humans can learn from elephants",
-                paragraphs: [
-                    "Elephants show that scale only becomes durable when it is paired with memory. Big systems fail quickly when they forget where the bottlenecks and fallback routes are.",
-                    "That is the practical lesson: store useful route knowledge, not just abstract data, because resilience often depends on remembering where survival still works."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/the-ecosystem-role-of-an-elephant-infographic.png",
-                        alt: "Elephant infographic summarizing landscape engineering, movement, survival strategy, and ecosystem role",
-                        width: 1536,
-                        height: 1024,
-                        caption: "Infographic summary: elephants reshape ecosystems through movement, seed dispersal, vegetation change, and remembered routes to resources."
-                    }
-                }
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "tiger",
-        slug: "how-tigers-survive-as-solo-apex-hunters",
-        title: "How Tigers Survive as Solo Apex Hunters",
-        description: "A systems look at tiger behavior, survival strategy, ecosystem role, and why this solitary predator remains one of the most effective hunters in the wild.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/bengal-tiger-close-up.webp",
-            alt: "Close-up of a Bengal tiger illustrating stealth, focus, and solo apex hunting strategy for AnimalDex",
-            width: 800,
-            height: 519,
-            caption: "A Bengal tiger close-up captures the restraint, sensory focus, and decisive commitment behind solo apex hunting."
-        },
-        readingMinutes: 7,
-        tags: ["Tiger behavior", "Apex predator", "Animal survival"],
-        searchIntents: ["tiger behavior", "how tigers survive", "tiger ecosystem role", "tiger hunting strategy"],
-        sections: [
-            {
-                title: "Why the tiger remains such a powerful animal story",
-                paragraphs: [
-                    "Tigers keep attracting attention because they combine visual power with operational restraint. They are not noisy social predators. They are solitary systems that still manage to dominate high-value territory.",
-                    "That makes them useful for understanding how ambush, camouflage, and energy discipline can outperform constant activity."
-                ]
-            },
-            {
-                title: "What makes a tiger unique?",
-                paragraphs: [
-                    "A tiger blends striped camouflage, strong night vision, padded feet, and explosive forelimb force into one close-range hunting package. The body is built for concealment and violent resolution, not for long public chases.",
-                    "That matters because the tiger’s edge is timing. It narrows the gap between hidden presence and decisive contact."
-                ]
-            },
-            {
-                title: "How to tell the difference between different tigers",
-                paragraphs: [
-                    "The safest way to compare tiger types is to look at body build, stripe density, coat tone, and context together rather than forcing one trait to do all the work. Bengal tigers usually look larger and heavier through the chest and shoulders, with a rich orange coat and strong black striping across a broad frame.",
-                    "Sumatran tigers usually read smaller, tighter, and more densely striped, often with a darker coat and a more compact build that fits dense forest conditions. If you compare Bengal tigers vs Sumatran tigers at a glance, Bengal tigers often feel broader and more open-patterned, while Sumatran tigers tend to look narrower, darker, and more tightly marked.",
-                    "Those are useful visual rules, but they are not perfect on their own. Age, sex, lighting, posture, and individual variation can blur the differences, so the most reliable comparison is pattern plus proportions plus where the tiger originates."
-                ],
-                inlineLinks: [
-                    {text: "Bengal tigers", slug: "bengal-tiger"},
-                    {text: "Sumatran tigers", slug: "sumatran-tiger"}
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/types-of-tigers-how-to-tell-the-difference.jpg",
-                        alt: "Comparison image showing how to tell the difference between tiger types, including Bengal and Sumatran tigers",
-                        width: 900,
-                        height: 1310,
-                        caption: "Tiger comparison visual: build, stripe density, coat tone, and habitat context help separate Bengal and Sumatran tigers."
-                    }
-                }
-            },
-            {
-                title: "How tigers survive without pack support",
-                paragraphs: [
-                    "Tiger survival depends on territory quality, stealth, and careful energy budgeting. Every failed hunt is expensive, so the animal benefits from selecting situations where surprise is already doing part of the work.",
-                    "This is why tiger animal behavior looks patient rather than busy. The tiger does not need constant motion to stay dangerous."
-                ]
-            },
-            {
-                title: "The ecosystem role of a tiger",
-                paragraphs: [
-                    "Tigers regulate herbivores and other prey across forests, floodplains, and grasslands. Their ecosystem role is not just about the prey they kill, but also the caution they inject into prey movement patterns.",
-                    "That risk pressure changes where animals feed, how long they stay exposed, and how vegetation recovers in response."
-                ]
-            },
-            {
-                title: "What humans can learn from tiger strategy",
-                paragraphs: [
-                    "The tiger is a case study in high-value commitment. It holds energy until position and surprise make the move worth making.",
-                    "That is the lesson. Activity is not the same as progress, and some systems win precisely because they stop doing low-leverage work."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "orangutan",
-        slug: "how-orangutans-think-and-survive-in-the-canopy",
-        title: "How Orangutans Think and Survive in the Canopy",
-        description: "Discover orangutan intelligence, canopy behavior, survival strategy, and ecosystem role through a systems view of one of the forest’s best problem solvers.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/photography-orangutan.jpg",
-            alt: "Orangutan in the forest canopy illustrating intelligence, reach, and arboreal survival strategy for AnimalDex",
-            width: 1600,
-            height: 1067,
-            caption: "An orangutan in the canopy captures the patience, reach, and forest memory that support survival in complex arboreal habitats."
-        },
-        readingMinutes: 8,
-        tags: ["Orangutan intelligence", "Canopy behavior", "Ecosystem role"],
-        searchIntents: ["orangutan intelligence", "orangutan behavior", "how orangutans survive", "orangutan ecosystem role"],
-        sections: [
-            {
-                title: "Why orangutans matter in conversations about animal intelligence",
-                paragraphs: [
-                    "Orangutans matter because their intelligence is not theatrical. It is patient, spatial, and deeply tied to the realities of moving and feeding in a three-dimensional forest.",
-                    "That makes them a stronger systems-biology story than the usual simplified narratives about being smart in a human-like way."
-                ]
-            },
-            {
-                title: "What makes an orangutan unique?",
-                paragraphs: [
-                    "Long arms, strong hands and feet, slow development, and extensive learning time give orangutans a rare combination of mobility and cognitive refinement in the canopy.",
-                    "They are not built for speed on the ground. They are built for solving arboreal problems in a habitat where one bad movement can be costly."
-                ]
-            },
-            {
-                title: "Types of orangutans",
-                paragraphs: [
-                    "There are three living orangutan species, and the most useful comparison is Bornean orangutan vs Sumatran orangutan vs Tapanuli orangutan. Bornean orangutans are generally heavier-built and more robust, while Sumatran orangutans often look slimmer, paler, and more lightly built through the face and body.",
-                    "Tapanuli orangutans are the rarest and most geographically restricted. They are closely related to the Sumatran form but are recognized as their own species, with differences in skull shape, hair texture, vocalization patterns, and isolated range in the Batang Toru ecosystem.",
-                    "If you are trying to tell them apart in photos, geography is still one of the best clues. Borneo points to Bornean orangutan, northern Sumatra usually points to Sumatran orangutan, and the Batang Toru region points to Tapanuli orangutan."
-                ],
-                inlineLinks: [
-                    {text: "Bornean orangutan", slug: "bornean-orangutan"},
-                    {text: "Bornean orangutans", slug: "bornean-orangutan"},
-                    {text: "Sumatran orangutan", slug: "sumatran-orangutan"},
-                    {text: "Sumatran orangutans", slug: "sumatran-orangutan"},
-                    {text: "Tapanuli orangutan", slug: "tapanuli-orangutan"},
-                    {text: "Tapanuli orangutans", slug: "tapanuli-orangutan"}
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/types-of-orangutans.png",
-                        alt: "Types of orangutans comparison image covering Bornean, Sumatran, and Tapanuli orangutans",
-                        width: 2482,
-                        height: 2482,
-                        caption: "Orangutan comparison visual: Bornean, Sumatran, and Tapanuli orangutans are easiest to separate by build, facial shape, coat texture, and geography."
-                    }
-                }
-            },
-            {
-                title: "How orangutans survive in a complex forest",
-                paragraphs: [
-                    "Orangutans survive by remembering routes, timing fruit availability, and navigating branch architecture without wasting unnecessary energy. Their animal behavior rewards caution, planning, and habitat familiarity.",
-                    "That is why forest degradation hits them hard. Break the canopy logic and you break part of the decision system they rely on."
-                ]
-            },
-            {
-                title: "The ecosystem role of orangutans",
-                paragraphs: [
-                    "Orangutans disperse seeds and support forest regeneration through feeding and movement. Their ecosystem role is tied to long-range plant turnover, especially in dense forest systems where large-bodied dispersers matter.",
-                    "They are not just residents of the canopy. They help keep the canopy’s future inventory moving."
-                ]
-            },
-            {
-                title: "What humans can learn from orangutans",
-                paragraphs: [
-                    "Orangutans are a reminder that not every intelligent system should be optimized for speed. In dense, high-risk environments, patience and retained knowledge are often the premium traits.",
-                    "That is the practical takeaway: if the environment is structurally complex, slow learning can be smarter than fast guessing."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "jellyfish",
-        slug: "why-jellyfish-thrive-in-changing-oceans",
-        title: "Why Jellyfish Thrive in Changing Oceans",
-        description: "A practical guide to jellyfish behavior, simple but effective survival strategy, ecosystem role, and why jellyfish can flourish when ocean systems shift.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/jellyfish-photography.webp",
-            alt: "Jellyfish in the ocean illustrating low-cost survival strategy and adaptation to changing marine conditions for AnimalDex",
-            width: 1072,
-            height: 715,
-            caption: "A jellyfish drifting through open water captures the simple, low-overhead design that lets jellyfish thrive when marine systems shift."
-        },
-        readingMinutes: 6,
-        tags: ["Jellyfish", "Marine ecosystems", "Animal behavior"],
-        searchIntents: ["jellyfish behavior", "how jellyfish survive", "jellyfish ecosystem role", "why jellyfish thrive"],
-        sections: [
-            {
-                title: "Why jellyfish matter more than most people assume",
-                paragraphs: [
-                    "Jellyfish are often treated as background marine oddities, but that misses the point. They are low-cost biological systems that can convert shifting ocean conditions into real competitive advantage.",
-                    "That is why jellyfish matter in ecology discussions. When they bloom, they often reveal something about the surrounding system."
-                ]
-            },
-            {
-                title: "What makes a jellyfish unique?",
-                paragraphs: [
-                    "A jellyfish does not rely on a heavy skeleton, large brain, or muscular chase strategy. It uses nematocysts, pulsed movement, and a gelatinous body plan that keeps structural costs low.",
-                    "That makes it a different kind of survival hardware. It is not trying to overpower the ocean. It is trying to exploit the flow efficiently enough to stay in the game."
-                ]
-            },
-            {
-                title: "How jellyfish survive",
-                paragraphs: [
-                    "Jellyfish survive by pairing simple capture hardware with environmental drift. They let currents do part of the transportation work while keeping prey capture mechanisms ready.",
-                    "In animal behavior terms, this is a lightweight strategy. The jellyfish does not need to dominate every interaction if the surrounding water keeps delivering opportunities."
-                ]
-            },
-            {
-                title: "Do jellyfish feel pain?",
-                paragraphs: [
-                    "Jellyfish respond to touch, injury, and environmental change, but that does not automatically mean they feel pain in the way vertebrates are thought to. They do not have a brain or a centralized nervous system that would strongly suggest pain processing like mammals, birds, or many other animals.",
-                    "The safer interpretation is that jellyfish detect and react to harmful stimuli without good evidence for conscious pain as humans usually mean it. They have nerve nets, not a centralized mind, so the better phrase is stimulus response rather than emotional suffering.",
-                    "That difference matters when people ask how predators interact with them. A sea turtle eating a jellyfish is still part of a real ecological relationship, but it is not well described by projecting mammal-style pain assumptions onto a very different kind of body plan."
-                ],
-                inlineLinks: [
-                    {text: "sea turtle", slug: "sea-turtle"}
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/sea-turtle-eating-jellyfish.png",
-                        alt: "Sea turtle eating jellyfish, illustrating predator-prey relationships and the question of whether jellyfish feel pain",
-                        width: 960,
-                        height: 636,
-                        caption: "Sea turtle and jellyfish interaction: jellyfish clearly respond to stimuli, but current evidence does not support pain processing in the mammal-like sense."
-                    }
-                }
-            },
-            {
-                title: "The ecosystem role of jellyfish",
-                paragraphs: [
-                    "Jellyfish feed on plankton and small organisms while also serving as food for other marine animals. Their ecosystem role is part transfer system and part warning light.",
-                    "When jellyfish populations surge, it can indicate marine imbalance, altered predation, or nutrient conditions that favor opportunistic, low-overhead biology."
-                ]
-            },
-            {
-                title: "What humans can learn from jellyfish",
-                paragraphs: [
-                    "Jellyfish are a lesson in structural economy. A system does not need to be elaborate to be effective if it is built for the real conditions it expects to face.",
-                    "That is the useful insight: sometimes the winning move is to lower the operating cost enough that the environment starts carrying more of the burden."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "crocodile",
-        slug: "how-crocodiles-dominate-the-water-edge",
-        title: "How Crocodiles Dominate the Water Edge: Ambush, Behavior, and Ecosystem Role",
-        description: "Understand crocodile behavior, ambush survival strategy, ecosystem role, and why riverbanks and estuaries become so dangerous when crocodiles control the chokepoints.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-crocodiles-dominate-the-water.webp",
-            alt: "Crocodile featured image for the AnimalDex article on water-edge ambush, behavior, and ecosystem role",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: AnimalDex CDN."
-        },
-        readingMinutes: 7,
-        tags: ["Crocodile behavior", "Ambush predators", "Ecosystem role"],
-        searchIntents: ["crocodile behavior", "how crocodiles survive", "crocodile ecosystem role", "crocodile ambush strategy"],
-        sections: [
-            {
-                title: "Why crocodiles remain such effective predators",
-                paragraphs: [
-                    "Crocodiles matter because they solve one problem extremely well: control the edge between land and water where movement narrows and attention gets split.",
-                    "That makes them less about constant domination and more about strategic geography. A crocodile is dangerous because the terrain is helping."
-                ]
-            },
-            {
-                title: "What makes a crocodile unique?",
-                paragraphs: [
-                    "Jaw pressure sensors, high-mounted eyes and nostrils, explosive tail propulsion, and a body plan that vanishes into the waterline make crocodiles specialized ambush hardware.",
-                    "They are not built to waste energy in open pursuit. They are built to hold still until the environment starts doing most of the setup."
-                ]
-            },
-            {
-                title: "How crocodiles survive",
-                paragraphs: [
-                    "Crocodile survival strategy depends on patience, low visible profile, and decisive short-range force. The success window is narrow, so timing matters more than continuous action.",
-                    "That is why crocodile animal behavior often looks lazy to casual observers. In reality, it is an energy-saving system waiting for a chokepoint to become a trap."
-                ]
-            },
-            {
-                title: "The ecosystem role of crocodiles",
-                paragraphs: [
-                    "Crocodiles regulate prey access around rivers, wetlands, estuaries, and shorelines. Their ecosystem role includes shifting drinking behavior, movement timing, and carcass-driven nutrient movement.",
-                    "They turn exposed edges into risk zones, and that alone changes how the rest of the system allocates space."
-                ]
-            },
-            {
-                title: "What humans can learn from crocodiles",
-                paragraphs: [
-                    "Crocodiles are a sharp lesson in bottleneck control. You do not need to own the entire map if you understand where the map collapses into a few forced pathways.",
-                    "In strategic terms, chokepoints often matter more than surface area."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "king-cobra",
-        slug: "how-king-cobras-survive-and-hunt-other-snakes",
-        title: "How King Cobras Survive and Hunt Other Snakes",
-        description: "Explore king cobra behavior, specialized hunting strategy, ecosystem role, and how this predator survives by focusing on one of the hardest niches in the forest.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-king-cobras-survive-and-hunt-other-snakes.webp",
-            alt: "King cobra featured image for the AnimalDex article on hunting other snakes and survival strategy",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: AnimalDex CDN."
-        },
-        readingMinutes: 7,
-        tags: ["King cobra", "Reptile behavior", "Predator ecology"],
-        searchIntents: ["king cobra behavior", "how king cobras survive", "king cobra ecosystem role", "king cobra hunting strategy"],
-        sections: [
-            {
-                title: "Why the king cobra stands apart",
-                paragraphs: [
-                    "The king cobra matters because it is a specialist with scale. It is not just another venomous snake; it is a predator tuned to track, confront, and consume other reptiles, including other snakes.",
-                    "That narrow focus gives it a distinct place in discussions about animal behavior and evolutionary strategy."
-                ]
-            },
-            {
-                title: "What makes a king cobra unique?",
-                paragraphs: [
-                    "The king cobra combines strong chemosensory tracking, an elevated defensive and striking posture, significant venom yield, and a long body built for efficient movement through forest structure.",
-                    "Those traits create a predator that can locate difficult prey and still defend itself with intimidating presence when needed."
-                ]
-            },
-            {
-                title: "How king cobras survive",
-                paragraphs: [
-                    "King cobra survival is built on specialization. By focusing on reptiles that many other predators avoid or cannot manage cleanly, it reduces direct competition for one of its main food channels.",
-                    "Its animal behavior reflects that economy. This is not a generalist gambler. It is a system tuned for a narrow, high-skill niche."
-                ]
-            },
-            {
-                title: "The ecosystem role of a king cobra",
-                paragraphs: [
-                    "King cobras regulate other snake populations and occupy a high position in reptile food chains. Their ecosystem role helps keep one difficult predator layer from going unchecked.",
-                    "That matters because controlling predator density inside predator-rich systems can stabilize the broader structure in less obvious ways."
-                ]
-            },
-            {
-                title: "What humans can learn from king cobras",
-                paragraphs: [
-                    "The king cobra demonstrates the value of hard specialization. General competence has value, but some systems create their edge by getting extremely good at one difficult job.",
-                    "The lesson is not to narrow blindly. It is to choose the niche where precision has the highest payoff."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "dolphin",
-        slug: "how-dolphin-intelligence-works-in-the-wild",
-        title: "How Dolphin Intelligence Works in the Wild",
-        description: "A practical guide to dolphin intelligence, animal behavior, echolocation, survival strategy, and ecosystem role in open-water hunting systems.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/dolphin-intelligence-a-pack-of-dolphins.jpg",
-            alt: "A pod of dolphins illustrating social intelligence, echolocation, and coordinated survival strategy for AnimalDex",
-            width: 2048,
-            height: 1152,
-            caption: "A pack of dolphins captures the social coordination and real-time sensing that make dolphin intelligence so effective in the wild."
-        },
-        readingMinutes: 7,
-        tags: ["Dolphin intelligence", "Marine behavior", "Animal behavior"],
-        searchIntents: ["dolphin intelligence", "dolphin behavior", "how dolphins survive", "dolphin ecosystem role"],
-        sections: [
-            {
-                title: "Why dolphins are more than just charismatic animals",
-                paragraphs: [
-                    "Dolphins attract attention because their behavior looks obviously intelligent, but the deeper value is how that intelligence works under marine constraints.",
-                    "They have to sense, coordinate, and hunt in an environment where visibility can be unreliable and movement never fully stops. That makes dolphin intelligence operational, not decorative."
-                ]
-            },
-            {
-                title: "What makes a dolphin unique?",
-                paragraphs: [
-                    "Echolocation is the obvious headline, but the real advantage comes from combining sound-based sensing with hydrodynamic efficiency and social communication.",
-                    "A dolphin can keep moving, keep sensing, and keep coordinating with others without needing the environment to become visually simple first."
-                ],
-                media: {
-                    type: "image",
-                    image: {
-                        src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/dolphin-seeing-themself-in-a-mirror.jpg",
-                        alt: "Dolphin seeing itself in a mirror, illustrating self-recognition and cognitive complexity in dolphin intelligence",
-                        width: 1259,
-                        height: 783,
-                        caption: "Mirror-recognition imagery points to the kind of perception and self-modeling that often enters dolphin intelligence discussions."
-                    }
-                }
-            },
-            {
-                title: "How dolphins survive and hunt",
-                paragraphs: [
-                    "Dolphins survive by converting uncertainty into feedback. They use sound, group movement, and flexible hunting tactics to corral fish, exploit local conditions, and reduce wasted effort.",
-                    "In animal behavior terms, they are not just quick thinkers. They are continuous-loop thinkers. They sense while moving and update while committing."
-                ]
-            },
-            {
-                title: "The ecosystem role of dolphins",
-                paragraphs: [
-                    "Dolphins pressure fish populations, influence prey schooling behavior, and move predation pressure through coastal and pelagic systems. Their ecosystem role sits in the higher-level marine coordination layer.",
-                    "That matters because smart predators do not only remove biomass. They alter how biomass organizes itself."
-                ]
-            },
-            {
-                title: "What humans can learn from dolphins",
-                paragraphs: [
-                    "Dolphins are a lesson in live feedback systems. Waiting for perfect visibility is usually too slow, so they build sensing into motion instead of treating it as a separate phase.",
-                    "That is the insight worth stealing: strong systems do not pause the world while they think."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "eagle",
-        slug: "how-eagles-use-height-vision-and-timing",
-        title: "How Eagles Use Height, Vision, and Timing to Survive",
-        description: "Learn how eagle behavior, animal vision, hunting strategy, and ecosystem role turn altitude and timing into survival advantages.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/how-eagles-use-height-vision-and-timing-to-survive.webp",
-            alt: "Eagle featured image for the AnimalDex article on height, vision, and timing",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: AnimalDex CDN."
-        },
-        readingMinutes: 6,
-        tags: ["Eagle behavior", "Animal vision", "Predator ecology"],
-        searchIntents: ["eagle behavior", "how eagles survive", "eagle ecosystem role", "eagle hunting strategy"],
-        sections: [
-            {
-                title: "Why eagles still feel like the benchmark for aerial predators",
-                paragraphs: [
-                    "Eagles stand out because they convert vertical space into strategic advantage. Height gives them information, and information gives them cleaner decisions.",
-                    "That makes eagles useful for understanding animal behavior that depends less on speed alone and more on a premium view of the operating surface."
-                ]
-            },
-            {
-                title: "What makes an eagle unique?",
-                paragraphs: [
-                    "Extreme visual acuity, broad soaring wings, and concentrated grip strength in the talons give eagles one of the strongest reconnaissance-to-capture pipelines in the animal world.",
-                    "They are not built just to fly well. They are built to read a large space efficiently enough that the strike can stay selective."
-                ]
-            },
-            {
-                title: "How eagles survive",
-                paragraphs: [
-                    "Eagle survival depends on energy efficiency and timing. Thermals, open sightlines, and selective pursuit keep the cost of hunting lower than it would be for an animal trying to chase everything directly.",
-                    "Their animal behavior is therefore strategic rather than frantic. They let the environment subsidize part of the search."
-                ]
-            },
-            {
-                title: "The ecosystem role of eagles",
-                paragraphs: [
-                    "Eagles regulate fish, birds, and medium prey while also reflecting habitat quality in many landscapes. Their ecosystem role is especially visible where water systems and open terrain make visibility a premium asset.",
-                    "They occupy the high-level pressure layer of a food web, which means their persistence often signals broader system health."
-                ]
-            },
-            {
-                title: "What humans can learn from eagles",
-                paragraphs: [
-                    "Eagles show the value of stepping back far enough to see the real pattern before committing scarce energy.",
-                    "That is the systems lesson: better vantage often beats faster reaction."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "termite",
-        slug: "how-termites-build-living-infrastructure",
-        title: "How Termites Build Living Infrastructure",
-        description: "A systems guide to termite behavior, mound engineering, survival strategy, ecosystem role, and why termites matter far beyond being decomposers.",
-        featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/termites-close-up.webp",
-            alt: "Termites close-up featured image for the AnimalDex article on living infrastructure and mound engineering",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: AnimalDex CDN."
-        },
-        readingMinutes: 7,
-        tags: ["Termite behavior", "Ecosystem engineering", "Animal systems"],
-        searchIntents: ["termite behavior", "termite ecosystem role", "how termites survive", "termite mound engineering"],
-        sections: [
-            {
-                title: "Why termites deserve more respect than they usually get",
-                paragraphs: [
-                    "Termites are easy to reduce to a pest story, but ecologically they are one of the more impressive infrastructure systems on land. They process difficult material, regulate mound conditions, and keep nutrients moving.",
-                    "That makes them important for both systems biology and environmental design conversations."
-                ]
-            },
-            {
-                title: "What makes a termite unique?",
-                paragraphs: [
-                    "Termites combine caste specialization, microbe-assisted digestion, and architecture that helps regulate temperature and moisture. Few animals integrate processing and building so tightly.",
-                    "The colony works because the labor system and the environmental hardware support each other. Digestion, defense, ventilation, and construction are not separate departments."
-                ]
-            },
-            {
-                title: "How termites survive",
-                paragraphs: [
-                    "Termite survival depends on converting low-grade plant material into usable energy while keeping colony conditions stable enough for the whole system to function.",
-                    "That means their animal behavior is less about visible drama and more about relentless maintenance. The colony survives because the internal environment is kept within workable limits."
-                ]
-            },
-            {
-                title: "The ecosystem role of termites",
-                paragraphs: [
-                    "Termites recycle dead plant matter, aerate soil, reshape nutrient availability, and create habitat conditions other organisms can exploit. Their ecosystem role is part decomposition engine and part environmental construction crew.",
-                    "In many landscapes, remove termites and you do not just lose decomposers. You lose a chunk of the soil and structure management layer."
-                ]
-            },
-            {
-                title: "What humans can learn from termites",
-                paragraphs: [
-                    "Termites are a strong reminder that valuable systems often work on the material everyone else ignores. Waste is frequently just unprocessed input.",
-                    "The second lesson is architectural: when structure helps regulate the environment, the whole operation becomes easier to sustain."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "chameleon",
-        slug: "how-chameleons-see-and-strike",
-        title: "How Chameleons See and Strike: Vision, Behavior, and Survival Strategy",
-        description: "Learn how chameleon vision, camouflage, tongue mechanics, animal behavior, and ecosystem role make this reptile an elite patient hunter.",
-        featuredImage: {
-            src: "https://chameleons101.com/wp-content/uploads/2023/04/Panther_Chameleons101_Eyes-1080x675.jpg",
-            alt: "Chameleon featured image for the AnimalDex article on vision, strike behavior, and survival strategy",
-            width: 1080,
-            height: 675,
-            caption: "Featured image source: Chameleons101."
-        },
-        readingMinutes: 6,
-        tags: ["Chameleon behavior", "Animal vision", "Reptile survival"],
-        searchIntents: ["chameleon behavior", "how chameleons survive", "chameleon ecosystem role", "chameleon vision"],
-        sections: [
-            {
-                title: "Why chameleons are more than just color-change curiosities",
-                paragraphs: [
-                    "Chameleons are famous for camouflage, but the more useful systems view is that they combine surveillance, grip, and ballistic feeding into one integrated hunting platform.",
-                    "That makes them interesting not because they look strange, but because their design solves a very specific arboreal problem set efficiently."
-                ]
-            },
-            {
-                title: "What makes a chameleon unique?",
-                paragraphs: [
-                    "Independently moving eyes give chameleons unusually broad visual coverage, while zygodactyl feet and gripping tails stabilize the body on narrow branches.",
-                    "Then the tongue does the final work, converting a long visual setup phase into a rapid capture event. It is a clean example of sensor-first hunting."
-                ]
-            },
-            {
-                title: "How chameleons survive",
-                paragraphs: [
-                    "Chameleon survival strategy depends on patience, concealment, and precise commitment. They do not benefit from wasteful movement because movement makes them easier to notice and costs energy.",
-                    "Their animal behavior therefore looks almost conservative. They hold position, keep scanning, and act when the probability turns in their favor."
-                ]
-            },
-            {
-                title: "The ecosystem role of chameleons",
-                paragraphs: [
-                    "Chameleons regulate insect populations in shrubs, trees, and forest edges while also serving as prey for larger animals. Their ecosystem role sits in a mid-level control band that helps keep local insect pressure from drifting upward unchecked.",
-                    "They matter because fine-scale predation is still system structure, even when it happens branch by branch."
-                ]
-            },
-            {
-                title: "What humans can learn from chameleons",
-                paragraphs: [
-                    "Chameleons are a strong case for patient sensing. You do not need constant activity if your observation quality is high enough to make the one important move count.",
-                    "That is the practical insight: better surveillance often creates more value than busier execution."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "firefly",
-        slug: "why-fireflies-use-light-so-well",
-        title: "Why Fireflies Use Light So Well: Signaling, Behavior, and Survival Strategy",
-        description: "Explore firefly signaling, animal behavior, survival strategy, and ecosystem role through a systems view of one of nature’s cleanest communication designs.",
-        featuredImage: {
-            src: "https://plunketts.net/uploads/blog/279a65cf-c701-422b-93f5-a428a926b59a/firefly-glow.jpg",
-            alt: "Firefly featured image for the AnimalDex article on signaling, behavior, and survival strategy",
-            width: 1200,
-            height: 675,
-            caption: "Featured image source: Plunkett's Pest Control."
-        },
-        readingMinutes: 6,
-        tags: ["Firefly behavior", "Animal signaling", "Insect ecology"],
-        searchIntents: ["firefly behavior", "how fireflies survive", "firefly ecosystem role", "firefly signaling"],
-        sections: [
-            {
-                title: "Why fireflies are a better systems story than a nostalgia story",
-                paragraphs: [
-                    "Fireflies are often framed as magical scenery, but their real value is functional. They turn communication into a low-energy, high-legibility signaling system that works in dark environments.",
-                    "That makes them one of the cleaner examples of signal design in the animal world."
-                ]
-            },
-            {
-                title: "What makes a firefly unique?",
-                paragraphs: [
-                    "Bioluminescence is the obvious answer, but the key is not simply producing light. It is producing the right flash pattern, at the right time, for the right audience.",
-                    "That turns a tiny insect into an elegant communication platform where energy cost, recognition, and timing are tightly linked."
-                ]
-            },
-            {
-                title: "How fireflies survive",
-                paragraphs: [
-                    "Firefly survival depends on successful signaling, habitat conditions that support larvae and adults, and timing synchronized to night activity patterns.",
-                    "Their animal behavior shows that good communication can be survival hardware. If your signal is clear enough, wasted search and wasted exposure both drop."
-                ]
-            },
-            {
-                title: "The ecosystem role of fireflies",
-                paragraphs: [
-                    "Fireflies contribute to local food webs and help illustrate habitat quality in moist landscapes, edges, and low-light environments where their life cycle can complete successfully.",
-                    "Their ecosystem role is not about brute force. It is about supporting biodiversity and revealing whether the surrounding system still supports delicate timing-based interactions."
-                ]
-            },
-            {
-                title: "What humans can learn from fireflies",
-                paragraphs: [
-                    "Fireflies demonstrate that a strong signal does not have to be loud or expensive. It has to be legible, efficient, and correctly timed.",
-                    "That is a useful design principle in almost any system where attention is scarce."
-                ]
-            }
-        ]
-    }),
-    createAnimalSystemsPost({
-        speciesSlug: "whale-shark",
-        slug: "how-whale-sharks-feed-at-ocean-scale",
-        title: "How Whale Sharks Feed at Ocean Scale",
-        description: "Understand whale shark behavior, filter-feeding survival strategy, ecosystem role, and how the largest fish on Earth thrives without acting like a classic predator.",
-        featuredImage: {
-            src: "https://cdn.britannica.com/33/151933-050-E7E77CA0/Whale-shark-swimming-trevallies-front-predators-filter-feeding.jpg",
-            alt: "Whale shark featured image for the AnimalDex article on ocean-scale filter feeding",
-            width: 1600,
-            height: 900,
-            caption: "Featured image source: Britannica."
-        },
-        readingMinutes: 7,
-        tags: ["Whale shark", "Marine biology", "Ecosystem role"],
-        searchIntents: ["whale shark behavior", "how whale sharks survive", "whale shark ecosystem role", "whale shark feeding strategy"],
-        sections: [
-            {
-                title: "Why the whale shark feels like a contradiction",
-                paragraphs: [
-                    "The whale shark is the largest fish on Earth, yet it does not behave like a classic apex hunter. That contrast is what makes it so useful in systems thinking.",
-                    "It proves that scale can come from processing flow efficiently rather than from dominating every interaction with force."
-                ]
-            },
-            {
-                title: "What makes a whale shark unique?",
-                paragraphs: [
-                    "A huge mouth, filtering structures, and low-cost cruising mechanics allow the whale shark to convert plankton-rich water into usable energy without high-speed pursuit.",
-                    "That is unusual because the animal’s size suggests aggression, while its real advantage is throughput."
-                ]
-            },
-            {
-                title: "How whale sharks survive",
-                paragraphs: [
-                    "Whale shark survival depends on tracking productive water, arriving where plankton or small prey concentrations justify the movement cost, and filtering volume efficiently once the resource appears.",
-                    "Their animal behavior is therefore route-aware and opportunity-driven. They do not need every part of the ocean to be good. They need to find the parts where the flow becomes worth processing."
-                ]
-            },
-            {
-                title: "The ecosystem role of a whale shark",
-                paragraphs: [
-                    "Whale sharks help link surface productivity to larger marine food webs by turning dense small prey into mobile biomass. Their ecosystem role also highlights where ocean conditions become seasonally productive enough to support very large filter feeders.",
-                    "They are useful indicators of marine abundance hotspots rather than simple symbols of ocean size."
-                ]
-            },
-            {
-                title: "What humans can learn from whale sharks",
-                paragraphs: [
-                    "Whale sharks are a lesson in scale through process efficiency. You do not always grow by chasing more targets individually. Sometimes you grow by getting very good at handling the concentrated flow when it arrives.",
-                    "That is the strategic insight: throughput can be a better growth engine than force."
-                ]
-            }
-        ]
-    }),
+    ...animalSystemsPosts1,
+    ...animalSystemsPosts2,
+    ...animalSystemsPosts3,
     {
         slug: "how-to-estimate-animal-breed-prices",
         title: "How to estimate animal breed prices without guessing",
-        description: "A practical guide to animal breed pricing, local average cost, grading signals, and why responsible valuation needs more than a single photo.",
+        description: "How to estimate animal breed prices: the factors that move a puppy or kitten price (pedigree, health tests, colour, demand, region), with a table.",
         publishedAt: "2026-04-24",
-        updatedAt: "2026-04-24",
+        updatedAt: "2026-10-07",
         featuredImage: contentThumb("how-to-estimate-animal-breed-prices"),
         readingMinutes: 7,
         author: "AnimalDex Market Desk",
         tags: ["Breed pricing", "Animal grading", "Pet valuation"],
         searchIntents: [
             "animal breed price estimator",
-            "animal breed pricing app",
+            "how much does a purebred puppy cost",
+            "what affects kitten prices",
             "average breed cost by area",
-            "breeder pricing tool",
             "pet breed valuation",
             "animal breed grading app"
         ],
-        speciesSlugs: ["maine-coon-cat", "african-wild-dog", "bald-eagle"],
+        speciesSlugs: ["maine-coon-cat", "domestic-dog", "domestic-cat"],
+        tableOfContents: [
+            "Breed price is a range, not a magic number",
+            "The seven factors that move the price",
+            "Factor by factor: what to check",
+            "Worked example: two Maine Coon kittens, two prices",
+            "Why a high price is not a quality guarantee",
+            "Why breeders need evidence-backed pricing",
+            "Where AnimalDex fits"
+        ],
+        relatedSlugs: ["how-to-create-custom-animal-card-decks", "how-to-identify-animals-in-the-wild-2026-guide", "what-makes-an-animal-rare"],
         sections: [
             {
                 title: "Breed price is a range, not a magic number",
                 paragraphs: [
-                    "The same breed can have very different prices depending on area, age, documentation, health, temperament, training, and demand. That is why a responsible estimate should start as a range.",
-                    "AnimalDex should position breed pricing around structured context: likely breed signals, grading notes, profile completeness, and local comparison logic."
+                    "The same breed sells for very different amounts depending on where you are, what documents come with the animal, what its parents were tested for, what colour it is, and how many people want one this year. A responsible estimate therefore starts as a range and gets narrower as you add evidence. In most markets, pedigree dogs and cats from registered breeders sit in the hundreds to low thousands in the local currency, with a long tail of outliers above that for show lines, rare colours and fashionable breeds.",
+                    "That spread is not noise. Each factor below moves a listing in a predictable direction, which means you can reason about a price instead of guessing at it."
                 ],
                 inlineLinks: [
-                    {
-                        text: "AnimalDex",
-                        slug: "animal-breed-price-estimator",
-                        href: "/animal-breed-price-estimator"
-                    },
-                    {
-                        text: "breed pricing and grading",
-                        slug: "animal-breed-grading-app",
-                        href: "/animal-breed-grading-app"
-                    }
+                    {text: "Breed price estimator", slug: "animal-breed-price-estimator", href: "/animal-breed-price-estimator"},
+                    {text: "Breed pricing and grading", slug: "animal-breed-grading-app", href: "/animal-breed-grading-app"}
                 ]
             },
             {
-                title: "The signals that matter most",
+                title: "The seven factors that move the price",
                 paragraphs: [
-                    "Start with visible breed traits, then add practical valuation inputs: age, sex, condition, lineage documents, vaccination or health records, training level, rarity, and local buyer demand.",
-                    "For breeder workflows, the most useful system is not just a price calculator. It is a record that explains why a price range might be reasonable."
+                    "Most of the variation in breed prices comes down to seven inputs. The table shows the direction each one pushes and the question to ask a seller about it."
+                ],
+                table: {
+                    columns: ["Factor", "Pushes price up when", "Pushes price down when", "Ask the seller"],
+                    rows: [
+                        {cells: ["Pedigree and registration", "Both parents registered with a recognised body (AKC, The Kennel Club, FCI; CFA or TICA for cats) and papers transfer to you", "No papers, \"papers available for extra\", or registration with an unknown body", "Which registry, and can I see the parents' certificates?"]},
+                        {cells: ["Health testing", "Parents screened for the breed's known problems: hip and elbow scores (OFA, BVA), eye tests, DNA panels, HCM heart scans for Maine Coons and Ragdolls", "\"Vet checked\" only, which means a general exam, not screening", "Which tests, which results, and are they published?"]},
+                        {cells: ["Colour and pattern", "A colour that is scarce within the standard, such as some tabby or tortoiseshell patterns in demand this year", "Common colours; or a \"rare\" colour that the breed standard does not recognise", "Is this colour in the breed standard?"]},
+                        {cells: ["Demand and trend", "A breed featured in films or on social media; small litters in a fashionable breed", "Breeds out of fashion; large litters; a saturated local market", "How long is your waiting list?"]},
+                        {cells: ["Region", "Large cities, countries with few breeders, and anywhere animals must be flown in", "Rural areas and regions where the breed is traditional and plentiful", "Where will the animal be collected from?"]},
+                        {cells: ["Age and purpose", "Puppies and kittens at 8 to 13 weeks; show or breeding rights; started training", "Adults, retired breeding animals, pet-only contracts with a spay or neuter clause", "Is this pet quality or show quality, and what does the contract say?"]},
+                        {cells: ["Breeder reputation", "Years in the breed, club membership, references, lifetime take-back clause", "No references, no visits allowed, several breeds for sale at once", "Can I visit and meet the mother?"]}
+                    ]
+                },
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-estimate-animal-breed-prices/maine-coon.webp",
+                        alt: "Long-haired tabby Maine Coon cat with tufted ears and a full ruff, meowing",
+                        width: 1400,
+                        height: 931,
+                        caption: "Maine Coon: one of the breeds where a parent's HCM heart screening and hip scoring are the biggest single price movers. Photo: Nortlio, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["maine-coon-cat"]
+            },
+            {
+                title: "Factor by factor: what to check",
+                paragraphs: [
+                    "Start with visible breed traits, then add the valuation inputs: age, sex, condition, lineage documents, health records, training and local demand. The point of a structured record is not to compute a number. It is to explain why a price range is reasonable."
                 ],
                 cards: [
                     {
                         label: "Breed evidence",
-                        body: "Likely breed, lookalike notes, image quality, and confidence level should be recorded before any price conversation."
+                        body: "Likely breed, lookalike notes (a Siberian is not a Maine Coon; a working-line Labrador is not a show-line one), photo quality and confidence level, recorded before any price conversation."
+                    },
+                    {
+                        label: "Health paperwork",
+                        body: "Screening results for the parents, not just vaccinations for the kitten or puppy. For dogs: hip and elbow scores, eye certificates, breed DNA panels. For cats: HCM scans, PKD tests, FeLV and FIV status."
                     },
                     {
                         label: "Market context",
-                        body: "Average breed cost by area depends on local demand, reputable seller supply, and what comparable animals include."
-                    },
-                    {
-                        label: "Grading context",
-                        body: "Health documentation, pedigree, age, training, and profile completeness can change how buyers interpret value."
+                        body: "Average breed cost by area depends on local demand, how many reputable breeders are nearby, and what comparable listings include: microchip, first vaccinations, insurance, a contract."
                     },
                     {
                         label: "Buyer protection",
-                        body: "Clear notes reduce vague claims and help buyers ask better questions before committing."
+                        body: "Clear notes reduce vague claims and help buyers ask better questions. A price that cannot be explained line by line is a price to walk away from."
+                    }
+                ],
+                inlineLinks: [
+                    {
+                        text: "Breed identifier and lookalike guide",
+                        slug: "animal-breed-identifier-lookalike-guide-app",
+                        href: "/use-cases/animal-breed-identifier-lookalike-guide-app"
                     }
                 ]
             },
             {
+                title: "Worked example: two Maine Coon kittens, two prices",
+                paragraphs: [
+                    "Imagine two 12-week-old Maine Coon kittens advertised in the same city in the same month. Kitten A comes from CFA-registered parents, both with clear HCM echocardiograms and hip scores published on the breeder's site, is sold on a pet contract with a neuter clause, and the breeder has a six-month waiting list. Kitten B is advertised as \"Maine Coon type\", comes with no papers, a vet-check certificate only, and is available today.",
+                    "Both may be lovely cats. But A carries the costs of health screening, registration and a smaller breeding programme, and those costs are what the higher price reflects. B is cheaper because the seller has not spent on any of that, and the buyer is accepting the unknowns, including whether the kitten is purebred at all. Neither price is wrong; the mistake is comparing them as if they were the same product."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-estimate-animal-breed-prices/labrador-puppies.webp",
+                        alt: "Yellow Labrador Retriever puppy standing in a yard",
+                        width: 1400,
+                        height: 933,
+                        caption: "A Labrador puppy at roughly the age most breeders sell, 8 to 12 weeks. The parents' hip, elbow and eye results are the paperwork that separates two otherwise identical listings. Photo: Sivahari, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["maine-coon-cat", "domestic-dog"]
+            },
+            {
+                title: "Why a high price is not a quality guarantee",
+                paragraphs: [
+                    "Price tracks scarcity and marketing as well as quality, and some of the most expensive listings are the ones to avoid. Colours sold as rare are often outside the breed standard, and several are linked to health problems: merle-to-merle breeding in dogs raises the risk of deafness and eye defects, and dilute coats in some breeds are associated with skin disease. A breeder who charges extra for a colour the breed club does not recognise is pricing novelty, not soundness.",
+                    "The opposite warning matters too. A price far below the local range for a registered breed usually means something is missing: no screening, no registration, a very young animal, or a seller who is not a breeder at all. Rescue and adoption fees are a separate category, typically a modest contribution toward vaccination and neutering rather than a market price, and they are the right benchmark if what you want is a companion rather than a lineage."
+                ],
+                pullQuote: "A price is a list of costs someone paid. Ask for the list. If there is no list, there is no price, only a number."
+            },
+            {
                 title: "Why breeders need evidence-backed pricing",
                 paragraphs: [
-                    "Breeders often need to explain value clearly. A structured profile can show the difference between a casual listing and a well-documented animal.",
-                    "That does not mean every animal needs a formal appraisal. It means the pricing conversation should be based on visible traits, documented facts, and comparable local expectations."
+                    "Breeders need to explain value clearly, to buyers and sometimes to breed clubs. A structured profile shows the difference between a casual listing and a documented animal: breed evidence, parent screening, registration, contract terms and comparable local listings, all in one place.",
+                    "That does not mean every animal needs a formal appraisal. It means the pricing conversation should rest on visible traits, documented facts and comparable local expectations rather than on what a neighbour got last year."
                 ],
                 inlineLinks: [
                     {
-                        text: "pricing conversation",
+                        text: "Breed pricing and grading use case",
                         slug: "animal-breed-pricing-grading-app",
                         href: "/use-cases/animal-breed-pricing-grading-app"
                     }
@@ -4685,129 +4037,257 @@ const blogPostsData: BlogPost[] = [
             {
                 title: "Where AnimalDex fits",
                 paragraphs: [
-                    "AnimalDex can give this search audience a useful bridge between breed identification and valuation. The app can help users collect the clues that make pricing less arbitrary.",
-                    "The careful framing is important: AnimalDex should support breed pricing and grading context, not promise exact market prices from one image."
+                    "AnimalDex helps with the first half of the problem: capturing the animal, recording breed clues and lookalike notes, and keeping a profile that a buyer or breeder can read. A German Shepherd or a Maine Coon indexes under its domestic base animal in the collection, with the breed notes attached to the capture.",
+                    "The careful framing matters. AnimalDex supports breed identification and grading context; it does not quote market prices from a single photo, and no photo can. The number comes from the paperwork and the local market, and the app's job is to make sure you have asked for both."
+                ],
+                inlineLinks: [
+                    {text: "How AnimalDex indexes animals", slug: "how-animaldex-indexes-animals", href: "/blog/how-animaldex-indexes-animals"}
                 ]
             }
         ],
         faq: [
             {
                 question: "Can a breed price estimator be exact?",
-                answer: "No. A responsible estimate should use a range and explain the factors behind it, including breed evidence, documentation, health, age, and local demand."
+                answer: "No. A responsible estimate is a range that narrows as evidence is added: registration, the parents' health screening, colour, age, contract terms and local demand. Two animals of the same breed in the same city can legitimately differ by several times depending on those inputs, so any tool that quotes a single number from a photo is guessing."
+            },
+            {
+                question: "What affects the price of a purebred puppy or kitten?",
+                answer: "Seven things explain most of it: pedigree and registration, the parents' health testing, colour and pattern, current demand for the breed, region, the animal's age and whether it is sold as pet or show quality, and the breeder's reputation. Health screening and registration are usually the largest costs behind a higher price."
+            },
+            {
+                question: "Why are some coat colours more expensive?",
+                answer: "Because they are scarce or fashionable, not because they are better. Some colours sold at a premium are not recognised by the breed standard, and a few are linked to health problems, such as deafness and eye defects from merle-to-merle breeding. Check the breed club's standard before paying extra for a colour."
             },
             {
                 question: "What is animal breed grading?",
-                answer: "Breed grading is the process of recording quality and confidence signals such as trait match, documentation, condition, rarity, and profile completeness."
+                answer: "Breed grading is recording the quality and confidence signals behind an animal's profile: how closely it matches the breed, lookalike notes, documentation, health screening, condition, rarity and how complete the record is. It is a way of explaining a price range, not a formal appraisal, and it works for buyers and breeders alike."
+            },
+            {
+                question: "Is a cheap purebred animal a bad idea?",
+                answer: "Not always, but a price well below the local range for a registered breed usually means something is missing, such as screening, papers or a breeder who will take the animal back. Ask what is not included before you assume it is a bargain. If you want a companion rather than a pedigree, rescue adoption fees are the fairer comparison."
             }
+        ],
+        sources: [
+            {label: "American Kennel Club", href: "https://www.akc.org/"},
+            {label: "Orthopedic Foundation for Animals: health screening databases", href: "https://ofa.org/"},
+            {label: "The Cat Fanciers' Association: Maine Coon breed standard", href: "https://cfa.org/maine-coon/"},
+            {label: "The Kennel Club (UK)", href: "https://www.thekennelclub.org.uk/"}
         ]
     },
     {
         slug: "how-to-create-custom-animal-card-decks",
-        title: "How to create custom animal card decks people want to collect",
-        description: "Learn how to design custom animal cards and decks for pets, wildlife trips, classrooms, photography projects, gifts, and creator sales.",
+        title: "How to create custom animal card decks people collect",
+        description: "How to design a custom animal card deck: theme, categories, meaningful stats, rarity tiers, card anatomy, print specs and photo rights.",
         publishedAt: "2026-04-24",
-        updatedAt: "2026-04-24",
+        updatedAt: "2026-10-07",
         featuredImage: contentThumb("how-to-create-custom-animal-card-decks"),
-        readingMinutes: 7,
+        readingMinutes: 8,
         author: "AnimalDex Creator Desk",
         tags: ["Animal cards", "Custom decks", "Creator tools"],
         searchIntents: [
             "custom animal card deck",
+            "how to make animal trading cards",
             "animal card deck creator",
-            "create animal cards",
-            "make animal trading cards",
-            "sell custom animal cards",
-            "pet trading cards"
+            "trading card design template",
+            "trading card print size",
+            "sell custom animal cards"
         ],
-        speciesSlugs: ["maine-coon-cat", "bald-eagle", "komodo-dragon"],
+        speciesSlugs: ["maine-coon-cat", "bald-eagle", "komodo-dragon", "peregrine-falcon", "cheetah", "elephant"],
+        tableOfContents: [
+            "Start with a deck theme",
+            "Choose categories that make the set feel complete",
+            "Pick stats that mean something",
+            "Rarity tiers and how many of each to print",
+            "Give every card a collectible structure",
+            "Print specs that save a reprint",
+            "Design for personal use and creator sales",
+            "Where AnimalDex fits"
+        ],
+        relatedSlugs: ["why-real-animal-collecting-feels-so-good", "real-life-pokemon-animals-you-can-collect-in-the-wild", "how-to-estimate-animal-breed-prices"],
         sections: [
             {
                 title: "Start with a deck theme",
                 paragraphs: [
-                    "A custom animal card deck needs a clear reason to exist. It might be a family pet deck, a zoo trip set, a regional wildlife pack, a classroom unit, or a photographer's best sightings.",
-                    "The theme decides which animals belong, what stats matter, and why someone would want to complete the set."
+                    "A custom animal card deck needs a reason to exist before it needs a design. It might be the family's pets, one zoo trip, the birds of a single reserve, a classroom unit on rainforests, or a photographer's best sightings of the year. The theme decides which animals belong, what stats matter, and why anyone would want the complete set.",
+                    "Keep the first deck small. Thirty to forty cards is enough to feel like a set and few enough to finish; the classic Top Trumps packs ran to about 30, and most trading-card starter sets are 40 to 60. A deck you finish beats a 200-card deck you abandon at card 70."
                 ],
                 inlineLinks: [
                     {
-                        text: "custom animal card deck",
+                        text: "Custom animal card deck",
                         slug: "custom-animal-card-deck",
                         href: "/custom-animal-card-deck"
                     }
                 ]
             },
             {
+                title: "Choose categories that make the set feel complete",
+                paragraphs: [
+                    "Categories are what turn a pile of cards into something collectable. They give the deck sub-sets to finish, a colour code to print, and a reason for a common card to matter: a grey squirrel is dull on its own and essential if it completes the Woodland set. Pick one category axis for the whole deck and keep it visible on every card."
+                ],
+                table: {
+                    columns: ["Category axis", "Example sub-sets", "Best for"],
+                    rows: [
+                        {cells: ["Habitat", "Woodland, wetland, grassland, coast, urban", "Local wildlife decks, school units"]},
+                        {cells: ["Class", "Mammal, bird, reptile, amphibian, fish, invertebrate", "Zoo trips, general nature decks"]},
+                        {cells: ["Continent or region", "Africa, Asia, Americas, Europe, Oceania", "Travel decks, zoo decks"]},
+                        {cells: ["Role", "Predator, grazer, scavenger, pollinator, builder", "Teaching food webs and behaviour"]},
+                        {cells: ["Owner or place", "Each family member's pets; each trip", "Keepsake and gift decks"]}
+                    ]
+                }
+            },
+            {
+                title: "Pick stats that mean something",
+                paragraphs: [
+                    "Stats are the part most homemade decks get wrong, because the numbers are invented. Tie every stat to a real measurement, put it on the same scale across the deck, and the cards become a field guide you can play. Four to six stats is the sweet spot; more than that and nobody reads them.",
+                    "A simple approach is to score each stat 1 to 100 against the largest value in the deck. If the elephant is the heaviest animal in the set at 6,000 kg, it gets 100 for size and a 60 kg cheetah gets 1. For speed, a peregrine's 300 km/h stoop sets the top and a tortoise sits at 1. Where a trait is not a number, such as intelligence or rarity, use a tier (1 to 5) and write the rule down so the deck stays consistent when you add cards later."
+                ],
+                cards: [
+                    {label: "Size", body: "Weight or length, scaled against the deck's biggest animal. Easy to source, easy to argue about, which is the point."},
+                    {label: "Speed", body: "Top recorded speed. Cheetah 100 km/h on land, peregrine 300 km/h in a dive, sailfish around 100 km/h in water."},
+                    {label: "Lifespan", body: "Typical wild lifespan in years. Elephants 60 to 70; a house mouse about one."},
+                    {label: "Rarity", body: "Map to IUCN status: Least Concern 1, Near Threatened 2, Vulnerable 3, Endangered 4, Critically Endangered 5."},
+                    {label: "Intelligence", body: "A tier from documented behaviour: tool use, problem solving, social learning. Keep the evidence note on the card."},
+                    {label: "Dominance", body: "How the animal ranks in its own food web, 1 to 5. Prey animals are not weak cards; they are what the predators need."}
+                ],
+                speciesSlugs: ["elephant", "cheetah", "peregrine-falcon"]
+            },
+            {
+                title: "Rarity tiers and how many of each to print",
+                paragraphs: [
+                    "Rarity is what makes opening a pack feel like something. Four or five tiers are standard, with a steep drop-off between them. A workable distribution for a 40-card deck is 50% common, 30% uncommon, 15% rare, 4% epic and 1% legendary, which gives you twenty commons, twelve uncommons, six rares, one or two epics and a single legendary card. If you also print packs, the same ratio decides how many copies of each card go into the print run.",
+                    "Mark the tier visually and consistently: a border colour, a foil strip, a symbol in one corner. Legendary should be reserved for an animal that is genuinely exceptional in the real world, whether by conservation status, by size, or by the story behind the sighting."
+                ]
+            },
+            {
                 title: "Give every card a collectible structure",
                 paragraphs: [
-                    "A card should include a strong image, animal name, traits, rarity, stats, a short story, and a reason it matters inside the deck.",
-                    "AnimalDex already uses animal profiles and collectible logic, so it can support cards that feel more complete than simple image templates."
+                    "A card should include a strong image, the animal's name, its category, a card number within the set, stats, a short story, and the credit for the photo. Each element has a job, and a card that drops one of them is the card that collectors find unsatisfying without being able to say why."
                 ],
                 cards: [
                     {
+                        label: "Image",
+                        body: "Fills the top 55 to 60% of the card. Use your own photo or a licensed one; a single animal, side-on or three-quarter, against a plain background reads best at card size."
+                    },
+                    {
                         label: "Identity",
-                        body: "Name, species or breed, location, and deck role make the card easy to understand."
+                        body: "Common name large, scientific name small, category symbol, and the set number as 12/40. The number is what makes people want the other 39."
                     },
                     {
                         label: "Stats",
-                        body: "Rarity, strength, speed, intelligence, adaptability, or care difficulty can create comparison value."
+                        body: "Four to six, same order on every card, same scale. A stat block is the part people compare, so it must line up when two cards are held side by side."
                     },
                     {
                         label: "Story",
-                        body: "A short story turns the animal from a picture into a memorable card."
+                        body: "Two or three lines: one real fact and, for a sighting deck, where and when you found it. The story is what turns the card from a picture into a memory."
                     },
                     {
-                        label: "Set logic",
-                        body: "Habitats, regions, colors, traits, or owner stories can make the deck feel complete."
+                        label: "Credit and date",
+                        body: "Photographer, licence and year in small type along the bottom edge. It protects you and makes the deck look finished."
                     }
-                ]
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-create-custom-animal-card-decks/trading-cards-table.webp",
+                        alt: "An 1888 Old Judge cabinet card showing a baseball player with his name and team printed beneath",
+                        width: 910,
+                        height: 1400,
+                        caption: "An 1888 Goodwin & Company card: photo, name, team and publisher. The anatomy of a collectible card has barely changed in 140 years. Photo: Goodwin & Company, Public domain, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["maine-coon-cat", "bald-eagle"]
+            },
+            {
+                title: "Print specs that save a reprint",
+                paragraphs: [
+                    "Most first print runs fail on the mechanics rather than the design. Standard poker size is 63.5 by 88.9 mm (2.5 by 3.5 inches), which is also the size most sleeves, binders and boxes are built for; bridge size is 57 by 89 mm and tarot 70 by 120 mm. Set the artwork up with 3 mm of bleed on every side and keep text at least 3 mm inside the trim line, because a cutter can drift by a millimetre or two on every sheet.",
+                    "Export at 300 dpi in CMYK, not RGB, or the greens and blues of a wildlife photo will shift when printed. Ask the printer for 300 to 350 gsm card stock, and choose a finish on purpose: linen or matte for a deck that will be handled, gloss for colour punch on a display set. Order a proof of five cards before the full run. A proof costs a few currency units and reveals bleed errors, dark photos and unreadable type before they are multiplied by 40."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/how-to-create-custom-animal-card-decks/offset-press.webp",
+                        alt: "Ink units of an offset printing press showing yellow, magenta and cyan sections",
+                        width: 1400,
+                        height: 933,
+                        caption: "The yellow, magenta and cyan units of an offset press. This is why card artwork has to be exported in CMYK, not the RGB your screen uses. Photo: Aatu Dorochenko, CC BY-SA 4.0, via Wikimedia Commons."
+                    }
+                }
             },
             {
                 title: "Design for personal use and creator sales",
                 paragraphs: [
-                    "Pet owners may want keepsake cards. Teachers may want classroom decks. Photographers may want wildlife packs. Small creators may want themed products for a niche audience.",
-                    "AnimalDex should frame this as a creator-ready workflow until a direct marketplace exists: make the cards, organize the deck, and prepare the concept for sharing, printing, or selling elsewhere."
+                    "Pet owners want keepsake cards. Teachers want classroom decks with a worksheet on the back. Photographers want a wildlife pack from a season's work. Small creators want a themed product for a niche audience, the moths of one county or the dogs of one shelter.",
+                    "Photo rights decide what you can sell. Your own photos are yours; Creative Commons images need the credit and, for CC BY-SA, the same licence on the deck; most stock and all screenshots are out. If you plan to sell, use your own captures or licensed images from the start so the deck does not have to be rebuilt later. Treat it as a creator-ready workflow until a direct marketplace exists: make the cards, organise the deck, and prepare the concept for sharing, printing or selling through existing print-on-demand and marketplace services."
                 ],
                 inlineLinks: [
                     {
-                        text: "creator-ready workflow",
+                        text: "Sell custom animal cards",
                         slug: "sell-custom-animal-cards",
                         href: "/sell-custom-animal-cards"
+                    },
+                    {
+                        text: "Custom animal card deck creator use case",
+                        slug: "custom-animal-card-deck-creator",
+                        href: "/use-cases/custom-animal-card-deck-creator"
                     }
                 ]
             },
             {
                 title: "Where AnimalDex fits",
                 paragraphs: [
-                    "AnimalDex has a strong foundation for custom animal cards because its product language already combines scanning, profiles, rarity, collection, and learning.",
-                    "That gives the SEO story a natural product path: users do not just create a card, they build an animal deck with structure."
+                    "AnimalDex is a strong foundation for a custom deck because its cards already combine a live capture, a species profile, stats, a rarity tier and the place and date of the sighting. A season of captures is a deck in waiting: the photos are yours, the stats are consistent across every species, and the rarity tier is grounded in conservation status rather than invented.",
+                    "That gives the project a natural path. You do not just create a card, you build an animal deck with structure, from real sightings, and then decide whether it stays on your phone, goes to a printer as a gift, or becomes a product."
                 ],
+                pullQuote: "A good deck is a field guide you can shuffle. Every number on the card should be true somewhere in the world.",
                 inlineLinks: [
                     {
-                        text: "animal deck",
+                        text: "Animal card deck creator",
                         slug: "animal-card-deck-creator",
                         href: "/animal-card-deck-creator"
-                    }
-                ]
+                    },
+                    {text: "Why real-animal collecting feels so good", slug: "why-real-animal-collecting-feels-so-good", href: "/blog/why-real-animal-collecting-feels-so-good"}
+                ],
+                speciesSlugs: ["komodo-dragon"]
             }
         ],
         faq: [
             {
                 question: "What should be on a custom animal card?",
-                answer: "A strong custom animal card usually includes an image, name, traits, rarity, stats, a short story, and a role inside a larger deck."
+                answer: "An image that fills the top half, the common and scientific name, a category symbol, a set number such as 12/40, four to six stats on a shared scale, a two-line story, and the photo credit. The set number and consistent stat block are what make a card feel collectible rather than decorative."
+            },
+            {
+                question: "What size are trading cards?",
+                answer: "Standard poker size is 63.5 by 88.9 mm (2.5 by 3.5 inches), and it is the size most sleeves, binders and deck boxes are made for. Bridge cards are 57 by 89 mm and tarot cards 70 by 120 mm. Whatever size you choose, add 3 mm of bleed and keep text 3 mm inside the trim line."
+            },
+            {
+                question: "How do you decide rarity for animal cards?",
+                answer: "Use a steep distribution across four or five tiers, for example 50% common, 30% uncommon, 15% rare, 4% epic and 1% legendary. Base the tier on something real, such as IUCN conservation status or how hard the animal was to find, so that a legendary card is legendary for a reason you can print on it."
+            },
+            {
+                question: "How many cards should a deck have?",
+                answer: "Thirty to forty for a first deck. That is enough to form sub-sets and a rarity curve, and few enough to finish and print as a proof. Classic Top Trumps packs ran to about 30 cards and most trading-card starter sets are 40 to 60, so the range is well tested."
             },
             {
                 question: "Can creators sell custom animal cards?",
-                answer: "Creators can prepare sellable deck concepts for gifts, classrooms, photography products, or niche collections. Direct AnimalDex marketplace claims should wait until that feature exists."
+                answer: "Yes, if the photos are theirs or properly licensed. Own captures are simplest; Creative Commons images need credit and, for share-alike licences, the same licence on the deck; stock photos usually cannot be resold on a product. Print-on-demand and general marketplaces handle the selling. AnimalDex does not run a card marketplace, so treat it as the place the deck is built, not sold."
             }
+        ],
+        sources: [
+            {label: "Library of Congress: baseball cards collection", href: "https://www.loc.gov/collections/baseball-cards/"},
+            {label: "Britannica: playing card", href: "https://www.britannica.com/topic/playing-card"},
+            {label: "IUCN Red List categories and criteria", href: "https://www.iucnredlist.org/"},
+            {label: "Creative Commons licences", href: "https://creativecommons.org/share-your-work/cclicenses/"}
         ]
     },
     {
         slug: "what-animals-can-teach-us-about-self-improvement",
         title: "What animals can teach us about self-improvement",
-        description: "Animals can teach focus, patience, resilience, teamwork, boundaries, and adaptability. Here is how AnimalDex can turn species learning into personal growth prompts.",
+        description: "What animals can teach us about self-improvement: meerkat sentinels, wild dog votes, sea otter routines and arctic tern migration mapped to habits.",
         publishedAt: "2026-04-24",
-        updatedAt: "2026-04-24",
+        updatedAt: "2026-10-07",
         featuredImage: contentThumb("what-animals-can-teach-us-about-self-improvement"),
-        readingMinutes: 6,
+        readingMinutes: 8,
         author: "AnimalDex Learning Desk",
         tags: ["Animal learning", "Self improvement", "Nature journaling"],
         searchIntents: [
@@ -4818,87 +4298,177 @@ const blogPostsData: BlogPost[] = [
             "animal traits personal growth",
             "animal behavior learning app"
         ],
-        speciesSlugs: ["bald-eagle", "african-wild-dog", "komodo-dragon"],
+        speciesSlugs: ["meerkat", "african-wild-dog", "sea-otter", "arctic-tern", "honey-bee", "bald-eagle", "komodo-dragon"],
         systemsSpeciesSlugs: ["bald-eagle", "african-wild-dog", "komodo-dragon"],
+        tableOfContents: [
+            "Animal lessons work because they are concrete",
+            "Meerkats: take turns on watch",
+            "African wild dogs: decide together, then commit",
+            "Sea otters: anchor the routine",
+            "Arctic terns: long goals are a chain of short legs",
+            "Honey bees and crows: communicate specifics, cache for later",
+            "Six habits animals make easier to understand",
+            "Turn animal learning into a journal habit",
+            "Why this belongs inside AnimalDex"
+        ],
+        relatedSlugs: ["what-if-every-animal-is-a-lesson", "biomimicry-in-animals", "why-real-animal-collecting-feels-so-good"],
         sections: [
             {
                 title: "Animal lessons work because they are concrete",
                 paragraphs: [
-                    "Self-improvement advice is often abstract. Animals make it easier to remember because their behavior gives you a vivid example of a trait in action.",
-                    "A species card can become a prompt: what does this animal do well, what constraint does it solve, and what human habit does that suggest?"
+                    "Self-improvement advice is usually abstract: be more patient, communicate better, think long term. Animals make the same advice easy to remember because their behaviour is a vivid example of a trait solving a real problem. The animal is not trying to be a role model. It is trying to eat, avoid being eaten and raise young, and the strategies that survive that test tend to be worth borrowing.",
+                    "A species card becomes a prompt with three questions: what does this animal do well, what constraint is it solving, and what human habit does that suggest? The examples below are real, documented behaviours. None of them require pretending a meerkat has a philosophy."
                 ],
                 inlineLinks: [
                     {
-                        text: "species card",
+                        text: "Learn from animals",
                         slug: "learn-from-animals",
                         href: "/learn-from-animals"
                     }
                 ]
             },
             {
-                title: "Six habits animals can make easier to understand",
+                title: "Meerkats: take turns on watch",
                 paragraphs: [
-                    "Focus is easier to picture through a hunting bird than through a vague slogan. Teamwork becomes clearer through social animals. Adaptability becomes clearer through species that thrive across difficult conditions.",
-                    "The point is not to pretend humans should copy animals literally. The point is to use animal behavior as a memorable anchor for reflection."
+                    "A meerkat group forages with its head down in the sand, which is the worst possible posture for spotting a hawk. The solution is a sentinel: one adult climbs a mound or a bush, stands upright and scans while the others dig, giving a steady \"watchman's song\" that tells the group all is clear and a sharp alarm when it is not. Sentinels rotate through the day, and research on wild groups in the Kalahari found that animals tend to go on guard once they have fed, so the job falls to whoever can currently afford it.",
+                    "The habit: in any team, someone has to be looking up while the rest look down, and the role should rotate rather than fall on the same person. At the personal level it is the weekly review, the one hour where you stop digging and check the horizon."
                 ],
-                cards: [
-                    {
-                        label: "Focus",
-                        body: "Predators and foragers show how attention narrows when the target matters."
-                    },
-                    {
-                        label: "Patience",
-                        body: "Ambush hunters, nesting birds, and slow-moving reptiles show the value of timing."
-                    },
-                    {
-                        label: "Teamwork",
-                        body: "Social animals show how shared signals and roles reduce wasted effort."
-                    },
-                    {
-                        label: "Boundaries",
-                        body: "Territorial behavior can become a prompt for space, energy, and limits."
-                    },
-                    {
-                        label: "Adaptability",
-                        body: "Generalist species show how flexible systems survive changing conditions."
-                    },
-                    {
-                        label: "Resilience",
-                        body: "Migration, recovery, and seasonal behavior show how persistence often has a rhythm."
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/what-animals-can-teach-us-about-self-improvement/meerkat-sentinel.webp",
+                        alt: "Meerkat standing upright on a post on sentinel duty",
+                        width: 966,
+                        height: 1400,
+                        caption: "A meerkat on sentinel duty: upright, scanning, and calling the all-clear so the rest of the group can keep foraging. Photo: Bernard DUPONT, CC BY-SA 4.0, via Wikimedia Commons."
                     }
-                ]
+                },
+                speciesSlugs: ["meerkat"]
+            },
+            {
+                title: "African wild dogs: decide together, then commit",
+                paragraphs: [
+                    "African wild dogs are among the most successful hunters on the savannah, with a far higher proportion of chases ending in a kill than lions manage, and the reason is coordination. Before a hunt the pack holds a rally, a burst of greeting and excitement, and a 2017 study in Botswana found that whether the pack actually sets off depends on how many dogs sneeze during it: a quorum of sneezes, fewer if a dominant dog starts, and the pack moves. Once it moves, every dog runs the same plan, and the whole pack eats, including pups and injured adults that did not hunt.",
+                    "The habit: separate deciding from doing. Argue the plan in the rally, use a clear signal to close the decision, and then run it without relitigating. And share the result with the people who kept things going while you were out."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/what-animals-can-teach-us-about-self-improvement/wild-dog-pack.webp",
+                        alt: "African wild dog with large rounded ears standing in dry grass",
+                        width: 1400,
+                        height: 933,
+                        caption: "An African wild dog in dry grass. The large ears and mottled coat are individual; the hunting is collective. Photo: Gregory \"Slobirdr\" Smith, CC BY-SA 2.0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["african-wild-dog"]
+            },
+            {
+                title: "Sea otters: anchor the routine",
+                paragraphs: [
+                    "Sea otters sleep floating on their backs, and an animal that drifts all night wakes up far from its feeding ground, so they wrap themselves in kelp fronds and often rest in rafts of dozens. They are also one of the few mammals that routinely use tools, carrying a favourite rock to crack open clams and mussels on their chest, and they groom for hours a day because their fur, not fat, keeps them warm in cold water.",
+                    "The habit: small anchoring rituals stop drift. A fixed place to work, a set of tools you keep rather than improvise, and maintenance done daily instead of in a crisis are the human version of kelp, a rock and grooming."
+                ],
+                media: {
+                    type: "image",
+                    image: {
+                        src: "/images/blog/what-animals-can-teach-us-about-self-improvement/sea-otter-tool-use.webp",
+                        alt: "Sea otter floating on its back in kelp with a pup on its chest",
+                        width: 1400,
+                        height: 933,
+                        caption: "A sea otter resting in kelp at Morro Bay with a pup on her chest. Kelp is the anchor; the chest is the workbench. Photo: Mike Baird from Morro Bay, USA, CC BY 2.0, via Wikimedia Commons."
+                    }
+                },
+                speciesSlugs: ["sea-otter"]
+            },
+            {
+                title: "Arctic terns: long goals are a chain of short legs",
+                paragraphs: [
+                    "The arctic tern makes the longest migration of any animal, from Arctic breeding grounds to the Antarctic pack ice and back, a round trip that tracking studies have put at around 70,000 km a year. It does not do this in one flight. It follows a zigzag route that uses prevailing winds, stops to feed at productive patches of ocean, and takes a different path south from the one it takes north. A bird that lives 30 years covers a distance equivalent to three trips to the moon.",
+                    "The habit: a goal that is too large to attempt is a route to plan, not a leap. Break it into legs with a feeding stop at the end of each, choose the leg that has the wind behind it, and accept that the way back may not be the way out."
+                ],
+                speciesSlugs: ["arctic-tern"]
+            },
+            {
+                title: "Honey bees and crows: communicate specifics, cache for later",
+                paragraphs: [
+                    "A honey bee that finds a good patch of flowers returns to the hive and performs a waggle dance on the comb: the angle of the run encodes the direction relative to the sun, and its duration encodes the distance. Nest-mates leave with a bearing and a range, not an enthusiastic \"over there\". Crows and other corvids solve a different problem. They cache food in hundreds of spots, remember them for months, and will move a cache if they notice another bird watching.",
+                    "The habits: when you hand off a task, give the angle and the distance, the exact next step and how far it goes. And put things where your future self will find them, in a notebook or an app rather than your memory, because the memory is the first thing the day steals."
+                ],
+                speciesSlugs: ["honey-bee", "crow"]
+            },
+            {
+                title: "Six habits animals make easier to understand",
+                paragraphs: [
+                    "Focus is easier to picture through a hunting bird than through a slogan. Teamwork is clearer through a pack than a poster. The table maps six common self-improvement goals to a behaviour you can watch, and to the habit it suggests. The point is not that humans should copy animals literally. It is that a memorable example makes the habit easier to practise."
+                ],
+                table: {
+                    columns: ["Habit", "Animal and behaviour", "Why it works for them", "The human version"],
+                    rows: [
+                        {cells: ["Focus", "Bald eagle perched for hours, then one dive", "Hunting is expensive; most of the day is spent watching, not chasing", "Decide before you act; most of the work is choosing the moment"]},
+                        {cells: ["Patience", "Komodo dragon waiting beside a game trail", "Ambush beats pursuit for a heavy reptile", "Position yourself where the opportunity will pass, then wait"]},
+                        {cells: ["Teamwork", "Meerkat sentinels and wild dog rallies", "Shared vigilance and a quorum decision", "Rotate the watch; close decisions with a clear signal"]},
+                        {cells: ["Boundaries", "Robin singing its territory each dawn", "Defending a patch costs less than fighting over it", "State your limits early and regularly, not in the argument"]},
+                        {cells: ["Adaptability", "Crows and red foxes thriving in cities", "Generalist diet, flexible behaviour, learning from others", "Keep more than one way to get what you need"]},
+                        {cells: ["Resilience", "Arctic tern migration in staged legs", "Feeding stops and favourable winds make the distance possible", "Plan recovery into the route, not after it"]}
+                    ]
+                },
+                speciesSlugs: ["bald-eagle", "komodo-dragon", "european-robin", "red-fox"]
             },
             {
                 title: "Turn animal learning into a journal habit",
                 paragraphs: [
-                    "After each sighting or card, users can ask one simple question: what useful trait does this animal demonstrate?",
-                    "AnimalDex can make that repeatable by connecting identification, collection, and reflection in one learning loop."
+                    "After each sighting or card, ask one question: what useful thing does this animal do, and what constraint is it solving? Write a line. A meerkat on a termite mound becomes \"someone is on watch; whose turn is it this week?\" A heron standing motionless for twenty minutes becomes \"the strike is short because the wait was long.\"",
+                    "Over a season those lines turn into a personal field guide to your own habits, grounded in animals you have actually seen rather than in quotes. The sightings make the reflection stick, and the reflection makes you look harder at the next animal."
                 ],
+                pullQuote: "The animal is not trying to be a role model. It is solving a problem, and that is exactly why the solution is worth borrowing.",
                 inlineLinks: [
                     {
-                        text: "learning loop",
+                        text: "Animal-inspired self-improvement app",
                         slug: "animal-inspired-self-improvement-app",
                         href: "/use-cases/animal-inspired-self-improvement-app"
-                    }
+                    },
+                    {text: "What if every animal is a lesson", slug: "what-if-every-animal-is-a-lesson", href: "/blog/what-if-every-animal-is-a-lesson"}
                 ]
             },
             {
                 title: "Why this belongs inside AnimalDex",
                 paragraphs: [
-                    "AnimalDex already gives users a reason to collect and revisit animal cards. Self-improvement adds another layer of meaning to those cards.",
+                    "AnimalDex already gives people a reason to collect and revisit animal cards. Each species card carries behaviour notes and a lesson, so a capture in the field can end with a prompt rather than just a name. Self-improvement adds a layer of meaning to the collection without changing what a capture is: a live photo of a real animal.",
                     "The best version stays grounded in real species and real observation, so it feels like practical nature learning rather than generic motivation."
+                ],
+                inlineLinks: [
+                    {text: "Biomimicry in animals", slug: "biomimicry-in-animals", href: "/blog/biomimicry-in-animals"}
                 ]
             }
         ],
         faq: [
             {
-                question: "What can animals teach people?",
-                answer: "Animals can teach focus, patience, teamwork, boundaries, adaptability, resilience, attention, and respect through observable behavior."
+                question: "What can animals teach people about self-improvement?",
+                answer: "Concrete versions of habits that are otherwise abstract: rotating vigilance from meerkat sentinels, decision-then-commitment from wild dog rallies, anchoring routines from sea otters, staged long-term goals from arctic tern migration, and precise communication from the honey bee waggle dance. Each is a documented behaviour that solves a survival problem, which is what makes it memorable."
+            },
+            {
+                question: "Why do meerkats stand on guard?",
+                answer: "Because the group forages head-down in sand and cannot see predators coming. One adult stands upright on a raised spot and calls continuously while scanning for hawks and jackals, then rotates off. Kalahari studies found meerkats tend to take sentinel duty after they have fed, so the cost falls on whoever can currently afford it."
+            },
+            {
+                question: "How do African wild dogs decide to hunt?",
+                answer: "Through a pre-hunt rally in which pack members greet and get excited, and a 2017 Botswana study showed the pack departs once enough dogs sneeze, with fewer sneezes needed if a dominant animal starts. The behaviour works like a quorum vote, after which the whole pack commits to the hunt together."
+            },
+            {
+                question: "Is it a good idea to model behaviour on animals?",
+                answer: "As a memory aid and a prompt, yes; as a literal rule, no. Animals are solving survival problems, not pursuing values, so the useful move is to ask what constraint a behaviour solves and whether a similar constraint exists in your own life. The examples in this article are documented behaviours, not stories about animal virtue."
             },
             {
                 question: "How can AnimalDex support self-improvement?",
-                answer: "AnimalDex can turn species cards and sightings into reflection prompts that connect animal traits to human habits."
+                answer: "By turning species cards and real sightings into reflection prompts. Each card carries behaviour notes, so after a capture you can ask what the animal does well and what habit that suggests, then write a line in your journal. The sighting makes the reflection memorable, and the habit stays tied to an animal you actually saw."
             }
+        ],
+        sources: [
+            {label: "Clutton-Brock et al., Selfish sentinels in cooperative mammals, Science (1999)", href: "https://www.science.org/doi/10.1126/science.284.5420.1640"},
+            {label: "Walker et al., Sneeze to leave: African wild dogs use variable quorum thresholds, Proceedings of the Royal Society B (2017)", href: "https://royalsocietypublishing.org/doi/10.1098/rspb.2017.0347"},
+            {label: "Monterey Bay Aquarium: sea otter", href: "https://www.montereybayaquarium.org/animals/animals-a-to-z/sea-otter"},
+            {label: "Britannica: African wild dog", href: "https://www.britannica.com/animal/African-hunting-dog"}
         ]
     }
 ];
@@ -4911,6 +4481,7 @@ export const blogPosts: BlogPost[] = [
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
     ...instagramWildlifeArchivePosts,
+    ...instagramWildlifeArchivePosts2,
     ...blogPostsData.filter((post) => ![
         howAnimalDexIndexesAnimalsPost.slug,
         whatIfEveryAnimalIsALessonPost.slug,

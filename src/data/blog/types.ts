@@ -87,17 +87,19 @@ export type BlogPost = CanonicalContentMetadata & {
 export type AnimalSystemsPostInput = Omit<BlogPost, "publishedAt" | "updatedAt" | "author" | "speciesSlugs" | "systemsSpeciesSlugs"> & {
     speciesSlug: string;
     author?: string;
+    updatedAt?: string;
 };
 
 export function createAnimalSystemsPost({
     speciesSlug,
     author = "AnimalDex Systems Desk",
+    updatedAt = "2026-04-10",
     ...post
 }: AnimalSystemsPostInput): BlogPost {
     return {
         ...post,
         publishedAt: "2026-04-10",
-        updatedAt: "2026-04-10",
+        updatedAt,
         author,
         speciesSlugs: [speciesSlug],
         systemsSpeciesSlugs: [speciesSlug]
