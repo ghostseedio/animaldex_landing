@@ -312,10 +312,10 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: axolotlSymbolismImage(
                         "axolotl-gills-symbolism.webp",
-                        "Close-up axolotl image showing feathery external gills as a symbol of sensitivity and openness",
-                        1200,
-                        675,
-                        "The axolotl survives through openness."
+                        "Close-up of an axolotl's feathery external gills",
+                        1400,
+                        1050,
+                        "Photo by Sahaquiel9102, CC BY-SA"
                     )
                 }
             },
@@ -462,10 +462,10 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: axolotlSymbolismImage(
                         "axolotl-symbolism-final.webp",
-                        "Final axolotl symbolism image representing endangered wonder, regeneration, child-like energy, and soft resilience",
-                        1058,
-                        705,
-                        "Protect the habitat. Protect the wonder. Protect the child-like energy that still knows how to grow back."
+                        "Axolotl eggs underwater",
+                        1400,
+                        933,
+                        "Photo by Brandon Antonio Segura Torres and Priscilla Vieto Bonilla, CC BY-SA"
                     )
                 }
             },
@@ -1196,10 +1196,10 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: snakeSymbolismImage(
                         "snake-symbolism-final.webp",
-                        "Snake symbolism infographic showing transformation, wisdom, hidden power, spine, DNA, coils, and rebirth",
-                        1536,
-                        1024,
-                        "The snake is a grounded current, a coiled pattern, a living spine, and a hidden intelligence."
+                        "A ball python coiled on the ground",
+                        1400,
+                        930,
+                        "Photo by Shankar S., CC BY"
                     )
                 }
             },
@@ -2930,11 +2930,11 @@ const blogPostsData: BlogPost[] = [
                 media: {
                     type: "image",
                     image: {
-                        src: "/images/placeholders/feature-scan-overview.svg",
-                        alt: "Diagram-style visual showing AI scan, verification, and species logging",
-                        width: 1200,
-                        height: 675,
-                        caption: "Fast identification gets better when image recognition and human judgment work as a pair."
+                        src: "/images/blog/how-to-identify-animals-in-the-wild-2026-guide/phone-camera-tripod.webp",
+                        alt: "Smartphone on a tripod photographing a sunset",
+                        width: 1400,
+                        height: 933,
+                        caption: "A phone camera is all you need to scan and log a species. Photo: PantheraLeo1359531, CC BY 4.0, via Wikimedia Commons."
                     }
                 },
                 speciesSlugs: ["bald-eagle", "maine-coon-cat"]
@@ -2990,16 +2990,18 @@ const blogPostsData: BlogPost[] = [
                     title: "Trip-planning lenses",
                     images: [
                         {
-                            src: "/images/placeholders/more-discovery.svg",
-                            alt: "Illustrated habitat-first wildlife discovery approach for Bali trips",
-                            width: 1200,
-                            height: 675
+                            src: "/images/blog/best-animals-to-spot-in-bali-2026/bali-myna.webp",
+                            alt: "Bali myna perched on a branch",
+                            width: 1400,
+                            height: 933,
+                            caption: "The Bali myna, one of the island's rarest birds. Photo: JJ Harrison, CC BY-SA 3.0, via Wikimedia Commons."
                         },
                         {
-                            src: "/images/placeholders/more-guide.svg",
-                            alt: "Illustrated checklist for planning wildlife spotting routes and goals",
-                            width: 1200,
-                            height: 675
+                            src: "/images/blog/best-animals-to-spot-in-bali-2026/west-bali-national-park.webp",
+                            alt: "Forested hills of West Bali National Park",
+                            width: 1400,
+                            height: 909,
+                            caption: "West Bali National Park: plan routes around habitats, not just hotspots. Photo: Ron from Nieuwegein, CC BY-SA 2.0, via Wikimedia Commons."
                         }
                     ]
                 }

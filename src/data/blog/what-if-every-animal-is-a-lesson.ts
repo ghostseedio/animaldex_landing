@@ -1,14 +1,9 @@
 import type {BlogPost} from "@/data/blog/types";
 
 const imageBase = "/images/blog/what-if-every-animal-is-a-lesson";
-const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
 
 function existingImage(src: string, alt: string, width: number, height: number, caption?: string) {
     return {src: `${imageBase}/${src}`, alt, width, height, caption};
-}
-
-function imageSlot(alt: string, caption: string) {
-    return {src: placeholderSrc, alt, width: 1600, height: 900, caption: `Image slot: ${caption}`};
 }
 
 export const whatIfEveryAnimalIsALessonPost: BlogPost = {
@@ -84,7 +79,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "On the surface, AnimalDex is simple. You see an animal. You capture it. You add it to your collection. You learn what makes it special.",
                 "Underneath that simple loop is a larger question: what does this animal know that I have forgotten?"
             ],
-            media: {type: "image", image: imageSlot("A phone using AnimalDex to capture an animal and reveal its lesson", "AnimalDex capture flow — animal, scan, card, and lesson")}
+            media: {type: "image", image: existingImage("phone-camera-tripod.webp", "Smartphone on a tripod photographing a sunset", 1400, 933, "A phone camera is all you need to capture an animal. Photo: PantheraLeo1359531, CC BY 4.0, via Wikimedia Commons.")}
         },
         {
             title: "The Old Way of Looking at Animals",
@@ -102,7 +97,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "Whether or not we accept every part of that framework, it opens a useful question: if the human body contains different forms of intelligence, what about the rest of nature?",
                 "What if animals are expressions of specialized intelligence—not intelligence in the school-test sense, but intelligence as a way of solving life?"
             ],
-            media: {type: "image", image: imageSlot("Diagram comparing the human body as a system with animal survival strategies", "Body intelligence and animal intelligence map")}
+            media: {type: "image", image: existingImage("bonobos-grooming.webp", "Bonobos grooming each other", 1400, 933, "Bonobos — our close relatives show how much bodies and behavior have in common. Photo: DBeaune, CC BY-SA 4.0, via Wikimedia Commons.")}
         },
         {
             title: "Every Animal Has a Strategy",
@@ -111,7 +106,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "The dolphin solves life through sonar communication. The gorilla solves life through presence. The cat solves life through independence. The dog solves life through loyalty. The weasel solves life through disruption and misdirection.",
                 "Every animal has a strategy. Every animal has a lesson. Each one has mastered a particular slice of existence."
             ],
-            media: {type: "image", image: imageSlot("A visual field guide matching animals to momentum, precision, cooperation, memory, communication, presence, independence, and loyalty", "Animal strategies and lessons field guide")},
+            media: {type: "image", image: existingImage("honey-bee.webp", "Western honey bee collecting pollen", 1400, 1164, "A honey bee: precision, cooperation and communication in one small animal. Photo: Andreas Trepte, CC BY-SA 2.5, via Wikimedia Commons.")},
             speciesSlugs: ["great-white-shark", "barn-owl", "wolf", "elephant", "dolphin", "gorilla"]
         },
         {
@@ -122,8 +117,8 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "I am not claiming that one animal is better or that pet ownership proves a social theory. I am asking whether certain animals become more visible to us when we need the lesson they embody."
             ],
             media: {type: "gallery", title: "Order and independence", images: [
-                imageSlot("A dog representing loyalty, service, structure, and social bonding", "Dog — loyalty and belonging"),
-                imageSlot("A cat representing independence, boundaries, intuition, and selective affection", "Cat — independence and boundaries")
+                existingImage("huskies-resting.webp", "Huskies resting in the snow", 1400, 930, "Dogs: loyalty, service and social bonding. Photo: M. Rehemtulla, CC BY 2.0, via Wikimedia Commons."),
+                existingImage("tabby-cat.webp", "Orange tabby cat lying on the ground", 1400, 933, "A cat: independence, boundaries and selective affection. Photo: Ginwai Tam, CC BY-SA 2.0, via Wikimedia Commons.")
             ]}
         },
         {
@@ -152,8 +147,8 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "Material explanations—sound, smell, body language, micro-movements, electromagnetic sensitivity, pattern recognition, and evolved instinct—should always be examined first. Mystery is not permission to overclaim. It is an invitation to stay curious."
             ],
             media: {type: "gallery", title: "Questions at the edge", images: [
-                imageSlot("Chicks beside a small randomly moving robot in the René Peoc'h experiment", "René Peoc’h chick and robot experiment"),
-                imageSlot("Planarian flatworm regeneration and the question of where biological memory lives", "Planarian regeneration and memory")
+                existingImage("leghorn-chickens.webp", "Leghorn rooster and hen", 1400, 1134, "Domestic chickens, the species used in René Peoc'h's chick-and-robot experiment. Photo: Bodlina, CC BY-SA 3.0, via Wikimedia Commons."),
+                existingImage("planarian.webp", "Planarian flatworm", 1400, 1050, "A planarian flatworm, famous for regenerating its whole body. Photo: Christopher Laumer, CC BY 2.0, via Wikimedia Commons.")
             ]},
             pullQuote: "Maybe our first job is not to solve every mystery. Maybe our first job is to pay attention."
         },
@@ -177,7 +172,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Small mustelids can move with extraordinary twists, jumps, freezes, and direction changes. The symbolic lesson is disruption: when the world expects a straight line, move strangely.",
                         "The weasel does not win through size. It survives through agility, surprise, and unpredictability. In human life, that can resemble creativity, originality, and breaking a stale pattern."
                     ],
-                    media: {type: "image", image: imageSlot("A weasel twisting through an unpredictable movement pattern", "Weasel — disruption and misdirection")}
+                    media: {type: "image", image: existingImage("stoat.webp", "Stoat in its winter coat", 1400, 1050, "A stoat, a weasel relative known for twisting, unpredictable movement. Photo: Marton Berntsen, CC BY-SA 4.0, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Owl: Acoustic Precision",
@@ -185,7 +180,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Owls can locate prey by sound with astonishing accuracy, and asymmetrical ear placement helps some species resolve where a sound comes from in darkness.",
                         "The owl says: you do not need to see everything if you can listen deeply enough. Silence is also data."
                     ],
-                    media: {type: "image", image: imageSlot("An owl listening in darkness with a visualized acoustic field", "Owl — deep listening and acoustic precision")}
+                    media: {type: "image", image: existingImage("tawny-owl.webp", "Tawny owl peering from a tree hole", 1400, 933, "A tawny owl, listening for prey in the dark. Photo: Anil Öztas, CC BY-SA 4.0, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Gorilla: Presence",
@@ -193,7 +188,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Gorilla strength is embodied rather than frantic. A silverback can represent protection, grounded authority, and power that does not need to perform constantly.",
                         "Presence is not aggression. It is the ability to be fully where you are. Sometimes strength sits still."
                     ],
-                    media: {type: "image", image: imageSlot("A silverback gorilla sitting with calm grounded authority", "Gorilla — presence and protective strength")}
+                    media: {type: "image", image: existingImage("gorilla.webp", "Western gorilla sitting calmly", 1400, 1050, "A western gorilla: calm, grounded authority. Photo: Jim Bowen, CC BY 2.0, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Shark: Momentum",
@@ -201,7 +196,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "The claim that every shark must keep moving or die is too simple; shark respiration varies by species. The broader biological image remains powerful: an animal built to move through resistance with sensory focus.",
                         "The shark lesson is directed momentum. Sometimes clarity follows movement, confidence follows action, and life opens because you kept swimming."
                     ],
-                    media: {type: "image", image: imageSlot("A shark moving with focus through open water", "Shark — momentum and commitment in motion")}
+                    media: {type: "image", image: existingImage("great-white-shark.webp", "Great white shark swimming in open water", 1200, 835, "A great white shark moving with focus through open water. Photo: Terry Goss, CC BY 2.5, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Dolphin: Communication",
@@ -209,7 +204,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Dolphins use clicks, whistles, echolocation, body movement, and complex social signals. Their intelligence is relational and layered.",
                         "The dolphin lesson is not merely to speak. It is to send, receive, sense, adjust, and remain connected to the group without losing yourself."
                     ],
-                    media: {type: "image", image: imageSlot("Dolphins communicating through sound in a social pod", "Dolphin — sonar communication and relational intelligence")}
+                    media: {type: "image", image: existingImage("bottlenose-dolphin.webp", "Common bottlenose dolphin surfacing", 1387, 1025, "Bottlenose dolphins communicate through sound within their pod. Photo: NASA, Public domain, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Wolf: Cooperation",
@@ -217,7 +212,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Wolf cooperation is survival cooperation. Hunting, territory, raising young, and enduring difficult conditions depend on coordinated social roles.",
                         "The deeper wolf lesson is not the romantic lone wolf. It is belonging with purpose: knowing when to lead, scout, protect, nurture, warn, or hold the back."
                     ],
-                    media: {type: "image", image: imageSlot("A coordinated wolf family moving through winter terrain", "Wolf — cooperation and belonging with purpose")}
+                    media: {type: "image", image: existingImage("eurasian-wolf.webp", "Eurasian wolf in snow", 1400, 1084, "A wolf — wolf families travel and hunt as coordinated units. Photo: Mas3cf, CC BY-SA 4.0, via Wikimedia Commons.")}
                 },
                 {
                     title: "The Elephant: Memory",
@@ -225,7 +220,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                         "Elephants remember routes, water sources, family members, and social relationships. Older matriarchs can carry survival knowledge that matters to the herd during drought and danger.",
                         "The elephant teaches memory as responsibility, not nostalgia. Memory is how the future survives."
                     ],
-                    media: {type: "image", image: imageSlot("An elephant matriarch leading a family toward remembered water", "Elephant — memory, family, and survival knowledge")}
+                    media: {type: "image", image: existingImage("african-bush-elephant.webp", "Male African bush elephant in Etosha National Park", 1400, 933, "African bush elephants follow matriarchs who remember where water is. Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons.")}
                 }
             ],
             speciesSlugs: ["barn-owl", "gorilla", "great-white-shark", "dolphin", "wolf", "elephant"]
@@ -237,7 +232,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "When the tiger disappears, focused power disappears from that ecosystem. When the bee disappears, pollination relationships disappear. When the whale disappears, depth and song disappear. When the vulture disappears, a purification service disappears.",
                 "At a plain ecological level, extinction makes the web of life less complete. At a symbolic level, it feels like collective amnesia: the disappearance of a teacher."
             ],
-            media: {type: "image", image: imageSlot("Fading animal silhouettes representing extinction as the loss of biological strategies and relationships", "Extinction — biodiversity, relationship, and lost lessons")},
+            media: {type: "image", image: existingImage("diprotodon-sculpture.webp", "Life-size sculpture of the extinct Diprotodon", 1400, 933, "Extinct species, like the giant Diprotodon, take their tested survival strategies with them. Photo: Yun Huang Yong, CC BY 2.0, via Wikimedia Commons.")},
             speciesSlugs: ["honey-bee", "elephant"]
         },
         {
@@ -255,7 +250,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "A child sees a bird, scans it, unlocks a profile, learns its traits, and starts noticing more animals. That moment matters because attention is the beginning of love, and love is the beginning of protection.",
                 "A trading card can lead to biology. A zoo visit can lead to ecology. A scan can lead to conservation. A game can lead to reverence."
             ],
-            media: {type: "image", image: imageSlot("A child using AnimalDex to identify a bird outdoors", "Playful learning — from a bird scan to care for nature")}
+            media: {type: "image", image: existingImage("bird-walk.webp", "Group of birdwatchers looking up with binoculars", 1400, 1050, "Birdwatchers outdoors — identifying a bird is where a collection starts. Photo: Dara Miles Wilson, CC BY-SA 4.0, via Wikimedia Commons.")}
         },
         {
             title: "What If Animals Are Teaching Balance?",
@@ -272,7 +267,7 @@ export const whatIfEveryAnimalIsALessonPost: BlogPost = {
                 "The real world already has this. Owls, sharks, dolphins, elephants, weasels, cats, and dogs are already extraordinary. We became too distracted to notice.",
                 "AnimalDex is built around a simple idea: the real-life Pokedex is nature. If we can make people look again, perhaps we can make people care again."
             ],
-            media: {type: "image", image: imageSlot("A real-world AnimalDex collection built from wildlife encounters", "The real-life Pokedex is nature")}
+            media: {type: "image", image: existingImage("hopetoun-falls.webp", "Hopetoun Falls surrounded by lush fern forest", 1400, 933, "Every wildlife encounter adds to a real-world record of biodiversity. Photo: Diliff, CC BY-SA 3.0, via Wikimedia Commons.")}
         },
         {
             title: "The Question I Keep Returning To",

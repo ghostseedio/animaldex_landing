@@ -1,11 +1,8 @@
 import {BlogPost} from "@/data/blog/types";
 
-const journalFeaturedImage = {
-    src: "/images/og.png",
-    alt: "AnimalDex blog guide for wildlife learning, spotting, and collection",
-    width: 1200,
-    height: 630
-};
+function journalPhoto(slug: string, file: string, alt: string, width: number, height: number, caption: string) {
+    return {src: `/images/blog/${slug}/${file}`, alt, width, height, caption};
+}
 
 export const journalMigratedPosts: BlogPost[] = [
     {
@@ -14,10 +11,14 @@ export const journalMigratedPosts: BlogPost[] = [
         description: "How to turn zoo visits, safari drives, and everyday nature walks into playful, educational animal discovery without making the experience feel like homework.",
         publishedAt: "2026-03-22",
         updatedAt: "2026-04-05",
-        featuredImage: {
-            ...journalFeaturedImage,
-            alt: "Family-friendly zoo, safari, and nature walk animal spotting guide on AnimalDex"
-        },
+        featuredImage: journalPhoto(
+            "zoo-safari-and-family-animal-spotting-guide",
+            "serengeti-lion.webp",
+            "Male lion resting in the Serengeti",
+            1400,
+            934,
+            "Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons."
+        ),
         readingMinutes: 5,
         author: "AnimalDex",
         tags: ["Family animal learning", "Zoo animal app", "Safari animal app", "Nature walk"],
@@ -67,10 +68,14 @@ export const journalMigratedPosts: BlogPost[] = [
         description: "Why collectors who love creature games, card albums, and Top Trumps style progression often find real-animal collecting unexpectedly satisfying.",
         publishedAt: "2026-03-11",
         updatedAt: "2026-03-28",
-        featuredImage: {
-            ...journalFeaturedImage,
-            alt: "Why real-animal collecting feels rewarding for card fans and creature collectors"
-        },
+        featuredImage: journalPhoto(
+            "why-real-animal-collecting-feels-so-good",
+            "painted-lady-echinacea.webp",
+            "Painted lady butterfly feeding on an echinacea flower",
+            1400,
+            1050,
+            "Photo: Jean-Pol Grandmont, CC BY 3.0, via Wikimedia Commons."
+        ),
         readingMinutes: 5,
         author: "AnimalDex",
         tags: ["Animal card app", "Species collecting game", "Collector psychology", "Top Trumps-like animal app"],
@@ -113,10 +118,14 @@ export const journalMigratedPosts: BlogPost[] = [
         description: "A beginner-friendly guide to cleaner animal photos, better species clues, and more respectful wildlife photography habits for travel, safaris, and everyday spotting.",
         publishedAt: "2026-03-04",
         updatedAt: "2026-03-21",
-        featuredImage: {
-            ...journalFeaturedImage,
-            alt: "Wildlife photography guide for beginners on AnimalDex"
-        },
+        featuredImage: journalPhoto(
+            "wildlife-photography-without-disturbing-animals",
+            "grey-heron-fishing.webp",
+            "Grey heron fishing in a river",
+            1400,
+            1049,
+            "Photo: Giacomo Cimino, CC BY-SA 4.0, via Wikimedia Commons."
+        ),
         readingMinutes: 6,
         author: "AnimalDex",
         tags: ["Wildlife photography", "Respectful observation", "Travel spotting", "Animal discovery"],

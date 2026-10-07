@@ -1,5 +1,46 @@
 const path = require("path");
 const withNextIntl = require('next-intl/plugin')();
+const closedSeoNamespaceSlugs = require("./src/data/closed-seo-namespace-slugs.json");
+
+// Mirrors src/lib/comparison-slug.ts, which next.config.js cannot import.
+const COMPARISON_TYPE_SUFFIXES = ["speed", "strength", "intelligence", "stealth", "durability", "agility"];
+
+function reversedComparisonSlug(slug) {
+    for (const type of COMPARISON_TYPE_SUFFIXES) {
+        const suffix = `-${type}`;
+        if (slug.endsWith(suffix)) {
+            const [a, b] = slug.slice(0, -suffix.length).split("-vs-");
+            return a && b ? `${b}-vs-${a}${suffix}` : null;
+        }
+    }
+    const [a, b] = slug.split("-vs-");
+    return a && b ? `${b}-vs-${a}` : null;
+}
+
+/**
+ * `/comparisons/cheetah-vs-leopard` → `/comparisons/leopard-vs-cheetah`.
+ *
+ * Comparison pages are a closed SSG namespace (`dynamicParams = false`), so a
+ * reversed pair order 404s before the page's own redirect can run. Every
+ * published slug whose reverse is not itself published gets a redirect here,
+ * for both the bare and the `/id` URL.
+ */
+function reversedComparisonRedirects() {
+    const published = new Set(closedSeoNamespaceSlugs.comparisons ?? []);
+    const redirects = [];
+    for (const slug of published) {
+        const reversed = reversedComparisonSlug(slug);
+        if (!reversed || published.has(reversed)) continue;
+        for (const prefix of ["", "/id"]) {
+            redirects.push({
+                source: `${prefix}/comparisons/${reversed}`,
+                destination: `/comparisons/${slug}`,
+                permanent: true
+            });
+        }
+    }
+    return redirects;
+}
 
 if (process.env.NEXT_PHASE === "phase-production-build" || process.argv.includes("build")) {
     process.env.ADEX_SEO_SSG_NO_REMOTE = "1";
@@ -81,16 +122,7 @@ module.exports = withNextIntl({
                 destination: "/id/powers/:path*",
                 permanent: true
             },
-            {
-                source: "/comparisons/lion-vs-tiger",
-                destination: "/comparisons/tiger-vs-lion",
-                permanent: true
-            },
-            {
-                source: "/id/comparisons/lion-vs-tiger",
-                destination: "/comparisons/tiger-vs-lion",
-                permanent: true
-            },
+            ...reversedComparisonRedirects(),
             {
                 source: "/rankings",
                 destination: "/tier-list",

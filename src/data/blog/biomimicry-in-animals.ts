@@ -1,10 +1,8 @@
 import type {BlogPost, BlogSubsection} from "@/data/blog/types";
 import {contentThumb} from "@/data/content-thumbnails";
 
-const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
-
-function imageSlot(alt: string, caption: string) {
-    return {src: placeholderSrc, alt, width: 1600, height: 900, caption: `Image slot: ${caption}`};
+function articlePhoto(file: string, alt: string, width: number, height: number, caption: string) {
+    return {src: `/images/blog/biomimicry-in-animals/${file}`, alt, width, height, caption};
 }
 
 function example(
@@ -108,7 +106,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
                 "A kingfisher enters water with little splash. Gecko feet stick without glue. Shark skin changes drag and attachment. Owl wings reduce noise. Termite mounds manage airflow and temperature.",
                 "Biomimicry is not about saying humans are better than nature. It says nature has already been researching and testing solutions for billions of years, so perhaps we should pay attention."
             ],
-            media: {type: "image", image: imageSlot("A kingfisher beak compared with a high-speed train nose", "Kingfisher beak and high-speed train comparison")}
+            media: {type: "image", image: articlePhoto("kingfisher.webp", "A common kingfisher perched", 1400, 1400, "Photo by Andreas Trepte, CC BY-SA")}
         },
         {
             title: "Why Animals Are So Good at Solving Problems",
@@ -132,7 +130,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
         {
             title: "Examples 1–5: Movement, Grip, and Flow",
             paragraphs: ["These animals show how shape, surface, silence, and irregular edges can improve movement."],
-            media: {type: "image", image: imageSlot("Shark skin, gecko feet, owl feathers, and a humpback whale fin shown as biomimicry references", "Movement, grip, and flow biomimicry")},
+            media: {type: "image", image: articlePhoto("gecko-feet.webp", "A gecko's foot gripping glass", 1340, 1400, "Photo by Bjørn Christian Tørrissen, CC BY-SA")},
             subsections: [
                 example(1, "Kingfisher", "Quiet Entry and Fast Movement", "Kingfishers dive from air into water with little splash.", "High-speed train nose design.", "Early high-speed trains created loud pressure waves when entering tunnels.", "The kingfisher’s long, narrow beak helps it enter water smoothly.", "A shape that moves cleanly between two environments can reduce noise, drag, and disruption.", "Smooth Entry", "Enter the situation cleanly.", "Starting a difficult conversation goes better when the first sentence is calm and direct."),
                 example(2, "Shark", "Skin That Moves Through Water Efficiently", "Shark skin is covered in tiny tooth-like structures called dermal denticles.", "Drag-reducing surfaces, swimsuits, boat coatings, and anti-fouling materials.", "Water creates drag, while submerged surfaces collect organisms.", "Shark skin can reduce drag and make settlement harder for some organisms.", "Surface texture matters; movement is also about flow, friction, and direction.", "Clean Momentum", "Move with less waste.", "Finishing a project gets easier when the workspace is cleared before the hard part begins."),
@@ -144,7 +142,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
         {
             title: "Examples 6–10: Materials, Structure, and Sensing",
             paragraphs: ["Nature combines strength, flexibility, ventilation, optical structure, gentle control, and sound-based navigation."],
-            media: {type: "image", image: imageSlot("Spider silk, butterfly structural color, an elephant trunk robot, and bat echolocation", "Materials, structure, and sensing biomimicry")},
+            media: {type: "image", image: articlePhoto("spider-web.webp", "An orb-weaver spider web", 1400, 934, "Photo by Fir0002, public domain")},
             subsections: [
                 example(6, "Spider", "Silk Stronger Than It Looks", "Spiders produce silk that can be strong, flexible, lightweight, and biodegradable.", "Advanced fibers, medical sutures, lightweight materials, and protective fabrics.", "Materials must be strong without being heavy or wasteful.", "Spider silk combines strength, stretch, and lightness.", "Strength and flexibility can work together; the web is built before opportunity arrives.", "Patient Web", "Prepare, then wait.", "Better sales calls happen after the right questions are ready, not after chasing everyone."),
                 example(7, "Termite", "Natural Air Conditioning", "Some termite mounds regulate airflow and temperature.", "Passive cooling architecture and energy-efficient buildings.", "Buildings consume large amounts of energy for heating and cooling.", "Mound structures manage ventilation through shape, airflow, and material placement.", "Architecture can cooperate with the environment instead of fighting it.", "Living Structure", "Build with the air, not against it.", "A home feels calmer when light, airflow, and quiet corners are planned before decoration."),
@@ -156,7 +154,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
         {
             title: "Examples 11–15: Communication and Collective Intelligence",
             paragraphs: ["These systems distribute information through sound, trails, geometry, neighbor awareness, and flexible bodies."],
-            media: {type: "image", image: imageSlot("Dolphin sonar, ant trails, honeycomb, schooling fish, and an octopus-inspired gripper", "Collective intelligence and communication biomimicry")},
+            media: {type: "image", image: articlePhoto("humpback-fluke.webp", "A humpback whale lifting its fluke", 1400, 933, "Photo by the photographer, CC BY-SA")},
             subsections: [
                 example(11, "Dolphin", "Sonar Communication", "Dolphins use sound, clicks, whistles, and echolocation underwater.", "Underwater sonar, acoustic communication, marine robotics, and sensing systems.", "Light travels poorly underwater, limiting vision.", "Dolphins use sound to communicate, locate, and understand their surroundings.", "Communication is more than words.", "Signal Play", "Communicate clearly and stay connected.", "A friendship improves when check-ins are light, regular, and honest."),
                 example(12, "Ant", "Swarm Intelligence", "Ant colonies solve complex problems through simple local rules.", "Routing algorithms, delivery systems, robotics, logistics, and network design.", "Large systems need coordination without constant central control.", "Ants use trails, feedback, roles, and repeated small actions.", "Many tiny actions can create big intelligence.", "Tiny Teamwork", "Small jobs build big things.", "Cleaning the house before guests arrive goes faster when everyone gets one tiny job."),
@@ -190,7 +188,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
         {
             title: "Examples 26–30: Ecosystem Engineering and Environmental Signals",
             paragraphs: ["Nature reshapes water, creates efficient light, produces authentic optical signals, sheds dirt, and warns of environmental stress."],
-            media: {type: "image", image: imageSlot("A beaver wetland, firefly light, morpho butterfly wing, shark-skin surface, and frog sensor", "Ecosystem engineering and environmental signal biomimicry")},
+            media: {type: "image", image: articlePhoto("beaver.webp", "A wetland at Taylor Creek, with sticks left along both shores after a beaver dam", 1400, 1050, "Photo by Schmiebel, CC BY-SA")},
             subsections: [
                 example(26, "Beaver", "Ecosystem Engineering", "Beavers build dams that reshape water flow and create wetland habitat.", "Water management, ecological restoration, flood control, and landscape design.", "Water systems can flood, dry out, or lose biodiversity.", "Beaver dams slow water, create habitat, and change landscapes.", "Small builders can reshape the whole environment.", "Patient Building", "Change the flow by building carefully.", "More free time appears when one repeated chore becomes a simple weekly routine."),
                 example(27, "Firefly", "Efficient Light", "Fireflies produce light through bioluminescence.", "Efficient lighting, chemical sensing, medical imaging, and biological markers.", "Light often wastes energy as heat.", "Fireflies produce light efficiently through chemical reactions.", "Shine without burning out.", "Cool Light", "Be bright without wasting energy.", "Being cooler at a party can mean smiling, listening, and not trying too hard."),

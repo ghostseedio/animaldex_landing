@@ -1,4 +1,5 @@
 import {BlogFAQ, BlogPost, BlogSection, BlogSource} from "@/data/blog/types";
+import {symbolismImageCredits} from "./image-credits";
 
 export type SymbolismThemeSection = {
     title: string;
@@ -36,12 +37,13 @@ export type SymbolismPostInput = {
 const SITE = "https://animaldex.app";
 
 export function symbolismImage(speciesSlug: string, src: string, alt: string, width = 1536, height = 1024, caption?: string) {
+    const credit = symbolismImageCredits[`${speciesSlug}/${src}`];
     return {
         src: `/images/blog/${speciesSlug}-symbolism/${src}`,
-        alt,
-        width,
-        height,
-        caption
+        alt: credit?.alt || alt,
+        width: credit?.width || width,
+        height: credit?.height || height,
+        caption: credit?.caption || caption
     };
 }
 

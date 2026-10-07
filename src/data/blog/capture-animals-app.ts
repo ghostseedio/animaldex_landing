@@ -2,10 +2,8 @@ import type {BlogPost} from "@/data/blog/types";
 import {contentThumb} from "@/data/content-thumbnails";
 import {LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
 
-const placeholderSrc = "/images/placeholders/blog-image-slot.svg";
-
-function imageSlot(alt: string, caption: string) {
-    return {src: placeholderSrc, alt, width: 1600, height: 900, caption: `Image slot: ${caption}`};
+function articlePhoto(src: string, alt: string, width: number, height: number, caption: string) {
+    return {src, alt, width, height, caption};
 }
 
 export const captureAnimalsAppPost: BlogPost = {
@@ -113,7 +111,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Each animal becomes part of your personal collection, with details like its name, species information, conservation status, traits, and game-style stats.",
                 "That means a walk in the park, a trip to the zoo, a visit to the beach, or even a moment with your pet can become part of your AnimalDex."
             ],
-            media: {type: "image", image: imageSlot("Step-by-step graphic showing Scan, Identify, Collect, Learn, and Level Up", "AnimalDex capture flow")}
+            media: {type: "image", image: articlePhoto("/images/blog/how-animaldex-indexes-animals/how-animaldex-indexes-animals-hero.png", "AnimalDex illustration of how animals are identified and indexed", 1536, 1024, "How AnimalDex identifies and indexes the animals you capture.")}
         },
         {
             title: "Capture Wild Animals",
@@ -122,7 +120,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "When you capture a wild animal, AnimalDex can help turn the sighting into a record. Instead of just saying you saw a cool bird, you can save it, identify it, and build your own wildlife collection over time.",
                 "This makes nature feel more interactive. Every walk becomes a chance to discover something new."
             ],
-            media: {type: "image", image: imageSlot("Phone scanning a wild bird on a branch with a digital animal card appearing", "Capture wild animals")}
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/european-robin.webp", "European robin with cocked head on a branch", 1400, 1120, "A European robin — garden and park birds are some of the easiest first captures. Photo: Francis C. Franklin, CC BY-SA 3.0, via Wikimedia Commons.")}
         },
         {
             title: "Capture Pets",
@@ -131,7 +129,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Pets are often the animals people know best, but AnimalDex can still make them feel fresh. Your dog is not just a dog. It can become part of your collection, with its species profile, traits, behaviour lessons, and card-style identity.",
                 "For children, families, animal lovers, and pet owners, this makes AnimalDex feel personal from the first capture."
             ],
-            media: {type: "image", image: imageSlot("Phone scanning a golden retriever and creating a collectible animal card", "Capture pets")}
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/golden-retriever.webp", "Golden retriever portrait", 1400, 933, "Pets count too: a golden retriever. Photo: Marlies Kloet, CC BY-SA 3.0, via Wikimedia Commons.")}
         },
         {
             title: "Capture Zoo Animals",
@@ -140,7 +138,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "A zoo visit becomes more than just looking at enclosures. It becomes a collection journey.",
                 "AnimalDex can help users remember what they saw, learn about each animal, and compare species later."
             ],
-            media: {type: "image", image: imageSlot("AnimalDex scan interface at a zoo enclosure with a tiger card appearing", "Capture zoo animals")},
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/bengal-tiger.webp", "Bengal tiger walking through grass", 1400, 933, "A Bengal tiger — zoo visits are a quick way to grow your collection. Photo: Tisha Mukherjee, CC BY-SA 4.0, via Wikimedia Commons.")},
             speciesSlugs: ["lion", "tiger", "elephant"]
         },
         {
@@ -150,7 +148,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Instead of imaginary monsters, you collect real species: scan a robin, capture a frog, add a fox, log a dog, find a butterfly, collect a snake, discover a rare bird, and unlock legendary animal forms from special real-world places.",
                 "The fun comes from the fact that the collection is tied to real life. You are not just tapping random creatures on a screen. You are going outside, noticing the world, and capturing animals you actually encounter."
             ],
-            media: {type: "image", image: imageSlot("Collection screen showing animal cards like frog, eagle, lion, snake, dog, butterfly, and whale", "Real-life Pokédex collection")},
+            media: {type: "image", image: articlePhoto("/images/blog/what-animal-am-i/wild-profile-hero.webp", "AnimalDex wild profile artwork", 1200, 630, "Your AnimalDex profile grows with every animal you collect.")},
             inlineLinks: [{text: "real-life Pokédex", slug: "real-life-pokedex", href: "/real-life-pokedex"}]
         },
         {
@@ -173,7 +171,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 {label: "Fish and marine animals", body: "Fish, sharks, rays, crabs, octopuses, jellyfish, starfish, and other sea life."},
                 {label: "Insects and invertebrates", body: "Butterflies, beetles, bees, spiders, ants, dragonflies, snails, and many more."}
             ],
-            media: {type: "image", image: imageSlot("Grid of different animal categories: mammals, birds, reptiles, amphibians, fish, insects", "Animal categories you can capture")}
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/serengeti-landscape.webp", "Serengeti savanna landscape", 1400, 806, "Serengeti wildlife: mammals, birds and reptiles all belong in one collection. Photo: Bjørn Christian Tørrissen, CC BY-SA 3.0, via Wikimedia Commons.")}
         },
         {
             title: "Why Use a Capture Animals App?",
@@ -194,7 +192,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Keep a safe distance from wild animals. Never chase, trap, touch, or scare animals for a photo. Respect zoo, park, and wildlife rules. Avoid flash around sensitive animals. Do not handle dangerous animals. Stay on marked paths. Never enter restricted or sacred sites. Let animals behave naturally.",
                 "A good capture is one that leaves the animal undisturbed."
             ],
-            media: {type: "image", image: imageSlot("Person scanning a deer from a safe distance on a trail", "Respectful wildlife capture")},
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/white-tailed-deer.webp", "White-tailed deer buck in a forest", 1400, 1063, "A white-tailed deer — always capture wildlife from a safe, respectful distance. Photo: Scott Bauer, USDA, Public domain, via Wikimedia Commons.")},
             inlineLinks: [{text: "Legendary Earth Beasts", slug: "legendary-earth-beasts", href: LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}]
         },
         {
@@ -204,7 +202,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Your garden or local park is great for birds, insects, squirrels, pets, frogs, and everyday discoveries. Zoos and aquariums are perfect for capturing many species in one day. Beaches and coastlines offer crabs, gulls, fish, seals, and rockpool animals. Forests and hiking trails are good for birds, insects, reptiles, and mammals. Farms and countryside offer horses, cows, sheep, goats, chickens, and working dogs. Travel destinations make every country feel different.",
                 "The best part is that you do not need to go somewhere exotic to start. Your first AnimalDex capture could be right outside your door."
             ],
-            media: {type: "image", image: imageSlot("Map-style image showing capture locations: park, zoo, beach, forest, farm, travel", "Best places to capture animals")},
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/forest-creek.webp", "Creek running through a forest nature reserve", 1296, 976, "Parks, reserves, beaches and farms are all capture locations. Photo: John Knouse, Public domain, via Wikimedia Commons.")},
             inlineLinks: [{text: "wildlife spotting app", slug: "wildlife-spotting-app", href: "/wildlife-spotting-app"}]
         },
         {
@@ -214,7 +212,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "AnimalDex can include animal identification, collection cards, species profiles, conservation status, animal stats, field-guide style information, behaviour lessons, rare and legendary entries, and real-world capture memories.",
                 "The result is an app that feels educational, collectible, and personal at the same time."
             ],
-            media: {type: "image", image: imageSlot("AnimalDex app mockup showing camera, animal card, collection, and profile stats", "AnimalDex app mockup")}
+            media: {type: "image", image: articlePhoto("/images/blog/what-if-every-animal-is-a-lesson/animal-kingdom-frequency-map.webp", "AnimalDex animal kingdom map artwork", 1600, 900, "Every animal you capture adds to your map of the animal kingdom.")}
         },
         {
             title: "Legendary Animal Captures",
@@ -222,7 +220,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Some animals in AnimalDex can be connected to special real-world places. Around the world, rocks, caves, mountains, and cliffs look like animals: Naga-like serpent caves, dragon-head mountains, elephant-shaped desert rocks, turtle-shaped granite formations, whale-shaped sandstone ridges, monkey-shaped sea rocks, and lion rock fortresses.",
                 "These can become Legendary Earth Beasts: special S-tier captures inspired by real places. This gives AnimalDex a travel and exploration layer. Some captures are common. Some are rare. Some are legendary."
             ],
-            media: {type: "image", image: imageSlot("Legendary Earth Beasts collage: Naga serpent, Sinai dragon, stone elephant, whale rock, turtle rock", "Legendary Earth Beasts")},
+            media: {type: "image", image: articlePhoto("/images/blog/petrified-giants/petrified-giants-hero.png", "Rock formations resembling a giant reptile, shark fin and elephant", 1672, 941, "Legendary Earth Beasts: animal-shaped rock formations from the AnimalDex field guide.")},
             inlineLinks: [{text: "Legendary Earth Beasts", slug: "legendary-earth-beasts", href: LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}]
         },
         {
@@ -265,7 +263,7 @@ export const captureAnimalsAppPost: BlogPost = {
                 "Start simple. Try capturing a pet, a bird outside your window, an insect on a plant, a dog at the park, a duck near water, a butterfly, a zoo animal, a farm animal, a reptile or amphibian, and a rare animal you see while travelling.",
                 "You do not need a perfect photo or a rare animal to begin. The collection grows one real encounter at a time."
             ],
-            media: {type: "image", image: imageSlot("Beginner checklist graphic with common first captures: dog, cat, bird, butterfly, frog, duck", "First captures checklist")}
+            media: {type: "image", image: articlePhoto("/images/blog/capture-animals-app/dabbling-duck.webp", "Dabbling duck resting on the ground", 1400, 933, "A dabbling duck — ducks are among the most common first captures. Photo: Paul Danese, CC BY-SA 4.0, via Wikimedia Commons.")}
         },
         {
             title: "Final Thought",
