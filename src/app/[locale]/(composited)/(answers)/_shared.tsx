@@ -6,13 +6,12 @@ import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
-import {answerPages, getAnswerPage, getRelatedAnswerPages} from "@/data/answer-pages";
+import {answerPages, getAnswerPage, getAnswerPageImage, getRelatedAnswerPages} from "@/data/answer-pages";
 import {getBlogPost} from "@/data/blog";
 import {getSpeciesBySlug} from "@/data/species";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
-import {contentThumb} from "@/data/content-thumbnails";
 import {localeConfig} from "@/i18n";
 import {getManagedPage} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
@@ -26,10 +25,6 @@ type AnswerPageProps = {
 
 type AnswerVisual = {
     eyebrow: string;
-    heroImage: string;
-    heroAlt: string;
-    companionImage: string;
-    companionAlt: string;
     toneClass: string;
     accentClass: string;
 };
@@ -46,46 +41,26 @@ type SectionShellProps = {
 const visualProfiles = {
     scan: {
         eyebrow: "AI scanner guide",
-        heroImage: contentThumb("answer-scan").src,
-        heroAlt: contentThumb("answer-scan").alt,
-        companionImage: "/images/placeholders/phone-scan-card.svg",
-        companionAlt: "AnimalDex phone scan card preview",
         toneClass: "from-primary-500/18 via-surface-800 to-canvas-900",
         accentClass: "border-primary-500/40 bg-primary-500/10 text-primary-100"
     },
     collection: {
         eyebrow: "Collection guide",
-        heroImage: contentThumb("answer-collection").src,
-        heroAlt: contentThumb("answer-collection").alt,
-        companionImage: "/images/placeholders/phone-collection-card.svg",
-        companionAlt: "AnimalDex collection card preview",
         toneClass: "from-amber-400/16 via-surface-800 to-canvas-900",
         accentClass: "border-amber-300/35 bg-amber-300/10 text-amber-100"
     },
     learning: {
         eyebrow: "Learning guide",
-        heroImage: contentThumb("answer-learning").src,
-        heroAlt: contentThumb("answer-learning").alt,
-        companionImage: "/images/placeholders/phone-guide-card.svg",
-        companionAlt: "AnimalDex field guide card preview",
         toneClass: "from-sky-400/14 via-surface-800 to-canvas-900",
         accentClass: "border-sky-300/35 bg-sky-300/10 text-sky-100"
     },
     analysis: {
         eyebrow: "Analysis guide",
-        heroImage: contentThumb("answer-analysis").src,
-        heroAlt: contentThumb("answer-analysis").alt,
-        companionImage: "/images/placeholders/phone-challenge-card.svg",
-        companionAlt: "AnimalDex comparison card preview",
         toneClass: "from-fuchsia-400/14 via-surface-800 to-canvas-900",
         accentClass: "border-fuchsia-300/35 bg-fuchsia-300/10 text-fuchsia-100"
     },
     discovery: {
         eyebrow: "Discovery guide",
-        heroImage: contentThumb("answer-discovery").src,
-        heroAlt: contentThumb("answer-discovery").alt,
-        companionImage: "/images/placeholders/phone-discovery-card.svg",
-        companionAlt: "AnimalDex discovery card preview",
         toneClass: "from-teal-400/14 via-surface-800 to-canvas-900",
         accentClass: "border-teal-300/35 bg-teal-300/10 text-teal-100"
     }
@@ -163,7 +138,8 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
     const managed = await getManagedPage(slug);
     const metadataTitle = managed?.title ?? entry.metaTitle;
     const metadataDescription = managed?.description ?? entry.metaDescription;
-    const metadataImage = managed?.featuredImage;
+    const metadataImage = getAnswerPageImage(entry, managed?.featuredImage);
+    const metadataImageUrl = getAbsoluteAssetUrl(metadataImage.src);
 
     return {
         title: metadataTitle,
@@ -188,10 +164,10 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
             tags: managed?.searchIntents ?? entry.searchIntents,
             images: [
                 {
-                    url: metadataImage ? getAbsoluteAssetUrl(metadataImage.src) : "/images/og.png",
-                    width: metadataImage?.width ?? 1200,
-                    height: metadataImage?.height ?? 630,
-                    alt: `${metadataImage?.alt ?? metadataTitle} | AnimalDex`
+                    url: metadataImageUrl,
+                    width: metadataImage.width,
+                    height: metadataImage.height,
+                    alt: metadataImage.alt
                 }
             ]
         },
@@ -199,7 +175,7 @@ export async function generateAnswerPageMetadata(slug: string, locale: string): 
             card: "summary_large_image",
             title: `${metadataTitle} | AnimalDex`,
             description: metadataDescription,
-            images: [metadataImage ? getAbsoluteAssetUrl(metadataImage.src) : "/images/og.png"]
+            images: [{url: metadataImageUrl, alt: metadataImage.alt}]
         }
     };
 }
@@ -276,7 +252,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
     const managed = await getManagedPage(slug);
 
     if (managed && !cmsSource) {
-        return <ManagedAnswerPageArticle managed={managed} />;
+        return <ManagedAnswerPageArticle managed={{...managed, featuredImage: getAnswerPageImage(entry, managed.featuredImage)}} />;
     }
 
     const relatedPages = getRelatedAnswerPages(entry.slug, 5);
@@ -288,6 +264,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
         .filter((item): item is NonNullable<ReturnType<typeof getBlogPost>> => Boolean(item));
 
     const pageUrl = getAbsoluteUrl(locale, `/${entry.slug}`);
+    const heroImage = getAnswerPageImage(entry, managed?.featuredImage);
     const articleSchema = {
         "@context": "https://schema.org",
         "@type": "Article",
@@ -296,6 +273,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
         dateModified: entry.updatedAt,
         inLanguage: locale,
         url: pageUrl,
+        image: getAbsoluteAssetUrl(heroImage.src),
         author: {"@type": "Organization", name: "AnimalDex"},
         publisher: {"@type": "Organization", name: "AnimalDex"},
         about: entry.searchIntents.map((intent) => ({
@@ -364,18 +342,24 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                     </div>
                     <div className="relative min-h-[28rem] border-t border-line-300 bg-canvas-950/35 lg:border-l lg:border-t-0">
                         <Image
-                            src={visual.heroImage}
-                            alt={visual.heroAlt}
-                            width={960}
-                            height={720}
+                            src={heroImage.src}
+                            alt={heroImage.alt}
+                            width={heroImage.width}
+                            height={heroImage.height}
                             priority
                             className="h-full min-h-[28rem] w-full object-cover"
                             sizes="(min-width: 1024px) 34rem, 100vw"
                         />
+                        {heroImage.caption ? (
+                            <p className="absolute right-3 top-3 max-w-[calc(100%-1.5rem)] rounded bg-canvas-950/75 px-2 py-1 text-[11px] leading-4 text-ink-300">
+                                {heroImage.caption}
+                            </p>
+                        ) : null}
                         <div className="absolute inset-x-4 bottom-4 rounded-lg border border-white/10 bg-canvas-950/78 p-4 shadow-2xl backdrop-blur">
                             <div className="flex items-center gap-3">
                                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-white/10 bg-surface-800">
-                                    <Image src={visual.companionImage} alt={visual.companionAlt} fill className="object-cover" sizes="4rem" />
+                                    {/* A tighter second crop of the guide's own photo. */}
+                                    <Image src={heroImage.src} alt="" fill className="scale-150 object-cover" sizes="4rem" />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">Guide preview</p>
@@ -608,8 +592,10 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                                     </Link>
                                 </div>
                             </div>
-                            <div className="relative hidden min-h-[22rem] overflow-hidden border-l border-primary-200/15 bg-canvas-950/45 lg:block">
-                                <Image src={visual.companionImage} alt="" fill className="object-cover opacity-75" sizes="22rem" />
+                            <div className={`relative hidden min-h-[22rem] place-items-center overflow-hidden border-l border-primary-200/15 bg-gradient-to-br lg:grid ${visual.toneClass}`} aria-hidden="true">
+                                <span className={`grid h-20 w-20 place-items-center rounded-lg border ${visual.accentClass}`}>
+                                    <MiniIcon name="collect" className="h-9 w-9" />
+                                </span>
                                 <div className="absolute inset-0 bg-gradient-to-r from-canvas-950/20 via-transparent to-canvas-950/45" />
                             </div>
                         </div>

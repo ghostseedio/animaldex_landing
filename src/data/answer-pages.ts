@@ -1,3 +1,5 @@
+import type {ContentImage} from "@/data/content-schema";
+
 export type AnswerPageFAQ = {
     question: string;
     answer: string;
@@ -26,6 +28,8 @@ export type AnswerPageEntry = {
     faq: AnswerPageFAQ[];
     searchIntents: string[];
     updatedAt: string;
+    /** The guide's own hero photo, used on the page, the /blog hub card and as the social image. */
+    featuredImage: ContentImage;
 };
 
 const answerPageData: AnswerPageEntry[] = [
@@ -119,7 +123,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal identification app comparison",
             "which animal identification app is best"
         ],
-        updatedAt: "2026-09-04"
+        updatedAt: "2026-09-04",
+        featuredImage: {
+            src: "/images/blog/answer-best-animal-identification-app/hero.webp",
+            alt: "A safari passenger holds up a smartphone to photograph a giraffe crossing the dry savanna",
+            width: 1400,
+            height: 786,
+            caption: "Photo: Queen Asali, CC BY-SA 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "what-is-animal-collecting",
@@ -199,7 +210,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal card game",
             "species collecting game"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-04-09",
+        featuredImage: {
+            src: "/images/blog/answer-what-is-animal-collecting/hero.webp",
+            alt: "A naturalist's field notebook open on a fish sketch with handwritten notes, beside a colour reference chart",
+            width: 1400,
+            height: 933,
+            caption: "Photo: Tim Evanson from Cleveland Heights, Ohio, USA, CC BY-SA 2.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "pokemon-like-animal-app",
@@ -279,7 +297,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal card game",
             "animal collection app"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-04-09",
+        featuredImage: {
+            src: "/images/blog/answer-pokemon-like-animal-app/hero.webp",
+            alt: "An axolotl facing the camera with its feathery external gills spread on the gravel",
+            width: 1400,
+            height: 898,
+            caption: "Photo: Vassil, CC0, via Wikimedia Commons."
+        }
     },
     {
         slug: "animal-collection-app",
@@ -359,7 +384,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal card app",
             "wildlife app"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-04-09",
+        featuredImage: {
+            src: "/images/blog/answer-animal-collection-app/hero.webp",
+            alt: "A person crouches on bare earth to photograph a centipede with a smartphone",
+            width: 1400,
+            height: 1224,
+            caption: "Photo: Medsile, CC BY-SA 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "animal-identifier-app",
@@ -484,7 +516,14 @@ const answerPageData: AnswerPageEntry[] = [
             "AI animal scanner",
             "pet breed identifier"
         ],
-        updatedAt: "2026-09-04"
+        updatedAt: "2026-09-04",
+        featuredImage: {
+            src: "/images/blog/answer-animal-identifier-app/hero.webp",
+            alt: "A woman photographs a mallard drake standing on the rim of a city fountain with her smartphone",
+            width: 1400,
+            height: 1050,
+            caption: "Photo: Andreas Schwarzkopf, CC BY-SA 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "ai-animal-scanner",
@@ -564,7 +603,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal breed identifier",
             "educational animal app"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-04-09",
+        featuredImage: {
+            src: "/images/blog/answer-ai-animal-scanner/hero.webp",
+            alt: "A smartphone held over a leaf to photograph a small green beetle in a Costa Rican forest",
+            width: 1400,
+            height: 1050,
+            caption: "Photo: Omenauks, CC0, via Wikimedia Commons."
+        }
     },
     {
         slug: "identify-insects",
@@ -645,7 +691,14 @@ const answerPageData: AnswerPageEntry[] = [
             "AI animal scanner",
             "animal identifier app"
         ],
-        updatedAt: "2026-05-05"
+        updatedAt: "2026-05-05",
+        featuredImage: {
+            src: "/images/blog/answer-identify-insects/hero.webp",
+            alt: "Close-up of a metallic green golden ground beetle with red-orange legs walking over moss",
+            width: 1400,
+            height: 1050,
+            caption: "Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "identify-birds",
@@ -733,7 +786,14 @@ const answerPageData: AnswerPageEntry[] = [
             "wildlife identification app",
             "import bird photography Instagram archive"
         ],
-        updatedAt: "2026-05-05"
+        updatedAt: "2026-05-05",
+        featuredImage: {
+            src: "/images/blog/answer-identify-birds/hero.webp",
+            alt: "A common kingfisher perched on a rock with a small fish in its bill",
+            width: 1400,
+            height: 934,
+            caption: "Photo: Вых Пыхманн, CC BY-SA 3.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "identify-reptiles",
@@ -836,7 +896,14 @@ const answerPageData: AnswerPageEntry[] = [
             "herping field journal",
             "AI animal scanner"
         ],
-        updatedAt: "2026-05-05"
+        updatedAt: "2026-05-05",
+        featuredImage: {
+            src: "/images/blog/answer-identify-reptiles/hero.webp",
+            alt: "Close-up of an Asian water monitor's head and patterned scales among green leaves",
+            width: 1400,
+            height: 1050,
+            caption: "Photo: Kingshuk Mondal, CC BY 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "identify-pets",
@@ -917,7 +984,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal breed identifier",
             "AI animal scanner"
         ],
-        updatedAt: "2026-05-05"
+        updatedAt: "2026-05-05",
+        featuredImage: {
+            src: "/images/blog/answer-identify-pets/hero.webp",
+            alt: "A long-haired colourpoint cat curled up against a dark brown dog on a fluffy rug",
+            width: 1400,
+            height: 1050,
+            caption: "Photo: SeanT313, CC BY-SA 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "wildlife-discovery-app",
@@ -1010,7 +1084,14 @@ const answerPageData: AnswerPageEntry[] = [
             "import wildlife photos from Instagram",
             "educational animal app"
         ],
-        updatedAt: "2026-04-09"
+        updatedAt: "2026-04-09",
+        featuredImage: {
+            src: "/images/blog/answer-wildlife-discovery-app/hero.webp",
+            alt: "A grandfather and two girls scanning for birds through binoculars at Claytor Lake State Park, Virginia",
+            width: 1400,
+            height: 937,
+            caption: "Photo: vastateparksstaff, CC BY 2.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "animal-breed-price-estimator",
@@ -1091,7 +1172,14 @@ const answerPageData: AnswerPageEntry[] = [
             "pet breed valuation",
             "animal breed grading app"
         ],
-        updatedAt: "2026-04-24"
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/blog/answer-animal-breed-price-estimator/hero.webp",
+            alt: "A cat show judge holds up a pedigree Siamese cat to assess its body and coat",
+            width: 1400,
+            height: 933,
+            caption: "Photo: Pieter Lanser, CC BY 2.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "animal-breed-grading-app",
@@ -1172,7 +1260,14 @@ const answerPageData: AnswerPageEntry[] = [
             "breeder pricing tool",
             "animal breed price estimator"
         ],
-        updatedAt: "2026-04-24"
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/blog/answer-animal-breed-grading-app/hero.webp",
+            alt: "A handler gaits a golden retriever past the judge in the show ring at the Ooty dog show",
+            width: 1400,
+            height: 933,
+            caption: "Photo: Timothy A. Gonsalves, CC BY-SA 4.0, via Wikimedia Commons."
+        }
     },
     {
         slug: "sell-custom-animal-cards",
@@ -1253,7 +1348,14 @@ const answerPageData: AnswerPageEntry[] = [
             "make animal trading cards",
             "pet trading cards"
         ],
-        updatedAt: "2026-04-24"
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/blog/answer-sell-custom-animal-cards/hero.webp",
+            alt: "John James Audubon's hand-colored plate of two yellow-billed cuckoos on a pawpaw branch, from The Birds of America",
+            width: 1400,
+            height: 947,
+            caption: "Collectible animal art: Plate II of Audubon's The Birds of America (1827). Drawn by John James Audubon, engraved by William Home Lizars, public domain, via Wikimedia Commons."
+        }
     },
     {
         slug: "learn-from-animals",
@@ -1334,7 +1436,14 @@ const answerPageData: AnswerPageEntry[] = [
             "animal traits personal growth",
             "animal behavior learning app"
         ],
-        updatedAt: "2026-04-24"
+        updatedAt: "2026-04-24",
+        featuredImage: {
+            src: "/images/blog/answer-learn-from-animals/hero.webp",
+            alt: "A family of five African elephants, including two calves, walking together across the Maasai Mara grassland",
+            width: 1400,
+            height: 822,
+            caption: "Photo: Ray in Manila, CC BY 2.0, via Wikimedia Commons."
+        }
     }
 ];
 
@@ -1342,6 +1451,17 @@ export const answerPages: AnswerPageEntry[] = [...answerPageData];
 
 export function getAnswerPage(slug: string) {
     return answerPages.find((entry) => entry.slug === slug);
+}
+
+/** The og.png / placeholder seed a CMS copy of a guide inherits is not a real image. */
+export function isRealAnswerImage(image: Partial<ContentImage> | null | undefined): image is ContentImage {
+    const src = image?.src ?? "";
+    return Boolean(src) && src !== "/images/og.png" && !src.endsWith("/og.png") && !src.includes("/images/placeholders/");
+}
+
+/** A managed (CMS) image wins when it is a real image; otherwise the guide's own photo. */
+export function getAnswerPageImage(entry: Pick<AnswerPageEntry, "featuredImage">, managedImage?: Partial<ContentImage> | null): ContentImage {
+    return isRealAnswerImage(managedImage) ? managedImage : entry.featuredImage;
 }
 
 export function getRelatedAnswerPages(slug: string, limit = 5) {

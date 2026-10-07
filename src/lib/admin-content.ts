@@ -263,12 +263,7 @@ function answerPageToManagedPage(entry: (typeof answerPages)[number]): BlogPost 
         description: entry.metaDescription,
         publishedAt: entry.updatedAt,
         updatedAt: entry.updatedAt,
-        featuredImage: {
-            src: "/images/og.png",
-            alt: `${entry.shortTitle} — AnimalDex`,
-            width: 1200,
-            height: 630
-        },
+        featuredImage: entry.featuredImage,
         readingMinutes: Math.max(4, Math.ceil([
             ...entry.directAnswer,
             ...entry.howItWorks,

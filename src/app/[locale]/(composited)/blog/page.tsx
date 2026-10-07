@@ -7,7 +7,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
-import {answerPages} from "@/data/answer-pages";
+import {answerPages, getAnswerPageImage} from "@/data/answer-pages";
 import EditorialCard from "@/app/[locale]/(composited)/blog/_components/editorial-card";
 import ArticleAppCta from "@/app/[locale]/(composited)/blog/_components/article-app-cta";
 import {hasImage, imageFit} from "@/app/[locale]/(composited)/blog/_components/article-media";
@@ -337,12 +337,7 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                     <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
                         {answerPages.map((page, index) => {
                             const pageSummary = pageSummaryBySlug.get(page.slug);
-                            const guideImage = pageSummary?.featuredImage ?? {
-                                src: "/images/og.png",
-                                alt: `${page.shortTitle} guide on AnimalDex`,
-                                width: 1200,
-                                height: 630
-                            };
+                            const guideImage = getAnswerPageImage(page, pageSummary?.featuredImage);
                             return (
                             <article key={page.slug} className="group min-w-0">
                                 <Link
@@ -357,7 +352,7 @@ export default async function BlogIndexPage({params}: BlogIndexPageProps) {
                                             fill
                                             unoptimized={guideImage.src.startsWith("http")}
                                             sizes="(min-width: 640px) 128px, 104px"
-                                            className={`editorial-zoom ${imageFit(featuredPost.featuredImage)}`}
+                                            className={`editorial-zoom ${imageFit(guideImage)}`}
                                         />
                                     </div>
                                     <div className="flex min-w-0 flex-col">

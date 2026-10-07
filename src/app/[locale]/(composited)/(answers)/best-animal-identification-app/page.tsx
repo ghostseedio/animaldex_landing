@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {generateAnswerPageMetadata} from "@/app/[locale]/(composited)/(answers)/_shared";
 import {AppChooser, AppComparisonTable} from "./_app-guide-interactive";
-import {getAbsoluteUrl} from "@/lib/site";
+import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
+import {getAnswerPage, isRealAnswerImage} from "@/data/answer-pages";
 import {getManagedPage} from "@/lib/admin-content";
 import {contentThumb} from "@/data/content-thumbnails";
 import ManagedSectionInteractions from "./managed-section-interactions";
@@ -157,10 +158,6 @@ function sectionByTitle(sections: Array<{title?: string; html?: string}> | undef
     return sections?.find((section) => section.title === title);
 }
 
-function shouldShowFeaturedImage(src: string | undefined) {
-    return Boolean(src && !src.includes("/images/placeholders/blog-image-slot.svg"));
-}
-
 function imageDisplayStyle(image: {displayHeight?: number}) {
     return image.displayHeight ? {height: `${image.displayHeight}px`} : undefined;
 }
@@ -188,7 +185,12 @@ export default async function BestAnimalIdentificationAppPage({params}: {params:
     const managedTrust = sectionByTitle(managedSections, "How to use AI identification responsibly");
     const managedFaq = sectionByTitle(managedSections, "Animal identification app FAQ");
     const managedRelated = sectionByTitle(managedSections, "Related guides");
-    const visibleFeaturedImage = shouldShowFeaturedImage(managed?.featuredImage?.src) ? managed?.featuredImage as ManagedDisplayImage : null;
+    const answerEntry = getAnswerPage("best-animal-identification-app");
+    // A real managed image (with its optional display height) wins; otherwise the guide's own photo.
+    const managedImage = managed?.featuredImage;
+    const visibleFeaturedImage: ManagedDisplayImage | null = isRealAnswerImage(managedImage)
+        ? managedImage as ManagedDisplayImage
+        : answerEntry?.featuredImage ?? null;
     const pageUrl = getAbsoluteUrl(params.locale, "/best-animal-identification-app");
     const structuredData = [
         {
@@ -199,6 +201,7 @@ export default async function BestAnimalIdentificationAppPage({params}: {params:
             dateModified: "2026-08-12",
             inLanguage: params.locale,
             url: pageUrl,
+            ...(visibleFeaturedImage ? {image: getAbsoluteAssetUrl(visibleFeaturedImage.src)} : {}),
             author: {"@type": "Organization", name: "AnimalDex Editorial"},
             publisher: {"@type": "Organization", name: "AnimalDex"}
         },
