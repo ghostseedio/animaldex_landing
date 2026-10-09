@@ -80,16 +80,35 @@ async function publishTikTok(connection: SocialConnection, request: PublishReque
         initUrl = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/";
         body = {source_info: sourceInfo};
     } else {
+        // The poster's own choices from the share dialog (TikTok forbids presetting them).
+        const chosen = request.options?.tiktok;
+        if (!chosen?.privacyLevel) throw new Error("No TikTok privacy level was chosen");
         const creator = await readJson(await fetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", {method: "POST", headers: auth}), "TikTok creator info");
-        const options: string[] = creator?.data?.privacy_level_options ?? [];
-        const privacy = options.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : options[0] ?? "SELF_ONLY";
+        const allowed: string[] = creator?.data?.privacy_level_options ?? [];
+        if (allowed.length && !allowed.includes(chosen.privacyLevel)) throw new Error(`TikTok no longer allows "${chosen.privacyLevel}" for this account; choose again`);
         initUrl = "https://open.tiktokapis.com/v2/post/publish/video/init/";
         body = {
-            post_info: {title: request.caption.slice(0, 2200), privacy_level: privacy, disable_comment: false, disable_duet: false, disable_stitch: false, is_aigc: true},
+            post_info: {
+                title: request.caption.slice(0, 2200),
+                privacy_level: chosen.privacyLevel,
+                disable_comment: !chosen.allowComment,
+                disable_duet: !chosen.allowDuet,
+                disable_stitch: !chosen.allowStitch,
+                brand_organic_toggle: chosen.brandOrganic,
+                brand_content_toggle: chosen.brandContent,
+                is_aigc: true
+            },
             source_info: sourceInfo
         };
     }
-    const init = await readJson(await fetch(initUrl, {method: "POST", headers: auth, body: JSON.stringify(body)}), "TikTok upload start");
+    const initResponse = await fetch(initUrl, {method: "POST", headers: auth, body: JSON.stringify(body)});
+    if (initResponse.status === 403) {
+        const text = await initResponse.clone().text();
+        if (text.includes("unaudited_client_can_only_post_to_private_accounts")) {
+            throw new Error("TikTok has not audited the app yet, so it only accepts posts set to \"Only me\" from a private account. Choose \"Only me\" (and keep the account private) until the audit passes.");
+        }
+    }
+    const init = await readJson(initResponse, "TikTok upload start");
     if (init?.error?.code && init.error.code !== "ok") throw new Error(`TikTok: ${init.error.message || init.error.code}`);
     const publishId: string = init.data.publish_id;
     const uploadUrl: string = init.data.upload_url;

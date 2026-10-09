@@ -124,3 +124,27 @@ test("Facebook picks the configured Page, else the AnimalDex one, and never a Pa
 test("the template gives Facebook a clickable guide link", () => {
     assert.match(buildTemplateCopy(beetle).facebook.caption, /https:\/\/animaldex\.app\/animals\/asiatic-rhinoceros-beetle/);
 });
+
+import {parseTikTokCreatorInfo, readTikTokOptions, tiktokOptionsProblem} from "./social/tiktok-options";
+
+test("TikTok posts need an explicit privacy choice that the account allows", () => {
+    const allowed = ["FOLLOWER_OF_CREATOR", "SELF_ONLY"];
+    assert.match(tiktokOptionsProblem(readTikTokOptions({}), allowed) ?? "", /Choose who can view/);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "PUBLIC_TO_EVERYONE"}), allowed) ?? "", /not available/);
+    assert.equal(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY"}), allowed), null);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY", brandContent: true}), allowed) ?? "", /Branded content cannot be private/);
+});
+
+test("TikTok interaction and disclosure settings default to off", () => {
+    const options = readTikTokOptions({privacyLevel: "SELF_ONLY", allowComment: "yes"});
+    assert.deepEqual(options, {privacyLevel: "SELF_ONLY", allowComment: false, allowDuet: false, allowStitch: false, brandOrganic: false, brandContent: false});
+    assert.equal(readTikTokOptions(null), undefined);
+});
+
+test("creator_info is read defensively", () => {
+    const info = parseTikTokCreatorInfo({creator_nickname: "animaldex.app", privacy_level_options: ["SELF_ONLY", 3], comment_disabled: true, max_video_post_duration_sec: 600});
+    assert.deepEqual(info.privacyLevelOptions, ["SELF_ONLY"]);
+    assert.equal(info.commentDisabled, true);
+    assert.equal(info.maxVideoPostDurationSec, 600);
+    assert.equal(parseTikTokCreatorInfo(undefined).nickname, null);
+});

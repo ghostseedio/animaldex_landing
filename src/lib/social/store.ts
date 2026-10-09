@@ -76,7 +76,7 @@ export async function listPosts(limit = 200) {
     return await response.json() as SocialPostRow[];
 }
 
-export type NewSocialPost = Pick<SocialPostRow, "platform" | "media_path" | "media_kind" | "species_profile_id" | "species_name" | "page_slug" | "capture_id" | "caption" | "title" | "mode">;
+export type NewSocialPost = Pick<SocialPostRow, "platform" | "media_path" | "media_kind" | "species_profile_id" | "species_name" | "page_slug" | "capture_id" | "caption" | "title" | "mode" | "options">;
 
 /** Inserts one queued row; returns null when that video is already live or posted on that platform. */
 export async function insertPost(post: NewSocialPost): Promise<SocialPostRow | null> {

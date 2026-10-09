@@ -53,7 +53,8 @@ export async function runShareJob(rows: SocialPostRow[]) {
                 videoUrl,
                 caption: row.caption,
                 title: row.title ?? row.caption.split("\n")[0] ?? "",
-                mode: row.mode
+                mode: row.mode,
+                options: row.options ?? null
             });
             await updatePost(row.id, {status: "published", external_id: result.externalId, external_url: result.externalUrl, error: null});
         } catch (error) {

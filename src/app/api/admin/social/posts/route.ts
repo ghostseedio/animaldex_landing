@@ -3,6 +3,7 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {runShareJob} from "@/lib/social/runner";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {insertPost, listPosts, updatePost} from "@/lib/social/store";
+import {readTikTokOptions, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {isSocialPlatform, type SocialPlatform, type SocialPostRow} from "@/lib/social/types";
 
 /** A queued/processing row older than this is assumed dead (server restarted mid-upload). */
@@ -21,17 +22,23 @@ type ShareBody = {
     speciesProfileId?: string;
     mediaPath?: string;
     title?: string;
-    targets?: Array<{platform?: string; caption?: string; mode?: string}>;
+    targets?: Array<{platform?: string; caption?: string; mode?: string; tiktok?: unknown}>;
 };
 
 /** Queues one video for the chosen platforms and starts uploading in the background. */
 export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     const body = await request.json().catch(() => null) as ShareBody | null;
-    const targets = (body?.targets ?? []).filter((target): target is {platform: SocialPlatform; caption?: string; mode?: string} => isSocialPlatform(target.platform));
+    const targets = (body?.targets ?? []).filter((target): target is {platform: SocialPlatform; caption?: string; mode?: string; tiktok?: unknown} => isSocialPlatform(target.platform));
     if (!body?.speciesProfileId || !body.mediaPath || targets.length === 0) {
         return NextResponse.json({error: "Pick a video and at least one platform"}, {status: 400});
     }
+
+    // A direct TikTok post needs the poster's own choices; drafts are finished in the TikTok app.
+    const tiktokTarget = targets.find((target) => target.platform === "tiktok" && target.mode !== "draft");
+    const tiktokOptions = tiktokTarget ? readTikTokOptions(tiktokTarget.tiktok) : undefined;
+    const tiktokProblem = tiktokTarget ? tiktokOptionsProblem(tiktokOptions, null) : null;
+    if (tiktokProblem) return NextResponse.json({error: tiktokProblem}, {status: 400});
 
     try {
         const video = await findAdminStoryVideo(body.speciesProfileId, body.mediaPath);
@@ -56,7 +63,8 @@ export async function POST(request: NextRequest) {
                 capture_id: video.captureId,
                 caption: (target.caption ?? "").slice(0, 5000),
                 title: body.title?.slice(0, 100) ?? null,
-                mode: target.mode === "draft" ? "draft" : "post"
+                mode: target.mode === "draft" ? "draft" : "post",
+                options: target === tiktokTarget && tiktokOptions ? {tiktok: tiktokOptions} : null
             });
             if (row) queued.push(row);
             else skipped.push(target.platform);

@@ -5,7 +5,8 @@ import {useCallback, useEffect, useMemo, useState} from "react";
 import {ArrowLeft, CheckCircle, ClapperboardPlay, CloseCircle, DangerTriangle, PlugCircle, Refresh, Share} from "solar-icon-set";
 import {X_POST_LIMIT, xLength} from "@/lib/social/captions";
 import {COPY_LIMITS, type ShareCopy, VISIBLE_CHARS} from "@/lib/social/share-copy";
-import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow} from "@/lib/social/types";
+import {TIKTOK_PRIVACY_LABELS, type TikTokCreatorInfo, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
+import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
 
 type Video = {
     mediaPath: string;
@@ -296,11 +297,34 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [tab, setTab] = useState<SocialPlatform>("youtube");
     const [xLink, setXLink] = useState(false);
     const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
-    const blocked = (platform: SocialPlatform) => shares.some((post) => post.platform === platform && (post.status === "published" || ((post.status === "queued" || post.status === "processing") && !isStale(post))));
-    const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected) && !blocked(platform);
+    // A draft and a direct post are separate shares; each can happen once.
+    const blocked = (platform: SocialPlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || ((post.status === "queued" || post.status === "processing") && !isStale(post))));
+    const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
+        && !(blocked(platform, "post") && (!DRAFT_LABELS[platform] || blocked(platform, "draft")));
     const [selected, setSelected] = useState<SocialPlatform[]>(() => SOCIAL_PLATFORMS.filter(available));
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const tiktokConnected = Boolean(connections.find((candidate) => candidate.platform === "tiktok")?.connected);
+    const [tiktokCreator, setTiktokCreator] = useState<TikTokCreatorInfo | null>(null);
+    const [tiktokCreatorError, setTiktokCreatorError] = useState("");
+    // TikTok's guidelines: no preset privacy level, every interaction off until the poster turns it on.
+    const [tiktok, setTiktok] = useState<TikTokPostOptions>({privacyLevel: "", allowComment: false, allowDuet: false, allowStitch: false, brandOrganic: false, brandContent: false});
+    const [tiktokDisclose, setTiktokDisclose] = useState(false);
+
+    useEffect(() => {
+        if (!tiktokConnected) return;
+        api<{creator: TikTokCreatorInfo}>("/api/admin/social/tiktok-creator")
+            .then((body) => setTiktokCreator(body.creator))
+            .catch((caught) => setTiktokCreatorError(caught instanceof Error ? caught.message : "Unable to load the TikTok account"));
+    }, [tiktokConnected]);
+
+    const tiktokDirect = selected.includes("tiktok") && modes.tiktok === "post";
+    const tiktokTooLong = Boolean(tiktokDirect && tiktokCreator?.maxVideoPostDurationSec && video.durationSeconds && video.durationSeconds > tiktokCreator.maxVideoPostDurationSec);
+    const tiktokProblem = tiktokDirect
+        ? (tiktokTooLong ? `This video is longer than the ${tiktokCreator?.maxVideoPostDurationSec}s this TikTok account can post`
+            : tiktokDisclose && !tiktok.brandOrganic && !tiktok.brandContent ? "Choose what the commercial content is, or turn the disclosure off"
+                : tiktokOptionsProblem(tiktok, tiktokCreator?.privacyLevelOptions ?? null))
+        : null;
 
     const draft = useCallback(async () => {
         setDrafting(true);
@@ -357,12 +381,21 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                     speciesProfileId: video.speciesProfileId,
                     mediaPath: video.mediaPath,
                     title: copy.youtube.title,
-                    targets: selected.map((platform) => ({platform, caption: captionFor[platform], mode: modes[platform]}))
+                    targets: selected.map((platform) => ({
+                        platform,
+                        caption: captionFor[platform],
+                        mode: modes[platform],
+                        ...(platform === "tiktok" ? {tiktok: {...tiktok, brandOrganic: tiktokDisclose && tiktok.brandOrganic, brandContent: tiktokDisclose && tiktok.brandContent}} : {})
+                    }))
                 })
             });
             const queued = body.queued.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ");
             const skipped = body.skipped.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ");
-            onShared([queued && `Uploading ${video.speciesName} to ${queued}.`, skipped && `Already shared to ${skipped}.`].filter(Boolean).join(" "));
+            onShared([
+                queued && `Uploading ${video.speciesName} to ${queued}.`,
+                body.queued.includes("tiktok") && "TikTok can take a few minutes to process the video before it appears.",
+                skipped && `Already shared to ${skipped}.`
+            ].filter(Boolean).join(" "));
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to share");
             setSubmitting(false);
@@ -398,7 +431,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                         <label className={`flex flex-1 items-center gap-2 text-sm ${available(platform) ? "text-white" : "text-ink-500"}`}>
                                             <input type="checkbox" disabled={!available(platform)} checked={checked} onChange={(event) => setSelected((current) => event.target.checked ? [...current, platform] : current.filter((item) => item !== platform))} />
                                             {SOCIAL_PLATFORM_LABELS[platform]}
-                                            {!connected ? <span className="text-[11px]">(not connected)</span> : already ? <span className="text-[11px]">(already shared)</span> : null}
+                                            {!connected ? <span className="text-[11px]">(not connected)</span> : already ? <span className="text-[11px]">({modes[platform] === "draft" ? "draft already sent" : "already posted"})</span> : null}
                                         </label>
                                         {DRAFT_LABELS[platform] && checked ? (
                                             <label className="flex items-center gap-2 text-xs text-ink-300">
@@ -446,6 +479,16 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                     <textarea value={copy.tiktok.caption} rows={8} onChange={(event) => edit("tiktok", "caption", event.target.value)} className={fieldClass} />
                                 </label>
                                 <VisiblePreview text={copy.tiktok.caption} visible={VISIBLE_CHARS.tiktok} />
+                                <TikTokPostSettings
+                                    creator={tiktokCreator}
+                                    creatorError={tiktokCreatorError}
+                                    connected={tiktokConnected}
+                                    draftMode={modes.tiktok === "draft"}
+                                    options={tiktok}
+                                    onChange={setTiktok}
+                                    disclose={tiktokDisclose}
+                                    onDiscloseChange={setTiktokDisclose}
+                                />
                             </>
                         )}
                         {tab === "instagram" && (
@@ -479,11 +522,92 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 )}
 
                 {error && <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
+                {tiktokProblem && <p className="mt-4 text-xs text-amber-200">TikTok: {tiktokProblem} (TikTok tab).</p>}
+                {tiktokDirect && (
+                    <p className="mt-4 text-right text-[11px] leading-5 text-ink-400">
+                        By posting, you agree to TikTok&apos;s <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer" className="underline hover:text-white">Music Usage Confirmation</a>
+                        {tiktokDisclose && tiktok.brandContent ? <> and <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noreferrer" className="underline hover:text-white">Branded Content Policy</a></> : null}.
+                    </p>
+                )}
 
                 <div className="mt-5 flex justify-end gap-2">
                     <button onClick={onClose} className="rounded-xl border border-line-300 px-5 py-2.5 text-sm font-bold text-white hover:border-primary-300">Cancel</button>
-                    <button onClick={submit} disabled={submitting || !copy || selected.length === 0 || tooLong} className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"><Share size={16} />{submitting ? "Queuing…" : `Share to ${selected.length} platform${selected.length === 1 ? "" : "s"}`}</button>
+                    <button onClick={submit} disabled={submitting || !copy || selected.length === 0 || tooLong || Boolean(tiktokProblem)} className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"><Share size={16} />{submitting ? "Queuing…" : `Share to ${selected.length} platform${selected.length === 1 ? "" : "s"}`}</button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+type TikTokPostSettingsProps = {
+    creator: TikTokCreatorInfo | null;
+    creatorError: string;
+    connected: boolean;
+    draftMode: boolean;
+    options: TikTokPostOptions;
+    onChange: (options: TikTokPostOptions) => void;
+    disclose: boolean;
+    onDiscloseChange: (disclose: boolean) => void;
+};
+
+/** The posting choices TikTok's Content Sharing Guidelines require us to show (and not preset). */
+function TikTokPostSettings({creator, creatorError, connected, draftMode, options, onChange, disclose, onDiscloseChange}: TikTokPostSettingsProps) {
+    if (!connected) return <p className="mt-4 text-xs text-ink-500">Connect TikTok to choose its posting settings.</p>;
+    if (draftMode) return <p className="mt-4 text-xs text-ink-400">Sent to the account&apos;s TikTok drafts: privacy, interactions and disclosure are chosen in the TikTok app when you finish the post.</p>;
+    const set = (patch: Partial<TikTokPostOptions>) => onChange({...options, ...patch});
+    const interactions: Array<{key: "allowComment" | "allowDuet" | "allowStitch"; label: string; disabled: boolean}> = [
+        {key: "allowComment", label: "Comment", disabled: Boolean(creator?.commentDisabled)},
+        {key: "allowDuet", label: "Duet", disabled: Boolean(creator?.duetDisabled)},
+        {key: "allowStitch", label: "Stitch", disabled: Boolean(creator?.stitchDisabled)}
+    ];
+    return (
+        <div className="mt-5 flex flex-col gap-4 rounded-xl border border-line-300 p-4">
+            <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {creator?.avatarUrl ? <img src={creator.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
+                <p className="text-sm text-white">Posting to TikTok as <strong>{creator?.nickname ?? (creatorError ? "unknown account" : "…")}</strong></p>
+            </div>
+            {creatorError && <p className="text-xs text-red-200">{creatorError}</p>}
+
+            <label className="block text-xs font-bold text-ink-300">Who can view this video
+                <select value={options.privacyLevel} onChange={(event) => set({privacyLevel: event.target.value})} className={fieldClass}>
+                    <option value="" disabled>Choose who can view…</option>
+                    {(creator?.privacyLevelOptions ?? []).map((level) => (
+                        <option key={level} value={level} disabled={disclose && options.brandContent && level === "SELF_ONLY"}>{TIKTOK_PRIVACY_LABELS[level] ?? level}</option>
+                    ))}
+                </select>
+            </label>
+            <p className="-mt-2 text-[11px] text-ink-500">Until TikTok audits the app it only accepts &quot;Only me&quot;, from a private account.</p>
+
+            <fieldset>
+                <legend className="text-xs font-bold text-ink-300">Allow users to</legend>
+                <div className="mt-2 flex flex-wrap gap-4">
+                    {interactions.map((item) => (
+                        <label key={item.key} className={`flex items-center gap-2 text-sm ${item.disabled ? "text-ink-600" : "text-white"}`} title={item.disabled ? "Turned off in this account's TikTok settings" : undefined}>
+                            <input type="checkbox" disabled={item.disabled} checked={!item.disabled && options[item.key]} onChange={(event) => set({[item.key]: event.target.checked})} />
+                            {item.label}
+                        </label>
+                    ))}
+                </div>
+            </fieldset>
+
+            <div>
+                <label className="flex items-center justify-between gap-3 text-sm text-white">
+                    <span>Disclose video content<span className="block text-[11px] text-ink-500">Turn on if this video promotes yourself, a brand, product or service.</span></span>
+                    <input type="checkbox" checked={disclose} onChange={(event) => onDiscloseChange(event.target.checked)} />
+                </label>
+                {disclose && (
+                    <div className="mt-3 flex flex-col gap-2 pl-1">
+                        <label className="flex items-start gap-2 text-sm text-white">
+                            <input type="checkbox" className="mt-1" checked={options.brandOrganic} onChange={(event) => set({brandOrganic: event.target.checked})} />
+                            <span>Your brand<span className="block text-[11px] text-ink-500">You are promoting yourself or your own business. The video will be labelled &quot;Promotional content&quot;.</span></span>
+                        </label>
+                        <label className="flex items-start gap-2 text-sm text-white">
+                            <input type="checkbox" className="mt-1" checked={options.brandContent} onChange={(event) => set({brandContent: event.target.checked, privacyLevel: event.target.checked && options.privacyLevel === "SELF_ONLY" ? "" : options.privacyLevel})} />
+                            <span>Branded content<span className="block text-[11px] text-ink-500">You are promoting another brand or a third party. The video will be labelled &quot;Paid partnership&quot;, and cannot be private.</span></span>
+                        </label>
+                    </div>
+                )}
             </div>
         </div>
     );
