@@ -2,6 +2,7 @@ import {getFreshConnection} from "@/lib/social/oauth";
 import {publishers} from "@/lib/social/publishers";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {updatePost} from "@/lib/social/store";
+import {normalizeVideoForSocial} from "@/lib/social/video-normalize";
 import type {SocialPostRow} from "@/lib/social/types";
 
 // Runs queued shares in the background of the (long-lived, self-hosted) Node
@@ -38,7 +39,10 @@ export async function runShareJob(rows: SocialPostRow[]) {
         const current = await findAdminStoryVideo(first.species_profile_id, first.media_path);
         if (!current) throw new Error("The video is no longer served by species-story-media (deleted or made private)");
         videoUrl = current.signedUrl ?? current.stableUrl;
-        video = await download(videoUrl);
+        // Fixes the frame rate (e.g. old 15 fps renders) once, for every platform.
+        const normalized = await normalizeVideoForSocial(await download(videoUrl));
+        video = normalized.video;
+        if (normalized.converted) console.info(`[social-share] ${first.media_path}: re-encoded ${normalized.fromFps?.toFixed(1)} fps → 30 fps`);
     } catch (error) {
         const message = errorText(error);
         await Promise.all(rows.map((row) => updatePost(row.id, {status: "failed", error: message}).catch(() => undefined)));

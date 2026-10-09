@@ -139,19 +139,26 @@ async function publishTikTok(connection: SocialConnection, request: PublishReque
     return {externalId: postId || publishId, externalUrl: null};
 }
 
-// ── Instagram: Reels via the Instagram Login content publishing API. Meta
-// downloads the file itself from a public URL, then we publish the container.
+// ── Instagram: Reels via the Instagram Login content publishing API: create
+// a resumable container, upload the bytes, wait for processing, publish.
 async function publishInstagram(connection: SocialConnection, request: PublishRequest): Promise<PublishResult> {
     if (!connection.accountId) throw new Error("Instagram account id missing; reconnect Instagram");
     // The API has no drafts (an unpublished container just expires after 24 h).
     if (request.mode === "draft") throw new Error("Instagram has no drafts via the API; use Post");
     const base = `https://graph.instagram.com/v23.0`;
     const token = connection.accessToken;
+    // Resumable upload of our bytes (not video_url), so Instagram gets the
+    // frame-rate-fixed file rather than downloading the original.
     const container = await readJson(await fetch(`${base}/${connection.accountId}/media`, {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: new URLSearchParams({media_type: "REELS", video_url: request.videoUrl, caption: request.caption.slice(0, 2200), share_to_feed: "true", access_token: token}).toString()
+        body: new URLSearchParams({media_type: "REELS", upload_type: "resumable", caption: request.caption.slice(0, 2200), share_to_feed: "true", access_token: token}).toString()
     }), "Instagram container");
+    await readJson(await fetch(container.uri ?? `https://rupload.facebook.com/ig-api-upload/v23.0/${container.id}`, {
+        method: "POST",
+        headers: {Authorization: `OAuth ${token}`, offset: "0", file_size: String(request.video.length), "Content-Type": "application/octet-stream"},
+        body: request.video
+    }), "Instagram upload");
     await poll("Instagram processing", async () => {
         const status = await readJson(await fetch(`${base}/${container.id}?fields=status_code,status&access_token=${encodeURIComponent(token)}`), "Instagram status");
         if (status.status_code === "ERROR" || status.status_code === "EXPIRED") throw new Error(`Instagram could not process the video: ${status.status ?? status.status_code}`);

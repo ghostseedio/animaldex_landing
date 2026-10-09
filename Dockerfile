@@ -97,9 +97,12 @@ ENV NODE_ENV=production \
     HOSTNAME=localhost \
     NODE_OPTIONS=--dns-result-order=ipv4first
 
+# ffmpeg: /admin/story-videos re-encodes low-frame-rate story videos to 30 fps
+# before sharing (TikTok and Reels reject anything under ~24 fps).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
   && rm -rf /var/lib/apt/lists/* \
+  && ffmpeg -hide_banner -version | head -1 \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 

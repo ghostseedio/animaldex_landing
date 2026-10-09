@@ -148,3 +148,45 @@ test("creator_info is read defensively", () => {
     assert.equal(info.maxVideoPostDurationSec, 600);
     assert.equal(parseTikTokCreatorInfo(undefined).nickname, null);
 });
+
+import {needsFrameRateFix, readMp4VideoInfo} from "./social/mp4-info";
+
+function box(type: string, ...parts: Buffer[]) {
+    const body = Buffer.concat(parts);
+    const header = Buffer.alloc(8);
+    header.writeUInt32BE(8 + body.length, 0);
+    header.write(type, 4, "latin1");
+    return Buffer.concat([header, body]);
+}
+const u32 = (...values: number[]) => Buffer.concat(values.map((value) => { const b = Buffer.alloc(4); b.writeUInt32BE(value); return b; }));
+const u16 = (value: number) => { const b = Buffer.alloc(2); b.writeUInt16BE(value); return b; };
+
+/** A track of `frames` samples over `seconds` at timescale 600. */
+function fakeTrak(handler: "vide" | "soun", frames: number, seconds: number) {
+    const mdhd = box("mdhd", u32(0, 0, 0, 600, seconds * 600), Buffer.alloc(4));
+    const hdlr = box("hdlr", u32(0, 0), Buffer.from(handler), Buffer.alloc(12));
+    const stts = box("stts", u32(0, 1, frames, (seconds * 600) / frames));
+    // Visual sample entry body: 24 bytes of reserved/indices, then width and height.
+    const stsd = box("stsd", u32(0, 1), box("avc1", Buffer.alloc(24), u16(720), u16(1280), Buffer.alloc(50)));
+    return box("trak", box("mdia", mdhd, hdlr, box("minf", box("stbl", stsd, stts))));
+}
+
+const fakeMp4 = (...traks: Buffer[]) => Buffer.concat([box("ftyp", Buffer.from("isom")), box("mdat", Buffer.alloc(16)), box("moov", ...traks)]);
+
+test("the MP4 reader finds the frame rate, size and audio", () => {
+    const info = readMp4VideoInfo(fakeMp4(fakeTrak("vide", 1215, 81), fakeTrak("soun", 3441, 80)));
+    assert.deepEqual(info, {fps: 15, width: 720, height: 1280, durationSeconds: 81, hasAudio: true});
+    assert.equal(readMp4VideoInfo(fakeMp4(fakeTrak("vide", 2430, 81)))?.hasAudio, false);
+    assert.equal(readMp4VideoInfo(fakeMp4(fakeTrak("soun", 100, 10))), null);
+    assert.equal(readMp4VideoInfo(Buffer.from("not a video")), null);
+});
+
+test("only frame rates outside 24–60 need re-encoding", () => {
+    const at = (fps: number) => ({fps, width: 720, height: 1280, durationSeconds: 10, hasAudio: true});
+    assert.equal(needsFrameRateFix(at(15)), true);
+    assert.equal(needsFrameRateFix(at(23.976)), true);
+    assert.equal(needsFrameRateFix(at(30)), false);
+    assert.equal(needsFrameRateFix(at(60)), false);
+    assert.equal(needsFrameRateFix(at(120)), true);
+    assert.equal(needsFrameRateFix(null), false);
+});
