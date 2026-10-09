@@ -56,6 +56,19 @@ docker pull "$NEW_IMAGE"
 docker inspect "$CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' \
     | grep -vE '^(PATH|HOSTNAME|HOME|NODE_VERSION|YARN_VERSION)=' | sed '/^$/d' > "$ENV_FILE"
 echo "env vars  : $(wc -l < "$ENV_FILE") carried over ($(grep -E '^NODE_OPTIONS=' "$ENV_FILE" || echo 'no NODE_OPTIONS'))"
+# New or changed variables go in this file (KEY=value lines, no quotes, chmod
+# 600); its values replace the carried-over ones, and later deploys keep them
+# because they carry the running container's env forward.
+EXTRA_ENV="/opt/animaldex/shared/app.env"
+if [ -r "$EXTRA_ENV" ]; then
+    keys="$(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "$EXTRA_ENV" | sed 's/=$//' | paste -sd'|' - || true)"
+    if [ -n "$keys" ]; then
+        { grep -vE "^(${keys})=" "$ENV_FILE" || true; } > "$ENV_FILE.merged"
+        grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$EXTRA_ENV" >> "$ENV_FILE.merged"
+        mv "$ENV_FILE.merged" "$ENV_FILE"
+        echo "env vars  : $(echo "$keys" | tr '|' '\n' | wc -l) set from $EXTRA_ENV ($(echo "$keys" | tr '|' ' '))"
+    fi
+fi
 
 echo "== booting new image on 127.0.0.1:${SIDE_PORT} for a health check"
 docker rm -f animaldex-next >/dev/null 2>&1 || true
