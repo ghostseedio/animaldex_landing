@@ -27,10 +27,10 @@ const NEON = "#A7F432";
 
 function Pill({children, tone = "state"}: {children: React.ReactNode; tone?: "analysis" | "extra" | "state"}) {
     const className = tone === "analysis"
-        ? "bg-[#A7F432] text-black/80"
+        ? "bg-primary-400 text-black/80"
         : tone === "extra"
             ? "bg-white/80 text-black/80"
-            : "bg-black/65 text-[#A7F432]";
+            : "bg-black/65 text-primary-400";
     return (
         <span className={`rounded-full px-2.5 py-[7px] text-[10px] font-semibold leading-none ${className}`}>
             {children}

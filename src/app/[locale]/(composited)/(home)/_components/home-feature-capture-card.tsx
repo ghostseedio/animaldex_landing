@@ -8,8 +8,8 @@ export default function HomeFeatureCaptureCard({capture, locale}: {capture: Disc
     const date = capture.capturedAt ? formatAppShortDateWithYear(capture.capturedAt, locale) : null;
 
     return (
-        <article className="group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:border-primary-400/30">
-            <Link href={discoverPostPath(capture.id)} className="relative block aspect-[4/3] overflow-hidden bg-white/5">
+        <article className="group overflow-hidden rounded-[1.4rem] border border-white/[0.09] light:border-line-200 bg-[#121212] light:bg-surface-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] light:shadow-[0_16px_40px_-28px_rgba(12,26,17,0.35)] transition hover:border-primary-400/30">
+            <Link href={discoverPostPath(capture.id)} className="theme-dark relative block aspect-[4/3] overflow-hidden bg-white/5">
                 <img
                     src={capture.imageSrc}
                     alt={capture.animalName}

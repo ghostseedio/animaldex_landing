@@ -19,7 +19,7 @@ export default function PlaceCard({place, fallbackImage, labels}: {
 
     return (
         <article className="group flex h-full flex-col overflow-hidden  bg-surface-900/80 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.95)]">
-            <div className="relative aspect-[16/9] overflow-hidden bg-surface-800">
+            <div className="theme-dark relative aspect-[16/9] overflow-hidden bg-surface-800">
                 <Image
                     src={image}
                     alt={place.imageAlt || `${place.name}, ${place.locationName}`}

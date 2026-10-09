@@ -4,8 +4,8 @@ import {FormEvent, RefObject, useEffect, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
-import {QuizAnimal, QuizResult, quizQuestions, scoreQuiz} from "@/data/what-animal-am-i-quiz";
-import type {whatAnimalAmIPage} from "@/data/what-animal-am-i-page";
+import {QuizAnimal, QuizResult, WildProfileRole, quizQuestions, scoreQuiz} from "@/data/what-animal-am-i-quiz";
+import {WILD_PROFILE_INTERVIEW_PATH, type whatAnimalAmIPage} from "@/data/what-animal-am-i-page";
 
 type QuizCopy = typeof whatAnimalAmIPage.quiz;
 
@@ -56,6 +56,35 @@ function AnimalLinks({animal, copy}: {animal: QuizAnimal; copy: QuizCopy}) {
     );
 }
 
+const ROLE_ACCENTS: Record<WildProfileRole, string> = {
+    origin: "text-primary-200",
+    apex: "text-amber-300",
+    active: "text-violet-300"
+};
+
+function RoleCard({role, animal, copy}: {role: Exclude<WildProfileRole, "origin">; animal: QuizAnimal; copy: QuizCopy}) {
+    return (
+        <article className="flex flex-col gap-4 rounded-lg border border-line-300 bg-surface-900/70 p-5 sm:flex-row sm:items-start md:p-6">
+            <SpeciesArtworkImage
+                slug={animal.slug}
+                imageFile={animal.artworkFile}
+                alt={`${animal.name} artwork`}
+                className="h-20 w-20 shrink-0 rounded-md border border-line-300"
+                sizes="80px"
+            />
+            <div className="flex min-w-0 flex-col gap-2">
+                <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${ROLE_ACCENTS[role]}`}>
+                    {copy.roles[role].label} · {copy.roles[role].meaning}
+                </p>
+                <h4 className="font-display text-2xl font-bold text-white">{animal.name}</h4>
+                <p className="text-sm font-semibold text-primary-100">{animal.archetype}</p>
+                <p className="text-base leading-7 text-ink-300">{animal.oneLiner}</p>
+                <AnimalLinks animal={animal} copy={copy} />
+            </div>
+        </article>
+    );
+}
+
 function ResultCard({
     result,
     copy,
@@ -67,48 +96,43 @@ function ResultCard({
     onRetake: () => void;
     headingRef: RefObject<HTMLHeadingElement>;
 }) {
-    const {primary, secondary} = result;
+    const {origin, apex, active} = result;
 
     return (
         <div className="flex flex-col gap-5" aria-live="polite">
             <article className="overflow-hidden rounded-lg border border-primary-300/40 bg-surface-900/80">
                 <div className="grid gap-0 md:grid-cols-[minmax(0,18rem)_1fr]">
                     <SpeciesArtworkImage
-                        slug={primary.slug}
-                        alt={`${primary.name} artwork`}
+                        slug={origin.slug}
+                        imageFile={origin.artworkFile}
+                        alt={`${origin.name} artwork`}
                         className="aspect-[4/3] w-full border-b border-line-300 md:aspect-auto md:min-h-[18rem] md:border-b-0 md:border-r"
                         sizes="(min-width: 768px) 18rem, 100vw"
                     />
                     <div className="flex flex-col gap-4 p-5 md:p-8">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{copy.resultEyebrow}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">
+                            {copy.resultEyebrow} · {copy.roles.origin.label}
+                        </p>
                         <h3
                             ref={headingRef}
                             tabIndex={-1}
                             className="font-display text-3xl font-bold leading-tight text-white focus:outline-none md:text-5xl"
                         >
-                            You are {/^[AEIOU]/.test(primary.name) ? "an" : "a"} {primary.name}
+                            You are {/^[AEIOU]/.test(origin.name) ? "an" : "a"} {origin.name}
                         </h3>
-                        <p className="text-base font-semibold text-primary-100 md:text-lg">{primary.archetype}</p>
-                        <p className="text-base leading-7 text-ink-200 md:text-lg md:leading-8">{primary.read}</p>
-                        <AnimalLinks animal={primary} copy={copy} />
+                        <p className="text-base font-semibold text-primary-100 md:text-lg">
+                            {origin.archetype} <span className="font-normal text-ink-300">— {copy.roles.origin.meaning.toLowerCase()}</span>
+                        </p>
+                        <p className="text-base leading-7 text-ink-200 md:text-lg md:leading-8">{origin.read}</p>
+                        <AnimalLinks animal={origin} copy={copy} />
                     </div>
                 </div>
             </article>
 
-            <article className="flex flex-col gap-4 rounded-lg border border-line-300 bg-surface-900/70 p-5 sm:flex-row sm:items-start md:p-6">
-                <SpeciesArtworkImage
-                    slug={secondary.slug}
-                    alt={`${secondary.name} artwork`}
-                    className="h-20 w-20 shrink-0 rounded-md border border-line-300"
-                    sizes="80px"
-                />
-                <div className="flex min-w-0 flex-col gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">{copy.secondaryLabel}</p>
-                    <h4 className="font-display text-2xl font-bold text-white">{secondary.name}</h4>
-                    <p className="text-base leading-7 text-ink-300">{secondary.oneLiner}</p>
-                    <AnimalLinks animal={secondary} copy={copy} />
-                </div>
-            </article>
+            <div className="grid gap-4 lg:grid-cols-2">
+                <RoleCard role="apex" animal={apex} copy={copy} />
+                <RoleCard role="active" animal={active} copy={copy} />
+            </div>
 
             <div className="flex flex-wrap items-center gap-3">
                 <button
@@ -123,7 +147,16 @@ function ResultCard({
             <div className="rounded-lg border border-line-300 bg-gradient-to-br from-primary-500/14 via-surface-900 to-canvas-900 p-5 text-center md:p-8">
                 <h3 className="font-display text-2xl font-bold text-white md:text-3xl">{copy.fullProfileTitle}</h3>
                 <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-ink-200 md:text-lg">{copy.fullProfileDescription}</p>
-                <StoreLinks className="mt-6" />
+                <div className="mt-6 flex flex-col items-center gap-4">
+                    <Link
+                        href={WILD_PROFILE_INTERVIEW_PATH}
+                        className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+                    >
+                        {copy.fullProfileWebLabel}
+                    </Link>
+                    <p className="text-sm text-ink-300">{copy.fullProfileAppLabel}</p>
+                    <StoreLinks variant="text" className="!mt-0" />
+                </div>
             </div>
         </div>
     );

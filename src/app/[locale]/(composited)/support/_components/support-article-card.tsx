@@ -11,7 +11,7 @@ export default function SupportArticleCard({
     const article = getSupportArticleById(articleId);
     if (!article) {
         return (
-            <div className="  border border-white/10 bg-[#101010] px-4 py-3 text-sm text-white/60">
+            <div className="  border border-white/10 bg-[#101010] light:bg-surface-800 px-4 py-3 text-sm text-white/60">
                 Help article unavailable
             </div>
         );
@@ -20,7 +20,7 @@ export default function SupportArticleCard({
     return (
         <Link
             href={getSupportArticlePath(article)}
-            className="block overflow-hidden rounded-2xl border border-primary-200/20 bg-[#071B0F] p-4 transition-colors hover:border-primary-200/40 hover:bg-[#0A2112]"
+            className="block overflow-hidden rounded-2xl border border-primary-200/20 bg-[#071B0F] light:bg-surface-900 p-4 transition-colors hover:border-primary-200/40 hover:bg-[#0A2112] light:hover:bg-surface-800"
         >
             <p className="text-[0.62rem] font-black uppercase tracking-[0.24em] text-primary-200">Help article</p>
             <p className="mt-2 font-display text-lg font-bold leading-snug text-white">{article.title}</p>

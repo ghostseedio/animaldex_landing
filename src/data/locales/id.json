@@ -31,6 +31,8 @@
     "browseAnimals": "Jelajahi Hewan",
     "signIn": "Masuk",
     "myAnimals": "Hewan saya",
+    "themeToLight": "Beralih ke tema terang",
+    "themeToDark": "Beralih ke tema gelap",
     "articlesGuides": "Artikel & Panduan",
     "earnOnAnimalDex": "Hasilkan di AnimalDex",
     "becomeAWildlifeGuide": "Jadi Wildlife Guide",
@@ -276,7 +278,7 @@
           "title": "Cara AI Mengenali Hewan",
           "description": "Apa yang bisa dilihat scanner hewan yang baik, dan apa yang tetap butuh penilaian manusia.",
           "cta": "Baca",
-          "alt": "Preview wild profile AnimalDex untuk panduan AI scanner"
+          "alt": "Seorang pelancong memotret jerapah dengan ponsel dari kendaraan safari"
         },
         "rareAnimals": {
           "eyebrow": "Hewan langka",
@@ -297,7 +299,7 @@
           "title": "Masalah Gurita",
           "description": "Kamuflase, kecerdasan meloloskan diri, dan tubuh yang berpikir berbeda.",
           "cta": "Pahami",
-          "alt": "Gambar hero simbolisme gurita"
+          "alt": "Gurita biasa yang berkamuflase di antara rumput laut merah di terumbu"
         }
       }
     },
@@ -800,7 +802,7 @@
     "eyebrow": "Wild Profile",
     "rolesTitle": "Tiga hewan, bukan satu label acak",
     "rolesDescription": "AnimalDex Wild Profile memisahkan pola akar, pola tekanan, dan musim saat ini agar jawaban spirit animal benar-benar cocok dengan cara kamu hidup.",
-    "howTitle": "Cara mendapatkan diagnosis nyata di aplikasi",
+    "howTitle": "Cara mendapatkan Wild Profile lengkapmu",
     "celebrityEyebrow": "Logika Wild Profile di publik",
     "celebrityTitle": "Hewan apa yang cocok untuk selebriti ini?",
     "celebrityDescription": "Ini contoh editorial bagaimana AnimalDex memetakan pola Origin, Apex, dan Active ke persona terkenal menggunakan prinsip perilaku hewan nyata — bukan label kuis satu ukuran untuk semua.",
@@ -816,7 +818,8 @@
     "faqTitle": "Pertanyaan yang sering diajukan",
     "faqDescription": "Jawaban langsung untuk pencarian what animal am I, kuis spirit animal, dan AnimalDex Wild Profile.",
     "ctaTitle": "Dapatkan Wild Profile aslimu di AnimalDex",
-    "ctaDescription": "Download AnimalDex, buka Identity, dan selesaikan wawancara adaptif untuk menerima diagnosis Origin, Apex, dan Active pribadimu.",
+    "ctaDescription": "Ikuti wawancara adaptif di web dengan akun gratis, atau di aplikasi AnimalDex lewat Identity. Keduanya menyimpan Origin, Apex, dan Active pribadimu ke profil yang sama.",
+    "ctaWebButton": "Ikuti wawancara lengkap",
     "ctaButton": "Download AnimalDex",
     "readDeepGuide": "Baca panduan lengkap"
   },
@@ -988,6 +991,13 @@
     "askLayerSymbolism": "Simbolisme",
     "askLayerSymbolismCaption": "Interpretasi budaya dan sejarah",
     "glanceTitle": "{animal} dalam satu menit",
+    "storyMediaHookLabel": "Tangkapan AnimalDex asli seekor {animal}, dihidupkan",
+    "storyMediaStoryVideoLabel": "Kisah {animal} dengan narasi: tangkapan AnimalDex asli",
+    "storyMediaEyebrow": "Dari cerita AnimalDex",
+    "storyMediaTitle": "{animal} bergerak",
+    "storyMediaDescription": "Adegan dari video cerita {animal} yang dibuat di aplikasi AnimalDex: Trial hewan ini dan momen dari kisahnya.",
+    "storyMediaTrialSceneLabel": "Trial {animal}, diperagakan",
+    "storyMediaStillLabel": "Adegan dari kisah {animal}",
     "glanceKnownFor": "Dikenal karena",
     "glancePower": "AnimalDex Power",
     "askLimitReached": "Kamu sudah menjelajahi panduan ini. Mulai koleksi untuk terus bertanya, membuka Animal Power lengkap, dan menyimpan hewan yang kamu pedulikan.",

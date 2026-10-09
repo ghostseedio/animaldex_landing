@@ -105,7 +105,7 @@ export default function ExperiencesDirectory({
                             <select
                                 value={requestedLocation}
                                 onChange={(event) => setParam("location", event.target.value)}
-                                className="min-h-11 rounded-full border border-white/15 bg-[#07100B] px-4 text-sm normal-case tracking-normal text-white"
+                                className="min-h-11 rounded-full border border-white/15 bg-canvas-950 px-4 text-sm normal-case tracking-normal text-white"
                             >
                                 <option value="">Any listed area</option>
                                 {locations.map(([key, label]) => (
@@ -119,7 +119,7 @@ export default function ExperiencesDirectory({
                         <select
                             value={duration}
                             onChange={(event) => setDuration(event.target.value as DurationId)}
-                            className="min-h-11 rounded-full border border-white/15 bg-[#07100B] px-4 text-sm normal-case tracking-normal text-white"
+                            className="min-h-11 rounded-full border border-white/15 bg-canvas-950 px-4 text-sm normal-case tracking-normal text-white"
                         >
                             {DURATION_FILTERS.map((item) => (
                                 <option key={item.id} value={item.id}>{item.label}</option>

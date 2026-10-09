@@ -31,6 +31,8 @@
     "browseAnimals": "Browse Animals",
     "signIn": "Sign in",
     "myAnimals": "My animals",
+    "themeToLight": "Switch to light theme",
+    "themeToDark": "Switch to dark theme",
     "articlesGuides": "Articles & Guides",
     "earnOnAnimalDex": "Earn on AnimalDex",
     "becomeAWildlifeGuide": "Become a Wildlife Guide",
@@ -276,7 +278,7 @@
           "title": "AI Animal Scanner",
           "description": "What a good animal scanner can see.",
           "cta": "Read",
-          "alt": "AnimalDex wild profile preview for an AI scanner guide"
+          "alt": "A traveller photographs a giraffe with a phone from a safari vehicle"
         },
         "rareAnimals": {
           "eyebrow": "Rare animals",
@@ -297,7 +299,7 @@
           "title": "The Octopus Problem",
           "description": "Camouflage, escape intelligence, and a body that thinks differently.",
           "cta": "Decode",
-          "alt": "Octopus symbolism hero image"
+          "alt": "A common octopus camouflaged among red seaweed on a reef"
         }
       }
     },
@@ -794,7 +796,7 @@
     "eyebrow": "Wild Profile",
     "rolesTitle": "Three animals, not one random label",
     "rolesDescription": "AnimalDex Wild Profile separates your root pattern, pressure pattern, and current season so a spirit-animal answer can actually fit how you live.",
-    "howTitle": "How to get your real diagnosis in the app",
+    "howTitle": "How to get your full Wild Profile",
     "celebrityEyebrow": "Wild Profile logic in public",
     "celebrityTitle": "Which animal would these celebrities be?",
     "celebrityDescription": "These are editorial examples of how AnimalDex maps Origin, Apex, and Active patterns onto well-known personas using real animal behavior principles — not one-size-fits-all quiz labels.",
@@ -810,7 +812,8 @@
     "faqTitle": "Frequently asked questions",
     "faqDescription": "Direct answers for people searching what animal am I, spirit animal quizzes, and AnimalDex Wild Profile.",
     "ctaTitle": "Get your real Wild Profile in AnimalDex",
-    "ctaDescription": "Download AnimalDex, open Identity, and complete the adaptive interview to receive your personal Origin, Apex, and Active animal diagnosis.",
+    "ctaDescription": "Take the adaptive interview on the web with a free account, or in the AnimalDex app under Identity. Both save the same personal Origin, Apex, and Active animals to your profile.",
+    "ctaWebButton": "Take the full interview",
     "ctaButton": "Download AnimalDex",
     "readDeepGuide": "Read the full guide"
   },
@@ -982,6 +985,13 @@
     "askLayerSymbolism": "Symbolism",
     "askLayerSymbolismCaption": "Cultural and historical interpretation",
     "glanceTitle": "{animal} at a glance",
+    "storyMediaHookLabel": "A real AnimalDex capture of a {animal}, brought to life",
+    "storyMediaStoryVideoLabel": "The {animal} story, narrated: a real AnimalDex capture",
+    "storyMediaEyebrow": "From AnimalDex stories",
+    "storyMediaTitle": "{animal} in motion",
+    "storyMediaDescription": "Scenes from {animal} story videos made in the AnimalDex app: the animal's Trial, and moments from its story.",
+    "storyMediaTrialSceneLabel": "The {animal} Trial, acted out",
+    "storyMediaStillLabel": "A scene from the {animal} story",
     "glanceKnownFor": "Known for",
     "glancePower": "AnimalDex Power",
     "askLimitReached": "You’ve explored this field guide. Start a collection to keep asking, unlock the full Animal Power, and save the animals you care about.",

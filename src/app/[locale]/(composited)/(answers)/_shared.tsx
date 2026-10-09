@@ -236,7 +236,7 @@ export function ManagedAnswerPageArticle({managed}: {managed: NonNullable<Awaite
                             {section.paragraphs.map((paragraph, index) => <p key={index} className="whitespace-pre-wrap text-lg leading-8 text-ink-200">{paragraph}</p>)}
                             {section.codeBlocks?.map((block, index) => block.render && canRenderCodeBlock(block.language)
                                 ? <figure key={index} className="overflow-hidden  border border-line-300 bg-white"><RenderedCodeFrame title={block.caption || `Embedded content ${index + 1}`} documentHtml={getRenderedCodeDocument(block)} minHeight={320} />{block.caption ? <figcaption className="border-t border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>
-                                : <figure key={index} className="overflow-hidden  border border-line-300 bg-[#080d0a]"><div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[.16em] text-ink-400">{block.language || "Text"}</div><pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>{block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>)}
+                                : <figure key={index} className="theme-dark overflow-hidden  border border-line-300 bg-[#080d0a]"><div className="border-b border-line-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[.16em] text-ink-400">{block.language || "Text"}</div><pre className="overflow-x-auto p-4 text-sm leading-6 text-primary-100"><code>{block.code}</code></pre>{block.caption ? <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{block.caption}</figcaption> : null}</figure>)}
                         </>}
                     </section>
                 ))}
@@ -557,7 +557,7 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                         </div>
                     </SectionShell>
 
-                    <div className="relative overflow-hidden  border border-primary-200/20 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <div className="relative overflow-hidden  border border-primary-200/20 light:border-line-200 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.14),transparent_34%),linear-gradient(135deg,rgba(16,25,20,0.96),rgba(6,10,8,0.98))] light:bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.16),transparent_38%)] light:bg-surface-900 shadow-[0_30px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)] light:shadow-[0_24px_70px_rgba(12,26,17,0.10)]">
                         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/50 to-transparent" />
                         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
                             <div className="relative z-10 p-6 text-center md:p-10 lg:p-12 lg:text-left">

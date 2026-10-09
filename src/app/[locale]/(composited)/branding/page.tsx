@@ -34,10 +34,10 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
 }
 
 const colors = [
-    {name: "AnimalDex Lime", value: "#A7F432", className: "bg-[#A7F432]", text: "text-canvas-950"},
+    {name: "AnimalDex Lime", value: "#A7F432", className: "bg-primary-400", text: "text-canvas-950"},
     {name: "Primary Green", value: "#21C05E", className: "bg-[#21C05E]", text: "text-canvas-950"},
-    {name: "Deep Forest", value: "#0D2A16", className: "bg-[#0D2A16]", text: "text-white"},
-    {name: "Near Black", value: "#07100B", className: "bg-[#07100B]", text: "text-white"},
+    {name: "Deep Forest", value: "#0D2A16", className: "bg-[#0D2A16]", text: "text-[#FFFFFF]"},
+    {name: "Near Black", value: "#07100B", className: "bg-[#07100B]", text: "text-[#FFFFFF]"},
     {name: "White", value: "#FFFFFF", className: "bg-white", text: "text-canvas-950"},
     {name: "Muted Text", value: "#A8B0AA", className: "bg-[#A8B0AA]", text: "text-canvas-950"}
 ];
@@ -100,7 +100,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     </div>
 
                     <div className="grid gap-5 lg:grid-cols-2">
-                        <article className="flex min-h-[25rem] flex-col justify-between  bg-canvas-950 p-7 md:p-10">
+                        <article className="theme-dark flex min-h-[25rem] flex-col justify-between  bg-canvas-950 p-7 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · dark background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={400} height={400} priority className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>

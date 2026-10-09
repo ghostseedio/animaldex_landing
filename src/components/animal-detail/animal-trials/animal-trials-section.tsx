@@ -107,7 +107,7 @@ export default function AnimalTrialsSection({
         <section className="flex flex-col">
             {showsHeader ? (
                 <header className="flex items-center gap-2 px-5 pb-3.5 pt-5">
-                    <span aria-hidden="true" className="text-[13px]" style={{color: "#A7F432"}}>◉</span>
+                    <span aria-hidden="true" className="text-[13px]" style={{color: "rgb(var(--c-primary-text-400))"}}>◉</span>
                     <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-white">Animal Trials</h3>
                     <span className="ml-auto text-[10px] text-white/40">What this animal teaches you to do</span>
                 </header>
@@ -125,7 +125,7 @@ export default function AnimalTrialsSection({
                     aria-label={`${progress.done} of ${progress.total} Trials complete`}
                 >
                     <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-[0.11em]" style={{color: progress.done === progress.total ? "#A7F432" : "rgba(255,255,255,0.85)"}}>
+                        <span className="text-[10px] font-black uppercase tracking-[0.11em]" style={{color: progress.done === progress.total ? "rgb(var(--c-primary-text-400))" : "rgb(var(--c-white) / 0.85)"}}>
                             {progress.label}
                         </span>
                         <span className="text-[10px] font-bold text-white/40">{progress.percent}%</span>
@@ -301,7 +301,7 @@ export function TrialCard({
                             disabled={isApplying}
                             aria-label={`Apply It Your Way for ${trial.title}`}
                             className="flex-1 bg-white/[0.04] text-sm font-black disabled:opacity-60"
-                            style={{color: "#A7F432"}}
+                            style={{color: "rgb(var(--c-primary-text-400))"}}
                         >
                             {isApplying ? "…" : "Your Way"}
                         </button>
@@ -316,7 +316,7 @@ function RewardChip({accent, children}: {accent: string; children: React.ReactNo
     return (
         <span
             className="inline-flex items-center rounded-full border px-2.5 py-1.5 text-[10px] font-black"
-            style={{color: accent, backgroundColor: `${accent}24`, borderColor: `${accent}59`}}
+            style={{color: `color-mix(in srgb, ${accent} var(--accent-ink-mix, 100%), black)`, backgroundColor: `${accent}24`, borderColor: `${accent}59`}}
         >
             {children}
         </span>

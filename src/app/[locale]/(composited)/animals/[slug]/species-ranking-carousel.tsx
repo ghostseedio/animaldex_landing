@@ -111,7 +111,7 @@ export default function SpeciesRankingCarousel({
                                     wide ? "lg:w-[164px]" : ""
                                 } ${
                                     isCurrentCapture
-                                        ? "border-[#A7F432]/80 ring-1 ring-[#A7F432]/80"
+                                        ? "border-primary-400/80 ring-1 ring-primary-400/80"
                                         : "border-white/10"
                                 }`}
                             >
@@ -125,7 +125,7 @@ export default function SpeciesRankingCarousel({
                                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
                                     <span
                                         className={`absolute left-2 top-2 rounded-full px-2 py-[5px] text-[10px] font-bold leading-none text-black/90 ${
-                                            isCurrentCapture ? "bg-[#A7F432]" : "bg-[#d5ddd6]"
+                                            isCurrentCapture ? "bg-primary-400" : "bg-[#d5ddd6]"
                                         }`}
                                     >
                                         #{item.rank}
@@ -136,7 +136,7 @@ export default function SpeciesRankingCarousel({
                                     {item.username ? (
                                         <Link
                                             href={`/u/${encodeURIComponent(item.username)}`}
-                                            className="block truncate text-[11px] font-medium leading-[13px] text-white hover:text-[#A7F432]"
+                                            className="block truncate text-[11px] font-medium leading-[13px] text-white hover:text-primary-400"
                                         >
                                             @{handle}
                                         </Link>
@@ -153,7 +153,7 @@ export default function SpeciesRankingCarousel({
                     {pinsPrivateCapture ? (
                         <article
                             aria-label="Your capture. Private, so it is not ranked."
-                            className={`w-[136px] shrink-0 overflow-hidden border border-[#A7F432]/80 bg-[#171a18] ring-1 ring-[#A7F432]/80 ${wide ? "lg:w-[164px]" : ""}`}
+                            className={`w-[136px] shrink-0 overflow-hidden border border-primary-400/80 bg-[#171a18] ring-1 ring-primary-400/80 ${wide ? "lg:w-[164px]" : ""}`}
                         >
                             <div className={`relative h-[148px] w-[136px] overflow-hidden bg-black/30 ${wide ? "lg:h-[178px] lg:w-[164px]" : ""}`}>
                                 {currentCaptureImageSrc ? (
@@ -161,7 +161,7 @@ export default function SpeciesRankingCarousel({
                                     <img src={currentCaptureImageSrc} alt="Your capture" className="h-full w-full object-cover" loading="lazy" />
                                 ) : null}
                                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/65" />
-                                <span className="absolute left-2 top-2 rounded-full bg-[#A7F432] px-2 py-[5px] text-[10px] font-bold leading-none text-black/90">
+                                <span className="absolute left-2 top-2 rounded-full bg-primary-400 px-2 py-[5px] text-[10px] font-bold leading-none text-black/90">
                                     Private
                                 </span>
                             </div>

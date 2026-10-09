@@ -93,7 +93,7 @@ export default function SpeciesAskAnimalDex({
     return (
         <section
             id="ask"
-            className="scroll-mt-28 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(167,244,50,0.12),transparent_36%),linear-gradient(180deg,rgba(18,22,19,0.96),rgba(10,13,11,0.98))] p-5 md:p-8"
+            className="scroll-mt-28 overflow-hidden border border-white/10 light:border-line-200 light:bg-none light:bg-surface-900 bg-[radial-gradient(circle_at_12%_0%,rgba(167,244,50,0.12),transparent_36%),linear-gradient(180deg,rgba(18,22,19,0.96),rgba(10,13,11,0.98))] p-5 md:p-8"
         >
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200/90">{labels.eyebrow}</p>
             <h2 className="mt-2 font-display text-3xl font-bold text-white md:text-4xl">
@@ -103,7 +103,7 @@ export default function SpeciesAskAnimalDex({
             <p className="mt-3 text-sm text-ink-400">{labels.quota}</p>
 
             <noscript>
-                <div className="mt-4 border border-white/10 bg-black/30 p-4">
+                <div className="mt-4 border border-white/10 bg-black/30 light:bg-canvas-950 p-4">
                     <p className="text-sm leading-6 text-ink-200">{labels.noscript}</p>
                     <dl className="mt-3 flex flex-col gap-2">
                         {(Object.keys(labels.layers) as SpeciesAskLayerKind[]).map((kind) => {
@@ -126,7 +126,7 @@ export default function SpeciesAskAnimalDex({
                 type="button"
                 onClick={() => openConversation(undefined, "form")}
                 aria-label={`${labels.submit}: ${animalName}`}
-                className="mt-6 flex w-full items-center gap-3 rounded-[1.75rem] border border-white/12 bg-black/30 py-3 pl-4 pr-2 text-left transition-colors hover:border-primary-300/50"
+                className="mt-6 flex w-full items-center gap-3 rounded-[1.75rem] border border-white/12 bg-black/30 light:bg-canvas-950 py-3 pl-4 pr-2 text-left transition-colors hover:border-primary-300/50"
             >
                 <span className="flex-1 text-base text-ink-400">{placeholder}</span>
                 <span

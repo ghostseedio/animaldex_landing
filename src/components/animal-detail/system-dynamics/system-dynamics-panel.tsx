@@ -26,7 +26,8 @@ import CrossDomainBrowser from "@/components/animal-detail/system-dynamics/cross
  * explanation → Across Reality → failure mode. No lesson content.
  */
 
-const ACCENT = "#A7F432";
+// Lime as text: the token darkens it to a legible green in the light theme.
+const ACCENT = "rgb(var(--c-primary-text-400))";
 
 function FailureModes({dynamics}: {dynamics: SpeciesSystemDynamics}) {
     const [isExpanded, setIsExpanded] = useState(false);

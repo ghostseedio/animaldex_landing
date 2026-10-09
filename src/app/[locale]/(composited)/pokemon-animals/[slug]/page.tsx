@@ -3,17 +3,18 @@ import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import PokemonAnimalTable from "@/app/[locale]/(composited)/pokemon-animals/pokemon-animal-table";
 import PokemonRealSpeciesSection from "@/app/[locale]/(composited)/pokemon-animals/pokemon-real-species-section";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {
     buildPokemonEntryContent,
     buildPokemonEntryDescription,
-    buildPokemonEntryTitle,
-    withArticle
+    buildPokemonEntryTitle
 } from "@/app/[locale]/(composited)/pokemon-animals/pokemon-entry-content";
 import {
     POKEMON_ANIMAL_CANONICAL_BASE_PATH,
     getPokemonAnimalEntriesByGeneration,
     getPokemonAnimalEntry,
     getPokemonAnimalGeneration,
+    getPokemonArtSrc,
     pokemonAnimalEntries,
     pokemonAnimalGenerations
 } from "@/data/pokemon-animal-counterparts";
@@ -91,12 +92,14 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             locale: getMetadataLocale(locale),
             title: `${title} | AnimalDex`,
             description,
-            url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`)
+            url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`),
+            images: [{url: getPokemonArtSrc(entry.slug), width: 256, height: 256, alt: `${entry.name} official artwork`}]
         },
         twitter: {
             card: "summary",
             title: `${title} | AnimalDex`,
-            description
+            description,
+            images: [getPokemonArtSrc(entry.slug)]
         }
     };
 }
@@ -110,11 +113,7 @@ function confidenceCopy(confidence: string) {
         return "Reasonable animal match";
     }
 
-    if (confidence === "broad") {
-        return "Broad or mixed-animal match";
-    }
-
-    return "No single real animal";
+    return "Broad or mixed-animal match";
 }
 
 function PokemonGenerationPage({locale, slug}: {locale: string; slug: string}) {
@@ -177,16 +176,14 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
     }
 
     const relatedEntries = getPokemonAnimalEntriesByGeneration(entry.generation)
-        .filter((item) => item.slug !== entry.slug && item.animal === entry.animal)
+        .filter((item) => item.slug !== entry.slug && item.speciesSlug === entry.speciesSlug)
         .slice(0, 8);
     const pageUrl = getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`);
     const {answer, noteParagraphs, species, comparison, faqs} = buildPokemonEntryContent(entry);
     const primarySpecies = species[0] ?? null;
     const comparisonHeading = primarySpecies
         ? `How ${entry.name} compares to the real ${primarySpecies.name}`
-        : entry.confidence === "none"
-            ? `Why ${entry.name} has no single real animal`
-            : `How ${entry.name} compares to ${withArticle(entry.animal)}`;
+        : `How ${entry.name} compares to the ${entry.animal}`;
     const schema = [
         {
             "@context": "https://schema.org",
@@ -231,27 +228,61 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
                 Back to {entry.generationLabel}
             </Link>
 
-            <section className="flex flex-col gap-5">
-                <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">
-                    #{String(entry.id).padStart(4, "0")} · {entry.generationLabel}
-                </p>
-                <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white">
-                    What Animal Is {entry.name} Based On?
-                </h1>
-                <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{answer}</p>
-                {noteParagraphs.length > 0 ? (
-                    <div className="flex flex-col gap-4 max-w-4xl">
-                        {noteParagraphs.map((paragraph) => (
-                            <p key={paragraph} className="text-ink-200 text-lg leading-8">{paragraph}</p>
-                        ))}
-                    </div>
-                ) : null}
+            <section className="grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-8 items-center">
+                <div className="flex flex-col gap-5">
+                    <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">
+                        #{String(entry.id).padStart(4, "0")} · {entry.generationLabel}
+                    </p>
+                    <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white">
+                        What Animal Is {entry.name} Based On?
+                    </h1>
+                    <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{answer}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <figure className="flex flex-col gap-2">
+                        <div className="relative aspect-square border border-line-300 bg-surface-900/80 p-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={getPokemonArtSrc(entry.slug)}
+                                alt={`${entry.name} official artwork`}
+                                width={256}
+                                height={256}
+                                fetchPriority="high"
+                                className="h-full w-full object-contain"
+                            />
+                        </div>
+                        <figcaption className="text-center text-ink-300">{entry.name}</figcaption>
+                    </figure>
+                    <figure className="flex flex-col gap-2">
+                        <Link href={`/animals/${entry.speciesSlug}`} aria-label={`${entry.animal} field guide`}>
+                            <SpeciesArtworkImage
+                                slug={entry.speciesSlug}
+                                alt={`${entry.animal}, the real animal ${entry.name} most resembles`}
+                                priority
+                                fit="contain"
+                                className="aspect-square border border-line-300"
+                                sizes="(min-width: 1024px) 20vw, 45vw"
+                            />
+                        </Link>
+                        <figcaption className="text-center text-ink-300">Real animal: {entry.animal}</figcaption>
+                    </figure>
+                </div>
             </section>
+
+            {noteParagraphs.length > 0 ? (
+                <section className="flex flex-col gap-4 max-w-4xl">
+                    {noteParagraphs.map((paragraph) => (
+                        <p key={paragraph} className="text-ink-200 text-lg leading-8">{paragraph}</p>
+                    ))}
+                </section>
+            ) : null}
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="  border border-line-300 bg-surface-900/80 px-6 py-6">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Closest animal</p>
-                    <p className="font-display text-4xl text-white mt-2">{entry.animal}</p>
+                    <Link href={`/animals/${entry.speciesSlug}`} className="block font-display text-4xl text-white hover:text-primary-100 mt-2">
+                        {entry.animal}
+                    </Link>
                 </div>
                 <div className="  border border-line-300 bg-surface-900/80 px-6 py-6">
                     <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Confidence</p>

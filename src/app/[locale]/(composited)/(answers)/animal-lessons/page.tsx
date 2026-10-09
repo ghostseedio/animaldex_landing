@@ -131,7 +131,7 @@ function pickCollectionLessons(
 function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorLesson; wide?: boolean; readLabel: string}) {
     return (
         <article className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${wide ? "md:col-span-2" : ""}`}>
-            <Link href={`/animal-lessons/${lesson.slug}`} className="relative block overflow-hidden">
+            <Link href={`/animal-lessons/${lesson.slug}`} className="theme-dark relative block overflow-hidden">
                 <SpeciesArtworkImage
                     slug={lesson.slug}
                     imageFile={lesson.imageFile}
@@ -273,15 +273,15 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
             </section>
 
             {!isFiltering && featured ? (
-                <section className="relative mt-8 overflow-hidden  border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
+                <section className="relative mt-8 overflow-hidden  border border-white/10 light:border-line-200 bg-surface-900 shadow-2xl shadow-black/25 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)]">
                     <SpeciesArtworkImage slug={featured.slug} imageFile={featured.imageFile} alt={getImageAlt(featured)} priority className="h-[24rem] w-full md:h-[34rem]" sizes="(min-width: 1280px) 1400px, 100vw" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/35 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/35 to-transparent light:from-surface-900 light:via-surface-900/60" />
                     <div className="absolute inset-x-0 bottom-0 max-w-3xl p-6 md:p-10">
                         <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-black">{t("featuredEyebrow")}</span>
                         <h2 className="mt-4 font-display text-4xl font-bold text-white md:text-6xl">{featured.displayName}</h2>
                         <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-100">{t("learnLabel")} {featured.principleName}</p>
                         <p className="mt-3 line-clamp-2 max-w-2xl text-base leading-7 text-ink-100 md:text-lg">{featured.applicationExample || featured.coreLesson}</p>
-                        <Link href={`/animal-lessons/${featured.slug}`} className="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">{t("openLesson")} →</Link>
+                        <Link href={`/animal-lessons/${featured.slug}`} className="mt-6 inline-flex rounded-full bg-white light:bg-primary-400 px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">{t("openLesson")} →</Link>
                     </div>
                 </section>
             ) : null}

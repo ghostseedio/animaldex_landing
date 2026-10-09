@@ -1,13 +1,25 @@
 import Link from "@/app/[locale]/_components/link";
+import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import type {PokemonRealSpecies} from "@/app/[locale]/(composited)/pokemon-animals/pokemon-entry-content";
 
 /** "Meet the real <animal>": database facts for one species a Pokémon is paired with. */
 export default function PokemonRealSpeciesSection({species}: {species: PokemonRealSpecies}) {
     return (
         <section className="  border border-line-300 bg-surface-900/80 px-6 py-8 md:px-10 md:py-10 flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Meet the real {species.name}</h2>
-                {species.scientificName ? <p className="text-ink-300 italic">{species.scientificName}</p> : null}
+            <div className="flex items-center gap-5">
+                <Link href={species.animalHref} aria-label={`${species.name} field guide`} className="shrink-0">
+                    <SpeciesArtworkImage
+                        slug={species.slug}
+                        alt={species.name}
+                        fit="contain"
+                        className="h-24 w-24 md:h-32 md:w-32 rounded-full border border-line-300"
+                        sizes="128px"
+                    />
+                </Link>
+                <div className="flex flex-col gap-1">
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Meet the real {species.name}</h2>
+                    {species.scientificName ? <p className="text-ink-300 italic">{species.scientificName}</p> : null}
+                </div>
             </div>
 
             {species.summary ? <p className="text-ink-200 text-lg md:text-xl leading-8">{species.summary}</p> : null}

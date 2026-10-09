@@ -205,7 +205,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                         <Link
                             key={animal.slug}
                             href={`/animals/${animal.slug}`}
-                            className={`group relative overflow-hidden rounded-3xl bg-surface-800 shadow-2xl lg:w-[82%] ${index === 1 ? "lg:ml-auto" : ""}`}
+                            className={`group relative overflow-hidden rounded-3xl bg-surface-800 shadow-2xl light:shadow-[0_24px_70px_rgba(12,26,17,0.10)] light:border light:border-line-200 lg:w-[82%] ${index === 1 ? "lg:ml-auto" : ""}`}
                         >
                             <SpeciesImage
                                 slug={animal.slug}
@@ -214,7 +214,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                                 sizes="(min-width: 1024px) 34vw, 30vw"
                                 className="aspect-[3/4] lg:aspect-[16/5] transition-transform duration-500 group-hover:scale-[1.02]"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent light:from-surface-900 light:via-surface-900/20" />
                             <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 lg:p-5">
                                 <p className="text-white text-base sm:text-xl font-bold">{animal.name}</p>
                                 <p className="text-primary-200 text-xs sm:text-sm font-semibold uppercase tracking-[0.14em]">{animal.principle}</p>

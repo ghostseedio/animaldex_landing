@@ -86,7 +86,7 @@ export default function SupportArticleFeedback({
     }
 
     return (
-        <section aria-labelledby="article-feedback-title" className="overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85">
+        <section aria-labelledby="article-feedback-title" className="overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85 light:bg-surface-900">
             <div className="border-b border-white/[0.06] px-5 py-6 md:px-7 md:py-7">
                 <div className="flex items-start gap-4">
                     <span
@@ -176,7 +176,7 @@ export default function SupportArticleFeedback({
                 className={`relative px-5 py-6 md:px-7 md:py-7 ${
                     highlightEscalation
                         ? "bg-[radial-gradient(ellipse_80%_120%_at_0%_50%,rgba(33,192,94,0.12),transparent_70%)]"
-                        : "bg-[#0A2112]/60"
+                        : "bg-[#0A2112]/60 light:bg-surface-800"
                 }`}
             >
                 <div
@@ -191,7 +191,7 @@ export default function SupportArticleFeedback({
                             className={`flex h-12 w-12 shrink-0 items-center justify-center  border ${
                                 highlightEscalation
                                     ? "border-primary-200/35 bg-primary-400/12 text-primary-200 shadow-[0_0_24px_rgba(33,192,94,0.12)]"
-                                    : "border-white/[0.08] bg-[#071B0F]/80 text-primary-200/90"
+                                    : "border-white/[0.08] bg-[#071B0F]/80 light:bg-surface-900 text-primary-200/90"
                             }`}
                         >
                             <LifeBuoyIcon size={22} />

@@ -48,7 +48,7 @@ function AnimalCardHeader() {
         <div className="flex items-center gap-2">
             <svg
                 aria-hidden="true"
-                className="h-[17px] w-[17px] shrink-0 text-[#A7F432]"
+                className="h-[17px] w-[17px] shrink-0 text-primary-400"
                 viewBox="0 0 24 24"
                 fill="currentColor"
             >
@@ -78,7 +78,7 @@ function SearchNearbyButton() {
     return (
         <Link
             href="/locations"
-            className="mt-1 flex w-full items-center gap-2 rounded-full bg-[#A7F432] px-3.5 py-3 text-[13px] font-extrabold text-black/[0.86]"
+            className="mt-1 flex w-full items-center gap-2 rounded-full bg-primary-400 px-3.5 py-3 text-[13px] font-extrabold text-black/[0.86]"
         >
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[13px] w-[13px]" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <circle cx="10" cy="10" r="5.5" />
@@ -96,7 +96,7 @@ function WildCaptureHint() {
     return (
         <div className="border border-white/[0.08] bg-white/[0.03] p-3">
             <p className="text-[11px] font-semibold text-white/[0.42]">Wild reward hint</p>
-            <p className="mt-1.5 text-[15px] font-medium leading-5 text-[#A7F432]/90">First-time wild species earn bonus rewards, including 1 free credit.</p>
+            <p className="mt-1.5 text-[15px] font-medium leading-5 text-primary-400/90">First-time wild species earn bonus rewards, including 1 free credit.</p>
         </div>
     );
 }
@@ -107,7 +107,7 @@ function AnimalCardVectorMap({regions, wide = false}: {regions: ReturnType<typeo
             wide ? "lg:h-[230px]" : ""
         }`}>
             <div className="absolute inset-3">
-                <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgba(255,255,255,0.12)" />
+                <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgb(var(--c-white) / 0.12)" />
                 {regions.map((region) => {
                     const overlayAssetPath = getNativeRangeOverlayAssetPath(region);
 
@@ -150,7 +150,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
             return (
                 <AnimalCardShell wide={wide}>
                     <AnimalCardHeader />
-                    <span className="w-fit rounded-full bg-[#A7F432]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#A7F432]">
+                    <span className="w-fit rounded-full bg-primary-400/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-primary-400">
                         {presentation.title}
                     </span>
                     {presentation.body ? (
@@ -205,7 +205,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
                         })}
                     </div>
                 ) : (
-                    <span className="w-fit rounded-full bg-[#A7F432]/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-[#A7F432]">
+                    <span className="w-fit rounded-full bg-primary-400/[0.12] px-[10px] py-[6px] text-[11px] font-semibold leading-[14px] text-primary-400">
                         {getNativeRangeDisplayLabel(descriptor)}
                     </span>
                 )}
@@ -260,7 +260,7 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
 
             {hasVectorMap ? (
                 <div className="relative h-44 md:h-48 border border-white/8 overflow-hidden bg-gradient-to-br from-white/[0.04] to-black/[0.14] p-3">
-                    <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgba(255,255,255,0.12)" />
+                    <MaskLayer assetPath={NATIVE_RANGE_WORLD_BASE_ASSET} color="rgb(var(--c-white) / 0.12)" />
                     {renderedRegions.map((region) => {
                         const overlayAssetPath = getNativeRangeOverlayAssetPath(region);
 
@@ -289,8 +289,8 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
                             key={region}
                             className="rounded-full border px-3 py-1 text-sm"
                             style={{
-                                borderColor: isRendered ? `${getNativeRangeAccent(region)}` : "rgba(255,255,255,0.08)",
-                                color: isRendered ? getNativeRangeAccent(region) : "rgba(214,223,238,0.75)",
+                                borderColor: isRendered ? `${getNativeRangeAccent(region)}` : "rgb(var(--c-white) / 0.08)",
+                                color: isRendered ? getNativeRangeAccent(region) : "rgb(var(--range-muted-text, 214 223 238) / 0.75)",
                                 backgroundColor: isRendered ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)"
                             }}
                         >

@@ -24,16 +24,16 @@ export default function TeamMember({
 }: TeamMemberProps) {
     return (
         <figure
-            className="group relative flex h-[26rem] w-[17.5rem] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.06] shadow-[0_24px_80px_rgba(0,0,0,0.42)] transition-[border-color,box-shadow] duration-500 ease-out hover:border-primary-200/55 hover:shadow-[0_28px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(167,244,50,0.12)] sm:h-[28rem] sm:w-[18.5rem] md:h-[32rem] md:w-[21rem] lg:h-[34rem] lg:w-[22rem]"
+            className="group relative flex h-[26rem] w-[17.5rem] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.06] light:border-line-200 shadow-[0_24px_80px_rgba(0,0,0,0.42)] light:shadow-[0_18px_50px_rgba(12,26,17,0.10)] transition-[border-color,box-shadow] duration-500 ease-out hover:border-primary-200/55 hover:shadow-[0_28px_90px_rgba(0,0,0,0.5),0_0_0_1px_rgba(167,244,50,0.12)] sm:h-[28rem] sm:w-[18.5rem] md:h-[32rem] md:w-[21rem] lg:h-[34rem] lg:w-[22rem]"
         >
             <Image
                 src={image}
                 alt={imageAlt}
                 fill
                 sizes="(max-width: 768px) 280px, 352px"
-                className="object-cover brightness-[0.42] saturate-[0.85] transition-[filter,transform] duration-700 ease-out group-hover:scale-[1.03] group-hover:brightness-[0.58] group-hover:saturate-100"
+                className="object-cover brightness-[0.42] saturate-[0.85] light:brightness-100 light:saturate-100 transition-[filter,transform] duration-700 ease-out group-hover:scale-[1.03] group-hover:brightness-[0.58] group-hover:saturate-100 light:group-hover:brightness-105"
             />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,27,15,0.35)_0%,rgba(7,27,15,0.72)_48%,rgba(7,27,15,0.94)_100%)] transition-opacity duration-500 group-hover:opacity-90" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,27,15,0.35)_0%,rgba(7,27,15,0.72)_48%,rgba(7,27,15,0.94)_100%)] light:bg-[linear-gradient(180deg,rgba(244,246,241,0.15)_0%,rgba(244,246,241,0.78)_45%,rgba(244,246,241,0.97)_100%)] transition-opacity duration-500 group-hover:opacity-90" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(167,244,50,0.08),transparent_58%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
             <figcaption className="relative flex h-full flex-col justify-between p-6 md:p-7 lg:p-8">

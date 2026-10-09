@@ -69,7 +69,7 @@ export default function AnimalDetailTabBar({
                         } ${
                             active
                                 ? "border-primary-400 bg-surface-900 text-white"
-                                : "border-transparent bg-black text-white/[0.42] hover:bg-surface-900/60 hover:text-white/[0.7]"
+                                : "border-transparent bg-black light:bg-surface-800 text-white/[0.42] hover:bg-surface-900/60 hover:text-white/[0.7]"
                         }`}
                     >
                         <TabIcon tab={tab.id} className={`h-3 w-3 ${wide ? "lg:h-4 lg:w-4" : ""}`} />

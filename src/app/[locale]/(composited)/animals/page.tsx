@@ -246,7 +246,7 @@ function SpeciesDirectorySkeleton() {
     return (
         <div
             aria-hidden="true"
-            className="grid grid-cols-4 gap-0 overflow-hidden bg-black sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8"
+            className="grid grid-cols-4 gap-0 overflow-hidden bg-black light:bg-transparent sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8"
         >
             {Array.from({length: 24}, (_, index) => (
                 <div key={index} className="aspect-square w-full animate-pulse bg-surface-800/60" />

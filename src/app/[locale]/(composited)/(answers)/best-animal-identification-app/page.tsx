@@ -40,7 +40,7 @@ const screenshots = [
     {title: "Collection", ...contentThumb("id-collection"), caption: "Keep discoveries instead of losing them after one search."},
     {title: "Comparisons", ...contentThumb("id-comparisons"), caption: "Place species side by side and explore tradeoffs."},
     {title: "Lessons", ...contentThumb("id-lessons"), caption: "Move from animal behavior to a memorable idea."},
-    {title: "Wild Profile", caption: "See patterns across the animals you connect with.", src: "/images/blog/what-animal-am-i/wild-profile-app-interface.webp", alt: "AnimalDex Wild Profile screen showing patterns across collected animals"}
+    {title: "Wild Profile", caption: "An adaptive interview that matches you to three animals.", src: "/images/blog/what-animal-am-i/wild-profile-app-interface.webp", alt: "Wild Profile interview: the Wild Guide asks a follow-up question, with quick-answer chips and a signal meter"}
 ];
 
 type FeatureDeepDive = {

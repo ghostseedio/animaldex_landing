@@ -5,9 +5,11 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {
     celebrityWildProfiles,
     whatAnimalAmIPage,
-    WHAT_ANIMAL_AM_I_UPDATED_AT
+    WHAT_ANIMAL_AM_I_PUBLISHED_AT,
+    WHAT_ANIMAL_AM_I_UPDATED_AT,
+    WILD_PROFILE_INTERVIEW_PATH
 } from "@/data/what-animal-am-i-page";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
 import {quizAnimals, quizQuestions} from "@/data/what-animal-am-i-quiz";
@@ -43,6 +45,7 @@ export async function generateMetadata({params}: WhatAnimalAmIPageProps): Promis
             title: `${page.metaTitle} | AnimalDex`,
             description: page.metaDescription,
             url: getLocalePath(params.locale, `/${page.slug}`),
+            publishedTime: WHAT_ANIMAL_AM_I_PUBLISHED_AT,
             modifiedTime: WHAT_ANIMAL_AM_I_UPDATED_AT,
             tags: page.searchIntents,
             images: [
@@ -50,7 +53,7 @@ export async function generateMetadata({params}: WhatAnimalAmIPageProps): Promis
                     url: "/images/blog/what-animal-am-i/wild-profile-hero.webp",
                     width: 1200,
                     height: 630,
-                    alt: "AnimalDex Wild Profile spirit animal diagnosis"
+                    alt: "Wild Profile triad: Gray Wolf as Origin, Honey Badger as Apex and Octopus as Active"
                 }
             ]
         },
@@ -70,9 +73,14 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
     const articleSchema = {
         "@context": "https://schema.org",
         "@type": "Article",
-        headline: page.heroTitle,
+        headline: page.metaTitle,
+        alternativeHeadline: page.heroTitle,
         description: page.metaDescription,
+        image: getAbsoluteAssetUrl("/images/blog/what-animal-am-i/wild-profile-hero.webp"),
+        datePublished: WHAT_ANIMAL_AM_I_PUBLISHED_AT,
         dateModified: WHAT_ANIMAL_AM_I_UPDATED_AT,
+        mainEntityOfPage: pageUrl,
+        keywords: page.searchIntents.join(", "),
         inLanguage: params.locale,
         url: pageUrl,
         author: {"@type": "Organization", name: "AnimalDex"},
@@ -94,6 +102,14 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
             }
         }))
     };
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(params.locale, "/")},
+            {"@type": "ListItem", position: 2, name: "Animal personality test", item: pageUrl}
+        ]
+    };
     const howToSchema = {
         "@context": "https://schema.org",
         "@type": "HowTo",
@@ -111,7 +127,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
         <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-12 px-4 py-12 md:px-8 md:py-20">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([articleSchema, faqSchema, howToSchema])}}
+                dangerouslySetInnerHTML={{__html: JSON.stringify([articleSchema, faqSchema, howToSchema, breadcrumbSchema])}}
             />
 
             <section className="overflow-hidden rounded-lg border border-line-300 bg-gradient-to-br from-primary-500/14 via-surface-900 to-canvas-900">
@@ -131,7 +147,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <div className="mt-8 grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{quizQuestions.length}</strong>
-                                <span>Quiz questions</span>
+                                <span>Test questions</span>
                             </div>
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{quizAnimals.length}</strong>
@@ -156,15 +172,15 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                     </div>
                     <div className="relative min-h-[27rem] border-t border-line-300 bg-canvas-950/35 lg:border-l lg:border-t-0">
                         <Image
-                            src="/images/blog/what-animal-am-i/wild-profile-hero.webp"
-                            alt="AnimalDex Wild Profile showing Origin, Apex, and Active animal patterns"
+                            src="/images/blog/what-animal-am-i/wild-profile-triad.webp"
+                            alt="Example animal personality test result: Gray Wolf as Origin, Honey Badger as Apex and Octopus as Active"
                             fill
                             priority
                             sizes="(min-width: 1024px) 36rem, 100vw"
                             className="object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute inset-x-4 bottom-4 rounded-lg border border-white/10 bg-canvas-950/78 p-4 backdrop-blur">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent light:from-black/25" />
+                        <div className="absolute inset-x-4 bottom-4 rounded-lg border border-white/10 light:border-line-200 bg-canvas-950/78 light:bg-surface-900/90 p-4 backdrop-blur">
                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">Wild Profile</p>
                             <p className="mt-1 text-sm leading-6 text-ink-200">Origin, Apex, and Active animal patterns in one personal profile.</p>
                         </div>
@@ -174,11 +190,28 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
 
             <WhatAnimalQuiz copy={page.quiz} />
 
+            <section aria-labelledby="test-measures-title" className="border-t border-line-300 pt-8">
+                <div className="mb-6 max-w-4xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{page.measures.eyebrow}</p>
+                    <h2 id="test-measures-title" className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{page.measures.title}</h2>
+                    <p className="mt-3 text-lg leading-8 text-ink-200 md:text-xl">{page.measures.description}</p>
+                </div>
+                <ol className="grid gap-3 sm:grid-cols-2">
+                    {quizQuestions.map((question, index) => (
+                        <li key={question.id} className="flex gap-4 rounded-lg border border-line-300 bg-surface-900/70 p-4">
+                            <span className="font-display text-2xl font-bold text-primary-200">{String(index + 1).padStart(2, "0")}</span>
+                            <p className="text-base leading-7 text-ink-200">{question.trait}</p>
+                        </li>
+                    ))}
+                </ol>
+                <p className="mt-5 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{page.measures.scoring}</p>
+            </section>
+
             <section aria-labelledby="quiz-results-title" className="border-t border-line-300 pt-8">
                 <div className="mb-6 max-w-4xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{page.quiz.resultsEyebrow}</p>
                     <h2 id="quiz-results-title" className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">
-                        All {quizAnimals.length} possible results
+                        All {quizAnimals.length} possible animal personality test results
                     </h2>
                     <p className="mt-3 text-lg leading-8 text-ink-200 md:text-xl">{page.quiz.resultsDescription}</p>
                 </div>
@@ -187,6 +220,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <li key={animal.slug} className="flex gap-4 rounded-lg border border-line-300 bg-surface-900/70 p-4">
                             <SpeciesArtworkImage
                                 slug={animal.slug}
+                                imageFile={animal.artworkFile}
                                 alt={`${animal.name} artwork`}
                                 className="h-16 w-16 shrink-0 rounded-md border border-line-300"
                                 sizes="64px"
@@ -294,20 +328,26 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                     <div className="p-6 text-center md:p-10 lg:text-left">
                         <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{t("ctaTitle")}</h2>
                         <p className="mx-auto mt-3 max-w-3xl text-lg leading-8 text-ink-200 lg:mx-0">{t("ctaDescription")}</p>
-                        <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-                            <StoreLinks />
-                            <Link href="/blog/what-animal-am-i" underline className="self-center text-lg text-primary-200 hover:text-primary-100">
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 lg:justify-start">
+                            <Link
+                                href={WILD_PROFILE_INTERVIEW_PATH}
+                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+                            >
+                                {t("ctaWebButton")}
+                            </Link>
+                            <Link href="/blog/what-animal-am-i" underline className="text-lg text-primary-200 hover:text-primary-100">
                                 {t("readDeepGuide")}
                             </Link>
                         </div>
+                        <StoreLinks variant="text" className="!mt-5 lg:justify-start" />
                     </div>
-                    <div className="relative hidden border-l border-line-300 bg-canvas-950/35 lg:block">
+                    <div className="relative hidden min-h-[22rem] border-l border-line-300 bg-canvas-950/35 lg:block">
                         <Image
-                            src="/images/blog/what-animal-am-i/wild-profile-app-interface.webp"
+                            src="/images/blog/what-animal-am-i/wild-profile-cta.webp"
                             alt=""
                             fill
                             sizes="18rem"
-                            className="object-cover opacity-85"
+                            className="object-cover"
                         />
                     </div>
                 </div>

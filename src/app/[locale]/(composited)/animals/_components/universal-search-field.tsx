@@ -265,7 +265,7 @@ export default function UniversalSearchField({
                     }}
                     placeholder={copy.placeholder}
                     aria-label={copy.searchLabel}
-                    className="h-14 w-full border border-white/12 bg-black/25 pl-12 pr-28 text-base text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60"
+                    className="h-14 w-full border border-white/12 bg-black/25 light:bg-white pl-12 pr-28 text-base text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60"
                 />
                 <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                     {query ? (
@@ -305,7 +305,7 @@ export default function UniversalSearchField({
             </form>
 
             {showPanel ? (
-                <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[28rem] overflow-y-auto border border-white/12 bg-[#0e1411] p-2 shadow-2xl shadow-black/50">
+                <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[28rem] overflow-y-auto border border-white/12 bg-[#0e1411] light:bg-surface-900 p-2 shadow-2xl shadow-black/50 light:shadow-black/10">
                     {showDiscovery && recent.length ? (
                         <>
                             <div className="flex items-center justify-between px-3 pb-1 pt-2">

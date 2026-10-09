@@ -49,7 +49,7 @@ export function StatsPanel({
 }) {
     return (
         <section
-            className={`relative w-full bg-[#1F1F1F] after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 ${className}`}
+            className={`relative w-full bg-[#1F1F1F] light:bg-surface-900 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 ${className}`}
         >
             {children}
         </section>
@@ -137,7 +137,8 @@ export function CollectorScoreCard({
                 background: [
                     `radial-gradient(220px 220px at 18px 18px, ${collectorScoreAccent(band, 0.16)}, transparent)`,
                     "linear-gradient(135deg, rgba(255,255,255,0.04), transparent 50%, rgba(0,0,0,0.18))",
-                    THEME.chrome
+                    // Same iOS chrome surface as the story card: #1F1F1F, white in the light theme.
+                    `var(--story-card-base, ${THEME.chrome})`
                 ].join(", ")
             }}
         >
@@ -358,7 +359,7 @@ export function TierDistributionCard({
     );
 
     if (!flush) {
-        return <section className="w-full  border border-white/10 bg-[#1F1F1F] p-4">{content}</section>;
+        return <section className="w-full  border border-white/10 bg-[#1F1F1F] light:bg-surface-900 p-4">{content}</section>;
     }
 
     return <StatsPanel className="p-4">{content}</StatsPanel>;
@@ -382,7 +383,7 @@ export function StatChipScroller({items}: {items: ProfileStatChip[]}) {
                 {items.map((item) => (
                     <div
                         key={item.title}
-                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between  border border-white/10 bg-[#1F1F1F] px-2.5 py-[9px]"
+                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between  border border-white/10 bg-[#1F1F1F] light:bg-surface-900 px-2.5 py-[9px]"
                     >
                         <p className="truncate text-[8px] font-extrabold uppercase text-white/40">{item.title}</p>
                         <p className="flex items-baseline gap-px">

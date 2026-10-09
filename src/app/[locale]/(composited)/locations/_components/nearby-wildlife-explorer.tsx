@@ -381,7 +381,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                         {copy.locationLabel}
                     </label>
                     {place ? (
-                        <div className="flex items-center gap-3  border border-white/12 bg-black/25 px-4 py-3">
+                        <div className="flex items-center gap-3  border border-white/12 bg-black/25 px-4 py-3 light:bg-surface-900">
                             <span className="text-primary-300" aria-hidden="true">◎</span>
                             <span className="min-w-0 flex-1 truncate text-sm text-white">{place.label}</span>
                             <button
@@ -438,7 +438,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             </form>
 
                             {placeOptions.length ? (
-                                <ul className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden  border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/50">
+                                <ul className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden  border border-white/12 bg-[#0d1310] shadow-2xl shadow-black/50 light:bg-surface-900 light:shadow-black/15">
                                     {placeOptions.map((option) => (
                                         <li key={`${option.latitude},${option.longitude}`}>
                                             <button
@@ -539,7 +539,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                             <ul
                                 id={animalListboxId}
                                 role="listbox"
-                                className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto overscroll-contain  border border-white/12 bg-[#0d1310] p-1 shadow-2xl shadow-black/50"
+                                className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto overscroll-contain  border border-white/12 bg-[#0d1310] p-1 shadow-2xl shadow-black/50 light:bg-surface-900 light:shadow-black/15"
                             >
                                 {animalSuggestions.map((item, index) => (
                                     <li key={item.name} role="option" aria-selected={index === animalActive}>
@@ -594,7 +594,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                 />
 
                 {!place ? (
-                    <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center  bg-gradient-to-t from-black/70 via-black/30 to-transparent p-6">
+                    <div className="theme-dark pointer-events-none absolute inset-0 z-[500] flex items-center justify-center  bg-gradient-to-t from-black/70 via-black/30 to-transparent p-6">
                         <div className="pointer-events-auto max-w-sm  border border-white/12 bg-[#0d1310]/90 p-5 text-center backdrop-blur-sm">
                             <p className="font-display text-lg font-bold text-white">{copy.mapEmptyTitle}</p>
                             <p className="mt-1.5 text-sm leading-6 text-ink-300">{copy.mapEmptyBody}</p>

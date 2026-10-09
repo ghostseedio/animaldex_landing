@@ -30,7 +30,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Pikachu is officially classified as the Mouse Pokémon, so a mouse is the first answer. Its rounded body, small paws, large ears and habit of storing electricity in its cheek pouches all fit a small rodent.",
             "The second answer comes from its name. \"Pika\" is the Japanese sound for a spark, and it is also the name of a real animal: the pika, a small, round-eared relative of rabbits that lives on rocky mountain slopes. Pikachu's compact body, short limbs and rounded ears look much more like a pika than a typical long-snouted mouse, which is why many fans treat the pika as its closest real counterpart.",
             "Squirrels are another often-cited influence, for its bushy lightning-bolt tail and cheek pouches. Pikachu's evolution, Raichu, keeps the same rodent body with a longer tail.",
-            "The real animals below are the American pika and the house mouse, the two species its shape and name point to."
+            "The real animals below are the pika and the house mouse, the two animals its shape and name point to."
         ]
     },
     eevee: {
@@ -70,7 +70,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Gengar is a Ghost-type Pokémon and is usually described as having no single real-animal counterpart. Its official category, the Shadow Pokémon, refers to its ghostly nature rather than to an animal.",
             "When people do compare it to animals, the usual suggestions are a cat, for its pointed ears and wide grin, which many link to the Cheshire Cat, and a bat, for its spiky silhouette and habit of lurking in the dark. Its round body and stubby limbs also recall an imp or a goblin from folklore more than any living species.",
             "A popular theory points out that Gengar looks like a shadow of Clefairy, with a similar body shape and ears, which fits its story of hiding in people's shadows.",
-            "The fairest answer is that Gengar is a ghost or shadow creature built from cat-like and imp-like cues. Because no real animal is a close match, AnimalDex does not attach a species page to it."
+            "The fairest answer is that Gengar is a ghost or shadow creature built from cat-like and imp-like cues. No real animal is a close match, so AnimalDex pairs it loosely with the Egyptian fruit bat below, the bat it also pairs with Clefairy, and with the aye-aye, a wide-eyed nocturnal primate long feared in folklore."
         ]
     },
     psyduck: {
@@ -118,7 +118,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Jigglypuff does not have a clear real-animal counterpart. Its official category, the Balloon Pokémon, describes its round, inflatable body rather than an animal.",
             "When people look for an animal, the usual suggestions are a rabbit or a small round mammal, for its pointed ears, and a balloon or marshmallow for its shape. Its evolution Wigglytuff has much longer, rabbit-like ears, which is why AnimalDex groups the line under a rabbit-like fantasy creature.",
             "Its name and singing are often linked to \"jiggly\" softness and to a puffball, while its signature move, putting listeners to sleep with a lullaby, is a fantasy trait. Some fans have also compared its swelling body to a pufferfish, which inflates itself with water.",
-            "The fairest answer is that Jigglypuff is a fantasy creature with light rabbit-like cues. Because no single species fits well, AnimalDex does not attach a real-animal page to it."
+            "The fairest answer is that Jigglypuff is a fantasy creature with light rabbit-like cues. No single species fits well, so AnimalDex pairs it loosely with the European rabbit below, alongside the pufferfish its swelling body recalls."
         ]
     },
     dragonite: {
@@ -126,7 +126,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Dragonite is a dragon, so it has no exact real-animal counterpart. Unlike most dragons, though, it is friendly, round and soft-looking, with small wings, short antennae and a large belly.",
             "Its evolution line points to a water creature. Dratini and Dragonair are long, serpentine dragons that live in water, which suggests a sea serpent or a long-bodied water animal such as an eel or sea snake. Dragonite itself is often compared to the Loch Ness Monster and to sea serpents in sailors' tales, and its Pokédex entries describe it rescuing people at sea.",
             "Some fans see a seal or sea lion in its rounded face and gentle expression, and its small wings look more like a bird's than a bat's.",
-            "The fairest answer is that Dragonite is a friendly sea-dragon design. Because no real animal matches its body well, AnimalDex does not attach a species page to it."
+            "The fairest answer is that Dragonite is a friendly sea-dragon design. No real animal matches its body well; the nearest living comparison is the West African manatee below, a gentle, round-bodied sea mammal that sailors' sea-monster tales are often traced to."
         ]
     },
     umbreon: {
@@ -158,7 +158,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Rayquaza is a dragon, so it has no real-animal counterpart. It is a huge, serpentine sky dragon that lives in the ozone layer in the Pokémon world.",
             "The design follows the dragons of Chinese and Japanese art more than European ones. Its long, snake-like body, small limbs, whisker-like features and ability to fly without large wings all match the East Asian dragon, which is pictured as a long serpent moving through clouds. Its yellow ring patterns and fins are often compared to these dragons' markings.",
             "When people name real animals, the usual suggestions are a snake, for its long body, and an eel or sea serpent for the way it moves. Its role as the ruler of the sky, calming the conflict between Groudon of the land and Kyogre of the sea, is mythological rather than biological.",
-            "Because no single species fits well, AnimalDex does not attach a species page to Rayquaza."
+            "No single species fits well. The nearest real comparison is the paradise flying snake below, a long, slender snake that flattens its body to glide from tree to tree."
         ]
     },
     lapras: {
@@ -166,7 +166,7 @@ export const pokemonAnimalNotes: Record<string, PokemonAnimalNote> = {
             "Lapras most closely resembles a plesiosaur, a group of long-necked marine reptiles that lived in the age of the dinosaurs and became extinct about 66 million years ago. Its long neck, small head, broad body and four large flippers match the classic plesiosaur shape.",
             "That same shape is the popular image of the Loch Ness Monster, which is why Lapras is often linked to Nessie. Its shell adds a turtle-like element, and the knobs on the shell are sometimes compared to a sea turtle's scutes. Its gentle nature and habit of ferrying people across water are fantasy traits.",
             "Lapras is also an endangered species in the Pokémon world, hunted almost to extinction, which some fans connect to real whales and sea turtles.",
-            "Because plesiosaurs are extinct and AnimalDex covers living species, no real-animal page is attached to Lapras."
+            "Plesiosaurs are extinct, so the nearest living comparison on AnimalDex is the leatherback sea turtle below: a huge, ocean-crossing marine reptile with four flippers and a ridged back."
         ]
     }
 };

@@ -19,9 +19,10 @@
     "lint": "next lint",
     "test": "tsx --test src/lib/**/*.test.ts",
     "audit:public-cache": "node scripts/audit-public-cache.mjs",
+    "refresh:animal-fusions": "tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts",
     "refresh:published-seo-slugs": "tsx scripts/refreshPublishedSeoSlugs.mjs",
     "refresh:animal-behaviours": "tsx scripts/refreshAnimalBehaviourSnapshots.mts",
-    "refresh:published-seo": "tsx scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts && tsx scripts/refreshPublishedSeoComparisons.mts",
+    "refresh:published-seo": "tsx scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts && tsx scripts/refreshPublishedSeoComparisons.mts",
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",
     "seo:audit:flagship": "node scripts/generateFlagshipSpeciesGapReport.js",
@@ -34,6 +35,7 @@
     "symbolism:seed-images": "node scripts/seedSymbolismImages.cjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@supabase/ssr": "^0.12.0",

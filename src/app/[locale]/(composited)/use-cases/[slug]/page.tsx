@@ -430,7 +430,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             {entry.whyDifferent.map((point) => (
                                 <div
                                     key={point}
-                                    className="  border border-primary-500/20 bg-black/20 p-5"
+                                    className="  border border-primary-500/20 bg-black/20 p-5 light:bg-surface-900"
                                 >
                                     <p className="text-ink-100 text-base md:text-lg leading-7">{point}</p>
                                 </div>

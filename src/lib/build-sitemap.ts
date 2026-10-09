@@ -1,3 +1,6 @@
+import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
+import {animalBehavioursPagination, challengeYourselfPagination, type HubPagination} from "@/data/hub-pagination";
+import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
 import {MetadataRoute} from "next";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -14,6 +17,7 @@ import {getTranslatedTierListHubPaths} from "@/data/tier-list-hub-translations";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
 import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, pokemonAnimalEntries, pokemonAnimalGenerations} from "@/data/pokemon-animal-counterparts";
+import {publishedAnimalFusions} from "@/data/animal-fusions";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getLocalPrincipleSlugs, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getSitemapSpeciesEntries} from "@/data/database-species-pages";
@@ -24,6 +28,13 @@ import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} 
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
+
+/** Pages 2..n of a paged hub; page 1 is the hub URL listed on its own. */
+function hubPageEntries(locale: string, pagination: HubPagination, total: number) {
+    return Array.from({length: pagination.pageCount(total) - 1}, (_, index) => ({
+        url: getAbsoluteUrl(locale, pagination.pagePath(index + 2))
+    }));
+}
 
 // Pages whose route still exists but which next.config.js permanently redirects
 // (consolidated into /animal-identifier-app). A sitemap must only list final
@@ -113,7 +124,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
         const staticEntries: MetadataRoute.Sitemap = [
             {url: getAbsoluteUrl(locale)},
-            {url: getAbsoluteUrl(locale, "/what-animal-am-i")},
+            {url: getAbsoluteUrl(locale, "/what-animal-am-i"), lastModified: new Date(WHAT_ANIMAL_AM_I_UPDATED_AT)},
             {url: getAbsoluteUrl(locale, "/animals")},
             {url: getAbsoluteUrl(locale, "/use-cases")},
             {url: getAbsoluteUrl(locale, "/blog")},
@@ -137,7 +148,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},
             {url: getAbsoluteUrl(locale, "/animal-lessons")},
             {url: getAbsoluteUrl(locale, "/animal-behaviours")},
+            ...hubPageEntries(locale, animalBehavioursPagination, behaviourSignatures.length),
             {url: getAbsoluteUrl(locale, "/challenge-yourself")},
+            ...hubPageEntries(locale, challengeYourselfPagination, animalTrials.length),
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, "/legal/privacy")},
@@ -219,6 +232,10 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),
             lastModified: new Date(entry.updatedAt)
         }));
+        const animalFusionPageEntries = publishedAnimalFusions.map((entry) => ({
+            url: getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`),
+            lastModified: new Date(entry.updatedAt)
+        }));
         const captureAnimalsAppEntry = {
             url: getAbsoluteUrl(locale, "/capture-animals-app"),
             lastModified: new Date("2026-07-06")
@@ -266,6 +283,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...pokemonAnimalGenerationEntries,
             ...pokemonAnimalPageEntries,
             ...animalHybridPageEntries,
+            ...animalFusionPageEntries,
             captureAnimalsAppEntry,
             legendaryEarthBeastHubEntry,
             ...legendaryEarthBeastPageEntries,

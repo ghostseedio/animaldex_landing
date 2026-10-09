@@ -68,6 +68,7 @@ export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) 
         return POKEMON_SLUGS.has(normalized);
     }
     if (family === "animal-hybrids") {
+        // Curated hybrids plus snapshot fusions (refreshClosedSeoNamespaceSlugs).
         return HYBRID_SLUGS.has(normalized);
     }
     if (family === "powers") {

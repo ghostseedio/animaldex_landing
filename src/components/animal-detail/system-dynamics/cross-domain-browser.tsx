@@ -111,7 +111,7 @@ export default function CrossDomainBrowser({
                                     onClick={() => setSelectedDomain(domain)}
                                     className={`inline-flex min-h-[34px] shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold transition ${
                                         isSelected
-                                            ? "border-transparent bg-[#A7F432] text-black"
+                                            ? "border-transparent bg-primary-400 text-black"
                                             : "border-white/[0.07] bg-white/[0.05] text-white hover:bg-white/[0.08]"
                                     }`}
                                 >
@@ -134,7 +134,7 @@ export default function CrossDomainBrowser({
                                 }
                                 setShowsAll((current) => !current);
                             }}
-                            className="inline-flex min-h-8 w-fit items-center gap-1 text-xs font-semibold text-[#A7F432]"
+                            className="inline-flex min-h-8 w-fit items-center gap-1 text-xs font-semibold text-primary-400"
                         >
                             {showsAll ? "Show top domains" : "More domains"}
                             <span aria-hidden="true">{showsAll ? "▴" : "▾"}</span>

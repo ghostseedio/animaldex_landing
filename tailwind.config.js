@@ -1,14 +1,44 @@
 const {fontFamily} = require('tailwindcss/defaultTheme')
 const plugin = require('tailwindcss/plugin')
 
+const defaultColors = require('tailwindcss/colors')
+
+const isSolid = (opacityValue) => opacityValue === undefined || opacityValue.startsWith("var(")
+const withAlpha = (channels, opacityValue) => opacityValue === undefined
+    ? `rgb(${channels})`
+    : `rgb(${channels} / ${opacityValue})`
+const token = (name) => ({opacityValue}) => withAlpha(`var(--c-${name})`, opacityValue)
+const tokenScale = (name, shades) => Object.fromEntries(shades.map((shade) => [shade, token(`${name}-${shade}`)]))
+const fixedScale = (channelsByShade) => Object.fromEntries(
+    Object.entries(channelsByShade).map(([shade, channels]) => [shade, ({opacityValue}) => withAlpha(channels, opacityValue)])
+)
+
+const hexToChannels = (hex) => {
+    const value = hex.replace("#", "")
+    return [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16)).join(" ")
+}
+
+// Tailwind's own hues (text-emerald-300, text-amber-200 ...) were picked for a dark
+// page and wash out on a light one. Each light shade reads through a variable that
+// only the light theme defines (see the plugin below), falling back to the original.
+const MIRRORED_HUES = ["red", "orange", "amber", "yellow", "lime", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose"]
+const LIGHT_TEXT_SHADE = {50: 800, 100: 800, 200: 800, 300: 700, 400: 700, 500: 700}
+const paletteTextMirrors = () => Object.fromEntries(MIRRORED_HUES.map((hue) => [hue, Object.fromEntries(
+    Object.entries(LIGHT_TEXT_SHADE).map(([shade]) => [
+        shade,
+        ({opacityValue}) => withAlpha(`var(--tx-${hue}-${shade}, ${hexToChannels(defaultColors[hue][shade])})`, opacityValue)
+    ])
+)]))
+
 const generateColorMap = (colors, callback, prefix = '') => {
     return Object.keys(colors).reduce((acc, color) => {
         const fullColor = (prefix ? prefix + '-' : '') + color
 
-        if (typeof colors[color] === 'string') {
+        if (typeof colors[color] === 'string' || typeof colors[color] === 'function') {
+            const value = typeof colors[color] === 'function' ? colors[color]({}) : colors[color]
             return {
                 ...acc,
-                ...callback(fullColor, colors[color])
+                ...callback(fullColor, value)
             }
         }
 
@@ -36,43 +66,35 @@ module.exports = {
             // Tailwind only emits a utility when the exact token exists. Shades and opacity
             // steps used in the codebase but missing here compiled to nothing, so the
             // elements using them rendered unstyled. Each value below fills such a gap.
+            // Brand colours resolve through CSS variables so one attribute on <html>
+            // (data-theme) re-skins the whole site. The values for each theme live
+            // in globals.css. See `themed` for why text gets its own mapping.
             colors: {
-                canvas: {
-                    950: "#07100B",
-                    900: "#0A1610",
-                    850: "#0D2A16",
-                },
-                surface: {
-                    950: "#07100B",
-                    900: "#0D2A16",
-                    800: "#12351C",
-                    700: "#164422",
-                },
-                ink: {
-                    100: "#FFFFFF",
-                    200: "#A8B0AA",
-                    300: "#A8B0AA",
-                    400: "#7E8781",
-                    500: "#5C6660",
-                    600: "#3F4842",
-                },
-                line: {
-                    100: "#3D5C46",
-                    200: "#2A4434",
-                    300: "#1C3324",
-                    400: "#0D2A16",
-                },
+                canvas: tokenScale("canvas", [950, 900, 850]),
+                surface: tokenScale("surface", [950, 900, 800, 700]),
+                ink: tokenScale("ink", [100, 200, 300, 400, 500, 600]),
+                line: tokenScale("line", [100, 200, 300, 400]),
+                primary: tokenScale("primary", [50, 100, 200, 300, 400, 500, 600, 900, 950]),
+                // White is the dark design's "ink at an opacity" (text-white/70,
+                // bg-white/5, border-white/10), so it flips with the theme. A solid
+                // bg-white is a literal white surface and is handled in backgroundColor.
+                white: token("white"),
+            },
+            backgroundColor: {
+                white: ({opacityValue}) => isSolid(opacityValue) ? "#FFFFFF" : withAlpha("var(--c-white)", opacityValue),
+            },
+            // Text sits on a different background from the fill of the same name, so
+            // it needs its own light-theme values: lime text darkens to a legible
+            // green, and canvas/surface/primary-900+ text (only ever used on lime or
+            // white fills) stays dark in both themes.
+            textColor: {
+                canvas: fixedScale({950: "7 16 11", 900: "10 22 16", 850: "13 42 22"}),
+                surface: fixedScale({950: "7 16 11", 900: "13 42 22", 800: "18 53 28", 700: "22 68 34"}),
                 primary: {
-                    50: "#F3FFD0",
-                    100: "#D4FB7A",
-                    200: "#A7F432",
-                    300: "#C8FA63",
-                    400: "#A7F432",
-                    500: "#21C05E",
-                    600: "#1A9A4B",
-                    900: "#0D2A16",
-                    950: "#07100B",
-                }
+                    ...tokenScale("primary-text", [50, 100, 200, 300, 400, 500, 600]),
+                    ...fixedScale({900: "13 42 22", 950: "7 16 11"}),
+                },
+                ...paletteTextMirrors(),
             },
             // Opacity modifiers outside the default scale (e.g. bg-white/15) emit no CSS.
             opacity: {
@@ -110,6 +132,24 @@ module.exports = {
         }
     },
     plugins: [
+        // `light:` styles an element only in the light theme; dark is the default
+        // the rest of the class list was written for. It skips anything inside a
+        // .theme-dark subtree, so a shared component can carry light: overrides and
+        // still render dark where a page pins it (the /app shell).
+        plugin(function({ addVariant, addBase }) {
+            addVariant('light', ':root[data-theme="light"] &:not(.theme-dark *)')
+            addBase({
+                ':root[data-theme="light"]': Object.fromEntries(MIRRORED_HUES.flatMap((hue) =>
+                    Object.entries(LIGHT_TEXT_SHADE).map(([shade, lightShade]) => [
+                        `--tx-${hue}-${shade}`, hexToChannels(defaultColors[hue][lightShade])
+                    ])
+                )),
+                // A pinned-dark subtree goes back to the original hues.
+                '.theme-dark': Object.fromEntries(MIRRORED_HUES.flatMap((hue) =>
+                    Object.keys(LIGHT_TEXT_SHADE).map((shade) => [`--tx-${hue}-${shade}`, 'initial'])
+                ))
+            })
+        }),
         require('@tailwindcss/typography'),
         // line-clamp only ships with Tailwind from 3.3; this project is on 3.2.
         plugin(function({ addUtilities }) {

@@ -80,7 +80,7 @@ export default async function SupportArticlePage({params}: ArticlePageProps) {
     };
 
     return (
-        <div className="relative w-full overflow-hidden bg-[#07100B]">
+        <div className="relative w-full overflow-hidden bg-canvas-950">
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[24rem] bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(33,192,94,0.08),transparent_62%)]" />
 
             <article className="relative mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 md:px-8 md:py-14">
@@ -143,7 +143,7 @@ export default async function SupportArticlePage({params}: ArticlePageProps) {
                         <ul className="mt-4 space-y-3">
                             {related.map((item) => (
                                 <li key={item.id}>
-                                    <Link href={getSupportArticlePath(item)} className="block rounded-2xl border border-white/[0.07] bg-[#071B0F]/80 px-4 py-4 transition-colors hover:border-primary-200/30 hover:text-white">
+                                    <Link href={getSupportArticlePath(item)} className="block rounded-2xl border border-white/[0.07] bg-[#071B0F]/80 light:bg-surface-900 px-4 py-4 transition-colors hover:border-primary-200/30 hover:text-white">
                                         <span className="font-display text-lg font-bold text-white">{item.title}</span>
                                     </Link>
                                 </li>

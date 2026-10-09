@@ -223,7 +223,7 @@ function ProfileChromeButton({
     ariaLabel: string;
 }) {
     const className =
-        "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.1] bg-[#12351C] text-white transition hover:bg-[#1a4528]";
+        "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.1] bg-surface-800 text-white transition hover:bg-[#1a4528] light:hover:bg-surface-700";
 
     if (href) {
         return (
@@ -291,7 +291,7 @@ function WildIdentityCard({
             {identity.summary ? <p className="mt-2 text-sm leading-relaxed text-white/55">{identity.summary}</p> : null}
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 {roles.map(({key, role, label}) => (
-                    <div key={key} className="  border border-white/[0.08] bg-black/20 p-3">
+                    <div key={key} className="  border border-white/[0.08] bg-black/20 p-3 light:bg-surface-900">
                         <p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-white/35">{label}</p>
                         {role.speciesSlug ? (
                             <Link href={`/animals/${role.speciesSlug}`} className="mt-2 block font-display text-lg font-bold text-white hover:text-primary-200">
@@ -321,7 +321,7 @@ function ProfileLocationsMap({visits}: {visits: ProfileLocationVisit[]}) {
     const maxCount = Math.max(...plotted.map((visit) => visit.captureCount), 1);
 
     return (
-        <div className="relative h-[28rem] overflow-hidden border-y border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.18),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px),#111714] bg-[size:auto,32px_32px,32px_32px,auto]">
+        <div className="relative h-[28rem] overflow-hidden border-y border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.18),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px),#111714] light:bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.10),transparent_32%),linear-gradient(rgba(12,26,17,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(12,26,17,.07)_1px,transparent_1px)] light:bg-canvas-900 bg-[size:auto,32px_32px,32px_32px,auto]">
             {plotted.map((visit) => {
                 const left = 8 + ((visit.longitude! - minLng) / lngSpan) * 84;
                 const top = 8 + (1 - (visit.latitude! - minLat) / latSpan) * 84;
@@ -337,7 +337,7 @@ function ProfileLocationsMap({visits}: {visits: ProfileLocationVisit[]}) {
                     </div>
                 );
             })}
-            <p className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-[0.62rem] font-bold text-white/55 backdrop-blur">
+            <p className="theme-dark absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-[0.62rem] font-bold text-white/55 backdrop-blur">
                 Approximate locations
             </p>
         </div>
@@ -529,7 +529,7 @@ export default function ProfileContent({
             ) : null}
 
             {viewer.isOwner && surface === "app" ? (
-                <div className="sticky top-16 z-20 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-[#07100B]/95 px-[18px] py-2.5 backdrop-blur-xl sm:-mx-7 lg:top-0 lg:-mx-10">
+                <div className="sticky top-16 z-20 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-canvas-950/95 px-[18px] py-2.5 backdrop-blur-xl sm:-mx-7 lg:top-0 lg:-mx-10">
                     <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
                         <ProfileMessagesIcon />
                     </ProfileChromeButton>
@@ -565,7 +565,7 @@ export default function ProfileContent({
                         className="h-[52px] w-[52px] shrink-0 rounded-full border border-white/[0.1] object-cover shadow-[0_0_24px_rgba(139,92,246,0.12)]"
                     />
                 ) : (
-                    <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-[#12351C] font-display text-lg font-bold text-primary-100">
+                    <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-surface-800 font-display text-lg font-bold text-primary-100">
                         {profile.displayName.slice(0, 1).toUpperCase()}
                     </div>
                 )}
@@ -586,7 +586,7 @@ export default function ProfileContent({
                                 </ProfileChromeButton>
                             ) : null}
                             {shareButton ? (
-                                <div className="[&_button]:grid [&_button]:h-9 [&_button]:w-9 [&_button]:place-items-center [&_button]:rounded-full [&_button]:border [&_button]:border-white/[0.1] [&_button]:bg-[#12351C] [&_button]:p-0 [&_button]:text-white">
+                                <div className="[&_button]:grid [&_button]:h-9 [&_button]:w-9 [&_button]:place-items-center [&_button]:rounded-full [&_button]:border [&_button]:border-white/[0.1] [&_button]:bg-surface-800 [&_button]:p-0 [&_button]:text-white">
                                     {shareButton}
                                 </div>
                             ) : null}
@@ -687,7 +687,7 @@ export default function ProfileContent({
             </div>
             </div>
 
-            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-[#07100B]/95 backdrop-blur-xl md:-mx-8 ${
+            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-canvas-950/95 backdrop-blur-xl md:-mx-8 ${
                 surface === "app"
                     ? viewer.isOwner ? "top-[6.65rem] lg:top-[2.65rem]" : "top-16 lg:top-0"
                     : "top-0"
@@ -881,7 +881,7 @@ export default function ProfileContent({
                             <StatsPanel>
                                 <div className="flex gap-3 overflow-x-auto px-[18px] py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {profile.locationVisits.map((visit) => (
-                                        <div key={visit.id} className="w-52 shrink-0  border border-white/10 bg-[#1F1F1F] p-4">
+                                        <div key={visit.id} className="w-52 shrink-0  border border-white/10 bg-[#1F1F1F] p-4 light:bg-surface-900">
                                             <p className="text-[11px] font-semibold uppercase text-white/40">
                                                 {labels.locationCaptures.replace("{count}", String(visit.captureCount))}
                                             </p>
@@ -952,8 +952,8 @@ export default function ProfileContent({
             ) : null}
 
             {showProfileStyle ? (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center" role="dialog" aria-modal="true" aria-label="Profile style">
-                    <div className="w-full max-w-md  border border-white/10 bg-[#171717] p-5 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 light:bg-black/40 p-4 md:items-center" role="dialog" aria-modal="true" aria-label="Profile style">
+                    <div className="w-full max-w-md  border border-white/10 bg-[#171717] light:bg-surface-900 p-5 shadow-2xl">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <h2 className="font-display text-2xl font-bold text-white">Profile style</h2>

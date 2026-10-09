@@ -14,6 +14,7 @@ import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {AskAnimalDexProvider} from "@/components/ask-animaldex/ask-animaldex-provider";
 import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surface";
 import {getScopedTranslator} from "@/loaders/translation";
+import ThemeScript from "@/components/theme/theme-script";
 
 const brandIconUrl = "/images/logo.webp";
 const socialImageUrl = "/images/og.png";
@@ -74,8 +75,10 @@ export default async function RootLayout(
 
     // noinspection HtmlRequiredTitleElement
     return (
-        <html lang={locale} className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
-        <head/>
+        <html data-theme="dark" suppressHydrationWarning lang={locale} className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
+        <head>
+            <ThemeScript />
+        </head>
         <body className={`${fontClassName} font-sans font-medium overscroll-none`} style={fontCssVariables}>
             <GoogleAnalytics />
             <CampaignAttribution />
@@ -112,7 +115,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             "apple-itunes-app": "app-id=6761607780",
             "facebook-domain-verification": "hi8zc0bm4dg7qrn95luj9isnn21ldo"
         },
-        colorScheme: "dark",
+        colorScheme: "dark light",
         themeColor: "#21C05E",
         category: "education",
         applicationName: title,

@@ -32,12 +32,12 @@ export default function SpeciesDetailTabs({
     const panels: Record<SpeciesDetailTab, ReactNode> = {learn, stats, play};
 
     return (
-        <div className="flex w-full flex-col gap-5 border-y border-line-300 bg-black px-5 py-6 font-sans sm:px-6 lg:gap-8 lg:px-10 lg:py-9">
+        <div className="flex w-full flex-col gap-5 border-y border-line-300 bg-black light:bg-surface-900 px-5 py-6 font-sans sm:px-6 lg:gap-8 lg:px-10 lg:py-9">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
                 {eyebrow || title ? (
                     <div className="hidden min-w-0 flex-col gap-1 lg:flex">
                         {eyebrow ? (
-                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#A7F432]">{eyebrow}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-400">{eyebrow}</p>
                         ) : null}
                         {title ? (
                             <h2 className="truncate font-display text-2xl font-bold text-white xl:text-3xl">{title}</h2>

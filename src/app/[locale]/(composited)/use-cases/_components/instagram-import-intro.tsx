@@ -76,7 +76,7 @@ export default function InstagramImportIntro({
                     </p>
                 </div>
 
-                <div className="border-t border-white/[0.08] bg-black/20 px-6 py-8 md:px-8 md:py-10 lg:border-l lg:border-t-0">
+                <div className="border-t border-white/[0.08] bg-black/20 light:bg-surface-800 px-6 py-8 md:px-8 md:py-10 lg:border-l lg:border-t-0">
                     <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-ink-400">
                         How it works
                     </p>

@@ -502,7 +502,7 @@ function CatalogGlyphThumbnail({
     const isLoaded = loadedSrc === displaySrc;
 
     return (
-        <div className="relative aspect-square w-full overflow-hidden bg-surface-900">
+        <div className="theme-dark relative aspect-square w-full overflow-hidden bg-surface-900">
             {!showPlaceholder && !isLoaded ? (
                 <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-surface-800/70" />
             ) : null}
@@ -1209,7 +1209,7 @@ export default function SpeciesDirectory({
                     aria-busy={isApplyingFilters}
                     // Three across on a phone rather than four: at four columns a tile is ~95px
                     // wide and almost every species name truncates to two words.
-                    className="grid grid-cols-3 gap-0 overflow-hidden bg-black sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+                    className="grid grid-cols-3 gap-0 overflow-hidden bg-black light:bg-transparent sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
                 >
                     {entries.map((entry, index) => (
                         <Link

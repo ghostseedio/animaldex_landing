@@ -2,6 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Theme tokens
+   --------------------------------------------------------------------------
+   Space-separated RGB channels so Tailwind opacity modifiers (bg-surface-900/80)
+   keep working. Dark is the default and is what every page was designed in;
+   light is opted into with data-theme="light" on <html> (see theme-script.tsx).
+
+   .theme-dark pins a subtree to the dark values in either theme. Use it for
+   things that are dark by nature rather than by page theme: app screenshots and
+   mock-ups, phone frames, photo panels, and full-bleed showcase bands.
+   ========================================================================== */
+
+:root,
+.theme-dark {
+    color-scheme: dark;
+    --c-canvas-950: 7 16 11;
+    --c-canvas-900: 10 22 16;
+    --c-canvas-850: 13 42 22;
+    --c-surface-950: 7 16 11;
+    --c-surface-900: 13 42 22;
+    --c-surface-800: 18 53 28;
+    --c-surface-700: 22 68 34;
+    --c-ink-100: 255 255 255;
+    --c-ink-200: 168 176 170;
+    --c-ink-300: 168 176 170;
+    --c-ink-400: 126 135 129;
+    --c-ink-500: 92 102 96;
+    --c-ink-600: 63 72 66;
+    --c-line-100: 61 92 70;
+    --c-line-200: 42 68 52;
+    --c-line-300: 28 51 36;
+    --c-line-400: 13 42 22;
+    --c-primary-50: 243 255 208;
+    --c-primary-100: 212 251 122;
+    --c-primary-200: 167 244 50;
+    --c-primary-300: 200 250 99;
+    --c-primary-400: 167 244 50;
+    --c-primary-500: 33 192 94;
+    --c-primary-600: 26 154 75;
+    --c-primary-900: 13 42 22;
+    --c-primary-950: 7 16 11;
+    --c-primary-text-50: 243 255 208;
+    --c-primary-text-100: 212 251 122;
+    --c-primary-text-200: 167 244 50;
+    --c-primary-text-300: 200 250 99;
+    --c-primary-text-400: 167 244 50;
+    --c-primary-text-500: 33 192 94;
+    --c-primary-text-600: 26 154 75;
+    --c-white: 255 255 255;
+    --c-accent: 167 244 50;
+}
+
+/* A near-white field with a trace of the forest green, so the brand still reads
+   as the same place. Ink is a deep green-black rather than pure black. Lime stays
+   lime as a fill (buttons, chips); as text it steps down to a green that holds
+   4.5:1 on the page. */
+.theme-dark {
+    color: rgb(var(--c-ink-100));
+    --idk-species-text: initial;
+    --idk-group-text: initial;
+    --idk-breed-text: initial;
+    --idk-fallback-text: initial;
+    --story-card-base: initial;
+    --range-muted-text: initial;
+    --radar-label-halo: initial;
+    --accent-ink-mix: initial;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --c-canvas-950: 244 246 241;
+    --c-canvas-900: 236 241 232;
+    --c-canvas-850: 226 234 220;
+    --c-surface-950: 244 246 241;
+    --c-surface-900: 255 255 255;
+    --c-surface-800: 240 244 237;
+    --c-surface-700: 228 236 224;
+    --c-ink-100: 12 26 17;
+    --c-ink-200: 58 70 62;
+    --c-ink-300: 58 70 62;
+    --c-ink-400: 84 95 88;
+    --c-ink-500: 103 114 107;
+    --c-ink-600: 142 152 145;
+    --c-line-100: 176 192 180;
+    --c-line-200: 200 213 203;
+    --c-line-300: 218 227 219;
+    --c-line-400: 230 236 230;
+    --c-primary-900: 223 238 211;
+    --c-primary-950: 244 246 241;
+    --c-primary-text-50: 47 94 6;
+    --c-primary-text-100: 47 94 6;
+    --c-primary-text-200: 58 112 9;
+    --c-primary-text-300: 63 122 10;
+    --c-primary-text-400: 63 122 10;
+    --c-primary-text-500: 21 128 61;
+    --c-primary-text-600: 22 101 52;
+    --c-white: 12 26 17;
+    --c-accent: 63 122 10;
+    --idk-species-text: 63 122 10;
+    --idk-group-text: 4 120 87;
+    --idk-breed-text: 3 105 161;
+    --idk-fallback-text: 180 83 9;
+    --story-card-base: #FFFFFF;
+    --range-muted-text: 84 95 88;
+    --radar-label-halo: transparent;
+    /* Inline accent hexes (trial frequencies) are mixed toward black by this much for text. */
+    --accent-ink-mix: 55%;
+}
+
 html {
     --scroll-behavior: smooth!important;
     scroll-behavior: smooth!important;
@@ -10,8 +119,8 @@ html {
 
 body {
     min-height: 100vh;
-    color: #FFFFFF;
-    background: #07100B;
+    color: rgb(var(--c-ink-100));
+    background: rgb(var(--c-canvas-950));
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -20,7 +129,7 @@ h1, h2, h3, h4, h5, h6 {
 
 a,
 button {
-    outline-color: #A7F432;
+    outline-color: rgb(var(--c-accent));
 }
 
 ::selection {
@@ -152,6 +261,22 @@ button {
     .editorial { --gutter: 2rem; }
 }
 
+:root[data-theme="light"] .editorial {
+    --paper-950: #F4F6F1;
+    --paper-900: #FFFFFF;
+    --paper-850: #F7F9F5;
+    --paper-800: #EEF2EB;
+    --paper-700: #E3E9DF;
+    --rule-strong: #C9D3CB;
+    --rule: #DDE4DE;
+    --rule-soft: #E8EDE8;
+    --lime: #3F7A0A;
+    --text-100: #0C1A11;
+    --text-200: #2F3A33;
+    --text-300: #4E5952;
+    --text-400: #67726B;
+}
+
 /* Named-line grid so a child can opt into a wider band without wrapper soup.
    Prose is the default column; images, quotes and modules break out. */
 .editorial-grid {
@@ -244,7 +369,7 @@ button {
 .editorial-prose a {
     color: var(--text-100);
     text-decoration: underline;
-    text-decoration-color: rgba(167, 244, 50, 0.45);
+    text-decoration-color: color-mix(in srgb, var(--lime) 45%, transparent);
     text-decoration-thickness: 1px;
     text-underline-offset: 0.2em;
     transition: text-decoration-color 160ms ease, text-decoration-thickness 160ms ease;
@@ -291,7 +416,7 @@ button {
 .editorial-prose blockquote {
     margin-top: 2em;
     padding-left: 1.5rem;
-    border-left: 2px solid rgba(167, 244, 50, 0.5);
+    border-left: 2px solid color-mix(in srgb, var(--lime) 50%, transparent);
     color: var(--text-100);
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
     font-size: 1.375rem;
@@ -440,20 +565,6 @@ button {
     --ask-series-1: #3987e5;
     --ask-series-2: #d95926;
     --ask-series-3: #199e70;
-}
-
-@media (prefers-color-scheme: light) {
-    :root:where(:not([data-theme="dark"])) .ask-chart {
-        color-scheme: light;
-        --ask-chart-surface: #fcfcfb;
-        --ask-chart-grid: rgba(11, 11, 11, 0.08);
-        --ask-chart-axis: rgba(11, 11, 11, 0.18);
-        --ask-chart-threshold: rgba(11, 11, 11, 0.38);
-        --ask-chart-ink-muted: #52514e;
-        --ask-series-1: #2a78d6;
-        --ask-series-2: #eb6834;
-        --ask-series-3: #1baf7a;
-    }
 }
 
 :root[data-theme="light"] .ask-chart {

@@ -204,7 +204,7 @@ export default function EarnPowerSection({
     } else if (power?.isEarned) {
         content = (
             <>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.08] bg-[#A7F432]/10 px-5 py-3.5" style={{color: NEON}}>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.08] bg-primary-400/10 px-5 py-3.5" style={{color: NEON}}>
                     <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.11em]">Power earned</span>
                     <span className="truncate text-[10px] font-bold text-white">· {power.principleName}</span>

@@ -1,6 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import Image from "next/image";
 import LocaleToggle from "@/app/[locale]/(composited)/_components/locale-toggle";
+import ThemeToggle from "@/components/theme/theme-toggle";
 import type {ScopedTranslator} from "@/loaders/translation";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import HeaderMenu from "@/app/[locale]/(composited)/_components/header-menu";
@@ -20,7 +21,8 @@ import {
 function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
     return links.map((link) => ({
         href: link.href,
-        label: t(link.labelKey)
+        label: t(link.labelKey),
+        preview: link.preview
     }));
 }
 
@@ -70,6 +72,7 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     actions={(
                         <>
                             <LocaleToggle currentLocale={locale} />
+                            <ThemeToggle toLightLabel={t("themeToLight")} toDarkLabel={t("themeToDark")} />
                             <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
                             <Link
                                 href={START_COLLECTION_HREF}
@@ -79,7 +82,12 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                             </Link>
                         </>
                     )}
-                    mobileLocale={<LocaleToggle currentLocale={locale} />}
+                    mobileLocale={(
+                        <div className="flex items-center gap-2">
+                            <LocaleToggle currentLocale={locale} />
+                            <ThemeToggle toLightLabel={t("themeToLight")} toDarkLabel={t("themeToDark")} />
+                        </div>
+                    )}
                     mobileLinks={(
                         <HeaderMobileNav
                             sections={mobileAccordionSections.map((section) => ({

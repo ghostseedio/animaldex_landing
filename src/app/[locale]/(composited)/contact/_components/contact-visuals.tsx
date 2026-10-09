@@ -111,7 +111,7 @@ export function ContactIconBadge({
 
     return (
         <div
-            className={`flex shrink-0 items-center justify-center border border-primary-200/20 bg-[#071B0F]/90 text-primary-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow] duration-500 group-hover:border-primary-200/40 group-hover:shadow-[0_0_20px_rgba(167,244,50,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] motion-reduce:transition-none ${container}`}
+            className={`flex shrink-0 items-center justify-center border border-primary-200/20 bg-[#071B0F]/90 light:bg-surface-800 text-primary-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow] duration-500 group-hover:border-primary-200/40 group-hover:shadow-[0_0_20px_rgba(167,244,50,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] motion-reduce:transition-none ${container}`}
         >
             <Icon size={size} />
         </div>

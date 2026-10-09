@@ -119,7 +119,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
                     <p className="mt-4 border-l-2 border-amber-300/35 pl-3 text-sm font-medium leading-6 text-amber-100/90">{item.sampleMotto}</p>
                     <div className="mt-5 flex flex-wrap gap-2">
                         {item.previewAnimals.slice(0, 3).map((animal) => (
-                            <span key={animal.slug} className="rounded-full bg-black/20 px-3 py-1 text-sm text-ink-200">{animal.name}</span>
+                            <span key={animal.slug} className="rounded-full bg-black/20 light:bg-black/[0.06] px-3 py-1 text-sm text-ink-200">{animal.name}</span>
                         ))}
                     </div>
                     <p className="mt-4 line-clamp-2 text-sm text-ink-300">
@@ -144,7 +144,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
             <p className="mt-4 text-sm font-semibold leading-6 text-amber-100/90">{item.sampleMotto}</p>
             <div className="mt-5 flex flex-wrap gap-2">
                 {item.previewAnimals.slice(0, 4).map((animal) => (
-                    <span key={animal.slug} className="rounded-full bg-black/20 px-3 py-1 text-sm text-ink-200">{animal.name}</span>
+                    <span key={animal.slug} className="rounded-full bg-black/20 light:bg-black/[0.06] px-3 py-1 text-sm text-ink-200">{animal.name}</span>
                 ))}
             </div>
             <p className="mt-4 line-clamp-2 text-sm text-ink-300">

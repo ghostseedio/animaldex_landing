@@ -98,7 +98,7 @@ function buildMetrics(
             title: "Total",
             shortTitle: "TOT",
             value: totalValue,
-            tint: "rgba(255, 255, 255, 0.92)",
+            tint: "rgb(var(--c-white) / 0.92)",
             delta: totalDelta
         }
     ];
@@ -115,7 +115,7 @@ function SpeciesRadarLegendChip({metric}: {metric: SpeciesRadarMetric}) {
                         {metric.value}
                         {metric.valueSuffix ?? ""}
                     </p>
-                    {metric.delta > 0 ? <span className="text-[10px] font-bold text-[#A7F432]">+{metric.delta}</span> : null}
+                    {metric.delta > 0 ? <span className="text-[10px] font-bold text-primary-400">+{metric.delta}</span> : null}
                 </div>
             </div>
         </div>
@@ -204,7 +204,7 @@ export default function SpeciesRadarStats({
                                 key={level}
                                 d={polygonPath(centerX, centerY, chartRadius, chartMetrics.length, level / RING_LEVELS)}
                                 fill="none"
-                                stroke={level === RING_LEVELS ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)"}
+                                style={{stroke: level === RING_LEVELS ? "rgb(var(--c-white) / 0.14)" : "rgb(var(--c-white) / 0.07)"}}
                                 strokeWidth="1"
                             />
                         );
@@ -221,19 +221,18 @@ export default function SpeciesRadarStats({
                                     y1={centerY}
                                     x2={outerPoint.x}
                                     y2={outerPoint.y}
-                                    stroke="rgba(255,255,255,0.1)"
                                     strokeWidth="1"
+                                    style={{stroke: "rgb(var(--c-white) / 0.1)"}}
                                 />
                                 <text
                                     x={labelPoint.x}
                                     y={labelPoint.y}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fill="rgba(255, 255, 255, 0.62)"
-                                    stroke="rgba(0, 0, 0, 0.55)"
                                     strokeWidth="2"
                                     paintOrder="stroke"
-                                    style={{fontSize: "9px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase"}}
+                                    // The halo lifts labels off a dark chart; the light theme drops it.
+                                    style={{fill: "rgb(var(--c-white) / 0.62)", stroke: "var(--radar-label-halo, rgba(0, 0, 0, 0.55))", fontSize: "9px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase"}}
                                 >
                                     {metric.shortTitle}
                                 </text>

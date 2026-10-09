@@ -20,7 +20,7 @@ export default function ExperienceCard({listing, locale}: {listing: PublicGuideL
     return (
         <article className="flex h-full overflow-hidden  border border-white/10 bg-white/[0.035]">
             <div className="flex w-full flex-col">
-                <div className="relative h-52 overflow-hidden bg-[#0A1A12]">
+                <div className="theme-dark relative h-52 overflow-hidden bg-[#0A1A12]">
                     {listing.cover_image_url ? (
                         <Image
                             src={listing.cover_image_url}

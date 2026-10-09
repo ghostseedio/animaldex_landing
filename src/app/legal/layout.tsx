@@ -4,6 +4,7 @@ import {Metadata} from "next";
 import {fontClassName, fontCssVariables} from "@/app/fonts";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 import {getSiteUrl} from "@/lib/site";
+import ThemeScript from "@/components/theme/theme-script";
 
 export const metadata: Metadata = {
     metadataBase: new URL(getSiteUrl()),
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     other: {
         "apple-itunes-app": "app-id=6761607780"
     },
-    colorScheme: "dark",
+    colorScheme: "dark light",
     themeColor: "#21C05E",
     icons: {
         icon: [
@@ -28,7 +29,10 @@ export const metadata: Metadata = {
 
 export default function PublicLegalLayout({children}: { children: ReactNode }) {
     return (
-        <html lang="en" className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
+        <html data-theme="dark" suppressHydrationWarning lang="en" className="scroll-smooth selection:bg-primary-200 selection:text-canvas-950">
+        <head>
+            <ThemeScript />
+        </head>
         <body className={`${fontClassName} font-sans font-medium bg-canvas-950`} style={fontCssVariables}>
             <GoogleAnalytics />
             {children}

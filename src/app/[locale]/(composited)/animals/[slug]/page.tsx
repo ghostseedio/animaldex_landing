@@ -7,6 +7,7 @@ import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/species-detail-tabs";
+import SpeciesStoryMediaSection, {StoryPlayer, StoryVideo} from "@/app/[locale]/(composited)/animals/[slug]/species-story-media";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import SpeciesEncyclopediaNav from "@/app/[locale]/(composited)/animals/[slug]/species-encyclopedia-nav";
 import SpeciesEncyclopediaAnalytics from "@/app/[locale]/(composited)/animals/[slug]/species-encyclopedia-analytics";
@@ -69,6 +70,7 @@ import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast
 import {getScopedTranslator} from "@/loaders/translation";
 import {getPublishedEnglishAnimalStaticParams} from "@/lib/published-seo-page-data";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
+import {getSpeciesStoryMedia} from "@/lib/species-story-media";
 import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
 export const revalidate = false;
@@ -391,6 +393,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         redirect(getLocalePath(locale, `/animals/${entry.slug}`));
     }
 
+    // Daily ISR: this fetch's revalidate lowers the route's `revalidate = false`.
+    const storyMedia = await getSpeciesStoryMedia(entry.slug, locale);
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
     const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
     const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
@@ -863,6 +867,27 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         }
     ];
 
+    const unlockCard = (
+        <div className="flex aspect-[4/5] flex-col items-center justify-center border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
+            <div className="relative mb-6 h-28 w-28 overflow-hidden border border-amber-200/20 bg-amber-200/[0.06] p-3">
+                <Image
+                    src={getSpeciesArtworkRoute(entry.slug)}
+                    alt={getSpeciesImageAltText(entry, "thumbnail")}
+                    fill
+                    unoptimized
+                    sizes="112px"
+                    className="object-contain p-2 brightness-0 invert opacity-80 light:invert-0 light:opacity-35"
+                />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
+            <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
+            <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
+            <Link href="/#download" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
+                {t("getAnimalDex")}
+            </Link>
+        </div>
+    );
+
     return (
         <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-16 px-4 py-6 md:gap-24 md:px-8 md:py-10">
             <script
@@ -887,7 +912,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     {t("back")}
                 </Link>
 
-                <section className="relative overflow-hidden border border-amber-200/15 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
+                <section className="relative overflow-hidden border border-amber-200/15 light:border-line-200 light:bg-none light:bg-surface-900 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.16),transparent_34%),linear-gradient(135deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] p-5 md:p-10 lg:p-12">
                 <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div className="flex flex-wrap gap-2">
@@ -931,24 +956,26 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </div>
 
                     <div className="order-1 lg:order-2">
-                            <div className="flex aspect-[4/5] flex-col items-center justify-center border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
-                                <div className="relative mb-6 h-28 w-28 overflow-hidden border border-amber-200/20 bg-amber-200/[0.06] p-3">
-                                    <Image
-                                        src={getSpeciesArtworkRoute(entry.slug)}
-                                        alt={getSpeciesImageAltText(entry, "thumbnail")}
-                                        fill
-                                        unoptimized
-                                        sizes="112px"
-                                        className="object-contain p-2 brightness-0 invert opacity-80"
-                                    />
-                                </div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
-                                <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
-                                <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
-                                <Link href="/#download" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
-                                    {t("getAnimalDex")}
-                                </Link>
+                        {storyMedia?.storyVideo ? (
+                            <div className="mx-auto w-full max-w-[15rem] overflow-hidden border border-amber-200/20 shadow-2xl shadow-black/30 sm:max-w-xs">
+                                <StoryPlayer
+                                    item={storyMedia.storyVideo}
+                                    poster={storyMedia.stills[0]?.stable_url}
+                                    label={t("storyMediaStoryVideoLabel", {animal: entry.name})}
+                                    fallback={unlockCard}
+                                />
                             </div>
+                        ) : storyMedia?.hook ? (
+                            <div className="mx-auto w-full max-w-[15rem] overflow-hidden border border-amber-200/20 shadow-2xl shadow-black/30 sm:max-w-xs">
+                                <StoryVideo
+                                    item={storyMedia.hook}
+                                    poster={storyMedia.stills[0]?.stable_url}
+                                    label={t("storyMediaHookLabel", {animal: entry.name})}
+                                    eager
+                                    fallback={unlockCard}
+                                />
+                            </div>
+                        ) : unlockCard}
                     </div>
                 </div>
             </section>
@@ -973,6 +1000,19 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     power: t("glancePower")
                 }}
             />
+
+            {storyMedia ? (
+                <SpeciesStoryMediaSection
+                    media={storyMedia}
+                    labels={{
+                        eyebrow: t("storyMediaEyebrow"),
+                        title: t("storyMediaTitle", {animal: entry.name}),
+                        description: t("storyMediaDescription", {animal: entry.name}),
+                        trialScene: t("storyMediaTrialSceneLabel", {animal: entry.name}),
+                        still: t("storyMediaStillLabel", {animal: entry.name})
+                    }}
+                />
+            ) : null}
 
             {legendaryBeast ? (
                 <section className=" border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">

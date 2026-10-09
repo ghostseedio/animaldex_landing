@@ -22,7 +22,7 @@ export function EarnPageShell({
     schema?: Record<string, unknown> | Array<Record<string, unknown>>;
 }) {
     return (
-        <div className="relative w-full overflow-hidden bg-[#07100B]">
+        <div className="relative w-full overflow-hidden bg-canvas-950">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 opacity-[0.035]"

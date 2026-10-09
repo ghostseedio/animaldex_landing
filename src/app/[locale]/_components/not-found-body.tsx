@@ -1,6 +1,8 @@
 "use client";
 
+import {useEffect} from "react";
 import {usePathname} from "next/navigation";
+import {THEME_STORAGE_KEY} from "@/lib/theme";
 import {checkedIcons} from "@/loaders/icons";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Link from "@/app/[locale]/_components/link";
@@ -21,6 +23,18 @@ export default function NotFoundBody() {
     const pathname = usePathname();
     const locale = pathname === "/id" || pathname.startsWith("/id/") ? "id" : "en";
     const t = notFoundCopy[locale];
+
+    // A 404 is client-rendered after the document has loaded, which rebuilds <html>
+    // with the server's data-theme and drops what the boot script applied.
+    useEffect(() => {
+        try {
+            if (localStorage.getItem(THEME_STORAGE_KEY) === "light") {
+                document.documentElement.setAttribute("data-theme", "light");
+            }
+        } catch {
+            // Blocked storage: stay on the default theme.
+        }
+    }, []);
 
     return (
         <>

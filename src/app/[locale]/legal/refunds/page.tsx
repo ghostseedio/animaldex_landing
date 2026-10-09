@@ -27,7 +27,7 @@ export default async function RefundPolicy() {
                 <DatabaseIcon size={64} />
             </aside>
             <div
-                className="prose prose-invert rounded-4xl border border-line-300 bg-surface-900/80 px-6 py-8 prose-headings:font-display prose-headings:font-bold prose-headings:text-white prose-a:text-primary-200 prose-a:underline prose-strong:text-white prose-li:text-left marker:text-ink-200 backdrop-blur"
+                className="prose prose-invert light:prose-stone rounded-4xl border border-line-300 bg-surface-900/80 px-6 py-8 prose-headings:font-display prose-headings:font-bold prose-headings:text-white prose-a:text-primary-200 prose-a:underline prose-strong:text-white prose-li:text-left marker:text-ink-200 backdrop-blur"
                 dangerouslySetInnerHTML={{__html: processedContent.toString()}}
             />
         </div>

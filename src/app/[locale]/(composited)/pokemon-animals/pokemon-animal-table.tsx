@@ -1,17 +1,28 @@
 import Link from "@/app/[locale]/_components/link";
-import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, PokemonAnimalEntry} from "@/data/pokemon-animal-counterparts";
+import {POKEMON_ANIMAL_CANONICAL_BASE_PATH, PokemonAnimalEntry, getPokemonIconSrc} from "@/data/pokemon-animal-counterparts";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 
 type PokemonAnimalTableProps = {
     entries: PokemonAnimalEntry[];
     showGeneration?: boolean;
 };
 
-function confidenceLabel(confidence: PokemonAnimalEntry["confidence"]) {
-    if (confidence === "none") {
-        return "no clear animal";
-    }
+const ICON_SIZE = 48;
 
-    return confidence;
+function TableIcon({src, className}: {src: string; className?: string}) {
+    return (
+        // Decorative: the linked name beside it carries the meaning.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={src}
+            alt=""
+            width={ICON_SIZE}
+            height={ICON_SIZE}
+            loading="lazy"
+            decoding="async"
+            className={`h-12 w-12 shrink-0 object-contain ${className ?? ""}`}
+        />
+    );
 }
 
 export default function PokemonAnimalTable({entries, showGeneration}: PokemonAnimalTableProps) {
@@ -34,8 +45,9 @@ export default function PokemonAnimalTable({entries, showGeneration}: PokemonAni
                             <td className="px-4 py-3">
                                 <Link
                                     href={`${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`}
-                                    className="font-display text-xl font-bold text-white hover:text-primary-100"
+                                    className="flex items-center gap-3 font-display text-xl font-bold text-white hover:text-primary-100"
                                 >
+                                    <TableIcon src={getPokemonIconSrc(entry.slug)} />
                                     {entry.name}
                                 </Link>
                             </td>
@@ -46,8 +58,13 @@ export default function PokemonAnimalTable({entries, showGeneration}: PokemonAni
                                     </Link>
                                 </td>
                             ) : null}
-                            <td className="px-4 py-3 text-primary-100">{entry.animal}</td>
-                            <td className="px-4 py-3 text-sm text-ink-300">{confidenceLabel(entry.confidence)}</td>
+                            <td className="px-4 py-3">
+                                <Link href={`/animals/${entry.speciesSlug}`} className="flex items-center gap-3 text-primary-100 hover:text-white">
+                                    <TableIcon src={getSpeciesArtworkRoute(entry.speciesSlug, ICON_SIZE * 2)} className="rounded-full bg-surface-800" />
+                                    {entry.animal}
+                                </Link>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-ink-300">{entry.confidence}</td>
                         </tr>
                     ))}
                 </tbody>

@@ -101,13 +101,13 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
             </nav>
 
             <div className="flex flex-col gap-16 md:gap-24">
-                <section className="relative overflow-hidden  bg-surface-900/80">
-                    <Image src={location.featuredImage.src} alt={location.featuredImage.alt} width={location.featuredImage.width} height={location.featuredImage.height} priority className="absolute inset-0 h-full w-full object-cover opacity-35" />
-                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,13,9,0.98)_0%,rgba(7,13,9,0.83)_54%,rgba(7,13,9,0.45)_100%)]" />
+                <section className="relative overflow-hidden  bg-surface-900/80 light:bg-surface-900 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)]">
+                    <Image src={location.featuredImage.src} alt={location.featuredImage.alt} width={location.featuredImage.width} height={location.featuredImage.height} priority className="absolute inset-0 h-full w-full object-cover opacity-35 light:opacity-60" />
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,13,9,0.98)_0%,rgba(7,13,9,0.83)_54%,rgba(7,13,9,0.45)_100%)] light:bg-[linear-gradient(90deg,rgb(var(--c-surface-900))_0%,rgb(var(--c-surface-900)/0.9)_54%,rgb(var(--c-surface-900)/0.35)_100%)]" />
                     <div className="relative max-w-4xl px-6 py-10 md:px-12 md:py-14">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-200">{labels.eyebrow}</p>
                         <h1 className="mt-4 font-display text-5xl font-bold tracking-tight text-white md:text-6xl">{labels.title}</h1>
-                        <p className="mt-4 text-xl leading-8 text-amber-50">{labels.subtitle}</p>
+                        <p className="mt-4 text-xl leading-8 text-amber-50 light:text-ink-100">{labels.subtitle}</p>
                         <p className="mt-4 max-w-3xl text-base leading-7 text-ink-200 md:text-lg">{labels.heroCopy}</p>
                         <div className="mt-7 flex flex-wrap gap-2.5">
                             <span className="rounded-full bg-white/[0.08] px-3.5 py-2 text-sm text-ink-100">{location.name}</span>
@@ -153,7 +153,7 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
                     </section>
                 )}
 
-                <section className="  bg-[linear-gradient(135deg,rgba(28,47,33,0.9),rgba(12,20,15,0.96))] px-6 py-9 md:px-10">
+                <section className="bg-[linear-gradient(135deg,rgba(28,47,33,0.9),rgba(12,20,15,0.96))] light:bg-none light:bg-canvas-900 px-6 py-9 md:px-10">
                     <h2 className="font-display text-3xl font-bold text-white md:text-4xl">{labels.tipsTitle}</h2>
                     <ul className="mt-6 grid gap-3 md:grid-cols-2">
                         {labels.tips.map((tip) => <li key={tip} className="flex gap-3 text-base leading-7 text-ink-100"><span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-400" />{tip}</li>)}
@@ -169,7 +169,7 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
                     </div>
                 </section>
 
-                <section className="overflow-hidden  bg-[radial-gradient(circle_at_10%_20%,rgba(46,255,74,0.13),transparent_35%),linear-gradient(135deg,rgba(25,43,30,0.95),rgba(10,18,13,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
+                <section className="overflow-hidden  light:bg-none light:bg-surface-900 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)] bg-[radial-gradient(circle_at_10%_20%,rgba(46,255,74,0.13),transparent_35%),linear-gradient(135deg,rgba(25,43,30,0.95),rgba(10,18,13,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
                     <h2 className="font-display text-4xl font-bold text-white md:text-5xl">{labels.ctaTitle}</h2>
                     <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-ink-100 md:text-xl">{labels.ctaDescription}</p>
                     <StoreLinks className="mt-7" />

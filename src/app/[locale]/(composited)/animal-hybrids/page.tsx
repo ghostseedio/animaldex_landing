@@ -1,6 +1,7 @@
 import {Metadata} from "next";
-import Link from "@/app/[locale]/_components/link";
-import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
+import AnimalFuseTool from "@/app/[locale]/(composited)/animal-hybrids/animal-fuse-tool";
+import AnimalHybridGrid, {type AnimalHybridCard} from "@/app/[locale]/(composited)/animal-hybrids/animal-hybrid-grid";
+import {formatFusionStat, getFusableSpecies, publishedAnimalFusions} from "@/data/animal-fusions";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getSpeciesBySlug} from "@/data/species";
 import {localeConfig} from "@/i18n";
@@ -13,7 +14,7 @@ export function generateStaticParams() {
 }
 
 const title = "Animal Hybrid Lab";
-const description = "Speculative animal hybrid pages that answer how a cross like zebra + rhino might look, behave, and use an ultimate ability.";
+const description = "Speculative animal hybrids that answer how a cross like zebra + rhino might look and behave, plus AnimalDex fusions: pick any two animals and see what one learns from the other.";
 
 type AnimalHybridsIndexPageProps = {
     params: {
@@ -32,7 +33,9 @@ export async function generateMetadata({params}: AnimalHybridsIndexPageProps): P
             "hypothetical animal hybrids",
             "zebra rhino hybrid",
             "animal cross ideas",
-            "what would animal hybrids look like"
+            "what would animal hybrids look like",
+            "animal fusion",
+            "fuse two animals"
         ],
         alternates: {
             canonical: getLocalePath(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH),
@@ -69,14 +72,52 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
         url: pageUrl,
         inLanguage: locale
     };
+    // Fusions made in the app lead; the curated hybrid creatures follow.
+    const fusionCards: AnimalHybridCard[] = publishedAnimalFusions.flatMap((fusion) => {
+        const receiver = getFusableSpecies(fusion.receiverSlug);
+        const donor = getFusableSpecies(fusion.donorSlug);
+        if (!receiver || !donor) return [];
+        const boosts = [
+            fusion.primaryStat && fusion.boostPrimary > 0 ? `+${fusion.boostPrimary} ${formatFusionStat(fusion.primaryStat)}` : null,
+            fusion.secondaryStat && fusion.boostSecondary > 0 ? `+${fusion.boostSecondary} ${formatFusionStat(fusion.secondaryStat)}` : null
+        ].filter(Boolean);
+        return [{
+            kind: "fusion",
+            slug: fusion.slug,
+            href: `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${fusion.slug}`,
+            title: `${receiver.name} + ${donor.name}`,
+            label: fusion.name,
+            summary: `The ${receiver.name} keeps its ${fusion.receiverPrinciple} and learns from the ${donor.name}'s ${fusion.donorPrinciple}.`,
+            abilityLabel: boosts.length > 0 ? `Learned power · ${boosts.join(" · ")}` : "Learned power",
+            abilityName: fusion.name,
+            abilityDescription: fusion.expression,
+            parents: [{slug: receiver.slug, name: receiver.name}, {slug: donor.slug, name: donor.name}]
+        }];
+    });
+    const hybridCards: AnimalHybridCard[] = animalHybridEntries.map((entry) => ({
+        kind: "hybrid",
+        slug: entry.slug,
+        href: `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`,
+        title: entry.title,
+        label: entry.hybridName,
+        summary: entry.quickAnswer,
+        abilityLabel: "Ultimate ability",
+        abilityName: entry.ultimateAbility.name,
+        abilityDescription: entry.ultimateAbility.description,
+        parents: entry.parents.flatMap((parent) => {
+            const species = getSpeciesBySlug(parent.slug);
+            return species ? [{slug: species.slug, name: species.name}] : [];
+        })
+    }));
+    const cards = [...fusionCards, ...hybridCards];
     const itemListSchema = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        itemListElement: animalHybridEntries.map((entry, index) => ({
+        itemListElement: cards.map((card, index) => ({
             "@type": "ListItem",
             position: index + 1,
-            name: entry.title,
-            url: getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`)
+            name: card.title,
+            url: getAbsoluteUrl(locale, card.href)
         }))
     };
 
@@ -93,75 +134,17 @@ export default async function AnimalHybridsIndexPage({params}: AnimalHybridsInde
             <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Fictional crosses, biology-first answers</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    These pages are speculative creature-design answers for search questions. Each one separates real-world viability from the fun design question: what would the hybrid look like, how would it behave, and what ultimate ability would emerge from both animals?
+                    Every pair of animals here is fictional. Hybrid pages separate real-world viability from the fun design question: what would the cross look like, how would it behave, and what ultimate ability would emerge? Fusions keep both animals real and ask what one would learn from the other.
                 </p>
             </section>
 
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {animalHybridEntries.map((entry, index) => {
-                    const firstSpecies = getSpeciesBySlug(entry.parents[0].slug);
-                    const secondSpecies = getSpeciesBySlug(entry.parents[1].slug);
-                    const showImages = index < 24;
+            <AnimalFuseTool />
 
-                    return (
-                        <article
-                            key={entry.slug}
-                            className="  border border-line-300 bg-surface-900/80 backdrop-blur p-5 md:p-6 flex flex-col gap-5"
-                        >
-                            {showImages ? (
-                                <div className="grid grid-cols-2 gap-3">
-                                    {firstSpecies ? (
-                                        <SpeciesArtworkImage
-                                            slug={firstSpecies.slug}
-                                            alt={`${firstSpecies.name} artwork`}
-                                            className="aspect-[4/3]  border border-line-300"
-                                            sizes="(min-width: 1024px) 20vw, 45vw"
-                                        />
-                                    ) : null}
-                                    {secondSpecies ? (
-                                        <SpeciesArtworkImage
-                                            slug={secondSpecies.slug}
-                                            alt={`${secondSpecies.name} artwork`}
-                                            className="aspect-[4/3]  border border-line-300"
-                                            sizes="(min-width: 1024px) 20vw, 45vw"
-                                        />
-                                    ) : null}
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap gap-2">
-                                    {firstSpecies ? (
-                                        <Link href={`/animals/${firstSpecies.slug}`} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                                            {firstSpecies.name}
-                                        </Link>
-                                    ) : null}
-                                    {secondSpecies ? (
-                                        <Link href={`/animals/${secondSpecies.slug}`} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
-                                            {secondSpecies.name}
-                                        </Link>
-                                    ) : null}
-                                </div>
-                            )}
-                            <div className="flex flex-col gap-3">
-                                <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">{entry.hybridName}</p>
-                                <h2 className="font-display font-bold text-3xl text-white">{entry.title}</h2>
-                                <p className="text-ink-200 text-lg leading-8">{entry.quickAnswer}</p>
-                                <div className="  border border-primary-500/30 bg-primary-900/10 px-4 py-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-primary-200">Ultimate ability</p>
-                                    <p className="font-display text-2xl font-bold text-white">{entry.ultimateAbility.name}</p>
-                                    <p className="text-ink-200 mt-2">{entry.ultimateAbility.description}</p>
-                                </div>
-                            </div>
-                            <Link
-                                href={`${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`}
-                                className="mt-auto text-primary-200 text-lg hover:text-primary-100 transition-colors"
-                                underline
-                            >
-                                Read the hybrid profile
-                            </Link>
-                        </article>
-                    );
-                })}
+            <section className="flex flex-col gap-2">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Hybrids and fusions</h2>
+                <p className="text-ink-200 text-lg">Hybrids imagine two animals as one creature; fusions are made in the AnimalDex app, where one animal learns a power from another.</p>
             </section>
+            <AnimalHybridGrid cards={cards} />
         </article>
     );
 }

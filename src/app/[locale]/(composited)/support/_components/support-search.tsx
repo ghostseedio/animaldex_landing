@@ -97,7 +97,7 @@ export default function SupportSearch({
             <label htmlFor={`${listboxId}-input`} className="sr-only">
                 {placeholder}
             </label>
-            <div className="relative overflow-hidden  border border-primary-200/20 bg-[#071B0F]/90 shadow-[0_24px_80px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.05)] focus-within:border-primary-200/45">
+            <div className="relative overflow-hidden  border border-primary-200/20 bg-[#071B0F]/90 light:bg-surface-900 shadow-[0_24px_80px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.05)] focus-within:border-primary-200/45">
                 <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(167,244,50,0.08),transparent_55%)]" />
                 <div className="relative flex items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-4">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-primary-200/80" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -127,7 +127,7 @@ export default function SupportSearch({
                 <div
                     id={`${listboxId}-listbox`}
                     role="listbox"
-                    className="mt-3 overflow-hidden  border border-white/[0.07] bg-[#071B0F]/95 shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
+                    className="mt-3 overflow-hidden  border border-white/[0.07] bg-[#071B0F]/95 light:bg-surface-900 shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
                 >
                     {results.length ? results.map((hit, index) => (
                         <Link

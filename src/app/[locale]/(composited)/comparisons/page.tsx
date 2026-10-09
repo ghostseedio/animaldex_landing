@@ -399,7 +399,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             </div>
 
             {showFeatured ? (
-                <section className="relative mt-9 overflow-hidden  border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
+                <section className="theme-dark relative mt-9 overflow-hidden  border border-white/10 bg-surface-900 shadow-2xl shadow-black/25">
                     <Image
                         src={featured.featuredImage.src}
                         alt={featured.featuredImage.alt}
@@ -443,31 +443,31 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                 })}
             </nav>
 
-            <div className="sticky top-3 z-30 mt-4  border border-white/10 bg-[#111713]/90 p-2 shadow-xl shadow-black/20 backdrop-blur-xl md:top-5">
+            <div className="sticky top-3 z-30 mt-4  border border-white/10 bg-[#111713]/90 p-2 shadow-xl shadow-black/20 backdrop-blur-xl light:bg-surface-900/90 light:shadow-black/5 md:top-5">
                 <form action={getLocalePath(locale, "/comparisons")} method="get" className="grid gap-2 md:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(9rem,0.65fr))_auto_auto]">
                     {state.quick !== "popular" ? <input type="hidden" name="quick" value={state.quick} /> : null}
                     <label className="relative">
                         <span className="sr-only">{t("searchLabel")}</span>
                         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" aria-hidden="true">⌕</span>
-                        <input name="q" defaultValue={state.query} placeholder={t("searchPlaceholder")} className="h-11 w-full rounded-xl border border-transparent bg-black/20 pl-10 pr-4 text-sm text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60" />
+                        <input name="q" defaultValue={state.query} placeholder={t("searchPlaceholder")} className="h-11 w-full rounded-xl border border-transparent bg-black/20 light:bg-surface-800 pl-10 pr-4 text-sm text-white outline-none placeholder:text-ink-400 focus:border-primary-400/60" />
                     </label>
                     <label>
                         <span className="sr-only">{t("comparisonTypeLabel")}</span>
-                        <select name="type" defaultValue={state.comparisonType} className="h-11 w-full rounded-xl border border-transparent bg-black/20 px-3 text-sm text-white outline-none focus:border-primary-400/60">
+                        <select name="type" defaultValue={state.comparisonType} className="h-11 w-full rounded-xl border border-transparent bg-black/20 light:bg-surface-800 px-3 text-sm text-white outline-none focus:border-primary-400/60">
                             <option value="all">{t("allTypes")}</option>
                             {comparisonTypeOptions.map((option) => <option key={option} value={option}>{t(`comparisonTypes.${option}`)}</option>)}
                         </select>
                     </label>
                     <label>
                         <span className="sr-only">{t("animalLabel")}</span>
-                        <select name="animal" defaultValue={state.animal} className="h-11 w-full rounded-xl border border-transparent bg-black/20 px-3 text-sm text-white outline-none focus:border-primary-400/60">
+                        <select name="animal" defaultValue={state.animal} className="h-11 w-full rounded-xl border border-transparent bg-black/20 light:bg-surface-800 px-3 text-sm text-white outline-none focus:border-primary-400/60">
                             <option value="all">{t("allAnimals")}</option>
                             {animalOptions.map((option) => <option key={option} value={option}>{getSpeciesBySlug(option)?.name || option}</option>)}
                         </select>
                     </label>
                     <label>
                         <span className="sr-only">{t("sortLabel")}</span>
-                        <select name="sort" defaultValue={state.sort} className="h-11 w-full rounded-xl border border-transparent bg-black/20 px-3 text-sm text-white outline-none focus:border-primary-400/60">
+                        <select name="sort" defaultValue={state.sort} className="h-11 w-full rounded-xl border border-transparent bg-black/20 light:bg-surface-800 px-3 text-sm text-white outline-none focus:border-primary-400/60">
                             <option value="popular">{t("sorts.popular")}</option>
                             <option value="newest">{t("sorts.newest")}</option>
                             <option value="az">{t("sorts.az")}</option>
@@ -494,7 +494,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                                 const wide = index % 6 === 0;
                                 return (
                                     <article key={entry.slug} className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.32)] ${wide ? "md:col-span-12 xl:col-span-8" : "md:col-span-6 xl:col-span-4"}`}>
-                                        <Link href={`/comparisons/${entry.slug}`} className="relative block overflow-hidden">
+                                        <Link href={`/comparisons/${entry.slug}`} className="theme-dark relative block overflow-hidden">
                                             <Image src={entry.featuredImage.src} alt={entry.featuredImage.alt} width={entry.featuredImage.width} height={entry.featuredImage.height} sizes={wide ? "(min-width:1280px) 60vw, 100vw" : "(min-width:1280px) 30vw, (min-width:768px) 50vw, 100vw"} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${wide ? "h-72 md:h-96" : "h-64 md:h-72"}`} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-black/30" />
                                             <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white backdrop-blur">{t(`comparisonTypes.${entry.comparisonType}`)}</span>

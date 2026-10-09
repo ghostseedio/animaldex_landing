@@ -71,7 +71,7 @@ export default function MyAnimalPowersSection({
                         <article
                             key={power.speciesProfileId}
                             aria-label={`${power.principleName}, earned from the ${power.speciesDisplayName}`}
-                            className="flex h-[142px] w-[174px] shrink-0 flex-col gap-1.5 rounded-2xl border border-[#A7F432]/25 bg-white/[0.04] p-3"
+                            className="flex h-[142px] w-[174px] shrink-0 flex-col gap-1.5 rounded-2xl border border-primary-400/25 bg-white/[0.04] p-3"
                         >
                             <p className="flex items-center gap-[5px] text-[10px] font-black uppercase tracking-[0.08em]" style={{color: NEON}}>
                                 <span aria-hidden="true">✓</span>

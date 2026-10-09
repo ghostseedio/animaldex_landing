@@ -480,6 +480,14 @@ export function getAnimalHybrid(slug: string) {
     return animalHybridEntriesBySlug.get(slug) ?? null;
 }
 
+/** The curated hybrid for two animals, in either order. */
+export function getAnimalHybridForPair(firstSlug: string, secondSlug: string) {
+    return animalHybridEntries.find((entry) => {
+        const [a, b] = entry.parents.map((parent) => parent.slug);
+        return (a === firstSlug && b === secondSlug) || (a === secondSlug && b === firstSlug);
+    }) ?? null;
+}
+
 export function getRelatedAnimalHybrids(slug: string, limit = 4) {
     const current = getAnimalHybrid(slug);
 

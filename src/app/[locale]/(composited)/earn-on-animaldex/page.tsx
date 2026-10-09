@@ -79,7 +79,7 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
 
             <section
                 aria-label="Credits are not cash"
-                className="  border border-primary-200/25 bg-[#0A1A10] px-5 py-6 md:px-8 md:py-7"
+                className="  border border-primary-200/25 bg-[#0A1A10] light:bg-surface-900 px-5 py-6 md:px-8 md:py-7"
             >
                 <p className="font-display text-2xl font-bold uppercase leading-tight tracking-[0.04em] text-primary-200 md:text-3xl">
                     {creditsAreNotCash}

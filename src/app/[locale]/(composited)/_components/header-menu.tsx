@@ -128,7 +128,7 @@ export default function HeaderMenu({
                     aria-expanded={open}
                     aria-controls="mobile-navigation-drawer"
                 >
-                    <Image src={OpenIcon} alt="" width={24} height={24} />
+                    <Image src={OpenIcon} alt="" width={24} height={24} className="light:invert" />
                 </button>
             </div>
 
@@ -196,7 +196,7 @@ export default function HeaderMenu({
                             onClick={closeMenu}
                             aria-label="Close menu"
                         >
-                            <Image src={CloseIcon} alt="" width={26} height={26} />
+                            <Image src={CloseIcon} alt="" width={26} height={26} className="light:invert" />
                         </button>
                     </div>
 

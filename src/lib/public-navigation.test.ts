@@ -89,7 +89,10 @@ test("header and footer consume the shared public navigation data", () => {
     assert.equal(footerColumns.length, 4);
     assert.match(dropdown, /aria-expanded/);
     assert.match(dropdown, /aria-haspopup/);
-    assert.doesNotMatch(dropdown, /onMouseEnter/);
+    // Desktop dropdowns open on mouse hover (a deliberate product change), but
+    // only for a mouse: touch and keyboard users still open them with the button.
+    assert.match(dropdown, /onPointerEnter=\{onRootPointerEnter\}/);
+    assert.match(dropdown, /pointerType !== "mouse"/);
 });
 
 test("nav labels match the published category names", () => {

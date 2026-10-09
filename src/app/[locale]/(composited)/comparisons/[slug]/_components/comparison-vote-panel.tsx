@@ -145,7 +145,7 @@ export default function ComparisonVotePanel({
                             onClick={() => castVote(option.side)}
                             aria-pressed={selected}
                             disabled={pending !== null}
-                            className={`group relative overflow-hidden rounded-3xl border p-5 text-left transition disabled:cursor-wait ${selected ? "border-primary-400 bg-primary-400/10" : "border-line-300 bg-black/20 hover:border-primary-400/50"}`}
+                            className={`group relative overflow-hidden rounded-3xl border p-5 text-left transition disabled:cursor-wait ${selected ? "border-primary-400 bg-primary-400/10" : "border-line-300 bg-black/20 light:bg-surface-900 hover:border-primary-400/50"}`}
                         >
                             <div className="flex items-center gap-4">
                                 <span className="relative h-16 w-16 shrink-0 overflow-hidden  bg-surface-800/70">

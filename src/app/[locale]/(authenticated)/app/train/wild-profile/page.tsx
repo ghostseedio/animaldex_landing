@@ -6,6 +6,7 @@ import {getTrainWildProfileState} from "@/data/train-modules";
 import {formatAppLongDate} from "@/lib/app-dates";
 import {appStoreUrl} from "@/lib/store-links";
 
+const INTERVIEW_PATH = "/app/train/wild-profile/interview";
 const HERO_IMAGE = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/lion-identity-thumbnail.webp";
 
 function RoleCard({
@@ -80,12 +81,15 @@ export default async function WildProfilePage({params}: {params: {locale: string
                     </div>
                     <p className="text-sm leading-6 text-white/50">
                         {profile.hasInProgressInterview
-                            ? "Your Wild Profile interview is in progress. Continue in the AnimalDex app to reveal your Origin, Apex, and Active animals."
-                            : "Take the animal interview in AnimalDex to unlock your Origin, Apex, and Active animals. It takes about five minutes."}
+                            ? "Your Wild Profile interview is in progress. Pick up where you left off here or in the AnimalDex app to reveal your Origin, Apex, and Active animals."
+                            : "Take the animal interview to unlock your Origin, Apex, and Active animals. It takes about five minutes, and your profile syncs with the AnimalDex app."}
                     </p>
-                    <div className="flex flex-wrap gap-3">
-                        <a href={appStoreUrl} className="inline-flex rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
-                            {profile.hasInProgressInterview ? "Continue in app" : "Start interview in app"}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Link href={INTERVIEW_PATH} className="inline-flex rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                            {profile.hasInProgressInterview ? "Continue interview" : "Start interview"}
+                        </Link>
+                        <a href={appStoreUrl} className="inline-flex rounded-2xl border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
+                            {profile.hasInProgressInterview ? "Continue in app" : "Use the app instead"}
                         </a>
                         <AppPrimaryLink href="/what-animal-am-i">Learn about Wild Profile</AppPrimaryLink>
                     </div>
@@ -98,11 +102,16 @@ export default async function WildProfilePage({params}: {params: {locale: string
                         {profile.apex ? <RoleCard {...profile.apex} /> : null}
                         {profile.active ? <RoleCard {...profile.active} /> : null}
                     </div>
-                    {profile.generatedAt ? (
-                        <p className="text-xs text-white/35">
-                            Generated {formatAppLongDate(profile.generatedAt, params.locale)}
-                        </p>
-                    ) : null}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        {profile.generatedAt ? (
+                            <p className="text-xs text-white/35">
+                                Generated {formatAppLongDate(profile.generatedAt, params.locale)}
+                            </p>
+                        ) : <span />}
+                        <Link href={INTERVIEW_PATH} underline className="text-sm font-bold text-primary-200 hover:text-primary-100">
+                            Retake interview
+                        </Link>
+                    </div>
                 </section>
             )}
         </div>

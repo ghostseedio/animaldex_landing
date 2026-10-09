@@ -1,7 +1,9 @@
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import AnimalFusionView, {fusionMetadata, resolvePublishedFusion} from "@/app/[locale]/(composited)/animal-hybrids/[slug]/animal-fusion-view";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
+import {getAnimalFusionsForPair, getFusableSpecies, publishedAnimalFusions} from "@/data/animal-fusions";
 import {
     ANIMAL_HYBRID_CANONICAL_BASE_PATH,
     animalHybridEntries,
@@ -19,11 +21,16 @@ type AnimalHybridDetailPageProps = {
     };
 };
 
+// Curated hybrids and snapshot fusions, all prerendered. A pair fused since
+// the snapshot shows in the hub's Fuse tool until the next refresh + deploy.
 export const revalidate = false;
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return animalHybridEntries.map((entry) => ({locale: "en", slug: entry.slug}));
+    return [
+        ...animalHybridEntries.map((entry) => ({locale: "en", slug: entry.slug})),
+        ...publishedAnimalFusions.map((entry) => ({locale: "en", slug: entry.slug}))
+    ];
 }
 
 export async function generateMetadata({params}: AnimalHybridDetailPageProps): Promise<Metadata> {
@@ -31,7 +38,8 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
     const entry = getAnimalHybrid(slug);
 
     if (!entry) {
-        return {};
+        const fusion = resolvePublishedFusion(slug);
+        return fusion ? fusionMetadata(fusion, locale) : {};
     }
 
     return {
@@ -59,11 +67,17 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
     const entry = getAnimalHybrid(slug);
 
     if (!entry) {
-        notFound();
+        const fusion = resolvePublishedFusion(slug);
+        if (!fusion) {
+            notFound();
+        }
+        return <AnimalFusionView fusion={fusion} locale={locale} />;
     }
 
     const parentSpecies = entry.parents.map((parent) => getSpeciesBySlug(parent.slug));
     const relatedEntries = getRelatedAnimalHybrids(entry.slug);
+    const pairFusions = getAnimalFusionsForPair(entry.parents[0].slug, entry.parents[1].slug);
+    const pairFusable = Boolean(getFusableSpecies(entry.parents[0].slug) && getFusableSpecies(entry.parents[1].slug));
     const pageUrl = getAbsoluteUrl(locale, `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${entry.slug}`);
     const schema = [
         {
@@ -181,6 +195,30 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Hybrid ecological role</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">{entry.habitatRole}</p>
             </section>
+
+            {pairFusable || pairFusions.length > 0 ? (
+            <section className="  border border-primary-500/40 bg-primary-900/10 px-6 py-8 md:px-10 flex flex-col gap-4">
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Fuse these two animals</h2>
+                <p className="text-ink-200 text-lg leading-8">
+                    In the AnimalDex app the {entry.parents[0].name} and {entry.parents[1].name} stay themselves: fusing them teaches one animal a power from the other.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                    {pairFusions.map((fusion) => (
+                        <Link key={fusion.slug} href={`${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${fusion.slug}`} className="rounded-full border border-primary-500/40 px-4 py-2 font-semibold text-primary-100 hover:border-primary-400">
+                            {getFusableSpecies(fusion.receiverSlug)?.name} learns {fusion.name}
+                        </Link>
+                    ))}
+                    {pairFusable && pairFusions.length < 2 ? (
+                        <Link
+                            href={`${ANIMAL_HYBRID_CANONICAL_BASE_PATH}?receiver=${entry.parents[0].slug}&donor=${entry.parents[1].slug}#fuse`}
+                            className="rounded-full bg-primary-400 px-5 py-2 font-semibold text-black"
+                        >
+                            Fuse {entry.parents[0].name} + {entry.parents[1].name}
+                        </Link>
+                    ) : null}
+                </div>
+            </section>
+            ) : null}
 
             {relatedEntries.length > 0 ? (
                 <section className="flex flex-col gap-4">

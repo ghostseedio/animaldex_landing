@@ -95,8 +95,8 @@ export default function ContactRouteCard({
             id={routeId}
             className={`group relative flex min-h-[15.5rem] overflow-hidden  border transition-[border-color,box-shadow,transform] duration-500 ease-out motion-reduce:transition-none ${
                 featured
-                    ? "border-primary-200/18 bg-[#0A2112]/92 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06)] md:p-8 lg:min-h-[15rem] lg:p-9 hover:-translate-y-0.5 hover:border-primary-200/42 hover:shadow-[0_30px_96px_rgba(0,0,0,0.42),0_0_0_1px_rgba(167,244,50,0.08)] motion-reduce:hover:translate-y-0"
-                    : "min-h-[14.5rem] border-white/[0.07] bg-[#071B0F]/82 p-5 md:min-h-[15rem] md:p-6 hover:-translate-y-0.5 hover:border-primary-200/32 hover:shadow-[0_0_0_1px_rgba(167,244,50,0.05),0_20px_64px_rgba(0,0,0,0.3)] motion-reduce:hover:translate-y-0"
+                    ? "border-primary-200/18 bg-[#0A2112]/92 light:bg-surface-900 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06)] md:p-8 lg:min-h-[15rem] lg:p-9 hover:-translate-y-0.5 hover:border-primary-200/42 hover:shadow-[0_30px_96px_rgba(0,0,0,0.42),0_0_0_1px_rgba(167,244,50,0.08)] motion-reduce:hover:translate-y-0"
+                    : "min-h-[14.5rem] border-white/[0.07] bg-[#071B0F]/82 light:bg-surface-900 p-5 md:min-h-[15rem] md:p-6 hover:-translate-y-0.5 hover:border-primary-200/32 hover:shadow-[0_0_0_1px_rgba(167,244,50,0.05),0_20px_64px_rgba(0,0,0,0.3)] motion-reduce:hover:translate-y-0"
             }`}
         >
             <div

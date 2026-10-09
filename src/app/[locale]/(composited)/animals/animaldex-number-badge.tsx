@@ -21,7 +21,7 @@ export default function AnimalDexNumberBadge({
     if (resolvedNumber) {
         return (
             <span
-                className={`inline-flex items-center gap-1 rounded-full border border-primary-400/35 bg-black/70 font-black tabular-nums text-primary-200 ${
+                className={`inline-flex items-center gap-1 rounded-full border border-primary-400/35 bg-black/70 light:border-line-200 light:bg-surface-900 font-black tabular-nums text-primary-200 ${
                     compact ? "px-2 py-0.5 text-[0.62rem] tracking-[0.08em]" : "px-2.5 py-1 text-xs tracking-[0.12em]"
                 } ${className}`}
             >
@@ -36,7 +36,7 @@ export default function AnimalDexNumberBadge({
 
     return (
         <span
-            className={`inline-flex items-center rounded-full border border-white/15 bg-black/55 font-black uppercase tracking-[0.14em] text-white/45 ${
+            className={`inline-flex items-center rounded-full border border-white/15 bg-black/55 light:border-line-200 light:bg-surface-900 font-black uppercase tracking-[0.14em] text-white/45 ${
                 compact ? "px-2 py-0.5 text-[0.62rem]" : "px-2.5 py-1 text-xs"
             } ${className}`}
         >

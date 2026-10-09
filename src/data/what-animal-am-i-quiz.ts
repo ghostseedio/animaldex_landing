@@ -35,6 +35,11 @@ export type QuizAnimal = {
     oneLiner: string;
     /** 2–3 sentence personality read grounded in the species' real behaviour. */
     read: string;
+    /**
+     * Artwork file in the species bucket when the slug has none of its own;
+     * without it the artwork route falls back to a relative (wolf → Ethiopian wolf).
+     */
+    artworkFile?: string;
 };
 
 export type QuizAnswer = {
@@ -45,19 +50,28 @@ export type QuizAnswer = {
 
 export type QuizQuestion = {
     id: string;
+    /** What the question measures, shown in the "what this test measures" section. */
+    trait: string;
     prompt: string;
     answers: QuizAnswer[];
 };
 
+export type WildProfileRole = "origin" | "apex" | "active";
+
 export type QuizResult = {
-    primary: QuizAnimal;
-    secondary: QuizAnimal;
+    /** Root pattern: best match across every answer. */
+    origin: QuizAnimal;
+    /** Pressure pattern: best match on the conflict / pressure / protect / flaw answers. */
+    apex: QuizAnimal;
+    /** Current season: best match on the recharge / novelty / learning / rhythm answers. */
+    active: QuizAnimal;
     scores: Record<QuizAnimalId, number>;
 };
 
 export const quizAnimals: QuizAnimal[] = [
     {
         slug: "wolf",
+        artworkFile: "gray-wolf.webp",
         name: "Gray Wolf",
         archetype: "The loyal coordinator",
         oneLiner: "Team-first and loyal — you do your best work as part of a tight, well-organised pack.",
@@ -72,6 +86,7 @@ export const quizAnimals: QuizAnimal[] = [
     },
     {
         slug: "elephant",
+        artworkFile: "african-bush-elephant.webp",
         name: "African Elephant",
         archetype: "The steady caretaker",
         oneLiner: "The one everyone leans on — you remember what matters and look after your herd.",
@@ -159,6 +174,7 @@ export const quizAnimals: QuizAnimal[] = [
 export const quizQuestions: QuizQuestion[] = [
     {
         id: "recharge",
+        trait: "How you recharge — solitude, close company, novelty or play",
         prompt: "After a draining week, how do you recharge?",
         answers: [
             {id: "solo", label: "Alone — phone off, no plans, my own space.", weights: {"grizzly-bear": 2, "domestic-cat": 2, "barn-owl": 1}},
@@ -169,6 +185,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "conflict",
+        trait: "How you handle conflict — head-on, patient, peacekeeping or clever",
         prompt: "Someone crosses a line with you. What do you do?",
         answers: [
             {id: "head-on", label: "Deal with it right away, directly.", weights: {"honey-badger": 3, "bald-eagle": 1}},
@@ -179,6 +196,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "solo-group",
+        trait: "Where you do your best work — team, solo, crowd or leading",
         prompt: "Which setup brings out your best work?",
         answers: [
             {id: "team", label: "A tight team where everyone knows their role.", weights: {wolf: 3}},
@@ -189,6 +207,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "planning",
+        trait: "Planning style — stockpiler, adapter, improviser or slow and steady",
         prompt: "Planner or improviser?",
         answers: [
             {id: "stockpile", label: "Planner — I prepare early and keep reserves.", weights: {"grizzly-bear": 2, "american-crow": 2, "galapagos-tortoise": 1}},
@@ -199,6 +218,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "day-night",
+        trait: "Your daily rhythm — dawn, daytime, dusk or night",
         prompt: "When are you most switched on?",
         answers: [
             {id: "morning", label: "Early morning — I'm up with the light.", weights: {"bald-eagle": 2, "ruby-throated-hummingbird": 2, "sea-otter": 1}},
@@ -209,6 +229,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "novelty",
+        trait: "Your relationship with your comfort zone",
         prompt: "How do you feel about your comfort zone?",
         answers: [
             {id: "routine", label: "I love my routines and rituals.", weights: {"galapagos-tortoise": 2, "domestic-cat": 2, "bald-eagle": 1}},
@@ -219,6 +240,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "care",
+        trait: "How you show care — memory, protection, play or quiet presence",
         prompt: "How do you usually show someone you care?",
         answers: [
             {id: "remember", label: "I remember the details and always show up.", weights: {elephant: 3, "american-crow": 1}},
@@ -229,6 +251,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "pressure",
+        trait: "How you react under pressure — fight, focus, pivot or outlast",
         prompt: "When the pressure is really on, you…",
         answers: [
             {id: "fiercer", label: "Get fiercer and refuse to quit.", weights: {"honey-badger": 3, wolf: 1}},
@@ -239,6 +262,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "learning",
+        trait: "How you learn — watching, tinkering, talking or diving in",
         prompt: "How do you learn something new?",
         answers: [
             {id: "watch", label: "Watch others first, then do it better.", weights: {"american-crow": 3, "barn-owl": 1}},
@@ -249,6 +273,7 @@ export const quizQuestions: QuizQuestion[] = [
     },
     {
         id: "flaw",
+        trait: "Your blind spot — stubborn, restless, aloof or over-giving",
         prompt: "What would your friends say is your biggest flaw?",
         answers: [
             {id: "stubborn", label: "Stubborn — I won't let things go.", weights: {"honey-badger": 2, "galapagos-tortoise": 1, "bald-eagle": 1}},
@@ -267,23 +292,25 @@ function emptyScores(): Record<QuizAnimalId, number> {
 }
 
 /**
- * Deterministic scoring.
- *
- * 1. Each chosen answer adds its weights to the matching animals.
- * 2. Animals are ranked by total score.
- * 3. Ties break on the number of separate answers that pointed at the animal
- *    (broad agreement beats one heavy answer), then on the strongest single
- *    weight received, then on the fixed order of `quizAnimals`.
- *
- * `answers` maps question id → answer id. Unknown ids are ignored, so a stale
- * saved state can never throw.
+ * The same three roles the app's Wild Profile uses. Apex and Active are scored
+ * on the questions that speak to that role; Origin on everything.
  */
-export function scoreQuiz(answers: Record<string, string>): QuizResult {
+export const wildProfileRoleQuestions: Record<Exclude<WildProfileRole, "origin">, string[]> = {
+    apex: ["conflict", "pressure", "care", "flaw"],
+    active: ["recharge", "novelty", "learning", "day-night"]
+};
+
+type Tally = {scores: Record<QuizAnimalId, number>; hits: Record<QuizAnimalId, number>; peak: Record<QuizAnimalId, number>};
+
+function tally(answers: Record<string, string>, questionIds?: string[]): Tally {
     const scores = emptyScores();
     const hits = emptyScores();
     const peak = emptyScores();
 
     quizQuestions.forEach((question) => {
+        if (questionIds && !questionIds.includes(question.id)) {
+            return;
+        }
         const answer = question.answers.find((item) => item.id === answers[question.id]);
         if (!answer) {
             return;
@@ -296,20 +323,47 @@ export function scoreQuiz(answers: Record<string, string>): QuizResult {
         });
     });
 
+    return {scores, hits, peak};
+}
+
+function rank(primary: Tally, overall: Tally, exclude: QuizAnimalId[] = []): QuizAnimal {
     const ranked = quizAnimals
         .map((animal, order) => ({animal, order}))
-        .sort((a, b) =>
-            scores[b.animal.slug] - scores[a.animal.slug]
-            || hits[b.animal.slug] - hits[a.animal.slug]
-            || peak[b.animal.slug] - peak[a.animal.slug]
-            || a.order - b.order
-        );
+        .filter(({animal}) => !exclude.includes(animal.slug))
+        .sort((a, b) => {
+            const x = a.animal.slug;
+            const y = b.animal.slug;
+            return primary.scores[y] - primary.scores[x]
+                || primary.hits[y] - primary.hits[x]
+                || primary.peak[y] - primary.peak[x]
+                || overall.scores[y] - overall.scores[x]
+                || a.order - b.order;
+        });
+    return ranked[0].animal;
+}
 
-    return {
-        primary: ranked[0].animal,
-        secondary: ranked[1].animal,
-        scores
-    };
+/**
+ * Deterministic scoring into an Origin / Apex / Active triad.
+ *
+ * 1. Each chosen answer adds its weights to the matching animals.
+ * 2. Origin is the top animal across all answers.
+ * 3. Apex is the top animal on the pressure questions, Active the top animal
+ *    on the current-season questions; each skips animals already assigned so
+ *    the triad is always three different species.
+ * 4. Ties break on the number of separate answers that pointed at the animal
+ *    (broad agreement beats one heavy answer), then on the strongest single
+ *    weight, then on the overall score, then on the fixed order of `quizAnimals`.
+ *
+ * `answers` maps question id → answer id. Unknown ids are ignored, so a stale
+ * saved state can never throw.
+ */
+export function scoreQuiz(answers: Record<string, string>): QuizResult {
+    const overall = tally(answers);
+    const origin = rank(overall, overall);
+    const apex = rank(tally(answers, wildProfileRoleQuestions.apex), overall, [origin.slug]);
+    const active = rank(tally(answers, wildProfileRoleQuestions.active), overall, [origin.slug, apex.slug]);
+
+    return {origin, apex, active, scores: overall.scores};
 }
 
 export function getQuizAnimal(slug: string): QuizAnimal | undefined {

@@ -140,7 +140,7 @@ export default async function GuideListingPage({params}: Props) {
                     </div>
                 </div>
                 <div className="overflow-hidden border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/25">
-                    <div className="relative h-80 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
+                    <div className="theme-dark relative h-80 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
                         {listing.cover_image_url ? (
                             <img src={listing.cover_image_url} alt="" className="h-full w-full object-cover" />
                         ) : (

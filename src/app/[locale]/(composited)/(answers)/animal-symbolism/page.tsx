@@ -100,7 +100,7 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                 {featuredSymbolismPosts.length > 0 ? (
                     <div className="grid min-h-[24rem] gap-3 border-t border-line-300 bg-canvas-950/35 p-4 lg:border-l lg:border-t-0">
                         {featuredSymbolismPosts.map((post, index) => (
-                            <Link key={post.slug} href={`/blog/${post.slug}`} className={`group relative overflow-hidden rounded-md border border-white/10 bg-surface-800 ${index === 0 ? "min-h-[13rem]" : "min-h-[9rem]"}`}>
+                            <Link key={post.slug} href={`/blog/${post.slug}`} className={`theme-dark group relative overflow-hidden rounded-md border border-white/10 bg-surface-800 ${index === 0 ? "min-h-[13rem]" : "min-h-[9rem]"}`}>
                                 <Image
                                     src={post.featuredImage.src}
                                     alt={post.featuredImage.alt}

@@ -283,7 +283,7 @@ export default function ApplyItYourWay({
                                     maxLength={POWER_APPLICATION_LIMITS.maxCharacters}
                                     rows={7}
                                     aria-label="What did you do?"
-                                    className="min-h-[160px] w-full resize-y rounded-[14px] border border-[#A7F432]/30 bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
+                                    className="min-h-[160px] w-full resize-y rounded-[14px] border border-primary-400/30 bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
                                 />
                                 <div className="flex items-center justify-between gap-3">
                                     <span className={`text-[10px] ${hasEnough ? "text-white/40" : "text-orange-400"}`}>

@@ -1,7 +1,18 @@
 export type PublicNavLink = {
     href: string;
     labelKey: string;
+    /**
+     * The scene a desktop dropdown shows in its preview pane while this row is
+     * hovered or focused (see header-nav-preview). Decorative: the row label
+     * names the page.
+     */
+    preview?: NavPreviewId;
 };
+
+export type NavPreviewId =
+    | "browse" | "compare" | "tiers" | "hybrid" | "locations" | "experiences"
+    | "ask" | "lessons" | "powers" | "behaviours" | "challenge" | "whatAmI"
+    | "symbolism" | "support" | "contact" | "sponsor" | "brand";
 
 export type PublicNavSection = {
     id: string;
@@ -36,12 +47,12 @@ export const productLinks: PublicNavLink[] = [
 
 /** 02 — Explore Animals: the catalogue and the places to use it. */
 export const exploreAnimalLinks: PublicNavLink[] = [
-    {href: "/animals", labelKey: "browseAnimals"},
-    {href: "/comparisons", labelKey: "compareAnimals"},
-    {href: "/tier-list", labelKey: "animalTierLists"},
-    {href: "/animal-hybrids", labelKey: "animalHybrids"},
-    {href: LOCATIONS_HREF, labelKey: "locations"},
-    {href: WILDLIFE_EXPERIENCES_HREF, labelKey: "wildlifeExperiences"}
+    {href: "/animals", labelKey: "browseAnimals", preview: "browse"},
+    {href: "/comparisons", labelKey: "compareAnimals", preview: "compare"},
+    {href: "/tier-list", labelKey: "animalTierLists", preview: "tiers"},
+    {href: "/animal-hybrids", labelKey: "animalHybrids", preview: "hybrid"},
+    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"},
+    {href: WILDLIFE_EXPERIENCES_HREF, labelKey: "wildlifeExperiences", preview: "experiences"}
 ];
 
 /**
@@ -52,22 +63,22 @@ export const exploreAnimalLinks: PublicNavLink[] = [
  * not a question about the catalogue.
  */
 export const animalLessonLinks: PublicNavLink[] = [
-    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom"},
-    {href: "/animal-lessons", labelKey: "animalLessons"},
-    {href: "/powers", labelKey: "animalAbilities"},
-    {href: ANIMAL_BEHAVIOURS_HREF, labelKey: "animalBehaviours"},
-    {href: CHALLENGE_YOURSELF_HREF, labelKey: "challengeYourself"},
-    {href: "/what-animal-am-i", labelKey: "whatAnimalAmI"}
+    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "ask"},
+    {href: "/animal-lessons", labelKey: "animalLessons", preview: "lessons"},
+    {href: "/powers", labelKey: "animalAbilities", preview: "powers"},
+    {href: ANIMAL_BEHAVIOURS_HREF, labelKey: "animalBehaviours", preview: "behaviours"},
+    {href: CHALLENGE_YOURSELF_HREF, labelKey: "challengeYourself", preview: "challenge"},
+    {href: "/what-animal-am-i", labelKey: "whatAnimalAmI", preview: "whatAmI"}
 ];
 
 /** 04 — Resources: reading, help, and the things partners ask for. */
 export const resourceLinks: PublicNavLink[] = [
     {href: BLOG_HREF, labelKey: "blog"},
-    {href: "/animal-symbolism", labelKey: "animalSymbolism"},
-    {href: "/support", labelKey: "support"},
-    {href: "/contact", labelKey: "contact"},
-    {href: "/sponsor-a-challenge", labelKey: "sponsorAChallenge"},
-    {href: "/branding", labelKey: "brandAssets"}
+    {href: "/animal-symbolism", labelKey: "animalSymbolism", preview: "symbolism"},
+    {href: "/support", labelKey: "support", preview: "support"},
+    {href: "/contact", labelKey: "contact", preview: "contact"},
+    {href: "/sponsor-a-challenge", labelKey: "sponsorAChallenge", preview: "sponsor"},
+    {href: "/branding", labelKey: "brandAssets", preview: "brand"}
 ];
 
 /**

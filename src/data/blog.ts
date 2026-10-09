@@ -575,16 +575,17 @@ const blogPostsData: BlogPost[] = [
         updatedAt: "2026-06-14",
         featuredImage: whatAnimalAmIImage(
             "wild-profile-hero.webp",
-            "AnimalDex app artwork for discovering what animal you are through Wild Profile",
+            "Wild Profile triad: Gray Wolf as Origin, Honey Badger as Apex and Octopus as Active",
             1200,
             630,
             "AnimalDex turns the classic what animal am I question into a Wild Profile with three animal patterns."
         ),
         readingMinutes: 8,
         author: "AnimalDex",
-        tags: ["What Animal Am I", "Animal Personality", "Wild Profile", "AnimalDex", "Animal Identity", "Personality Quiz"],
+        tags: ["What Animal Am I", "Animal Personality", "Wild Profile", "AnimalDex", "Animal Identity", "Personality Quiz", "Animal Personality Test"],
         searchIntents: [
             "what animal am I",
+            "animal personality test",
             "what animal are you",
             "find out which animal you are",
             "animal personality quiz",
@@ -635,10 +636,10 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: whatAnimalAmIImage(
                         "animaldex-identity-phone.webp",
-                        "AnimalDex mobile app screen representing the Identity area and Wild Profile experience",
+                        "Wild Profile start screen: Find your three animals, with Origin, Apex and Active explained before the interview begins",
                         512,
                         1084,
-                        "Wild Profile lives in the Identity area of AnimalDex."
+                        "Wild Profile starts by explaining the three roles, then hands you to the Wild Guide."
                     )
                 }
             },
@@ -656,7 +657,7 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: whatAnimalAmIImage(
                         "wild-profile-app-interface.webp",
-                        "AnimalDex app interface artwork showing a polished mobile flow for discovering animal identity",
+                        "Wild Profile interview: the Wild Guide asks a follow-up question, with quick-answer chips and a signal meter",
                         1024,
                         767,
                         "The interview adapts as it learns more about your patterns."
@@ -705,7 +706,7 @@ const blogPostsData: BlogPost[] = [
                     type: "image",
                     image: whatAnimalAmIImage(
                         "animaldex-animal-profile-results.webp",
-                        "AnimalDex app artwork representing animal profile results and structured animal identity matching",
+                        "A catalog shortlist of six animals narrowed to a Wild Profile of Barn Owl as Origin, Grizzly Bear as Apex and Red Fox as Active",
                         1024,
                         688,
                         "AnimalDex shortlists candidate animals before AI makes the final selection."
@@ -747,11 +748,11 @@ const blogPostsData: BlogPost[] = [
                     "Start the interview and answer honestly. Short answers can work, but detailed answers give the system more signal.",
                     "When the app has enough information, generate your Wild Profile.",
                     "You will receive an Origin animal, an Apex animal, and an Active animal, each with evidence and meaning inside the app.",
-                    "For the full landing-page walkthrough, start at the What Animal Am I page, then explore the AnimalDex Blog for symbolism guides and animal pattern breakdowns."
+                    "Want a quick answer first? Take the free animal personality test on the What Animal Am I page, then explore the AnimalDex Blog for symbolism guides and animal pattern breakdowns."
                 ],
                 inlineLinks: [
                     {
-                        text: "What Animal Am I",
+                        text: "free animal personality test",
                         slug: "what-animal-am-i",
                         href: "https://animaldex.app/what-animal-am-i"
                     },

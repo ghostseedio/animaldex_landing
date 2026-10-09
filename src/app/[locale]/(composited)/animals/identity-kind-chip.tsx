@@ -9,30 +9,31 @@ import {
     type IdentityKindTone
 } from "@/lib/identity-kind";
 
-/** Matches iOS IdentityKindChip palette groups. */
+/** Matches iOS IdentityKindChip palette groups. Text reads through --idk-*-text,
+ * which only the light theme defines (globals.css), so dark keeps these values. */
 const TONE_STYLES: Record<IdentityKindTone, {color: string; background: string; border: string}> = {
     species: {
-        color: "rgba(167, 244, 50, 1)",
+        color: "rgb(var(--idk-species-text, 167 244 50))",
         background: "rgba(167, 244, 50, 0.12)",
         border: "rgba(167, 244, 50, 0.34)"
     },
     group: {
-        color: "rgba(110, 224, 184, 1)",
+        color: "rgb(var(--idk-group-text, 110 224 184))",
         background: "rgba(110, 224, 184, 0.12)",
         border: "rgba(110, 224, 184, 0.34)"
     },
     breed: {
-        color: "rgba(115, 219, 255, 1)",
+        color: "rgb(var(--idk-breed-text, 115 219 255))",
         background: "rgba(115, 219, 255, 0.12)",
         border: "rgba(115, 219, 255, 0.34)"
     },
     fallback: {
-        color: "rgba(250, 184, 61, 1)",
+        color: "rgb(var(--idk-fallback-text, 250 184 61))",
         background: "rgba(250, 184, 61, 0.14)",
         border: "rgba(250, 184, 61, 0.36)"
     },
     neutral: {
-        color: "rgba(255, 255, 255, 0.55)",
+        color: "rgb(var(--c-white) / 0.55)",
         background: "rgba(255, 255, 255, 0.08)",
         border: "rgba(255, 255, 255, 0.14)"
     }
@@ -76,7 +77,7 @@ function IdentityKindInfoTooltip({
         <div
             id={id}
             role="tooltip"
-            className="pointer-events-none z-[120] w-[min(18.5rem,calc(100vw-1.5rem))]  border border-white/12 bg-[#141814]/96 p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            className="pointer-events-none z-[120] w-[min(18.5rem,calc(100vw-1.5rem))]  border border-white/12 bg-[#141814]/96 light:bg-surface-900 light:shadow-black/10 p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
             style={style}
         >
             <p className="text-[0.7rem] font-black uppercase tracking-[0.14em] text-white/45">Identity level</p>

@@ -69,7 +69,7 @@ export function RewardShowcase({items, onFinished}: {items: RewardShowcaseItem[]
             <span
                 key={index}
                 role="status"
-                className="flex w-full max-w-xs flex-col gap-3 rounded-[1.5rem] border border-[#A7F432]/40 bg-gradient-to-b from-[#A7F432]/25 to-[#A7F432]/5 px-5 py-6 text-left shadow-2xl"
+                className="flex w-full max-w-xs flex-col gap-3 rounded-[1.5rem] border border-primary-400/40 bg-gradient-to-b from-primary-400/25 to-primary-400/5 px-5 py-6 text-left shadow-2xl"
             >
                 <span className="flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/60">
                     <span aria-hidden="true" style={{color: NEON}}>✦</span>

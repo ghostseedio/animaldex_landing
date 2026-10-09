@@ -1,6 +1,7 @@
 import {
     Bell,
     ChatRound,
+    ClapperboardPlay,
     ClipboardCheck,
     Compass,
     CupStar,
@@ -83,6 +84,7 @@ export const adminNavGroups: AdminNavGroup[] = [
         items: [
             {href: "/admin/seo", label: "Content studio", icon: Pen, hint: "Pages and articles"},
             {href: "/admin/assets", label: "Assets", icon: GalleryWide, hint: "Reusable media"},
+            {href: "/admin/story-videos", label: "Story videos", icon: ClapperboardPlay, hint: "Share to official socials"},
             {href: "/admin/guides", label: "Wildlife Guides", icon: Compass, hint: "Sellers and listings"},
         ],
     },

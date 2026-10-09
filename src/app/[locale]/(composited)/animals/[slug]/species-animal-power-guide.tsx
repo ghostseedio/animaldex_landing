@@ -46,7 +46,7 @@ export default function SpeciesAnimalPowerGuide({
     return (
         <section
             id="animal-power"
-            className="scroll-mt-28 overflow-hidden  border border-primary-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(167,244,50,0.14),transparent_32%),linear-gradient(180deg,rgba(16,22,14,0.96),rgba(8,11,8,0.98))] p-5 md:p-8"
+            className="scroll-mt-28 overflow-hidden  border border-primary-400/20 light:border-line-200 light:bg-none light:bg-surface-900 bg-[radial-gradient(circle_at_80%_0%,rgba(167,244,50,0.14),transparent_32%),linear-gradient(180deg,rgba(16,22,14,0.96),rgba(8,11,8,0.98))] p-5 md:p-8"
         >
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:items-start">
                 <div>

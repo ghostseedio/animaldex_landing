@@ -2,7 +2,6 @@ import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import {getPokemonAnimalNote} from "@/data/pokemon-animal-notes";
 import {
     getPokemonSharingSpecies,
-    pokemonAnimalEntries,
     type PokemonAnimalEntry
 } from "@/data/pokemon-animal-counterparts";
 import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
@@ -16,9 +15,6 @@ const STAT_LABELS = [
     ["size", "Size"],
     ["intelligence", "Intelligence"]
 ] as const;
-
-/** Nouns that read wrong with "a" in front ("a cattle"). */
-const UNCOUNTABLE_ANIMALS = new Set(["cattle", "shellfish"]);
 
 export type PokemonRealSpecies = {
     slug: string;
@@ -45,14 +41,6 @@ export type PokemonEntryContent = {
     comparison: string[];
     faqs: PokemonFaq[];
 };
-
-export function withArticle(animal: string) {
-    if (UNCOUNTABLE_ANIMALS.has(animal)) {
-        return animal;
-    }
-
-    return /^[aeiou]/i.test(animal) ? `an ${animal}` : `a ${animal}`;
-}
 
 function cleanText(value: string | null | undefined) {
     const text = value?.trim();
@@ -131,7 +119,7 @@ function statSentence(species: PokemonRealSpecies) {
 function buildComparison(entry: PokemonAnimalEntry, species: PokemonRealSpecies[]) {
     const [primary, ...others] = species;
     const genus = entry.genus.replace(/ Pokemon$/i, " Pokémon");
-    const opening = `${entry.name}'s official category is the ${genus}. AnimalDex rates its resemblance to ${withArticle(entry.animal)} as ${confidencePhrase(entry.confidence)}. ${entry.note}`;
+    const opening = `${entry.name}'s official category is the ${genus}. AnimalDex rates its resemblance to the ${entry.animal} as ${confidencePhrase(entry.confidence)}. ${entry.note}`;
 
     if (!primary) {
         return [opening];
@@ -157,19 +145,11 @@ function buildFaqs(entry: PokemonAnimalEntry, answer: string, noteParagraphs: st
         }
     ];
 
-    if (entry.confidence === "none") {
-        faqs.push({
-            question: `Is ${entry.name} a real animal?`,
-            answer: `No. ${entry.name} is a fictional Pokémon, and its design does not point cleanly to one real animal, so AnimalDex does not pair it with a real species.`
-        });
-        return faqs;
-    }
-
     faqs.push({
         question: `Is ${entry.name} a real animal?`,
         answer: primary
             ? `No. ${entry.name} is a fictional Pokémon. Its closest real counterpart is the ${primary.name}${primary.scientificName ? ` (${primary.scientificName})` : ""}, which AnimalDex covers with real field-guide facts.`
-            : `No. ${entry.name} is a fictional Pokémon. Its closest real-animal comparison is ${withArticle(entry.animal)}, but no single living species is a close enough match to pair it with.`
+            : `No. ${entry.name} is a fictional Pokémon. Its closest real counterpart is the ${entry.animal}.`
     });
 
     if (primary?.summary) {
@@ -179,31 +159,21 @@ function buildFaqs(entry: PokemonAnimalEntry, answer: string, noteParagraphs: st
         });
     }
 
-    if (primary) {
-        const others = getPokemonSharingSpecies(entry, primary.slug, 6);
-        if (others.length > 0) {
-            faqs.push({
-                question: `Which other Pokémon are based on the ${primary.name}?`,
-                answer: `AnimalDex also pairs ${joinNames(others.map((item) => item.name))} with the ${primary.name}.`
-            });
-        }
-    } else {
-        const others = pokemonAnimalEntries.filter((item) => item.slug !== entry.slug && item.animal === entry.animal).slice(0, 6);
-        if (others.length > 0) {
-            faqs.push({
-                question: `Which other Pokémon are based on ${withArticle(entry.animal)}?`,
-                answer: `AnimalDex also compares ${joinNames(others.map((item) => item.name))} to ${withArticle(entry.animal)}.`
-            });
-        }
+    const others = getPokemonSharingSpecies(entry, entry.speciesSlug, 6);
+    if (others.length > 0) {
+        faqs.push({
+            question: `Which other Pokémon are based on the ${entry.animal}?`,
+            answer: `AnimalDex also pairs ${joinNames(others.map((item) => item.name))} with the ${entry.animal}.`
+        });
     }
 
     return faqs;
 }
 
 export function buildPokemonEntryAnswer(entry: PokemonAnimalEntry) {
-    return entry.confidence === "none"
-        ? `${entry.name} is not cleanly based on a single real animal. The best answer is that it is a fantasy design with no single animal counterpart.`
-        : `${entry.name} most closely resembles ${withArticle(entry.animal)}.`;
+    return entry.confidence === "broad"
+        ? `${entry.name} is mostly a fantasy design, but its closest real animal is the ${entry.animal}.`
+        : `${entry.name} most closely resembles the ${entry.animal}.`;
 }
 
 export function buildPokemonEntryContent(entry: PokemonAnimalEntry): PokemonEntryContent {
@@ -230,12 +200,8 @@ export function buildPokemonEntryTitle(entry: PokemonAnimalEntry) {
 }
 
 export function buildPokemonEntryDescription(entry: PokemonAnimalEntry) {
-    if (entry.confidence === "none") {
-        return `${entry.name} does not have a single clear real-animal counterpart. AnimalDex compares its official category and design cues.`;
-    }
-
-    const lead = `${entry.name} most closely resembles ${withArticle(entry.animal)}.`;
-    const primary = entry.speciesSlugs[0] ? getPublishedSpeciesForContent(entry.speciesSlugs[0]) : null;
+    const lead = buildPokemonEntryAnswer(entry);
+    const primary = getPublishedSpeciesForContent(entry.speciesSlug);
     const candidates = primary
         ? [
             `${lead} Meet the real ${primary.name}: diet, lifespan, traits and AnimalDex stats.`,

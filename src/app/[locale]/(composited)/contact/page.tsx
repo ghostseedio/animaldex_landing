@@ -74,7 +74,7 @@ export default async function ContactPage({params}: {params: {locale: string}}) 
     };
 
     return (
-        <div className="relative w-full overflow-hidden bg-[#07100B]">
+        <div className="relative w-full overflow-hidden bg-canvas-950">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 opacity-[0.035]"
@@ -168,7 +168,7 @@ export default async function ContactPage({params}: {params: {locale: string}}) 
 
                 <section
                     aria-labelledby="support-callout-title"
-                    className="relative overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85 px-5 py-6 md:flex md:items-center md:justify-between md:gap-8 md:px-7 md:py-7"
+                    className="relative overflow-hidden  border border-white/[0.07] bg-[#071B0F]/85 light:bg-surface-900 px-5 py-6 md:flex md:items-center md:justify-between md:gap-8 md:px-7 md:py-7"
                 >
                     <div
                         aria-hidden="true"

@@ -26,8 +26,13 @@ const pokemon = [
     .filter((slug, index, all) => all.indexOf(slug) === index)
     .sort((left, right) => left.localeCompare(right));
 
-const hybrids = animalHybridEntries
-    .map((entry) => entry.slug)
+// Fusion pages share /animal-hybrids; the fusion snapshot is refreshed first.
+const fusionSnapshotPath = join(here, "..", "src/data/published-animal-fusions.json");
+const fusionSlugs: string[] = existsSync(fusionSnapshotPath)
+    ? (JSON.parse(readFileSync(fusionSnapshotPath, "utf8")).fusions ?? []).map((entry: {slug: string}) => entry.slug)
+    : [];
+const hybrids = [...animalHybridEntries.map((entry) => entry.slug), ...fusionSlugs]
+    .filter((slug, index, all) => all.indexOf(slug) === index)
     .sort((left, right) => left.localeCompare(right));
 
 const powers = getLocalPrincipleSlugs();
@@ -37,7 +42,7 @@ const existingComparisons = existsSync(outputPath)
 
 writeFileSync(outputPath, `${JSON.stringify({
     generatedAt: new Date().toISOString().slice(0, 10),
-    source: "local pokemon-animal-counterparts + animal-hybrids + species-behavior-lessons + comparison snapshot",
+    source: "local pokemon-animal-counterparts + animal-hybrids + animal-fusion snapshot + species-behavior-lessons + comparison snapshot",
     note: "Used by Edge middleware to close static SEO namespaces. Refresh with yarn refresh:published-seo.",
     pokemon,
     hybrids,

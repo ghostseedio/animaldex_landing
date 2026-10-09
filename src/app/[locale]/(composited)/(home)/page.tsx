@@ -152,7 +152,7 @@ export default async function Home({params}: HomePageProps) {
         {
             id: "scannerGuide",
             href: "/best-animal-identification-app",
-            image: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-07-29/best-animal-identification-apps-2026-74c9e4aa-95a3-480c-8f37-a90f7afbc71d.png",
+            image: "/images/blog/answer-best-animal-identification-app/hero.webp",
             layout: "small"
         },
         {
@@ -170,7 +170,7 @@ export default async function Home({params}: HomePageProps) {
         {
             id: "octopusMind",
             href: "/blog/octopus-symbolism",
-            image: "/images/blog/octopus-symbolism/octopus-symbolism-hero.webp",
+            image: "/images/blog/how-octopus-intelligence-works/common-octopus.webp",
             layout: "wide"
         }
     ];
@@ -305,7 +305,7 @@ export default async function Home({params}: HomePageProps) {
                     fill
                     priority
                     sizes="100vw"
-                    className="hero-background-feather object-cover object-center"
+                    className="hero-background-feather object-cover object-center light:opacity-30"
                 />
             </div>
             <IconCanvas
@@ -516,13 +516,13 @@ export default async function Home({params}: HomePageProps) {
                             )
                         },
                     ]}
-                    className="flex min-h-[30rem] flex-col border border-line-400 bg-canvas-950 text-white sm:min-h-[34rem] lg:h-[40rem] lg:min-h-[40rem] lg:w-[40rem] xl:w-[44rem] rounded-3xl shadow-[0_30px_120px_rgba(0,0,0,0.35)]"
+                    className="flex min-h-[30rem] flex-col border border-line-400 light:border-line-200 bg-canvas-950 light:bg-surface-900 text-white sm:min-h-[34rem] lg:h-[40rem] lg:min-h-[40rem] lg:w-[40rem] xl:w-[44rem] rounded-3xl shadow-[0_30px_120px_rgba(0,0,0,0.35)]"
                     leftOffset={0}
                 />
             </section>
 
             <Anchor id="more" />
-            <section className="relative mb-16 w-full-no-offset overflow-hidden bg-[#071B0F] mx-offset o-4 md:o-16">
+            <section className="relative mb-16 w-full-no-offset overflow-hidden bg-[#071B0F] light:bg-canvas-900 mx-offset o-4 md:o-16">
                 <div className="relative">
                     {moreFeatures.slice(0, 2).map(({img, id, icon}, i) => {
                         const iconMarkup = unsafelyLoadSVG(localisePath(icon, locale));
@@ -535,13 +535,13 @@ export default async function Home({params}: HomePageProps) {
                                         aria-hidden="true"
                                         className="mx-auto flex max-w-[88rem] items-center px-4 sm:px-8 lg:px-20 xl:px-24"
                                     >
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#163322]/90 to-[#163322]/40" />
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#163322]/90 to-[#163322]/40 light:via-line-200 light:to-line-200/40" />
                                         <div className="mx-5 flex h-7 w-7 items-center justify-center text-primary-200/35">
                                             <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
                                                 <path d="M8 11 3 6h10L8 11Z" />
                                             </svg>
                                         </div>
-                                        <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#163322]/90 to-[#163322]/40" />
+                                        <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#163322]/90 to-[#163322]/40 light:via-line-200 light:to-line-200/40" />
                                     </div>
                                 ) : null}
                                 <figure
@@ -584,7 +584,7 @@ export default async function Home({params}: HomePageProps) {
                         );
                     })}
                     <figure className="mx-auto w-full max-w-5xl px-4 pb-12 pt-4 sm:px-8 lg:px-16 lg:pb-16">
-                        <div className="relative overflow-hidden border border-white/[0.08] bg-[#0A2112]/90 px-5 py-5 text-center shadow-[0_22px_70px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.07)] md:px-7 md:py-6 lg:text-left">
+                        <div className="relative overflow-hidden border border-white/[0.08] bg-[#0A2112]/90 light:bg-surface-900 px-5 py-5 text-center shadow-[0_22px_70px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.07)] md:px-7 md:py-6 lg:text-left">
                         <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary-200 via-primary-500 to-transparent" />
                         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full border border-primary-200/[0.10]" />
                         <div className="pointer-events-none absolute -right-8 top-8 h-24 w-24 rounded-full border border-primary-200/[0.12]" />
@@ -704,7 +704,7 @@ export default async function Home({params}: HomePageProps) {
                 <div className="relative w-full max-w-6xl">
                     <div className="pointer-events-none absolute inset-x-10 top-8 -z-10 h-56 rounded-full bg-primary-500/[0.18] blur-3xl motion-safe:animate-[ctaGlow_5s_ease-in-out_infinite]" />
                     <div
-                        className="relative overflow-hidden rounded-[2rem] border border-primary-200/15 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.16),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(167,244,50,0.10),transparent_34%),linear-gradient(135deg,rgba(28,37,32,0.92),rgba(7,11,9,0.96))] p-5 shadow-[0_28px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur md:p-8 lg:p-10 motion-safe:animate-[ctaRise_700ms_ease-out_both]"
+                        className="relative overflow-hidden rounded-[2rem] border border-primary-200/15 light:border-line-200 light:bg-none light:bg-surface-900 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.16),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(167,244,50,0.10),transparent_34%),linear-gradient(135deg,rgba(28,37,32,0.92),rgba(7,11,9,0.96))] p-5 shadow-[0_28px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur md:p-8 lg:p-10 motion-safe:animate-[ctaRise_700ms_ease-out_both]"
                     >
                         <svg
                             aria-hidden="true"
@@ -746,7 +746,7 @@ export default async function Home({params}: HomePageProps) {
                                         href={href}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-[1.45rem] border border-white/10 bg-[#07100B]/88 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)]"
+                                        className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-[1.45rem] border border-white/10 bg-[#07100B]/88 light:bg-surface-800 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] light:hover:bg-surface-700 hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)]"
                                     >
                                         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.055] text-primary-100 transition-colors duration-300 group-hover/store:border-primary-200/30 group-hover/store:text-white">
                                             {name === "App Store" ? (
@@ -815,8 +815,8 @@ export default async function Home({params}: HomePageProps) {
                                         sizes={isFeatured ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"}
                                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-canvas-950 via-canvas-950/58 to-canvas-950/4 transition-opacity duration-500 group-hover:opacity-95" />
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(167,244,50,0.22),transparent_34%)] opacity-60 transition-opacity duration-500 group-hover:opacity-90" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-canvas-950 via-canvas-950/58 to-canvas-950/4 light:bg-[linear-gradient(to_top,rgb(var(--c-canvas-950))_0%,rgb(var(--c-canvas-950)/0.92)_40%,rgb(var(--c-canvas-950)/0.6)_68%,rgb(var(--c-canvas-950)/0.1)_100%)] transition-opacity duration-500 group-hover:opacity-95" />
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(167,244,50,0.22),transparent_34%)] opacity-60 light:opacity-0 transition-opacity duration-500 group-hover:opacity-90" />
                                     <div className={`relative mt-auto flex w-full flex-col ${isFeatured ? "gap-5 p-6 md:p-8" : "gap-3 p-5 md:p-6"}`}>
                                         <span className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">
                                             {t(`explore.cards.${item.id}.eyebrow`)}

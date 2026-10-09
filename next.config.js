@@ -77,6 +77,12 @@ module.exports = withNextIntl({
                 destination: "/animal-lessons",
                 permanent: true
             },
+            // Page 1 of a paged hub (src/data/hub-pagination.ts) is the hub itself.
+            ...["/challenge-yourself", "/animal-behaviours"].flatMap((hub) => ["", "/id"].map((prefix) => ({
+                source: `${prefix}${hub}/page/1`,
+                destination: `${prefix}${hub}`,
+                permanent: true
+            }))),
             {
                 source: "/id/animal-meanings",
                 destination: "/id/animal-lessons",

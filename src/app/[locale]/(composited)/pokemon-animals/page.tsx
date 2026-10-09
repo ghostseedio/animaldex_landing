@@ -105,19 +105,19 @@ export default async function PokemonAnimalsIndexPage({params}: PokemonAnimalsIn
                     <p className="font-display text-4xl text-white">{summary.strongCount}</p>
                 </div>
                 <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
-                    <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Broad</p>
-                    <p className="font-display text-4xl text-white">{summary.mediumCount + summary.broadCount}</p>
+                    <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Medium</p>
+                    <p className="font-display text-4xl text-white">{summary.mediumCount}</p>
                 </div>
                 <div className="  border border-line-300 bg-surface-900/80 px-5 py-5">
-                    <p className="text-sm uppercase tracking-[0.2em] text-ink-400">No single animal</p>
-                    <p className="font-display text-4xl text-white">{summary.noSingleAnimalCount}</p>
+                    <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Broad</p>
+                    <p className="font-display text-4xl text-white">{summary.broadCount}</p>
                 </div>
             </section>
 
             <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">How to read this directory</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
-                    Each row gives the closest real-animal counterpart, not a claim that the Pokemon was officially designed from only that animal. Many designs mix animals with mythology, objects, plants, machines, fossils, or original fantasy traits.
+                    Each row names one real species as the closest counterpart and links to its AnimalDex field guide. That is a resemblance, not a claim that the Pokemon was officially designed from only that animal. Many designs mix animals with mythology, objects, plants, machines, fossils, or original fantasy traits; those rows are marked broad and name the real animal that comes nearest.
                 </p>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     The directory uses English names, National Dex order, generation data, and official category text from PokeAPI data, then adds AnimalDex editorial comparison labels for animal resemblance.

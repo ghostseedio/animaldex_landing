@@ -30,7 +30,7 @@ export default async function PrivacyPolicy() {
                 <DatabaseIcon size={64} />
             </aside>
             <div
-                className="prose prose-invert prose-headings:font-bold prose-headings:font-display prose-headings:text-white
+                className="prose prose-invert light:prose-stone prose-headings:font-bold prose-headings:font-display prose-headings:text-white
                 prose-a:text-primary-200 prose-a:underline prose-strong:text-white marker:text-ink-200 prose-li:text-left
                 rounded-4xl border border-line-300 bg-surface-900/80 px-6 py-8 backdrop-blur"
                 dangerouslySetInnerHTML={{ __html: contentHtml }}

@@ -198,7 +198,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                 <span className="text-ink-100">{lesson.displayName}</span>
             </nav>
 
-            <section className="relative overflow-hidden  bg-[radial-gradient(circle_at_12%_10%,rgba(180,139,72,0.15),transparent_33%),linear-gradient(135deg,rgba(27,36,29,0.98),rgba(10,15,12,0.98))] p-5 shadow-2xl shadow-black/20 md:p-10 lg:p-12">
+            <section className="relative overflow-hidden light:border-line-200 light:bg-none light:bg-surface-900 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)] bg-[radial-gradient(circle_at_12%_10%,rgba(180,139,72,0.15),transparent_33%),linear-gradient(135deg,rgba(27,36,29,0.98),rgba(10,15,12,0.98))] p-5 shadow-2xl shadow-black/20 md:p-10 lg:p-12">
                 <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
                     <div className="order-2 flex flex-col items-start gap-6 lg:order-1">
                         <div>
@@ -247,7 +247,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                     </div>
 
                     <div className="order-1 lg:order-2">
-                        <div className="  bg-black/20 p-3 shadow-2xl shadow-black/30">
+                        <div className="  bg-black/20 light:bg-canvas-950 p-3 shadow-2xl shadow-black/30 light:shadow-black/10">
                             <div className="relative overflow-hidden ">
                                 <SpeciesArtworkImage
                                     slug={lesson.slug}
@@ -257,7 +257,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                                     className="aspect-[4/3] "
                                     sizes="(min-width: 1024px) 40vw, 100vw"
                                 />
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-5 pb-5 pt-16">
+                                <div className="theme-dark absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-5 pb-5 pt-16">
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">{t("imageLabel")}</p>
                                     <p className="mt-1 text-lg font-semibold text-white">{t("principleChip", {principle: lesson.principleName})}</p>
                                 </div>
@@ -418,7 +418,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                 ) : null}
             </section>
 
-            <section className="  bg-[radial-gradient(circle_at_50%_0%,rgba(53,181,89,0.18),transparent_42%),linear-gradient(145deg,rgba(25,41,29,0.98),rgba(10,16,12,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
+            <section className="light:border-line-200 light:bg-none light:bg-surface-900 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)] bg-[radial-gradient(circle_at_50%_0%,rgba(53,181,89,0.18),transparent_42%),linear-gradient(145deg,rgba(25,41,29,0.98),rgba(10,16,12,0.98))] px-6 py-10 text-center md:px-12 md:py-14">
                 <h2 className="mx-auto max-w-3xl font-display text-3xl font-bold text-white md:text-5xl">{t("ctaTitle")}</h2>
                 <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("ctaBody")}</p>
                 <StoreLinks className="!mt-7" />
