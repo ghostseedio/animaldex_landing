@@ -71,15 +71,15 @@ const beetle: SpeciesShareContext = {
 test("the brand stays out of the YouTube title and #AnimalDex is on every platform", () => {
     const copy = normalizeShareCopy({
         youtube: {title: "This beetle kills palms | AnimalDex #Shorts", description: "no tags here"},
-        tiktok: {caption: "hook"}, instagram: {caption: "hook"}, x: {text: "hook"}
+        tiktok: {caption: "hook"}, instagram: {caption: "hook"}, facebook: {caption: "hook"}, x: {text: "hook"}
     }, beetle);
     assert.equal(copy.youtube.title, "This beetle kills palms");
-    for (const text of [copy.youtube.description, copy.tiktok.caption, copy.instagram.caption, copy.x.text]) assert.match(text, /#AnimalDex/);
+    for (const text of [copy.youtube.description, copy.tiktok.caption, copy.instagram.caption, copy.facebook.caption, copy.x.text]) assert.match(text, /#AnimalDex/);
 });
 
 test("an over-long X post is trimmed to 280 with its hashtags kept", () => {
     const copy = normalizeShareCopy({
-        youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"},
+        youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"}, facebook: {caption: "c"},
         x: {text: `${"word ".repeat(80)}#AnimalDex #Beetle`}
     }, beetle);
     assert.ok(xLength(copy.x.text) <= X_POST_LIMIT);
@@ -102,5 +102,25 @@ test("the template leads with the vivid fact and carries the search intents", ()
 test("unusable model replies are rejected", () => {
     assert.equal(parseShareCopy("not json"), null);
     assert.equal(parseShareCopy(JSON.stringify({youtube: {title: ""}})), null);
-    assert.ok(parseShareCopy("```json\n" + JSON.stringify({youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"}, x: {text: "x"}}) + "\n```"));
+    assert.ok(parseShareCopy("```json\n" + JSON.stringify({youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"}, facebook: {caption: "c"}, x: {text: "x"}}) + "\n```"));
+    assert.equal(parseShareCopy(JSON.stringify({youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"}, x: {text: "x"}})), null);
+});
+
+import {pickFacebookPage} from "./social/facebook-page";
+
+test("Facebook picks the configured Page, else the AnimalDex one, and never a Page it cannot post to", () => {
+    const pages = [
+        {id: "1", name: "Lenny's Page", access_token: "a", tasks: ["CREATE_CONTENT"]},
+        {id: "2", name: "AnimalDex", access_token: "b", tasks: ["CREATE_CONTENT", "MANAGE"]},
+        {id: "3", name: "Read only", access_token: "c", tasks: ["ANALYZE"]}
+    ];
+    assert.equal(pickFacebookPage(pages, "1")?.id, "1");
+    assert.equal(pickFacebookPage(pages, null)?.id, "2");
+    assert.equal(pickFacebookPage(pages, "3")?.id, "2");
+    assert.equal(pickFacebookPage([pages[0], pages[2]], null)?.id, "1");
+    assert.equal(pickFacebookPage([], null), null);
+});
+
+test("the template gives Facebook a clickable guide link", () => {
+    assert.match(buildTemplateCopy(beetle).facebook.caption, /https:\/\/animaldex\.app\/animals\/asiatic-rhinoceros-beetle/);
 });

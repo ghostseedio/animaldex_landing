@@ -10,6 +10,7 @@ export const SOCIAL_HANDLES = {
     youtube: "@animaldexapp",
     tiktok: "@animaldex.app",
     instagram: "@animaldexapp",
+    facebook: "AnimalDex",
     x: "@animaldexapp"
 } as const;
 
@@ -17,6 +18,7 @@ export type ShareCopy = {
     youtube: {title: string; description: string};
     tiktok: {caption: string};
     instagram: {caption: string};
+    facebook: {caption: string};
     x: {text: string};
 };
 
@@ -41,7 +43,7 @@ export type SpeciesShareContext = {
 };
 
 /** Where each feed cuts the text off behind "more" — the hook has to land before it. */
-export const VISIBLE_CHARS = {youtubeTitle: 40, tiktok: 80, instagram: 125} as const;
+export const VISIBLE_CHARS = {youtubeTitle: 40, tiktok: 80, instagram: 125, facebook: 125} as const;
 export const COPY_LIMITS = {youtubeTitle: 100, youtubeDescription: 5000, caption: 2200} as const;
 
 function pascal(text: string) {
@@ -121,6 +123,9 @@ export function buildTemplateCopy(context: SpeciesShareContext): ShareCopy {
         instagram: {
             caption: `${hook}\n\n${meaning}${lesson ? ` ${lesson}` : ""}\n\nCaptured for real in the AnimalDex app. Follow ${SOCIAL_HANDLES.instagram} for a new animal every day 🐾\n\n#AnimalDex ${tag} ${groups.instagram} #AnimalFacts #AnimalSymbolism`
         },
+        facebook: {
+            caption: `${hook}\n\n${meaning}${lesson ? ` ${lesson}` : ""}\n\nFull ${animal} guide (facts, spiritual meaning, dream meaning): ${pageUrl}\n\n#AnimalDex ${tag} #AnimalFacts`
+        },
         x: {text: `${hook} #AnimalDex ${tag}`}
     }, context);
 }
@@ -159,6 +164,7 @@ export function normalizeShareCopy(copy: ShareCopy, context: Pick<SpeciesShareCo
         },
         tiktok: {caption: clip(ensureAnimalDexTag(copy.tiktok.caption), COPY_LIMITS.caption)},
         instagram: {caption: clip(ensureAnimalDexTag(copy.instagram.caption), COPY_LIMITS.caption)},
+        facebook: {caption: clip(ensureAnimalDexTag(copy.facebook.caption), COPY_LIMITS.caption)},
         x: {text: fitXText(ensureAnimalDexTag(copy.x.text).replace(/\n#AnimalDex$/, " #AnimalDex"))}
     };
 }
@@ -166,7 +172,7 @@ export function normalizeShareCopy(copy: ShareCopy, context: Pick<SpeciesShareCo
 export const SHARE_COPY_JSON_SCHEMA = {
     type: "object",
     additionalProperties: false,
-    required: ["youtube", "tiktok", "instagram", "x"],
+    required: ["youtube", "tiktok", "instagram", "facebook", "x"],
     properties: {
         youtube: {
             type: "object", additionalProperties: false, required: ["title", "description"],
@@ -174,6 +180,7 @@ export const SHARE_COPY_JSON_SCHEMA = {
         },
         tiktok: {type: "object", additionalProperties: false, required: ["caption"], properties: {caption: {type: "string"}}},
         instagram: {type: "object", additionalProperties: false, required: ["caption"], properties: {caption: {type: "string"}}},
+        facebook: {type: "object", additionalProperties: false, required: ["caption"], properties: {caption: {type: "string"}}},
         x: {type: "object", additionalProperties: false, required: ["text"], properties: {text: {type: "string"}}}
     }
 } as const;
@@ -186,7 +193,7 @@ Every piece of copy must do two jobs at once:
 
 Brand rules:
 - The word "AnimalDex" must NOT appear in the YouTube title. Put the brand in hashtags: #AnimalDex is always the FIRST hashtag on every platform.
-- Handles: YouTube @animaldexapp, TikTok @animaldex.app, Instagram @animaldexapp, X @animaldexapp.
+- Handles: YouTube @animaldexapp, TikTok @animaldex.app, Instagram @animaldexapp, X @animaldexapp. On Facebook it is the AnimalDex Page (no @handle).
 - 1–2 emoji per post at most. No ALL-CAPS sentences (one emphasised word is fine).
 
 Platform rules:
@@ -194,6 +201,7 @@ Platform rules:
 - youtube.description: 3–6 short lines. Line 1 expands the hook. Then one line each on meaning/symbolism, dream meaning, what it teaches, biomimicry (skip any you have no material for). Then "Full guide: <pageUrl>". Then "Subscribe @animaldexapp for a new animal every day." Last line: 4–5 hashtags starting "#AnimalDex #Shorts #<AnimalNamePascalCase>".
 - tiktok.caption: the hook in the first 80 characters, then one line with the searchable phrases (facts / spiritual meaning / dream meaning), a question that invites comments, "Follow @animaldex.app". Links are not clickable on TikTok: no URL. End with 4–5 hashtags starting "#AnimalDex #<animalname>" and including a community tag like #insectsoftiktok or #animalsoftiktok, plus #animalfacts or #spiritanimal.
 - instagram.caption: hook line in the first 125 characters, a blank line, 1–2 lines with the fact and the meaning/lesson, a blank line, "Captured for real in the AnimalDex app. Follow @animaldexapp for a new animal every day.", a blank line, 3–5 hashtags starting "#AnimalDex #<AnimalName>". No URL.
+- facebook.caption: hook line in the first 125 characters, a blank line, 2–3 short lines with the fact, the symbolism/meaning and what it teaches (Facebook skews older and reads more, so this can be a little fuller), a blank line, "Full guide: <pageUrl>" (links ARE clickable on Facebook), a blank line, 2–3 hashtags starting "#AnimalDex #<AnimalName>".
 - x.text: max 240 characters including hashtags. Just the hook fact, punchy, ending "#AnimalDex #<AnimalName>". No URL.
 
 Return only the JSON object.`;
@@ -223,6 +231,7 @@ export function parseShareCopy(raw: string): ShareCopy | null {
         const value = JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, ""));
         const ok = typeof value?.youtube?.title === "string" && typeof value?.youtube?.description === "string"
             && typeof value?.tiktok?.caption === "string" && typeof value?.instagram?.caption === "string"
+            && typeof value?.facebook?.caption === "string"
             && typeof value?.x?.text === "string" && value.youtube.title.trim().length > 0;
         return ok ? value as ShareCopy : null;
     } catch {

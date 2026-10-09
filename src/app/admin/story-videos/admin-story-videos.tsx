@@ -43,7 +43,8 @@ const KIND_LABELS: Record<Video["kind"], string> = {
 /** Only TikTok (inbox) and YouTube (private upload) have a not-yet-public option. */
 const DRAFT_LABELS: Partial<Record<SocialPlatform, string>> = {
     tiktok: "Send to TikTok drafts",
-    youtube: "Upload as private"
+    youtube: "Upload as private",
+    facebook: "Save as draft"
 };
 
 const STALE_MS = 30 * 60_000;
@@ -142,7 +143,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
 
                 <section className="mt-6">
                     <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">Official accounts</h2>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                         {SOCIAL_PLATFORMS.map((platform) => {
                             const connection = connections.find((candidate) => candidate.platform === platform);
                             return (
@@ -294,7 +295,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [drafting, setDrafting] = useState(false);
     const [tab, setTab] = useState<SocialPlatform>("youtube");
     const [xLink, setXLink] = useState(false);
-    const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", x: "post"});
+    const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
     const blocked = (platform: SocialPlatform) => shares.some((post) => post.platform === platform && (post.status === "published" || ((post.status === "queued" || post.status === "processing") && !isStale(post))));
     const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected) && !blocked(platform);
     const [selected, setSelected] = useState<SocialPlatform[]>(() => SOCIAL_PLATFORMS.filter(available));
@@ -330,6 +331,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
         || (selected.includes("youtube") && (copy.youtube.title.length > COPY_LIMITS.youtubeTitle || copy.youtube.description.length > COPY_LIMITS.youtubeDescription))
         || (selected.includes("tiktok") && copy.tiktok.caption.length > COPY_LIMITS.caption)
         || (selected.includes("instagram") && copy.instagram.caption.length > COPY_LIMITS.caption)
+        || (selected.includes("facebook") && copy.facebook.caption.length > COPY_LIMITS.caption)
     );
 
     function edit<K extends keyof ShareCopy>(platform: K, field: keyof ShareCopy[K], value: string) {
@@ -344,6 +346,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
             youtube: copy.youtube.description,
             tiktok: copy.tiktok.caption,
             instagram: copy.instagram.caption,
+            facebook: copy.facebook.caption,
             x: xText
         };
         try {
@@ -451,6 +454,14 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                     <textarea value={copy.instagram.caption} rows={10} onChange={(event) => edit("instagram", "caption", event.target.value)} className={fieldClass} />
                                 </label>
                                 <VisiblePreview text={copy.instagram.caption} visible={VISIBLE_CHARS.instagram} />
+                            </>
+                        )}
+                        {tab === "facebook" && (
+                            <>
+                                <label className="block text-xs font-bold text-ink-300">Caption <Counter length={copy.facebook.caption.length} max={COPY_LIMITS.caption} visible={VISIBLE_CHARS.facebook} />
+                                    <textarea value={copy.facebook.caption} rows={10} onChange={(event) => edit("facebook", "caption", event.target.value)} className={fieldClass} />
+                                </label>
+                                <VisiblePreview text={copy.facebook.caption} visible={VISIBLE_CHARS.facebook} />
                             </>
                         )}
                         {tab === "x" && (

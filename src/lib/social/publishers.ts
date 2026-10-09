@@ -147,6 +147,47 @@ async function publishInstagram(connection: SocialConnection, request: PublishRe
     return {externalId: published.id, externalUrl: media?.permalink ?? null};
 }
 
+// ── Facebook: Page Reels. Start an upload session, send the bytes to
+// rupload, then finish with the description; Facebook processes it async.
+async function publishFacebook(connection: SocialConnection, request: PublishRequest): Promise<PublishResult> {
+    if (!connection.accountId) throw new Error("Facebook Page id missing; reconnect Facebook");
+    const base = "https://graph.facebook.com/v23.0";
+    const token = connection.accessToken;
+    const start = await readJson(await fetch(`${base}/${connection.accountId}/video_reels`, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({upload_phase: "start", access_token: token}).toString()
+    }), "Facebook upload start");
+    const videoId: string = start.video_id;
+    if (!videoId) throw new Error("Facebook did not return a video id");
+    await readJson(await fetch(start.upload_url ?? `https://rupload.facebook.com/video-upload/v23.0/${videoId}`, {
+        method: "POST",
+        headers: {Authorization: `OAuth ${token}`, offset: "0", file_size: String(request.video.length), "Content-Type": "application/octet-stream"},
+        body: request.video
+    }), "Facebook upload");
+    await readJson(await fetch(`${base}/${connection.accountId}/video_reels`, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({
+            upload_phase: "finish",
+            video_id: videoId,
+            video_state: request.mode === "draft" ? "DRAFT" : "PUBLISHED",
+            description: request.caption.slice(0, 2200),
+            access_token: token
+        }).toString()
+    }), "Facebook publish");
+    await poll("Facebook processing", async () => {
+        const status = await readJson(await fetch(`${base}/${videoId}?fields=status&access_token=${encodeURIComponent(token)}`), "Facebook status");
+        const state = status?.status;
+        if (state?.video_status === "error" || state?.processing_phase?.status === "error") {
+            throw new Error(`Facebook could not process the video: ${state?.processing_phase?.error?.message ?? "unknown reason"}`);
+        }
+        const done = state?.video_status === "ready" || state?.publishing_phase?.status === "complete";
+        return done || request.mode === "draft" && state?.uploading_phase?.status === "complete" ? true : null;
+    });
+    return {externalId: videoId, externalUrl: request.mode === "draft" ? null : `https://www.facebook.com/reel/${videoId}`};
+}
+
 // ── X: v2 chunked media upload, wait for processing, then a post with it.
 const X_CHUNK = 4 * 1024 * 1024;
 
@@ -193,5 +234,6 @@ export const publishers: Record<SocialPlatform, (connection: SocialConnection, r
     youtube: publishYouTube,
     tiktok: publishTikTok,
     instagram: publishInstagram,
+    facebook: publishFacebook,
     x: publishX
 };

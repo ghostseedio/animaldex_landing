@@ -1,5 +1,6 @@
 import {createHash, randomBytes} from "crypto";
 import {getSiteUrl} from "@/lib/site";
+import {pickFacebookPage} from "@/lib/social/facebook-page";
 import {needsRefresh} from "@/lib/social/refresh-policy";
 import {getConnection, saveConnection} from "@/lib/social/store";
 import type {SocialConnection, SocialPlatform} from "@/lib/social/types";
@@ -14,8 +15,12 @@ const ENV_NAMES: Record<SocialPlatform, {id: string; secret: string}> = {
     youtube: {id: "YOUTUBE_OAUTH_CLIENT_ID", secret: "YOUTUBE_OAUTH_CLIENT_SECRET"},
     tiktok: {id: "TIKTOK_CLIENT_KEY", secret: "TIKTOK_CLIENT_SECRET"},
     instagram: {id: "INSTAGRAM_APP_ID", secret: "INSTAGRAM_APP_SECRET"},
+    // The Meta app's own ID/secret (App settings → Basic), not the Instagram ones.
+    facebook: {id: "FACEBOOK_APP_ID", secret: "FACEBOOK_APP_SECRET"},
     x: {id: "X_OAUTH_CLIENT_ID", secret: "X_OAUTH_CLIENT_SECRET"}
 };
+
+const GRAPH_VERSION = "v23.0";
 
 export function getProviderEnvNames(platform: SocialPlatform) {
     return ENV_NAMES[platform];
@@ -74,7 +79,10 @@ export function buildAuthorizeUrl(platform: SocialPlatform): OAuthStart {
             redirect_uri: redirectUri,
             response_type: "code",
             scope: "user.info.basic,video.publish,video.upload",
-            state
+            state,
+            // TikTok requires PKCE and, unlike RFC 7636, hex-encodes the SHA-256.
+            code_challenge: createHash("sha256").update(verifier).digest("hex"),
+            code_challenge_method: "S256"
         }).toString();
     } else if (platform === "instagram") {
         url = new URL("https://www.instagram.com/oauth/authorize");
@@ -83,6 +91,15 @@ export function buildAuthorizeUrl(platform: SocialPlatform): OAuthStart {
             redirect_uri: redirectUri,
             response_type: "code",
             scope: "instagram_business_basic,instagram_business_content_publish",
+            state
+        }).toString();
+    } else if (platform === "facebook") {
+        url = new URL(`https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`);
+        url.search = new URLSearchParams({
+            client_id: env.id,
+            redirect_uri: redirectUri,
+            response_type: "code",
+            scope: "pages_show_list,pages_read_engagement,pages_manage_posts",
             state
         }).toString();
     } else {
@@ -152,7 +169,7 @@ export async function exchangeCode(platform: SocialPlatform, code: string, verif
 
     if (platform === "tiktok") {
         const token = await readJson(await fetch("https://open.tiktokapis.com/v2/oauth/token/", form({
-            client_key: env.id, client_secret: env.secret, code, grant_type: "authorization_code", redirect_uri: redirectUri
+            client_key: env.id, client_secret: env.secret, code, grant_type: "authorization_code", redirect_uri: redirectUri, code_verifier: verifier
         })), "TikTok token exchange");
         if (token.error) throw new Error(`TikTok token exchange: ${token.error_description ?? token.error}`);
         const info = await readJson(await fetch("https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name", {
@@ -183,6 +200,27 @@ export async function exchangeCode(platform: SocialPlatform, code: string, verif
         };
     }
 
+    if (platform === "facebook") {
+        const graph = `https://graph.facebook.com/${GRAPH_VERSION}`;
+        const short = await readJson(await fetch(`${graph}/oauth/access_token?${new URLSearchParams({
+            client_id: env.id, client_secret: env.secret, redirect_uri: redirectUri, code
+        })}`), "Facebook token exchange");
+        const long = await readJson(await fetch(`${graph}/oauth/access_token?${new URLSearchParams({
+            grant_type: "fb_exchange_token", client_id: env.id, client_secret: env.secret, fb_exchange_token: short.access_token
+        })}`), "Facebook long-lived token");
+        // A Page token derived from a long-lived user token does not expire.
+        const pages = await readJson(await fetch(`${graph}/me/accounts?${new URLSearchParams({
+            fields: "id,name,access_token,tasks", limit: "100", access_token: long.access_token
+        })}`), "Facebook Page lookup");
+        const page = pickFacebookPage(pages.data ?? [], process.env.FACEBOOK_PAGE_ID?.trim() || null);
+        if (!page) throw new Error("No Facebook Page found for that login; pick the AnimalDex Page when Facebook asks which Pages to allow");
+        return {
+            platform, accountId: page.id, accountName: page.name ?? null,
+            accessToken: page.access_token, refreshToken: null,
+            expiresAt: null, scopes: "pages_show_list,pages_read_engagement,pages_manage_posts"
+        };
+    }
+
     const token = await readJson(await fetch("https://api.x.com/2/oauth2/token", {
         ...form({code, grant_type: "authorization_code", redirect_uri: redirectUri, code_verifier: verifier, client_id: env.id}),
         headers: {"Content-Type": "application/x-www-form-urlencoded", Authorization: xBasicAuth(env)}
@@ -208,7 +246,7 @@ async function refresh(connection: SocialConnection): Promise<SocialConnection> 
         return {...connection, accessToken: token.access_token, expiresAt: expiresIn(token.expires_in)};
     }
 
-    if (!connection.refreshToken) throw new Error(`${platform} session expired; reconnect it in /admin/story-videos`);
+    if (platform === "facebook" || !connection.refreshToken) throw new Error(`${platform} session expired; reconnect it in /admin/story-videos`);
 
     if (platform === "youtube") {
         const token = await readJson(await fetch("https://oauth2.googleapis.com/token", form({

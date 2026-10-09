@@ -1,10 +1,11 @@
-export const SOCIAL_PLATFORMS = ["youtube", "tiktok", "instagram", "x"] as const;
+export const SOCIAL_PLATFORMS = ["youtube", "tiktok", "instagram", "facebook", "x"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 
 export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
     youtube: "YouTube Shorts",
     tiktok: "TikTok",
     instagram: "Instagram Reels",
+    facebook: "Facebook Reels",
     x: "X"
 };
 
