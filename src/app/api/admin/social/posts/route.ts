@@ -34,7 +34,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({error: "Pick a video and at least one platform"}, {status: 400});
     }
 
-    // A direct TikTok post needs the poster's own choices; drafts are finished in the TikTok app.
+    // The TikTok connection only has video.publish (direct posting), no drafts scope.
+    if (targets.some((target) => target.platform === "tiktok" && target.mode === "draft")) {
+        return NextResponse.json({error: "TikTok drafts are not enabled; post directly instead"}, {status: 400});
+    }
+    // A direct TikTok post needs the poster's own choices.
     const tiktokTarget = targets.find((target) => target.platform === "tiktok" && target.mode !== "draft");
     const tiktokOptions = tiktokTarget ? readTikTokOptions(tiktokTarget.tiktok) : undefined;
     const tiktokProblem = tiktokTarget ? tiktokOptionsProblem(tiktokOptions, null) : null;

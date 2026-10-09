@@ -41,9 +41,8 @@ const KIND_LABELS: Record<Video["kind"], string> = {
     still: "Still"
 };
 
-/** Only TikTok (inbox) and YouTube (private upload) have a not-yet-public option. */
+/** Not-yet-public options. TikTok has none: its drafts scope (video.upload) is not requested. */
 const DRAFT_LABELS: Partial<Record<SocialPlatform, string>> = {
-    tiktok: "Send to TikTok drafts",
     youtube: "Upload as private",
     facebook: "Save as draft"
 };

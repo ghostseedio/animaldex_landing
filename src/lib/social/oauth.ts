@@ -78,7 +78,9 @@ export function buildAuthorizeUrl(platform: SocialPlatform): OAuthStart {
             client_key: env.id,
             redirect_uri: redirectUri,
             response_type: "code",
-            scope: "user.info.basic,video.publish,video.upload",
+            // Direct posting only: video.upload (send to drafts) was dropped so the
+            // TikTok review covers exactly what the app requests.
+            scope: "user.info.basic,video.publish",
             state,
             // TikTok requires PKCE and, unlike RFC 7636, hex-encodes the SHA-256.
             code_challenge: createHash("sha256").update(verifier).digest("hex"),
