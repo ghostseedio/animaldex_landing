@@ -13,8 +13,9 @@ import {
 import type {WildProfileInterviewPayload} from "@/lib/wild-profile-interview-types";
 
 export const runtime = "nodejs";
-// generate-identity-profile can take minutes; iOS waits 240s plus a 24s poll.
-export const maxDuration = 300;
+// generate-identity-profile can take minutes (iOS waits 240s plus a 24s poll).
+// The self-hosted server has no function time limit, and Next 13.4 rejects a
+// `maxDuration` route export at build time, so none is declared here.
 
 function errorResponse(error: unknown) {
     if (error instanceof WildProfileInterviewError) {
