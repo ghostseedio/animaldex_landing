@@ -402,6 +402,22 @@ async function buildMix(voice: string, music: string | null | undefined, seconds
     return out;
 }
 
+/** Seconds of audio actually in a file (decoded sample count / rate), or null if it cannot be read. */
+function audioSeconds(file: string): Promise<number | null> {
+    return new Promise((resolve) => {
+        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-map", "0:a", "-af", "aresample=48000,astats=measure_perchannel=none", "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"]});
+        let stderr = "";
+        child.stderr.on("data", (chunk) => {
+            stderr = (stderr + chunk.toString()).slice(-6000);
+        });
+        child.on("error", () => resolve(null));
+        child.on("close", () => {
+            const samples = Number(stderr.match(/Number of samples:\s*(\d+)/)?.[1]);
+            resolve(Number.isFinite(samples) && samples > 0 ? samples / 48000 : null);
+        });
+    });
+}
+
 /** Escapes a path for use inside an ffmpeg filter argument. */
 function filterPath(value: string) {
     return value.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
@@ -447,19 +463,24 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
     // The logo rides along the top until the end card, which carries its own.
     const logo = path.join(dir, "logo-small.png");
     await sharp(input.logoPath).resize({width: 300}).ensureAlpha(0.88).png().toFile(logo);
+    // The audio is mastered on its own, sample-exact. Normalised inside the video
+    // pass it lost ~3 s of samples over a 48 s video while keeping its
+    // timestamps, so the voice drifted ahead of the captions scene by scene.
+    const master = path.join(dir, "master.wav");
+    await runFfmpeg(["-i", voice, "-af", `${loudnorm},aresample=48000,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=stereo`, "-c:a", "pcm_s16le", "-t", total.toFixed(2), master]);
+
     const videoPath = path.join(dir, "final.mp4");
     await runFfmpeg([
         "-i", silent,
-        "-i", voice,
+        "-i", master,
         // Looped: a one-frame image input ends after its first frame, and the overlay can drop it mid-video.
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", logo,
         "-filter_complex", [
             `[2:v]format=rgba,colorchannelmixer=aa=0.85[logo]`,
             `[0:v][logo]overlay=x=(W-w)/2:y=110:shortest=1:enable='lt(t,${end.start.toFixed(2)})'[branded]`,
-            `[branded]ass='${filterPath(input.assPath)}':fontsdir='${filterPath(input.fontsDir)}',format=yuv420p[v]`,
-            `[1:a]${loudnorm},aresample=48000,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a]`
+            `[branded]ass='${filterPath(input.assPath)}':fontsdir='${filterPath(input.fontsDir)}',format=yuv420p[v]`
         ].join(";"),
-        "-map", "[v]", "-map", "[a]",
+        "-map", "[v]", "-map", "1:a",
         "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-maxrate", "8M", "-bufsize", "16M", "-profile:v", "high", "-threads", "2",
         "-r", String(VIDEO_FPS),
         "-c:a", "aac", "-b:a", "160k",
@@ -467,6 +488,12 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         "-movflags", "+faststart",
         videoPath
     ], 20 * 60_000);
+
+    // Never ship a video whose sound has drifted from its picture and captions.
+    const audio = await audioSeconds(videoPath);
+    if (audio !== null && Math.abs(audio - total) > 0.1) {
+        throw new Error(`The finished audio is ${audio.toFixed(2)}s for a ${total.toFixed(2)}s video; the voice would drift from the captions`);
+    }
 
     // The poster is a frame from the hook, with its headline already on screen.
     const posterPath = path.join(dir, "poster.jpg");
