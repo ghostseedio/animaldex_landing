@@ -14,6 +14,7 @@ import {animalSystemsPosts2} from "@/data/blog/animal-systems-2";
 import {animalSystemsPosts3} from "@/data/blog/animal-systems-3";
 import {earnEconomyBlogPosts} from "@/data/blog/earn";
 import {petrifiedGiantsPost} from "@/data/blog/petrified-giants";
+import {mosquitoesMalariaGermVsTerrainPost} from "@/data/blog/mosquitoes-malaria-germ-vs-terrain";
 import {superlativeBlogPosts} from "@/data/blog/superlatives";
 import {
     BlogFAQ,
@@ -4500,6 +4501,7 @@ export const blogPosts: BlogPost[] = [
     ...earnEconomyBlogPosts,
     howAnimalDexIndexesAnimalsPost,
     petrifiedGiantsPost,
+    mosquitoesMalariaGermVsTerrainPost,
     captureAnimalsAppPost,
     biomimicryInAnimalsPost,
     whatIfEveryAnimalIsALessonPost,
