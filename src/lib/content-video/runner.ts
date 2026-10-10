@@ -17,7 +17,7 @@ import {
     uploadImage
 } from "@/lib/content-video/higgsfield";
 import {generateVideoPlan} from "@/lib/content-video/llm";
-import {AI_CLIP_SECONDS, buildAss, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
+import {AI_CLIP_SECONDS, applyStatCards, buildAss, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
 import {portraitCrop, renderVideo, runFfmpeg, type SceneVisual} from "@/lib/content-video/render";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {loadPageSource, sourcePath} from "@/lib/content-video/page-sources";
@@ -290,7 +290,8 @@ async function download(url: string, out: string) {
 }
 
 /** Voiceover, photos/clips, captions and the edit, in `dir`. Shared with scripts that render without the database. */
-export async function produceVideo(plan: VideoPlan, source: VideoSource, clips: ContentVideoClip[], dir: string, progress: (step: string) => Promise<void>, seed = source.slug) {
+export async function produceVideo(planned: VideoPlan, source: VideoSource, clips: ContentVideoClip[], dir: string, progress: (step: string) => Promise<void>, seed = source.slug) {
+    const plan = applyStatCards(planned, source);
     await progress("Recording the voiceover");
     const voiceState = {skip: new Set<string>(), failures: [] as string[]};
     const lines = [];

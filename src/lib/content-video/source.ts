@@ -4,6 +4,8 @@ import type {BlogMediaBlock, ContentImage} from "@/data/content-schema";
 import type {BlogPost} from "@/data/blog";
 import {getManagedBlogPost, getManagedBlogPosts} from "@/lib/admin-content";
 import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
+import {getSpeciesBySlug} from "@/data/species";
+import {sourceSpecies} from "@/lib/content-video/stat-cards";
 import {licenseFromCaption, MAX_PLAN_IMAGES, type SourceImage, type VideoSource} from "@/lib/content-video/plan";
 
 // Turns a blog post (code-defined or Content Studio) into what the planner
@@ -105,7 +107,12 @@ export async function listVideoCandidates(): Promise<VideoCandidate[]> {
 
 export async function loadVideoSource(slug: string): Promise<VideoSource | null> {
     const post = await getManagedBlogPost(slug);
-    return post ? toVideoSource(post) : null;
+    if (!post) return null;
+    const source = toVideoSource(post);
+    // The animals the post is about; the planner marks scenes about one of them for its stats card.
+    const slugs = Array.from(new Set([...post.speciesSlugs, ...(post.systemsSpeciesSlugs ?? [])])).slice(0, 8);
+    const species = await sourceSpecies(slugs.map((speciesSlug) => ({slug: speciesSlug, name: getSpeciesBySlug(speciesSlug)?.name ?? speciesSlug.replace(/-/g, " "), image: null})));
+    return species.length ? {...source, species} : source;
 }
 
 /** The bytes of a blog image: local files from public/, anything else over HTTP. */

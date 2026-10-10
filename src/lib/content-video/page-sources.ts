@@ -10,6 +10,7 @@ import {getAbsoluteUrl} from "@/lib/site";
 import type {Fighter, SourceImage, SourceType, StatLine, VideoSource} from "@/lib/content-video/plan";
 import {listVideoCandidates, loadVideoSource as loadBlogSource, type VideoCandidate} from "@/lib/content-video/source";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
+import {sourceSpecies} from "@/lib/content-video/stat-cards";
 
 // Every page family a video can be made from, as a VideoSource: comparisons
 // (battle), hybrids and fusions (creature), rankings and locations
@@ -73,6 +74,7 @@ async function comparisonSource(slug: string): Promise<VideoSource | null> {
         tags: entry.searchIntents.slice(0, 6),
         text: [entry.quickVerdict, ...entry.shortAnswer, ...entry.whyThisMatchupIsInteresting, ...entry.finalTake].join("\n"),
         images,
+        species: await sourceSpecies([{slug: entry.animalASlug, name: nameA, image: 1}, {slug: entry.animalBSlug, name: nameB, image: 2}]),
         battle: {a: fighter(entry.animalASlug, nameA, images, 1), b: fighter(entry.animalBSlug, nameB, images, 2), stats, scenarios, verdict: entry.quickVerdict, winner}
     };
 }
@@ -138,6 +140,7 @@ async function rankingSource(slug: string): Promise<VideoSource | null> {
     const top = [...page.entries].sort((a, b) => a.rank - b.rank).slice(0, TOP_RANKING_ENTRIES);
     const images = await artworkImages(top.map((entry) => ({slug: entry.speciesSlug, alt: `#${entry.rank} ${speciesName(entry.speciesSlug)} — ${entry.primaryMetric}`})));
     if (images.length < 3) return null;
+    const species = await sourceSpecies(top.map((entry, offset) => ({slug: entry.speciesSlug, name: speciesName(entry.speciesSlug), image: images.some((image) => image.index === offset + 1) ? offset + 1 : null})));
     return {
         type: "ranking",
         format: "editorial",
@@ -148,6 +151,7 @@ async function rankingSource(slug: string): Promise<VideoSource | null> {
         tags: page.searchIntents.slice(0, 6),
         text: [page.quickAnswer, ...page.introduction, ...top.map((entry) => `#${entry.rank} ${speciesName(entry.speciesSlug)} (${entry.primaryMetric}): ${entry.shortReason}`)].join("\n"),
         images,
+        species,
         brief: `A TOP ${top.length} COUNTDOWN. ${ARTWORK_NOTE}
 - Scene 1 (the hook) teases number one without naming it, over an ai_clip of number one's photo (with a keyframe_prompt).
 - Then one scene per entry from #${top.length} down to #1, using that entry's photo; overlay is "#<rank> <NAME>" (e.g. "#3 PEREGRINE FALCON"); narration gives the metric and why, escalating.
@@ -161,6 +165,7 @@ async function locationSource(slug: string): Promise<VideoSource | null> {
     const spots = page.animalsToSpot.slice(0, LOCATION_ANIMALS);
     const images = await artworkImages(spots.map((spot) => ({slug: spot.speciesSlug, alt: `${speciesName(spot.speciesSlug)}${spot.rarityHint ? ` (${spot.rarityHint})` : ""}`})));
     if (images.length < 3) return null;
+    const species = await sourceSpecies(spots.map((spot, offset) => ({slug: spot.speciesSlug, name: speciesName(spot.speciesSlug), image: images.some((image) => image.index === offset + 1) ? offset + 1 : null})));
     return {
         type: "location",
         format: "editorial",
@@ -171,6 +176,7 @@ async function locationSource(slug: string): Promise<VideoSource | null> {
         tags: page.searchIntents.slice(0, 6),
         text: [page.quickAnswer, ...page.introduction, "Animals:", ...spots.map((spot) => `- ${speciesName(spot.speciesSlug)}: ${spot.whyItFits}${spot.rarityHint ? ` (${spot.rarityHint})` : ""}`), "How to find them:", ...page.spottingTips].join("\n"),
         images,
+        species,
         brief: `A "WHAT YOU CAN SEE IN ${page.name.toUpperCase()}" GUIDE, written for search and AI answers as much as for views. ${ARTWORK_NOTE}
 - The hook names the place and the most surprising animal you can see there.
 - One scene per animal (5–7), using its photo; overlay is the animal's name; narration says where/how to spot it from the page (habitat, time of day, a tip).

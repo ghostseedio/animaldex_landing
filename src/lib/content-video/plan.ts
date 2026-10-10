@@ -42,6 +42,16 @@ export function isSourceType(value: unknown): value is SourceType {
 export type VideoFormat = "editorial" | "battle" | "creature";
 
 export type StatLine = {label: string; a: string; b: string; advantage: "a" | "b" | "even"};
+
+/** An animal's game stats (0–100) and tier, for the pentagon overlay. Only real stats, never generated placeholders. */
+export type StatCard = {
+    name: string;
+    tier: "S" | "A" | "B" | "C" | "D" | "E";
+    stats: {dominance: number; speed: number; size: number; intelligence: number; rarity: number};
+};
+
+/** A species the video may show a stat card for: which source image is it, and its stats. */
+export type SourceSpecies = {slug: string; name: string; image: number | null; card: StatCard};
 export type Fighter = {name: string; slug: string; image: number};
 
 export type BattleFacts = {
@@ -76,6 +86,8 @@ export type VideoSource = {
     images: SourceImage[];
     /** Format-specific instructions for the editorial planner (a countdown, a location guide). */
     brief?: string;
+    /** Species with real stats; scenes about one of them get its stat card. */
+    species?: SourceSpecies[];
     battle?: BattleFacts;
     creature?: CreatureFacts;
 };
@@ -100,11 +112,15 @@ export type PlanScene = {
     minSeconds?: number;
     overlayStyle?: "headline" | "winner" | "title";
     card?: CardSpec;
+    /** The pentagon stat card for the one animal this scene is about. */
+    statCard?: StatCard;
+    /** Slug of the one species (from the source's list) this scene is about, chosen by the planner. */
+    species?: string;
 };
 
 /** A designed still: the battle's VS card, or the two parents of an imagined animal. */
 export type CardSpec =
-    | {kind: "vs"; left: Fighter; right: Fighter; stats: StatLine[]}
+    | {kind: "vs"; left: Fighter; right: Fighter; stats: StatLine[]; radar?: {left: StatCard; right: StatCard}}
     | {kind: "pair"; left: Fighter; right: Fighter; title: string};
 
 /** Pokémon-style health bars over a battle's fight scenes. */
@@ -132,6 +148,7 @@ export type TimelineEntry = {
     kind: "hook" | "scene" | "end";
     overlayStyle?: PlanScene["overlayStyle"];
     card?: CardSpec;
+    statCard?: StatCard;
 };
 
 export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video.
@@ -159,6 +176,7 @@ Shots:
 - visual "ai_clip" brings that photo to life with an AI image-to-video model. Scene 1 MUST be an ai_clip of the most striking photo of a real animal or landscape. Use exactly ${MAX_AI_CLIPS} ai_clips in total (the hook plus ${MAX_AI_CLIPS - 1} more, on the strongest beats); a photo may be animated in more than one scene. Use fewer only when there are not enough suitable photos. Only real photographs of animals, people outdoors or nature can be ai_clips — never a screenshot, app render, diagram, chart, map or anything with text in it. Prefer photos whose license is not "BY-SA" for ai_clips when a comparable one exists.
 - motion_prompt (ai_clip only, else ""): one or two sentences of believable motion for exactly what is in THAT photo — the animal's natural movement, wind, water, light, a slow camera move. Never add animals, people or text; never change the species.
 - keyframe_prompt: "" for real photographs. When the photos are cut-out species ARTWORK on a plain background (the source says so), every ai_clip needs a keyframe_prompt instead: a photoreal, cinematic description of that exact species in its natural habitat doing something striking, vertical 9:16, no text — the clip is drawn from that, not from the cut-out.
+- species: when a SPECIES list is given and this scene is about exactly ONE of those animals, its slug (its stats card is shown); otherwise "".
 - focus_x: the photos are cropped to a tall 9:16 frame; 0 keeps the left edge, 0.5 the centre, 1 the right edge. Put the subject in frame.
 
 Music (music_mood): the instrumental bed under the voice. Pick the one that fits the story's emotion:
@@ -185,6 +203,7 @@ export function buildPlanUserPrompt(source: VideoSource) {
         source.tags.length ? `Tags: ${source.tags.join(", ")}` : null,
         `Summary: ${source.description}`,
         source.brief ? `\nFORMAT FOR THIS VIDEO:\n${source.brief}` : null,
+        source.species?.length ? `\nSPECIES (slug: name): ${source.species.map((entry) => `${entry.slug}: ${entry.name}`).join("; ")}` : null,
         "",
         `Photos (attached in this order):`,
         ...images,
@@ -219,7 +238,7 @@ export const PLAN_JSON_SCHEMA = {
             items: {
                 type: "object",
                 additionalProperties: false,
-                required: ["narration", "overlay", "visual", "image", "focus_x", "motion_prompt", "keyframe_prompt"],
+                required: ["narration", "overlay", "visual", "image", "focus_x", "motion_prompt", "keyframe_prompt", "species"],
                 properties: {
                     narration: {type: "string"},
                     overlay: {type: "string"},
@@ -227,7 +246,8 @@ export const PLAN_JSON_SCHEMA = {
                     image: {type: "integer"},
                     focus_x: {type: "number"},
                     motion_prompt: {type: "string"},
-                    keyframe_prompt: {type: "string"}
+                    keyframe_prompt: {type: "string"},
+                    species: {type: "string"}
                 }
             }
         },
@@ -291,7 +311,9 @@ export function normalizePlan(value: unknown, imageCount: number): VideoPlan | n
         const focus = typeof scene.focus_x === "number" && Number.isFinite(scene.focus_x) ? Math.min(Math.max(scene.focus_x, 0), 1) : 0.5;
         const motionPrompt = text(scene.motion_prompt, 600);
         const keyframePrompt = text(scene.keyframe_prompt, 1200);
+        const species = text(scene.species, 120);
         return [{
+            ...(species ? {species} : {}),
             ...(keyframePrompt && scene.visual === "ai_clip" ? {keyframePrompt} : {}),
             narration,
             overlay: text(scene.overlay, 48),
@@ -328,6 +350,38 @@ export function normalizePlan(value: unknown, imageCount: number): VideoPlan | n
     };
 }
 
+/**
+ * Puts the pentagon stat cards on the plan, at render time (so re-edits of
+ * older videos get them too). Only where relevant: a battle's VS card shows
+ * both fighters; an editorial scene about one species with real stats shows
+ * its card, the first time that species appears, never over the hook.
+ * Imagined animals (creature videos) get none.
+ */
+export function applyStatCards(plan: VideoPlan, source: Pick<VideoSource, "species" | "battle">): VideoPlan {
+    const bySlug = new Map((source.species ?? []).map((entry) => [entry.slug, entry]));
+    if (plan.format === "creature") return plan;
+    if (plan.format === "battle") {
+        const left = source.battle ? bySlug.get(source.battle.a.slug)?.card : undefined;
+        const right = source.battle ? bySlug.get(source.battle.b.slug)?.card : undefined;
+        return {
+            ...plan,
+            scenes: plan.scenes.map((scene) => scene.card?.kind === "vs" && left && right ? {...scene, card: {...scene.card, radar: {left, right}}} : scene)
+        };
+    }
+    const shown = new Set<string>();
+    return {
+        ...plan,
+        scenes: plan.scenes.map((scene, index) => {
+            if (index === 0) return scene;
+            const entry = (scene.species ? bySlug.get(scene.species) : undefined)
+                ?? (source.species ?? []).find((candidate) => candidate.image !== null && candidate.image === scene.image);
+            if (!entry || shown.has(entry.slug)) return scene;
+            shown.add(entry.slug);
+            return {...scene, statCard: entry.card};
+        })
+    };
+}
+
 export function narrationWordCount(plan: Pick<VideoPlan, "scenes">) {
     return plan.scenes.reduce((sum, scene) => sum + scene.narration.split(/\s+/).filter(Boolean).length, 0);
 }
@@ -356,7 +410,8 @@ export function buildTimeline(plan: VideoPlan, sceneSeconds: number[], ctaSecond
             overlay: index === 0 ? plan.hookText : scene.overlay,
             kind: index === 0 ? "hook" : "scene",
             ...(scene.overlayStyle ? {overlayStyle: scene.overlayStyle} : {}),
-            ...(scene.card ? {card: scene.card} : {})
+            ...(scene.card ? {card: scene.card} : {}),
+            ...(scene.statCard ? {statCard: scene.statCard} : {})
         });
         cursor += duration;
     });
@@ -464,6 +519,79 @@ function rect(width: number, height: number) {
     return `m 0 0 l ${width} 0 ${width} ${height} 0 ${height}`;
 }
 
+const STAT_AXES = [["dominance", "DOM"], ["speed", "SPD"], ["size", "SIZE"], ["intelligence", "INT"], ["rarity", "RAR"]] as const;
+/** Tier badge colours (ASS BGR): S gold, A red, B orange, C lime, D teal, E grey. */
+const TIER_COLOURS: Record<StatCard["tier"], string> = {S: "&H0035C8F5", A: "&H004B4BE8", B: "&H002E9AF0", C: LIME, D: "&H00B4B43C", E: "&H00A0A0A0"};
+
+type Point = [number, number];
+
+/** Pentagon vertices around (cx, cy): top first, clockwise; `values` are 0–1 per axis. */
+function pentagon(cx: number, cy: number, radius: number, values = [1, 1, 1, 1, 1]): Point[] {
+    return values.map((value, index) => {
+        const angle = -Math.PI / 2 + (index * 2 * Math.PI) / 5;
+        const r = radius * Math.max(0.04, Math.min(1, value));
+        return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+    });
+}
+
+/**
+ * An ASS vector shape at absolute coordinates: libass aligns a drawing by its
+ * bounding box, so the points are shifted to it and the event is placed there.
+ */
+function shape(points: Point[], tags: string, closed = true) {
+    const left = Math.min(...points.map(([x]) => x));
+    const top = Math.min(...points.map(([, y]) => y));
+    const path = points.map(([x, y], index) => `${index === 0 ? "m" : index === 1 ? "l" : ""} ${Math.round(x - left)} ${Math.round(y - top)}`.trim()).join(" ");
+    return `{\\an7\\pos(${Math.round(left)},${Math.round(top)})\\shad0${tags}\\p1}${path}${closed ? "" : ""}{\\p0}`;
+}
+
+type StatEvent = (layer: number, start: number, end: number, style: string, body: string) => void;
+
+/** Grid, axes and labels of a stat pentagon (shared by single and head-to-head charts). */
+function radarFrame(event: StatEvent, at: number, until: number, cx: number, cy: number, radius: number, labels: string[]) {
+    for (const ring of [1, 0.66, 0.33]) {
+        event(2, at, until, "HudBar", `{\\fad(180,0)}${shape(pentagon(cx, cy, radius * ring), `\\bord2\\1a&HFF&\\3c&H00FFFFFF&\\3a&H${ring === 1 ? "60" : "B0"}&`)}`);
+    }
+    pentagon(cx, cy, radius).forEach(([x, y]) => {
+        event(2, at, until, "HudBar", `{\\fad(180,0)}${shape([[cx, cy], [x, y], [x + 0.5, y + 0.5], [cx + 0.5, cy + 0.5]], "\\bord1\\1a&HFF&\\3c&H00FFFFFF&\\3a&HB0&")}`);
+    });
+    pentagon(cx, cy, radius + 34).forEach(([x, y], index) => {
+        event(4, at, until, "StatAxis", `{\\an5\\pos(${Math.round(x)},${Math.round(y)})\\fad(180,0)}${labels[index]}`);
+    });
+}
+
+function statValues(card: StatCard) {
+    return STAT_AXES.map(([key]) => card.stats[key] / 100);
+}
+
+/**
+ * One animal's stat card: dark panel, pentagon, name and tier badge. It sits
+ * under the headline: the bottom fifth is covered by TikTok/Reels captions and
+ * the right edge by their buttons.
+ */
+function statCardEvents(event: StatEvent, card: StatCard, at: number, until: number) {
+    const cx = 195;
+    const cy = 625;
+    const radius = 95;
+    event(1, at, until, "HudBar", `{\\fad(180,0)}${shape([[40, 470], [720, 470], [720, 785], [40, 785]], "\\bord0\\1c&H000000&\\1a&H50&")}`);
+    radarFrame(event, at, until, cx, cy, radius, STAT_AXES.map(([key, label]) => `${label} ${Math.round(card.stats[key])}`));
+    event(3, at + 0.15, until, "HudBar", `{\\fad(220,0)}${shape(pentagon(cx, cy, radius, statValues(card)), `\\bord3\\1c${LIME}&\\1a&H70&\\3c${LIME}&`)}`);
+    event(4, at, until, "StatName", `{\\an7\\pos(350,505)\\fad(180,0)}${balanceLines(assEscape(card.name.toUpperCase()), 12)}`);
+    event(4, at + 0.1, until, "TierBadge", `{\\an7\\pos(360,655)\\3c${TIER_COLOURS[card.tier]}&\\fscx140\\fscy140\\t(0,160,\\fscx100\\fscy100)\\fad(120,0)}TIER ${card.tier}`);
+}
+
+/** Two animals' stats on one pentagon (battle VS card): red corner vs blue corner. */
+function headToHeadEvents(event: StatEvent, left: StatCard, right: StatCard, at: number, until: number) {
+    const cx = 540;
+    const cy = 1270;
+    const radius = 165;
+    radarFrame(event, at, until, cx, cy, radius, STAT_AXES.map(([, label]) => label));
+    event(3, at + 0.2, until, "HudBar", `{\\fad(240,0)}${shape(pentagon(cx, cy, radius, statValues(left)), "\\bord3\\1c&H3C3CFF&\\1a&H80&\\3c&H3C3CFF&")}`);
+    event(3, at + 0.35, until, "HudBar", `{\\fad(240,0)}${shape(pentagon(cx, cy, radius, statValues(right)), "\\bord3\\1c&HFF8B3B&\\1a&H80&\\3c&HFF8B3B&")}`);
+    event(4, at, until, "TierBadge", `{\\an5\\pos(270,440)\\3c${TIER_COLOURS[left.tier]}&\\fad(120,0)}TIER ${left.tier}`);
+    event(4, at, until, "TierBadge", `{\\an5\\pos(810,440)\\3c${TIER_COLOURS[right.tier]}&\\fad(120,0)}TIER ${right.tier}`);
+}
+
 /** The last word in lime: the hook's punchline lands visually too. */
 function limeLastWord(label: string) {
     const words = label.split(" ");
@@ -502,6 +630,9 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
         `Style: CreatureTitle,${FONT},110,${WHITE},${WHITE},${INK},${SHADOW},0,0,0,0,100,100,4,0,1,7,4,5,60,60,0,1`,
         `Style: HudName,${FONT},44,${WHITE},${WHITE},${INK},&H00000000,0,0,0,0,100,100,2,0,1,4,0,7,0,0,0,1`,
         `Style: HudBar,${FONT},20,${LIME},${LIME},${INK},&H00000000,0,0,0,0,100,100,0,0,1,3,0,7,0,0,0,1`,
+        `Style: StatAxis,${FONT},28,&H00E6E6E6,&H00E6E6E6,${INK},&H00000000,0,0,0,0,100,100,1,0,1,3,0,5,0,0,0,1`,
+        `Style: StatName,${FONT},58,${WHITE},${WHITE},${INK},${SHADOW},0,0,0,0,100,100,1,0,1,5,2,7,0,0,0,1`,
+        `Style: TierBadge,${FONT},58,${INK},${INK},${LIME},&H00000000,0,0,0,0,100,100,2,0,3,14,0,7,0,0,0,1`,
         "",
         "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
@@ -531,7 +662,8 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
                 event(3, entry.start, sceneEnd, "CardName", `{\\pos(270,${cy(360)})\\fad(120,0)}${assEscape(card.left.name.toUpperCase())}`);
                 event(3, entry.start, sceneEnd, "CardName", `{\\pos(810,${cy(360)})\\fad(120,0)}${assEscape(card.right.name.toUpperCase())}`);
                 event(4, entry.start + 0.15, sceneEnd, "CardVs", `{\\pos(540,${cy(700)})\\fscx220\\fscy220\\t(0,180,\\fscx100\\fscy100)}VS`);
-                card.stats.forEach((stat, row) => {
+                if (card.radar) headToHeadEvents(event, card.radar.left, card.radar.right, entry.start + 0.3, sceneEnd);
+                (card.radar ? [] : card.stats).forEach((stat, row) => {
                     const y = 1070 + row * 100;
                     const at = entry.start + 0.35 + row * 0.18;
                     const colour = (side: "a" | "b") => (stat.advantage === side ? `{\\c${LIME}&}` : "");
@@ -548,6 +680,7 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             }
             return;
         }
+        if (entry.statCard) statCardEvents(event, entry.statCard, entry.start + 0.25, entry.start + entry.duration - 0.05);
         if (entry.overlay && entry.overlayStyle === "winner") {
             // Slams in for the last stretch of the finishing clip.
             const at = Math.max(entry.start + 0.5, sceneEnd - 2.4);

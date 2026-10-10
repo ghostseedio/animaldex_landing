@@ -159,3 +159,15 @@ test("pause-pinned timing puts a clause break in the recording's pause", async (
     assert.ok(words[1].end <= 0.9 + 1e-6, "first clause ends before the pause");
     assert.ok(Math.abs(words[2].start - 1.5) < 0.01, "second clause starts when speech resumes");
 });
+
+test("stat cards go only where relevant: first appearance, never the hook, never imagined animals", async () => {
+    const {applyStatCards} = await import("./content-video/plan");
+    const card = {name: "Cheetah", tier: "A" as const, stats: {dominance: 60, speed: 98, size: 40, intelligence: 50, rarity: 55}};
+    const plan = normalizePlan({hook_text: "h", scenes: [scene("ai_clip", 1), scene("image", 1), scene("image", 2), scene("image", 1), scene("image", 2)], share}, 2)!;
+    const withCards = applyStatCards(plan, {species: [{slug: "cheetah", name: "Cheetah", image: 1, card}]});
+    assert.equal(withCards.scenes[0].statCard, undefined, "never over the hook");
+    assert.deepEqual(withCards.scenes[1].statCard, card);
+    assert.equal(withCards.scenes[3].statCard, undefined, "only the first time it appears");
+    assert.equal(withCards.scenes[2].statCard, undefined, "no stats, no card");
+    assert.equal(applyStatCards({...plan, format: "creature"}, {species: [{slug: "cheetah", name: "Cheetah", image: 1, card}]}).scenes[1].statCard, undefined);
+});
