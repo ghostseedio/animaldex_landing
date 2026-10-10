@@ -481,7 +481,9 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
             `[branded]ass='${filterPath(input.assPath)}':fontsdir='${filterPath(input.fontsDir)}',format=yuv420p[v]`
         ].join(";"),
         "-map", "[v]", "-map", "1:a",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-maxrate", "8M", "-bufsize", "16M", "-profile:v", "high", "-threads", "2",
+        // One thread and veryfast: on the 2-vCPU, 2 GB production VM a medium/2-thread encode starved the web
+        // server for 11+ minutes until the health check restarted the container (502s, Oct 10 2026).
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-maxrate", "8M", "-bufsize", "16M", "-profile:v", "high", "-threads", "1",
         "-r", String(VIDEO_FPS),
         "-c:a", "aac", "-b:a", "160k",
         "-t", total.toFixed(2),

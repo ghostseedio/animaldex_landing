@@ -1,6 +1,8 @@
 "use client";
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import AiVoiceHint from "@/components/narration/ai-voice-hint";
+import {useCloudNarration} from "@/components/narration/use-cloud-narration";
 
 type PlaybackState = "idle" | "playing" | "paused";
 
@@ -64,6 +66,10 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
     const chunkIndexRef = useRef(0);
     const rateRef = useRef(rate);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    // Signed-in readers hear the saved AI reading; everyone else the browser voice.
+    const cloud = useCloudNarration({text, locale});
+    const [engine, setEngine] = useState<"browser" | "cloud">("browser");
+    const cloudActive = engine === "cloud" && cloud.state !== "idle";
 
     useEffect(() => {
         rateRef.current = rate;
@@ -132,8 +138,24 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
         };
     }, []);
 
-    function togglePlayback() {
-        if (!isSupported || chunks.length === 0) {
+    async function togglePlayback() {
+        if (chunks.length === 0) {
+            return;
+        }
+
+        if (cloudActive) {
+            if (cloud.state === "playing") cloud.pause();
+            else if (cloud.state === "paused" || cloud.state === "ready") cloud.resume();
+            return;
+        }
+
+        if (playbackState === "idle" && cloud.signedIn) {
+            setEngine("cloud");
+            if (await cloud.start()) return;
+            setEngine("browser");
+        }
+
+        if (!isSupported) {
             return;
         }
 
@@ -154,6 +176,12 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
     }
 
     function restart() {
+        if (cloudActive) {
+            cloud.stop();
+            void cloud.start();
+            return;
+        }
+
         if (!isSupported) {
             return;
         }
@@ -166,6 +194,7 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
     function changeRate(nextRate: number) {
         setRate(nextRate);
         rateRef.current = nextRate;
+        cloud.setRate(nextRate);
 
         if (playbackState !== "idle") {
             const resumeAt = chunkIndexRef.current;
@@ -175,14 +204,22 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
         }
     }
 
-    const progress = playbackState === "idle" || chunks.length === 0
-        ? 0
-        : Math.max(2, ((currentChunk + 1) / chunks.length) * 100);
-    const primaryLabel = playbackState === "playing"
-        ? "Pause"
-        : playbackState === "paused"
-            ? "Resume"
-            : "Listen to article";
+    const state = cloudActive
+        ? (cloud.state === "ready" ? "paused" : cloud.state)
+        : playbackState;
+    const progress = cloudActive
+        ? Math.max(2, cloud.progress * 100)
+        : playbackState === "idle" || chunks.length === 0
+            ? 0
+            : Math.max(2, ((currentChunk + 1) / chunks.length) * 100);
+    const primaryLabel = state === "loading"
+        ? "Preparing AI voice"
+        : state === "playing"
+            ? "Pause"
+            : state === "paused"
+                ? "Resume"
+                : "Listen to article";
+    const canPlay = (isSupported || cloud.signedIn) && chunks.length > 0;
 
     return (
         <section
@@ -191,12 +228,14 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
         >
             <button
                 type="button"
-                onClick={togglePlayback}
-                disabled={!isSupported || chunks.length === 0}
+                onClick={() => void togglePlayback()}
+                disabled={!canPlay || state === "loading"}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--rule-strong)] bg-[color:var(--paper-800)] text-[color:var(--lime)] transition-colors hover:border-[color:var(--lime)] disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label={primaryLabel}
             >
-                {playbackState === "playing" ? (
+                {state === "loading" ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+                ) : state === "playing" ? (
                     <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M5 3h3v14H5V3Zm7 0h3v14h-3V3Z" /></svg>
                 ) : (
                     <svg viewBox="0 0 20 20" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="m5 3 12 7-12 7V3Z" /></svg>
@@ -205,7 +244,11 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
 
             <div className="order-3 w-full min-w-0 sm:order-none sm:flex-1">
                 <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--text-300)]">
-                    {isSupported ? "Listen to this story" : "Listen"}
+                    {state === "loading"
+                        ? "Preparing AI voice\u2026"
+                        : cloud.signedIn
+                            ? "Listen \u00b7 AI voice"
+                            : isSupported ? "Listen to this story" : "Listen"}
                 </p>
                 {/* The rail doubles as the progress read-out, so an extra bar and
                     a percentage caption are both unnecessary. */}
@@ -215,15 +258,21 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
                         style={{width: `${progress}%`}}
                     />
                 </div>
-                {!isSupported ? (
+                {!isSupported && !cloud.signedIn ? (
                     <p className="mt-2 text-[12px] text-[color:var(--text-400)]">
                         Text-to-speech is not supported by this browser.
                     </p>
                 ) : null}
+                {cloud.error && !cloudActive ? (
+                    <p className="mt-2 text-[12px] text-[color:var(--text-400)]">
+                        {cloud.error} Playing your browser&apos;s voice instead.
+                    </p>
+                ) : null}
+                {!cloud.signedIn ? <AiVoiceHint className="mt-2" /> : null}
             </div>
 
             <div className="ml-auto flex items-center gap-1.5 sm:ml-0">
-                {playbackState !== "idle" && (
+                {state !== "idle" && state !== "loading" && (
                     <button
                         type="button"
                         onClick={restart}
@@ -238,7 +287,7 @@ export default function BlogListenControl({locale, text}: BlogListenControlProps
                     id="blog-narration-speed"
                     value={rate}
                     onChange={(event) => changeRate(Number(event.target.value))}
-                    disabled={!isSupported}
+                    disabled={!canPlay}
                     className="h-10 cursor-pointer rounded-full border border-[color:var(--rule-strong)] bg-transparent px-3 font-mono text-[12px] tabular-nums text-[color:var(--text-200)] outline-none transition-colors hover:border-[color:var(--lime)] focus-visible:border-[color:var(--lime)] disabled:opacity-40"
                     aria-label="Playback speed"
                 >

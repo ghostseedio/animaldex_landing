@@ -1,6 +1,8 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
+import AiVoiceHint from "@/components/narration/ai-voice-hint";
+import {useCloudNarration} from "@/components/narration/use-cloud-narration";
 
 export type AnimalStoryPrinciple = {
     name: string;
@@ -18,6 +20,7 @@ type AnimalStoryCardProps = {
     principle?: AnimalStoryPrinciple | null;
     settingTag?: string | null;
     layout?: "compact" | "wide";
+    locale?: string;
 };
 
 const SETTING_TINT: Record<string, string> = {
@@ -76,7 +79,7 @@ function PanelLabel({icon, children, cyan = false}: {icon: "lesson" | "leaf" | "
     );
 }
 
-export default function AnimalStoryCard({contentKey, story, principle, settingTag, layout = "compact"}: AnimalStoryCardProps) {
+export default function AnimalStoryCard({contentKey, story, principle, settingTag, layout = "compact", locale = "en"}: AnimalStoryCardProps) {
     const wide = layout === "wide";
     const [expanded, setExpanded] = useState(false);
     const [speaking, setSpeaking] = useState(false);
@@ -100,6 +103,8 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
         applicationExample ? `Try it. ${applicationExample}` : null,
         bestUseCases.length ? `Use it for. ${bestUseCases.join(". ")}` : null
     ].filter(Boolean).join(" "), [applicationExample, bestUseCases, biologicalBasis, cleanStory, coreLesson, principle?.expression, principle?.motto, principleName]);
+    // Signed-in readers hear the saved AI reading; everyone else the browser voice.
+    const cloud = useCloudNarration({text: speechText, locale});
 
     useEffect(() => {
         setExpanded(false);
@@ -113,8 +118,20 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
 
     if (!cleanStory && !principleName) return null;
 
-    const toggleSpeech = () => {
-        if (typeof window === "undefined" || !("speechSynthesis" in window) || !speechText) return;
+    const cloudBusy = cloud.state !== "idle";
+
+    const toggleSpeech = async () => {
+        if (!speechText) return;
+        if (cloudBusy) {
+            if (cloud.state === "ready") cloud.resume();
+            else cloud.stop();
+            return;
+        }
+        if (!speaking && cloud.signedIn) {
+            setExpanded(true);
+            if (await cloud.start()) return;
+        }
+        if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
         if (speaking) {
             window.speechSynthesis.cancel();
             setSpeaking(false);
@@ -166,11 +183,21 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                     {speechText ? (
                         <button
                             type="button"
-                            onClick={toggleSpeech}
-                            className="flex items-center gap-1.5 rounded-full border border-primary-400/25 bg-[#121212] light:bg-surface-900 px-2.5 py-2 text-[11px] font-semibold text-primary-400"
+                            onClick={() => void toggleSpeech()}
+                            disabled={cloud.state === "loading"}
+                            title={cloud.signedIn ? "Play the AI voice reading" : "Play with your browser's voice. Sign in for the AI voice."}
+                            className="flex items-center gap-1.5 rounded-full border border-primary-400/25 bg-[#121212] light:bg-surface-900 px-2.5 py-2 text-[11px] font-semibold text-primary-400 disabled:opacity-70"
                         >
-                            <Icon name={speaking ? "stop" : "play"} className="h-[11px] w-[11px]" />
-                            {speaking ? "Stop" : "Play"}
+                            {cloud.state === "loading" ? (
+                                <span className="h-[11px] w-[11px] animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+                            ) : (
+                                <Icon name={speaking || cloud.state === "playing" || cloud.state === "paused" ? "stop" : "play"} className="h-[11px] w-[11px]" />
+                            )}
+                            {cloud.state === "loading"
+                                ? "Preparing AI voice\u2026"
+                                : speaking || cloud.state === "playing" || cloud.state === "paused"
+                                    ? "Stop"
+                                    : cloud.signedIn ? "Play \u00b7 AI voice" : "Play"}
                         </button>
                     ) : null}
                     <button
@@ -184,6 +211,8 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                     </button>
                 </div>
             </div>
+
+            {speechText && !cloud.signedIn ? <AiVoiceHint className="mt-2 text-right" /> : null}
 
             {!expanded ? (
                 <div className="mt-3 space-y-3">
