@@ -16,6 +16,7 @@ import {getAbsoluteUrl} from "@/lib/site";
 import {getPublishedEnglishLessonStaticParams} from "@/lib/published-seo-page-data";
 import {getNextPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getScopedTranslator} from "@/loaders/translation";
+import {ogContentImage} from "@/lib/og/og-image";
 
 export const revalidate = false;
 export const dynamicParams = false;
@@ -38,7 +39,6 @@ function toPrincipleSlug(principle: string) {
 export async function generateMetadata({params}: AnimalLessonPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const lesson = await getBehaviorLessonBySlug(params.slug);
-    const speciesEntry = getSpeciesBySlug(params.slug);
 
     if (!lesson) {
         return {};
@@ -61,17 +61,7 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
             `${lesson.principleName.toLowerCase()} lessons from nature`,
             "animal behavior lessons"
         ],
-        featuredImage: speciesEntry
-            ? {
-                ...speciesEntry.featuredImage,
-                alt: `${lesson.displayName} lesson from nature on AnimalDex`
-            }
-            : {
-                src: "/images/og.png",
-                alt: `${lesson.displayName} lesson from nature on AnimalDex`,
-                width: 1200,
-                height: 630
-            }
+        featuredImage: ogContentImage(`${lesson.displayName} lesson from nature on AnimalDex`, "lesson", lesson.slug)
     });
 
     return {...metadata, title: {absolute: title}};

@@ -14,6 +14,7 @@ import {
 import {getSpeciesBySlug} from "@/data/species";
 import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 type AnimalHybridDetailPageProps = {
     params: {
@@ -43,7 +44,7 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
         return fusion ? fusionMetadata(fusion, locale) : {};
     }
 
-    return {
+    return withOgCard({
         title: `${entry.title}: How It Might Look and Behave`,
         description: entry.quickAnswer,
         keywords: entry.searchIntents,
@@ -60,7 +61,7 @@ export async function generateMetadata({params}: AnimalHybridDetailPageProps): P
             title: `${entry.title} | AnimalDex`,
             description: entry.quickAnswer
         }
-    };
+    }, entry.title, "hybrid", entry.slug);
 }
 
 export default async function AnimalHybridDetailPage({params}: AnimalHybridDetailPageProps) {

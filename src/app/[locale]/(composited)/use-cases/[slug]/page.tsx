@@ -11,6 +11,7 @@ import {appDestinationHref, INSTAGRAM_WEB_IMPORT_LIVE, instagramWebImportCtaLabe
 import {getSupportArticleBySlugs, getSupportArticlePath} from "@/lib/support-articles";
 import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
 import InstagramImportIntro from "@/app/[locale]/(composited)/use-cases/_components/instagram-import-intro";
+import {withOgCard} from "@/lib/og/og-image";
 
 export function generateStaticParams() {
     return [
@@ -37,7 +38,7 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
 
     if (!entry) return {};
 
-    return {
+    return withOgCard({
         title: templateSafeTitle(entry.title),
         description: entry.description,
         keywords: [...entry.searchIntents, entry.audience],
@@ -57,27 +58,18 @@ export async function generateMetadata({params}: UseCasePageProps): Promise<Meta
             description: entry.description,
             url: getLocalePath(locale, `/use-cases/${entry.slug}`),
             modifiedTime: entry.updatedAt,
-            tags: entry.searchIntents,
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: withBrandSuffix(entry.title)
-                }
-            ]
+            tags: entry.searchIntents
         },
         twitter: {
             card: "summary_large_image",
             title: withBrandSuffix(entry.title),
-            description: entry.description,
-            images: ["/images/og.png"]
+            description: entry.description
         },
         other: {
             "article:author": "AnimalDex",
             "article:section": t("metaSection")
         }
-    };
+    }, entry.title, "use-case", entry.slug);
 }
 
 export default async function UseCasePage({params}: UseCasePageProps) {

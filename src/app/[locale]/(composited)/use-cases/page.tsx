@@ -7,6 +7,7 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import {withOgCard} from "@/lib/og/og-image";
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];
@@ -101,7 +102,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const title = messages.useCases?.metaTitle || "AnimalDex Use Cases";
     const description = messages.useCases?.metaDescription || messages.meta?.description || "";
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [...baseKeywords, ...useCaseKeywords],
@@ -119,23 +120,14 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             title: `${title} | AnimalDex`,
             description,
-            url: getLocalePath(locale, "/use-cases"),
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${title} | AnimalDex`
-                }
-            ]
+            url: getLocalePath(locale, "/use-cases")
         },
         twitter: {
             card: "summary_large_image",
             title: `${title} | AnimalDex`,
-            description,
-            images: ["/images/og.png"]
+            description
         }
-    };
+    }, "AnimalDex use cases", "page", "use-cases");
 }
 
 export default async function UseCasesIndexPage({params}: {params: {locale: string}}) {

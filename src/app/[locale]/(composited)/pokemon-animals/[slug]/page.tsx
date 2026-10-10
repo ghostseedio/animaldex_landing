@@ -20,6 +20,7 @@ import {
 } from "@/data/pokemon-animal-counterparts";
 import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 type PokemonAnimalDetailPageProps = {
     params: {
@@ -47,7 +48,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
         const title = `${generation.label} Pokemon Animal Counterparts`;
         const description = `Every ${generation.label} Pokemon categorized by closest real-animal counterpart, including ${entries.slice(0, 4).map((entry) => entry.name).join(", ")}, and more.`;
 
-        return {
+        return withOgCard({
             title,
             description,
             keywords: [`${generation.label} Pokemon animals`, "what animal is each Pokemon based on", "Pokemon animal counterparts"],
@@ -64,7 +65,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
                 title: `${title} | AnimalDex`,
                 description
             }
-        };
+        }, title, "pokemon", generation.slug);
     }
 
     const entry = getPokemonAnimalEntry(slug);
@@ -76,7 +77,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
     const title = buildPokemonEntryTitle(entry);
     const description = buildPokemonEntryDescription(entry);
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [
@@ -92,16 +93,14 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             locale: getMetadataLocale(locale),
             title: `${title} | AnimalDex`,
             description,
-            url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`),
-            images: [{url: getPokemonArtSrc(entry.slug), width: 256, height: 256, alt: `${entry.name} official artwork`}]
+            url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`)
         },
         twitter: {
             card: "summary",
             title: `${title} | AnimalDex`,
-            description,
-            images: [getPokemonArtSrc(entry.slug)]
+            description
         }
-    };
+    }, `${entry.name} and its closest real animal`, "pokemon", entry.slug);
 }
 
 function confidenceCopy(confidence: string) {

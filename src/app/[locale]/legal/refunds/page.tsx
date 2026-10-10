@@ -9,6 +9,7 @@ import {localeConfig} from "@/i18n";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -42,7 +43,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const title = t("refundTitle");
     const description = t("refundDescription");
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords,
@@ -58,15 +59,13 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             title: `${title} | AnimalDex`,
             description,
-            url: getLocalePath(locale, "/legal/refunds"),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: `${title} | AnimalDex`}]
+            url: getLocalePath(locale, "/legal/refunds")
         },
         twitter: {
             card: "summary_large_image",
             title: `${title} | AnimalDex`,
-            description,
-            images: ["/images/og.png"]
+            description
         },
         robots: {index: true, follow: true}
-    };
+    }, "AnimalDex Refund Policy", "page", "legal", "refunds");
 }

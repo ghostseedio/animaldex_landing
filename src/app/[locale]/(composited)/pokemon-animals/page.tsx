@@ -10,6 +10,7 @@ import {
 } from "@/data/pokemon-animal-counterparts";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -29,7 +30,7 @@ type PokemonAnimalsIndexPageProps = {
 export async function generateMetadata({params}: PokemonAnimalsIndexPageProps): Promise<Metadata> {
     const {locale} = params;
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [
@@ -59,7 +60,7 @@ export async function generateMetadata({params}: PokemonAnimalsIndexPageProps): 
             title: `${title} | AnimalDex`,
             description
         }
-    };
+    }, "Pokémon and their real animals on AnimalDex", "page", "pokemon-animals");
 }
 
 export default async function PokemonAnimalsIndexPage({params}: PokemonAnimalsIndexPageProps) {

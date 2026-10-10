@@ -6,6 +6,7 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {blogPosts} from "@/data/blog";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {withOgCard} from "@/lib/og/og-image";
 
 type AnimalWisdomPageProps = {
     params: {
@@ -93,7 +94,7 @@ const faq = [
 export async function generateMetadata({params}: AnimalWisdomPageProps): Promise<Metadata> {
     const {locale} = params;
 
-    return {
+    return withOgCard({
         title: pageTitle,
         description: pageDescription,
         keywords: [
@@ -120,23 +121,14 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
             title: `${pageTitle} | AnimalDex`,
             description: pageDescription,
             url: getLocalePath(locale, "/animal-wisdom"),
-            modifiedTime: updatedAt,
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${pageTitle} | AnimalDex`
-                }
-            ]
+            modifiedTime: updatedAt
         },
         twitter: {
             card: "summary_large_image",
             title: `${pageTitle} | AnimalDex`,
-            description: pageDescription,
-            images: ["/images/og.png"]
+            description: pageDescription
         }
-    };
+    }, "Animal wisdom on AnimalDex", "page", "animal-wisdom");
 }
 
 export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {

@@ -8,6 +8,7 @@ import {getLocalPrincipleSlugs, getPublicPrincipleHubBySlug} from "@/data/specie
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import {ogContentImage} from "@/lib/og/og-image";
 
 export const revalidate = false;
 export const dynamicParams = false;
@@ -43,12 +44,7 @@ export async function generateMetadata({params}: PrinciplePageProps): Promise<Me
         pathname: basePath,
         title: t("detailMetaTitle", {principle: principle.principle}),
         description: t("detailMetaDescription", {principle: principle.principle}),
-        featuredImage: {
-            src: "/images/og.png",
-            alt: `${principle.principle} principle animals on AnimalDex`,
-            width: 1200,
-            height: 630
-        },
+        featuredImage: ogContentImage(`${principle.principle} principle animals on AnimalDex`, "power", principle.principleSlug),
         keywords: [
             `${principle.principle.toLowerCase()} animal meaning`,
             `${principle.principle.toLowerCase()} animal symbolism`,

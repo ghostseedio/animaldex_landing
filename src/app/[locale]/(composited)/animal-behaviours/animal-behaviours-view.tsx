@@ -14,6 +14,7 @@ import {resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagination-nav";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const animalBehavioursPageCount = pagination.pageCount(behaviourSignatures.length);
 
@@ -87,7 +88,7 @@ export function buildAnimalBehavioursMetadata(locale: string, page: number): Met
             + "the archetype, frequency and waveform rhythm of each species. "
             + `Page ${page} of ${animalBehavioursPageCount}.`;
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [
@@ -111,10 +112,9 @@ export function buildAnimalBehavioursMetadata(locale: string, page: number): Met
             locale: getMetadataLocale(locale),
             title,
             description,
-            url: getLocalePath(locale, path),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: TITLE}]
+            url: getLocalePath(locale, path)
         }
-    };
+    }, "Animal behaviours on AnimalDex", "page", "animal-behaviours");
 }
 
 /** Page 1 is the full hub; later pages carry only the paged signature grid. */

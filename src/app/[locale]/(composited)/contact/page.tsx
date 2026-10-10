@@ -7,6 +7,7 @@ import {ContactHeroMark} from "@/app/[locale]/(composited)/contact/_components/c
 import {contactSupportEmail, getContactContent} from "@/data/contact-content";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];
@@ -18,7 +19,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const locale = params.locale;
     const content = getContactContent(locale);
 
-    return {
+    return withOgCard({
         title: content.metaTitle,
         description: content.metaDescription,
         alternates: {
@@ -33,16 +34,14 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             title: content.metaTitle,
             description: content.metaDescription,
-            url: getLocalePath(locale, contactPath),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: content.title}]
+            url: getLocalePath(locale, contactPath)
         },
         twitter: {
             card: "summary_large_image",
             title: content.metaTitle,
-            description: content.metaDescription,
-            images: ["/images/og.png"]
+            description: content.metaDescription
         }
-    };
+    }, "Contact AnimalDex", "page", "contact");
 }
 
 export default async function ContactPage({params}: {params: {locale: string}}) {

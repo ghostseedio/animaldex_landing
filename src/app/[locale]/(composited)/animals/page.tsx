@@ -17,6 +17,7 @@ import UniversalSearchField from "@/app/[locale]/(composited)/animals/_component
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {withOgCard} from "@/lib/og/og-image";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
@@ -205,7 +206,7 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
     const title = messages.animals?.metaTitle || "Animal Species Guides";
     const description = messages.animals?.metaDescription || messages.meta?.description || "";
 
-    return {
+    return withOgCard({
         title: templateSafeTitle(title),
         description,
         keywords: [...metaKeywords, ...speciesKeywords],
@@ -223,23 +224,14 @@ export async function generateMetadata({params}: AnimalsIndexPageProps): Promise
             locale: getMetadataLocale(locale),
             title: withBrandSuffix(title),
             description,
-            url: getLocalePath(locale, "/animals"),
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: withBrandSuffix(title)
-                }
-            ]
+            url: getLocalePath(locale, "/animals")
         },
         twitter: {
             card: "summary_large_image",
             title: withBrandSuffix(title),
-            description,
-            images: ["/images/og.png"]
+            description
         }
-    };
+    }, "Animal species guides on AnimalDex", "page", "animals");
 }
 
 function SpeciesDirectorySkeleton() {

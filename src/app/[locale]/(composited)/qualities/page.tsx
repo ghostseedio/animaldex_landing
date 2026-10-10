@@ -8,6 +8,7 @@ import QualitiesLibraryClient, {
 import {getSpeciesBySlug} from "@/data/species";
 import {getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
+import {ogContentImage} from "@/lib/og/og-image";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -63,12 +64,7 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
         pathname: "/powers",
         title,
         description: t("metaDescription"),
-        featuredImage: {
-            src: "/images/og.png",
-            alt: "Animal powers on AnimalDex",
-            width: 1200,
-            height: 630
-        },
+        featuredImage: ogContentImage("Animal powers on AnimalDex", "page", "powers"),
         keywords: [
             "animal powers",
             "animal survival strategies",

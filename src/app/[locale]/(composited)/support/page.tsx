@@ -9,6 +9,7 @@ import {getSupportArticlePath, slugifySupportText} from "@/lib/support-articles"
 import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];
@@ -25,7 +26,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const locale = params.locale;
     const content = getSupportContent(locale);
 
-    return {
+    return withOgCard({
         title: content.metaTitle,
         description: content.metaDescription,
         alternates: {
@@ -40,16 +41,14 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             title: content.metaTitle,
             description: content.metaDescription,
-            url: getLocalePath(locale, supportPath),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: content.title}]
+            url: getLocalePath(locale, supportPath)
         },
         twitter: {
             card: "summary_large_image",
             title: content.metaTitle,
-            description: content.metaDescription,
-            images: ["/images/og.png"]
+            description: content.metaDescription
         }
-    };
+    }, "AnimalDex Help Center", "page", "support");
 }
 
 export default async function SupportPage({params}: {params: {locale: string}}) {

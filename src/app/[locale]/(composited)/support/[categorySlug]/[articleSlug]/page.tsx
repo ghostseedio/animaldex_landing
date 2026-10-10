@@ -13,6 +13,7 @@ import {
 import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 type ArticlePageProps = {
     params: {locale: string; categorySlug: string; articleSlug: string};
@@ -25,7 +26,7 @@ export async function generateMetadata({params}: ArticlePageProps): Promise<Meta
 
     const path = getSupportArticlePath(article);
 
-    return {
+    return withOgCard({
         title: `${article.title} — AnimalDex Help Center`,
         description: article.summary,
         alternates: {
@@ -42,7 +43,7 @@ export async function generateMetadata({params}: ArticlePageProps): Promise<Meta
             description: article.summary,
             url: getLocalePath(locale, path)
         }
-    };
+    }, article.title, "support", article.categorySlug, article.slug);
 }
 
 export default async function SupportArticlePage({params}: ArticlePageProps) {

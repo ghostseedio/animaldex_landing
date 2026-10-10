@@ -53,7 +53,8 @@ module.exports = withNextIntl({
     staticPageGenerationTimeout: 600,
     experimental: {
         // Keep sharp as a native Node dependency so /api/admin/assets can boot on Vercel.
-        serverComponentsExternalPackages: ["sharp"]
+        // satori (share cards, /api/og) loads its yoga layout wasm at runtime; keep it unbundled.
+        serverComponentsExternalPackages: ["sharp", "satori"]
     },
     async redirects() {
         return [

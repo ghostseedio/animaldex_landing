@@ -7,6 +7,7 @@ import GuideCard from "@/components/guides/guide-card";
 import {GuidePageView} from "@/components/guides/guide-analytics";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {categoryLabel, guideAreaServedName, guideLocationSlug, isLocationPageIndexable, type GuideCategory} from "@/lib/guide-marketplace-core";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -19,7 +20,7 @@ export async function generateMetadata({params}: WildlifeGuidesPageProps): Promi
     const description = "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.";
     const canonical = getLocalePath(params.locale, "/wildlife-guides");
 
-    return {
+    return withOgCard({
         title,
         description,
         alternates: {
@@ -33,10 +34,9 @@ export async function generateMetadata({params}: WildlifeGuidesPageProps): Promi
             title: "AnimalDex Wildlife Guides",
             description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.",
             url: canonical,
-            locale: getMetadataLocale(params.locale),
-            images: ["/images/og.png"]
+            locale: getMetadataLocale(params.locale)
         }
-    };
+    }, "AnimalDex wildlife guides", "page", "wildlife-guides");
 }
 
 export default async function WildlifeGuidesPage({params}: WildlifeGuidesPageProps) {

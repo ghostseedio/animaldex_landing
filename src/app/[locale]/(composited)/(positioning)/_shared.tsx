@@ -8,6 +8,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {withOgCard} from "@/lib/og/og-image";
 
 type PositioningPageResult = {
     slug: string;
@@ -23,7 +24,7 @@ export async function generateCollectorMetadata(slug: string, locale: string): P
         return {};
     }
 
-    return {
+    return withOgCard({
         title: entry.heroTitle,
         description: entry.description,
         keywords: [...baseKeywords, ...entry.searchIntents],
@@ -41,23 +42,14 @@ export async function generateCollectorMetadata(slug: string, locale: string): P
             locale: getMetadataLocale(locale),
             title: `${entry.heroTitle} | AnimalDex`,
             description: entry.description,
-            url: getLocalePath(locale, `/${entry.slug}`),
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${entry.heroTitle} | AnimalDex`
-                }
-            ]
+            url: getLocalePath(locale, `/${entry.slug}`)
         },
         twitter: {
             card: "summary_large_image",
             title: `${entry.heroTitle} | AnimalDex`,
-            description: entry.description,
-            images: ["/images/og.png"]
+            description: entry.description
         }
-    };
+    }, entry.heroTitle, "collector", entry.slug);
 }
 
 export default async function CollectorLandingPage({slug, locale}: PositioningPageResult) {

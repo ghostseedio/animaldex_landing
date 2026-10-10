@@ -5,6 +5,7 @@ import {challengeYourselfPagination as pagination} from "@/data/hub-pagination";
 import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagination-nav";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const challengeYourselfPageCount = pagination.pageCount(animalTrials.length);
 
@@ -60,7 +61,7 @@ export function buildChallengeYourselfMetadata(locale: string, page: number): Me
         ? DESCRIPTION
         : `Animal Trials ${(page - 1) * pagination.perPage + 1}–${Math.min(page * pagination.perPage, animalTrials.length)} of ${animalTrials.length}. ${DESCRIPTION}`;
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [
@@ -84,10 +85,9 @@ export function buildChallengeYourselfMetadata(locale: string, page: number): Me
             locale: getMetadataLocale(locale),
             title,
             description,
-            url: getLocalePath(locale, path),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: TITLE}]
+            url: getLocalePath(locale, path)
         }
-    };
+    }, "Animal challenges on AnimalDex", "page", "challenge-yourself");
 }
 
 /** Page 1 is the full hub; later pages carry only the paged Trial list. */

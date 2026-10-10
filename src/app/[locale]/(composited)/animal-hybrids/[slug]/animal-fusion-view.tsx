@@ -14,6 +14,7 @@ import {
 } from "@/data/animal-fusions";
 import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 export type ResolvedFusion = {
     entry: AnimalFusionEntry;
@@ -42,7 +43,7 @@ export function fusionMetadata(fusion: ResolvedFusion, locale: string): Metadata
     const description = fusionAnswer(fusion).slice(0, 300);
     const path = `${ANIMAL_HYBRID_CANONICAL_BASE_PATH}/${fusion.entry.slug}`;
 
-    return {
+    return withOgCard({
         title,
         description,
         alternates: englishOnlyLanguageAlternates(path),
@@ -58,7 +59,7 @@ export function fusionMetadata(fusion: ResolvedFusion, locale: string): Metadata
             title: `${title} | AnimalDex`,
             description
         }
-    };
+    }, title, "hybrid", fusion.entry.slug);
 }
 
 export default function AnimalFusionView({fusion, locale}: {fusion: ResolvedFusion; locale: string}) {

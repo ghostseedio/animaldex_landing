@@ -9,6 +9,7 @@ import {getSpeciesImageAltText} from "@/data/species-images";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
+import {withOgCard} from "@/lib/og/og-image";
 
 type LessonTag = "popular" | "leadership" | "wisdom" | "teamwork" | "adaptation" | "survival" | "focus" | "intelligence" | "engineering" | "cooperation" | "patience";
 
@@ -182,7 +183,7 @@ function getPageNumbers(currentPage: number, totalPages: number) {
 export async function generateMetadata({params}: AnimalLessonsPageProps): Promise<Metadata> {
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const pageDescription = t("metaDescription");
-    return {
+    return withOgCard({
         title: templateSafeTitle(t("metaTitle")),
         description: pageDescription,
         keywords: ["animal lessons", "lessons from animals", "animal behavior lessons", "biology backed lessons"],
@@ -198,10 +199,9 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
             locale: getMetadataLocale(params.locale),
             title: t("metaTitle"),
             description: pageDescription,
-            url: getLocalePath(params.locale, "/animal-lessons"),
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: t("metaTitle")}]
+            url: getLocalePath(params.locale, "/animal-lessons")
         }
-    };
+    }, "Animal lessons on AnimalDex", "page", "animal-lessons");
 }
 
 export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps) {

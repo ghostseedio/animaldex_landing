@@ -79,11 +79,16 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
                 "x-default": getLocalePath(localeConfig.defaultLocale)
             } as Record<string, string>)
         },
+        // A page's openGraph replaces the layout's wholesale, so the brand card
+        // has to be repeated here or the home page shares with no image at all.
         openGraph: {
+            type: "website",
             url: canonicalPath,
             locale: getMetadataLocale(locale),
             title: fullTitle,
-            description
+            description,
+            siteName: "AnimalDex",
+            images: [{url: "/images/og.png", width: 1200, height: 630, alt: fullTitle}]
         }
     };
 }

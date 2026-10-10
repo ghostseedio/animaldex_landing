@@ -1,6 +1,7 @@
 import type {Metadata} from "next";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {ogMetadataImages} from "@/lib/og/og-image";
 
 export function buildEarnPageMetadata(options: {
     locale: string;
@@ -12,6 +13,7 @@ export function buildEarnPageMetadata(options: {
     const {locale, path, title, description, keywords} = options;
     const canonical = getLocalePath(locale, path);
     const url = getAbsoluteUrl(locale, path);
+    const images = ogMetadataImages(title, "page", path.replace(/^\/+/, ""));
 
     return {
         title,
@@ -30,13 +32,13 @@ export function buildEarnPageMetadata(options: {
             title,
             description,
             url,
-            images: [{url: "/images/og-animaldex.svg", width: 1200, height: 630, alt: title}]
+            images: images.openGraph
         },
         twitter: {
             card: "summary_large_image",
             title,
             description,
-            images: ["/images/og-animaldex.svg"]
+            images: images.twitter
         }
     };
 }

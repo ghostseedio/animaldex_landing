@@ -9,6 +9,7 @@ import {localeConfig} from "@/i18n";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -45,7 +46,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const messages = await loadLocaleMessages(locale);
     const keywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
 
-    return {
+    return withOgCard({
         title: t("termsTitle"),
         description: t("termsDescription"),
         keywords,
@@ -63,25 +64,16 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             title: `${t("termsTitle")} | AnimalDex`,
             description: t("termsDescription"),
-            url: getLocalePath(locale, "/legal/terms"),
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${t("termsTitle")} | AnimalDex`
-                }
-            ]
+            url: getLocalePath(locale, "/legal/terms")
         },
         twitter: {
             card: "summary_large_image",
             title: `${t("termsTitle")} | AnimalDex`,
-            description: t("termsDescription"),
-            images: ["/images/og.png"]
+            description: t("termsDescription")
         },
         robots: {
             index: true,
             follow: true
         }
-    };
+    }, "AnimalDex Terms of Service", "page", "legal", "terms");
 }

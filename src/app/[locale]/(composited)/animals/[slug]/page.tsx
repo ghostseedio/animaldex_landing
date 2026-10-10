@@ -37,6 +37,7 @@ import {getChallengesForSpecies} from "@/data/challenges";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {getSpeciesPageData} from "@/data/database-species-pages";
+import {ogContentImage} from "@/lib/og/og-image";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {
     getSpeciesImageAltText,
@@ -351,11 +352,7 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
             "animal identification app",
             "wildlife app"
         ],
-        featuredImage: {
-            ...entry.featuredImage,
-            src: getSpeciesImageRoute(entry.slug),
-            alt: getSpeciesImageAltText(entry, "metadata")
-        },
+        featuredImage: ogContentImage(getSpeciesImageAltText(entry, "metadata"), "species", entry.slug),
         publishedAt: entry.publishedAt,
         updatedAt: entry.updatedAt,
         tags: entry.searchIntents

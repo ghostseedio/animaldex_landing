@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import Image from "next/image";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 const path = "/branding";
 
@@ -10,7 +11,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const title = "AnimalDex Logo, Brand Assets & Usage Guidelines";
     const description = "Download the official AnimalDex logo and review brand colors, typography, spacing, accessibility, and logo usage guidelines.";
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: ["AnimalDex logo", "AnimalDex brand", "AnimalDex branding", "AnimalDex logo download", "AnimalDex brand assets"],
@@ -26,11 +27,9 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             locale: getMetadataLocale(locale),
             url: getLocalePath(locale, path),
             title,
-            description,
-            images: [{url: "/images/og-animaldex.svg", width: 1200, height: 630, alt: "AnimalDex official brand identity"}]
-        },
-        twitter: {card: "summary_large_image", title, description, images: ["/images/og-animaldex.svg"]}
-    };
+            description
+        }
+    }, "AnimalDex brand identity", "page", "branding");
 }
 
 const colors = [

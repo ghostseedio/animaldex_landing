@@ -59,6 +59,7 @@
     "remark": "^14.0.2",
     "remark-html": "^15.0.2",
     "resend": "^6.12.4",
+    "satori": "0.29.1",
     "sharp": "^0.33.5",
     "solar-icon-set": "^1.0.0",
     "standardwebhooks": "^1.0.0",

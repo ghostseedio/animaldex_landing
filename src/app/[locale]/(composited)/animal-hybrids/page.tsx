@@ -6,6 +6,7 @@ import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/ani
 import {getSpeciesBySlug} from "@/data/species";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -25,7 +26,7 @@ type AnimalHybridsIndexPageProps = {
 export async function generateMetadata({params}: AnimalHybridsIndexPageProps): Promise<Metadata> {
     const {locale} = params;
 
-    return {
+    return withOgCard({
         title,
         description,
         keywords: [
@@ -58,7 +59,7 @@ export async function generateMetadata({params}: AnimalHybridsIndexPageProps): P
             title: `${title} | AnimalDex`,
             description
         }
-    };
+    }, "Animal hybrids on AnimalDex", "page", "animal-hybrids");
 }
 
 export default async function AnimalHybridsIndexPage({params}: AnimalHybridsIndexPageProps) {

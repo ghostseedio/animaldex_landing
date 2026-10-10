@@ -2,8 +2,9 @@ import {Metadata} from "next";
 import policy from "@/data/privacy-policy.md";
 import LegalPage from "@/app/legal/legal-page";
 import {getSiteUrl} from "@/lib/site";
+import {withOgCard} from "@/lib/og/og-image";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withOgCard({
     title: "AnimalDex Privacy Policy",
     description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion.",
     alternates: {
@@ -13,27 +14,18 @@ export const metadata: Metadata = {
         type: "website",
         title: "AnimalDex Privacy Policy",
         description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion.",
-        url: `${getSiteUrl()}/legal/privacy`,
-        images: [
-            {
-                url: "/images/og.png",
-                width: 1200,
-                height: 630,
-                alt: "AnimalDex Privacy Policy"
-            }
-        ]
+        url: `${getSiteUrl()}/legal/privacy`
     },
     twitter: {
         card: "summary_large_image",
         title: "AnimalDex Privacy Policy",
-        description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion.",
-        images: ["/images/og.png"]
+        description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion."
     },
     robots: {
         index: true,
         follow: true
     }
-};
+}, "AnimalDex Privacy Policy", "page", "legal", "privacy");
 
 export default function PublicPrivacyPolicy() {
     return <LegalPage content={policy} />;

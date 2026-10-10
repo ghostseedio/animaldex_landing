@@ -11,6 +11,7 @@ import {answerPages, getAnswerPageImage} from "@/data/answer-pages";
 import EditorialCard from "@/app/[locale]/(composited)/blog/_components/editorial-card";
 import ArticleAppCta from "@/app/[locale]/(composited)/blog/_components/article-app-cta";
 import {hasImage, imageFit} from "@/app/[locale]/(composited)/blog/_components/article-media";
+import {withOgCard} from "@/lib/og/og-image";
 
 export const revalidate = 86400;
 
@@ -72,7 +73,7 @@ export async function generateMetadata({params}: BlogIndexPageProps): Promise<Me
         ? title
         : `${title} – ${(messages.blog?.metaPageTitle || "Page {page}").replace("{page}", String(currentPage))}`;
 
-    return {
+    return withOgCard({
         title: pageTitle,
         description,
         keywords: [...baseKeywords, ...postKeywords],
@@ -90,23 +91,14 @@ export async function generateMetadata({params}: BlogIndexPageProps): Promise<Me
             locale: getMetadataLocale(locale),
             title: `${pageTitle} | AnimalDex`,
             description,
-            url: getLocalePath(locale, pagePath),
-            images: [
-                {
-                    url: "/images/og.png",
-                    width: 1200,
-                    height: 630,
-                    alt: `${pageTitle} | AnimalDex`
-                }
-            ]
+            url: getLocalePath(locale, pagePath)
         },
         twitter: {
             card: "summary_large_image",
             title: `${pageTitle} | AnimalDex`,
-            description,
-            images: ["/images/og.png"]
+            description
         }
-    };
+    }, "AnimalDex blog", "page", "blog");
 }
 
 export default async function BlogIndexPage({params}: BlogIndexPageProps) {

@@ -7,6 +7,7 @@ import {blogPosts} from "@/data/blog";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
+import {withOgCard} from "@/lib/og/og-image";
 
 type AnimalSymbolismPageProps = {
     params: {
@@ -28,7 +29,7 @@ export async function generateMetadata({params}: AnimalSymbolismPageProps): Prom
     const t = await getScopedTranslator(params.locale, "animalSymbolism");
     const canonicalUrl = getAnimalSymbolismPath(params.locale);
 
-    return {
+    return withOgCard({
         title: templateSafeTitle(t("metaTitle")),
         description: t("metaDescription"),
         keywords: ["animal symbolism", "what does an animal symbolize", "biology backed symbolism", "animal archetype meaning"],
@@ -44,10 +45,9 @@ export async function generateMetadata({params}: AnimalSymbolismPageProps): Prom
             locale: getMetadataLocale(params.locale),
             title: t("metaTitle"),
             description: t("metaDescription"),
-            url: canonicalUrl,
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: t("metaTitle")}]
+            url: canonicalUrl
         }
-    };
+    }, "Animal symbolism on AnimalDex", "page", "animal-symbolism");
 }
 
 export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageProps) {
