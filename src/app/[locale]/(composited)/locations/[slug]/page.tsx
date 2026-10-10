@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import PageVideo from "@/app/[locale]/(composited)/_components/page-video/page-video";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -335,6 +336,19 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 placeTypeLabel={t("readingTime")}
                 placeTypeValue={t("readingTimeValue", {minutes: readingMinutes})}
             />
+
+            {locale === "en" ? (
+                <div className="editorial [&>section]:mb-0">
+                    <PageVideo
+                        type="location"
+                        slug={location.slug}
+                        pageTitle={location.title}
+                        pageDescription={location.description}
+                        pageUrl={pageUrl}
+                        copy={{kicker: "Watch the guide", blurb: `What you can see in ${location.name}, and where to look, in under a minute.`, footnote: "AI-narrated, with motion added to some images."}}
+                    />
+                </div>
+            ) : null}
 
             <section className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(24rem,0.75fr)]" aria-labelledby="location-quick-answer">
                 <div className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">

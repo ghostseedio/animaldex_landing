@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import PageVideo from "@/app/[locale]/(composited)/_components/page-video/page-video";
 import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, getAnimalHybridForPair} from "@/data/animal-hybrids";
@@ -127,6 +128,19 @@ export default function AnimalFusionView({fusion, locale}: {fusion: ResolvedFusi
                     ))}
                 </div>
             </section>
+
+            {locale === "en" ? (
+                <div className="editorial [&>section]:mb-0">
+                    <PageVideo
+                        type="fusion"
+                        slug={entry.slug}
+                        pageTitle={`${receiver.name} learns from the ${donor.name}`}
+                        pageDescription={entry.expression}
+                        pageUrl={pageUrl}
+                        copy={{kicker: "See it in action", blurb: `The ${receiver.name}, imagined using what it learns from the ${donor.name}.`, footnote: "AI-generated imagery of an imagined behaviour."}}
+                    />
+                </div>
+            ) : null}
 
             <section className="  border border-primary-500/40 bg-primary-900/10 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                 <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Learned sub-principle</p>

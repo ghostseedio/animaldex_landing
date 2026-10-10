@@ -2,6 +2,7 @@ import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {runShareJob} from "@/lib/social/runner";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
+import {shareableContentVideo} from "@/lib/content-video/share";
 import {insertPost, listPosts, updatePost} from "@/lib/social/store";
 import {readTikTokOptions, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {isSocialPlatform, type SocialPlatform, type SocialPostRow} from "@/lib/social/types";
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
 }
 
 type ShareBody = {
+    /** A blog video (admin_content_videos.id) instead of an app story video. */
+    contentVideoId?: string;
     speciesProfileId?: string;
     mediaPath?: string;
     title?: string;
@@ -30,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     const body = await request.json().catch(() => null) as ShareBody | null;
     const targets = (body?.targets ?? []).filter((target): target is {platform: SocialPlatform; caption?: string; mode?: string; tiktok?: unknown} => isSocialPlatform(target.platform));
-    if (!body?.speciesProfileId || !body.mediaPath || targets.length === 0) {
+    if (!(body?.contentVideoId || (body?.speciesProfileId && body.mediaPath)) || targets.length === 0) {
         return NextResponse.json({error: "Pick a video and at least one platform"}, {status: 400});
     }
 
@@ -45,8 +48,10 @@ export async function POST(request: NextRequest) {
     if (tiktokProblem) return NextResponse.json({error: tiktokProblem}, {status: 400});
 
     try {
-        const video = await findAdminStoryVideo(body.speciesProfileId, body.mediaPath);
-        if (!video) return NextResponse.json({error: "That video is no longer served (deleted or made private)"}, {status: 409});
+        const video = body.contentVideoId
+            ? await shareableContentVideo(body.contentVideoId)
+            : await findAdminStoryVideo(body.speciesProfileId!, body.mediaPath!);
+        if (!video) return NextResponse.json({error: "That video is no longer served (deleted, archived or made private)"}, {status: 409});
 
         const existing = await listPosts(500);
         const now = Date.now();

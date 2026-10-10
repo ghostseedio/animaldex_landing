@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import PageVideo from "@/app/[locale]/(composited)/_components/page-video/page-video";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {notFound, redirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -307,6 +308,19 @@ export default async function ComparisonDetailPage({params}: Props) {
             </Link>
 
             <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
+
+            {locale === "en" ? (
+                <div className="editorial [&>section]:mb-0">
+                    <PageVideo
+                        type="comparison"
+                        slug={challenge.slug}
+                        pageTitle={challenge.title}
+                        pageDescription={challenge.description}
+                        pageUrl={pageUrl}
+                        copy={{kicker: "Watch the battle", blurb: `${animalA.name} vs ${animalB.name} in 20 seconds: an AI-simulated stand-off built from the stats and verdict on this page.`, footnote: "AI-generated simulation for entertainment, staged without blood or injury. The real analysis is below."}}
+                    />
+                </div>
+            ) : null}
 
             <ComparisonPageNavigation title={challenge.title} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
 

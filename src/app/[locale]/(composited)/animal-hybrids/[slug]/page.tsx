@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import PageVideo from "@/app/[locale]/(composited)/_components/page-video/page-video";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AnimalFusionView, {fusionMetadata, resolvePublishedFusion} from "@/app/[locale]/(composited)/animal-hybrids/[slug]/animal-fusion-view";
@@ -152,6 +153,19 @@ export default async function AnimalHybridDetailPage({params}: AnimalHybridDetai
                     ) : null)}
                 </div>
             </section>
+
+            {locale === "en" ? (
+                <div className="editorial [&>section]:mb-0">
+                    <PageVideo
+                        type="hybrid"
+                        slug={entry.slug}
+                        pageTitle={entry.title}
+                        pageDescription={entry.quickAnswer}
+                        pageUrl={pageUrl}
+                        copy={{kicker: "See it move", blurb: `What the ${entry.hybridName} could look like in the wild, imagined from the anatomy on this page.`, footnote: "AI-generated imagery of an imagined animal. It does not exist."}}
+                    />
+                </div>
+            ) : null}
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {entry.parents.map((parent) => (

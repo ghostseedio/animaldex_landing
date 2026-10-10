@@ -24,6 +24,8 @@ import BlogListenControl from "@/app/[locale]/(composited)/blog/_components/blog
 import {getManagedBlogPost} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
 import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
+import ArticleVideoBrief from "@/app/[locale]/(composited)/blog/_components/article-video-brief";
+import {getPublishedContentVideo} from "@/lib/content-video/store";
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -521,6 +523,8 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
         notFound();
     }
 
+    // The short video is English: only the English article carries it.
+    const video = locale === "en" ? await getPublishedContentVideo(post.slug) : null;
     const relatedPosts = getRelatedBlogPosts(post.slug, 3);
     const relatedChallenges = getRelatedChallengesForBlogPost(post.slug, 4);
     const relatedAnswerPages = getAnswerPagesForIntents(post.searchIntents, 3);
@@ -608,7 +612,25 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
             }
         ]
     };
-    const schemas = faqSchema ? [schema, faqSchema, breadcrumbSchema] : [schema, breadcrumbSchema];
+    const videoSchema = video ? {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        name: video.title || post.title,
+        description: video.hookText ? `${video.hookText}. ${post.description}` : post.description,
+        thumbnailUrl: video.posterUrl ?? getAbsoluteAssetUrl(post.featuredImage.src),
+        uploadDate: video.publishedAt,
+        contentUrl: video.videoUrl,
+        inLanguage: "en",
+        ...(video.durationSeconds ? {duration: `PT${Math.round(video.durationSeconds)}S`} : {}),
+        isPartOf: {"@id": postUrl},
+        publisher: {"@type": "Organization", name: "AnimalDex", logo: {"@type": "ImageObject", url: getAbsoluteAssetUrl("/images/logo.webp")}}
+    } : null;
+    const schemas = [schema, faqSchema, videoSchema, breadcrumbSchema].filter((entry) => entry !== null);
+    const videoChapters = (video?.timeline ?? [])
+        // The hook's line is the module's headline already.
+        .filter((entry) => entry.kind === "scene" && entry.overlay)
+        .slice(0, 6)
+        .map((entry) => ({start: entry.start, label: entry.overlay}));
     const tableOfContentsTitles = post.tableOfContents && post.tableOfContents.length > 0
         ? post.tableOfContents
         : post.sections.filter((section) => section.html === undefined).map((section) => section.title);
@@ -659,6 +681,19 @@ export default async function BlogPostPage({params}: BlogPostPageProps) {
                 still break the measure without fighting it for space. */}
             <div className="mx-auto flex w-full max-w-[84rem] justify-center gap-0 px-0 xl:gap-12">
                 <div className="min-w-0 flex-1">
+                    {video ? (
+                        <div className="editorial-grid mt-8 md:mt-12">
+                            <div className="span-wide">
+                                <ArticleVideoBrief
+                                    videoUrl={video.videoUrl}
+                                    posterUrl={video.posterUrl}
+                                    durationSeconds={video.durationSeconds}
+                                    headline={video.hookText || video.title || post.title}
+                                    chapters={videoChapters}
+                                />
+                            </div>
+                        </div>
+                    ) : null}
                     <div className="editorial-grid">
                         <div className="mt-8 flex flex-col md:mt-10">
                             <BlogListenControl locale={locale} text={narrationText} />

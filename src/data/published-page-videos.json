@@ -1,0 +1,5 @@
+{
+    "generatedAt": "2026-10-10T06:02:59.099Z",
+    "note": "Published page videos baked into static pages at build time. Refresh with: npm run refresh:page-videos",
+    "videos": {}
+}

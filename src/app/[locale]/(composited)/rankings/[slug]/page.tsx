@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import PageVideo from "@/app/[locale]/(composited)/_components/page-video/page-video";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
@@ -371,6 +372,19 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 methodologyHref="#methodology"
                 methodologyLabel={t("methodologyLink")}
             />
+
+            {locale === "en" ? (
+                <div className="editorial [&>section]:mb-0">
+                    <PageVideo
+                        type="ranking"
+                        slug={ranking.slug}
+                        pageTitle={title}
+                        pageDescription={ranking.description}
+                        pageUrl={pageUrl}
+                        copy={{kicker: "The countdown", blurb: "The top of this ranking in under a minute. The full table and methodology are below.", footnote: "AI-narrated, with motion added to some images."}}
+                    />
+                </div>
+            ) : null}
 
             {ranking.introduction.length > 0 ? (
                 <section className="max-w-4xl">

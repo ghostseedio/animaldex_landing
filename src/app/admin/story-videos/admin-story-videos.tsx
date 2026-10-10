@@ -7,10 +7,12 @@ import {X_POST_LIMIT, xLength} from "@/lib/social/captions";
 import {COPY_LIMITS, type ShareCopy, VISIBLE_CHARS} from "@/lib/social/share-copy";
 import {TIKTOK_PRIVACY_LABELS, type TikTokCreatorInfo, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
+import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
+import {sourcePath} from "@/lib/content-video/source-paths";
 
 type Video = {
     mediaPath: string;
-    kind: "story_video" | "hook" | "trial_scene" | "still";
+    kind: "story_video" | "hook" | "trial_scene" | "still" | "blog_video";
     locale: string | null;
     stableUrl: string;
     durationSeconds: number | null;
@@ -22,7 +24,30 @@ type Video = {
     speciesProfileId: string;
     speciesName: string;
     pageSlug: string;
+    /** Set for blog videos: shared by id, linked to the post instead of an animal page. */
+    contentVideoId?: string;
+    pagePath?: string;
 };
+
+function blogVideoToShareable(video: BlogVideo): Video {
+    return {
+        mediaPath: video.video_path ?? "",
+        kind: "blog_video",
+        locale: "en",
+        stableUrl: video.videoUrl ?? "",
+        durationSeconds: video.duration_seconds,
+        hasAudio: true,
+        script: video.plan?.scenes.map((scene) => scene.narration).join(" ") ?? null,
+        videoHook: video.plan?.hookText ?? null,
+        captureId: null,
+        createdAt: video.created_at,
+        speciesProfileId: "",
+        speciesName: video.source_title,
+        pageSlug: video.source_slug,
+        contentVideoId: video.id,
+        pagePath: sourcePath(video.source_type, video.source_slug)
+    };
+}
 
 type Connection = {
     platform: SocialPlatform;
@@ -38,7 +63,8 @@ const KIND_LABELS: Record<Video["kind"], string> = {
     story_video: "Narrated story",
     hook: "Animated capture",
     trial_scene: "Trial scene",
-    still: "Still"
+    still: "Still",
+    blog_video: "Page video"
 };
 
 /** Not-yet-public options. TikTok has none: its drafts scope (video.upload) is not requested. */
@@ -133,7 +159,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                         <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-ink-400 hover:text-white"><ArrowLeft size={18} />Dashboard</Link>
                         <p className="mt-7 text-xs font-black uppercase tracking-[.2em] text-primary-200">Social publishing</p>
                         <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Story videos</h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Every finished, narrated story video the app currently serves. Share one to the official AnimalDex accounts; uploads run in the background and land in the log below.</p>
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Videos made from blog posts here, and every finished, narrated story video the app serves. Share any of them to the official AnimalDex accounts; uploads run in the background and land in the log below.</p>
                     </div>
                     <button onClick={() => loadAll()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-300 px-5 py-3 text-sm font-black text-white hover:border-primary-300"><Refresh size={18} />Refresh</button>
                 </header>
@@ -175,8 +201,10 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                     </div>
                 </section>
 
+                <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} />
+
                 <section className="mt-8">
-                    <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">Videos {videos ? `(${videos.length})` : ""}</h2>
+                    <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">App story videos {videos ? `(${videos.length})` : ""}</h2>
                     {videos === null ? <div className="grid min-h-[16rem] place-items-center text-sm text-ink-400">Loading videos…</div> : videos.length === 0 ? (
                         <div className="mt-3 grid min-h-[16rem] place-items-center rounded-2xl border border-dashed border-line-300 text-center"><div><ClapperboardPlay size={38} className="mx-auto text-ink-500" /><p className="mt-3 font-bold text-white">No finished story videos yet</p><p className="mt-1 text-sm text-ink-500">They appear here once the app renders them.</p></div></div>
                     ) : (
@@ -216,7 +244,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                         <div className="mt-3 overflow-x-auto rounded-2xl border border-line-300">
                             <table className="w-full min-w-[44rem] text-left text-sm">
                                 <thead className="bg-surface-900 text-[10px] uppercase tracking-[.14em] text-ink-500">
-                                    <tr><th className="px-4 py-3">When</th><th className="px-4 py-3">Animal</th><th className="px-4 py-3">Platform</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Result</th></tr>
+                                    <tr><th className="px-4 py-3">When</th><th className="px-4 py-3">Video</th><th className="px-4 py-3">Platform</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Result</th></tr>
                                 </thead>
                                 <tbody>
                                     {posts.map((post) => (
@@ -288,7 +316,7 @@ function VisiblePreview({text, visible}: {text: string; visible: number}) {
 const fieldClass = "mt-1 w-full rounded-xl border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300";
 
 function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: ShareDialogProps) {
-    const pageUrl = `${siteUrl}/animals/${video.pageSlug}`;
+    const pageUrl = `${siteUrl}${video.pagePath ?? `/animals/${video.pageSlug}`}`;
     const [copy, setCopy] = useState<ShareCopy | null>(null);
     const [copySource, setCopySource] = useState<"claude" | "template" | null>(null);
     const [copyError, setCopyError] = useState("");
@@ -325,14 +353,16 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 : tiktokOptionsProblem(tiktok, tiktokCreator?.privacyLevelOptions ?? null))
         : null;
 
-    const draft = useCallback(async () => {
+    const draft = useCallback(async (regenerate = false) => {
         setDrafting(true);
         setCopyError("");
         try {
             const body = await api<{copy: ShareCopy; source: "claude" | "template"; error?: string}>("/api/admin/social/copy", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath, pageSlug: video.pageSlug, speciesName: video.speciesName})
+                body: JSON.stringify(video.contentVideoId
+                    ? {contentVideoId: video.contentVideoId, regenerate}
+                    : {speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath, pageSlug: video.pageSlug, speciesName: video.speciesName})
             });
             setCopy(body.copy);
             setCopySource(body.source);
@@ -377,8 +407,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    speciesProfileId: video.speciesProfileId,
-                    mediaPath: video.mediaPath,
+                    ...(video.contentVideoId ? {contentVideoId: video.contentVideoId} : {speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath}),
                     title: copy.youtube.title,
                     targets: selected.map((platform) => ({
                         platform,
@@ -453,7 +482,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                     </div>
                     <div className="flex items-center gap-3">
                         {copySource ? <span className="text-[11px] text-ink-500">{copySource === "claude" ? "Drafted by Claude" : "Template draft"}</span> : null}
-                        <button onClick={() => draft()} disabled={drafting} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300 disabled:opacity-50"><Refresh size={14} />{drafting ? "Drafting…" : "Regenerate"}</button>
+                        <button onClick={() => draft(true)} disabled={drafting} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300 disabled:opacity-50"><Refresh size={14} />{drafting ? "Drafting…" : "Regenerate"}</button>
                     </div>
                 </div>
                 {copyError && <p className="mt-3 text-xs text-amber-200">{copyError}</p>}
@@ -513,7 +542,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                 </label>
                                 <label className="mt-2 flex items-center gap-2 text-xs text-ink-300">
                                     <input type="checkbox" checked={xLink} onChange={(event) => setXLink(event.target.checked)} />
-                                    Add the animal page link (X shows posts with outside links to fewer people)
+                                    Add the {video.contentVideoId ? "article" : "animal page"} link (X shows posts with outside links to fewer people)
                                 </label>
                             </>
                         )}

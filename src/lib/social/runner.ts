@@ -1,6 +1,8 @@
 import {getFreshConnection} from "@/lib/social/oauth";
 import {publishers} from "@/lib/social/publishers";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
+import {findShareableContentVideoByPath} from "@/lib/content-video/share";
+import {CONTENT_VIDEO_MEDIA_KIND} from "@/lib/content-video/store";
 import {updatePost} from "@/lib/social/store";
 import {normalizeVideoForSocial} from "@/lib/social/video-normalize";
 import type {SocialPostRow} from "@/lib/social/types";
@@ -33,12 +35,19 @@ export async function runShareJob(rows: SocialPostRow[]) {
     let video: Buffer;
     let videoUrl: string;
     try {
-        if (!first.species_profile_id) throw new Error("Share has no species");
-        // Re-read from the endpoint: the file must still be served (the capture
-        // still public) at the moment of sharing, and this gives a fresh URL.
-        const current = await findAdminStoryVideo(first.species_profile_id, first.media_path);
-        if (!current) throw new Error("The video is no longer served by species-story-media (deleted or made private)");
-        videoUrl = current.signedUrl ?? current.stableUrl;
+        if (first.media_kind === CONTENT_VIDEO_MEDIA_KIND) {
+            // A blog video: still live (not archived) at the moment of sharing.
+            const current = await findShareableContentVideoByPath(first.media_path);
+            if (!current) throw new Error("The blog video was archived or removed");
+            videoUrl = current.stableUrl;
+        } else {
+            if (!first.species_profile_id) throw new Error("Share has no species");
+            // Re-read from the endpoint: the file must still be served (the capture
+            // still public) at the moment of sharing, and this gives a fresh URL.
+            const current = await findAdminStoryVideo(first.species_profile_id, first.media_path);
+            if (!current) throw new Error("The video is no longer served by species-story-media (deleted or made private)");
+            videoUrl = current.signedUrl ?? current.stableUrl;
+        }
         // Fixes the frame rate (e.g. old 15 fps renders) once, for every platform.
         const normalized = await normalizeVideoForSocial(await download(videoUrl));
         video = normalized.video;
