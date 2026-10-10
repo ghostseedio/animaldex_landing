@@ -5,6 +5,7 @@ import SpeciesRadarStats from "@/app/[locale]/(composited)/animals/[slug]/specie
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
+import {MAX_ANIMAL_LEVEL_XP, animalLevel, xpForAnimalLevel} from "@/lib/animal-level";
 
 const STAT_LABELS: Record<keyof SpeciesStats, string> = {
     dominance: "Dominance",
@@ -57,9 +58,9 @@ function titleCase(value: string) {
 
 function levelPresentation(totalXP: number) {
     const xp = Math.max(0, Math.round(totalXP));
-    const level = Math.min(100, Math.floor(Math.sqrt(xp)) + 1);
-    const currentThreshold = (level - 1) ** 2;
-    const nextThreshold = level >= 100 ? 9801 : level ** 2;
+    const level = animalLevel(xp);
+    const currentThreshold = xpForAnimalLevel(level);
+    const nextThreshold = level >= 100 ? MAX_ANIMAL_LEVEL_XP : xpForAnimalLevel(level + 1);
     const span = Math.max(1, nextThreshold - currentThreshold);
     const progressXP = level >= 100 ? 0 : Math.max(0, xp - currentThreshold);
 

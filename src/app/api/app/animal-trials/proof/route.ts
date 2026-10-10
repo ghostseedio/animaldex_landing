@@ -119,8 +119,13 @@ export async function POST(request: Request) {
     if (proofPath && proof instanceof File) {
         const uploadFailure = await upload(supabase, proofPath, proof);
 
-        if (uploadFailure) {
+        // A video's clip is what Discover plays; the verifier reads only the
+        // frames already uploaded, so a clip that will not upload is not fatal.
+        if (uploadFailure && proofType !== "video") {
             return NextResponse.json({error: uploadFailure}, {status: 400});
+        }
+        if (uploadFailure) {
+            console.warn("[animal-trials/proof] clip upload failed, verifying from frames", uploadFailure);
         }
     }
 

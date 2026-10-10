@@ -7,6 +7,7 @@ import Link from "@/app/[locale]/_components/link";
 import type {CaptureProgressState} from "@/data/species-growth-types";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
+import {MAX_ANIMAL_LEVEL_XP, animalLevel, xpForAnimalLevel} from "@/lib/animal-level";
 
 const ENDORSEMENT_STATS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
@@ -114,9 +115,9 @@ function SizeScaleRuler({
 
 function levelPresentation(totalXP: number) {
     const xp = Math.max(0, totalXP);
-    const level = Math.min(100, Math.floor(Math.sqrt(xp)) + 1);
-    const currentThreshold = (level - 1) ** 2;
-    const nextThreshold = level >= 100 ? 9801 : level ** 2;
+    const level = animalLevel(xp);
+    const currentThreshold = xpForAnimalLevel(level);
+    const nextThreshold = level >= 100 ? MAX_ANIMAL_LEVEL_XP : xpForAnimalLevel(level + 1);
     const span = Math.max(1, nextThreshold - currentThreshold);
     const progressXP = level >= 100 ? 0 : xp - currentThreshold;
 

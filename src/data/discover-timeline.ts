@@ -25,6 +25,7 @@ import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-
 import {logDevPerfEvent, timeDevAsync, timeDevStep} from "@/lib/dev-request-timing";
 import {devCacheTtlMs, withServerMemoryCache} from "@/lib/server-memory-cache";
 import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
+import {animalLevel} from "@/lib/animal-level";
 
 type DiscoverSupabaseClient = NonNullable<
     ReturnType<typeof createSupabaseServerClient> | ReturnType<typeof createSupabasePublicClient>
@@ -473,9 +474,6 @@ function parseDate(value: string | null) {
     return Number.isFinite(ms) ? ms : 0;
 }
 
-function animalLevel(totalProgressionXP: number) {
-    return Math.min(100, Math.floor(Math.sqrt(Math.max(0, totalProgressionXP))) + 1);
-}
 
 function isBroadCollectionIdentityToken(token: string) {
     const normalized = token.toLowerCase();

@@ -18,6 +18,7 @@ import {
 import {resolveCaptureDisplayName} from "@/lib/capture-display-name";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {animalLevel} from "@/lib/animal-level";
 
 type QueryRow = Record<string, unknown>;
 
@@ -56,9 +57,6 @@ function readNumber(row: QueryRow, key: string, fallback = 0) {
     return Number.isFinite(value) ? value : fallback;
 }
 
-function animalLevel(totalProgressionXP: number) {
-    return Math.min(100, Math.floor(Math.sqrt(Math.max(0, totalProgressionXP))) + 1);
-}
 
 function captureImageSrc(captureId: string, speciesSlug: string | null) {
     if (speciesSlug) {
