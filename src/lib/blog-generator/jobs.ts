@@ -6,7 +6,7 @@ import {assembleBlogPost, isNewImageSlot, normalizeUrl, sectionImageKey, uniqueS
 import {editArticle, type EditInput, type EditResult} from "@/lib/blog-generator/edit";
 import {loadSiteCatalog} from "@/lib/blog-generator/catalog";
 import {CostMeter, formatCost, withCostMeter, type CostReport} from "@/lib/blog-generator/cost-meter";
-import {sourceArticleImages, type ImageRequest} from "@/lib/blog-generator/images";
+import {SHARE_IMAGE_MIN_ASPECT, sourceArticleImages, type ImageRequest} from "@/lib/blog-generator/images";
 import {deleteMaterials, loadMaterials, type MaterialFile, type MaterialRef} from "@/lib/blog-generator/materials";
 import {checkReachable, researchBrief, suggestTopics, writeAndEdit, type Brief, type GeneratorMode, type Research, type ResearchDepth, type TopicIdea} from "@/lib/blog-generator/pipeline";
 
@@ -195,7 +195,8 @@ async function generateMetered(input: GenerateInput, log: (line: string) => void
     log(`Draft written: "${spec.title}" → /blog/${slug}`);
 
     const imageRequests: ImageRequest[] = [
-        {key: "hero", ...spec.heroImage},
+        // The hero is the share image: landscape, and a wider pick to choose from.
+        {key: "hero", ...spec.heroImage, minAspect: SHARE_IMAGE_MIN_ASPECT, candidates: 5},
         ...spec.sections.flatMap((section, index) => (isNewImageSlot(section.image) ? [{key: sectionImageKey(index), ...section.image}] : []))
     ];
     log(`Finding ${imageRequests.length} photo(s)`);

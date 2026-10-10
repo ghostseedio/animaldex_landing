@@ -5,7 +5,7 @@ import {getContentEntry, listContentEntries, saveContentEntry} from "@/lib/admin
 import {assembleBlogPost, isNewImageSlot, normalizeUrl, sectionImageKey, toEditable} from "@/lib/blog-generator/article-spec";
 import {loadSiteCatalog, searchCatalog, type CatalogItem} from "@/lib/blog-generator/catalog";
 import {CostMeter, formatCost, withCostMeter, type CostReport} from "@/lib/blog-generator/cost-meter";
-import {sourceArticleImages, type ImageRequest} from "@/lib/blog-generator/images";
+import {SHARE_IMAGE_MIN_ASPECT, sourceArticleImages, type ImageRequest} from "@/lib/blog-generator/images";
 import {checkReachable, researchBrief, writeAndEdit, writeArticle, type Brief, type Research, type ResearchDepth} from "@/lib/blog-generator/pipeline";
 import {saveRevision} from "@/lib/blog-generator/revisions";
 
@@ -140,7 +140,7 @@ async function editMetered(input: EditInput, log: (line: string) => void): Promi
     spec.changeSummary.forEach((line) => log(`Change: ${line}`));
 
     const imageRequests: ImageRequest[] = [
-        ...(isNewImageSlot(spec.heroImage) ? [{key: "hero", ...spec.heroImage}] : []),
+        ...(isNewImageSlot(spec.heroImage) ? [{key: "hero", ...spec.heroImage, minAspect: SHARE_IMAGE_MIN_ASPECT, candidates: 5}] : []),
         ...spec.sections.flatMap((section, index) => (isNewImageSlot(section.image) ? [{key: sectionImageKey(index), ...section.image}] : []))
     ];
     if (imageRequests.length) log(`Finding ${imageRequests.length} new photo(s)`);

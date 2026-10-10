@@ -24,7 +24,14 @@ export type ImageRequest = {
     /** What the photo must show, judged against the candidates. */
     mustShow: string;
     alt: string;
+    /** Width ÷ height the photo must reach. Share images need landscape (≈1.3+). */
+    minAspect?: number;
+    /** How many photos to put in front of the relevance check. */
+    candidates?: number;
 };
+
+/** Shape a share card crops well: social cards are 1.91:1. */
+export const SHARE_IMAGE_MIN_ASPECT = 1.3;
 
 type Candidate = {title: string; thumbUrl: string; width: number; height: number; artist: string; license: string; pageUrl: string};
 
@@ -50,7 +57,7 @@ type CommonsPage = {
     imageinfo?: Array<{thumburl?: string; url?: string; width?: number; height?: number; mime?: string; descriptionurl?: string; extmetadata?: Record<string, {value?: string}>}>;
 };
 
-async function searchCommons(query: string, used: Set<string>): Promise<Candidate[]> {
+async function searchCommons(query: string, used: Set<string>, minAspect = 0.9, limit = CANDIDATES_PER_SLOT): Promise<Candidate[]> {
     const url = new URL("https://commons.wikimedia.org/w/api.php");
     for (const [key, value] of Object.entries({
         action: "query", format: "json", generator: "search", gsrsearch: `${query} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "24",
@@ -67,10 +74,10 @@ async function searchCommons(query: string, used: Set<string>): Promise<Candidat
             if (!licenseOk(info.extmetadata?.LicenseShortName?.value ?? "")) return false;
             if (/logo|icon|\bmap\b|diagram|coat of arms|flag of|chart|screenshot|stamp|drawing|illustration|skeleton|specimen|museum/i.test(page.title)) return false;
             if (used.has(page.title)) return false;
-            return (info.width ?? 0) >= 1000 && (info.width ?? 0) >= (info.height ?? 0) * 0.9;
+            return (info.width ?? 0) >= 1000 && (info.width ?? 0) >= (info.height ?? 0) * minAspect;
         })
         .sort((a, b) => (b.info!.width ?? 0) - (a.info!.width ?? 0))
-        .slice(0, CANDIDATES_PER_SLOT)
+        .slice(0, limit)
         .map(({page, info}) => ({
             title: page.title,
             thumbUrl: info!.thumburl || info!.url!,
@@ -171,7 +178,7 @@ export async function sourceArticleImages(slug: string, requests: ImageRequest[]
     const slots: Array<{request: ImageRequest; candidates: Array<Candidate & {preview: Buffer}>}> = [];
     for (const request of requests) {
         try {
-            const found = await searchCommons(request.query, used);
+            const found = await searchCommons(request.query, used, request.minAspect, request.candidates);
             const candidates = (await Promise.all(found.map(async (candidate) => {
                 try {
                     const preview = await sharp(await download(candidate.thumbUrl), {failOn: "none"}).rotate().resize(512, 512, {fit: "inside"}).jpeg({quality: 70}).toBuffer();
