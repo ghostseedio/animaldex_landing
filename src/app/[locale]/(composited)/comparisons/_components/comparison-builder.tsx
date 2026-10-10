@@ -13,7 +13,6 @@ export type ComparisonBuilderCopy = {
     noMatchesLabel: string;
     swapLabel: string;
     randomLabel: string;
-    typeLabel: string;
     compareLabel: string;
     compareBusyLabel: string;
     sameAnimalError: string;
@@ -22,7 +21,6 @@ export type ComparisonBuilderCopy = {
     resultsLabel: string;
     changeLabel: string;
     doneLabel: string;
-    typeOptions: Array<{value: string; label: string}>;
 };
 
 type ComparisonBuilderProps = {
@@ -295,7 +293,6 @@ export default function ComparisonBuilder({
     const router = useRouter();
     const [animalA, setAnimalA] = useState<ComparableAnimal | null>(defaultAnimalA);
     const [animalB, setAnimalB] = useState<ComparableAnimal | null>(defaultAnimalB);
-    const [comparisonType, setComparisonType] = useState(copy.typeOptions[0]?.value ?? "battle");
     const [isPending, startTransition] = useTransition();
 
     const sameAnimal = Boolean(animalA && animalB && animalA.slug === animalB.slug);
@@ -303,8 +300,8 @@ export default function ComparisonBuilder({
 
     const targetHref = useMemo(() => {
         if (!animalA || !animalB || sameAnimal) return null;
-        return `${basePath}/${buildComparisonSlug(animalA.slug, animalB.slug, comparisonType)}`;
-    }, [animalA, animalB, basePath, comparisonType, sameAnimal]);
+        return `${basePath}/${buildComparisonSlug(animalA.slug, animalB.slug, "battle")}`;
+    }, [animalA, animalB, basePath, sameAnimal]);
 
     const submit = useCallback(() => {
         if (!targetHref) return;
@@ -362,29 +359,15 @@ export default function ComparisonBuilder({
             </div>
 
             <div className="mt-4 grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 sm:gap-3">
-                    <label className="block">
-                        <span className="sr-only">{copy.typeLabel}</span>
-                        <select
-                            value={comparisonType}
-                            onChange={(event) => setComparisonType(event.target.value)}
-                            aria-label={copy.typeLabel}
-                            className="h-12 w-full appearance-none rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-sm font-semibold text-white outline-none transition focus:border-primary-400/60"
-                        >
-                            {copy.typeOptions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </label>
-
-                    <button
-                        type="button"
-                        onClick={randomise}
-                        className="h-12 whitespace-nowrap rounded-xl border border-white/10 px-4 text-sm font-semibold text-ink-300 transition hover:border-white/25 hover:text-white"
-                    >
-                        {copy.randomLabel}
-                    </button>
-                </div>
+                {/* Battle only, as in the iOS app: it always asks the shared
+                    get-or-generate-species-comparison function for "battle". */}
+                <button
+                    type="button"
+                    onClick={randomise}
+                    className="h-12 whitespace-nowrap rounded-xl border border-white/10 px-4 text-sm font-semibold text-ink-300 transition hover:border-white/25 hover:text-white"
+                >
+                    {copy.randomLabel}
+                </button>
 
                 <button
                     type="button"

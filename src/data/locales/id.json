@@ -1010,6 +1010,14 @@
     "askError": "AnimalDex belum bisa menjawab. Coba pertanyaan yang lebih singkat.",
     "compareEyebrow": "Bandingkan",
     "compareTitle": "Bandingkan {animal}",
+    "compareBattlesTitle": "Bertarung di Arena",
+    "compareBattlesEmpty": "Belum ada yang membawa {animal} ke pertarungan Arena. Pertarungan pemain dengan hewan ini di aplikasi AnimalDex akan muncul di sini.",
+    "compareCardsEmpty": "Belum ada perbandingan untuk {animal}. Pilih hewan apa saja untuk diadu.",
+    "compareAnyAnimal": "Bandingkan dengan hewan apa saja",
+    "compareBattleVs": "vs {animal}",
+    "compareBattleWon": "{name} menang",
+    "compareBattleDraw": "Seri",
+    "compareBattleMore": "dan {count} lainnya",
     "whereEyebrow": "Di mana menemukannya",
     "whereTitle": "Di mana menemukan {animal}",
     "whereExperiencesCta": "Pengalaman satwa liar →",
@@ -1593,7 +1601,7 @@
     "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan. Pilih dua spesies dari ribuan pilihan dan dapatkan verdict langsung dengan stat, breakdown skenario, tingkat keyakinan, dan FAQ — dibangun dari biologi nyata.",
     "statAnimals": "Hewan untuk dibandingkan",
     "statComparisons": "Matchup terbit",
-    "statTypes": "Mode perbandingan",
+    "statBattles": "Battle pemain",
     "builder": {
       "animalA": "Hewan pertama",
       "animalB": "Hewan kedua",
@@ -1706,6 +1714,7 @@
     "quickFiltersLabel": "Kategori cepat perbandingan",
     "quickCategories": {
       "popular": "Populer",
+      "battles": "Battle pemain",
       "predators": "Predator",
       "reptiles": "Reptil",
       "mammals": "Mamalia",
@@ -1846,7 +1855,9 @@
       "even": "Seimbang",
       "draw": "Imbang",
       "depends": "Tergantung konteks"
-    }
+    },
+    "battleCreditsWon": "{count} kredit dimenangkan",
+    "battleMore": "+{count} lagi"
   },
   "collectorPages": {
     "back": "Kembali ke Use Cases",

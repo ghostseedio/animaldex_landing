@@ -4,6 +4,7 @@ import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
+import {listSnapshotSpecies} from "@/lib/published-seo-page-data";
 
 /** Lightweight species shape used by the public comparison builder. */
 export type ComparableAnimal = {
@@ -70,9 +71,12 @@ function toComparableAnimal(
 function getIndex(): ComparisonAnimalIndex {
     if (indexCache && indexCache.expiresAt > Date.now()) return indexCache;
 
-    const animals = speciesEntries
-        .filter((entry) => Boolean(entry.slug && entry.name))
-        .map((entry) => toComparableAnimal(entry, null));
+    // Hand-coded species plus every published database species, so the picker
+    // covers the same catalog as /animals (not just the ~1,000 local pages).
+    const seen = new Set<string>();
+    const animals = [...speciesEntries, ...listSnapshotSpecies()]
+        .filter((entry) => Boolean(entry.slug && entry.name) && !seen.has(entry.slug) && Boolean(seen.add(entry.slug)))
+        .map((entry) => toComparableAnimal(entry as SpeciesEntry, null));
 
     indexCache = {
         animals,

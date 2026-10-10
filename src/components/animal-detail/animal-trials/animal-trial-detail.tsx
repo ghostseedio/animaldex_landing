@@ -177,7 +177,7 @@ export default function AnimalTrialDetail({
     useEffect(() => {
         let cancelled = false;
         void fetch(
-            `/api/discover/animal-trial-cohort?species=${encodeURIComponent(current.speciesProfileId)}&frequency=${encodeURIComponent(current.frequency)}&limit=24`
+            `/api/discover/animal-trial-cohort?species=${encodeURIComponent(current.speciesProfileId)}&frequency=${encodeURIComponent(current.frequency)}&limit=24&scope=attempts`
         )
             .then((response) => (response.ok ? response.json() : {items: []}))
             .then((payload: {items?: DiscoverAnimalTrialItem[]}) => {

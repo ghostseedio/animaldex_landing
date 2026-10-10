@@ -13,6 +13,8 @@ import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-ca
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import ComparisonVotePanel from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-vote-panel";
 import ComparisonComments from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-comments";
+import ComparisonUserBattles from "@/app/[locale]/(composited)/comparisons/_components/comparison-user-battles";
+import {getComparisonBattles} from "@/data/comparison-battles";
 import {
     COMMENT_MAX_LENGTH,
     EMPTY_VOTE_TALLY,
@@ -181,6 +183,8 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
             </Link>
 
             <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
+
+            <ComparisonUserBattles battles={getComparisonBattles(challenge.slug)} />
 
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">

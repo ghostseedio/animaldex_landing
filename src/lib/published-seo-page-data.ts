@@ -34,6 +34,11 @@ export function getSnapshotSpeciesBySlug(slug: string) {
     return snapshotAnimalsBySlug.get(normalized) ?? null;
 }
 
+/** Every database catalog species in the published snapshot (not the hand-coded ones). */
+export function listSnapshotSpecies() {
+    return Array.from(snapshotAnimalsBySlug.values());
+}
+
 export function getSnapshotLessonBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
     return snapshotLessonsBySlug.get(normalized) ?? null;
@@ -58,6 +63,11 @@ export function getPublishedEnglishLessonStaticParams() {
 export function getSnapshotComparisonBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
     return snapshotComparisonsBySlug.get(normalized) ?? null;
+}
+
+/** Published DB comparisons (generated pairs promoted by the last snapshot refresh). */
+export function listSnapshotComparisons(): ChallengeEntry[] {
+    return comparisonPages.entries;
 }
 
 export function getPublishedEnglishComparisonStaticParams() {

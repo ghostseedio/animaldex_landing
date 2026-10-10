@@ -1004,6 +1004,14 @@
     "askError": "AnimalDex could not answer just now. Try a shorter question.",
     "compareEyebrow": "Compare",
     "compareTitle": "Compare the {animal}",
+    "compareBattlesTitle": "Battled in the Arena",
+    "compareBattlesEmpty": "No one has taken a {animal} into an Arena battle yet. Battles players fight with this animal in the AnimalDex app show up here.",
+    "compareCardsEmpty": "No matchups written for the {animal} yet. Pick any animal to put it up against.",
+    "compareAnyAnimal": "Compare with any animal",
+    "compareBattleVs": "vs {animal}",
+    "compareBattleWon": "{name} won",
+    "compareBattleDraw": "Draw",
+    "compareBattleMore": "and {count} more",
     "whereEyebrow": "Where to find them",
     "whereTitle": "Where to find {animal}",
     "whereExperiencesCta": "Wildlife Experiences →",
@@ -1603,7 +1611,7 @@
     "metaDescription": "Compare any two animals side by side. Pick two species from thousands and get an instant head-to-head verdict with stats, scenario breakdowns, a confidence rating and FAQ — built from real biology.",
     "statAnimals": "Animals to compare",
     "statComparisons": "Published matchups",
-    "statTypes": "Comparison modes",
+    "statBattles": "Player battles",
     "builder": {
       "animalA": "First animal",
       "animalB": "Second animal",
@@ -1716,6 +1724,7 @@
     "quickFiltersLabel": "Quick comparison categories",
     "quickCategories": {
       "popular": "Popular",
+      "battles": "Player battles",
       "predators": "Predators",
       "reptiles": "Reptiles",
       "mammals": "Mammals",
@@ -1856,7 +1865,9 @@
       "even": "Even",
       "draw": "Draw",
       "depends": "Depends on context"
-    }
+    },
+    "battleCreditsWon": "{count} credits won",
+    "battleMore": "+{count} more"
   },
   "collectorPages": {
     "back": "Back to Use Cases",
