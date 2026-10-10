@@ -681,19 +681,21 @@ function SocialAccounts({
   syncing,
   onSync,
   organicViews,
+  issues,
 }: {
   social: SocialMetric[];
   lastSyncedAt: string | null;
   syncing: boolean;
   onSync: () => void;
   organicViews: Array<{ platform: string; views: number; posts: number }>;
+  issues: string[];
 }) {
   const configured = social.filter((item) => item.configured);
   return (
     <Card>
       <CardHeader
         title="Organic social"
-        description={`Views and posts from the daily log this month. Account totals synced ${lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("en") : "never"}.`}
+        description={`Views and posts from the daily log this month: posts shared from Story videos and views from connected accounts are recorded automatically. Account totals synced ${lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("en") : "never"}.`}
         action={
           configured.length ? (
             <Button size="sm" onClick={onSync} disabled={syncing}>
@@ -728,8 +730,15 @@ function SocialAccounts({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-ink-500">No social API keys configured, so follower counts aren&apos;t synced.</p>
+          <p className="text-xs text-ink-500">No social API keys or Story videos logins, so follower counts aren&apos;t synced.</p>
         )}
+        {issues.length ? (
+          <ul className="space-y-1 text-[11px] text-amber-200/80">
+            {issues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -757,6 +766,7 @@ export default function AdminMetricsDashboard() {
   const [social, setSocial] = useState<SocialMetric[]>([]);
   const [socialSyncedAt, setSocialSyncedAt] = useState<string | null>(null);
   const [socialSyncing, setSocialSyncing] = useState(false);
+  const [socialSyncIssues, setSocialSyncIssues] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -842,6 +852,7 @@ export default function AdminMetricsDashboard() {
       if (!response.ok || !body.ok) return;
       setSocial(body.metrics ?? []);
       setSocialSyncedAt(body.lastSyncedAt ?? null);
+      if (force) setSocialSyncIssues([...(body.errors ?? []), ...(body.notes ?? [])]);
       // Sync from the providers at most once a day without being asked.
       const stale = !body.lastSyncedAt || Date.now() - Date.parse(body.lastSyncedAt) > 24 * 60 * 60 * 1000;
       if (!force && stale && (body.metrics ?? []).some((item: SocialMetric) => item.configured)) {
@@ -1210,7 +1221,7 @@ export default function AdminMetricsDashboard() {
                 <HistoricalTable rows={growth?.historicalChannels ?? []} />
               </Card>
 
-              <SocialAccounts social={social} lastSyncedAt={socialSyncedAt} syncing={socialSyncing} onSync={() => void syncSocial(true)} organicViews={organicViews} />
+              <SocialAccounts social={social} lastSyncedAt={socialSyncedAt} syncing={socialSyncing} onSync={() => void syncSocial(true)} organicViews={organicViews} issues={[...socialSyncIssues, ...(growth?.socialAutoLogNotes ?? [])]} />
 
               {attribution?.available ? (
                 <Card>

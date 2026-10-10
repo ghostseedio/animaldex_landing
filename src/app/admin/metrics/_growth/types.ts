@@ -39,7 +39,14 @@ export type GrowthDaily = {
   captures: number;
   hasMarketingEntry?: boolean;
   spendEntries?: SpendEntry[];
+  /** Hand-entered and auto entries merged: what the log shows. */
   organicEntries?: OrganicEntry[];
+  /** Hand-entered only: what the edit form loads and saves. */
+  manualOrganicEntries?: OrganicEntry[];
+  /** Posts shared from Story videos, and views from connected accounts. */
+  autoOrganicEntries?: OrganicEntry[];
+  /** The typed combined total, without auto views. */
+  manualSocialViews?: number;
   marketing: {
     date: string;
     socialViews: number;
@@ -119,6 +126,8 @@ export type GrowthData = {
   marketingSnapshots?: GrowthSnapshot[];
   primaryMarketingSnapshots?: GrowthSnapshot[];
   daily?: GrowthDaily[];
+  /** Why part of the automatic social log is missing (e.g. an API error). */
+  socialAutoLogNotes?: string[];
   socialPages?: Array<{
     id: string;
     platform: string;

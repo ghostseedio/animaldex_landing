@@ -35,6 +35,8 @@ export function TodayCard({
 }) {
   if (!row) return null;
   const remainingUsers = Math.max(0, requiredUsers - row.users);
+  // Social numbers can be known without a hand entry: the auto log.
+  const hasSocial = row.hasMarketingEntry || Boolean(row.autoOrganicEntries?.length);
   return (
     <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -62,7 +64,7 @@ export function TodayCard({
         </p>
         <p>
           Social views{" "}
-          {row.hasMarketingEntry ? format(row.marketing.socialViews) : "—"}
+          {hasSocial ? format(row.marketing.socialViews) : "—"}
           {targets.socialViews > 0
             ? ` / ${format(dailyPaceTarget(targets.socialViews, totalDays))}`
             : ""}
@@ -76,7 +78,7 @@ export function TodayCard({
         </p>
         <p>
           Shorts{" "}
-          {row.hasMarketingEntry ? format(row.marketing.shortVideos) : "—"}
+          {hasSocial ? format(row.marketing.shortVideos) : "—"}
           {targets.shortVideos > 0
             ? ` / ${format(dailyPaceTarget(targets.shortVideos, totalDays))}`
             : ""}
@@ -95,8 +97,8 @@ export function TodayCard({
           : "Today’s user pace is covered."}
       </p>
       <p className="mt-2 text-xs text-ink-500">
-        Users and captures are AUTO. Missing marketing is shown as — , never as
-        a fake zero miss.
+        Users, captures and Story videos posts are AUTO. Missing marketing is
+        shown as — , never as a fake zero miss.
       </p>
     </div>
   );
@@ -160,6 +162,12 @@ export function YesterdayCard({
             Users and captures are automatic. External marketing is missing, not
             zero.
           </p>
+          {organic.posts > 0 || organic.views > 0 ? (
+            <p className="mt-1 text-xs text-amber-100/80">
+              Auto-recorded social: {format(organic.views)} views ·{" "}
+              {format(organic.posts)} posts.
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="mt-3 grid gap-2 text-sm text-ink-200">

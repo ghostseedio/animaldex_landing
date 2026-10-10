@@ -378,12 +378,20 @@ export function GrowthCommandCenter({
           })),
       ]
     : [];
-  const organicFormRows = organicPlatforms.map(
-    (platform) =>
-      editingDate?.organicEntries?.find(
-        (entry) => entry.platform === platform,
-      ) ?? { platform, posts: 0, views: 0 },
-  );
+  // The form edits only hand-entered numbers (older payloads have no split,
+  // so fall back to the merged list). Auto numbers are shown beside them.
+  const manualOrganic =
+    editingDate?.manualOrganicEntries ?? editingDate?.organicEntries ?? [];
+  const organicFormRows = organicPlatforms.map((platform) => ({
+    ...(manualOrganic.find((entry) => entry.platform === platform) ?? {
+      platform,
+      posts: 0,
+      views: 0,
+    }),
+    auto: editingDate?.autoOrganicEntries?.find(
+      (entry) => entry.platform === platform,
+    ),
+  }));
 
   async function saveMarketing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -992,9 +1000,10 @@ export function GrowthCommandCenter({
                 min="0"
                 step="1"
                 defaultValue={
-                  editingDate.organicEntries?.length
+                  manualOrganic.length
                     ? ""
-                    : editingDate.marketing.socialViews || ""
+                    : (editingDate.manualSocialViews ??
+                        editingDate.marketing.socialViews) || ""
                 }
                 placeholder="combined views"
                 className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
@@ -1005,10 +1014,17 @@ export function GrowthCommandCenter({
               counted once toward the Shorts target using the highest platform
               post count.
             </p>
+            <p className="mt-2 text-xs text-ink-400">
+              <span className="font-bold text-primary-200">Auto</span> numbers
+              are recorded for you: posts shared from Story videos, and views
+              from the connected accounts. Enter only posts made elsewhere; they
+              are added to the auto count. A views number you enter replaces
+              the auto one for that platform.
+            </p>
             <div className="mt-2 space-y-2">
               <div className="grid grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)] gap-2 px-1 text-[10px] font-black uppercase tracking-[.12em] text-ink-500">
                 <span>Platform</span>
-                <span>Posts</span>
+                <span>Other posts</span>
                 <span>Views</span>
               </div>
               {organicFormRows.map((entry) => (
@@ -1018,6 +1034,12 @@ export function GrowthCommandCenter({
                 >
                   <p className="self-center text-xs font-bold text-white">
                     {organicPlatformLabels[entry.platform]}
+                    {entry.auto ? (
+                      <span className="mt-0.5 block text-[10px] font-normal text-primary-200">
+                        Auto {format(entry.auto.posts)} posts ·{" "}
+                        {format(entry.auto.views)} views
+                      </span>
+                    ) : null}
                   </p>
                   <input
                     name="organicPosts"

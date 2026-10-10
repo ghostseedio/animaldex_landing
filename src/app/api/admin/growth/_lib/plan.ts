@@ -11,6 +11,7 @@ import {
   dateKeyForDay,
   daysInMonth,
   deriveOrganicTotals,
+  deriveShortVideoCount,
   generatedOperatingTargets,
   jakartaDayBounds,
   monthDateKeys,
@@ -59,6 +60,8 @@ import {
   loadUserGrowthRows,
   loadPurchaseLedger,
 } from "./queries";
+import { loadAutoOrganic, type AutoOrganic } from "./auto-organic";
+import { mergeOrganicEntries } from "@/lib/social/auto-log";
 
 export function aggregateByDay(
   rows: DatedRow[],
@@ -292,6 +295,7 @@ export async function loadMonthActuals(
     spendRows,
     organicRows,
     purchases,
+    autoOrganic,
   ] = await Promise.all([
     fetchRows<DatedRow>(
       "profiles",
@@ -308,6 +312,14 @@ export async function loadMonthActuals(
     fetchRows<DatedRow>(
       "app_store_purchases",
       `select=user_id,created_at,environment,product_id,product_code&environment=eq.Production&created_at=lte.${encodeURIComponent(new Date().toISOString())}&order=created_at.asc`,
+    ),
+    loadAutoOrganic(dates[0], dates[dates.length - 1], startIso, endIso).catch(
+      (error): AutoOrganic => ({
+        byDate: {},
+        notes: [
+          `Auto social log unavailable: ${error instanceof Error ? error.message : "unknown error"}`,
+        ],
+      }),
     ),
   ]);
   const userDaily = aggregateByDay(profiles, "created_at", selectedMonth);
@@ -329,7 +341,10 @@ export async function loadMonthActuals(
     },
     {},
   );
-  const organicByDate = organicRows.reduce<Record<string, OrganicEntry[]>>(
+  // Hand-entered rows; the form edits these. organicByDate below is what the
+  // dashboard shows: these merged with posts shared from Story videos and
+  // views from the connected accounts.
+  const manualOrganicByDate = organicRows.reduce<Record<string, OrganicEntry[]>>(
     (byDate, row) => {
       const posts = Math.max(0, Math.round(Number(row.posts) || 0));
       const views = Math.max(0, Math.round(Number(row.views) || 0));
@@ -351,8 +366,25 @@ export async function loadMonthActuals(
         ];
     }
   }
-  for (const [date, entries] of Object.entries(organicByDate)) {
-    const derived = deriveOrganicTotals(entries);
+  const autoOrganicByDate = autoOrganic.byDate;
+  const organicByDate = Object.fromEntries(
+    Array.from(
+      new Set([
+        ...Object.keys(manualOrganicByDate),
+        ...Object.keys(autoOrganicByDate),
+      ]),
+    ).map((date) => [
+      date,
+      mergeOrganicEntries(
+        manualOrganicByDate[date] ?? [],
+        autoOrganicByDate[date] ?? [],
+      ),
+    ]),
+  ) as Record<string, OrganicEntry[]>;
+  for (const [date, entries] of Object.entries(manualOrganicByDate)) {
+    const derived = deriveOrganicTotals(
+      mergeOrganicEntries(entries, autoOrganicByDate[date] ?? []),
+    );
     const existing = manualByDate[date] ?? {
       date,
       socialViews: 0,
@@ -384,8 +416,15 @@ export async function loadMonthActuals(
             return totals;
           }, {})
       : {};
+  // A day nobody logged still gets its automatic posts and views. A typed
+  // combined total (no platform rows) already covers every platform, so auto
+  // views aren't added to it.
   const socialDaily = Object.fromEntries(
-    dates.map((date) => [date, manualByDate[date]?.socialViews ?? 0]),
+    dates.map((date) => [
+      date,
+      manualByDate[date]?.socialViews ||
+        deriveOrganicTotals(autoOrganicByDate[date] ?? []).views,
+    ]),
   );
   const searchDaily = Object.fromEntries(
     dates.map((date) => [date, manualByDate[date]?.searchClicks ?? 0]),
@@ -400,7 +439,13 @@ export async function loadMonthActuals(
     dates.map((date) => [date, manualByDate[date]?.paidUsers ?? 0]),
   );
   const shortVideoDaily = Object.fromEntries(
-    dates.map((date) => [date, manualByDate[date]?.shortVideos ?? 0]),
+    dates.map((date) => [
+      date,
+      Math.max(
+        manualByDate[date]?.shortVideos ?? 0,
+        deriveShortVideoCount(organicByDate[date] ?? []),
+      ),
+    ]),
   );
   const seoDaily = Object.fromEntries(
     dates.map((date) => [date, manualByDate[date]?.seoPages ?? 0]),
@@ -467,6 +512,9 @@ export async function loadMonthActuals(
     manualByDate,
     spendByDate,
     organicByDate,
+    manualOrganicByDate,
+    autoOrganicByDate,
+    autoOrganicNotes: autoOrganic.notes,
     spendByCurrency,
     manualDailyEntryCount: marketingRows.length,
     socialDaily,

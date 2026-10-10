@@ -336,18 +336,28 @@ export async function GET(request: NextRequest) {
         captures: actualMonth.captureDaily[date] ?? 0,
         hasMarketingEntry: Boolean(actualMonth.manualByDate[date]),
         spendEntries: actualMonth.spendByDate[date] ?? [],
+        // What the log shows (hand-entered merged with auto), and each half:
+        // the edit form only ever writes the hand-entered rows.
         organicEntries: actualMonth.organicByDate[date] ?? [],
-        marketing: actualMonth.manualByDate[date] ?? {
-          date,
-          socialViews: 0,
-          searchClicks: 0,
-          adSpend: 0,
-          paidUsers: 0,
-          shortVideos: 0,
-          seoPages: 0,
-          notes: "",
+        manualOrganicEntries: actualMonth.manualOrganicByDate[date] ?? [],
+        autoOrganicEntries: actualMonth.autoOrganicByDate[date] ?? [],
+        manualSocialViews: actualMonth.manualByDate[date]?.socialViews ?? 0,
+        marketing: {
+          ...(actualMonth.manualByDate[date] ?? {
+            date,
+            socialViews: 0,
+            searchClicks: 0,
+            adSpend: 0,
+            paidUsers: 0,
+            shortVideos: 0,
+            seoPages: 0,
+            notes: "",
+          }),
+          socialViews: actualMonth.socialDaily[date] ?? 0,
+          shortVideos: actualMonth.shortVideoDaily[date] ?? 0,
         },
       })),
+      socialAutoLogNotes: actualMonth.autoOrganicNotes,
       weeklyActuals: weeklyTargets.map((week) => ({
         label: week.label,
         startDay: week.startDay,
