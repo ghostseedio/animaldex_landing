@@ -8,6 +8,8 @@
  * the server picks. Every Trial is one action, and missing one costs nothing.
  */
 
+import {TRAINING_COPY} from "@/lib/species-training";
+
 export type AnimalTrialFrequency = "LOW" | "MID" | "HIGH";
 
 export type AnimalTrialStatus =
@@ -379,9 +381,10 @@ export function canAttemptTrial(input: {
 export const NOT_YET_CAPTURED_TITLE = "NOT YET CAPTURED";
 export const NOT_YET_CAPTURED_NOTE = "You don't own this index yet.";
 
-/** A start/restart refusal, with the unlock gate named plainly. */
+/** A start/restart refusal, with the unlock and Training gates named plainly. */
 export function trialStartErrorMessage(error: unknown, fallback: string) {
     const text = typeof error === "string" ? error : error instanceof Error ? error.message : JSON.stringify(error ?? "");
+    if (/training_required/i.test(text)) return TRAINING_COPY.required;
     return /species_not_unlocked/i.test(text) ? NOT_YET_CAPTURED_NOTE : fallback;
 }
 
@@ -470,6 +473,8 @@ export function verifierRefusalMessage(code: string, serverMessage?: string | nu
             return "That evidence could not be verified as yours.";
         case "species_not_unlocked":
             return "Capture this animal before taking its Trials.";
+        case "training_required":
+            return TRAINING_COPY.required;
         case "verification_failed":
             return "The check could not be completed. Try again in a moment.";
         case "server_configuration":
@@ -487,7 +492,8 @@ const NON_RETRYABLE_CODES = [
     "trial_window_closed",
     "trial_not_active",
     "proof_type_not_allowed",
-    "species_not_unlocked"
+    "species_not_unlocked",
+    "training_required"
 ];
 
 export function isRetryableRefusal(code: string) {

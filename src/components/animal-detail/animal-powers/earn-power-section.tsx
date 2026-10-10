@@ -5,6 +5,9 @@ import {type AnimalPower, powerGateAnalytics} from "@/lib/animal-powers";
 import {type AnimalTrial, NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE, isComplete} from "@/lib/animal-trials";
 import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
+import TrainingBand from "@/components/animal-detail/species-training/training-band";
+import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
+import {TRAINING_COPY, notingTrainingResult, trainingGatesPlay} from "@/lib/species-training";
 
 /**
  * The Play tab: one Power, two ways to earn it, one of them on screen. Ported
@@ -123,6 +126,10 @@ export default function EarnPowerSection({
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
+    // Training comes first: until it is passed, the Trials and Apply It Your
+    // Way show locked. An animal with no Training gates nothing.
+    const speciesTraining = useSpeciesTraining(speciesProfileId);
+    const lockedByTraining = trainingGatesPlay(speciesTraining.training);
 
     const isLocked = Boolean(power && !power.isEarned);
     const lockedSpeciesId = isLocked ? power?.speciesProfileId : null;
@@ -154,6 +161,7 @@ export default function EarnPowerSection({
             speciesProfileId={speciesProfileId}
             showsHeader={showsHeader}
             canAttempt={canAttemptTrials}
+            lockedByTraining={lockedByTraining}
             onTrialCompleted={handleTrialCompleted}
             onUpdated={trialDidUpdate}
         />
@@ -172,7 +180,15 @@ export default function EarnPowerSection({
             {/* What you write is a Discover post, whatever the verdict. Said
                 here, before anyone writes anything. */}
             <p className="text-[10px] text-white/40">📡 Accepted and rejected writing both post to Discover.</p>
-            {canAttemptTrials ? (
+            {canAttemptTrials && lockedByTraining ? (
+                <button
+                    type="button"
+                    disabled
+                    className="flex min-h-[48px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-white/[0.08] text-base font-bold text-white/60"
+                >
+                    🔒 {TRAINING_COPY.lockedLine}
+                </button>
+            ) : canAttemptTrials ? (
                 <button
                     type="button"
                     onClick={() => setShowsApply(true)}
@@ -266,6 +282,16 @@ export default function EarnPowerSection({
 
     return (
         <section className="flex flex-col">
+            <TrainingBand
+                training={speciesTraining.training}
+                power={power}
+                onPassed={(result) => {
+                    speciesTraining.setTraining((current) => current ? notingTrainingResult(current, result) : current);
+                }}
+                onClosed={() => {
+                    void speciesTraining.reload();
+                }}
+            />
             {content}
             {showsApply && power ? (
                 <ApplyItYourWay

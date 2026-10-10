@@ -11,6 +11,7 @@
  */
 
 import {trackEvent} from "@/lib/analytics";
+import {TRAINING_COPY} from "@/lib/species-training";
 import {
     DOMAIN_PREFERRED_ORDER,
     type SystemDynamicsDomain,
@@ -200,6 +201,8 @@ export function powerRefusalMessage(code: string, serverMessage?: string | null)
             return "This animal has no Power to earn yet.";
         case "species_not_unlocked":
             return "You don't own this index yet. Capture this animal first.";
+        case "training_required":
+            return TRAINING_COPY.required;
         case "grading_unavailable":
             // Explicitly NOT phrased as a refusal. Nothing was graded and no
             // attempt was spent, so the copy must not imply otherwise.

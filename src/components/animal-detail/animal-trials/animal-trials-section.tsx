@@ -17,6 +17,7 @@ import {
     trialId,
     trialProgress
 } from "@/lib/animal-trials";
+import {TRAINING_COPY} from "@/lib/species-training";
 import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
 
 /**
@@ -37,6 +38,7 @@ export default function AnimalTrialsSection({
     speciesProfileId,
     showsHeader = true,
     canAttempt = true,
+    lockedByTraining = false,
     onTrialCompleted,
     onUpdated,
     onApplyYourWay,
@@ -51,6 +53,8 @@ export default function AnimalTrialsSection({
     showsHeader?: boolean;
     /** False when the viewer has not unlocked this animal. Cards stay visible; start and submit do not. */
     canAttempt?: boolean;
+    /** True while this animal's Training is owed. Cards stay visible; start does not. */
+    lockedByTraining?: boolean;
     /** Completing a Trial earns the animal's Power, so the caller re-reads it. */
     onTrialCompleted?: (trial: AnimalTrial) => void;
     /** Any change the sheet wrote, so a parent list can stay in step. */
@@ -141,8 +145,9 @@ export default function AnimalTrialsSection({
                     key={trialId(trial)}
                     trial={trial}
                     canAttempt={canAttempt}
+                    lockedByTraining={lockedByTraining}
                     onOpen={() => {
-                        if (!canAttempt && !isComplete(trial)) return;
+                        if ((!canAttempt || lockedByTraining) && !isComplete(trial)) return;
                         setOpenTrialId(trialId(trial));
                     }}
                     onApplyYourWay={onApplyYourWay ? () => onApplyYourWay(trial) : null}
@@ -191,12 +196,15 @@ function lifecycleLabel(trial: AnimalTrial) {
 export function TrialCard({
     trial,
     canAttempt = true,
+    lockedByTraining = false,
     onOpen,
     onApplyYourWay = null,
     isApplying = false
 }: {
     trial: AnimalTrial;
     canAttempt?: boolean;
+    /** Training is owed first: locked with "Complete Training to unlock", no start. */
+    lockedByTraining?: boolean;
     onOpen: () => void;
     onApplyYourWay?: (() => void) | null;
     isApplying?: boolean;
@@ -205,7 +213,8 @@ export function TrialCard({
     const complete = isComplete(trial);
     const state = lifecycleLabel(trial);
     const social = socialProofText(trial);
-    const isLocked = !canAttempt && !complete;
+    const isLockedByCapture = !canAttempt && !complete;
+    const isLocked = (isLockedByCapture || lockedByTraining) && !complete;
     const showsTwoPaths = Boolean(onApplyYourWay) && !complete && !isLocked;
     const preview = instructionsPreview(trial.instructions);
 
@@ -234,7 +243,7 @@ export function TrialCard({
                     {!complete ? (
                         isLocked ? (
                             <span className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-white/[0.08] text-sm font-black text-white/60">
-                                🔒 {NOT_YET_CAPTURED_TITLE}
+                                🔒 {isLockedByCapture ? NOT_YET_CAPTURED_TITLE : TRAINING_COPY.lockedLine}
                             </span>
                         ) : (
                             <span
@@ -245,7 +254,7 @@ export function TrialCard({
                             </span>
                         )
                     ) : null}
-                    {isLocked ? <p className="text-center text-[10px] text-white/40">{NOT_YET_CAPTURED_NOTE}</p> : null}
+                    {isLockedByCapture ? <p className="text-center text-[10px] text-white/40">{NOT_YET_CAPTURED_NOTE}</p> : null}
                     {social ? <p className="text-center text-[10px] text-white/40">{social}</p> : null}
                 </>
             ) : null}
@@ -274,7 +283,9 @@ export function TrialCard({
                 aria-label={showsTwoPaths ? trial.title : `${trial.frequency} Trial. ${trial.title}. ${trial.instructions}`}
                 title={showsTwoPaths
                     ? "Do the Trial, or Apply It Your Way."
-                    : isLocked ? `Not yet captured. ${NOT_YET_CAPTURED_NOTE}` : "Opens the Trial"}
+                    : isLockedByCapture
+                        ? `Not yet captured. ${NOT_YET_CAPTURED_NOTE}`
+                        : isLocked ? TRAINING_COPY.lockedLine : "Opens the Trial"}
                 className="flex w-full flex-col gap-3 px-5 pb-[18px] pt-3.5 text-left disabled:cursor-not-allowed"
                 style={{backgroundImage: `linear-gradient(to bottom, ${accent}${complete ? "1A" : "2E"}, transparent 60%)`}}
             >
