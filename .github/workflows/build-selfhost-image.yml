@@ -230,7 +230,8 @@ jobs:
 
           expect_status "/" 200
           expect_status "/animals/aardvark" 200
-          expect_status "/animal-lessons/aardvark" 200
+          expect_status "/animal-powers/aardvark" 200
+          expect_status "/animal-lessons/aardvark" 308 "/animal-powers/aardvark"
           expect_status "/pokemon-animals/generation-i" 200
           expect_status "/id/animals/tiger" 308 "/animals/tiger"
           expect_status "/animals/definitely-not-a-real-animaldex-slug" 404
