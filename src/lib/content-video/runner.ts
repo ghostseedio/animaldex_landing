@@ -29,7 +29,8 @@ import {
     updateContentVideo,
     uploadToStorage
 } from "@/lib/content-video/store";
-import {speakLine} from "@/lib/content-video/tts";
+import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
+import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
 import {existsSync} from "node:fs";
 
@@ -296,6 +297,18 @@ export async function produceVideo(plan: VideoPlan, source: VideoSource, clips: 
     for (const narration of [...plan.scenes.map((scene) => scene.narration), plan.ctaNarration]) {
         lines.push(await speakLine(narration, voiceState));
     }
+    // When each word is said: measured by the aligner when it is available, else pinned to the recording's pauses.
+    await progress("Timing the captions to the voice");
+    const narrations = [...plan.scenes.map((scene) => scene.narration), plan.ctaNarration];
+    const alignState = {disabled: false, failure: null as string | null};
+    const lineWords = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        const aligned = await alignLine(narrations[index], lines[index].wav, alignState);
+        const {pcm, sampleRate, channels} = wavPcm(lines[index].wav);
+        const spans = channels === 1 ? speechSpans(pcm, sampleRate) : null;
+        lineWords.push(timeLineWords(narrations[index], lines[index].seconds, {aligned, spans}));
+    }
+    if (alignState.failure) console.warn(`[content-video] caption alignment fell back to the pause-based estimate: ${alignState.failure}`);
     const sceneSeconds = lines.slice(0, -1).map((line) => line.seconds);
     const ctaSeconds = lines.at(-1)!.seconds;
     const timeline = buildTimeline(plan, sceneSeconds, ctaSeconds);
@@ -349,6 +362,7 @@ export async function produceVideo(plan: VideoPlan, source: VideoSource, clips: 
     await writeFile(assPath, buildAss({
         timeline,
         spokenSeconds: lines.map((line) => line.seconds),
+        lineWords,
         endUrl: "ANIMALDEX.APP",
         credit: credited ? "Photos: Wikimedia Commons contributors · full credits in the article" : plan.format && plan.format !== "editorial" ? "AI-generated imagery" : undefined,
         hud: plan.hud

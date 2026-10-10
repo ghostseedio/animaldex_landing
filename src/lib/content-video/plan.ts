@@ -446,6 +446,8 @@ type AssInput = {
     timeline: TimelineEntry[];
     /** Spoken seconds per timeline entry (captions follow the voice, not the scene padding). */
     spokenSeconds: number[];
+    /** Measured or estimated word times per entry, from the start of its line (word-timing.ts); estimated here when absent. */
+    lineWords?: Array<Array<{word: string; start: number; end: number}> | null>;
     endUrl: string;
     /** Small print on the end card (photo credits), when needed. */
     credit?: string;
@@ -454,6 +456,7 @@ type AssInput = {
 };
 
 const RED = "&H003C3CE8";
+const CAPTION_LEAD = 0.04;
 const GREY = "&H00B4B4B4";
 
 /** Draws an ASS vector rectangle (in \p1 drawing mode) of the given size. */
@@ -473,7 +476,7 @@ function limeLastWord(label: string) {
  * lime), the hook headline over the first scene, a headline box per beat and
  * the end card's call to action. The logo is overlaid by the renderer.
  */
-export function buildAss({timeline, spokenSeconds, endUrl, credit, hud}: AssInput) {
+export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hud}: AssInput) {
     const header = [
         "[Script Info]",
         "ScriptType: v4.00+",
@@ -561,7 +564,11 @@ export function buildAss({timeline, spokenSeconds, endUrl, credit, hud}: AssInpu
                 event(3, entry.start + 0.05, sceneEnd - 0.05, "Headline", `{\\fad(90,90)\\fscx106\\fscy106\\t(0,120,\\fscx100\\fscy100)}${balanceLines(label, 18)}`);
             }
         }
-        const words = timeWords(entry.narration, entry.start, spokenSeconds[index] ?? entry.duration);
+        const measured = lineWords?.[index];
+        const words = measured?.length
+            // A highlight ~40 ms ahead of the sound reads as exactly on the beat.
+            ? measured.map((word) => ({word: word.word, start: round2(entry.start + Math.max(0, word.start - CAPTION_LEAD)), end: round2(entry.start + Math.max(0, word.end - CAPTION_LEAD))}))
+            : timeWords(entry.narration, entry.start, spokenSeconds[index] ?? entry.duration);
         for (const chunk of chunkWords(words)) {
             const chunkEnd = Math.min(chunk.at(-1)!.end, sceneEnd);
             chunk.forEach((word, wordIndex) => {

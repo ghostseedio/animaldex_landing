@@ -4,6 +4,65 @@
 
 export type SpokenLine = {wav: Buffer; seconds: number; provider: "google" | "openai"};
 
+/** The PCM samples and rate of a 16-bit WAV (for finding its pauses). */
+export function wavPcm(wav: Buffer): {pcm: Buffer; sampleRate: number; channels: number} {
+    let offset = 12;
+    let sampleRate = 24000;
+    let channels = 1;
+    while (offset + 8 <= wav.length) {
+        const id = wav.toString("ascii", offset, offset + 4);
+        let size = wav.readUInt32LE(offset + 4);
+        if (id === "fmt ") {
+            channels = wav.readUInt16LE(offset + 10);
+            sampleRate = wav.readUInt32LE(offset + 12);
+        }
+        if (id === "data") {
+            if (size === 0 || size === 0xFFFFFFFF || offset + 8 + size > wav.length) size = wav.length - offset - 8;
+            return {pcm: wav.subarray(offset + 8, offset + 8 + size), sampleRate, channels};
+        }
+        offset += 8 + size + (size % 2);
+    }
+    throw new Error("WAV has no data chunk");
+}
+
+export type AlignState = {disabled: boolean; failure: string | null};
+
+/**
+ * Real word times for a recorded line from ElevenLabs forced alignment
+ * (ELEVENLABS_API_KEY with the Forced Alignment permission). Null when it is
+ * not available; after the first refusal it is not asked again this video.
+ */
+export async function alignLine(text: string, wav: Buffer, state: AlignState): Promise<Array<{text: string; start: number; end: number}> | null> {
+    const key = process.env.ELEVENLABS_API_KEY?.trim();
+    if (!key || state.disabled) return null;
+    try {
+        const form = new FormData();
+        form.append("file", new Blob([new Uint8Array(wav)], {type: "audio/wav"}), "line.wav");
+        form.append("text", text);
+        const response = await fetch("https://api.elevenlabs.io/v1/forced-alignment", {
+            method: "POST",
+            headers: {"xi-api-key": key},
+            body: form,
+            signal: AbortSignal.timeout(60_000)
+        });
+        if (!response.ok) {
+            const detail = (await response.text()).slice(0, 200);
+            // A missing permission or plan will not fix itself mid-video.
+            if (response.status === 401 || response.status === 402 || response.status === 403) state.disabled = true;
+            state.failure = `elevenlabs_alignment_${response.status}: ${detail}`;
+            return null;
+        }
+        const body = await response.json() as {words?: Array<{text?: string; start?: number; end?: number}>};
+        const words = (body.words ?? [])
+            .filter((word) => typeof word.text === "string" && word.text.trim() && typeof word.start === "number" && typeof word.end === "number")
+            .map((word) => ({text: word.text!.trim(), start: word.start!, end: word.end!}));
+        return words.length ? words : null;
+    } catch (error) {
+        state.failure = error instanceof Error ? error.message : String(error);
+        return null;
+    }
+}
+
 /** Duration of a PCM WAV from its header (fmt + data chunks). */
 export function wavSeconds(wav: Buffer): number {
     if (wav.length < 44 || wav.toString("ascii", 0, 4) !== "RIFF" || wav.toString("ascii", 8, 12) !== "WAVE") {

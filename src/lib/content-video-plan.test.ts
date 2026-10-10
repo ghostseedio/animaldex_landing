@@ -134,3 +134,28 @@ test("the plan's music mood is validated, defaulting to curious", () => {
     assert.equal(normalizePlan({...base, music_mood: "epic"}, 1)?.musicMood, "epic");
     assert.equal(normalizePlan({...base, music_mood: "dubstep"}, 1)?.musicMood, "curious");
 });
+
+test("spoken syllables count numbers the way they are read", async () => {
+    const {spokenSyllables, numberWords} = await import("./content-video/word-timing");
+    assert.equal(numberWords(610000), "six hundred ten thousand");
+    assert.equal(numberWords(2024), "twenty twenty four");
+    assert.ok(spokenSyllables("610,000") >= 6);
+    assert.equal(spokenSyllables("cat"), 1);
+    assert.ok(spokenSyllables("70%") >= 4);
+});
+
+test("aligned words map back onto the script, including split numbers", async () => {
+    const {mapAlignedWords} = await import("./content-video/word-timing");
+    const mapped = mapAlignedWords(["Malaria", "killed", "610,000", "people."], [
+        {text: "Malaria", start: 0, end: 0.5}, {text: "killed", start: 0.55, end: 0.9},
+        {text: "610", start: 0.95, end: 1.4}, {text: "000", start: 1.4, end: 1.9}, {text: "people", start: 2, end: 2.4}
+    ]);
+    assert.deepEqual(mapped?.map((word) => [word.word, word.start, word.end]), [["Malaria", 0, 0.5], ["killed", 0.55, 0.9], ["610,000", 0.95, 1.9], ["people.", 2, 2.4]]);
+});
+
+test("pause-pinned timing puts a clause break in the recording's pause", async () => {
+    const {timeLineWords} = await import("./content-video/word-timing");
+    const words = timeLineWords("Forget sharks. They kill fewer than ten people.", 3, {spans: [{start: 0.1, end: 0.9}, {start: 1.5, end: 2.9}]});
+    assert.ok(words[1].end <= 0.9 + 1e-6, "first clause ends before the pause");
+    assert.ok(Math.abs(words[2].start - 1.5) < 0.01, "second clause starts when speech resumes");
+});
