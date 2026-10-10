@@ -2824,17 +2824,7 @@ const blogPostsData: BlogPost[] = [
                     "This is why AnimalDex exists. Not just to identify animals. To decode them.",
                     "Because the animal kingdom is not background scenery. It is a living archive. A biological library. A symbolic language older than writing. A network of fur, feather, scale, sound, scent, blood, bone, instinct, memory, and signal.",
                     "And we are only just beginning to remember how to read it."
-                ],
-                media: {
-                    type: "image",
-                    image: forbiddenAnimalFilesImage(
-                        "animal-kingdom-connected-consciousness-field.webp",
-                        "World map style image showing animals connected through a shared consciousness field, representing the AnimalDex view of nature as a living network",
-                        1548,
-                        1296,
-                        "Every creature has a secret."
-                    )
-                }
+                ]
             }
         ],
         faq: [

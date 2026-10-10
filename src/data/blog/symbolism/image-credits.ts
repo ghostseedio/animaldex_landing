@@ -1,6 +1,6 @@
 import type {ContentImage} from "@/data/content-schema";
 
-export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "caption" | "width" | "height">> = {
+export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "caption" | "width" | "height"> & {source?: string}> = {
     "aardwolf/what-is-a-aardwolf.webp": {
         "alt": "Aardwolf: Proteles cristatus1",
         "caption": "Photo by by Dkaeuferle = Dominik Käuferle, CC BY-SA",
@@ -26,10 +26,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1050
     },
     "aardwolf/aardwolf-shadow-symbolism.webp": {
-        "alt": "Aardwolf: Proteles cristata(2) ZooHalle",
-        "caption": "Photo by Catatine, CC BY-SA",
+        "alt": "Aardwolf: 35 mm slide; color",
+        "caption": "Photo: Garst, Warren, 1922-2016, photographer, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1050
+        "height": 945,
+        "source": "File:Aardwolf lying on ground - DPLA - 0596ce5f66e4b9206df277b7ac674a7d.jpg"
     },
     "aardwolf/aardwolf-symbolism-lesson.webp": {
         "alt": "Aardwolf, Proteles cristata, at Lion and Rhino Reserve, Gauteng, South Africa (47987198482)",
@@ -38,10 +39,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 877
     },
     "aardwolf/aardwolf-symbolism-final.webp": {
-        "alt": "Aardwolf, Proteles cristata, at Lion and Rhino Reserve, Gauteng, South Africa (47987199002)",
-        "caption": "Photo by Derek Keats from Johannesburg, South Africa, CC BY",
+        "alt": "Aardwolf, Proteles cristata, at Lion and Rhino Reserve, Gauteng, South Africa",
+        "caption": "Photo: Derek Keats from Johannesburg, South Africa, CC BY 2.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1400
+        "height": 861,
+        "source": "File:Aardwolf, Proteles cristata, at Lion and Rhino Reserve, Gauteng, South Africa (47987215058).jpg"
     },
     "adelie-penguin/what-is-a-penguin.webp": {
         "alt": "Adelie Penguin",
@@ -50,10 +52,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 698
     },
     "adelie-penguin/penguin-biology-symbolism.webp": {
-        "alt": "Adelie Penguin: Pygoscelis adeliae Distribuzione",
-        "caption": "Photo by Renato Caniatti, CC BY-SA",
-        "width": 419,
-        "height": 643
+        "alt": "Adélie penguin , Hope Bay , Trinity Peninsula , on the northernmost tip of the Antarctic Peninsula",
+        "caption": "Photo: Godot13, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Hope Bay-2016-Trinity Peninsula–Adélie penguin (Pygoscelis adeliae) 02.jpg"
     },
     "adelie-penguin/penguin-teamwork-symbolism.webp": {
         "alt": "Adelie Penguin (Pygoscelis adeliae) on iceberg",
@@ -80,10 +83,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "adelie-penguin/adelie-penguin-symbolism-final.webp": {
-        "alt": "Manchot Adelie - Adelie Penguin",
-        "caption": "Photo by This illustration was made by Samuel Blanc . If you plan on using it, an email to samuel @, CC BY-SA",
-        "width": 800,
-        "height": 980
+        "alt": "Adelie penguins in the South Shetland Islands",
+        "caption": "Photo: ravas51, CC BY-SA 2.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Adelie penguins in the South Shetland Islands.jpg"
     },
     "african-bush-elephant/what-is-a-elephant.webp": {
         "alt": "Loxodonta africana - drinking",
@@ -92,10 +96,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1050
     },
     "african-bush-elephant/elephant-biology-symbolism.webp": {
-        "alt": "Loxodonta africana crossing the Zambesi",
-        "caption": "Photo by ( Hans Hillewaert ), CC BY-SA",
+        "alt": "Baby African bush elephant , Kruger National Park , South Africa",
+        "caption": "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1050
+        "height": 963,
+        "source": "File:Elefante africano de sabana (Loxodonta africana), parque nacional Kruger, Sudáfrica, 2018-07-25, DD 06.jpg"
     },
     "african-bush-elephant/elephant-precision-symbolism.webp": {
         "alt": "African Bush Elephant",
@@ -134,10 +139,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "african-grey-parrot/parrot-biology-symbolism.webp": {
-        "alt": "African Grey Parrot: Psittacus erithacus range",
-        "caption": "Photo by Bojars, CC BY-SA",
-        "width": 888,
-        "height": 531
+        "alt": "African grey parrot (Psittacus erithacus) at Vogelburg, Germany",
+        "caption": "Photo: H. Zell, CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Psittacus erithacus - Vogelburg Weilrod 02.jpg"
     },
     "african-grey-parrot/parrot-memory-symbolism.webp": {
         "alt": "African Grey Parrot (Psittacus erithacus) -held on hand",
@@ -170,10 +176,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1357
     },
     "alpine-newt/what-is-a-newt.webp": {
-        "alt": "Alpine Newt: Triturus alpestris dis",
-        "caption": "Photo by No machine-readable author provided. Achim Raschka assumed (based on copyright claims)., CC BY-SA",
-        "width": 247,
-        "height": 157
+        "alt": "Alpine newt (Ichthyosaura alpestris) in Germany",
+        "caption": "Photo: Holger Krisp, CC BY 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 823,
+        "source": "File:Ichthyosaura alpestris Bergmolch.jpg"
     },
     "alpine-newt/newt-biology-symbolism.webp": {
         "alt": "Alpine Newt: Triturus alpestris ovum",
@@ -224,10 +231,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1050
     },
     "andean-goose/goose-memory-symbolism.webp": {
-        "alt": "Andean Goose: Chloephaga melanoptera",
-        "caption": "Photo by John Gould, Public domain",
+        "alt": "Andean Goose, Chile",
+        "caption": "Photo: Greg Schechter from San Francisco, USA, CC BY 2.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1155
+        "height": 788,
+        "source": "File:Andean Goose, Chile 1.jpg"
     },
     "andean-goose/goose-cultural-symbolism.webp": {
         "alt": "Andean Goose (Chloephaga melanoptera) RWD",
@@ -254,10 +262,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1120
     },
     "antlion/what-is-a-antlion.webp": {
-        "alt": "Spotted-winged Antlion: Myrmeleontidae roesel",
-        "caption": "Photo by Roesel von Rosenhof, Public domain",
-        "width": 555,
-        "height": 743
+        "alt": "Antlion , Pletvar, Republic of North Macedonia",
+        "caption": "Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Antlion (Palpares libelluloides).jpg"
     },
     "antlion/antlion-biology-symbolism.webp": {
         "alt": "Spotted-winged Antlion: Myrmeleon acer",
@@ -272,10 +281,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "antlion/antlion-cultural-symbolism.webp": {
-        "alt": "Spotted-winged Antlion: Myrmeleontidae (antlion) 1252005",
-        "caption": "Photo by Joseph Berger,, CC BY",
+        "alt": "Adult antlion (Myrmeleontidae) with patterned wings, Caetité, Bahia, Brazil",
+        "caption": "Photo: André Koehne, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 933
+        "height": 768,
+        "source": "File:Formiga-leão Caetité a.png"
     },
     "antlion/antlion-shadow-symbolism.webp": {
         "alt": "Spotted-winged Antlion: Myrmeleontidae (antlion) 5370350",
@@ -308,16 +318,18 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1019
     },
     "beluga-whale/whale-observation-symbolism.webp": {
-        "alt": "Beluga Whale: Delphinapterus leucas with hand",
-        "caption": "Photo by Stan Shebs, CC BY-SA",
-        "width": 1200,
-        "height": 979
+        "alt": "Beluga whale (Delphinapterus leucas) at the Vancouver Aquarium",
+        "caption": "Photo: ZeWrestler, CC BY 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 1050,
+        "source": "File:Delphinapterus leucas in Vancouver Aquarium.jpg"
     },
     "beluga-whale/whale-cultural-symbolism.webp": {
-        "alt": "Beluga Whale: Delphinapterus leucas range in ak",
-        "caption": "Photo by Calliopejen, CC BY-SA",
+        "alt": "Beluga Whale Delphinapterus Leucas",
+        "caption": "Photo: EgorovaSvetlana, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 819
+        "height": 882,
+        "source": "File:Beluga Whale Delphinapterus Leucas.jpg"
     },
     "beluga-whale/whale-shadow-symbolism.webp": {
         "alt": "Belugas",
@@ -326,10 +338,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 898
     },
     "beluga-whale/beluga-whale-symbolism-lesson.webp": {
-        "alt": "Beluga oceanografic",
-        "caption": "Photo by Carquinyol from Badalona, Catalunya, CC BY-SA",
+        "alt": "beluga or white whale, Delphinapterus leucas courtship",
+        "caption": "Photo: Brian Gratwicke from DC, USA, CC BY 2.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1050
+        "height": 887,
+        "source": "File:Beluga or white whale, Delphinapterus leucas courtship (6182461448).jpg"
     },
     "beluga-whale/beluga-whale-symbolism-final.webp": {
         "alt": "Beluga Whale: Delphinapterus leucas Bubble Ring",
@@ -356,10 +369,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "black-rhinoceros/rhinoceros-cultural-symbolism.webp": {
-        "alt": "Black Rhinoceros: Diceros bicornis MNHN",
-        "caption": "Photo by Jebulon, CC0",
+        "alt": "Black rhinoceros contemplating sunset at the Okaukuejo waterhole in Etosha National Park , Namibia",
+        "caption": "Photo: Axel Tschentscher, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1038
+        "height": 933,
+        "source": "File:Black Rhinoceros During Sunset 2019-07-23.jpg"
     },
     "black-rhinoceros/rhinoceros-shadow-symbolism.webp": {
         "alt": "Black Rhinoceros: Diceros bicornis",
@@ -380,10 +394,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "blue-ringed-octopus/what-is-a-octopus.webp": {
-        "alt": "Southern Blue-ringed Octopus Pengo",
-        "caption": "Photo by the photographer, CC BY-SA",
-        "width": 800,
-        "height": 765
+        "alt": "A tiny blue-ringed octopus near the shore in northern New South Wales",
+        "caption": "Photo: MurkySeb, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Blue Ringed Octopus.png"
     },
     "blue-ringed-octopus/octopus-biology-symbolism.webp": {
         "alt": "Blue-ringed Octopus: Hapalochlaena lunulata",
@@ -404,10 +419,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 375
     },
     "blue-ringed-octopus/octopus-shadow-symbolism.webp": {
-        "alt": "Variable ring patterns on mantles of the blue-ringed octopus Hapalochlaena lunulata",
-        "caption": "Photo by Roy Caldwell, CC BY",
+        "alt": "Blue-ringed octopus flashing its warning rings",
+        "caption": "Photo: Sylke Rohrlach from Sydney, CC BY-SA 2.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 459
+        "height": 1050,
+        "source": "File:Blue-ringed octopus (Hapalochlaena maculosa) (8593173385).jpg"
     },
     "blue-ringed-octopus/blue-ringed-octopus-symbolism-lesson.webp": {
         "alt": "Blue-ringed octopus (Hapalochlaena maculosa), Parsley Bay, Sydney, NSW",
@@ -500,10 +516,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 969
     },
     "blue-whale/blue-whale-symbolism-final.webp": {
-        "alt": "Blue Whale: Balaenoptera musculus NOAA",
-        "caption": "Photo by NOAA United States. National Marine Fisheries Service, Public domain",
-        "width": 1200,
-        "height": 301
+        "alt": "Blue whale in Isfjord, Svalbard",
+        "caption": "Photo: Carina Gsottbauer, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:2024-08-11 Blue whale Isfjord Svalbard 04.jpg"
     },
     "cat/cat-biology-symbolism.webp": {
         "alt": "Domestic cat felis catus",
@@ -512,10 +529,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "cat/cat-threshold-symbolism.webp": {
-        "alt": "Domestic cat felis catus stare",
-        "caption": "Photo by Muhammad Mahdi Karim, GFDL",
+        "alt": "A domestic cat playing with a garden lizard",
+        "caption": "Photo: Basile Morin, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 933
+        "height": 788,
+        "source": "File:Cat playing with a lizard.jpg"
     },
     "cat/cat-stalk-symbolism.webp": {
         "alt": "Felis catus-cat on snow",
@@ -542,10 +560,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 933
     },
     "chameleon/what-is-a-chameleon.webp": {
-        "alt": "Chameleon (PSF)",
-        "caption": "Photo by Pearson Scott Foresman, Public domain",
-        "width": 574,
-        "height": 358
+        "alt": "Panther chameleon male, Lokobe Strict Reserve, Nosy Be, Madagascar",
+        "caption": "Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Panther chameleon (Furcifer pardalis) male Nosy Be.jpg"
     },
     "chameleon/chameleon-biology-symbolism.webp": {
         "alt": "Chameleon: Chamaeleonidae anagoria",
@@ -680,10 +699,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 800
     },
     "dragonfly/dragonfly-flight-symbolism.webp": {
-        "alt": "Dragonfly: Anisoptera thurifera Blanco2.264",
-        "caption": "Photo by Francisco Manuel Blanco (O.S.A.), Public domain",
-        "width": 972,
-        "height": 1400
+        "alt": "Dragonfly: Ruddy darter dragonflies adult male",
+        "caption": "Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 934,
+        "source": "File:Ruddy darter dragonfly (Sympetrum sanguineum) adult male head.jpg"
     },
     "dragonfly/dragonfly-light-symbolism.webp": {
         "alt": "Dragonfly emerging",
@@ -848,40 +868,46 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1048
     },
     "giant-pacific-octopus/octopus-shadow-symbolism.webp": {
-        "alt": "Giant Pacific Octopus: E dofleini range",
-        "caption": "Photo by Kirt L. Onthank, Public domain",
-        "width": 1357,
-        "height": 628
+        "alt": "Giant Pacific Octopus",
+        "caption": "Photo: Erin McKittrick, CC BY 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 934,
+        "source": "File:Enteroctopus dofleini 189957195.jpg"
     },
     "giant-pacific-octopus/giant-pacific-octopus-symbolism-lesson.webp": {
-        "alt": "Giant Pacific Octopus: Enteroctopus range",
-        "caption": "Photo by Kirt L. Onthank, Public domain",
-        "width": 1357,
-        "height": 628
+        "alt": "Enteroctopus dofleini at the national aquarium in Washington D.C",
+        "caption": "Photo: User:Bachrach44, CC0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 1050,
+        "source": "File:Enteroctopus dofleini in aquarium rotated.jpg"
     },
     "giant-pacific-octopus/giant-pacific-octopus-symbolism-final.webp": {
-        "alt": "Giant Pacific Octopus: Enteroctopus dofleini in aquarium crop",
-        "caption": "Photo by Enteroctopus_dofleini_in_aquarium.jpg : Bachrach44 derivative work: a Wikimedia contributor, Public domain",
-        "width": 696,
-        "height": 1400
+        "alt": "a Giant Pacific octopus in hanging off the tank glass wall",
+        "caption": "Photo: Kevstan, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Giant Pacific octopus in Ucluelet Aquarium.jpg"
     },
     "gorilla/what-is-a-gorilla.webp": {
-        "alt": "A male gorilla",
-        "caption": "Photo by Didier Descouens, CC BY-SA",
-        "width": 1360,
-        "height": 1400
+        "alt": "Mountain gorilla female, Volcanoes National Park, Rwanda",
+        "caption": "Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 987,
+        "source": "File:Mountain gorilla (Gorilla beringei beringei) female 2.jpg"
     },
     "gorilla/gorilla-biology-symbolism.webp": {
-        "alt": "A male gorilla",
-        "caption": "Photo by Didier Descouens, CC BY-SA",
+        "alt": "Mountain gorilla , Bwindi Impenetrable National Park, Uganda",
+        "caption": "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1066
+        "height": 933,
+        "source": "File:Gorila de montaña (Gorilla beringei beringei), parque nacional de la Selva Impenetrable de Bwindi, Uganda, 2024-02-02, DD 05.jpg"
     },
     "gorilla/gorilla-memory-symbolism.webp": {
-        "alt": "A western gorilla skull",
-        "caption": "Photo by Didier Descouens, CC BY-SA",
+        "alt": "Western lowland gorilla, Saint Martin la Plaine",
+        "caption": "Photo: Clément Bardot, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 630
+        "height": 888,
+        "source": "File:Gorille des Plaines de l'Ouest.jpg"
     },
     "gorilla/gorilla-cultural-symbolism.webp": {
         "alt": "Western lowland gorilla (Gorilla gorilla gorilla) closeup eating",
@@ -926,34 +952,39 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1008
     },
     "great-white-shark/shark-cultural-symbolism.webp": {
-        "alt": "Great White Shark (Carcharodon carcharias) 03",
-        "caption": "Photo by Godot13, CC BY-SA",
+        "alt": "Great white shark rising toward the surface at Guadalupe Island, Mexico",
+        "caption": "Photo: Horizon Charters, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 930
+        "height": 785,
+        "source": "File:Great white shark at Guadalupe Island.png"
     },
     "great-white-shark/shark-shadow-symbolism.webp": {
-        "alt": "Great White Shark (Carcharodon carcharias) 04",
-        "caption": "Photo by Godot13, CC BY-SA",
+        "alt": "Great white shark in the shallows off Gansbaai, South Africa",
+        "caption": "Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 911
+        "height": 909,
+        "source": "File:Great White Shark (Carcharodon carcharias) (32872319266).jpg"
     },
     "great-white-shark/great-white-shark-symbolism-lesson.webp": {
-        "alt": "Great White Shark (Carcharodon carcharias) 02",
-        "caption": "Photo by Godot13, CC BY-SA",
+        "alt": "Great white shark showing a bite wound from another shark",
+        "caption": "Photo: GregAmptman, CC BY 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 930
+        "height": 1087,
+        "source": "File:Great White Shark Displaying a Bite Wound from Another Shark.jpg"
     },
     "great-white-shark/great-white-shark-symbolism-final.webp": {
-        "alt": "Great White Shark (Carcharodon carcharias) 05",
-        "caption": "Photo by Godot13, CC BY-SA",
-        "width": 1400,
-        "height": 870
+        "alt": "A great white shark at Isla Guadalupe , Mexico",
+        "caption": "Photo: Brocken Inaglory (derivative work), CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1200,
+        "height": 800,
+        "source": "File:Great white shark 1001.jpg"
     },
     "indus-river-dolphin/what-is-a-dolphin.webp": {
-        "alt": "Indus River Dolphin: Platanista gangetica",
-        "caption": "Photo by Unknown author Unknown author, Public domain",
-        "width": 1400,
-        "height": 452
+        "alt": "The Indus river freshwater dolphin from Sindh, Pakistan",
+        "caption": "Photo: Shiana1, CC0, via Wikimedia Commons.",
+        "width": 768,
+        "height": 512,
+        "source": "File:Indus river Dolphin , The National Aquatic Animal of Pakistan.jpg"
     },
     "indus-river-dolphin/dolphin-biology-symbolism.webp": {
         "alt": "A cast of an Indus river dolphin skull",
@@ -962,28 +993,32 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 512
     },
     "indus-river-dolphin/dolphin-murky-water-symbolism.webp": {
-        "alt": "Detail of an Indus river dolphin skull cast",
-        "caption": "Photo by the photographer, CC BY-SA",
-        "width": 768,
-        "height": 399
+        "alt": "The silt-brown Indus River near Sukkur Barrage, Sindh — the murky water Indus river dolphins navigate by echolocation",
+        "caption": "Photo: مھتاب احمد, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 1050,
+        "source": "File:Artificial island near Sukkur Barrage.jpg"
     },
     "indus-river-dolphin/dolphin-endangered-symbolism.webp": {
-        "alt": "Indus River Dolphin: Anatomical and zoological researches- comprising an account of the zoological results of the",
-        "caption": "Photo by Anderson, John, Public domain",
-        "width": 1048,
-        "height": 1400
+        "alt": "Sukkur Barrage on the Indus River — barrages split the Indus river dolphin's range into isolated subpopulations",
+        "caption": "Photo: Ashahid83, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 960,
+        "height": 720,
+        "source": "File:Sukkur Barrage in daylight.jpg"
     },
     "indus-river-dolphin/dolphin-blind-seer-symbolism.webp": {
-        "alt": "Indus River Dolphin: Anatomical and zoological researches- comprising an account of the zoological results of the",
-        "caption": "Photo by Anderson, John, Public domain",
-        "width": 1400,
-        "height": 1033
+        "alt": "Sunset over the Indus River at Hund, Pakistan",
+        "caption": "Photo: Ahmad Faraz22, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1366,
+        "height": 960,
+        "source": "File:Indus hund evening.jpg"
     },
     "indus-river-dolphin/indus-river-dolphin-symbolism-lesson.webp": {
-        "alt": "Indus River Dolphin: A-Platanista-gangetica-showing-the-body-shape-and-especially-the-head-with-a-long-beak",
-        "caption": "Photo by Christina H Lockyer and Gill T Braulik, CC BY",
-        "width": 736,
-        "height": 448
+        "alt": "Indus river dolphin surfacing in the Indus River, Sindh, Pakistan",
+        "caption": "Photo: Shiana1, CC0, via Wikimedia Commons.",
+        "width": 1200,
+        "height": 630,
+        "source": "File:پاکستان کا قومی آبی سمندری ممالیہ.jpg"
     },
     "indus-river-dolphin/indus-river-dolphin-symbolism-final.webp": {
         "alt": "Indus River Dolphin: B-Platanista-gangetica-in-natural-habitat",
@@ -1004,22 +1039,25 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1059
     },
     "jellyfish/jellyfish-glow-symbolism.webp": {
-        "alt": "Jellyfish: Aurelia Aurita 20071019 Fnac 1",
-        "caption": "Photo by Georges Seguin ( Okki ), CC BY-SA",
-        "width": 933,
-        "height": 1400
+        "alt": "Moon jellyfish (Aurelia aurita) drifting among seaweed in shallow water",
+        "caption": "Photo: Felicia Seichter, CC BY 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 1050,
+        "source": "File:Aurelia aurita 108506307.jpg"
     },
     "jellyfish/jellyfish-sting-symbolism.webp": {
-        "alt": "Jellyfish: Aurelia Aurita 20071019 Fnac 2",
-        "caption": "Photo by Georges Seguin ( Okki ), CC BY-SA",
-        "width": 933,
-        "height": 1400
+        "alt": "A dense bloom of moon jellyfish near the surface",
+        "caption": "Photo: Unknown photographer, CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1024,
+        "height": 768,
+        "source": "File:Vandmaend.jpg"
     },
     "jellyfish/jellyfish-symbolism-lesson.webp": {
-        "alt": "Jellyfish: Aurelia Aurita 20071019 Fnac 3",
-        "caption": "Photo by Georges Seguin ( Okki ), CC BY-SA",
-        "width": 933,
-        "height": 1400
+        "alt": "Jellyfish: Moon Jellies at Toronto Zoo",
+        "caption": "Photo: Silver Dovelet, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 680,
+        "source": "File:Moon Jellies (Aurelia aurita) - Toronto Zoo (4).jpg"
     },
     "jellyfish/jellyfish-symbolism-final.webp": {
         "alt": "Jellyfish: Aurelia aurita 2",
@@ -1040,10 +1078,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "leopard/leopard-rosette-symbolism.webp": {
-        "alt": "Duesternbrook Leopard auf Baum",
-        "caption": "Photo by Ikiwaner, GFDL",
+        "alt": "Exemplar of Leopard devouring an impala , Kruger National Park , South Africa",
+        "caption": "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 933
+        "height": 933,
+        "source": "File:Leopardo (Panthera pardus) devorando un antílope, parque nacional Kruger, Sudáfrica, 2018-07-26, DD 07.jpg"
     },
     "leopard/leopard-tree-symbolism.webp": {
         "alt": "Charging Leopard-001",
@@ -1052,10 +1091,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "leopard/leopard-solitary-symbolism.webp": {
-        "alt": "African leopard (Panthera pardus)",
-        "caption": "Photo by Godot13, CC BY-SA",
+        "alt": "Gaze of a juvenile leopard perched on a tree in the Serengeti National Park",
+        "caption": "Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 828
+        "height": 934,
+        "source": "File:001 Juvenile leopard in the Serengeti National Park Photo by Giles Laurent.jpg"
     },
     "leopard/leopard-symbolism-lesson.webp": {
         "alt": "One-eyed African leopard",
@@ -1142,10 +1182,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1138
     },
     "lionfish/lionfish-symbolism-lesson.webp": {
-        "alt": "Lionfish: Pterois volitans Manado-e edit",
-        "caption": "Photo by Photo by Jens Petersen , Edited by User:Olegiwit (cloned in part of fins) and Fir0002 (rem, CC BY",
+        "alt": "Red lionfish",
+        "caption": "Photo: Lewis Hulbert, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1014
+        "height": 951,
+        "source": "File:Pterois volitans 400.jpg"
     },
     "lionfish/lionfish-symbolism-final.webp": {
         "alt": "Common lionfish at Shaab El Erg reef",
@@ -1172,10 +1213,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "orangutan/orangutan-endangered-symbolism.webp": {
-        "alt": "Bornean orangutan (Pongo pygmaeus)",
-        "caption": "Photo by Unuplusunu, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "District Sandakan, Sabah: Orangutan heading to feeding station at Sepilok Orangutan Rehabilitation Centre",
+        "caption": "Photo: CEphoto, Uwe Aranas, CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Sandakan Sabah Sepilok-Orangutan-Rehabilitation-Centre-02a.jpg"
     },
     "orangutan/orangutan-symbolism-lesson.webp": {
         "alt": "Orangutan Kalimantan",
@@ -1226,10 +1268,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 868
     },
     "owl/owl-symbolism-final.webp": {
-        "alt": "Owl: Tutufa bubo 01",
-        "caption": "Photo by Llez, CC BY-SA",
+        "alt": "A rehabilitated Eurasian eagle-owl at Raptor Fest, a wildlife conservation event held by NYC Parks in Central Park",
+        "caption": "Photo: Rhododendrites, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1047
+        "height": 987,
+        "source": "File:Eurasian eagle-owl (44088).jpg"
     },
     "philippine-eagle/what-is-a-eagle.webp": {
         "alt": "Philippine Eagle with nest",
@@ -1250,28 +1293,32 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1050
     },
     "philippine-eagle/eagle-cultural-symbolism.webp": {
-        "alt": "Pithecophaga jefferyi -Philippine Eagle Center, Davao City, Philippines-8a (1)",
-        "caption": "Photo by Constantine Agustin from Manila, Philippines, CC BY-SA",
-        "width": 1400,
-        "height": 1050
+        "alt": "A Philippine eagle chick in Bukidnon named Pamarayeg III",
+        "caption": "Photo: Aimee Valencia, CC BY 4.0, via Wikimedia Commons.",
+        "width": 1017,
+        "height": 1400,
+        "source": "File:Pamarayeg IIIx2.jpg"
     },
     "philippine-eagle/eagle-shadow-symbolism.webp": {
-        "alt": "Philippine Eagle nestling",
-        "caption": "Photo by markaharper1, CC BY-SA",
-        "width": 1024,
-        "height": 768
+        "alt": "A Philippine Eagle at Philippine Eagle Center, Davao City, Philippines",
+        "caption": "Photo: Constantine Agustin from Manila, Philippines, CC BY-SA 2.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 1050,
+        "source": "File:Pithecophaga jefferyi -Philippine Eagle Center, Davao City, Philippines-8a (1).jpg"
     },
     "philippine-eagle/philippine-eagle-symbolism-lesson.webp": {
-        "alt": "A taxidermied Philippine eagle",
-        "caption": "Photo by Ramon FVelasquez, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "Philippine eagle",
+        "caption": "Photo: shankar s., CC BY 2.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Philippine eagle Pithecophaga jefferyi.jpg"
     },
     "philippine-eagle/philippine-eagle-symbolism-final.webp": {
-        "alt": "A taxidermied Philippine eagle on display",
-        "caption": "Photo by Ramon FVelasquez, CC BY-SA",
+        "alt": "Philippine Eagle — Philippine Eagle - Pithecophaga jefferyi - Ninoy Aquino Parks & Wildlife Center 06",
+        "caption": "Photo: Ramon FVelasquez, CC BY-SA 3.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1050
+        "height": 1050,
+        "source": "File:Philippine Eagle - Pithecophaga jefferyi - Ninoy Aquino Parks & Wildlife Center 06.jpg"
     },
     "polar-bear/what-is-a-bear.webp": {
         "alt": "Polar bears near north pole",
@@ -1286,16 +1333,18 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 643
     },
     "polar-bear/bear-adaptability-symbolism.webp": {
-        "alt": "Polar Bear: Ursus maritimus skin upernavik kujalleq 2007-07-24",
-        "caption": "Photo by Kim Hansen, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "A thin polar bear on the sea ice in the Arctic",
+        "caption": "Photo: Andreas Weith, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Endangered arctic - starving polar bear.jpg"
     },
     "polar-bear/bear-cultural-symbolism.webp": {
-        "alt": "Polar Bear: Ursus maritimus tyrannus",
-        "caption": "Photo by FunkMonk, CC BY-SA",
-        "width": 990,
-        "height": 648
+        "alt": "This male polar bear failed to catch a bearded seal and is on his way to find another prey",
+        "caption": "Photo: Andreas Weith, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Polar bear after unlucky hunt for a seal.jpg"
     },
     "polar-bear/bear-shadow-symbolism.webp": {
         "alt": "Oso polar (Ursus maritimus), Tierpark Hellabrunn, Múnich, Alemania, 2012-06-17, DD 01",
@@ -1340,22 +1389,25 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 990
     },
     "raven/raven-voice-symbolism.webp": {
-        "alt": "Raven: Corvus corax tingitanus MHNT 232 HdB Djebel Messaad Algerie",
-        "caption": "Photo by Didier Descouens, CC BY-SA",
+        "alt": "A group of ravens, Corvus corax , standing around a puddle at Bonny Doon Beach",
+        "caption": "Photo: Grendelkhan, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 962
+        "height": 933,
+        "source": "File:Corvus corax group near puddle at Bonny Doon Beach.jpg"
     },
     "raven/raven-symbolism-lesson.webp": {
-        "alt": "Raven: 2014-07-26 Corvus Corax (Amphi festival 2014) 027",
-        "caption": "Photo by Atamari, CC BY-SA",
+        "alt": "Common raven on volcanic ground, Ruta de los Volcanes, La Palma",
+        "caption": "Photo: Ingo Mehling, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1122
+        "height": 933,
+        "source": "File:La Palma - Cuervo Canario.jpg"
     },
     "raven/raven-symbolism-final.webp": {
-        "alt": "Raven: 14-07-27 Amphi Corvus Corax 12",
-        "caption": "Photo by Achim Raschka ( talk ), CC BY-SA",
+        "alt": "Common raven , Denali National Park‎, Alaska, United States",
+        "caption": "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 890
+        "height": 965,
+        "source": "File:Cuervo grande (Corvus corax), Parque nacional y reserva Denali, Alaska, Estados Unidos, 2017-08-29, DD 114.jpg"
     },
     "remora/what-is-a-remora.webp": {
         "alt": "Remora: Echeneis naucrates Indonesia",
@@ -1448,22 +1500,25 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "sumatran-orangutan/orangutan-biology-symbolism.webp": {
-        "alt": "Sumatran Orangutan (Pongo abelii) at Perth Zoo, February 2023 01",
-        "caption": "Photo by Calistemon, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "Sumatran orangutan resting on a rock at Tierpark Hagenbeck, Hamburg",
+        "caption": "Photo: H. Zell, CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Pongo abelii - Tierpark Hagenbeck 02.jpg"
     },
     "sumatran-orangutan/orangutan-adaptability-symbolism.webp": {
-        "alt": "Sumatran Orangutan (Pongo abelii) at Perth Zoo, February 2023 02",
-        "caption": "Photo by Calistemon, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "Sumatran orangutan at Zoo Dresden",
+        "caption": "Photo: Steffen Prößdorf, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:2025-05-11 Zoo Dresden STP 3563-2.jpg"
     },
     "sumatran-orangutan/orangutan-cultural-symbolism.webp": {
-        "alt": "Sumatran Orangutan (Pongo abelii) at Perth Zoo, February 2023 04",
-        "caption": "Photo by Calistemon, CC BY-SA",
-        "width": 1050,
-        "height": 1400
+        "alt": "Sumatran orangutan , Orientarium ZOO, Łódź, Poland",
+        "caption": "Photo: Krigore, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1054,
+        "height": 1400,
+        "source": "File:Orangutan sumatrzański – Sumatran orangutan – Pongo abelii.jpg"
     },
     "sumatran-orangutan/orangutan-shadow-symbolism.webp": {
         "alt": "Sumatran Orangutan (Pongo abelii) at Perth Zoo, February 2023 06",
@@ -1478,10 +1533,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1050
     },
     "sumatran-orangutan/sumatran-orangutan-symbolism-final.webp": {
-        "alt": "Sumatran Orangutan (Pongo abelii) at Perth Zoo, February 2023 09",
-        "caption": "Photo by Calistemon, CC BY-SA",
+        "alt": "A Sumatran Orangutan at Perth Zoo, Western Australia",
+        "caption": "Photo: Calistemon, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 1050
+        "height": 1050,
+        "source": "File:Sumatran Orangutan (Pongo abelii) at Perth Zoo, October 2024 18.jpg"
     },
     "tiger-salamander/what-is-a-salamander.webp": {
         "alt": "Tiger Salamander: Ambystoma tigrinum 177383114",
@@ -1496,10 +1552,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "tiger-salamander/salamander-resilience-symbolism.webp": {
-        "alt": "Tiger Salamander: Ambystoma tigrinum 157597069",
-        "caption": "Photo by Nicole Michel, CC BY",
-        "width": 1050,
-        "height": 1400
+        "alt": "Tiger salamander at Gavins Point National Fish Hatchery, Yankton, South Dakota",
+        "caption": "Photo: USFWS Mountain Prairie, Public domain, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 852,
+        "source": "File:Tiger Salamander (Ambystoma tigrinum).jpg"
     },
     "tiger-salamander/salamander-cultural-symbolism.webp": {
         "alt": "Tiger Salamander: Ambystoma tigrinum 141822003",
@@ -1520,10 +1577,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 662
     },
     "tiger-salamander/tiger-salamander-symbolism-final.webp": {
-        "alt": "Tiger Salamander: Ambystoma tigrinum 131716852",
-        "caption": "Photo by kiwikki, CC BY-SA",
+        "alt": "Tiger Salamander",
+        "caption": "Photo: evangrimes, CC BY 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 662
+        "height": 1050,
+        "source": "File:Ambystoma tigrinum 65538465.jpg"
     },
     "tiger/what-is-a-tiger.webp": {
         "alt": "Tiger: Panthera tigris sumatran subspecies",
@@ -1592,10 +1650,11 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "height": 1400
     },
     "wolf/wolf-endurance-symbolism.webp": {
-        "alt": "Mexican Wolf 2 yfb-edit 1",
-        "caption": "Photo by Clark, Jim (U.S. Fish and Wildlife Service), Public domain",
+        "alt": "Gray wolf at the Sainte-Croix wildlife park, Moselle, France",
+        "caption": "Photo: Musicaline, CC BY-SA 4.0, via Wikimedia Commons.",
         "width": 1400,
-        "height": 933
+        "height": 933,
+        "source": "File:Loup gris commun DSCF1575.jpg"
     },
     "wolf/wolf-symbolism-lesson.webp": {
         "alt": "Wolf: Canis lupus arctos (Pocock, 1935)",
@@ -1608,5 +1667,68 @@ export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "c
         "caption": "Photo by Cephas, CC BY-SA",
         "width": 933,
         "height": 1400
+    },
+    "dolphin/what-is-a-dolphin.webp": {
+        "alt": "Atlantic bottlenose dolphin jumping at Pelican point, Namibia",
+        "caption": "Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:010 Atlantic bottlenose dolphin jumping at Pelican point Photo by Giles Laurent.jpg"
+    },
+    "eagle/what-is-a-eagle.webp": {
+        "alt": "Bald eagle at the Hawk Conservancy Trust , Andover",
+        "caption": "Photo: Lewis Hulbert, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 931,
+        "source": "File:Bald eagle at the Hawk Conservancy Trust 2-2.jpg"
+    },
+    "raven/raven-symbolism-hero.webp": {
+        "alt": "American Raven calling at Point Reyes National Seashore, Marin County, California",
+        "caption": "Photo: Frank Schulenburg, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Corvus corax clarionensis, Point Reyes National Seashore.jpg"
+    },
+    "cat/what-is-a-cat.webp": {
+        "alt": "A Sphynx cat kitten",
+        "caption": "Photo: Dmitry Makeev, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 979,
+        "source": "File:Cat Sphynx. Kittens. img 11.jpg"
+    },
+    "crocodile/crocodile-symbolism-hero.webp": {
+        "alt": "Nile crocodile during the golden hour, Chobe National Park , Botswana",
+        "caption": "Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 693,
+        "source": "File:Cocodrilo del Nilo (Crocodylus niloticus), parque nacional de Chobe, Botsuana, 2018-07-28, DD 86.jpg"
+    },
+    "leopard/leopard-symbolism-hero.webp": {
+        "alt": "Male leopard in the Maasai Mara",
+        "caption": "Photo: Sumeet Moghe, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 788,
+        "source": "File:Male leopard - Mara.jpg"
+    },
+    "jellyfish/what-is-a-jellyfish.webp": {
+        "alt": "Moon jellyfish in the Pairi Daiza aquarium in Belgium",
+        "caption": "Photo: Luc Viatour, CC BY-SA 3.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Aurelia aurita (Cnidaria) Luc Viatour.jpg"
+    },
+    "orangutan/what-is-a-orangutan.webp": {
+        "alt": "orangutan in São Paulo Zoo",
+        "caption": "Photo: Wilfredor, CC0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 930,
+        "source": "File:Orangutan in São Paulo Zoo 56.jpg"
+    },
+    "dragonfly/dragonfly-symbolism-hero.webp": {
+        "alt": "A pair of dragonflies in flight, Nepal",
+        "caption": "Photo: Prasan Shrestha, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933,
+        "source": "File:Skimmer (Dragonfly) mating in air.jpg"
     }
 };

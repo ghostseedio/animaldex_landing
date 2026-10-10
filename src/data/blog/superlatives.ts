@@ -901,11 +901,11 @@ const dangerousPost: BlogPost = {
     updatedAt: DATE,
     author: "AnimalDex",
     featuredImage: {
-        src: "/images/blog/what-is-the-most-dangerous-animal/anopheles-mosquito.webp",
-        alt: "Anopheles mosquito with an abdomen full of blood feeding on human skin",
+        src: "/images/blog/what-is-the-most-dangerous-animal/anopheles-albimanus.webp",
+        alt: "Anopheles albimanus mosquito, abdomen swollen with blood, feeding on human skin",
         width: 1400,
-        height: 932,
-        caption: "A female Anopheles mosquito taking a blood meal; Anopheles species carry the parasites that cause malaria. Photo: CDC/James Gathany, Public domain, via Wikimedia Commons."
+        height: 925,
+        caption: "A female Anopheles albimanus mosquito taking a blood meal; Anopheles species carry the parasites that cause malaria. Photo: CDC/James Gathany, Public domain, via Wikimedia Commons."
     },
     readingMinutes: 10,
     tags: ["Animal rankings", "Dangerous animals", "Venomous animals", "Wildlife safety"],
