@@ -16,6 +16,9 @@ const DYNAMIC_ALLOWLIST = [
     "app/[locale]/(composited)/checkout/page.tsx",
     "app/[locale]/(composited)/u/[handle]/page.tsx",
     "app/[locale]/(composited)/animals/search/page.tsx",
+    // On-demand comparisons for unpublished pairs: noindex, robots-disallowed,
+    // reads the generated row fresh so a just-generated pair shows at once.
+    "app/[locale]/(composited)/compare/[slug]/page.tsx",
     "app/[locale]/(composited)/blog/feed.xml/route.ts",
     "app/blog/feed.xml/route.ts"
 ];

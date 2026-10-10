@@ -24,7 +24,7 @@ import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
 import {buildSpeciesAskSuggestions, SPECIES_ASK_DAILY_LIMITS, type SpeciesAskGrounding} from "@/lib/species-ask";
 import {buildSpeciesAtAGlance, speciesHasSubstantiveFieldGuide} from "@/lib/species-field-guide";
 import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
-import {buildComparisonSlug} from "@/lib/comparison-slug";
+import {comparisonPairHref} from "@/data/species-comparisons";
 import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
@@ -493,6 +493,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             }).filter((item): item is readonly [string, {challengeSlug: string; otherSlug: string; otherName: string}] => Boolean(item))
         ).values()
     ).slice(0, 4);
+    // Built-in matchups first; otherwise related animals, linked to their static
+    // comparison when one exists, else to the on-demand /compare route.
+    const compareCards = compareWithLinks.length > 0
+        ? compareWithLinks.slice(0, 3).map((item) => ({href: `/comparisons/${item.challengeSlug}`, published: true, otherSlug: item.otherSlug, otherName: item.otherName}))
+        : related.slice(0, 3).map((item) => ({...comparisonPairHref(entry.slug, item.slug), otherSlug: item.slug, otherName: item.name}));
     const ctaSupportItems = [
         t("ctaSupportOne"),
         t("ctaSupportTwo"),
@@ -1122,18 +1127,29 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </h2>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {(compareWithLinks.length > 0 ? compareWithLinks : related.slice(0, 3).map((item) => ({
-                        challengeSlug: buildComparisonSlug(entry.slug, item.slug),
-                        otherName: item.name
-                    }))).map((item) => (
+                    {compareCards.map((item) => (
                         <Link
-                            key={item.challengeSlug}
-                            href={`/comparisons/${item.challengeSlug}`}
-                            className=" border border-white/10 bg-surface-900/55 p-5 transition hover:-translate-y-0.5 hover:border-primary-300/40"
+                            key={item.href}
+                            href={item.href}
+                            // Unpublished pairs open the on-demand generator; keep crawlers off it.
+                            rel={item.published ? undefined : "nofollow"}
+                            className="group flex items-center gap-4 border border-white/10 bg-surface-900/55 p-5 transition hover:-translate-y-0.5 hover:border-primary-300/40"
                         >
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">VS</p>
-                            <h3 className="mt-2 font-display text-2xl font-bold text-white">{item.otherName}</h3>
-                            <p className="mt-2 text-sm text-ink-300">{t("compareWithLink", {animal: item.otherName})}</p>
+                            <span className="relative h-16 w-16 shrink-0 overflow-hidden border border-white/10 bg-white/[0.04]">
+                                <Image
+                                    src={getSpeciesArtworkRoute(item.otherSlug)}
+                                    alt=""
+                                    fill
+                                    unoptimized
+                                    sizes="64px"
+                                    className="object-contain p-1.5 transition duration-300 group-hover:scale-105"
+                                />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">VS</span>
+                                <span className="mt-1 block font-display text-2xl font-bold text-white">{item.otherName}</span>
+                                <span className="mt-1 block text-sm text-ink-300">{t("compareWithLink", {animal: item.otherName})}</span>
+                            </span>
                         </Link>
                     ))}
                 </div>

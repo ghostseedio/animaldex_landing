@@ -6,12 +6,20 @@ import {
     SPECIES_COMPARISON_CACHE_TAG,
     buildComparisonSlug,
     canonicalUnpublishedComparisonSlug,
+    fetchSpeciesComparisonBySlug,
     getOrGenerateSpeciesComparison,
     parseComparisonSlug,
     resolveReadyChallengeEntry,
     speciesComparisonSlugCacheTag
 } from "@/data/species-comparisons";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
+
+/** A published (static/snapshot) entry for either order, else a generated DB row under the canonical slug. */
+async function findReadyComparison(requestedSlug: string, reversedSlug: string) {
+    return (await resolveReadyChallengeEntry(requestedSlug))
+        ?? (await resolveReadyChallengeEntry(reversedSlug))
+        ?? (await fetchSpeciesComparisonBySlug(canonicalUnpublishedComparisonSlug(requestedSlug) ?? requestedSlug, {fresh: true}));
+}
 
 export const runtime = "nodejs";
 
@@ -33,7 +41,7 @@ function normalizeSlug(value: unknown) {
 /**
  * Cheap status probe. Generation takes ~45s, which can outlive the platform's
  * function timeout, so the client polls this instead of trusting the POST to
- * return. Reads published rows only — never spends an AI call.
+ * return. Reads published entries and generated rows — never spends an AI call.
  */
 export async function GET(request: Request) {
     const {searchParams} = new URL(request.url);
@@ -45,8 +53,7 @@ export async function GET(request: Request) {
     }
 
     const reversedSlug = buildComparisonSlug(parsed.animalBSlug, parsed.animalASlug, parsed.comparisonType);
-    const existing = (await resolveReadyChallengeEntry(slug))
-        ?? (await resolveReadyChallengeEntry(reversedSlug));
+    const existing = await findReadyComparison(slug, reversedSlug);
 
     if (!existing) {
         return NextResponse.json({status: "pending"}, {headers: {"Cache-Control": "no-store"}});
@@ -101,8 +108,7 @@ export async function POST(request: Request) {
 
     // Cache hits are free and unthrottled — including the reversed pair, which
     // shares one canonical row upstream.
-    const existing = (await resolveReadyChallengeEntry(requestedSlug))
-        ?? (await resolveReadyChallengeEntry(reversedSlug));
+    const existing = await findReadyComparison(requestedSlug, reversedSlug);
 
     if (existing && !body.refreshImage) {
         return NextResponse.json({status: "ready", slug: existing.slug, title: existing.title});
@@ -137,10 +143,16 @@ export async function POST(request: Request) {
 
         // Publish immediately: drop the cached misses for this slug plus the
         // directory/sitemap feeds so the new page is live on the next request.
-        revalidateTag(SPECIES_COMPARISON_CACHE_TAG);
-        revalidateTag(speciesComparisonSlugCacheTag(comparison.slug));
-        if (comparison.slug !== requestedSlug) {
-            revalidateTag(speciesComparisonSlugCacheTag(requestedSlug));
+        // Best effort: Next 13.4 can throw "static generation store missing" here,
+        // and a failed cache drop must not turn a saved comparison into an error.
+        try {
+            revalidateTag(SPECIES_COMPARISON_CACHE_TAG);
+            revalidateTag(speciesComparisonSlugCacheTag(comparison.slug));
+            if (comparison.slug !== requestedSlug) {
+                revalidateTag(speciesComparisonSlugCacheTag(requestedSlug));
+            }
+        } catch (error) {
+            console.warn("[comparisons/generate] revalidateTag failed", error instanceof Error ? error.message : error);
         }
 
         return NextResponse.json({status: "ready", slug: comparison.slug, title: comparison.title});

@@ -45,7 +45,8 @@ test("Ask AnimalDex is one assistant mounted once, not a copy per surface", () =
 
     for (const file of [
         "src/app/[locale]/(composited)/blog/[slug]/page.tsx",
-        "src/app/[locale]/(composited)/comparisons/[slug]/page.tsx",
+        // Rendered by /comparisons/[slug] and /compare/[slug].
+        "src/app/[locale]/(composited)/comparisons/_components/comparison-article.tsx",
         "src/app/[locale]/(composited)/locations/[slug]/page.tsx",
         "src/app/[locale]/(authenticated)/app/capture/[id]/capture-detail-client.tsx",
         "src/app/[locale]/(composited)/animals/[slug]/page.tsx"

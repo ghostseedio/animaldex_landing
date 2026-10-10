@@ -13,6 +13,7 @@ import type {SystemsIntelligenceEntry} from "@/data/content-schema";
 import type {SpeciesEntry} from "@/data/species";
 import {findComparableAnimal, type ComparableAnimal} from "@/data/comparison-animals";
 import {
+    buildComparisonSlug,
     canonicalUnpublishedComparisonSlug,
     parseComparisonSlug,
     reversedComparisonSlug
@@ -276,7 +277,8 @@ export function speciesComparisonSlugCacheTag(slug: string) {
     return `species-comparison:${slug.trim().toLowerCase()}`;
 }
 
-export async function fetchSpeciesComparisonBySlug(slug: string): Promise<ChallengeEntry | null> {
+/** `fresh` skips the data cache: for the on-demand /compare page and the generation poll, where a cached miss would hide a just-generated pair. */
+export async function fetchSpeciesComparisonBySlug(slug: string, options: {fresh?: boolean} = {}): Promise<ChallengeEntry | null> {
     const config = getReadConfig();
     if (!config) return null;
 
@@ -286,10 +288,9 @@ export async function fetchSpeciesComparisonBySlug(slug: string): Promise<Challe
     url.searchParams.set("generation_status", "eq.ready");
     url.searchParams.set("limit", "1");
 
-    const response = await fetch(url, {
-        headers: getSupabaseHeaders(config.key),
-        next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG, speciesComparisonSlugCacheTag(slug)]}
-    });
+    const response = await fetch(url, options.fresh
+        ? {headers: getSupabaseHeaders(config.key), cache: "no-store"}
+        : {headers: getSupabaseHeaders(config.key), next: {revalidate: 86400, tags: [SPECIES_COMPARISON_CACHE_TAG, speciesComparisonSlugCacheTag(slug)]}});
     if (!response.ok) return null;
     const rows = (await response.json()) as SpeciesComparisonRow[];
     const row = rows[0];
@@ -545,6 +546,19 @@ async function resolveComparisonPageDataOnce(slug: string): Promise<ComparisonPa
     }
 
     return {status: "missing"};
+}
+
+/**
+ * Where a link to "A vs B" should point: the published static page when there
+ * is one (either order), else the on-demand /compare route, which
+ * shows a generated comparison or generates it.
+ */
+export function comparisonPairHref(animalASlug: string, animalBSlug: string): {href: string; published: boolean} {
+    const slug = buildComparisonSlug(animalASlug, animalBSlug);
+    if (getLocalReadyChallenge(slug)) return {href: `/comparisons/${slug}`, published: true};
+    const reversed = buildComparisonSlug(animalBSlug, animalASlug);
+    if (getLocalReadyChallenge(reversed)) return {href: `/comparisons/${reversed}`, published: true};
+    return {href: `/compare/${canonicalUnpublishedComparisonSlug(slug) ?? slug}`, published: false};
 }
 
 /** Shared by generateMetadata + page so reversed/unpublished slugs resolve once. */

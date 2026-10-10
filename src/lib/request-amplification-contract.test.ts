@@ -161,7 +161,16 @@ test("species slug pages resolve identity once and do not load the full catalog"
 test("public species pages do not read the authenticated viewer on the server", () => {
     const speciesPage = read("app/[locale]/(composited)/animals/[slug]/page.tsx");
     const growth = read("data/species-growth.ts");
-    const comparisonPage = read("app/[locale]/(composited)/comparisons/[slug]/page.tsx");
+    // The page plus the shared article it renders (also used by /compare).
+    const comparisonPage = read("app/[locale]/(composited)/comparisons/[slug]/page.tsx")
+        + read("app/[locale]/(composited)/comparisons/_components/comparison-article.tsx");
+    const onDemandComparison = read("app/[locale]/(composited)/compare/[slug]/page.tsx");
+
+    // The on-demand route for unpublished pairs: noindex, never per-viewer, never AI on render.
+    assert.match(onDemandComparison, /robots: \{index: false/);
+    assert.doesNotMatch(onDemandComparison, /getViewerUserId|readGuestKey/);
+    assert.doesNotMatch(onDemandComparison, /getOrGenerateSpeciesComparison/);
+    assert.match(onDemandComparison, /renderComparisonArticle/);
 
     assert.match(speciesPage, /createEmptyPublicSpeciesGrowthContext/);
     assert.doesNotMatch(speciesPage, /generate-applied-insight/);

@@ -32,10 +32,13 @@ test("comparison detail articles are English DB bodies, so /id twins may consoli
     );
     assert.doesNotMatch(metadata, /description: t\(/);
     assert.doesNotMatch(metadata, /t\("metaTitle"/);
-    assert.match(page, /headline: challenge\.title/);
-    assert.match(page, /summary=\{challenge\.quickVerdict\}/);
-    assert.match(page, /paragraphs=\{challenge\.shortAnswer\}/);
-    assert.match(page, /challenge\.faq\.map/);
+    // The article body is the shared component the page renders.
+    const article = read("app/[locale]/(composited)/comparisons/_components/comparison-article.tsx");
+    assert.match(page, /renderComparisonArticle/);
+    assert.match(article, /headline: challenge\.title/);
+    assert.match(article, /summary=\{challenge\.quickVerdict\}/);
+    assert.match(article, /paragraphs=\{challenge\.shortAnswer\}/);
+    assert.match(article, /challenge\.faq\.map/);
     assert.equal(isCollapsedEnglishDetailPath("/comparisons/tiger-vs-lion"), true);
     assert.deepEqual(matchCollapsedIdDetailPath("/id/comparisons/tiger-vs-lion"), {
         family: "comparisons",
