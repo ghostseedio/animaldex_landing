@@ -272,7 +272,7 @@ export default function AdminBlogGenerator() {
                     <p className="mt-7 text-xs font-black uppercase tracking-[.2em] text-primary-200">Content</p>
                     <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Blog generator</h1>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-300">
-                        Claude researches a topic on the web, writes a full article with photos, charts and interactive quizzes, links it into our species and comparison pages, and publishes it to the blog, or edits a post that's already live. Every source link and internal link is checked first; if a check fails, nothing goes live. A new article takes about 12–16 minutes; an edit, 5–15.
+                        Claude researches a topic on the web, writes a full article with photos, charts and interactive quizzes, links it into our species and comparison pages, and publishes it to the blog, or edits a post that’s already live. Every source link and internal link is checked first; if a check fails, nothing goes live. A new article takes about 12–16 minutes; an edit, 5–15.
                     </p>
                 </header>
 
