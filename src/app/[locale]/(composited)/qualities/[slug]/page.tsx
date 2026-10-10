@@ -37,19 +37,19 @@ export async function generateMetadata({params}: PrinciplePageProps): Promise<Me
         return {};
     }
 
-    const basePath = `/powers/${principle.principleSlug}`;
+    const basePath = `/qualities/${principle.principleSlug}`;
 
     return buildContentMetadata({
         locale: params.locale,
         pathname: basePath,
         title: t("detailMetaTitle", {principle: principle.principle}),
         description: t("detailMetaDescription", {principle: principle.principle}),
-        featuredImage: ogContentImage(`${principle.principle} principle animals on AnimalDex`, "power", principle.principleSlug),
+        featuredImage: ogContentImage(`${principle.principle} quality animals on AnimalDex`, "power", principle.principleSlug),
         keywords: [
             `${principle.principle.toLowerCase()} animal meaning`,
             `${principle.principle.toLowerCase()} animal symbolism`,
-            `${principle.principle.toLowerCase()} animal lesson`,
-            "biology-backed animal powers"
+            `${principle.principle.toLowerCase()} animal quality`,
+            "biology-backed animal qualities"
         ]
     });
 }
@@ -85,13 +85,13 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 "@type": "ListItem",
                 position: 2,
                 name: "Qualities",
-                item: getAbsoluteUrl(params.locale, "/powers")
+                item: getAbsoluteUrl(params.locale, "/qualities")
             },
             {
                 "@type": "ListItem",
                 position: 3,
                 name: principle.principle,
-                item: getAbsoluteUrl(params.locale, `/powers/${principle.principleSlug}`)
+                item: getAbsoluteUrl(params.locale, `/qualities/${principle.principleSlug}`)
             }
         ]
     };
@@ -102,7 +102,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([breadcrumbSchema])}}
             />
-            <Link href="/powers" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
+            <Link href="/qualities" className="text-primary-200 hover:text-primary-100 transition-colors w-fit" underline>
                 {t("back")}
             </Link>
 
@@ -116,11 +116,11 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                 {speciesItems.map(({entry, lesson}, index) => {
-                    const detailHref = entry ? `/animals/${entry.slug}` : `/animal-lessons/${lesson.slug}`;
+                    const detailHref = entry ? `/animals/${entry.slug}` : `/animal-powers/${lesson.slug}`;
                     const displayName = entry?.name ?? lesson.displayName;
                     const imageAlt = entry
                         ? getSpeciesImageAltText(entry, "thumbnail")
-                        : `${lesson.displayName} animal lesson image on AnimalDex`;
+                        : `${lesson.displayName} animal power image on AnimalDex`;
                     const principleName = lesson.principleName;
                     const motto = lesson.shortMotto;
                     const coreLesson = lesson.coreLesson;
@@ -161,7 +161,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                                     </Link>
                                 ) : null}
                                 <Link
-                                    href={`/animal-lessons/${lesson.slug}`}
+                                    href={`/animal-powers/${lesson.slug}`}
                                     underline
                                     className="text-primary-200 hover:text-primary-100 transition-colors"
                                 >
@@ -183,7 +183,7 @@ export default async function PrincipleDetailPage({params}: PrinciplePageProps) 
                     <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedSpecies")}
                     </Link>
-                    <Link href="/animal-lessons" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
+                    <Link href="/animal-powers" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                         {t("relatedLessons")}
                     </Link>
                     <Link href="/animal-symbolism" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">

@@ -652,6 +652,48 @@ export function domainDisplayTitle(domain: string) {
     return DOMAIN_TITLES[normalizeDomain(domain)];
 }
 
+/** Domain names as they read mid-sentence ("turns up in history, sport and business"). */
+const DOMAIN_PHRASES: Record<SystemDynamicsDomain, string> = {
+    MONEY_FINANCE: "money",
+    BUSINESS: "business",
+    HUMAN_BEHAVIOR: "human behaviour",
+    PLANT_KINGDOM: "plants",
+    FOOD_NUTRITION: "food",
+    SPORT_ATHLETICS: "sport",
+    TECHNOLOGY: "technology",
+    ENTERTAINMENT: "entertainment",
+    ARCHITECTURE: "architecture",
+    TRANSPORT: "transport",
+    STRATEGY: "strategy",
+    PEOPLE_HISTORY_POWER: "history",
+    PLACE_GEOGRAPHY: "places",
+    STARS: "the stars",
+    MUSIC: "music",
+    ART: "art",
+    ENGINEERING: "engineering",
+    NATURAL_FORCES: "natural forces",
+    UNKNOWN: ""
+};
+
+function listPhrase(items: string[]) {
+    if (items.length <= 1) return items[0] ?? "";
+    return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+/**
+ * One line for the summary card. Locked viewers get the Pro hook — the domain
+ * matrix is what Pro unlocks, and a locked payload carries none of it.
+ */
+export function systemDynamicsIntro(dynamics: SpeciesSystemDynamics, animal: string) {
+    const domains = orderedCrossDomainMappings(dynamics.crossDomainMatrix)
+        .map((mapping) => DOMAIN_PHRASES[normalizeDomain(mapping.domain)])
+        .filter(Boolean);
+    if (!domains.length) {
+        return `Want to see the ${animal}'s system in history, sport and business? Unlock it with Pro.`;
+    }
+    return `The ${animal}'s system across ${domains.length} areas of life, from ${listPhrase(domains.slice(0, 2))}.`;
+}
+
 /** Six high-value domains first; the rest on request. */
 export const DOMAIN_PREFERRED_ORDER: SystemDynamicsDomain[] = [
     "MONEY_FINANCE",

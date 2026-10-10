@@ -95,7 +95,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
         return (
             <article className="group overflow-hidden  bg-[linear-gradient(145deg,rgba(180,139,72,0.12),rgba(34,58,41,0.2))] transition-transform duration-200 hover:-translate-y-1">
                 {imageAnimal ? (
-                    <Link href={`/powers/${item.principleSlug}`} className="block">
+                    <Link href={`/qualities/${item.principleSlug}`} className="block">
                         <SpeciesArtworkImage
                             slug={imageAnimal.slug}
                             alt={`${imageAnimal.name}, an animal linked to the ${item.principle} behavioral principle`}
@@ -125,7 +125,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
                     <p className="mt-4 line-clamp-2 text-sm text-ink-300">
                         {formatTemplate(labels.subPrinciples, {principles: item.subPrinciples.slice(0, 3).join(" · ")})}
                     </p>
-                    <Link href={`/powers/${item.principleSlug}`} className="mt-auto pt-6 font-semibold text-primary-200 transition-colors hover:text-primary-100">
+                    <Link href={`/qualities/${item.principleSlug}`} className="mt-auto pt-6 font-semibold text-primary-200 transition-colors hover:text-primary-100">
                         {labels.explorePrinciple.replace("{principle}", item.principle)} →
                     </Link>
                 </div>
@@ -150,7 +150,7 @@ function PrincipleCard({item, labels, featured = false, index = 0}: {
             <p className="mt-4 line-clamp-2 text-sm text-ink-300">
                 {formatTemplate(labels.subPrinciples, {principles: item.subPrinciples.slice(0, 3).join(" · ")})}
             </p>
-            <Link href={`/powers/${item.principleSlug}`} className="mt-auto pt-6 font-semibold text-primary-200 transition-colors hover:text-primary-100">
+            <Link href={`/qualities/${item.principleSlug}`} className="mt-auto pt-6 font-semibold text-primary-200 transition-colors hover:text-primary-100">
                 {labels.explorePrinciple.replace("{principle}", item.principle)} →
             </Link>
         </article>

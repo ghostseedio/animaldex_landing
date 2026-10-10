@@ -1,13 +1,17 @@
 "use client";
 
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {
     type AnimalPower,
+    type PowerApplicationEvidenceType,
     type PowerApplicationResult,
     OFFERED_APPLICATION_DOMAINS,
+    POWER_APPLICATION_EVIDENCE,
     POWER_APPLICATION_LIMITS,
-    applicationDomainShortlist
+    applicationDomainShortlist,
+    powerRefusalMessage
 } from "@/lib/animal-powers";
+import {extractTrialFrames} from "@/lib/animal-trial-frames";
 import {type SystemDynamicsDomain, domainDisplayTitle} from "@/lib/system-dynamics";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import {journalAskBrief, journalAskKey, journalAskSuggestions} from "@/lib/animal-trial-ask";
@@ -47,6 +51,38 @@ function Eyebrow({children, color}: {children: React.ReactNode; color?: string})
     );
 }
 
+/** What is attached: one photo, or the frames sampled from a video. */
+type AttachedEvidence = {
+    type: PowerApplicationEvidenceType;
+    files: File[];
+    /** Object URL of the photo, or of the first sampled frame of a video. */
+    previewUrl: string;
+};
+
+/**
+ * Turns a picked file into evidence. Only frames of a video are kept; the clip
+ * itself is never uploaded. Throws with the copy to show when it cannot be used.
+ */
+async function prepareEvidence(file: File): Promise<AttachedEvidence> {
+    if (file.type.startsWith("video/")) {
+        const frames = await extractTrialFrames(file, POWER_APPLICATION_EVIDENCE.frameCount, {
+            firstFraction: POWER_APPLICATION_EVIDENCE.firstFrameFraction,
+            lastFraction: POWER_APPLICATION_EVIDENCE.lastFrameFraction,
+            maxLongEdge: POWER_APPLICATION_EVIDENCE.maxLongEdge,
+            quality: POWER_APPLICATION_EVIDENCE.jpegQuality
+        }).catch(() => [] as File[]);
+        if (frames.length < POWER_APPLICATION_EVIDENCE.minFrames) {
+            throw new Error(powerRefusalMessage("video_frames_required"));
+        }
+        return {type: "video", files: frames, previewUrl: URL.createObjectURL(frames[0])};
+    }
+    // The bucket takes JPEG, PNG and WebP only.
+    if (!POWER_APPLICATION_EVIDENCE.photoTypes.includes(file.type)) {
+        throw new Error(powerRefusalMessage("evidence_download_failed"));
+    }
+    return {type: "photo", files: [file], previewUrl: URL.createObjectURL(file)};
+}
+
 export default function ApplyItYourWay({
     power,
     trial = null,
@@ -72,6 +108,31 @@ export default function ApplyItYourWay({
     /** The server said this Power is already held, so another write-up is not accepted. */
     const [earnedLocally, setEarnedLocally] = useState(false);
     const {open: openAsk} = useAskAnimalDex();
+    const [evidence, setEvidence] = useState<AttachedEvidence | null>(null);
+    const [isPreparingEvidence, setIsPreparingEvidence] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
+    const libraryInputRef = useRef<HTMLInputElement>(null);
+
+    // Each preview is an object URL; release it once it is replaced or the sheet closes.
+    useEffect(() => {
+        const url = evidence?.previewUrl;
+        return () => {
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [evidence]);
+
+    const attachEvidence = useCallback(async (file: File) => {
+        setIsPreparingEvidence(true);
+        setErrorMessage(null);
+        try {
+            setEvidence(await prepareEvidence(file));
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : powerRefusalMessage("evidence_download_failed"));
+        } finally {
+            setIsPreparingEvidence(false);
+        }
+    }, []);
 
     const trimmed = account.trim();
     const hasEnough = trimmed.length >= POWER_APPLICATION_LIMITS.minCharacters;
@@ -92,18 +153,22 @@ export default function ApplyItYourWay({
 
     const submit = useCallback(async () => {
         if (!selectedDomain) return;
+        if (!evidence) {
+            setErrorMessage(powerRefusalMessage("evidence_required"));
+            return;
+        }
         setIsWorking(true);
         setErrorMessage(null);
         try {
-            const response = await fetch("/api/app/animal-powers/application", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    speciesProfileId: power.speciesProfileId,
-                    domain: selectedDomain,
-                    account: trimmed
-                })
-            });
+            const form = new FormData();
+            form.set("speciesProfileId", power.speciesProfileId);
+            form.set("domain", selectedDomain);
+            form.set("account", trimmed);
+            form.set("evidenceType", evidence.type);
+            if (evidence.type === "photo") form.set("evidence", evidence.files[0]);
+            else for (const frame of evidence.files) form.append("frames", frame);
+
+            const response = await fetch("/api/app/animal-powers/application", {method: "POST", body: form});
             const payload = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
@@ -133,14 +198,17 @@ export default function ApplyItYourWay({
         } finally {
             setIsWorking(false);
         }
-    }, [onFinished, power.speciesProfileId, selectedDomain, trimmed]);
+    }, [evidence, onFinished, power.speciesProfileId, selectedDomain, trimmed]);
 
     const actionTitle = holdsPower
         ? "DONE"
         : !selectedDomain
             ? "PICK AN AREA"
             : result ? "SEND AGAIN" : "SEND FOR REVIEW";
-    const isDisabled = holdsPower ? false : isWorking || !selectedDomain || !hasEnough;
+    const isDisabled = holdsPower
+        ? false
+        : isWorking || isPreparingEvidence || !selectedDomain || !hasEnough || !evidence;
+    const needsEvidenceHint = !holdsPower && Boolean(selectedDomain) && hasEnough && !evidence;
 
     return (
         <div
@@ -296,6 +364,79 @@ export default function ApplyItYourWay({
                             </Band>
                         ) : null}
 
+                        {selectedDomain ? (
+                            <Band>
+                                <Eyebrow>Add a photo or video</Eyebrow>
+                                <p className="text-sm leading-6 text-white">
+                                    Show what you did, what you did it to, or how it turned out. A screenshot works if it happened on a screen.
+                                </p>
+                                {evidence ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-black/25">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={evidence.previewUrl}
+                                                alt={evidence.type === "video" ? "Video attached" : "Photo attached"}
+                                                className="h-full w-full object-cover"
+                                            />
+                                            {evidence.type === "video" ? (
+                                                <span className="absolute bottom-1 left-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+                                                    Video
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEvidence(null)}
+                                            disabled={isWorking}
+                                            className="min-h-9 rounded-full border border-white/10 bg-black/25 px-3 text-xs font-semibold text-white/80 transition hover:border-white/25 hover:text-white disabled:opacity-50"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ) : null}
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        {title: "Take photo", ref: photoInputRef},
+                                        {title: "Record video", ref: videoInputRef},
+                                        {title: "Choose from library", ref: libraryInputRef}
+                                    ].map((action) => (
+                                        <button
+                                            key={action.title}
+                                            type="button"
+                                            onClick={() => action.ref.current?.click()}
+                                            disabled={isWorking || isPreparingEvidence}
+                                            className="min-h-9 rounded-full border border-white/10 bg-black/25 px-3 text-xs font-semibold text-white/80 transition hover:border-white/25 hover:text-white disabled:opacity-50"
+                                        >
+                                            {action.title}
+                                        </button>
+                                    ))}
+                                    {isPreparingEvidence ? (
+                                        <span aria-live="polite" className="self-center text-[10px] text-white/40">…</span>
+                                    ) : null}
+                                </div>
+                                {[
+                                    {ref: photoInputRef, accept: "image/*", capture: true},
+                                    {ref: videoInputRef, accept: "video/*", capture: true},
+                                    {ref: libraryInputRef, accept: "image/*,video/*", capture: false}
+                                ].map((input) => (
+                                    <input
+                                        key={input.accept}
+                                        ref={input.ref}
+                                        type="file"
+                                        accept={input.accept}
+                                        capture={input.capture ? "environment" : undefined}
+                                        className="hidden"
+                                        onChange={(event) => {
+                                            const file = event.target.files?.[0];
+                                            event.target.value = "";
+                                            if (file) void attachEvidence(file);
+                                        }}
+                                    />
+                                ))}
+                            </Band>
+                        ) : null}
+
                         {result ? (
                             <Band accent={isRevisable ? NEON : ORANGE}>
                                 <Eyebrow color={isRevisable ? NEON : ORANGE}>{isRevisable ? "Almost" : "Not yet"}</Eyebrow>
@@ -321,6 +462,8 @@ export default function ApplyItYourWay({
             <div className="border-t border-white/[0.08] bg-black/80 px-[18px] py-3 backdrop-blur">
                 {errorMessage ? (
                     <p className="mb-2 text-center text-[10px] text-orange-400">{errorMessage}</p>
+                ) : needsEvidenceHint ? (
+                    <p className="mb-2 text-center text-[10px] text-white/60">Add a photo or video to submit.</p>
                 ) : null}
                 <button
                     type="button"

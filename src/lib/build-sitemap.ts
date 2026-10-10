@@ -1,5 +1,5 @@
 import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
-import {animalBehavioursPagination, challengeYourselfPagination, type HubPagination} from "@/data/hub-pagination";
+import {animalFrequenciesPagination, animalTrialsPagination, type HubPagination} from "@/data/hub-pagination";
 import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
 import {MetadataRoute} from "next";
 import {localeConfig} from "@/i18n";
@@ -115,9 +115,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         if (locale !== localeConfig.defaultLocale) {
             return [
                 {url: getAbsoluteUrl(locale)},
-                {url: getAbsoluteUrl(locale, "/powers")},
+                {url: getAbsoluteUrl(locale, "/qualities")},
                 ...getLocalPrincipleSlugs().map((slug) => ({
-                    url: getAbsoluteUrl(locale, `/powers/${slug}`)
+                    url: getAbsoluteUrl(locale, `/qualities/${slug}`)
                 }))
             ];
         }
@@ -144,13 +144,13 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             // the default-locale branch at their literal paths.
             ...getTranslatedTierListHubPaths().map((path) => ({url: getAbsoluteUrl(locale, path)})),
             {url: getAbsoluteUrl(locale, "/locations")},
-            {url: getAbsoluteUrl(locale, "/powers")},
+            {url: getAbsoluteUrl(locale, "/qualities")},
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},
-            {url: getAbsoluteUrl(locale, "/animal-lessons")},
-            {url: getAbsoluteUrl(locale, "/animal-behaviours")},
-            ...hubPageEntries(locale, animalBehavioursPagination, behaviourSignatures.length),
-            {url: getAbsoluteUrl(locale, "/challenge-yourself")},
-            ...hubPageEntries(locale, challengeYourselfPagination, animalTrials.length),
+            {url: getAbsoluteUrl(locale, "/animal-powers")},
+            {url: getAbsoluteUrl(locale, "/animal-frequencies")},
+            ...hubPageEntries(locale, animalFrequenciesPagination, behaviourSignatures.length),
+            {url: getAbsoluteUrl(locale, "/animal-trials")},
+            ...hubPageEntries(locale, animalTrialsPagination, animalTrials.length),
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, "/legal/privacy")},
@@ -212,15 +212,15 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             return entries;
         });
         // Only power pages the route serves: catalog-only principles in the hub
-        // index 404 at /powers/<slug> (123 sitemap URLs did, e.g. /powers/agility).
+        // index 404 at /qualities/<slug> (123 sitemap URLs did, e.g. /qualities/agility).
         const servedPowerSlugs = new Set(getLocalPrincipleSlugs());
         const principlePageEntries = principleHubs
             .filter((item) => servedPowerSlugs.has(item.principleSlug))
             .map((item) => ({
-                url: getAbsoluteUrl(locale, `/powers/${item.principleSlug}`)
+                url: getAbsoluteUrl(locale, `/qualities/${item.principleSlug}`)
             }));
         const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
-            url: getAbsoluteUrl(locale, `/animal-lessons/${lesson.slug}`)
+            url: getAbsoluteUrl(locale, `/animal-powers/${lesson.slug}`)
         }));
         const pokemonAnimalGenerationEntries = pokemonAnimalGenerations.map((generation) => ({
             url: getAbsoluteUrl(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`)

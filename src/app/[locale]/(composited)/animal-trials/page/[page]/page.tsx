@@ -1,8 +1,8 @@
 import type {Metadata} from "next";
 import {notFound, redirect} from "next/navigation";
-import {challengeYourselfPagination, parsePageParam} from "@/data/hub-pagination";
+import {animalTrialsPagination, parsePageParam} from "@/data/hub-pagination";
 import {getLocalePath} from "@/lib/site";
-import ChallengeYourselfView, {buildChallengeYourselfMetadata, challengeYourselfPageCount} from "../../challenge-yourself-view";
+import AnimalTrialsView, {buildAnimalTrialsMetadata, animalTrialsPageCount} from "../../animal-trials-view";
 
 export const revalidate = 86400;
 
@@ -14,18 +14,18 @@ export function generateStaticParams() {
 
 function resolvePage(value: string) {
     const page = parsePageParam(value);
-    if (!page || page > challengeYourselfPageCount) notFound();
+    if (!page || page > animalTrialsPageCount) notFound();
     return page;
 }
 
 export function generateMetadata({params}: {params: Params}): Metadata {
-    return buildChallengeYourselfMetadata(params.locale, resolvePage(params.page));
+    return buildAnimalTrialsMetadata(params.locale, resolvePage(params.page));
 }
 
-export default function ChallengeYourselfPagedPage({params}: {params: Params}) {
+export default function AnimalTrialsPagedPage({params}: {params: Params}) {
     const page = resolvePage(params.page);
     // Page 1 has exactly one URL: the hub. next.config.js 308s it before this
     // runs; this is the fallback if that rule is ever bypassed.
-    if (page === 1) redirect(getLocalePath(params.locale, challengeYourselfPagination.pagePath(1)));
-    return <ChallengeYourselfView locale={params.locale} page={page} />;
+    if (page === 1) redirect(getLocalePath(params.locale, animalTrialsPagination.pagePath(1)));
+    return <AnimalTrialsView locale={params.locale} page={page} />;
 }

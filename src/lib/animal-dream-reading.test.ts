@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
-import {buildAnimalDreamReading, buildDreamQuestion, commonNameInSentence} from "@/lib/animal-dream-reading";
+import {buildAnimalDreamReading, buildDreamQuestion, commonNameInSentence, isKeptAnimal} from "@/lib/animal-dream-reading";
+import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
 
-test("dream question reads like the search, with natural casing", () => {
-    assert.equal(buildDreamQuestion("Lion"), "What does it mean to dream about a lion?");
-    assert.equal(buildDreamQuestion("African Bush Elephant"), "What does it mean to dream about an African bush elephant?");
+test("the question covers dreams and real encounters, with natural casing", () => {
+    assert.equal(buildDreamQuestion("Lion"), "What does it mean to dream about or encounter a wild lion?");
+    assert.equal(buildDreamQuestion("African Bush Elephant"), "What does it mean to dream about or encounter a wild African bush elephant?");
+    assert.equal(buildDreamQuestion("Domestic Cat", true), "What does it mean to dream about or encounter a domestic cat?");
     assert.equal(commonNameInSentence("Sabine's Gull"), "Sabine's gull");
 });
 
@@ -22,7 +24,9 @@ test("the reading is built from the animal's own principle and core lesson", () 
     });
     assert.match(reading.answer, /Silent Ascent/);
     assert.match(reading.answer, /Solitude becomes power/);
-    assert.equal(reading.scenarios.length, 4);
+    assert.equal(reading.scenarios.length, 6);
+    assert.equal(reading.scenarios[0].title, "Spotting a Bengal tiger in the wild");
+    assert.match(reading.note, /leave it undisturbed/);
     assert.ok(reading.scenarios.every((scenario) => scenario.reading.length > 60));
 });
 
@@ -44,4 +48,19 @@ test("almost every published animal page carries a dream reading", () => {
         }).answer;
     }));
     assert.equal(answers.size, 400, "each animal gets its own answer");
+});
+
+test("only kept animals lose the word wild", () => {
+    const kept = (slug: string) => {
+        const entry = getPublishedSpeciesForContent(slug);
+        assert.ok(entry, slug);
+        return isKeptAnimal(entry);
+    };
+    for (const slug of ["domestic-dog", "domestic-cat", "maine-coon-cat", "alpaca", "flowerhorn-cichlid"]) {
+        assert.equal(kept(slug), true, slug);
+    }
+    // Name matches and wild ancestors stay wild.
+    for (const slug of ["bobcat", "sand-cat", "african-wild-dog", "prairie-dog", "rock-pigeon", "european-rabbit", "apple-snail"]) {
+        assert.equal(kept(slug), false, slug);
+    }
 });

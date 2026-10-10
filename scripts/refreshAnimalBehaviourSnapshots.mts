@@ -1,5 +1,5 @@
 /**
- * Rebuild the snapshots behind /animal-behaviours and /challenge-yourself.
+ * Rebuild the snapshots behind /animal-frequencies and /animal-trials.
  *
  * Operator-run. Do NOT add to Next prebuild: the production build forbids
  * remote work during static generation (`assertNoRemoteDuringSeoSsg`), so these
@@ -85,7 +85,7 @@ function closingLine(value: unknown) {
  * Map catalog profile → published animal page. This used to read only
  * published-seo-animal-pages.json, which by design omits the ~1,000
  * hand-coded species, so their dynamics and Trials (tiger, wolf, octopus…)
- * never reached /animal-behaviours or /challenge-yourself. Read the indexed
+ * never reached /animal-frequencies or /animal-trials. Read the indexed
  * catalog instead and keep every profile whose slug has a published page.
  */
 const publishedAnimals = new Set<string>(JSON.parse(readFileSync(join(root, "src/data/published-seo-slugs.json"), "utf8")).animals);
@@ -143,7 +143,7 @@ const behaviours = dynamicsRows.flatMap((row) => {
 
 const trialRows = await fetchAll(
     "animal_trials_for_viewer_v1",
-    "species_profile_id,species_display_name,title,objective,animal_rule,user_benefit,principle_name,"
+    "species_profile_id,species_display_name,title,objective,instructions,animal_rule,user_benefit,principle_name,"
     + "principle_link,mechanism_connection,frequency,difficulty,estimated_minutes,completion_count",
     "species_profile_id.asc,frequency.asc,title.asc"
 );
@@ -159,6 +159,7 @@ const trials = trialRows.flatMap((row) => {
         species: text(row.species_display_name) ?? species.name,
         title,
         objective: text(row.objective),
+        instructions: text(row.instructions),
         animalRule: text(row.animal_rule),
         userBenefit: text(row.user_benefit),
         principleName: text(row.principle_name),

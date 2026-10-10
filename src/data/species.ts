@@ -29,6 +29,8 @@ export type SpeciesAnalysis = {
     identification: string[];
     habitat: string;
     nativeRange: string;
+    /** Canonical region keys parsed off the catalog's `Native range keys:` line; drives the range map. */
+    nativeRangeKeys?: string[];
     rarityScore: number; // 0-100 where higher means rarer
     rarityReason: string;
 };

@@ -61,7 +61,7 @@ test("tier-list bodies are English ranking data, so /id twins consolidate on Eng
     });
 });
 
-test("power detail title and intro are localized, so /id/powers must stay", () => {
+test("quality detail title and intro are localized, so /id/qualities must stay", () => {
     const page = read("app/[locale]/(composited)/qualities/[slug]/page.tsx");
     const idLocale = read("data/locales/id.json");
     const nextConfig = readFileSync(join(root, "..", "next.config.js"), "utf8");
@@ -69,12 +69,12 @@ test("power detail title and intro are localized, so /id/powers must stay", () =
     assert.match(page, /t\("detailMetaTitle"/);
     assert.match(page, /t\("detailMetaDescription"/);
     assert.match(page, /t\("clusterIntro"\)/);
-    assert.match(idLocale, /"detailMetaTitle": "Hewan dan Kekuatan \{principle\} \| AnimalDex"/);
-    assert.match(idLocale, /"clusterIntro": "Hewan di sini menunjukkan kekuatan/);
+    assert.match(idLocale, /"detailMetaTitle": "Hewan dan Kualitas \{principle\} \| AnimalDex"/);
+    assert.match(idLocale, /"clusterIntro": "Hewan di sini menunjukkan kualitas/);
     assert.match(page, /locale: "id"/);
-    assert.doesNotMatch(nextConfig, /source: "\/id\/powers\/:slug"/);
-    assert.equal(matchCollapsedIdDetailPath("/id/powers/resilience"), null);
-    assert.equal(isCollapsedEnglishDetailPath("/powers/resilience"), false);
+    assert.doesNotMatch(nextConfig, /source: "\/id\/qualities\/:slug"/);
+    assert.equal(matchCollapsedIdDetailPath("/id/qualities/resilience"), null);
+    assert.equal(isCollapsedEnglishDetailPath("/qualities/resilience"), false);
 });
 
 test("safety gate does not noindex ready power pages or robots-block crawlers", () => {

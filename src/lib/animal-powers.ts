@@ -151,7 +151,30 @@ export type PowerApplicationResult = {
      */
     grantedPower: boolean;
     rejectionsRemaining: number;
+    /** The grader's read on whether the photo or video shows what was written. */
+    evidenceMatches?: boolean;
 };
+
+/** A photo is one image; a video is the frames sampled from it in the browser. */
+export type PowerApplicationEvidenceType = "photo" | "video";
+
+/**
+ * The evidence the written route now requires. Mirrors the server contract in
+ * `verify-power-application`: a photo is exactly one image, a video is 2–4
+ * sampled frames. The clip itself is never uploaded.
+ */
+export const POWER_APPLICATION_EVIDENCE = {
+    bucket: "journal-proofs",
+    frameCount: 4,
+    minFrames: 2,
+    maxFrames: 4,
+    firstFrameFraction: 0.05,
+    lastFrameFraction: 0.95,
+    maxLongEdge: 768,
+    jpegQuality: 0.7,
+    /** The bucket accepts only these, so anything else is refused before upload. */
+    photoTypes: ["image/jpeg", "image/png", "image/webp"] as readonly string[]
+} as const;
 
 export const POWER_APPLICATION_LIMITS = {
     /** Mirrors POWER_APPLICATION_MAX_REJECTIONS in the shared rubric. */
@@ -183,6 +206,13 @@ export function powerRefusalMessage(code: string, serverMessage?: string | null)
             return "We could not check that right now. Nothing was used up — try again in a moment.";
         case "server_configuration":
             return "Reviewing is offline right now. Nothing was lost.";
+        case "evidence_required":
+            return "Add a photo or video of what you did.";
+        case "video_frames_required":
+            return "That video could not be read. Try recording it again.";
+        case "evidence_path_not_owned":
+        case "evidence_download_failed":
+            return "Your photo or video did not finish uploading. Try adding it again.";
         default:
             return serverMessage || "Could not check that right now. Try again in a moment.";
     }

@@ -90,7 +90,7 @@ function resolveRealSpecies(slug: string): PokemonRealSpecies | null {
         facts: species.premiumDetails.whyInteresting.map((item) => item.trim()).filter(Boolean).slice(0, 2),
         stats,
         animalHref: `/animals/${slug}`,
-        lessonHref: publishedLessonSlugs.has(slug) ? `/animal-lessons/${slug}` : null
+        lessonHref: publishedLessonSlugs.has(slug) ? `/animal-powers/${slug}` : null
     };
 }
 

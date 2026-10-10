@@ -233,7 +233,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                                 </h3>
                                 <p className="text-sm font-semibold text-primary-200">{animal.archetype}</p>
                                 <p className="text-sm leading-6 text-ink-300 md:text-base">{animal.oneLiner}</p>
-                                <Link href={`/animal-lessons/${animal.slug}`} underline className="w-fit text-sm text-primary-200 hover:text-primary-100">
+                                <Link href={`/animal-powers/${animal.slug}`} underline className="w-fit text-sm text-primary-200 hover:text-primary-100">
                                     {page.quiz.lessonLinkLabel}
                                 </Link>
                             </div>

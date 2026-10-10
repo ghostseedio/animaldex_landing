@@ -25,6 +25,7 @@ type ProfileRow = {
     created_at?: string | null;
     chrome_preset?: string | null;
     location_visibility?: string | null;
+    capture_grid_sort?: string | null;
 };
 
 type PublicCaptureRow = {
@@ -45,6 +46,7 @@ type PublicCaptureRow = {
     speed_boost?: number | null;
     intelligence_boost?: number | null;
     identity_kind?: string | null;
+    image_media_kind?: string | null;
 };
 
 type PublicProfileSummaryRow = {
@@ -165,6 +167,10 @@ export type PublicProfileCapture = {
     rarity: number;
     isIndexed: boolean;
     identityKind: string | null;
+    /** AnimalDex # for the grid's index chip; null when the species has no number. */
+    animalDexNumber: number | null;
+    speciesProfileId: string | null;
+    isMovingMedia: boolean;
 };
 
 export type ProfileBestForTag = {
@@ -267,6 +273,8 @@ export type PublicProfileCard = {
     challengeWins: number;
     challengeLosses: number;
     locationVisibility: ProfileLocationVisibility;
+    /** iOS `UserProfile.captureGridSort`: the owner's choice in the profile editor. */
+    captureGridSort: "recent" | "index";
     /** Raw metric — callers must gate on `locationVisibility` before showing it. */
     discoveryDistanceMeters: number | null;
 };
@@ -409,7 +417,8 @@ function readStat(stats: Record<string, number> | null | undefined, key: string,
 
 function toPublicCapture(
     row: PublicCaptureRow,
-    speciesSlug: string | null
+    speciesSlug: string | null,
+    animalDexNumber: number | null = null
 ): PublicProfileCapture {
     const imageSrc = getCaptureImageRoute(row.capture_id);
     const stats = row.game_stats ?? {};
@@ -429,7 +438,10 @@ function toPublicCapture(
         intelligence: readStat(stats, "intelligence", row.intelligence_boost ?? 0),
         rarity: readStat(stats, "rarity"),
         isIndexed: Boolean(row.species_profile_id?.trim()),
-        identityKind: row.identity_kind?.trim() || null
+        identityKind: row.identity_kind?.trim() || null,
+        animalDexNumber: animalDexNumber != null && animalDexNumber >= 1 ? animalDexNumber : null,
+        speciesProfileId: row.species_profile_id?.trim().toLowerCase() || null,
+        isMovingMedia: Boolean(row.image_media_kind && row.image_media_kind !== "photo")
     };
 }
 
@@ -445,8 +457,13 @@ function buildLocationVisits(captures: Array<PublicProfileCapture & {
         if (!label) continue;
 
         const hasCoordinate = Number.isFinite(row.latitude) && Number.isFinite(row.longitude);
+        // A public page: group onto iOS's ~1 km grid and publish only the cell
+        // centre, never the capture point (3 decimals was ~110 m, close enough
+        // to find someone's garden).
+        const cellLatitude = hasCoordinate ? Math.round(Number(row.latitude) * 100) / 100 : null;
+        const cellLongitude = hasCoordinate ? Math.round(Number(row.longitude) * 100) / 100 : null;
         const key = hasCoordinate
-            ? `${Number(row.latitude).toFixed(3)},${Number(row.longitude).toFixed(3)}`
+            ? `${cellLatitude!.toFixed(2)},${cellLongitude!.toFixed(2)}`
             : label.toLowerCase();
         const existing = grouped.get(key);
 
@@ -462,8 +479,8 @@ function buildLocationVisits(captures: Array<PublicProfileCapture & {
                 label,
                 captureCount: 1,
                 lastSeenAt: row.capturedAt,
-                latitude: hasCoordinate ? Number(Number(row.latitude).toFixed(3)) : null,
-                longitude: hasCoordinate ? Number(Number(row.longitude).toFixed(3)) : null
+                latitude: cellLatitude,
+                longitude: cellLongitude
             });
         }
     }
@@ -683,7 +700,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     if (!handle) return null;
 
     const profileParams = new URLSearchParams({
-        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at,chrome_preset,location_visibility",
+        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at,chrome_preset,location_visibility,capture_grid_sort",
         username: `eq.${handle}`,
         limit: "1"
     });
@@ -707,7 +724,8 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         "dominance_boost",
         "speed_boost",
         "intelligence_boost",
-        "identity_kind"
+        "identity_kind",
+        "image_media_kind"
     ].join(",");
 
     const topCaptureParams = new URLSearchParams({
@@ -775,7 +793,14 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
 
     const speciesByIdentity = new Map<string, string>();
     const speciesByProfileId = new Map<string, string>();
+    const animalDexNumberByProfileId = new Map<string, number>();
+    const animalDexNumberBySlug = new Map<string, number>();
     for (const entry of speciesEntries) {
+        const number = entry.databaseSource?.animalDexNumber;
+        if (number != null && number >= 1) {
+            animalDexNumberBySlug.set(entry.slug, number);
+            if (entry.speciesProfileId) animalDexNumberByProfileId.set(entry.speciesProfileId.toLowerCase(), number);
+        }
         speciesByIdentity.set(entry.slug, entry.slug);
         if (entry.normalizedIdentityKey) {
             speciesByIdentity.set(toSpeciesSlug(entry.normalizedIdentityKey) ?? entry.slug, entry.slug);
@@ -787,7 +812,12 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
 
     const mapCaptureRow = (row: PublicCaptureRow) => {
         const identitySlug = toSpeciesSlug(row.normalized_identity_key);
-        return toPublicCapture(row, identitySlug ? speciesByIdentity.get(identitySlug) ?? null : null);
+        const slug = identitySlug ? speciesByIdentity.get(identitySlug) ?? null : null;
+        // iOS `animalDexNumber(for:)`: species profile first, then the catalog identity.
+        const number = (row.species_profile_id ? animalDexNumberByProfileId.get(row.species_profile_id.trim().toLowerCase()) : undefined)
+            ?? (slug ? animalDexNumberBySlug.get(slug) : undefined)
+            ?? null;
+        return toPublicCapture(row, slug, number);
     };
 
     const topCaptures = topRows.map(mapCaptureRow);
@@ -937,6 +967,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         challengeWins: Number(summary?.challenge_wins ?? 0),
         challengeLosses: Number(summary?.challenge_losses ?? 0),
         locationVisibility: normalizeLocationVisibility(profile.location_visibility),
+        captureGridSort: profile.capture_grid_sort?.trim().toLowerCase() === "index" ? "index" : "recent",
         discoveryDistanceMeters:
             Number(summary?.located_observation_count ?? 0) >= MIN_LOCATED_OBSERVATIONS_FOR_DISTANCE
             && summary?.discovery_distance_meters != null

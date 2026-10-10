@@ -1,5 +1,5 @@
 /**
- * Path-based paging for long hub lists (/challenge-yourself, /animal-behaviours).
+ * Path-based paging for long hub lists (/animal-trials, /animal-frequencies).
  *
  * Page 1 is the hub itself; later pages live at <hub>/page/<n> so each one is
  * a static, cacheable URL with its own canonical. /page/1 is 308'd to the hub
@@ -53,14 +53,14 @@ export function getPaginationItems(currentPage: number, totalPages: number): Arr
     });
 }
 
-export const challengeYourselfPagination = createHubPagination({
-    basePath: "/challenge-yourself",
+export const animalTrialsPagination = createHubPagination({
+    basePath: "/animal-trials",
     perPage: 60,
     anchor: "every-trial"
 });
 
-export const animalBehavioursPagination = createHubPagination({
-    basePath: "/animal-behaviours",
+export const animalFrequenciesPagination = createHubPagination({
+    basePath: "/animal-frequencies",
     perPage: 24,
     anchor: "behaviour-signatures"
 });

@@ -61,7 +61,7 @@ export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) 
     if (family === "animals") {
         return isPublishedAnimalSlug(normalized);
     }
-    if (family === "animal-lessons") {
+    if (family === "animal-powers") {
         return isPublishedLessonSlug(normalized);
     }
     if (family === "pokemon-animals") {
@@ -71,7 +71,7 @@ export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) 
         // Curated hybrids plus snapshot fusions (refreshClosedSeoNamespaceSlugs).
         return HYBRID_SLUGS.has(normalized);
     }
-    if (family === "powers") {
+    if (family === "qualities") {
         return POWER_SLUGS.has(normalized);
     }
     return COMPARISON_SLUGS.has(normalized);

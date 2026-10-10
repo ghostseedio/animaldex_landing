@@ -22,7 +22,7 @@
     "refresh:animal-fusions": "tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts",
     "refresh:published-seo-slugs": "tsx scripts/refreshPublishedSeoSlugs.mjs",
     "refresh:animal-behaviours": "tsx scripts/refreshAnimalBehaviourSnapshots.mts",
-    "refresh:published-seo": "tsx scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts && tsx scripts/refreshPublishedSeoComparisons.mts && npm run refresh:page-videos",
+    "refresh:published-seo": "tsx scripts/refreshPublishedSeoSlugs.mjs && tsx scripts/refreshPublishedSeoSnapshots.mts && tsx scripts/refreshStaticSpeciesProfiles.mts && tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts && tsx scripts/refreshPublishedSeoComparisons.mts && npm run refresh:page-videos",
     "refresh:page-videos": "node --env-file-if-exists=.env scripts/refresh-published-page-videos.mjs",
     "seo:audit": "node scripts/generateSeoSpeciesGapReport.js",
     "seo:audit:missing-principles": "node scripts/generateMissingPrinciplesReviewReport.js",

@@ -32,8 +32,8 @@ export const LOCATIONS_HREF = "/locations";
 export const INSTAGRAM_WILDLIFE_ARCHIVE_HREF = "/use-cases/import-instagram-wildlife-photos";
 export const WILDLIFE_EXPERIENCES_HREF = "/wildlife-experiences";
 export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
-export const ANIMAL_BEHAVIOURS_HREF = "/animal-behaviours";
-export const CHALLENGE_YOURSELF_HREF = "/challenge-yourself";
+export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
+export const ANIMAL_TRIALS_HREF = "/animal-trials";
 
 /** 01 — AnimalDex: what the product is, and the two ways in. */
 export const productLinks: PublicNavLink[] = [
@@ -56,18 +56,19 @@ export const exploreAnimalLinks: PublicNavLink[] = [
 ];
 
 /**
- * 03 — Lessons from Animals: what an animal teaches, rather than what it is.
+ * 03 — Animal Wisdom: what an animal teaches, rather than what it is.
  *
- * Was `animalWisdomLinks`. Renamed with the category, and `/what-animal-am-i`
- * moved here out of Explore Animals: it answers a question about the reader,
- * not a question about the catalogue.
+ * `/what-animal-am-i` lives here rather than in Explore Animals: it answers a
+ * question about the reader, not a question about the catalogue. The Oct 2026
+ * rename (Lessons → Powers, Traits → Qualities, Behaviours → Frequencies,
+ * Challenge Yourself → Trials) moved every URL here; next.config.js 301s the old ones.
  */
-export const animalLessonLinks: PublicNavLink[] = [
+export const animalWisdomLinks: PublicNavLink[] = [
     {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "ask"},
-    {href: "/animal-lessons", labelKey: "animalLessons", preview: "lessons"},
-    {href: "/powers", labelKey: "animalAbilities", preview: "powers"},
-    {href: ANIMAL_BEHAVIOURS_HREF, labelKey: "animalBehaviours", preview: "behaviours"},
-    {href: CHALLENGE_YOURSELF_HREF, labelKey: "challengeYourself", preview: "challenge"},
+    {href: "/animal-powers", labelKey: "animalPowers", preview: "lessons"},
+    {href: "/qualities", labelKey: "animalQualities", preview: "powers"},
+    {href: ANIMAL_FREQUENCIES_HREF, labelKey: "animalFrequencies", preview: "behaviours"},
+    {href: ANIMAL_TRIALS_HREF, labelKey: "animalTrials", preview: "challenge"},
     {href: "/what-animal-am-i", labelKey: "whatAnimalAmI", preview: "whatAmI"}
 ];
 
@@ -95,7 +96,7 @@ export const headerDropdowns: PublicNavSection[] = [
     // Catalogue above the rule, the places to go and use it below.
     {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks, ruleAfterHref: "/animal-hybrids"},
     // Reading above the rule, the interactive pages below.
-    {id: "lessons", titleKey: "animalWisdom", links: animalLessonLinks, ruleAfterHref: "/powers"},
+    {id: "lessons", titleKey: "animalWisdom", links: animalWisdomLinks, ruleAfterHref: "/qualities"},
     {id: "resources", titleKey: "footerGroups.resources", links: headerResourceLinks, ruleAfterHref: "/support"}
 ];
 
@@ -122,6 +123,6 @@ export const footerColumns: Array<{
 }> = [
     {titleKey: "footerGroups.product", links: productLinks},
     {titleKey: "footerGroups.explore", links: exploreAnimalLinks},
-    {titleKey: "footerGroups.wisdom", links: animalLessonLinks},
+    {titleKey: "footerGroups.wisdom", links: animalWisdomLinks},
     {titleKey: "footerGroups.resources", links: resourceLinks}
 ];

@@ -78,6 +78,7 @@ export const adminNavGroups: AdminNavGroup[] = [
         items: [
             {href: "/admin/catalog", label: "Index", icon: Notebook, hint: "Every AnimalDex number"},
             {href: "/admin/indexing", label: "Unindexed", icon: Hourglass, hint: "Captures still awaiting a number"},
+            {href: "/admin/identity-review", label: "Identity review", icon: ClipboardCheck, hint: "Same animal under two numbers"},
         ],
     },
     {

@@ -49,7 +49,7 @@ function AnimalLinks({animal, copy}: {animal: QuizAnimal; copy: QuizCopy}) {
             <Link href={`/animals/${animal.slug}`} underline className="text-primary-200 hover:text-primary-100">
                 {copy.speciesLinkLabel}: {animal.name}
             </Link>
-            <Link href={`/animal-lessons/${animal.slug}`} underline className="text-primary-200 hover:text-primary-100">
+            <Link href={`/animal-powers/${animal.slug}`} underline className="text-primary-200 hover:text-primary-100">
                 {copy.lessonLinkLabel}
             </Link>
         </div>

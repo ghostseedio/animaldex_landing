@@ -23,7 +23,7 @@ const additionalEditablePages = [
     {slug: "animal-card-deck-creator", title: "Animal Card Deck Creator"},
     {slug: "animal-collection-game", title: "Animal Collection Game"},
     {slug: "animal-hybrids", title: "Animal Hybrids"},
-    {slug: "animal-lessons", title: "Animal Lessons"},
+    {slug: "animal-powers", title: "Animal Powers"},
     {slug: "animal-symbolism", title: "Animal Symbolism"},
     {slug: "animal-wisdom", title: "Animal Wisdom"},
     {slug: "animals", title: "Animals"},

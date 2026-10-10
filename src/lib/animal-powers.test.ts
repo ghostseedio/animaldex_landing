@@ -131,6 +131,14 @@ test("a grader outage is never phrased as a refusal", () => {
     assert.equal(powerRefusalMessage("unmapped_code", "Server said so."), "Server said so.");
 });
 
+test("evidence refusals carry the shared cross-platform copy", () => {
+    assert.equal(powerRefusalMessage("evidence_required"), "Add a photo or video of what you did.");
+    assert.equal(powerRefusalMessage("video_frames_required"), "That video could not be read. Try recording it again.");
+    const upload = "Your photo or video did not finish uploading. Try adding it again.";
+    assert.equal(powerRefusalMessage("evidence_path_not_owned"), upload);
+    assert.equal(powerRefusalMessage("evidence_download_failed"), upload);
+});
+
 function trial(overrides: Record<string, unknown>): AnimalTrial {
     const decoded = decodeAnimalTrial({
         species_profile_id: SPECIES,

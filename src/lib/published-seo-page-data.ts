@@ -6,6 +6,7 @@ import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
 import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
+import {withReadableRangeText} from "@/data/native-range";
 
 type SnapshotFile<T> = {
     generatedAt: string;
@@ -18,7 +19,7 @@ const animalPages = animalSnapshot as SnapshotFile<SpeciesEntry>;
 const lessonPages = lessonSnapshot as SnapshotFile<SpeciesBehaviorLesson>;
 
 const snapshotAnimalsBySlug = new Map(
-    animalPages.entries.map((entry) => [entry.slug, entry] as const)
+    animalPages.entries.map((entry) => [entry.slug, {...entry, analysis: withReadableRangeText(entry.analysis)}] as const)
 );
 const snapshotLessonsBySlug = new Map(
     lessonPages.entries.map((entry) => [entry.slug, entry] as const)

@@ -31,7 +31,7 @@ test("published SEO slug index covers the live sitemap surface and rejects unkno
 
 test("public animal and lesson detail pages do not fan out remote SEO work", () => {
     const animals = read("app/[locale]/(composited)/animals/[slug]/page.tsx");
-    const lessons = read("app/[locale]/(composited)/(answers)/animal-lessons/[slug]/page.tsx");
+    const lessons = read("app/[locale]/(composited)/(answers)/animal-powers/[slug]/page.tsx");
     const catalog = read("data/database-species-pages.ts");
     const behavior = read("data/species-behavior-lessons.ts");
 

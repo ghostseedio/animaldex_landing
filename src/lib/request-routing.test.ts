@@ -19,10 +19,10 @@ test("matchDefaultLocalePrefixedPath collapses /en to unprefixed canonicals", ()
     assert.equal(matchDefaultLocalePrefixedPath("/en"), "/");
     assert.equal(matchDefaultLocalePrefixedPath("/en/"), "/");
     assert.equal(matchDefaultLocalePrefixedPath("/en/animals/aardvark"), "/animals/aardvark");
-    assert.equal(matchDefaultLocalePrefixedPath("/en/animal-lessons/aardvark"), "/animal-lessons/aardvark");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/animal-powers/aardvark"), "/animal-powers/aardvark");
     assert.equal(matchDefaultLocalePrefixedPath("/en/pokemon-animals/generation-i"), "/pokemon-animals/generation-i");
     assert.equal(matchDefaultLocalePrefixedPath("/animals/aardvark"), null);
-    assert.equal(matchDefaultLocalePrefixedPath("/animal-lessons/aardvark"), null);
+    assert.equal(matchDefaultLocalePrefixedPath("/animal-powers/aardvark"), null);
     assert.equal(matchDefaultLocalePrefixedPath("/pokemon-animals/generation-i"), null);
     assert.equal(matchDefaultLocalePrefixedPath("/id/animals/tiger"), null);
     assert.equal(matchDefaultLocalePrefixedPath("/english"), null);
@@ -33,7 +33,7 @@ test("unprefixed English SEO paths must never be treated as /en collapse targets
     // Regression: next.config /en/:path* + next-intl rewrite caused self-308s.
     for (const path of [
         "/animals/aardvark",
-        "/animal-lessons/aardvark",
+        "/animal-powers/aardvark",
         "/pokemon-animals/generation-i",
         "/animals/mata-mata"
     ]) {

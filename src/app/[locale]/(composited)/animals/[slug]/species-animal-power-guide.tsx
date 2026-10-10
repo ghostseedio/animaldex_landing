@@ -8,11 +8,11 @@ type SpeciesAnimalPowerGuideProps = {
     animalName: string;
     artwork?: ReactNode;
     profile: EnhancedAnimalPowerProfile;
-    /** "What does it mean to dream about a <animal>?", built from this principle. */
+    /** "What does it mean to dream about or encounter a wild <animal>?", built from this principle. */
     dream?: DreamReading | null;
     /** Symbolism, spirit animal, life areas and biomimicry — all from data. */
     meaning?: AnimalMeaningSections | null;
-    /** /animal-lessons/<slug> when published: owns "what can we learn from…". */
+    /** /animal-powers/<slug> when published: owns "what can we learn from…". */
     lessonHref?: string | null;
     labels: {
         eyebrow: string;

@@ -380,6 +380,36 @@ function readDeclaredRangeKeys(text: string): NativeRangeRegionKey[] {
     return keys;
 }
 
+const DECLARED_KEYS_LINE = /^\s*native range keys:\s*([^.]*)\.\s*/i;
+
+/**
+ * The catalog's `Native range keys: north_america, south_asia.` prefix is
+ * machine data, but it arrives inside `typical_habitat`, which is also the
+ * page's habitat and native-range copy. Move the keys to `nativeRangeKeys` and
+ * leave readers the prose; a field that was only keys becomes region names.
+ */
+export function withReadableRangeText(analysis: SpeciesEntry["analysis"]): SpeciesEntry["analysis"] {
+    const habitat = DECLARED_KEYS_LINE.exec(analysis.habitat);
+    const nativeRange = DECLARED_KEYS_LINE.exec(analysis.nativeRange);
+    const declared = habitat ?? nativeRange;
+    if (!declared) return analysis;
+
+    const keys = readDeclaredRangeKeys(declared[0]);
+    const regionNames = keys.map((key) => REGION_LABELS[key]).join(", ");
+    const readable = (text: string, match: RegExpExecArray | null) => {
+        if (!match) return text;
+        return text.slice(match[0].length).trim() || regionNames || text;
+    };
+
+    return {
+        ...analysis,
+        habitat: readable(analysis.habitat, habitat),
+        // The native-range fact reads better as the regions than as habitat prose.
+        nativeRange: nativeRange && regionNames ? regionNames : readable(analysis.nativeRange, nativeRange),
+        nativeRangeKeys: analysis.nativeRangeKeys ?? keys
+    };
+}
+
 function mappingFromDeclaredKeys(keys: NativeRangeRegionKey[]): NativeRangeMapping | null {
     if (!keys.length) return null;
 
@@ -417,8 +447,10 @@ function buildDescriptor(entry: SpeciesEntry, habitatText: string | null): Nativ
     ].some((pattern) => habitatTokens.includes(pattern));
     const habitatMatches = (fragments: string[]) => fragments.some((fragment) => containsFragment(fragment) && !isNegatedFragment(fragment));
 
-    // Explicit keys from the catalog pipeline win over prose inference.
-    const declaredMapping = mappingFromDeclaredKeys(readDeclaredRangeKeys(habitatTokens));
+    // Explicit keys from the catalog pipeline win over prose inference. Entries
+    // built by `withReadableRangeText` carry them parsed; older text still has the line.
+    const parsedKeys = (entry.analysis.nativeRangeKeys ?? []).filter(isAnyNativeRangeRegionKey);
+    const declaredMapping = mappingFromDeclaredKeys(parsedKeys.length ? parsedKeys : readDeclaredRangeKeys(habitatTokens));
     if (declaredMapping) {
         return descriptorFromMapping(declaredMapping, habitatText);
     }

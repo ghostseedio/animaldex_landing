@@ -73,62 +73,38 @@ module.exports = withNextIntl({
                 destination: "/legal/terms",
                 permanent: true
             },
+            // Oct 2026 rename: Animal Lessons → Animal Powers, Animal Powers
+            // (traits) → Animal Qualities, Animal Behaviours → Animal
+            // Frequencies, Challenge Yourself → Animal Trials. Each old URL
+            // lands on its final destination in one hop.
+            // Lesson detail pages are English-only (see the /id/...:slug block below).
             {
-                source: "/animal-meanings",
-                destination: "/animal-lessons",
+                source: "/id/animal-lessons/:slug",
+                destination: "/animal-powers/:slug",
                 permanent: true
             },
             // Page 1 of a paged hub (src/data/hub-pagination.ts) is the hub itself.
-            ...["/challenge-yourself", "/animal-behaviours"].flatMap((hub) => ["", "/id"].map((prefix) => ({
-                source: `${prefix}${hub}/page/1`,
-                destination: `${prefix}${hub}`,
+            ...[
+                ["/animal-trials", "/animal-trials"],
+                ["/animal-frequencies", "/animal-frequencies"],
+                ["/challenge-yourself", "/animal-trials"],
+                ["/animal-behaviours", "/animal-frequencies"]
+            ].flatMap(([from, to]) => ["", "/id"].map((prefix) => ({
+                source: `${prefix}${from}/page/1`,
+                destination: `${prefix}${to}`,
                 permanent: true
             }))),
-            {
-                source: "/id/animal-meanings",
-                destination: "/id/animal-lessons",
-                permanent: true
-            },
-            {
-                source: "/principles",
-                destination: "/powers",
-                permanent: true
-            },
-            {
-                source: "/principles/:path*",
-                destination: "/powers/:path*",
-                permanent: true
-            },
-            {
-                source: "/id/principles",
-                destination: "/id/powers",
-                permanent: true
-            },
-            {
-                source: "/id/principles/:path*",
-                destination: "/id/powers/:path*",
-                permanent: true
-            },
-            {
-                source: "/qualities",
-                destination: "/powers",
-                permanent: true
-            },
-            {
-                source: "/qualities/:path*",
-                destination: "/powers/:path*",
-                permanent: true
-            },
-            {
-                source: "/id/qualities",
-                destination: "/id/powers",
-                permanent: true
-            },
-            {
-                source: "/id/qualities/:path*",
-                destination: "/id/powers/:path*",
-                permanent: true
-            },
+            ...[
+                ["/animal-meanings", "/animal-powers"],
+                ["/animal-lessons", "/animal-powers"],
+                ["/powers", "/qualities"],
+                ["/principles", "/qualities"],
+                ["/animal-behaviours", "/animal-frequencies"],
+                ["/challenge-yourself", "/animal-trials"]
+            ].flatMap(([from, to]) => ["", "/id"].flatMap((prefix) => [
+                {source: `${prefix}${from}`, destination: `${prefix}${to}`, permanent: true},
+                {source: `${prefix}${from}/:path*`, destination: `${prefix}${to}/:path*`, permanent: true}
+            ])),
             ...reversedComparisonRedirects(),
             // "tiger vs cheetah" has no battle page yet; the speed matchup is the
             // closest published answer (Search Console, Oct 2026).
@@ -190,8 +166,8 @@ module.exports = withNextIntl({
                 permanent: true
             },
             {
-                source: "/id/animal-lessons/:slug",
-                destination: "/animal-lessons/:slug",
+                source: "/id/animal-powers/:slug",
+                destination: "/animal-powers/:slug",
                 permanent: true
             },
             {
@@ -330,22 +306,6 @@ module.exports = withNextIntl({
             {
                 source: "/.well-known/assetlinks.json",
                 destination: "/api/assetlinks"
-            },
-            {
-                source: "/powers",
-                destination: "/qualities"
-            },
-            {
-                source: "/powers/:path*",
-                destination: "/qualities/:path*"
-            },
-            {
-                source: "/:locale(en|id)/powers",
-                destination: "/:locale/qualities"
-            },
-            {
-                source: "/:locale(en|id)/powers/:path*",
-                destination: "/:locale/qualities/:path*"
             }
         ];
     },

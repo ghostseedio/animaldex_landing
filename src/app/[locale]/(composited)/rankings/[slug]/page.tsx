@@ -296,7 +296,7 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
             principle: profile.principle,
             coreLesson: profile.coreLesson,
             bestFor: profile.bestFor.slice(0, 2),
-            lessonHref: hasLessonPage ? `/animal-lessons/${entry.species.slug}` : undefined,
+            lessonHref: hasLessonPage ? `/animal-powers/${entry.species.slug}` : undefined,
             lessonLabel: hasLessonPage ? t("topTeachLessonLink", {animal: commonNameInSentence(entry.species.name)}) : undefined
         }];
     });

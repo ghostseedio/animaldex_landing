@@ -8,7 +8,7 @@ import {
     frequencyOf,
     type BehaviourSignature
 } from "@/data/animal-behaviours";
-import {animalBehavioursPagination as pagination} from "@/data/hub-pagination";
+import {animalFrequenciesPagination as pagination} from "@/data/hub-pagination";
 import {getSpeciesArtworkRoute, getSpeciesArtworkThumbnailUrl} from "@/data/species-artwork";
 import {resolveSpeciesArtworkFiles} from "@/data/species-artwork-index";
 import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagination-nav";
@@ -16,7 +16,7 @@ import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
 
-export const animalBehavioursPageCount = pagination.pageCount(behaviourSignatures.length);
+export const animalFrequenciesPageCount = pagination.pageCount(behaviourSignatures.length);
 
 /** First letter → the page that starts that letter, for the A–Z jump row. */
 const letterPages: Array<{letter: string; page: number}> = (() => {
@@ -30,11 +30,11 @@ const letterPages: Array<{letter: string; page: number}> = (() => {
 
 const ICON_SIZE = 96;
 
-const TITLE = "Animal Behaviours: The Science Behind Animal Frequencies and Signatures";
+const TITLE = "Animal Frequencies: The Science Behind Animal Behaviour Rhythms and Signatures";
 const DESCRIPTION =
-    "How animal behaviour actually works — the tempo an animal runs at, the rhythm its body commits to, "
+    "Animal frequencies explained — the tempo an animal runs at, the rhythm its body commits to, "
     + "and what \"animal frequency\" means when you measure behaviour instead of guessing at it. "
-    + `Behaviour signatures for ${behaviourSignatures.length} species.`;
+    + `Frequency signatures for ${behaviourSignatures.length} species.`;
 
 const FAQ: Array<{question: string; answer: string}> = [
     {
@@ -69,7 +69,7 @@ const FAQ: Array<{question: string; answer: string}> = [
             + "and exposure, so it is used rarely and held for a long time. Repetition rate follows the cost of a single try."
     },
     {
-        question: "How are these behaviour signatures produced?",
+        question: "How are these frequency signatures produced?",
         answer:
             "Each signature is generated from a species' documented behaviour and anatomy, then reduced to an archetype, a "
             + "frequency profile and a waveform that traces the rhythm. They are summaries of published natural history, "
@@ -78,24 +78,24 @@ const FAQ: Array<{question: string; answer: string}> = [
     }
 ];
 
-export function buildAnimalBehavioursMetadata(locale: string, page: number): Metadata {
+export function buildAnimalFrequenciesMetadata(locale: string, page: number): Metadata {
     const path = pagination.pagePath(page);
     const pageEntries = pagination.slice(behaviourSignatures, page);
-    const title = page === 1 ? TITLE : `Animal Behaviour Signatures – Page ${page} of ${animalBehavioursPageCount}`;
+    const title = page === 1 ? TITLE : `Animal Frequency Signatures – Page ${page} of ${animalFrequenciesPageCount}`;
     const description = page === 1
         ? DESCRIPTION
-        : `Behaviour signatures for ${pageEntries[0]?.name} to ${pageEntries[pageEntries.length - 1]?.name}: `
+        : `Frequency signatures for ${pageEntries[0]?.name} to ${pageEntries[pageEntries.length - 1]?.name}: `
             + "the archetype, frequency and waveform rhythm of each species. "
-            + `Page ${page} of ${animalBehavioursPageCount}.`;
+            + `Page ${page} of ${animalFrequenciesPageCount}.`;
 
     return withOgCard({
         title,
         description,
         keywords: [
-            "animal behaviour",
-            "animal behavior science",
             "animal frequencies",
             "animal frequency meaning",
+            "animal behaviour",
+            "animal behavior science",
             "science behind animal behaviour",
             "animal behaviour patterns",
             "why animals behave the way they do"
@@ -114,7 +114,7 @@ export function buildAnimalBehavioursMetadata(locale: string, page: number): Met
             description,
             url: getLocalePath(locale, path)
         }
-    }, "Animal behaviours on AnimalDex", "page", "animal-behaviours");
+    }, "Animal frequencies on AnimalDex", "page", "animal-frequencies");
 }
 
 /** Page 1 is the full hub; later pages carry only the paged signature grid. */
@@ -123,7 +123,7 @@ export function buildAnimalBehavioursMetadata(locale: string, page: number): Met
  * the artwork route for the rest (a species with no artwork lands on the
  * placeholder). Loaded by the route so the view can stay synchronous.
  */
-export async function loadAnimalBehavioursIcons(page: number): Promise<Record<string, string>> {
+export async function loadAnimalFrequenciesIcons(page: number): Promise<Record<string, string>> {
     const slugs = pagination.slice(behaviourSignatures, page).map((entry) => entry.slug);
     const files = await resolveSpeciesArtworkFiles(slugs).catch(() => new Map<string, string | null>());
     return Object.fromEntries(slugs.map((slug) => {
@@ -132,7 +132,7 @@ export async function loadAnimalBehavioursIcons(page: number): Promise<Record<st
     }));
 }
 
-export default function AnimalBehavioursView({locale, page, icons}: {locale: string; page: number; icons: Record<string, string>}) {
+export default function AnimalFrequenciesView({locale, page, icons}: {locale: string; page: number; icons: Record<string, string>}) {
     const params = {locale};
     const isFirstPage = page === 1;
     const totals = countByFrequency(behaviourSignatures);
@@ -164,10 +164,10 @@ export default function AnimalBehavioursView({locale, page, icons}: {locale: str
             <section className="border-b border-line-300 px-5 pb-16 pt-12 sm:px-8">
                 <div className="mx-auto max-w-5xl">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300">
-                        Lessons from Animals
+                        Animal Frequencies
                     </p>
                     <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.08] text-white sm:text-6xl">
-                        The science behind animal behaviour
+                        The tempo behind animal behaviour
                     </h1>
                     <p className="mt-6 max-w-3xl text-lg leading-8 text-ink-200">
                         Every animal runs at a tempo. Some commit rarely and hold it for a long time; some make hundreds
@@ -226,10 +226,10 @@ export default function AnimalBehavioursView({locale, page, icons}: {locale: str
                             href={pagination.pagePath(1)}
                             className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300 underline-offset-4 hover:underline"
                         >
-                            Animal Behaviours
+                            Animal Frequencies
                         </Link>
                         <h1 className="mt-4 font-display text-4xl leading-[1.08] text-white sm:text-5xl">
-                            Behaviour signatures: {pageEntries[0]?.name} to {pageEntries[pageEntries.length - 1]?.name}
+                            Frequency signatures: {pageEntries[0]?.name} to {pageEntries[pageEntries.length - 1]?.name}
                         </h1>
                         <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-200">
                             Each card gives a species&rsquo; behavioural archetype, its frequency — how often it commits
@@ -241,7 +241,7 @@ export default function AnimalBehavioursView({locale, page, icons}: {locale: str
 
             <section id={pagination.anchor} className="scroll-mt-24 border-b border-line-300 px-5 py-16 sm:px-8">
                 <div className="mx-auto max-w-6xl">
-                    <h2 className="font-display text-3xl text-white">Behaviour signatures</h2>
+                    <h2 className="font-display text-3xl text-white">Frequency signatures</h2>
                     <p className="mt-3 max-w-3xl leading-7 text-ink-200">
                         Each waveform traces one species&rsquo; working rhythm — where it spends effort, and where it waits.{" "}
                         {behaviourSignatures.length.toLocaleString(params.locale)} species, A–Z; showing{" "}
@@ -270,9 +270,9 @@ export default function AnimalBehavioursView({locale, page, icons}: {locale: str
                     <HubPaginationNav
                         pagination={pagination}
                         page={page}
-                        totalPages={animalBehavioursPageCount}
+                        totalPages={animalFrequenciesPageCount}
                         locale={params.locale}
-                        label="Behaviour signature pages"
+                        label="Frequency signature pages"
                     />
                 </div>
             </section>
@@ -292,12 +292,12 @@ export default function AnimalBehavioursView({locale, page, icons}: {locale: str
 
                     <p className="mt-10 leading-7 text-ink-300">
                         Next:{" "}
-                        <Link href="/challenge-yourself" className="text-primary-200 underline-offset-4 hover:underline">
-                            run an animal&rsquo;s strategy yourself
+                        <Link href="/animal-trials" className="text-primary-200 underline-offset-4 hover:underline">
+                            take on the animal trials
                         </Link>
-                        {", read the "}
-                        <Link href="/animal-lessons" className="text-primary-200 underline-offset-4 hover:underline">
-                            animal lessons
+                        {", discover the "}
+                        <Link href="/animal-powers" className="text-primary-200 underline-offset-4 hover:underline">
+                            animal powers
                         </Link>
                         {", or "}
                         <Link href="/animals" className="text-primary-200 underline-offset-4 hover:underline">

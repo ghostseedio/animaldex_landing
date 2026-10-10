@@ -6,7 +6,7 @@
  * no randomness: the same answers always produce the same result.
  *
  * Every `slug` is published in src/data/published-seo-slugs.json under both
- * `animals` and `lessons`, so /animals/<slug> and /animal-lessons/<slug> resolve.
+ * `animals` and `lessons`, so /animals/<slug> and /animal-powers/<slug> resolve.
  */
 
 export type QuizAnimalId =

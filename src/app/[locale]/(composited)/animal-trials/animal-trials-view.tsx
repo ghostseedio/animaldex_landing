@@ -1,20 +1,20 @@
 import type {Metadata} from "next";
+import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import {animalTrials, countByFrequency, frequencyOf, stride, type AnimalTrialEntry} from "@/data/animal-behaviours";
-import {challengeYourselfPagination as pagination} from "@/data/hub-pagination";
+import {animalTrials, countByFrequency, frequencyOf, type AnimalTrialEntry} from "@/data/animal-behaviours";
+import {animalTrialsPagination as pagination} from "@/data/hub-pagination";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagination-nav";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
 
-export const challengeYourselfPageCount = pagination.pageCount(animalTrials.length);
+export const animalTrialsPageCount = pagination.pageCount(animalTrials.length);
 
-const TITLE = "Challenge Yourself: Biomimicry Challenges Drawn From Animal Behaviour";
+const TITLE = "Animal Trials: Biomimicry Challenges Drawn From Animal Behaviour";
 const DESCRIPTION =
     "What humans and animals genuinely have in common, and what you can borrow. "
     + `${animalTrials.length} Animal Trials, each one a strategy a real species uses, turned into something you can run yourself.`;
-
-const FEATURED_COUNT = 18;
 
 const FAQ: Array<{question: string; answer: string}> = [
     {
@@ -54,9 +54,9 @@ const FAQ: Array<{question: string; answer: string}> = [
     }
 ];
 
-export function buildChallengeYourselfMetadata(locale: string, page: number): Metadata {
+export function buildAnimalTrialsMetadata(locale: string, page: number): Metadata {
     const path = pagination.pagePath(page);
-    const title = page === 1 ? TITLE : `Every Animal Trial – Page ${page} of ${challengeYourselfPageCount}`;
+    const title = page === 1 ? TITLE : `Every Animal Trial – Page ${page} of ${animalTrialsPageCount}`;
     const description = page === 1
         ? DESCRIPTION
         : `Animal Trials ${(page - 1) * pagination.perPage + 1}–${Math.min(page * pagination.perPage, animalTrials.length)} of ${animalTrials.length}. ${DESCRIPTION}`;
@@ -69,6 +69,7 @@ export function buildChallengeYourselfMetadata(locale: string, page: number): Me
             "biomimicry examples",
             "similarities between humans and animals",
             "what humans can learn from animals",
+            "animal trials",
             "animal inspired challenges",
             "copying animal behaviour",
             "nature inspired problem solving"
@@ -87,18 +88,17 @@ export function buildChallengeYourselfMetadata(locale: string, page: number): Me
             description,
             url: getLocalePath(locale, path)
         }
-    }, "Animal challenges on AnimalDex", "page", "challenge-yourself");
+    }, "Animal trials on AnimalDex", "page", "animal-trials");
 }
 
 /** Page 1 is the full hub; later pages carry only the paged Trial list. */
-export default function ChallengeYourselfView({locale, page}: {locale: string; page: number}) {
+export default function AnimalTrialsView({locale, page}: {locale: string; page: number}) {
     const params = {locale};
     const isFirstPage = page === 1;
     const pageTrials = pagination.slice(animalTrials, page);
     const rangeStart = (page - 1) * pagination.perPage + 1;
     const rangeEnd = rangeStart + pageTrials.length - 1;
     const totals = countByFrequency(animalTrials);
-    const featured = stride(animalTrials, FEATURED_COUNT);
     const species = new Set(animalTrials.map((trial) => trial.slug)).size;
     const principles = new Set(animalTrials.map((trial) => trial.principleName).filter(Boolean)).size;
 
@@ -115,7 +115,7 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
     const stats = [
         {value: animalTrials.length, label: "Trials"},
         {value: species, label: "Species"},
-        {value: principles, label: "Principles"},
+        {value: principles, label: "Powers"},
         {value: totals.LOW + totals.MID + totals.HIGH, label: "Classified by tempo"}
     ];
 
@@ -133,10 +133,10 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
             <section className="border-b border-line-300 px-5 pb-16 pt-12 sm:px-8">
                 <div className="mx-auto max-w-5xl">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300">
-                        Lessons from Animals
+                        Animal Trials
                     </p>
                     <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.08] text-white sm:text-6xl">
-                        Challenge yourself the way an animal would
+                        Take on the trials real animals face
                     </h1>
                     <p className="mt-6 max-w-3xl text-lg leading-8 text-ink-200">
                         You cannot copy a kingfisher&rsquo;s bill or a tern&rsquo;s migration. You can copy the rule each one
@@ -162,20 +162,6 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
                 </div>
             </section>
 
-            <section className="border-b border-line-300 px-5 py-16 sm:px-8">
-                <div className="mx-auto max-w-6xl">
-                    <h2 className="font-display text-3xl text-white">Trials drawn from real behaviour</h2>
-                    <p className="mt-3 max-w-3xl leading-7 text-ink-200">
-                        The animal&rsquo;s mechanism first, then the rule you follow. Reading a Trial needs no account.
-                    </p>
-
-                    <div className="mt-10 grid gap-px border border-line-300 bg-line-300 md:grid-cols-2 xl:grid-cols-3">
-                        {featured.map((trial) => (
-                            <TrialCard key={`${trial.slug}-${trial.title}`} trial={trial} locale={params.locale} />
-                        ))}
-                    </div>
-                </div>
-            </section>
             </>
             ) : (
                 <section className="border-b border-line-300 px-5 pb-10 pt-12 sm:px-8">
@@ -184,14 +170,14 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
                             href={pagination.pagePath(1)}
                             className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300 underline-offset-4 hover:underline"
                         >
-                            Challenge Yourself
+                            Animal Trials
                         </Link>
                         <h1 className="mt-4 font-display text-4xl leading-[1.08] text-white sm:text-5xl">
-                            Every Animal Trial — page {page} of {challengeYourselfPageCount}
+                            Every Animal Trial — page {page} of {animalTrialsPageCount}
                         </h1>
                         <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-200">
                             Each Trial is a strategy a real species uses, turned into something you can run yourself in about
-                            ten minutes. Open one to see the animal&rsquo;s mechanism and the rule you follow.
+                            ten minutes. Each card says what to do and why it helps.
                         </p>
                     </div>
                 </section>
@@ -199,29 +185,22 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
 
             <section id={pagination.anchor} className="scroll-mt-24 border-b border-line-300 px-5 py-16 sm:px-8">
                 <div className="mx-auto max-w-6xl">
-                    <h2 className="font-display text-3xl text-white">Every Trial</h2>
+                    <h2 className="font-display text-3xl text-white">Trials drawn from real behaviour</h2>
                     <p className="mt-3 max-w-3xl leading-7 text-ink-200">
+                        What each Trial asks you to do, and what it does for you. Reading a Trial needs no account.{" "}
                         {animalTrials.length.toLocaleString(params.locale)} Trials across{" "}
                         {species.toLocaleString(params.locale)} species. Showing{" "}
                         {rangeStart.toLocaleString(params.locale)}–{rangeEnd.toLocaleString(params.locale)}.
                     </p>
-                    <ul className="mt-8 flex flex-col gap-px border border-line-300 bg-line-300">
+                    <div className="mt-10 grid gap-px border border-line-300 bg-line-300 md:grid-cols-2 xl:grid-cols-3">
                         {pageTrials.map((trial) => (
-                            <li key={`${trial.slug}-${trial.title}-row`}>
-                                <Link
-                                    href={`/animals/${trial.slug}`}
-                                    className="flex flex-col gap-1 bg-canvas-950 px-5 py-3.5 transition-colors hover:bg-canvas-900 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
-                                >
-                                    <span className="font-semibold text-white">{trial.title}</span>
-                                    <span className="shrink-0 text-sm text-ink-400">{trial.species}</span>
-                                </Link>
-                            </li>
+                            <TrialCard key={`${trial.slug}-${trial.title}`} trial={trial} locale={params.locale} />
                         ))}
-                    </ul>
+                    </div>
                     <HubPaginationNav
                         pagination={pagination}
                         page={page}
-                        totalPages={challengeYourselfPageCount}
+                        totalPages={animalTrialsPageCount}
                         locale={params.locale}
                         label="Trial pages"
                     />
@@ -243,12 +222,12 @@ export default function ChallengeYourselfView({locale, page}: {locale: string; p
 
                     <p className="mt-10 leading-7 text-ink-300">
                         Next: read{" "}
-                        <Link href="/animal-behaviours" className="text-primary-200 underline-offset-4 hover:underline">
-                            the science behind animal behaviour
+                        <Link href="/animal-frequencies" className="text-primary-200 underline-offset-4 hover:underline">
+                            the animal frequencies
                         </Link>
                         {", the "}
-                        <Link href="/animal-lessons" className="text-primary-200 underline-offset-4 hover:underline">
-                            animal lessons
+                        <Link href="/animal-powers" className="text-primary-200 underline-offset-4 hover:underline">
+                            animal powers
                         </Link>
                         {", or "}
                         <Link href="/animals" className="text-primary-200 underline-offset-4 hover:underline">
@@ -276,23 +255,36 @@ function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: string}) {
 
             <Link
                 href={`/animals/${trial.slug}`}
-                className="w-fit text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400 underline-offset-4 transition-colors hover:text-primary-200 hover:underline"
+                className="group flex w-fit items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400 underline-offset-4 transition-colors hover:text-primary-200"
             >
-                {trial.species}
-                {trial.principleName ? ` · ${trial.principleName}` : ""}
+                <span className="relative h-10 w-10 shrink-0 overflow-hidden border border-line-300 bg-white/[0.04]">
+                    {/* Sized variant: 60 cards a page, so fetch thumbnails, not full artwork. */}
+                    <Image
+                        src={getSpeciesArtworkRoute(trial.slug, 96)}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="40px"
+                        className="object-contain p-1 transition duration-300 group-hover:scale-105"
+                    />
+                </span>
+                <span className="group-hover:underline">
+                    {trial.species}
+                    {trial.principleName ? ` · ${trial.principleName}` : ""}
+                </span>
             </Link>
 
-            {/* The animal's mechanism, then the human rule taken from it — the
-                borrowing is the point, so both halves are always shown. */}
+            {/* What the Trial asks, then what it does for you. The animal's
+                mechanism and rule stay on the species page. */}
             <div className="border-l-2 border-primary-500/40 pl-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-300">In the animal</p>
-                <p className="mt-1.5 line-clamp-5 text-sm leading-6 text-ink-200">{trial.mechanismConnection}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-300">The Trial</p>
+                <p className="mt-1.5 text-sm leading-6 text-ink-100">{trial.instructions ?? trial.objective}</p>
             </div>
 
-            {trial.animalRule ? (
+            {trial.userBenefit ? (
                 <div className="border-l-2 border-line-300 pl-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">In your version</p>
-                    <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-ink-200">{trial.animalRule}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Why it helps</p>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-200">{trial.userBenefit}</p>
                 </div>
             ) : null}
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07",
+  "generatedAt": "2026-10-10",
   "source": "species_system_dynamics, teaser fields only, joined to published SEO species pages",
   "note": "Newly generated rows do not appear on the page until this snapshot is refreshed and deployed. The production build consumes this file only and never fetches Supabase.",
   "entries": [

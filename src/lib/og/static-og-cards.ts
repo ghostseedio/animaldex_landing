@@ -22,14 +22,14 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         title: "How animals survive, think and win",
         tiles: [art("common-octopus", "Octopus"), art("peregrine-falcon", "Peregrine Falcon"), art("chameleon", "Chameleon")]
     },
-    "animal-lessons": {
-        kicker: "Animal lessons",
-        title: "What every animal can teach you",
+    "animal-powers": {
+        kicker: "Animal powers",
+        title: "The power every animal can teach you",
         tiles: [art("african-bush-elephant", "Elephant"), art("common-raven", "Raven"), art("honey-badger", "Honey Badger")]
     },
-    "powers": {
-        kicker: "Animal powers",
-        title: "Biology-backed powers from real animals",
+    "qualities": {
+        kicker: "Animal qualities",
+        title: "Biology-backed qualities from real animals",
         tiles: [art("cheetah", "Speed"), art("mantis-shrimp", "Precision"), art("arctic-tern", "Endurance")]
     },
     "animal-symbolism": {
@@ -42,13 +42,13 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         title: "Survival wisdom from the natural world",
         tiles: [art("bornean-orangutan", "Orangutan"), art("barn-owl", "Barn Owl"), art("green-sea-turtle", "Sea Turtle")]
     },
-    "animal-behaviours": {
-        kicker: "Animal behaviours",
+    "animal-frequencies": {
+        kicker: "Animal frequencies",
         title: "How animals hunt, hide, migrate and survive",
         tiles: [art("humpback-whale", "Humpback Whale"), art("leafcutter-ant", "Leafcutter Ant"), art("meerkat", "Meerkat")]
     },
-    "challenge-yourself": {
-        kicker: "Challenge yourself",
+    "animal-trials": {
+        kicker: "Animal trials",
         title: "Could you survive like these animals?",
         tiles: [art("emperor-penguin", "Emperor Penguin"), art("wolverine", "Wolverine"), art("komodo-dragon", "Komodo Dragon")]
     },

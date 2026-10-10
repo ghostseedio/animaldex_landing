@@ -4,7 +4,7 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {isNavHrefActive, isNavSectionActive, stripNavLocale} from "@/lib/nav-active";
-import {animalLessonLinks, exploreAnimalLinks, resourceLinks, START_COLLECTION_HREF} from "@/data/public-navigation";
+import {animalWisdomLinks, exploreAnimalLinks, resourceLinks, START_COLLECTION_HREF} from "@/data/public-navigation";
 
 test("strips the locale prefix the header links are rendered with", () => {
     assert.equal(stripNavLocale("/id"), "/");
@@ -32,7 +32,7 @@ test("home only matches home, and in-page anchors never take the marker", () => 
 });
 
 test("a dropdown is active when any of its links is", () => {
-    const lessons = animalLessonLinks.map((link) => link.href);
+    const lessons = animalWisdomLinks.map((link) => link.href);
     const explore = exploreAnimalLinks.map((link) => link.href);
     // Animal Symbolism sits under Resources now, not with the lesson pages.
     const resources = resourceLinks.map((link) => link.href);
@@ -40,7 +40,7 @@ test("a dropdown is active when any of its links is", () => {
     assert.ok(isNavSectionActive("/animal-symbolism/owl", resources));
     assert.ok(!isNavSectionActive("/animal-symbolism/owl", explore));
     assert.ok(!isNavSectionActive("/animal-symbolism/owl", lessons));
-    assert.ok(isNavSectionActive("/animal-lessons/patience", lessons));
+    assert.ok(isNavSectionActive("/animal-powers/patience", lessons));
     assert.ok(isNavSectionActive("/comparisons/lion-vs-tiger", explore));
     assert.ok(!isNavSectionActive("/blog", lessons));
 });

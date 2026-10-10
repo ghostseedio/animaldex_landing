@@ -1,5 +1,6 @@
 /**
- * "What does it mean to dream about a <animal>?" — answered from the animal's
+ * "What does it mean to dream about or encounter a wild <animal>?" — dreams
+ * and real sightings read the same way here. Answered from the animal's
  * own AnimalDex principle, expression, core lesson and best-for qualities, so
  * every species page with a principle (≈2,400) carries a distinct reading in
  * its Animal Power section. Phrasing rotates deterministically by slug so the
@@ -7,6 +8,24 @@
  *
  * Framing: a reflective reading tied to real behaviour, never a prediction.
  */
+
+import type {SpeciesEntry} from "@/data/species";
+
+// Not "domestic_parent": that marks the wild ancestor (rock pigeon, European rabbit).
+const KEPT_IDENTITY_KINDS = new Set(["breed", "cross_breed"]);
+const KEPT_HABITAT = /\b(no wild (population|habitat)|^kept (on|in)\b|domestic (home|environment|grazing))/i;
+
+/**
+ * Pets, livestock and aquarium hybrids — animals you meet, not meet "in the
+ * wild". Deliberately strict: native-range's domestic test matches "cat" and
+ * "dog" inside names, which would catch bobcats and African wild dogs.
+ */
+export function isKeptAnimal(entry: SpeciesEntry) {
+    return entry.slug.startsWith("domestic-")
+        || /domestic/i.test(entry.analysis.category)
+        || KEPT_IDENTITY_KINDS.has(entry.databaseSource?.identityKind ?? "")
+        || KEPT_HABITAT.test(entry.analysis.habitat.trim());
+}
 
 export type DreamReadingInput = {
     slug: string;
@@ -16,6 +35,8 @@ export type DreamReadingInput = {
     coreLesson: string;
     motto?: string | null;
     bestFor: string[];
+    /** Pets and livestock are met, not met "in the wild". */
+    domesticated?: boolean;
 };
 
 export type DreamScenarioReading = {title: string; reading: string};
@@ -61,15 +82,18 @@ function pick<T>(slug: string, salt: number, options: T[]): T {
     return options[hash % options.length];
 }
 
-export function buildDreamQuestion(name: string) {
+export function buildDreamQuestion(name: string, domesticated = false) {
     const animal = commonNameInSentence(name);
-    return `What does it mean to dream about ${article(animal)} ${animal}?`;
+    const subject = domesticated ? animal : `wild ${animal}`;
+    return `What does it mean to dream about or encounter ${article(subject)} ${subject}?`;
 }
 
 export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading {
     const {slug, name} = input;
+    const domesticated = input.domesticated === true;
     const animal = commonNameInSentence(name);
     const a = `${article(animal)} ${animal}`;
+    const wildA = domesticated ? a : `${article("wild")} wild ${animal}`;
     const principle = input.principle.trim();
     const expression = input.principleExpression?.trim();
     const lesson = sentence(input.coreLesson);
@@ -78,16 +102,17 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
     const second = qualities[1] ?? first;
     const third = qualities[2] ?? second;
     const motto = input.motto?.trim();
+    const capital = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
     const opener = pick(slug, 1, [
-        `Dreaming about ${a} usually points to ${first} and ${second}: the qualities the ${animal} lives by.`,
-        `${a.charAt(0).toUpperCase()}${a.slice(1)} in a dream tends to show up when ${first} or ${second} is on your mind.`,
-        `A dream about ${a} is often a nudge toward ${first}, the quality the ${animal} is built around.`
+        `Dreaming about ${wildA}, or coming across one, usually points to ${first} and ${second}: the qualities the ${animal} lives by.`,
+        `${capital(wildA)}, whether in a dream or in front of you, tends to show up when ${first} or ${second} is on your mind.`,
+        `Meeting ${wildA}, asleep or awake, is often a nudge toward ${first}, the quality the ${animal} is built around.`
     ]);
     const principleLine = expression
         ? `In AnimalDex, the ${animal}'s principle is ${principle}: ${lowerFirst(sentence(expression))}`
         : `In AnimalDex, the ${animal}'s principle is ${principle}.`;
-    const answer = `${opener} ${principleLine} Read the dream through its core lesson: ${lesson}`;
+    const answer = `${opener} ${principleLine} Read the moment through its core lesson: ${lesson}`;
 
     const goodOrBad = pick(slug, 2, [
         `Mostly a prompt rather than a warning. A calm ${animal} suggests ${first} you already have; a threatening one suggests ${first} is being tested or pushed too far.`,
@@ -97,7 +122,23 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
 
     const scenarios: DreamScenarioReading[] = [
         {
-            title: `Being chased by ${a}`,
+            title: domesticated ? `Meeting ${a} in real life` : `Spotting ${a} in the wild`,
+            reading: pick(slug, 7, [
+                `A real encounter is the plainest version of the sign: notice what the ${animal} was doing. ${expression ? sentence(expression) : lesson} That is the ${first} worth borrowing today.`,
+                `Coming across ${a} in person asks for attention more than interpretation. Watch it for a minute; the ${animal}'s way of working is ${principle}, and the lesson is: ${lowerFirst(lesson)}`,
+                `If ${a} crosses your path, take it as a cue to look at where ${first} fits your day. ${motto ? `Its AnimalDex motto: "${motto}"` : `The ${animal}'s lesson: ${lowerFirst(lesson)}`}`
+            ])
+        },
+        {
+            title: `${capital(a)} that keeps appearing`,
+            reading: pick(slug, 8, [
+                `Seeing the ${animal} again and again, in dreams or outside, suggests ${first} is a theme you have not settled yet.`,
+                `${capital(a)} that keeps turning up points to ${second} you keep circling back to. The repetition is the message.`,
+                `Repeated sightings of ${a} usually mean the ${principle} lesson is still open: ${lowerFirst(lesson)}`
+            ])
+        },
+        {
+            title: `Dreaming of being chased by ${a}`,
             reading: pick(slug, 3, [
                 `Being chased suggests you are avoiding the ${principle} the ${animal} stands for: ${lowerFirst(lesson)} Ask what you keep postponing that needs ${first}.`,
                 `A chase often means a demand for ${first} is catching up with you. The ${animal}'s lesson, "${input.coreLesson.trim().replace(/[.!?]+$/, "")}", is the part you may be running from.`,
@@ -105,7 +146,7 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
             ])
         },
         {
-            title: `${a.charAt(0).toUpperCase()}${a.slice(1)} attacking you`,
+            title: `Dreaming that ${a} attacks you`,
             reading: pick(slug, 4, [
                 `An attack points to ${first} turned against you: someone using it on you, or your own ${first} overused until it costs you.`,
                 `When the ${animal} attacks, the dream may be about pressure: ${second} or ${third} applied too hard, by you or by someone close to you.`,
@@ -115,7 +156,7 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
         {
             title: `A calm or friendly ${animal}`,
             reading: pick(slug, 5, [
-                `A relaxed ${animal} near you reads as readiness: ${principle} is available to you now${motto ? `, as its motto puts it, "${motto}"` : ""}.`,
+                `A relaxed ${animal} near you, in a dream or in person, reads as readiness: ${principle} is available to you now${motto ? `, as its motto puts it, "${motto}"` : ""}.`,
                 `A calm ${animal} suggests you have made peace with ${first} and can use it without force.`,
                 `Meeting a peaceful ${animal} is usually encouraging: ${second} and ${third} are within reach.`
             ])
@@ -123,7 +164,7 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
         {
             title: `A dead or injured ${animal}`,
             reading: pick(slug, 6, [
-                `A dead or injured ${animal} can mark ${first} you have let lapse, or a phase built on ${principle} coming to an end.`,
+                `A dead or injured ${animal}, dreamed or found, can mark ${first} you have let lapse, or a phase built on ${principle} coming to an end.`,
                 `Seeing the ${animal} hurt may point to ${second} that has been neglected. Ask what it would take to restore it.`,
                 `An injured ${animal} often reflects ${first} under strain; rest and repair come before pushing again.`
             ])
@@ -131,10 +172,12 @@ export function buildAnimalDreamReading(input: DreamReadingInput): DreamReading 
     ];
 
     return {
-        question: buildDreamQuestion(name),
+        question: buildDreamQuestion(name, domesticated),
         answer,
         goodOrBad,
         scenarios,
-        note: `Dream readings on AnimalDex are reflective prompts drawn from how the ${animal} really lives, not predictions.`
+        note: domesticated
+            ? `These readings are reflective prompts drawn from how the ${animal} really lives, not predictions.`
+            : `These readings are reflective prompts drawn from how the ${animal} really lives, not predictions. If you meet one in the wild, watch from a distance and leave it undisturbed.`
     };
 }

@@ -8,6 +8,7 @@ import type {PublicProfileCapture, ProfilePowerSetCompletion} from "@/data/publi
 import {getAuthenticatedUserProfile} from "@/data/user-captures";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type QueryRow = Record<string, any>;
 
@@ -92,7 +93,10 @@ function toCaptureFromFeedRow(
         intelligence: Number(stats.intelligence ?? 0) + Number(row.intelligence_boost ?? 0),
         rarity: Number(stats.rarity ?? 0),
         isIndexed: Boolean(row.species_profile_id?.trim()),
-        identityKind: row.identity_kind?.trim() || null
+        identityKind: row.identity_kind?.trim() || null,
+        animalDexNumber: null,
+        speciesProfileId: row.species_profile_id?.trim().toLowerCase() || null,
+        isMovingMedia: false
     };
 }
 
@@ -105,6 +109,86 @@ export async function getProfileViewerState(profileUserId: string): Promise<Prof
         viewerUsername: viewer?.username ?? null,
         viewerDisplayName: viewer?.displayName ?? null,
         viewerAvatarUrl: viewer?.avatarUrl ?? null
+    };
+}
+
+export type ProfileFollowCounts = {followers: number; following: number};
+
+export type ProfileViewStats = {thisWeek: number; previousWeek: number; allTime: number};
+
+export type ProfileSocialState = {
+    followCounts: ProfileFollowCounts | null;
+    /** Owner only, as on iOS: the server omits it for anyone else. */
+    profileViews: ProfileViewStats | null;
+    isFollowing: boolean;
+    isFriend: boolean;
+    notificationPreference: "all" | "off";
+};
+
+const toCount = (value: unknown) => Math.max(0, Number(value) || 0);
+
+/** Public counts for a signed-out visitor; the RPC is closed to anon, so the server reads it. */
+async function fetchFollowCountsAsServer(profileUserId: string): Promise<ProfileFollowCounts | null> {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServerReadKey();
+    if (!url || !key) return null;
+    try {
+        const response = await fetch(`${url}/rest/v1/rpc/get_profile_follow_counts`, {
+            method: "POST",
+            headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+            body: JSON.stringify({p_user_id: profileUserId}),
+            cache: "no-store"
+        });
+        if (!response.ok) return null;
+        const data = await response.json() as QueryRow | null;
+        return data ? {followers: toCount(data.followers), following: toCount(data.following)} : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Follow state, follow counts and (for the owner) profile views, read the way
+ * iOS reads them. A signed-in visitor who is not the owner also records a view
+ * here (`record_profile_view`: one per viewer per profile per UTC day, deduped
+ * server-side), so web visits count exactly like app visits.
+ */
+export async function getProfileSocialState(profileUserId: string): Promise<ProfileSocialState> {
+    const empty: ProfileSocialState = {followCounts: null, profileViews: null, isFollowing: false, isFriend: false, notificationPreference: "all"};
+    const supabase = createSupabaseServerClient();
+    const user = supabase ? (await supabase.auth.getUser()).data.user : null;
+
+    if (!supabase || !user) {
+        return {...empty, followCounts: await fetchFollowCountsAsServer(profileUserId)};
+    }
+
+    const isOwner = user.id === profileUserId;
+    if (!isOwner) {
+        // Counted before the overview is read is not required; failures never block the page.
+        void Promise.resolve(supabase.rpc("record_profile_view", {p_profile_id: profileUserId, p_source: "profile_link"})).catch(() => undefined);
+    }
+
+    const [overview, follow, friend, preference] = await Promise.all([
+        supabase.rpc("get_profile_stats_overview", {p_user_id: profileUserId, p_time_zone: "UTC"}),
+        isOwner ? null : supabase.from("user_follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", profileUserId).maybeSingle(),
+        isOwner ? null : supabase.from("user_friendships_v1").select("friend_id").eq("friend_id", profileUserId).maybeSingle(),
+        isOwner ? null : supabase.from("user_follow_notification_preferences").select("preference").eq("follower_id", user.id).eq("followed_id", profileUserId).maybeSingle()
+    ]);
+
+    const data = (overview.data ?? null) as QueryRow | null;
+    const counts = data?.follow_counts as QueryRow | undefined;
+    const views = data?.profile_views as QueryRow | undefined;
+
+    return {
+        followCounts: counts
+            ? {followers: toCount(counts.followers), following: toCount(counts.following)}
+            : await fetchFollowCountsAsServer(profileUserId),
+        profileViews: isOwner && views
+            ? {thisWeek: toCount(views.this_week), previousWeek: toCount(views.previous_week), allTime: toCount(views.all_time)}
+            : null,
+        isFollowing: Boolean(follow?.data),
+        isFriend: Boolean(friend?.data),
+        notificationPreference: (preference?.data as QueryRow | null)?.preference === "off" ? "off" : "all"
     };
 }
 

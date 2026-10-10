@@ -4,10 +4,10 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {
-    ANIMAL_BEHAVIOURS_HREF,
-    animalLessonLinks,
+    ANIMAL_FREQUENCIES_HREF,
+    animalWisdomLinks,
     blogNavLink,
-    CHALLENGE_YOURSELF_HREF,
+    ANIMAL_TRIALS_HREF,
     EARN_ON_ANIMALDEX_HREF,
     exploreAnimalLinks,
     footerColumns,
@@ -46,12 +46,12 @@ test("public navigation keeps existing SEO routes", () => {
         LOCATIONS_HREF,
         WILDLIFE_EXPERIENCES_HREF
     ]);
-    assert.deepEqual(animalLessonLinks.map((link) => link.href), [
+    assert.deepEqual(animalWisdomLinks.map((link) => link.href), [
         "/animal-wisdom",
-        "/animal-lessons",
-        "/powers",
-        ANIMAL_BEHAVIOURS_HREF,
-        CHALLENGE_YOURSELF_HREF,
+        "/animal-powers",
+        "/qualities",
+        ANIMAL_FREQUENCIES_HREF,
+        ANIMAL_TRIALS_HREF,
         "/what-animal-am-i"
     ]);
     assert.deepEqual(resourceLinks.map((link) => link.href), [
@@ -68,7 +68,7 @@ test("public navigation keeps existing SEO routes", () => {
     // Retired from public navigation by an explicit product decision: the Guide
     // and Creator Rewards pages are reachable by URL and in-page links only.
     const everyNavHref = [
-        ...productLinks, ...exploreAnimalLinks, ...animalLessonLinks, ...resourceLinks,
+        ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks,
         ...headerDropdowns.flatMap((section) => section.links), ...moreNavGroups.flat()
     ].map((link) => link.href);
     for (const retired of ["/wildlife-guides", "/become-a-wildlife-guide", "/creator-rewards"]) {
@@ -97,17 +97,17 @@ test("header and footer consume the shared public navigation data", () => {
 
 test("nav labels match the published category names", () => {
     const en = JSON.parse(readRepo("src/data/locales/en.json"));
-    // The "Animal Wisdom" category is now "Lessons from Animals", and Blog is
-    // now "Articles" — both renamed deliberately, replacing an earlier guard
-    // that pinned the previous names.
-    assert.equal(en.nav.animalWisdom, "Lessons from Animals");
-    assert.equal(en.nav.footerGroups.wisdom, "Lessons from Animals");
+    // Oct 2026: the category is "Animal Wisdom" again (it no longer holds a
+    // Lessons page), and Blog is "Articles". Lessons → Powers, Traits →
+    // Qualities, Behaviours → Frequencies, Challenge Yourself → Trials.
+    assert.equal(en.nav.animalWisdom, "Animal Wisdom");
+    assert.equal(en.nav.footerGroups.wisdom, "Animal Wisdom");
     assert.equal(en.nav.blog, "Articles");
-    assert.equal(en.nav.discoverAnimalWisdom, "Ask AnimalDex");
-    assert.equal(en.nav.animalLessons, "Animal Lessons");
-    assert.equal(en.nav.animalAbilities, "Animal Traits");
-    assert.equal(en.nav.animalBehaviours, "Animal Behaviours");
-    assert.equal(en.nav.challengeYourself, "Challenge Yourself");
+    assert.equal(en.nav.discoverAnimalWisdom, "Lessons from Animals");
+    assert.equal(en.nav.animalPowers, "Animal Powers");
+    assert.equal(en.nav.animalQualities, "Animal Qualities");
+    assert.equal(en.nav.animalFrequencies, "Animal Frequencies");
+    assert.equal(en.nav.animalTrials, "Animal Trials");
     assert.equal(en.nav.instagramWildlifeArchive, "Import from Instagram");
     assert.equal(en.nav.animalSymbolism, "Animal Symbolism Articles");
     assert.equal(en.nav.support, "Help Center");
@@ -120,7 +120,7 @@ test("nav labels match the published category names", () => {
     // Every label key the navigation renders must exist in both locales.
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
     const keys = [
-        ...productLinks, ...exploreAnimalLinks, ...animalLessonLinks, ...resourceLinks
+        ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks
     ].map((link) => link.labelKey);
     for (const key of Array.from(new Set(keys))) {
         assert.equal(typeof en.nav[key], "string", `en.nav.${key} is missing`);
@@ -140,8 +140,8 @@ test("the mobile drawer shows every link exactly once", () => {
 
     assert.ok(explore?.links.some((link) => link.href === LOCATIONS_HREF));
     assert.ok(explore?.links.some((link) => link.href === WILDLIFE_EXPERIENCES_HREF));
-    assert.ok(lessons?.links.some((link) => link.href === ANIMAL_BEHAVIOURS_HREF));
-    assert.ok(lessons?.links.some((link) => link.href === CHALLENGE_YOURSELF_HREF));
+    assert.ok(lessons?.links.some((link) => link.href === ANIMAL_FREQUENCIES_HREF));
+    assert.ok(lessons?.links.some((link) => link.href === ANIMAL_TRIALS_HREF));
 
     // Articles keeps its own slot, so the Resources dropdown drops it.
     assert.equal(blogNavLink.href, "/blog");

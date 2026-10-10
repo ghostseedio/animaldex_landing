@@ -5,7 +5,7 @@
  * borrow). Each section is also returned as an FAQ pair for the page's
  * FAQPage JSON-LD.
  *
- * Intent split: /animal-lessons/<slug> owns "what can we learn from the X";
+ * Intent split: /animal-powers/<slug> owns "what can we learn from the X";
  * the species page owns meaning, symbolism, spirit animal, what it helps with,
  * the biological "why" and biomimicry, and dreams.
  */

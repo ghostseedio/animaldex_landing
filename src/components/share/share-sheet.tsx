@@ -2,6 +2,7 @@
 
 import {appStoreUrl} from "@/lib/store-links";
 import {useEffect, useId, useState} from "react";
+import {createPortal} from "react-dom";
 
 export type ShareOptionId =
     | "share-repost"
@@ -235,7 +236,9 @@ export default function ShareSheet({
         }
     }
 
-    return (
+    // Portalled to <body>: a fixed overlay rendered inside a transformed or
+    // blurred ancestor (the profile header) is trapped and clipped by it.
+    return createPortal(
         <div
             className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 md:items-center md:p-4"
             role="dialog"
@@ -344,6 +347,7 @@ export default function ShareSheet({
                     </p>
                 ) : null}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -3,7 +3,7 @@ import publishedTrials from "@/data/published-animal-trials.json";
 import {getSpeciesPageData} from "@/data/database-species-pages";
 import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
 import {getSystemsIntelligenceBySpeciesSlug} from "@/data/species-systems-intelligence";
-import {buildAnimalDreamReading} from "@/lib/animal-dream-reading";
+import {buildAnimalDreamReading, isKeptAnimal} from "@/lib/animal-dream-reading";
 import {getSiteUrl} from "@/lib/site";
 import {speciesDisplayCategory} from "@/lib/species-breed";
 import {
@@ -38,7 +38,8 @@ export async function buildSpeciesShareContext(
         principleExpression: profile.principleExpression,
         coreLesson: profile.coreLesson,
         motto: profile.motto,
-        bestFor: profile.bestFor
+        bestFor: profile.bestFor,
+        domesticated: entry ? isKeptAnimal(entry) : false
     }) : null;
 
     return {

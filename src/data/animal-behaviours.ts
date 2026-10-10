@@ -18,6 +18,7 @@ export type AnimalTrialEntry = {
     species: string;
     title: string;
     objective: string | null;
+    instructions: string | null;
     animalRule: string | null;
     userBenefit: string | null;
     principleName: string | null;
@@ -72,18 +73,4 @@ export function countByFrequency<T extends {frequency: string}>(entries: T[]) {
         totals[frequencyOf(entry.frequency)] += 1;
         return totals;
     }, {LOW: 0, MID: 0, HIGH: 0, UNKNOWN: 0});
-}
-
-/**
- * A stable, spread-out sample for the featured grid.
- *
- * Deliberately not random: the page is statically generated, so a random pick
- * would change the HTML on every rebuild and churn the crawled page for no
- * reader benefit. Striding the sorted list gives variety across the alphabet
- * and the same result every build.
- */
-export function stride<T>(entries: T[], count: number): T[] {
-    if (entries.length <= count) return entries;
-    const step = entries.length / count;
-    return Array.from({length: count}, (_, index) => entries[Math.floor(index * step)]);
 }

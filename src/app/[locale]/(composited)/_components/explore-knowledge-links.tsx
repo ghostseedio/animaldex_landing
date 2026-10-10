@@ -21,7 +21,7 @@ export default function ExploreKnowledgeLinks({title, description, labels}: Expl
                 <Link href="/animals" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                     {labels.species}
                 </Link>
-                <Link href="/animal-lessons" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
+                <Link href="/animal-powers" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">
                     {labels.lessons}
                 </Link>
                 <Link href="/animal-symbolism" className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 hover:text-primary-100">

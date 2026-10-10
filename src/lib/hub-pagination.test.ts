@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-    animalBehavioursPagination,
-    challengeYourselfPagination,
+    animalFrequenciesPagination,
+    animalTrialsPagination,
     createHubPagination,
     getPaginationItems,
     parsePageParam
@@ -13,8 +13,8 @@ const pagination = createHubPagination({basePath: "/hub", perPage: 10, anchor: "
 test("page 1 is the hub, later pages are path segments", () => {
     assert.equal(pagination.pagePath(1), "/hub");
     assert.equal(pagination.pagePath(2), "/hub/page/2");
-    assert.equal(challengeYourselfPagination.pagePath(3), "/challenge-yourself/page/3");
-    assert.equal(animalBehavioursPagination.pagePath(1), "/animal-behaviours");
+    assert.equal(animalTrialsPagination.pagePath(3), "/animal-trials/page/3");
+    assert.equal(animalFrequenciesPagination.pagePath(1), "/animal-frequencies");
 });
 
 test("page count and slices cover every entry exactly once", () => {

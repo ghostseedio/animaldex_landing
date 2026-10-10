@@ -46,14 +46,14 @@ test("middleware collapses external /en before intlMiddleware runs", () => {
 test("canonical unprefixed English detail paths are not /en collapse targets", () => {
     for (const path of [
         "/animals/aardvark",
-        "/animal-lessons/aardvark",
+        "/animal-powers/aardvark",
         "/pokemon-animals/generation-i"
     ]) {
         assert.equal(matchDefaultLocalePrefixedPath(path), null);
     }
 
     assert.equal(matchDefaultLocalePrefixedPath("/en/animals/aardvark"), "/animals/aardvark");
-    assert.equal(matchDefaultLocalePrefixedPath("/en/animal-lessons/aardvark"), "/animal-lessons/aardvark");
+    assert.equal(matchDefaultLocalePrefixedPath("/en/animal-powers/aardvark"), "/animal-powers/aardvark");
     assert.equal(
         matchDefaultLocalePrefixedPath("/en/pokemon-animals/generation-i"),
         "/pokemon-animals/generation-i"

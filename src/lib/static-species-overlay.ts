@@ -2,6 +2,7 @@ import overlaySnapshot from "@/data/published-seo-static-species-overlay.json";
 import {speciesAuthoredDetails} from "@/data/species-authored-details";
 import {speciesEntries, type SpeciesEntry} from "@/data/species";
 import {getSnapshotSpeciesBySlug} from "@/lib/published-seo-page-data";
+import {getStaticSpeciesProfileId} from "@/lib/static-species-profiles";
 
 export type StaticSpeciesOverlay = {
     animalDexNumber: number;
@@ -49,6 +50,21 @@ export function getPublishedSpeciesForContent(slug: string): SpeciesEntry | null
  * emptied rather than shown.
  */
 export function applyStaticSpeciesOverlay(entry: SpeciesEntry): SpeciesEntry {
+    return withStaticSpeciesProfileId(applyOverlayContent(entry));
+}
+
+/**
+ * Hand-coded entries carry no species_profile_id, so the Play tab's Trial and
+ * powers, System Dynamics and Ask grounding (all keyed on it) rendered nothing.
+ * The build-time profile snapshot supplies it; an entry that has one keeps it.
+ */
+function withStaticSpeciesProfileId(entry: SpeciesEntry): SpeciesEntry {
+    if (entry.speciesProfileId) return entry;
+    const speciesProfileId = getStaticSpeciesProfileId(entry.slug);
+    return speciesProfileId ? {...entry, speciesProfileId} : entry;
+}
+
+function applyOverlayContent(entry: SpeciesEntry): SpeciesEntry {
     const overlay = getStaticSpeciesOverlay(entry.slug);
     const isTemplate = entry.contentSource === "template";
 

@@ -245,9 +245,9 @@ async function main() {
     lines.push("");
     lines.push("## Priority Guidance");
     lines.push("");
-    lines.push("1. Backfill the website-missing set first so `/animal-lessons/[slug]` and animal pages can use catalog data everywhere.");
+    lines.push("1. Backfill the website-missing set first so `/animal-powers/[slug]` and animal pages can use catalog data everywhere.");
     lines.push("2. Add website species pages for high-intent catalog-only animals, starting with numbered active catalog entries.");
-    lines.push("3. Keep `/principles/*` as the 10-cluster browse layer; species-specific DB principles should surface through `/animal-lessons/[slug]`.");
+    lines.push("3. Keep `/principles/*` as the 10-cluster browse layer; species-specific DB principles should surface through `/animal-powers/[slug]`.");
     lines.push("4. Re-run `node scripts/generateBehaviorLessonsGapReport.js` after each behavior backfill batch.");
 
     const outPath = path.resolve(process.cwd(), args.out);

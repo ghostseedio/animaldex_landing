@@ -17,10 +17,10 @@ const root = join(here, "..");
 
 test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
     assert.equal(isClosedSeoNamespaceFamily("animals"), true);
-    assert.equal(isClosedSeoNamespaceFamily("animal-lessons"), true);
+    assert.equal(isClosedSeoNamespaceFamily("animal-powers"), true);
     assert.equal(isClosedSeoNamespaceFamily("pokemon-animals"), true);
     assert.equal(isClosedSeoNamespaceFamily("animal-hybrids"), true);
-    assert.equal(isClosedSeoNamespaceFamily("powers"), true);
+    assert.equal(isClosedSeoNamespaceFamily("qualities"), true);
     assert.equal(isClosedSeoNamespaceFamily("comparisons"), true);
     assert.equal(isClosedSeoNamespaceFamily("blog"), false);
 
@@ -36,16 +36,16 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
         family: "animals",
         slug: "definitely-not-real-928341"
     });
-    assert.deepEqual(resolveClosedSeoNamespacePath("/animal-lessons/definitely-not-real-928341"), {
+    assert.deepEqual(resolveClosedSeoNamespacePath("/animal-powers/definitely-not-real-928341"), {
         action: "block",
         reason: "unknown-slug",
-        family: "animal-lessons",
+        family: "animal-powers",
         slug: "definitely-not-real-928341"
     });
-    assert.deepEqual(resolveClosedSeoNamespacePath("/powers/definitely-not-real-928341"), {
+    assert.deepEqual(resolveClosedSeoNamespacePath("/qualities/definitely-not-real-928341"), {
         action: "block",
         reason: "unknown-slug",
-        family: "powers",
+        family: "qualities",
         slug: "definitely-not-real-928341"
     });
     assert.deepEqual(resolveClosedSeoNamespacePath("/pokemon-animals/definitely-not-real-928341"), {
@@ -67,10 +67,10 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
         slug: "search"
     });
     assert.equal(resolveClosedSeoNamespacePath("/animals")?.action, "allow");
-    assert.deepEqual(resolveClosedSeoNamespacePath("/powers/resilience"), {
+    assert.deepEqual(resolveClosedSeoNamespacePath("/qualities/resilience"), {
         action: "allow",
         reason: "published",
-        family: "powers",
+        family: "qualities",
         slug: "resilience"
     });
     assert.equal(resolveClosedSeoNamespacePath("/blog/animal-symbolism"), null);
@@ -93,8 +93,8 @@ test("closed SEO namespaces treat unknown detail slugs as blocked", () => {
 test("closed SEO slug index covers local Pokemon and hybrid catalogs", () => {
     assert.ok(closedSeoNamespaceSlugs.pokemon.length >= 1000);
     assert.ok(closedSeoNamespaceSlugs.hybrids.length >= 500);
-    assert.equal(isPublishedClosedSeoSlug("powers", "resilience"), true);
-    assert.equal(isPublishedClosedSeoSlug("powers", "definitely-not-real-928341"), false);
+    assert.equal(isPublishedClosedSeoSlug("qualities", "resilience"), true);
+    assert.equal(isPublishedClosedSeoSlug("qualities", "definitely-not-real-928341"), false);
     assert.equal(isPublishedClosedSeoSlug("comparisons", "tiger-vs-lion"), true);
     assert.equal(isPublishedClosedSeoSlug("comparisons", "definitely-not-real-928341"), false);
     assert.equal(isPublishedClosedSeoSlug("pokemon-animals", "naganadel"), true);

@@ -169,7 +169,7 @@ export default async function AnimalSymbolismPage({params}: AnimalSymbolismPageP
                 </div>
                 <div>
                     <p className="text-lg leading-8 text-ink-200 md:text-xl">{t("strategyDescription")}</p>
-                    <Link href="/powers" underline className="mt-5 inline-flex text-primary-200 hover:text-primary-100">
+                    <Link href="/qualities" underline className="mt-5 inline-flex text-primary-200 hover:text-primary-100">
                         {t("strategyLink")}
                     </Link>
                 </div>

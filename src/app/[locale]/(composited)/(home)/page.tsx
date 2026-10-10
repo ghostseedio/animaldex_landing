@@ -144,7 +144,7 @@ export default async function Home({params}: HomePageProps) {
         },
         {
             id: "wolfLessons",
-            href: "/animal-lessons/wolf",
+            href: "/animal-powers/wolf",
             image: "/images/blog/wolf-symbolism/wolf-symbolism-hero.webp",
             layout: "medium"
         },

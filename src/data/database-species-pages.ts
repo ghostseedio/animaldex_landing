@@ -16,6 +16,7 @@ import {logDevPerfEvent} from "@/lib/dev-request-timing";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getSnapshotSpeciesBySlug} from "@/lib/published-seo-page-data";
 import {assertNoRemoteDuringSeoSsg} from "@/lib/seo-ssg-remote-guard";
+import {withReadableRangeText} from "@/data/native-range";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 type CatalogRow = {
@@ -462,7 +463,7 @@ function mapDatabaseSpecies(row: CatalogRow, guide: FieldGuideRow | null): Speci
         updatedAt,
         featuredImage: {src: `/api/species-images/${slug}`, alt: `${name} AnimalDex species guide`, width: 1200, height: 1500},
         searchIntents: [name, scientificName, `${name} facts`, `${name} habitat`, `${name} animal power`, `${name} identification`],
-        analysis: {
+        analysis: withReadableRangeText({
             summary,
             scientificName,
             category: inferCategory(row),
@@ -471,7 +472,7 @@ function mapDatabaseSpecies(row: CatalogRow, guide: FieldGuideRow | null): Speci
             nativeRange,
             rarityScore,
             rarityReason: `AnimalDex canonical rarity score: ${rarityScore}/100, maintained by the live indexed species profile.`
-        },
+        }),
         premiumDetails: {
             behaviorTraits: signatureTraits.length ? signatureTraits : [clean(row.principle_expression) ?? clean(row.core_lesson) ?? summary],
             whyInteresting: interestingFacts,

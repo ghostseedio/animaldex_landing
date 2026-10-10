@@ -61,16 +61,16 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
     const title = t("metaTitle");
     const metadata = buildContentMetadata({
         locale: params.locale,
-        pathname: "/powers",
+        pathname: "/qualities",
         title,
         description: t("metaDescription"),
-        featuredImage: ogContentImage("Animal powers on AnimalDex", "page", "powers"),
+        featuredImage: ogContentImage("Animal qualities on AnimalDex", "page", "qualities"),
         keywords: [
-            "animal powers",
+            "animal qualities",
             "animal survival strategies",
-            "lessons from animal behavior",
+            "qualities from animal behavior",
             "animal teamwork memory precision",
-            "biology-backed animal lessons"
+            "biology-backed animal qualities"
         ]
     });
 
@@ -143,7 +143,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 "@type": "ListItem",
                 position: 2,
                 name: t("eyebrow"),
-                item: getAbsoluteUrl(params.locale, "/powers")
+                item: getAbsoluteUrl(params.locale, "/qualities")
             }
         ]
     };
@@ -152,11 +152,11 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
         "@type": "CollectionPage",
         name: t("title"),
         description: t("description"),
-        url: getAbsoluteUrl(params.locale, "/powers"),
+        url: getAbsoluteUrl(params.locale, "/qualities"),
         hasPart: principles.map((principle) => ({
             "@type": "CollectionPage",
             name: principle.principle,
-            url: getAbsoluteUrl(params.locale, `/powers/${principle.principleSlug}`),
+            url: getAbsoluteUrl(params.locale, `/qualities/${principle.principleSlug}`),
             numberOfItems: principle.speciesCount
         }))
     };
@@ -226,7 +226,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                             <Link href="#principle-library" className="flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-primary-400 px-6 font-bold text-canvas-950 hover:bg-primary-300">
                                 {t("explorePrinciples")}
                             </Link>
-                            <Link href="/animal-lessons" className="flex min-h-[3.25rem] items-center justify-center rounded-2xl border border-white/15 px-6 font-bold text-white hover:border-primary-400 hover:text-primary-100">
+                            <Link href="/animal-powers" className="flex min-h-[3.25rem] items-center justify-center rounded-2xl border border-white/15 px-6 font-bold text-white hover:border-primary-400 hover:text-primary-100">
                                 {t("browseLessons")}
                             </Link>
                         </div>
@@ -245,7 +245,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">{t("featuredTitle")}</p>
                         <div className="mt-4 divide-y divide-white/[0.09]">
                             {featuredPrinciples.map((principle) => (
-                                <Link key={principle.principleSlug} href={`/powers/${principle.principleSlug}`} className="group flex items-center justify-between gap-5 py-4">
+                                <Link key={principle.principleSlug} href={`/qualities/${principle.principleSlug}`} className="group flex items-center justify-between gap-5 py-4">
                                     <div>
                                         <p className="font-display text-2xl font-bold text-white">{principle.principle}</p>
                                         <p className="mt-1 line-clamp-1 text-sm text-ink-300">{principle.sampleMotto}</p>
@@ -298,7 +298,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 <p className="mt-3 max-w-3xl text-lg leading-8 text-ink-200">{t("relatedDescription")}</p>
                 <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[
-                        ["/animal-lessons", t("relatedLessons"), t("relatedLessonsDescription")],
+                        ["/animal-powers", t("relatedLessons"), t("relatedLessonsDescription")],
                         ["/animal-symbolism", t("relatedSymbolism"), t("relatedSymbolismDescription")],
                         ["/animal-wisdom", t("animalWisdom"), t("animalWisdomDescription")],
                         ["/animals", t("animalEncyclopedia"), t("animalEncyclopediaDescription")]
@@ -331,7 +331,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                 <h2 className="mx-auto max-w-3xl font-display text-3xl font-bold text-white md:text-5xl">{t("ctaTitle")}</h2>
                 <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{t("ctaDescription")}</p>
                 <StoreLinks className="!mt-7" />
-                <Link href="/animal-lessons" className="mt-6 inline-block font-semibold text-primary-200 hover:text-primary-100" underline>
+                <Link href="/animal-powers" className="mt-6 inline-block font-semibold text-primary-200 hover:text-primary-100" underline>
                     {t("browseLessons")}
                 </Link>
             </section>

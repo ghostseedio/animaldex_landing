@@ -42,7 +42,7 @@ export const whatAnimalAmIPage = {
             active: {label: "Active", meaning: "Showing up right now"}
         },
         speciesLinkLabel: "Meet the species",
-        lessonLinkLabel: "Read its life lessons",
+        lessonLinkLabel: "Discover its animal power",
         retakeLabel: "Retake the quiz",
         fullProfileTitle: "Want your real Wild Profile?",
         fullProfileDescription: "This quiz picks from 14 animals with fixed questions. The full Wild Profile is an adaptive chat with the Wild Guide: each question follows your last answer, and your Origin, Apex and Active animals are matched against the whole AnimalDex species catalog. It is saved to your account, so it shows up in the app too.",

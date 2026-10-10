@@ -15,22 +15,30 @@ type AnimalWisdomPageProps = {
 };
 
 const pageTitle = "Animal Wisdom";
-const pageDescription = "Explore what animals mean, what they teach, and what real behavior reveals about survival, instinct, emotion, intelligence, and adaptation.";
-const updatedAt = "2026-06-28";
+const pageDescription = "Explore what animals mean, the powers and qualities they show, the frequencies their behavior runs at, and the trials you can take on from them.";
+const updatedAt = "2026-10-10";
 const heroAnimals = [
     {slug: "barn-owl", name: "Owl", principle: "Precision"},
     {slug: "wolf", name: "Wolf", principle: "Cooperation"},
     {slug: "elephant", name: "Elephant", principle: "Memory"}
 ];
 const starterAnimals = [
-    {slug: "barn-owl", name: "Owl", lesson: "Precision and deep listening"},
-    {slug: "wolf", name: "Wolf", lesson: "Cooperation and social intelligence"},
-    {slug: "elephant", name: "Elephant", lesson: "Memory and social knowledge"},
-    {slug: "great-white-shark", name: "Shark", lesson: "Momentum and sensory awareness"},
-    {slug: "harbor-seal", name: "Seal", lesson: "Rhythm, rest, and awareness"},
-    {slug: "crow", name: "Crow", lesson: "Problem-solving and adaptation"}
+    {slug: "barn-owl", name: "Owl", power: "Precision and deep listening"},
+    {slug: "wolf", name: "Wolf", power: "Cooperation and social intelligence"},
+    {slug: "elephant", name: "Elephant", power: "Memory and social knowledge"},
+    {slug: "great-white-shark", name: "Shark", power: "Momentum and sensory awareness"},
+    {slug: "harbor-seal", name: "Seal", power: "Rhythm, rest, and awareness"},
+    {slug: "crow", name: "Crow", power: "Problem-solving and adaptation"}
 ];
-const wisdomPaths = [
+const wisdomPaths: Array<{
+    number: string;
+    label: string;
+    title: string;
+    description: string;
+    href: string;
+    cta: string;
+    examples?: Array<{label: string; href: string}>;
+}> = [
     {
         number: "01",
         label: "Meanings",
@@ -45,27 +53,43 @@ const wisdomPaths = [
     },
     {
         number: "02",
-        label: "Lessons",
-        title: "Lessons from Animals",
-        description: "Learn what observable behavior can teach about courage, attention, timing, cooperation, resilience, and emotional growth.",
-        href: "/animal-lessons",
-        cta: "Browse animal lessons",
+        label: "Powers",
+        title: "Animal Powers",
+        description: "Discover the power each species has evolved, and what it can teach about courage, attention, timing, cooperation, resilience, and emotional growth.",
+        href: "/animal-powers",
+        cta: "Browse animal powers",
         examples: [
-            {label: "Seal lesson", href: "/animal-lessons/harbor-seal"},
-            {label: "Elephant lesson", href: "/animal-lessons/elephant"}
+            {label: "Seal power", href: "/animal-powers/harbor-seal"},
+            {label: "Elephant power", href: "/animal-powers/elephant"}
         ]
     },
     {
         number: "03",
-        label: "Abilities",
-        title: "Animal Abilities",
-        description: "Browse abilities expressed through real animal behavior, from precision and observation to cooperation, memory, and adaptation.",
-        href: "/powers",
-        cta: "Explore animal abilities",
+        label: "Qualities",
+        title: "Animal Qualities",
+        description: "Browse qualities expressed through real animal behavior, from precision and observation to cooperation, memory, and adaptation.",
+        href: "/qualities",
+        cta: "Explore animal qualities",
         examples: [
-            {label: "Precision", href: "/powers/precision"},
-            {label: "Observation", href: "/powers/observation"}
+            {label: "Precision", href: "/qualities/precision"},
+            {label: "Observation", href: "/qualities/observation"}
         ]
+    },
+    {
+        number: "04",
+        label: "Frequencies",
+        title: "Animal Frequencies",
+        description: "See the tempo each species' behavior runs at: how often it commits effort, how long it holds, and the rhythm its body is built for.",
+        href: "/animal-frequencies",
+        cta: "Explore animal frequencies"
+    },
+    {
+        number: "05",
+        label: "Trials",
+        title: "Animal Trials",
+        description: "Take on a strategy a real species uses, turned into a short trial you can run yourself in about ten minutes.",
+        href: "/animal-trials",
+        cta: "Take on an animal trial"
     }
 ];
 const latestWisdomPosts = blogPosts
@@ -75,15 +99,15 @@ const featuredEssay = blogPosts.find((post) => post.slug === "what-if-every-anim
 const faq = [
     {
         question: "What is Animal Wisdom in AnimalDex?",
-        answer: "Animal Wisdom is AnimalDex's home for animal symbolism, lessons from real behavior, and animal powers such as patience, timing, teamwork, focus, and adaptability."
+        answer: "Animal Wisdom is AnimalDex's home for animal symbolism, animal powers, animal qualities such as patience, timing, teamwork, focus, and adaptability, animal frequencies, and animal trials."
     },
     {
-        question: "Are Animal Wisdom lessons based on real behavior?",
+        question: "Are animal powers and qualities based on real behavior?",
         answer: "Yes. AnimalDex connects interpretation to observable biology, ecology, and repeatable behavior rather than presenting metaphor as scientific fact."
     },
     {
-        question: "What is the difference between symbolism, lessons, and powers?",
-        answer: "Symbolism explores cultural and interpretive meaning, lessons turn behavior into practical takeaways, and powers group animals by strengths expressed through recurring behavior in nature."
+        question: "What is the difference between symbolism, powers, qualities, frequencies, and trials?",
+        answer: "Symbolism explores cultural and interpretive meaning. Each species has its own power, a strategy it has evolved that you can learn from. Qualities group animals by strengths expressed through recurring behavior in nature. Frequencies describe the tempo a species' behavior runs at, and trials turn an animal's strategy into something you can try yourself."
     },
     {
         question: "Does Animal Wisdom replace the animal scanner or card collection?",
@@ -100,8 +124,10 @@ export async function generateMetadata({params}: AnimalWisdomPageProps): Promise
         keywords: [
             "Animal Wisdom",
             "animal symbolism",
-            "lessons from animals",
             "animal powers",
+            "animal qualities",
+            "animal frequencies",
+            "animal trials",
             "learn from animals",
             "animal behavior strategies",
             "animal self-improvement"
@@ -147,8 +173,10 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
             {"@type": "Thing", name: "Animal Wisdom"},
             {"@type": "Thing", name: "Animal behavior"},
             {"@type": "Thing", name: "Animal symbolism"},
-            {"@type": "Thing", name: "Lessons from animals"},
-            {"@type": "Thing", name: "Animal powers"}
+            {"@type": "Thing", name: "Animal powers"},
+            {"@type": "Thing", name: "Animal qualities"},
+            {"@type": "Thing", name: "Animal frequencies"},
+            {"@type": "Thing", name: "Animal trials"}
         ]
     };
     const faqSchema = {
@@ -179,7 +207,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                         Animals aren&apos;t just something to identify or collect. Every species has evolved its own way of surviving, adapting and succeeding.
                     </p>
                     <p className="text-base md:text-lg text-ink-300 max-w-2xl">
-                        AnimalDex helps you discover what those strategies can teach us — through abilities, behavior, lessons, and cultural symbolism, with interpretation kept distinct from biological fact.
+                        AnimalDex helps you discover what those strategies can teach us — through animal powers, qualities, frequencies, trials, and cultural symbolism, with interpretation kept distinct from biological fact.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
                         <Link href="#wisdom-paths" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 hover:bg-primary-300 transition-colors">
@@ -222,12 +250,12 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                     <h2 className="font-display font-bold text-4xl md:text-5xl text-white">More than an animal name</h2>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 text-lg md:text-xl leading-8 text-ink-200">
                         <p>AnimalDex begins with identification: what species is this, where does it live, and how does it behave?</p>
-                        <p>Animal Wisdom goes deeper, connecting real behavior with the meanings and lessons people recognize in nature without confusing metaphor with scientific fact.</p>
+                        <p>Animal Wisdom goes deeper, connecting real behavior with the meanings and powers people recognize in nature without confusing metaphor with scientific fact.</p>
                     </div>
                     <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold uppercase tracking-[0.12em] text-primary-100">
                         <span>Biology first</span>
                         <span>Symbolism clearly marked</span>
-                        <span>Lessons grounded in behavior</span>
+                        <span>Powers grounded in behavior</span>
                     </div>
                 </div>
             </section>
@@ -269,10 +297,10 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
             <section id="wisdom-paths" className="scroll-mt-32 flex flex-col gap-10">
                 <div className="max-w-3xl flex flex-col gap-3">
                     <p className="text-primary-200 text-sm font-semibold uppercase tracking-[0.2em]">Choose a path</p>
-                    <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Three ways to explore</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">Move between cultural meaning, practical lessons, and recurring patterns across species.</p>
+                    <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Five ways to explore</h2>
+                    <p className="text-ink-200 text-lg md:text-xl">Move between cultural meaning, species powers, shared qualities, behavioral tempo, and trials you can take on yourself.</p>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
                     {wisdomPaths.map((path) => (
                         <article key={path.href} className="flex flex-col gap-5 border-t-2 border-primary-500/60 pt-6">
                             <div className="flex items-center justify-between gap-4">
@@ -281,6 +309,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                             </div>
                             <h3 className="font-display text-3xl font-bold text-white">{path.title}</h3>
                             <p className="text-ink-200 text-lg leading-8">{path.description}</p>
+                            {path.examples ? (
                             <div className="flex flex-wrap gap-2">
                                 {path.examples.map((example) => (
                                     <Link key={example.href} href={example.href} className="rounded-full bg-surface-800/70 px-3 py-1.5 text-sm text-ink-200 hover:text-primary-100 transition-colors">
@@ -288,6 +317,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                                     </Link>
                                 ))}
                             </div>
+                            ) : null}
                             <Link href={path.href} className="mt-auto pt-3 text-primary-200 font-bold hover:text-primary-100 transition-colors">
                                 {path.cta} →
                             </Link>
@@ -300,20 +330,20 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                 <div className="max-w-3xl flex flex-col gap-3">
                     <p className="text-primary-200 text-sm font-semibold uppercase tracking-[0.2em]">Begin anywhere</p>
                     <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Start with an animal</h2>
-                    <p className="text-ink-200 text-lg md:text-xl">Every animal profile begins with biology, then opens into behavior, meaning, and related lessons.</p>
+                    <p className="text-ink-200 text-lg md:text-xl">Every animal profile begins with biology, then opens into behavior, meaning, and its animal power.</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                     {starterAnimals.map((animal) => (
                         <Link key={animal.slug} href={`/animals/${animal.slug}`} className="group flex flex-col overflow-hidden rounded-3xl bg-surface-800/50">
                             <SpeciesImage
                                 slug={animal.slug}
-                                alt={`${animal.name}: ${animal.lesson}`}
+                                alt={`${animal.name}: ${animal.power}`}
                                 sizes="(min-width: 768px) 28vw, 45vw"
                                 className="aspect-[4/3] transition-transform duration-500 group-hover:scale-[1.03]"
                             />
                             <div className="flex flex-col gap-1 p-4 md:p-5">
                                 <h3 className="text-xl md:text-2xl font-bold text-white">{animal.name}</h3>
-                                <p className="text-sm md:text-base text-ink-300">{animal.lesson}</p>
+                                <p className="text-sm md:text-base text-ink-300">{animal.power}</p>
                             </div>
                         </Link>
                     ))}
@@ -328,13 +358,13 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                     className="min-h-[22rem] lg:min-h-[34rem]"
                 />
                 <div className="flex flex-col justify-center gap-6 p-7 md:p-12 lg:p-16">
-                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#347344]">Featured lesson</p>
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#347344]">Featured power</p>
                     <h2 className="font-display text-4xl md:text-5xl font-bold">The Harbor Seal: rhythm before intensity</h2>
                     <p className="text-lg md:text-xl leading-8 text-[#304437]">
-                        Harbor seals alternate between resting on shore and precise foraging in coastal water. Their rhythm suggests a practical lesson: awareness includes knowing when conditions call for movement and when recovery is part of the work.
+                        Harbor seals alternate between resting on shore and precise foraging in coastal water. Their power is rhythm: awareness includes knowing when conditions call for movement and when recovery is part of the work.
                     </p>
-                    <Link href="/animal-lessons/harbor-seal" className="font-bold text-[#245d34] hover:text-[#173e23] transition-colors w-fit">
-                        Read the Harbor Seal lesson →
+                    <Link href="/animal-powers/harbor-seal" className="font-bold text-[#245d34] hover:text-[#173e23] transition-colors w-fit">
+                        Discover the Harbor Seal power →
                     </Link>
                 </div>
             </section>

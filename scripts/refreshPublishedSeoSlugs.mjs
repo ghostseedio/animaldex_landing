@@ -91,7 +91,7 @@ async function collectSitemapSlugs() {
         if (parts[0] === "animals" && parts[1] && !parts[2]) {
             animals.add(parts[1]);
         }
-        if (parts[0] === "animal-lessons" && parts[1] && !parts[2] && parts[1] !== "what-if-every-animal-is-a-lesson") {
+        if (parts[0] === "animal-powers" && parts[1] && !parts[2] && parts[1] !== "what-if-every-animal-is-a-lesson") {
             lessons.add(parts[1]);
         }
     }

@@ -7,5 +7,5 @@ type AnimalMeaningsRedirectPageProps = {
 };
 
 export default function AnimalMeaningsRedirectPage({params}: AnimalMeaningsRedirectPageProps) {
-    redirect(`/${params.locale}/animal-lessons`);
+    redirect(`/${params.locale}/animal-powers`);
 }

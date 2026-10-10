@@ -5,6 +5,8 @@ import {useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
 import SettingsActivityDrawer from "@/app/[locale]/(composited)/u/[handle]/settings-activity-drawer";
+import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
+import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyAnimalPowersSection from "@/components/animal-detail/animal-powers/my-animal-powers-section";
 import {
     AverageTraitsCard,
@@ -34,8 +36,11 @@ import type {
     ProfileCompletedSet,
     ProfileCreditsSummary,
     ProfileListedPack,
+    ProfileSocialState,
+    ProfileViewStats,
     ProfileViewerState
 } from "@/data/profile-authenticated";
+import ProfileSocialControls from "@/app/[locale]/(composited)/u/[handle]/profile-social-controls";
 import {formatAppInteger, formatAppUsd} from "@/lib/format-numbers";
 import {categoryLabel, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
@@ -157,6 +162,7 @@ type ProfileContentProps = {
         topCaptures: PublicProfileCapture[];
         recentCaptures: PublicProfileCapture[];
         canViewLocations: boolean;
+        captureGridSort: "recent" | "index";
     };
     labels: ProfileContentLabels;
     locale: string;
@@ -170,10 +176,14 @@ type ProfileContentProps = {
         tradeUnlock: {verifiedOverallScore: number; requiredScore: number; tradeUnlocked: boolean} | null;
         completedSets: ProfileCompletedSet[];
         completedSetsCount: number;
+        /** Null when the binders could not be loaded: the count is then unknown, not zero. */
+        completedBinders: ProfileBinder[] | null;
         signOutButton: React.ReactNode;
     } | null;
     listedPacks: ProfileListedPack[];
     listedGuides?: PublicGuideListing[];
+    social?: ProfileSocialState | null;
+    signInHref?: string;
     surface?: "marketing" | "app";
 };
 
@@ -307,40 +317,126 @@ function WildIdentityCard({
     );
 }
 
-function ProfileLocationsMap({visits}: {visits: ProfileLocationVisit[]}) {
-    const plotted = visits.filter((visit) => visit.latitude != null && visit.longitude != null);
-    if (!plotted.length) return null;
-    const latitudes = plotted.map((visit) => visit.latitude!);
-    const longitudes = plotted.map((visit) => visit.longitude!);
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    const latSpan = Math.max(maxLat - minLat, 0.01);
-    const lngSpan = Math.max(maxLng - minLng, 0.01);
-    const maxCount = Math.max(...plotted.map((visit) => visit.captureCount), 1);
+/** iOS `ShopDestinationRow`. */
+function ShopDestinationRow({href, external = false, tint, title, subtitle, status}: {
+    href: string;
+    external?: boolean;
+    tint: string;
+    title: string;
+    subtitle: string;
+    status: string;
+}) {
+    const body = (
+        <>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{backgroundColor: `${tint}26`, color: tint}}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: tint}} />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-white">{title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-white/45">{subtitle}</span>
+                <span className="mt-1 block text-[11px] font-semibold text-white/60">{status}</span>
+            </span>
+            <span className="shrink-0 text-xs font-extrabold" style={{color: THEME.neon}}>Manage ›</span>
+        </>
+    );
+    const className = "flex items-center gap-3 border-b border-white/[0.06] px-[18px] py-3.5 transition hover:bg-white/[0.03]";
+    return external
+        ? <a href={href} target="_blank" rel="noopener noreferrer" className={className}>{body}</a>
+        : <Link href={href} className={className}>{body}</Link>;
+}
+
+/** iOS `followCountsRow`: two counts under the score card, on every profile. */
+function FollowCountsRow({counts}: {counts: {followers: number; following: number}}) {
+    return (
+        <div className="flex items-center border-b border-white/[0.06] bg-[#12351C]/40 py-3.5">
+            {([["Followers", counts.followers], ["Following", counts.following]] as const).map(([label, value], index) => (
+                <div key={label} className={`flex flex-1 flex-col items-center gap-0.5 ${index > 0 ? "border-l border-white/10" : ""}`}>
+                    <span className="text-xl font-extrabold tabular-nums text-white">{formatAppInteger(value)}</span>
+                    <span className="text-[11px] font-medium uppercase text-[#7E8781]">{label}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** iOS `ProfileViewsCard`: owner only. */
+function ProfileViewsCard({stats}: {stats: ProfileViewStats}) {
+    const comparison = stats.thisWeek === 0
+        ? "No views this week"
+        : stats.previousWeek === 0
+            ? "First views this week"
+            : stats.thisWeek === stats.previousWeek
+                ? "Same as last week"
+                : `${stats.thisWeek > stats.previousWeek ? "+" : ""}${Math.round(((stats.thisWeek - stats.previousWeek) / stats.previousWeek) * 100)}% vs last week`;
 
     return (
-        <div className="relative h-[28rem] overflow-hidden border-y border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.18),transparent_32%),linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px),#111714] light:bg-[radial-gradient(circle_at_30%_20%,rgba(32,120,80,.10),transparent_32%),linear-gradient(rgba(12,26,17,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(12,26,17,.07)_1px,transparent_1px)] light:bg-canvas-900 bg-[size:auto,32px_32px,32px_32px,auto]">
-            {plotted.map((visit) => {
-                const left = 8 + ((visit.longitude! - minLng) / lngSpan) * 84;
-                const top = 8 + (1 - (visit.latitude! - minLat) / latSpan) * 84;
-                const size = 34 + (visit.captureCount / maxCount) * 42;
-                return (
-                    <div
-                        key={visit.id}
-                        title={`${visit.label} · ${visit.captureCount} captures`}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary-100/45 bg-primary-400/25 shadow-[0_0_30px_rgba(167,244,50,.24)] backdrop-blur-[2px]"
-                        style={{left: `${left}%`, top: `${top}%`, width: size, height: size}}
-                    >
-                        <span className="absolute inset-0 grid place-items-center text-[0.65rem] font-black text-white">{visit.captureCount}</span>
+        <section className="border-b border-white/[0.06] px-[18px] py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.09em] text-white">Community</p>
+            {stats.allTime === 0 ? (
+                <div className="mt-3">
+                    <p className="text-sm font-bold text-white">Profile views</p>
+                    <p className="mt-1 text-xs text-white/45">No one has visited your profile yet.</p>
+                </div>
+            ) : (
+                <div className="mt-3 flex items-end justify-between gap-4">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase text-white/40">Profile views</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums text-white">
+                            {formatAppInteger(stats.thisWeek)} <span className="text-xs font-semibold text-white/45">this week</span>
+                        </p>
+                        <p className="mt-1 text-xs font-semibold" style={{color: THEME.neon}}>{comparison}</p>
                     </div>
-                );
-            })}
-            <p className="theme-dark absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-[0.62rem] font-bold text-white/55 backdrop-blur">
-                Approximate locations
-            </p>
-        </div>
+                    <div className="text-right">
+                        <p className="text-[11px] font-semibold uppercase text-white/40">All time</p>
+                        <p className="mt-1 text-lg font-extrabold tabular-nums text-white">{formatAppInteger(stats.allTime)}</p>
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+}
+
+/** iOS `ProfileHistoryGridCell`: square photo, index chip, sightings pill, video marker. */
+function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) {
+    const capture = item.representative;
+    return (
+        <Link href={capture.href} className="group relative aspect-square overflow-hidden bg-black">
+            <Image
+                src={capture.imageSrc}
+                alt={capture.animalName}
+                fill
+                unoptimized
+                className="object-cover transition duration-300 group-hover:scale-105"
+            />
+            {item.animalDexNumber != null ? (
+                <span className="absolute left-[7px] top-[7px] rounded-full border border-[#A7F432]/[0.28] bg-black/55 px-[7px] py-1 text-[11px] font-extrabold leading-none tabular-nums text-[#A7F432]">
+                    {formatAnimalDexNumber(item.animalDexNumber)}
+                </span>
+            ) : (
+                <span className="absolute left-[7px] top-[7px] rounded-full bg-black/55 px-1.5 py-1 text-[9px] font-extrabold leading-none text-[#A8B0AA]">
+                    NOT INDEXED
+                </span>
+            )}
+            {item.captureCount > 1 ? (
+                <span
+                    aria-label={`${item.captureCount} sightings`}
+                    className="absolute right-[7px] top-[7px] inline-flex items-center gap-1 rounded-full bg-black/55 px-[7px] py-1 text-[10px] font-extrabold leading-none text-white"
+                >
+                    <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="currentColor" aria-hidden="true">
+                        <path d="M9 4.5 7.6 6.5H5A2.5 2.5 0 0 0 2.5 9v8.5A2.5 2.5 0 0 0 5 20h14a2.5 2.5 0 0 0 2.5-2.5V9A2.5 2.5 0 0 0 19 6.5h-2.6L15 4.5H9Zm3 4.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" />
+                    </svg>
+                    {item.captureCount}
+                </span>
+            ) : null}
+            {item.isMovingMedia ? (
+                <span className="absolute bottom-1.5 right-1.5 grid h-[19px] w-[19px] place-items-center rounded-full bg-black/55 text-white" aria-label="Video">
+                    <svg viewBox="0 0 24 24" className="ml-px h-[9px] w-[9px]" fill="currentColor" aria-hidden="true">
+                        <path d="M7 4.5v15l12.5-7.5L7 4.5Z" />
+                    </svg>
+                </span>
+            ) : null}
+            <span className="sr-only">{capture.animalName}</span>
+        </Link>
     );
 }
 
@@ -387,6 +483,8 @@ export default function ProfileContent({
     ownerExtras,
     listedPacks,
     listedGuides = [],
+    social = null,
+    signInHref = "/account",
     surface = "marketing"
 }: ProfileContentProps) {
     const [activeTab, setActiveTab] = useState<ProfileTab>("history");
@@ -420,16 +518,20 @@ export default function ProfileContent({
         return labels.locationsTitle;
     };
 
-    const binders = useMemo<ProfileBinder[]>(
-        () => profile.powerSetCompletions.map((completion) => ({
-            key: completion.powerKey,
-            title: completion.powerLabel,
-            found: completion.speciesCount,
-            total: completion.catalogLinkedCount ?? completion.speciesCount,
-            tier: completion.tier
-        })),
-        [profile.powerSetCompletions]
+    const [followerDelta, setFollowerDelta] = useState(0);
+    const followCounts = social?.followCounts
+        ? {...social.followCounts, followers: Math.max(0, social.followCounts.followers + followerDelta)}
+        : null;
+
+    const gridItems = useMemo(
+        () => buildProfileGridItems(profile.recentCaptures, profile.captureGridSort),
+        [profile.recentCaptures, profile.captureGridSort]
     );
+
+    // iOS lists the owner's completed collection binders and nothing for another
+    // member: binder progress is built from the viewer's own captures. The old
+    // power-set tiers ("Indexed Species Silver") are retired there.
+    const binders = viewer.isOwner ? ownerExtras?.completedBinders ?? null : null;
 
     // Matches iOS: the server ranks each scope, and a missing Wild ranking falls
     // back to the same leaders computed over the wild-only sample.
@@ -470,7 +572,8 @@ export default function ProfileContent({
                 tint: THEME.mint,
                 denominator: speciesDenominator
             },
-            {title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"},
+            // iOS omits the chip when the count is not known.
+            ...(binders ? [{title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"}] : []),
             {
                 title: "Challenges",
                 value: `${profile.challengeWins}/${profile.challengeWins + profile.challengeLosses}`,
@@ -489,7 +592,7 @@ export default function ProfileContent({
         }
 
         return chips;
-    }, [binders.length, profile, speciesDenominator]);
+    }, [binders, profile, speciesDenominator]);
 
     useEffect(() => {
         const onScroll = () => {
@@ -584,6 +687,18 @@ export default function ProfileContent({
                                 <ProfileChromeButton href={`${localePrefix}/app/messages/${encodeURIComponent(profile.userId)}`} ariaLabel="Message">
                                     <ProfileMessagesIcon />
                                 </ProfileChromeButton>
+                            ) : null}
+                            {!viewer.isOwner ? (
+                                <ProfileSocialControls
+                                    profileUserId={profile.userId}
+                                    displayName={profile.displayName}
+                                    isLoggedIn={viewer.isLoggedIn}
+                                    signInHref={signInHref}
+                                    initialIsFollowing={social?.isFollowing ?? false}
+                                    initialIsFriend={social?.isFriend ?? false}
+                                    initialPreference={social?.notificationPreference ?? "all"}
+                                    onFollowersChange={(delta) => setFollowerDelta((current) => current + delta)}
+                                />
                             ) : null}
                             {shareButton ? (
                                 <div className="[&_button]:grid [&_button]:h-9 [&_button]:w-9 [&_button]:place-items-center [&_button]:rounded-full [&_button]:border [&_button]:border-white/[0.1] [&_button]:bg-surface-800 [&_button]:p-0 [&_button]:text-white">
@@ -725,6 +840,7 @@ export default function ProfileContent({
                             : null}
                         tradeUnlock={ownerExtras?.tradeUnlock ?? null}
                     />
+                    {followCounts ? <FollowCountsRow counts={followCounts} /> : null}
                     <SettingComparisonCard
                         wild={profile.wildCount}
                         zoo={profile.zooCount}
@@ -754,6 +870,7 @@ export default function ProfileContent({
                         usernameHandle={`@${profile.username}`}
                     />
                     <AverageTraitsCard stats={profile.averageTraits} />
+                    {viewer.isOwner && social?.profileViews ? <ProfileViewsCard stats={social.profileViews} /> : null}
                     <ProfileInsightsSection
                         insights={insights}
                         isWildScope={isWildInsightScope}
@@ -763,10 +880,7 @@ export default function ProfileContent({
                         found. Earned Powers are read for the signed-in viewer
                         only, so this is the owner's own profile. */}
                     {viewer.isOwner ? <MyAnimalPowersSection animalsMet={profile.speciesCount} /> : null}
-                    <CompletedBindersSection
-                        binders={binders}
-                        href={viewer.isOwner ? `${localePrefix}/app/collection?segment=binders` : `${localePrefix}/app/collection`}
-                    />
+                    {binders ? <CompletedBindersSection binders={binders} /> : null}
                     {!viewer.isOwner ? (
                         <StatsPanel className="px-[18px] py-4">
                             <p className="text-[11px] font-semibold uppercase text-white/40">{labels.userIdLabel}</p>
@@ -777,43 +891,71 @@ export default function ProfileContent({
             ) : null}
 
             {activeTab === "shop" ? (
-                listedPacks.length === 0 && listedGuides.length === 0 ? (
-                    <div className="  border border-white/10 bg-surface-900/60 p-5">
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-primary-200">{labels.tabShop}</p>
-                        <h3 className="mt-2 font-display text-2xl font-bold text-white">
-                            {viewer.isOwner ? labels.manageShop : labels.packMarketplaceEmpty}
-                        </h3>
-                        <p className="mt-2 text-sm leading-6 text-white/45">
-                            {viewer.isOwner
-                                ? "Sealed Packs sell for Credits. Wildlife Guides are real-money experiences you can set up here on the web."
-                                : labels.packMarketplaceEmpty}
-                        </p>
-                        {viewer.isOwner ? (
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                <a href={appStoreUrl} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
-                                    <p className="font-display text-lg font-bold text-white">Sealed Packs</p>
-                                    <p className="mt-1 text-xs leading-5 text-white/40">Bundle eligible captures into mystery packs.</p>
-                                </a>
-                                <Link href={`${localePrefix}/app/guides`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
-                                    <p className="font-display text-lg font-bold text-white">Wildlife Guides</p>
-                                    <p className="mt-1 text-xs leading-5 text-white/40">Apply, publish experiences, and manage bookings.</p>
-                                </Link>
-                            </div>
-                        ) : null}
+                viewer.isOwner ? (
+                    // iOS `ownerDashboard`: destinations, not product cards.
+                    <div className="-mx-4 flex flex-col md:-mx-8">
+                        <ShopDestinationRow
+                            href={appStoreUrl}
+                            external
+                            tint="#FF9500"
+                            title="Sealed Packs"
+                            subtitle="Bundle eligible captures into mystery packs. Sold for Credits."
+                            status={listedPacks.length > 0 ? `${listedPacks.length} for sale` : "No active listings"}
+                        />
+                        <ShopDestinationRow
+                            href={`${localePrefix}/app/guides`}
+                            tint="#32ADE6"
+                            title="Wildlife Guides"
+                            subtitle="Create real-world wildlife experiences. Paid in real money."
+                            status={listedGuides.length > 0 ? `${listedGuides.length} published` : "Set up on the web"}
+                        />
+                        <Link
+                            href={`${localePrefix}/earn-on-animaldex`}
+                            className="flex items-center gap-3 border-b border-white/[0.06] px-[18px] py-3.5 text-sm font-semibold text-white transition hover:bg-white/[0.03]"
+                        >
+                            <span className="flex-1">Ways to earn</span>
+                            <span className="text-xs text-white/40">Credits and real money ›</span>
+                        </Link>
                     </div>
                 ) : (
+                    // iOS `publicStorefront`.
                     <div className="flex flex-col gap-3">
-                        {viewer.isOwner ? (
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <a href={appStoreUrl} className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
-                                    <p className="font-display text-lg font-bold text-white">Sealed Packs</p>
-                                    <p className="mt-1 text-xs text-white/40">Manage pack listings in AnimalDex.</p>
-                                </a>
-                                <Link href={`${localePrefix}/app/guides`} className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.07]">
-                                    <p className="font-display text-lg font-bold text-white">Wildlife Guides</p>
-                                    <p className="mt-1 text-xs text-white/40">Manage guide listings and bookings.</p>
-                                </Link>
+                        <p className="text-xs font-medium uppercase tracking-[0.09em] text-white">For sale</p>
+                        {listedPacks.length === 0 && listedGuides.length === 0 ? (
+                            <div className="border border-white/10 bg-surface-900/60 px-5 py-8 text-center">
+                                <p className="font-display text-xl font-bold text-white">Nothing listed yet</p>
+                                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/45">
+                                    This collector doesn&rsquo;t have any packs or Wildlife Guides available right now.
+                                </p>
                             </div>
+                        ) : null}
+                        {listedPacks.map((pack) => (
+                            <div key={pack.id} className="  border border-white/10 bg-surface-900/60 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h3 className="font-display text-xl font-bold text-white">{pack.themeTitle}</h3>
+                                        <p className="mt-1 text-sm text-white/45">
+                                            {pack.packSize} cards · {pack.listedPrice} credits
+                                            {pack.qualityBand ? ` · ${pack.qualityBand}` : ""}
+                                        </p>
+                                        {pack.guaranteesSummary ? (
+                                            <p className="mt-2 text-xs text-white/35">{pack.guaranteesSummary}</p>
+                                        ) : null}
+                                    </div>
+                                    <a
+                                        href={appStoreUrl}
+                                        className="shrink-0 rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-black"
+                                    >
+                                        {labels.packBuyInApp}
+                                    </a>
+                                </div>
+                                <p className="mt-3 text-xs text-white/35">
+                                    {labels.packListedBy.replace("{name}", profile.displayName)}
+                                </p>
+                            </div>
+                        ))}
+                        {listedGuides.length > 0 ? (
+                            <h3 className="mt-3 font-display text-lg font-bold text-white">Wildlife Guides</h3>
                         ) : null}
                         {listedGuides.map((guide) => (
                             <Link
@@ -839,31 +981,6 @@ export default function ProfileContent({
                                     </span>
                                 </div>
                             </Link>
-                        ))}
-                        {listedPacks.map((pack) => (
-                            <div key={pack.id} className="  border border-white/10 bg-surface-900/60 p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <h3 className="font-display text-xl font-bold text-white">{pack.themeTitle}</h3>
-                                        <p className="mt-1 text-sm text-white/45">
-                                            {pack.packSize} cards · {pack.listedPrice} credits
-                                            {pack.qualityBand ? ` · ${pack.qualityBand}` : ""}
-                                        </p>
-                                        {pack.guaranteesSummary ? (
-                                            <p className="mt-2 text-xs text-white/35">{pack.guaranteesSummary}</p>
-                                        ) : null}
-                                    </div>
-                                    <a
-                                        href={appStoreUrl}
-                                        className="shrink-0 rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-black"
-                                    >
-                                        {labels.packBuyInApp}
-                                    </a>
-                                </div>
-                                <p className="mt-3 text-xs text-white/35">
-                                    {labels.packListedBy.replace("{name}", profile.displayName)}
-                                </p>
-                            </div>
                         ))}
                     </div>
                 )
@@ -905,18 +1022,9 @@ export default function ProfileContent({
                             </p>
                         </div>
                     ) : (
-                        <div className="-mx-4 grid grid-cols-3 gap-0.5 md:-mx-8">
-                            {profile.recentCaptures.map((capture) => (
-                                <Link key={capture.id} href={capture.href} className="group relative aspect-square overflow-hidden bg-white/[0.03]">
-                                    <Image
-                                        src={capture.imageSrc}
-                                        alt={capture.animalName}
-                                        fill
-                                        unoptimized
-                                        className="object-cover transition duration-300 group-hover:scale-105"
-                                    />
-                                    <span className="sr-only">{capture.animalName}</span>
-                                </Link>
+                        <div className="-mx-4 mt-2 grid grid-cols-3 gap-0.5 md:-mx-8">
+                            {gridItems.map((item) => (
+                                <ProfileGridCell key={item.id} item={item} />
                             ))}
                         </div>
                     )}

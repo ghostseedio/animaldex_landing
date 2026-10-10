@@ -1,0 +1,5446 @@
+{
+  "generatedAt": "2026-10-10",
+  "note": "Hand-coded /animals pages linked to the catalog: their own indexed species_profile_id, a folded duplicate's canonical profile, or, for group pages with no indexed group profile, the indexed species they cover. Written by scripts/refreshStaticSpeciesProfiles.mts; the build never queries Supabase.",
+  "entries": {
+    "aardvark": {
+      "speciesProfileId": "164fd8c1-e3b5-4b23-9f23-ce23972b4773",
+      "source": "own"
+    },
+    "aardwolf": {
+      "speciesProfileId": "0a981510-9035-4d33-9c68-5c0e1f51a20b",
+      "source": "own"
+    },
+    "abyssinian-ground-hornbill": {
+      "speciesProfileId": "8f33007f-2c6f-4e81-a8ce-72d944e489d7",
+      "source": "own"
+    },
+    "ackie-monitor": {
+      "speciesProfileId": "f4e699d9-16a8-4c4e-a9c1-8821177f4908",
+      "source": "own"
+    },
+    "addax": {
+      "speciesProfileId": "2f19f32d-ac21-4518-ab61-40a07e1d2d3f",
+      "source": "own"
+    },
+    "adelie-penguin": {
+      "speciesProfileId": "f9816488-ce98-4595-8149-98709f5d788e",
+      "source": "own"
+    },
+    "african-bullfrog": {
+      "speciesProfileId": "19cb659c-b46a-4893-8d00-1b573da44a79",
+      "source": "own"
+    },
+    "african-bush-elephant": {
+      "speciesProfileId": "9923af79-7ca3-411d-b232-5668b7c3c5ba",
+      "source": "own"
+    },
+    "african-civet": {
+      "speciesProfileId": "7a5f5e34-78c4-48f9-9de6-526f3fe3d74e",
+      "source": "own"
+    },
+    "african-clawed-frog": {
+      "speciesProfileId": "221476ab-f99f-433b-98f0-806952ae871c",
+      "source": "own"
+    },
+    "african-fish-eagle": {
+      "speciesProfileId": "e261d062-bb60-4500-9bfc-64a51916e512",
+      "source": "own"
+    },
+    "african-forest-elephant": {
+      "speciesProfileId": "57b848b6-5287-4d4e-a615-63e5cb883bbd",
+      "source": "own"
+    },
+    "african-grey-parrot": {
+      "speciesProfileId": "084078d2-49ab-4434-adda-877fb2371ca2",
+      "source": "own"
+    },
+    "african-jacana": {
+      "speciesProfileId": "e9031f99-af1e-4866-9cfc-f603926d30e8",
+      "source": "own"
+    },
+    "african-openbill": {
+      "speciesProfileId": "8dc581f7-125a-4869-89be-55eb053a2115",
+      "source": "own"
+    },
+    "african-rock-python": {
+      "speciesProfileId": "496902c3-51d9-442e-8d5c-2ea85cd13cff",
+      "source": "own"
+    },
+    "african-wild-dog": {
+      "speciesProfileId": "d13c28bb-924e-48ae-ac29-8dc5e6034628",
+      "source": "own"
+    },
+    "agile-wallaby": {
+      "speciesProfileId": "42ca6108-de08-4ae6-9d1e-c2b63c326d3c",
+      "source": "own"
+    },
+    "agouti": {
+      "speciesProfileId": "db5e0c2c-0e78-4872-9adc-82662f70b5f9",
+      "source": "own"
+    },
+    "aldabra-giant-tortoise": {
+      "speciesProfileId": "cecb51a5-ebb6-4aed-8d58-ac889516810c",
+      "source": "own"
+    },
+    "alligator-gar": {
+      "speciesProfileId": "677c2d28-8cab-47c0-bb8c-4f7a5ff9b899",
+      "source": "own"
+    },
+    "alligator-snapping-turtle": {
+      "speciesProfileId": "bf99640c-29db-4a05-9cf3-3cd638cb4f02",
+      "source": "own"
+    },
+    "alpaca": {
+      "speciesProfileId": "29a0e9de-7d63-4d03-9701-00edf7c51fe2",
+      "source": "own"
+    },
+    "alpine-ibex": {
+      "speciesProfileId": "889edb60-58bb-4daf-b514-dc3e1d63e55c",
+      "source": "own"
+    },
+    "alpine-newt": {
+      "speciesProfileId": "8b036cf8-a49b-4a68-9f05-ad7eda6361fc",
+      "source": "own"
+    },
+    "alpine-salamander": {
+      "speciesProfileId": "330514ea-f705-4bfb-a4b0-2d005405e05b",
+      "source": "own"
+    },
+    "amazon-milk-frog": {
+      "speciesProfileId": "c9054ecc-66eb-4256-a163-e799404cd418",
+      "source": "own"
+    },
+    "american-alligator": {
+      "speciesProfileId": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+      "source": "own"
+    },
+    "american-avocet": {
+      "speciesProfileId": "d7bfc024-3aa4-44c6-a541-1dead059e007",
+      "source": "own"
+    },
+    "american-bison": {
+      "speciesProfileId": "bff73dfd-9557-4a14-b9fe-dde6d39536ac",
+      "source": "own"
+    },
+    "american-bullfrog": {
+      "speciesProfileId": "398571ec-d21e-4319-a187-e4235111026c",
+      "source": "own"
+    },
+    "american-dipper": {
+      "speciesProfileId": "7d96006a-4601-46ee-8ada-d317c3fcb518",
+      "source": "own"
+    },
+    "american-marten": {
+      "speciesProfileId": "64f95cbc-ffaa-4de0-87a9-55fafe3a82e6",
+      "source": "own"
+    },
+    "american-paddlefish": {
+      "speciesProfileId": "c5bf8448-b4b1-4c52-b7e9-403358ecf11e",
+      "source": "own"
+    },
+    "amur-leopard": {
+      "speciesProfileId": "d3b4d2f4-3547-485e-94fe-9d403c16baf7",
+      "source": "own"
+    },
+    "andean-cock-of-the-rock": {
+      "speciesProfileId": "6123ef85-fe6b-4464-8a7a-f31fca5f5a5e",
+      "source": "own"
+    },
+    "andean-condor": {
+      "speciesProfileId": "aec7b8a2-9288-404b-86ef-b9e95f155883",
+      "source": "own"
+    },
+    "andean-goose": {
+      "speciesProfileId": "d5a2746c-086b-4b81-8fcb-6e4d3a1f068c",
+      "source": "own"
+    },
+    "andean-lapwing": {
+      "speciesProfileId": "83caea98-c84a-4537-81f2-3cd08646cd8b",
+      "source": "own"
+    },
+    "anglerfish": {
+      "speciesProfileId": "ffbdcfce-5f89-4e08-92d2-798dcdb8f81d",
+      "source": "canonical"
+    },
+    "anhinga": {
+      "speciesProfileId": "58a5bef7-1458-44ae-a183-c4589fb34935",
+      "source": "own"
+    },
+    "antlion": {
+      "speciesProfileId": "d1fb8966-d66e-4604-b9f1-77a54a7a8db7",
+      "source": "own"
+    },
+    "arabian-sand-boa": {
+      "speciesProfileId": "2de6b85b-4b14-47a0-b6e1-65ae0f7ce870",
+      "source": "own"
+    },
+    "arapaima": {
+      "speciesProfileId": "76ddb4b4-2908-4737-9d7e-d3fd30864637",
+      "source": "own"
+    },
+    "archerfish": {
+      "speciesProfileId": "180adbb0-b186-4cbd-aa32-e637fd78ceef",
+      "source": "own"
+    },
+    "arctic-tern": {
+      "speciesProfileId": "004fb4f2-fa2f-4f28-ae43-6eb8ecfb6276",
+      "source": "own"
+    },
+    "argentine-black-and-white-tegu": {
+      "speciesProfileId": "177ef916-a0f4-42b7-842b-bc7d30abb810",
+      "source": "own"
+    },
+    "argus-monitor": {
+      "speciesProfileId": "02650624-6d01-4ff1-92d2-3758d29bc64e",
+      "source": "own"
+    },
+    "armadillo-girdled-lizard": {
+      "speciesProfileId": "0a1254cd-7656-4a26-8815-6692afc9218c",
+      "source": "own"
+    },
+    "asian-elephant": {
+      "speciesProfileId": "191f2749-42e2-4209-a400-3bc9d2b49b00",
+      "source": "own"
+    },
+    "assassin-bug": {
+      "speciesProfileId": "d65333b8-6e4e-42a0-b207-f6aef424b98a",
+      "source": "own"
+    },
+    "atlantic-puffin": {
+      "speciesProfileId": "cabff44d-59a9-48a8-b226-cc9784870f73",
+      "source": "own"
+    },
+    "atlantic-sailfish": {
+      "speciesProfileId": "973a34dc-47bc-419a-9066-2cd866e366e8",
+      "source": "own"
+    },
+    "atlantic-tarpon": {
+      "speciesProfileId": "1df1fca2-1ba4-44e0-99cc-2df6181b5eaf",
+      "source": "own"
+    },
+    "atlantic-yellow-nosed-albatross": {
+      "speciesProfileId": "c9e38351-7152-44fa-859c-c1630ba50802",
+      "source": "own"
+    },
+    "atlas-beetle": {
+      "speciesProfileId": "8148e8d3-ef67-45cf-9dd0-768d78bd6c9e",
+      "source": "own"
+    },
+    "atlas-moth": {
+      "speciesProfileId": "4c18b93a-cb12-47de-82d3-d74d6b8c1ea1",
+      "source": "own"
+    },
+    "australian-green-tree-frog": {
+      "speciesProfileId": "2f42e66c-acf5-49d0-9933-adf64f22f04e",
+      "source": "own"
+    },
+    "axolotl": {
+      "speciesProfileId": "9f99b80f-8643-4a43-b568-773bcececf05",
+      "source": "own"
+    },
+    "aye-aye": {
+      "speciesProfileId": "8f3cabeb-2054-4ff3-9898-0b1576b6c869",
+      "source": "own"
+    },
+    "babirusa": {
+      "speciesProfileId": "48af30eb-a8b5-4d35-a487-514016850317",
+      "source": "own"
+    },
+    "bactrian-camel": {
+      "speciesProfileId": "c9ea6687-df70-4bd1-aca7-16614b3dcce5",
+      "source": "own"
+    },
+    "bairds-tapir": {
+      "speciesProfileId": "83dc7b12-48fa-4fd1-b12c-95a0e0c64b8e",
+      "source": "own"
+    },
+    "bald-eagle": {
+      "speciesProfileId": "03506ff1-c27b-4981-bedd-4dcb7a52b55d",
+      "source": "own"
+    },
+    "bald-uakari": {
+      "speciesProfileId": "d8e3ce70-f3c5-4841-b6a4-5d651d4e98ee",
+      "source": "own"
+    },
+    "bali-myna": {
+      "speciesProfileId": "b3da7a72-5ca5-446d-8b58-076ff78d595b",
+      "source": "own"
+    },
+    "banded-linsang": {
+      "speciesProfileId": "77f73d9a-cd8d-4d1b-a956-16313fe13cb7",
+      "source": "own"
+    },
+    "banded-palm-civet": {
+      "speciesProfileId": "65ffe921-2c44-4416-94fe-e57989b23a2b",
+      "source": "own"
+    },
+    "barbary-macaque": {
+      "speciesProfileId": "490e7f82-eb6a-4eff-adad-cb34cbb18ac9",
+      "source": "own"
+    },
+    "bare-throated-bellbird": {
+      "speciesProfileId": "84b41224-3386-447d-a7cd-9eb4128830b9",
+      "source": "own"
+    },
+    "barn-owl": {
+      "speciesProfileId": "77afa7fe-b132-4d7c-8ee5-fd32f3de64f6",
+      "source": "own"
+    },
+    "barn-swallow": {
+      "speciesProfileId": "389d6e31-1cd3-491e-b92d-3c23a94b2a1e",
+      "source": "own"
+    },
+    "barramundi": {
+      "speciesProfileId": "ac12e66a-0a5b-4d5b-81d4-59a3c4abcef4",
+      "source": "own"
+    },
+    "barreleye": {
+      "speciesProfileId": "6d4c2b31-82c2-4716-a24a-f1889e9ca674",
+      "source": "own"
+    },
+    "basilisk-lizard": {
+      "speciesProfileId": "50ba663b-e668-47ed-a5e1-cadc1a05db57",
+      "source": "canonical"
+    },
+    "basking-shark": {
+      "speciesProfileId": "f4a857d2-4be3-4598-b65f-a6f10879bf65",
+      "source": "own"
+    },
+    "bat-eared-fox": {
+      "speciesProfileId": "6a332339-5b72-4af5-832b-4fefde7df320",
+      "source": "own"
+    },
+    "bateleur": {
+      "speciesProfileId": "5b50ee3a-fc81-480c-bef7-f42a844209a9",
+      "source": "own"
+    },
+    "bawean-deer": {
+      "speciesProfileId": "2f66939b-bb0b-43ca-9d1d-a119735a462b",
+      "source": "own"
+    },
+    "bay-duiker": {
+      "speciesProfileId": "127dee5c-e270-46a2-8f60-703e376d298e",
+      "source": "own"
+    },
+    "bearded-dragon": {
+      "speciesProfileId": "b861fe97-301a-451f-942d-55ceb8c9fec2",
+      "source": "own"
+    },
+    "bearded-reedling": {
+      "speciesProfileId": "3b971b0c-fd6d-4f3f-af86-0a901b0ca873",
+      "source": "own"
+    },
+    "bearded-seal": {
+      "speciesProfileId": "bfb9cc8e-8ca3-4f90-a560-cde3752f2004",
+      "source": "own"
+    },
+    "bee-hummingbird": {
+      "speciesProfileId": "fc7c175f-74fc-4236-bc3a-00c56fd00404",
+      "source": "own"
+    },
+    "beira": {
+      "speciesProfileId": "195328fe-f27a-4c52-bfc5-8c0804df2d97",
+      "source": "own"
+    },
+    "belted-kingfisher": {
+      "speciesProfileId": "76527332-05b8-4f34-b0d5-507b46f1b3ed",
+      "source": "own"
+    },
+    "beluga-sturgeon": {
+      "speciesProfileId": "ed180bf5-0ea4-485d-8fa6-e6c508bb7add",
+      "source": "own"
+    },
+    "beluga-whale": {
+      "speciesProfileId": "4892e0a6-9384-4ca8-8baf-a14f48a52769",
+      "source": "own"
+    },
+    "bengal-tiger": {
+      "speciesProfileId": "90c88a61-371b-4600-a0e9-e928a89101fb",
+      "source": "own"
+    },
+    "bharal": {
+      "speciesProfileId": "a9955f5c-7f4c-46be-93b7-707c3ffad710",
+      "source": "own"
+    },
+    "binturong": {
+      "speciesProfileId": "815c04af-a99b-4afd-9dc3-e26f8fe5a358",
+      "source": "own"
+    },
+    "black-and-rufous-elephant-shrew": {
+      "speciesProfileId": "7a3a3dbf-ae83-4b4c-9805-d88c462a5d8e",
+      "source": "own"
+    },
+    "black-and-white-colobus": {
+      "speciesProfileId": "5a842b6e-c58f-4108-bcd6-1c182af21968",
+      "source": "own"
+    },
+    "black-and-white-ruffed-lemur": {
+      "speciesProfileId": "6a1d1bad-3eb9-4149-9ca6-fa07c3f9de1e",
+      "source": "own"
+    },
+    "black-breasted-leaf-turtle": {
+      "speciesProfileId": "6f50e970-c95e-4ad2-b5c5-910cadd18657",
+      "source": "own"
+    },
+    "black-browed-albatross": {
+      "speciesProfileId": "5c1d7401-ab4c-48f7-a41f-17b3b3ad7086",
+      "source": "own"
+    },
+    "black-caiman": {
+      "speciesProfileId": "0f991b64-3b86-439a-b2b2-41ccf62612a6",
+      "source": "own"
+    },
+    "black-crowned-night-heron": {
+      "speciesProfileId": "e702751e-5c83-42fc-ae09-42f6cc989a09",
+      "source": "own"
+    },
+    "black-faced-ibis": {
+      "speciesProfileId": "8067c9ed-196c-4bef-995a-ce93b633ff60",
+      "source": "own"
+    },
+    "black-footed-albatross": {
+      "speciesProfileId": "3d5541a5-56c2-4286-9e21-55dd759295ad",
+      "source": "own"
+    },
+    "black-footed-ferret": {
+      "speciesProfileId": "8915460b-7c0c-4919-a5ad-851d3682d945",
+      "source": "own"
+    },
+    "black-headed-ibis": {
+      "speciesProfileId": "9e91f426-a179-41dc-86b0-ce161d876475",
+      "source": "own"
+    },
+    "black-howler-monkey": {
+      "speciesProfileId": "cf736657-b518-4c8e-9ad5-fcc29cd490f3",
+      "source": "own"
+    },
+    "black-lechwe": {
+      "speciesProfileId": "1500e970-00f9-4a09-8fe3-cc4904e8fd6c",
+      "source": "own"
+    },
+    "black-mamba": {
+      "speciesProfileId": "da711af8-c1fb-4c70-9467-25c3b8707661",
+      "source": "own"
+    },
+    "black-naped-tern": {
+      "speciesProfileId": "2c530a0a-b767-44a5-a18e-acb8b93dba5c",
+      "source": "own"
+    },
+    "black-necked-crane": {
+      "speciesProfileId": "ac4b8751-b3ae-455b-883d-3ae440941c38",
+      "source": "own"
+    },
+    "black-necked-stilt": {
+      "speciesProfileId": "e1e7d5b5-5055-4a49-af14-fb66c0b3d46d",
+      "source": "own"
+    },
+    "black-necked-swan": {
+      "speciesProfileId": "1307ad31-35b1-413d-a9cd-9344a686ac80",
+      "source": "own"
+    },
+    "black-rhinoceros": {
+      "speciesProfileId": "69e565f6-ae64-4d71-9d8d-65bcd41b624e",
+      "source": "own"
+    },
+    "black-shouldered-kite": {
+      "speciesProfileId": "758e232d-f654-441a-8891-896076e4f58c",
+      "source": "own"
+    },
+    "black-skimmer": {
+      "speciesProfileId": "af602f30-b085-432d-8c90-64429b711786",
+      "source": "own"
+    },
+    "black-swan": {
+      "speciesProfileId": "4937286b-da9e-4b66-ba50-c372f16f4e66",
+      "source": "own"
+    },
+    "black-vulture": {
+      "speciesProfileId": "d0d1c412-a1d6-4944-b2fe-afea3710315a",
+      "source": "own"
+    },
+    "blackbuck": {
+      "speciesProfileId": "45bfa732-3cfe-4bf6-ac8e-9d7f60304023",
+      "source": "own"
+    },
+    "blesbok": {
+      "speciesProfileId": "56f237f8-01c7-499f-87b8-3ebb99ddb3df",
+      "source": "own"
+    },
+    "blobfish": {
+      "speciesProfileId": "2ea171c8-bdc1-42b5-b301-d78aa088b9e9",
+      "source": "own"
+    },
+    "blue-duiker": {
+      "speciesProfileId": "264e6365-5fd8-486f-8a8e-d9492e8f65ea",
+      "source": "own"
+    },
+    "blue-footed-booby": {
+      "speciesProfileId": "6582c31c-92f1-4232-9720-721b2479455e",
+      "source": "own"
+    },
+    "blue-morpho": {
+      "speciesProfileId": "4fa1c39c-e766-4eb4-a94c-70c551125a4a",
+      "source": "own"
+    },
+    "blue-ringed-octopus": {
+      "speciesProfileId": "5e551535-9996-4b3d-88fc-5733e3934d79",
+      "source": "own"
+    },
+    "blue-spotted-salamander": {
+      "speciesProfileId": "f3630348-0439-4ce0-a5b8-bbce07b13d2f",
+      "source": "own"
+    },
+    "blue-tongued-skink": {
+      "speciesProfileId": "9c66e88f-ccf8-4926-a3dd-59e74a98aea5",
+      "source": "own"
+    },
+    "blue-tree-monitor": {
+      "speciesProfileId": "27b4207b-81f3-4c0b-8b60-1d9adf08fd10",
+      "source": "own"
+    },
+    "blue-whale": {
+      "speciesProfileId": "7bc3afb3-856c-4130-ab4e-dc2afc44a673",
+      "source": "own"
+    },
+    "bluefin-tuna": {
+      "speciesProfileId": "71fa2b4a-3968-4cab-94ad-a196a5a6c096",
+      "source": "own"
+    },
+    "boa-constrictor": {
+      "speciesProfileId": "a3dd5533-899f-4563-95c5-a4fe25728be7",
+      "source": "own"
+    },
+    "boat-billed-heron": {
+      "speciesProfileId": "560495da-5aec-4a88-8f7b-ecf1a85146de",
+      "source": "own"
+    },
+    "bobcat": {
+      "speciesProfileId": "2847c369-4b13-46f5-9a20-a0ddb1af4119",
+      "source": "own"
+    },
+    "boelens-python": {
+      "speciesProfileId": "4d3473d3-779f-4f21-b847-cb4b4cc349eb",
+      "source": "own"
+    },
+    "bombardier-beetle": {
+      "speciesProfileId": "b8feb368-6f6b-474b-bcb9-e4d65c36d355",
+      "source": "own"
+    },
+    "bongo": {
+      "speciesProfileId": "36ff0d47-a8c5-4299-8d47-71a38ce4b0c5",
+      "source": "own"
+    },
+    "bonobo": {
+      "speciesProfileId": "f09d17dd-148d-49a7-8ba7-f7ec99aa58d1",
+      "source": "own"
+    },
+    "bontebok": {
+      "speciesProfileId": "6420c6eb-2aa0-47f8-9143-0890e2b92ae9",
+      "source": "own"
+    },
+    "boobook-owl": {
+      "speciesProfileId": "a121fc13-2229-4d91-8b64-6224912b9804",
+      "source": "own"
+    },
+    "boomslang": {
+      "speciesProfileId": "a54ca20f-b5cc-447a-91f0-cf63cdf8aa1a",
+      "source": "own"
+    },
+    "bornean-orangutan": {
+      "speciesProfileId": "4d29c9c9-1c6d-4cd9-b859-6a2a8a17a460",
+      "source": "own"
+    },
+    "bowhead-whale": {
+      "speciesProfileId": "e75d8baa-8492-44fd-a116-e6b3d8f0682c",
+      "source": "own"
+    },
+    "bowmouth-guitarfish": {
+      "speciesProfileId": "f047b72b-252e-41d5-8c4b-4786647cfee1",
+      "source": "own"
+    },
+    "boxer-crab": {
+      "speciesProfileId": "a9c7853d-34e4-45b1-9f20-db996a31d91d",
+      "source": "own"
+    },
+    "bronze-winged-jacana": {
+      "speciesProfileId": "3b51ffe5-5c88-41c4-bbb3-17ef4a7723c3",
+      "source": "own"
+    },
+    "brown-bear": {
+      "speciesProfileId": "cbdf4dc0-2503-4342-b159-adc5a7cc02c6",
+      "source": "own"
+    },
+    "brown-pelican": {
+      "speciesProfileId": "1a167ad8-c13d-4f3d-b4ca-4e41fac90732",
+      "source": "own"
+    },
+    "brush-tailed-bettong": {
+      "speciesProfileId": "bd64789f-fd1a-4c99-93c8-b1efd8567313",
+      "source": "own"
+    },
+    "budgetts-frog": {
+      "speciesProfileId": "27e9d143-cd8e-4fcb-8f70-948c6852aca6",
+      "source": "own"
+    },
+    "bull-shark": {
+      "speciesProfileId": "9fbfb9ff-2eb2-43d1-af5e-bd61356876b7",
+      "source": "own"
+    },
+    "bullet-ant": {
+      "speciesProfileId": "9de72ffb-75c1-41fa-8e49-6e6d46d24ff0",
+      "source": "own"
+    },
+    "burmese-python": {
+      "speciesProfileId": "59a7adff-c5f6-4c13-9808-bb3beecddbfa",
+      "source": "own"
+    },
+    "burrowing-owl": {
+      "speciesProfileId": "531b1665-35de-44d3-b43b-4501e8c6c49a",
+      "source": "own"
+    },
+    "burrowing-parakeet": {
+      "speciesProfileId": "9956e56c-98ea-4c58-b550-3911e4ea992d",
+      "source": "own"
+    },
+    "bush-dog": {
+      "speciesProfileId": "8e49a1b4-645e-4d4b-9765-b0f2118a201a",
+      "source": "own"
+    },
+    "bush-hyrax": {
+      "speciesProfileId": "df04e727-bb5a-440c-9f23-d085d6b665e8",
+      "source": "own"
+    },
+    "bushbuck": {
+      "speciesProfileId": "fd4583eb-c722-4995-8284-05372288cdca",
+      "source": "own"
+    },
+    "bushmaster": {
+      "speciesProfileId": "dbac29f0-3900-47ce-b28b-fb0f83c46d63",
+      "source": "own"
+    },
+    "bushy-tailed-mongoose": {
+      "speciesProfileId": "3d6dcad5-a23f-4324-912c-f7776fc2b697",
+      "source": "own"
+    },
+    "cacomistle": {
+      "speciesProfileId": "19464aa7-b8d2-4757-9336-e24371840a54",
+      "source": "own"
+    },
+    "caecilian": {
+      "speciesProfileId": "ea50adf7-16f7-48b7-9d7b-c81fce580e9a",
+      "source": "own"
+    },
+    "caiman-lizard": {
+      "speciesProfileId": "b2e57b01-bd60-4998-a081-03cedf5f574e",
+      "source": "own"
+    },
+    "california-condor": {
+      "speciesProfileId": "1bbfaae7-62df-4301-bd0e-8587beffbfd7",
+      "source": "own"
+    },
+    "california-quail": {
+      "speciesProfileId": "03e3ee4a-e041-405b-a61a-03ad1255ebc7",
+      "source": "own"
+    },
+    "camel-spider": {
+      "speciesProfileId": "e9b237af-c4e3-4f22-9c23-fd8e073f61f0",
+      "source": "own"
+    },
+    "canada-goose": {
+      "speciesProfileId": "f5f062f7-4911-4051-800b-d5639ca0688f",
+      "source": "own"
+    },
+    "canada-lynx": {
+      "speciesProfileId": "9b8e66e6-8639-4e1d-b2e4-3d094af17ce0",
+      "source": "own"
+    },
+    "cane-toad": {
+      "speciesProfileId": "dcb60ea3-8623-446b-8ea9-81c2513ca08e",
+      "source": "own"
+    },
+    "capybara": {
+      "speciesProfileId": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+      "source": "own"
+    },
+    "caracal": {
+      "speciesProfileId": "4a197b55-3eb9-4aa6-a7a4-8403bc197248",
+      "source": "own"
+    },
+    "carmine-bee-eater": {
+      "speciesProfileId": "9f48ddee-a951-4d7c-895f-57ecf332f1dc",
+      "source": "own"
+    },
+    "carp": {
+      "speciesProfileId": "f027bea1-ed69-4559-9f67-497d088e0047",
+      "source": "own"
+    },
+    "cat": {
+      "speciesProfileId": "5c5fab8a-0426-4588-8024-a1d30bcbbca2",
+      "source": "own"
+    },
+    "cattle-egret": {
+      "speciesProfileId": "a9343eac-404d-458a-9c7c-037b99f79026",
+      "source": "own"
+    },
+    "cayenne-caecilian": {
+      "speciesProfileId": "2702e233-af77-4e72-96b5-d9326855956b",
+      "source": "own"
+    },
+    "cecropia-moth": {
+      "speciesProfileId": "d32ad438-e30a-4832-856c-1dab2449da1c",
+      "source": "own"
+    },
+    "chambered-nautilus": {
+      "speciesProfileId": "8067878f-d448-452b-9161-86631e451619",
+      "source": "own"
+    },
+    "chameleon": {
+      "members": [
+        {
+          "slug": "panther-chameleon",
+          "name": "Panther Chameleon",
+          "animalDexNumber": 415
+        },
+        {
+          "slug": "jacksons-chameleon",
+          "name": "Jackson's Chameleon",
+          "animalDexNumber": 1983
+        },
+        {
+          "slug": "cape-dwarf-chameleon",
+          "name": "Cape Dwarf Chameleon",
+          "animalDexNumber": 2383
+        },
+        {
+          "slug": "carpet-chameleon",
+          "name": "Carpet Chameleon",
+          "animalDexNumber": 2384
+        },
+        {
+          "slug": "giant-chameleon",
+          "name": "Giant Chameleon",
+          "animalDexNumber": 2393
+        },
+        {
+          "slug": "helmeted-chameleon",
+          "name": "Helmeted Chameleon",
+          "animalDexNumber": 2394
+        }
+      ]
+    },
+    "chamois": {
+      "speciesProfileId": "983523d6-ee2e-4fee-9379-318a19eb8ad4",
+      "source": "own"
+    },
+    "cheetah": {
+      "speciesProfileId": "742b057b-47c4-447a-a61c-53d0b28c5e00",
+      "source": "own"
+    },
+    "chimpanzee": {
+      "speciesProfileId": "56169946-7f4c-4aa1-89d6-bc2512abd7b4",
+      "source": "own"
+    },
+    "chinese-alligator": {
+      "speciesProfileId": "96697203-55e4-4415-b13f-2e56678bb3eb",
+      "source": "own"
+    },
+    "chinese-cobra": {
+      "speciesProfileId": "8ed83aec-64b6-43d4-ac8b-02cf4c6b15db",
+      "source": "own"
+    },
+    "chinese-crocodile-lizard": {
+      "speciesProfileId": "ddcc9c47-8196-47fa-b6b1-bead952a61bf",
+      "source": "own"
+    },
+    "chinese-giant-salamander": {
+      "speciesProfileId": "bc187d88-c445-4054-bb9a-d56eb15f8307",
+      "source": "own"
+    },
+    "chinese-softshell-turtle": {
+      "speciesProfileId": "266b4ae0-449c-47ab-8590-e24a77c9130e",
+      "source": "own"
+    },
+    "chinese-water-dragon": {
+      "speciesProfileId": "12104bf8-5161-4b6a-9d73-fd4f3fd5ec7a",
+      "source": "own"
+    },
+    "chiru": {
+      "speciesProfileId": "8bebc629-3d4b-45f7-ba9e-5a49ff291d8c",
+      "source": "own"
+    },
+    "cicada": {
+      "speciesProfileId": "345709d8-1c8e-4bfa-ad81-51efb3bdbf9a",
+      "source": "own"
+    },
+    "cicada-killer-wasp": {
+      "speciesProfileId": "00b0bcc2-cc5b-48d9-8b9d-1d68979875c7",
+      "source": "own"
+    },
+    "cinereous-vulture": {
+      "speciesProfileId": "9fa10e94-8612-4281-96f9-86d72224ad41",
+      "source": "own"
+    },
+    "clouded-leopard": {
+      "speciesProfileId": "b6129317-27ce-4519-b8a1-1365d75583c1",
+      "source": "own"
+    },
+    "clown-loach": {
+      "speciesProfileId": "6789b4bb-0a5a-4e15-8116-64545f965c1c",
+      "source": "own"
+    },
+    "clown-triggerfish": {
+      "speciesProfileId": "55c7d016-388f-45ec-94de-15ac823dee88",
+      "source": "own"
+    },
+    "clownfish": {
+      "speciesProfileId": "4b6ae26c-9273-4788-84b9-b22bcfb6343c",
+      "source": "own"
+    },
+    "coati": {
+      "members": [
+        {
+          "slug": "ring-tailed-coati",
+          "name": "South American Coati",
+          "animalDexNumber": 102
+        },
+        {
+          "slug": "white-nosed-coati",
+          "name": "White-nosed Coati",
+          "animalDexNumber": 124
+        },
+        {
+          "slug": "cozumel-coati",
+          "name": "Cozumel Coati",
+          "animalDexNumber": 455
+        }
+      ]
+    },
+    "cockroach": {
+      "speciesProfileId": "c6b03eec-5aa9-43a9-864a-a79f2cf4d1e8",
+      "source": "own"
+    },
+    "coconut-crab": {
+      "speciesProfileId": "3f955e24-6aae-4101-a1cc-5e1ec3afebe7",
+      "source": "own"
+    },
+    "coelacanth": {
+      "speciesProfileId": "31d15103-0049-4267-90e0-669d7de1ae93",
+      "source": "own"
+    },
+    "collared-falconet": {
+      "speciesProfileId": "43572880-a436-48fe-8cdc-a9bd99322cb6",
+      "source": "own"
+    },
+    "comet-moth": {
+      "speciesProfileId": "90e17884-96b1-4e57-af7a-dac0f7f69031",
+      "source": "own"
+    },
+    "common-basilisk": {
+      "speciesProfileId": "50ba663b-e668-47ed-a5e1-cadc1a05db57",
+      "source": "own"
+    },
+    "common-genet": {
+      "speciesProfileId": "99f35cb8-d205-4bd3-a13f-b914ea3b2fda",
+      "source": "own"
+    },
+    "common-gundi": {
+      "speciesProfileId": "798901d2-3768-4987-96fb-5cdb883ff9fc",
+      "source": "own"
+    },
+    "common-kingfisher": {
+      "speciesProfileId": "0d991095-9587-402c-892c-a2cbea1750cf",
+      "source": "own"
+    },
+    "common-loon": {
+      "speciesProfileId": "89aa92fe-f522-484c-b4e2-8c75d6581d18",
+      "source": "own"
+    },
+    "common-murre": {
+      "speciesProfileId": "7d89fce5-7cbe-43fd-a56b-df29fdbc274c",
+      "source": "own"
+    },
+    "common-potoo": {
+      "speciesProfileId": "0b1a11ca-ed51-4671-8d31-557c3a1bad55",
+      "source": "own"
+    },
+    "common-raven": {
+      "speciesProfileId": "776b6b89-462a-4c3f-ada0-1c3d86d03e3d",
+      "source": "own"
+    },
+    "common-snapping-turtle": {
+      "speciesProfileId": "696281b7-35ee-4f2a-b571-cbd4dd3d7522",
+      "source": "own"
+    },
+    "common-tree-frog": {
+      "speciesProfileId": "5e607d69-e8cc-4785-ab6e-ca8d616a18c0",
+      "source": "canonical"
+    },
+    "common-warthog": {
+      "speciesProfileId": "eff290de-4ccd-4364-a6e6-07be990dd5ac",
+      "source": "own"
+    },
+    "coquerels-sifaka": {
+      "speciesProfileId": "8d5fd4a2-5570-4701-bbe0-19ffb4e4b4f5",
+      "source": "own"
+    },
+    "cormorant": {
+      "members": [
+        {
+          "slug": "double-crested-cormorant",
+          "name": "Double-crested Cormorant",
+          "animalDexNumber": 98
+        },
+        {
+          "slug": "neotropic-cormorant",
+          "name": "Neotropic Cormorant",
+          "animalDexNumber": 106
+        },
+        {
+          "slug": "great-cormorant",
+          "name": "Great Cormorant",
+          "animalDexNumber": 115
+        }
+      ]
+    },
+    "corn-snake": {
+      "speciesProfileId": "182e58d6-041e-410f-999d-ca137416495c",
+      "source": "own"
+    },
+    "corsac-fox": {
+      "speciesProfileId": "244c3056-c79d-4fb1-a47d-2413815e5b1b",
+      "source": "own"
+    },
+    "coscoroba-swan": {
+      "speciesProfileId": "836f5d8e-4efc-4ac0-ad55-9f7a600b37ce",
+      "source": "own"
+    },
+    "cotton-top-tamarin": {
+      "speciesProfileId": "4cc648b0-8db2-4676-b181-2fe6c452124b",
+      "source": "own"
+    },
+    "cougar": {
+      "speciesProfileId": "6bdca2fe-481f-4bf2-a3ed-caf430350f02",
+      "source": "own"
+    },
+    "coyote": {
+      "speciesProfileId": "8a8299d5-971b-4f1a-bf8d-4e3d1ecfb7d8",
+      "source": "own"
+    },
+    "crab": {
+      "members": [
+        {
+          "slug": "sally-lightfoot-crab",
+          "name": "Sally Lightfoot Crab",
+          "animalDexNumber": 262
+        },
+        {
+          "slug": "boxer-crab",
+          "name": "Boxer Crab",
+          "animalDexNumber": 458
+        },
+        {
+          "slug": "coconut-crab",
+          "name": "Coconut Crab",
+          "animalDexNumber": 680
+        },
+        {
+          "slug": "yeti-crab",
+          "name": "Yeti Crab",
+          "animalDexNumber": 972
+        },
+        {
+          "slug": "vampire-crab",
+          "name": "Vampire Crab",
+          "animalDexNumber": 1072
+        },
+        {
+          "slug": "fiddler-crab",
+          "name": "Fiddler Crab",
+          "animalDexNumber": 1132
+        },
+        {
+          "slug": "japanese-spider-crab",
+          "name": "Japanese Spider Crab",
+          "animalDexNumber": 1198
+        },
+        {
+          "slug": "semaphore-crab",
+          "name": "Semaphore Crab",
+          "animalDexNumber": 1240
+        },
+        {
+          "slug": "red-spotted-guard-crab",
+          "name": "Red-spotted Guard Crab",
+          "animalDexNumber": 1276
+        },
+        {
+          "slug": "decorator-crab",
+          "name": "Decorator Crab",
+          "animalDexNumber": 1318
+        },
+        {
+          "slug": "velvet-swimming-crab",
+          "name": "Velvet Swimming Crab",
+          "animalDexNumber": 1370
+        },
+        {
+          "slug": "shore-crab",
+          "name": "Shore Crab",
+          "animalDexNumber": 1449
+        },
+        {
+          "slug": "pacific-mole-crab",
+          "name": "Pacific Mole Crab",
+          "animalDexNumber": 1485
+        },
+        {
+          "slug": "flat-porcelain-crab",
+          "name": "Flat Porcelain Crab",
+          "animalDexNumber": 1525
+        },
+        {
+          "slug": "christmas-island-red-crab",
+          "name": "Christmas Island Red Crab",
+          "animalDexNumber": 1584
+        },
+        {
+          "slug": "brown-crab",
+          "name": "Brown Crab",
+          "animalDexNumber": 1593
+        },
+        {
+          "slug": "hoff-crab",
+          "name": "Hoff Crab",
+          "animalDexNumber": 1682
+        },
+        {
+          "slug": "spider-crab",
+          "name": "European Spider Crab",
+          "animalDexNumber": 1732
+        },
+        {
+          "slug": "strawberry-hermit-crab",
+          "name": "Strawberry Hermit Crab",
+          "animalDexNumber": 1875
+        },
+        {
+          "slug": "hermit-crab",
+          "name": "Hermit Crab",
+          "animalDexNumber": 2021
+        },
+        {
+          "slug": "rainbow-crab",
+          "name": "Rainbow Crab",
+          "animalDexNumber": 2071
+        },
+        {
+          "slug": "freshwater-crab",
+          "name": "Freshwater Crab",
+          "animalDexNumber": 2147
+        },
+        {
+          "slug": "rugose-hermit-crab",
+          "name": "Rugose Hermit Crab",
+          "animalDexNumber": 2221
+        },
+        {
+          "slug": "swamp-forest-crab",
+          "name": "Swamp Forest Crab",
+          "animalDexNumber": 2398
+        }
+      ]
+    },
+    "crab-eating-fox": {
+      "speciesProfileId": "023d95cc-bb3a-4164-992c-1fd031a1c9b3",
+      "source": "own"
+    },
+    "crested-oropendola": {
+      "speciesProfileId": "5eec22c0-ec8a-4fb4-ae6e-10085e984e90",
+      "source": "own"
+    },
+    "crested-pigeon": {
+      "speciesProfileId": "2f60e653-5afb-4608-994f-53ed95cbdd52",
+      "source": "own"
+    },
+    "crested-porcupine": {
+      "speciesProfileId": "b43494a4-7d84-4c3c-9281-0302c6d4929a",
+      "source": "own"
+    },
+    "crested-serpent-eagle": {
+      "speciesProfileId": "84911292-e6ce-4d91-8ff6-1e0831956b24",
+      "source": "own"
+    },
+    "crocodile": {
+      "members": [
+        {
+          "slug": "american-crocodile",
+          "name": "American Crocodile",
+          "animalDexNumber": 265
+        },
+        {
+          "slug": "siamese-crocodile",
+          "name": "Siamese Crocodile",
+          "animalDexNumber": 951
+        },
+        {
+          "slug": "philippine-crocodile",
+          "name": "Philippine Crocodile",
+          "animalDexNumber": 952
+        },
+        {
+          "slug": "cuban-crocodile",
+          "name": "Cuban Crocodile",
+          "animalDexNumber": 997
+        },
+        {
+          "slug": "saltwater-crocodile",
+          "name": "Saltwater Crocodile",
+          "animalDexNumber": 1015
+        },
+        {
+          "slug": "mugger-crocodile",
+          "name": "Mugger Crocodile",
+          "animalDexNumber": 2329
+        }
+      ]
+    },
+    "crocodile-monitor": {
+      "speciesProfileId": "3b29b766-8318-4f09-90b7-78cb3fb2e3b5",
+      "source": "own"
+    },
+    "crow": {
+      "members": [
+        {
+          "slug": "house-crow",
+          "name": "House Crow",
+          "animalDexNumber": 1112
+        },
+        {
+          "slug": "pied-crow",
+          "name": "Pied Crow",
+          "animalDexNumber": 1149
+        },
+        {
+          "slug": "american-crow",
+          "name": "American Crow",
+          "animalDexNumber": 1166
+        },
+        {
+          "slug": "new-caledonian-crow",
+          "name": "New Caledonian Crow",
+          "animalDexNumber": 1185
+        },
+        {
+          "slug": "hawaiian-crow",
+          "name": "Hawaiian Crow",
+          "animalDexNumber": 1655
+        },
+        {
+          "slug": "great-crow",
+          "name": "Great Crow",
+          "animalDexNumber": 2064
+        },
+        {
+          "slug": "jungle-crow",
+          "name": "Large-billed Crow",
+          "animalDexNumber": 2140
+        },
+        {
+          "slug": "carrion-crow",
+          "name": "Carrion Crow",
+          "animalDexNumber": 2316
+        }
+      ]
+    },
+    "crowned-eagle": {
+      "speciesProfileId": "f49efb0f-1ae3-40ef-854a-3ba6cfc243fa",
+      "source": "own"
+    },
+    "cuban-crocodile": {
+      "speciesProfileId": "78cfe0cb-01a6-4f0a-9ec5-fe9d9252165d",
+      "source": "own"
+    },
+    "cuban-rock-iguana": {
+      "speciesProfileId": "01e13200-b264-4315-bd38-a288a335dd33",
+      "source": "own"
+    },
+    "cuttlefish": {
+      "members": [
+        {
+          "slug": "flamboyant-cuttlefish",
+          "name": "Flamboyant Cuttlefish",
+          "animalDexNumber": 1874
+        }
+      ]
+    },
+    "de-brazzas-monkey": {
+      "speciesProfileId": "8773d436-16fb-4a0c-b494-38aff2abcea8",
+      "source": "own"
+    },
+    "deaths-head-hawkmoth": {
+      "speciesProfileId": "cf02fb63-a90c-4568-a6fe-297c2528b740",
+      "source": "own"
+    },
+    "deer": {
+      "members": [
+        {
+          "slug": "fallow-deer",
+          "name": "Fallow Deer",
+          "animalDexNumber": 94
+        },
+        {
+          "slug": "sika-deer",
+          "name": "Sika Deer",
+          "animalDexNumber": 183
+        },
+        {
+          "slug": "red-deer",
+          "name": "Red Deer",
+          "animalDexNumber": 260
+        },
+        {
+          "slug": "marsh-deer",
+          "name": "Marsh Deer",
+          "animalDexNumber": 281
+        },
+        {
+          "slug": "pere-davids-deer",
+          "name": "Pere David's Deer",
+          "animalDexNumber": 313
+        },
+        {
+          "slug": "alpine-musk-deer",
+          "name": "Alpine Musk Deer",
+          "animalDexNumber": 509
+        },
+        {
+          "slug": "water-deer",
+          "name": "Water Deer",
+          "animalDexNumber": 610
+        },
+        {
+          "slug": "tufted-deer",
+          "name": "Tufted Deer",
+          "animalDexNumber": 687
+        },
+        {
+          "slug": "hog-deer",
+          "name": "Hog Deer",
+          "animalDexNumber": 796
+        },
+        {
+          "slug": "siberian-musk-deer",
+          "name": "Siberian Musk Deer",
+          "animalDexNumber": 874
+        },
+        {
+          "slug": "bawean-deer",
+          "name": "Bawean Deer",
+          "animalDexNumber": 961
+        },
+        {
+          "slug": "roe-deer",
+          "name": "Roe Deer",
+          "animalDexNumber": 1002
+        },
+        {
+          "slug": "white-tailed-deer",
+          "name": "White-tailed Deer",
+          "animalDexNumber": 1890
+        },
+        {
+          "slug": "sambar-deer",
+          "name": "Sambar Deer",
+          "animalDexNumber": 1973
+        },
+        {
+          "slug": "mule-deer",
+          "name": "Mule Deer",
+          "animalDexNumber": 1996
+        },
+        {
+          "slug": "javan-rusa-deer",
+          "name": "Javan Rusa Deer",
+          "animalDexNumber": 2219
+        }
+      ]
+    },
+    "degu": {
+      "speciesProfileId": "3b0e98ca-01d5-4d73-98ee-ff8b4628e607",
+      "source": "own"
+    },
+    "demoiselle-crane": {
+      "speciesProfileId": "3e573d41-c30d-4806-8b57-90750fac4698",
+      "source": "own"
+    },
+    "desert-horned-viper": {
+      "speciesProfileId": "a8281305-664d-4b11-abe1-193c39074634",
+      "source": "own"
+    },
+    "desert-rain-frog": {
+      "speciesProfileId": "011e8201-0732-4263-ac19-c5559f6dd707",
+      "source": "own"
+    },
+    "devils-flower-mantis": {
+      "speciesProfileId": "f420c4d3-563e-4806-b7a2-ba074b5674fa",
+      "source": "own"
+    },
+    "dhole": {
+      "speciesProfileId": "2336adb8-9fc9-44db-90f2-9fea7c4a9b96",
+      "source": "own"
+    },
+    "diamondback-terrapin": {
+      "speciesProfileId": "32346a51-4a0b-45db-adc4-3bb3934607ae",
+      "source": "own"
+    },
+    "dibatag": {
+      "speciesProfileId": "a8c5bf47-51bf-4457-babc-d28f582e4e24",
+      "source": "own"
+    },
+    "dik-dik": {
+      "speciesProfileId": "09c7bc84-846f-49e2-a3b5-8eb4101d45ee",
+      "source": "canonical"
+    },
+    "discus-fish": {
+      "speciesProfileId": "db9895cb-6750-47e4-9d7d-650adeb36120",
+      "source": "own"
+    },
+    "dobsonfly": {
+      "speciesProfileId": "25c16649-4cf2-4135-8d83-6b993a2b87d3",
+      "source": "own"
+    },
+    "dolphin": {
+      "members": [
+        {
+          "slug": "spinner-dolphin",
+          "name": "Spinner Dolphin",
+          "animalDexNumber": 280
+        },
+        {
+          "slug": "dusky-dolphin",
+          "name": "Dusky Dolphin",
+          "animalDexNumber": 311
+        },
+        {
+          "slug": "indus-river-dolphin",
+          "name": "Indus River Dolphin",
+          "animalDexNumber": 957
+        },
+        {
+          "slug": "commersons-dolphin",
+          "name": "Commerson's Dolphin",
+          "animalDexNumber": 1862
+        },
+        {
+          "slug": "amazon-river-dolphin",
+          "name": "Amazon River Dolphin",
+          "animalDexNumber": 1868
+        }
+      ]
+    },
+    "domestic-chicken": {
+      "speciesProfileId": "cf059266-56af-4199-adba-64d2d7c0e623",
+      "source": "own"
+    },
+    "double-crested-cormorant": {
+      "speciesProfileId": "c544e15d-27cb-49ab-af3b-a449c7cab24e",
+      "source": "own"
+    },
+    "dragonfly": {
+      "speciesProfileId": "8dbebddf-a7ed-4a73-9a11-a49861b71027",
+      "source": "own"
+    },
+    "drill": {
+      "speciesProfileId": "4dfb9fa4-af14-4ee4-ba7f-4a1c8cdc08df",
+      "source": "own"
+    },
+    "dromedary-camel": {
+      "speciesProfileId": "c93861b3-507c-4a02-be8c-ee2a78f42059",
+      "source": "own"
+    },
+    "dugong": {
+      "speciesProfileId": "2a34e9f1-9a51-4676-bd42-57622ed970b6",
+      "source": "own"
+    },
+    "dung-beetle": {
+      "speciesProfileId": "a89bb0f1-25e5-457e-b205-cfcab1e058f0",
+      "source": "own"
+    },
+    "dusky-dolphin": {
+      "speciesProfileId": "a8126cf2-4dab-4686-b78c-080eee4b1f92",
+      "source": "own"
+    },
+    "dusky-gopher-frog": {
+      "speciesProfileId": "bf26979f-46a2-45b2-9649-517b722a5093",
+      "source": "own"
+    },
+    "dusky-leaf-monkey": {
+      "speciesProfileId": "9a95faea-7ad8-49fe-9a1d-c53558e518c4",
+      "source": "own"
+    },
+    "dusky-pademelon": {
+      "speciesProfileId": "cce9e81d-bd71-4988-adc8-2f7b6be410cb",
+      "source": "own"
+    },
+    "dwarf-caiman": {
+      "speciesProfileId": "6271b0c0-7c9e-4cc4-a077-6cb792dc692c",
+      "source": "own"
+    },
+    "dwarf-cassowary": {
+      "speciesProfileId": "aec55978-db3c-49de-b0d6-6840f46a805e",
+      "source": "own"
+    },
+    "eagle": {
+      "members": [
+        {
+          "slug": "bald-eagle",
+          "name": "Bald Eagle",
+          "animalDexNumber": 229
+        },
+        {
+          "slug": "african-fish-eagle",
+          "name": "African Fish Eagle",
+          "animalDexNumber": 249
+        },
+        {
+          "slug": "steppe-eagle",
+          "name": "Steppe Eagle",
+          "animalDexNumber": 252
+        },
+        {
+          "slug": "crested-serpent-eagle",
+          "name": "Crested Serpent Eagle",
+          "animalDexNumber": 298
+        },
+        {
+          "slug": "wedge-tailed-eagle",
+          "name": "Wedge-tailed Eagle",
+          "animalDexNumber": 322
+        },
+        {
+          "slug": "golden-eagle",
+          "name": "Golden Eagle",
+          "animalDexNumber": 348
+        },
+        {
+          "slug": "white-bellied-sea-eagle",
+          "name": "White-bellied Sea Eagle",
+          "animalDexNumber": 433
+        },
+        {
+          "slug": "stellers-sea-eagle",
+          "name": "Steller's Sea Eagle",
+          "animalDexNumber": 793
+        },
+        {
+          "slug": "martial-eagle",
+          "name": "Martial Eagle",
+          "animalDexNumber": 814
+        },
+        {
+          "slug": "harpy-eagle",
+          "name": "Harpy Eagle",
+          "animalDexNumber": 855
+        },
+        {
+          "slug": "crowned-eagle",
+          "name": "Crowned Eagle",
+          "animalDexNumber": 890
+        },
+        {
+          "slug": "philippine-eagle",
+          "name": "Philippine Eagle",
+          "animalDexNumber": 913
+        }
+      ]
+    },
+    "earless-monitor-lizard": {
+      "speciesProfileId": "59a1749b-2397-4210-a8f0-0bb081a65e74",
+      "source": "own"
+    },
+    "eastern-glass-lizard": {
+      "speciesProfileId": "3fcfaf5e-0914-49cc-af32-96d8824d9cd8",
+      "source": "own"
+    },
+    "eastern-indigo-snake": {
+      "speciesProfileId": "4252a4b4-3441-4407-a071-85c2fa745d0f",
+      "source": "own"
+    },
+    "eastern-newt": {
+      "speciesProfileId": "873580a5-452c-4ca5-ab72-8bfac6e9b291",
+      "source": "own"
+    },
+    "eastern-quoll": {
+      "speciesProfileId": "58433f0a-0728-4c2e-b08b-c55489e2716a",
+      "source": "own"
+    },
+    "eastern-red-backed-salamander": {
+      "speciesProfileId": "6604f90d-9c81-4aed-864f-58cd1c160caf",
+      "source": "own"
+    },
+    "egyptian-cobra": {
+      "speciesProfileId": "4057dcb8-9052-4bc9-998e-4b354fe34abe",
+      "source": "own"
+    },
+    "electric-catfish": {
+      "speciesProfileId": "a549c40c-b850-43f4-96e9-b6726e0e0a72",
+      "source": "own"
+    },
+    "electric-eel": {
+      "speciesProfileId": "15cf0ccb-6809-4744-8a5d-823b6d6d4174",
+      "source": "own"
+    },
+    "elephant": {
+      "members": [
+        {
+          "slug": "bornean-pygmy-elephant",
+          "name": "Bornean Pygmy Elephant",
+          "animalDexNumber": 614
+        },
+        {
+          "slug": "african-bush-elephant",
+          "name": "African Bush Elephant",
+          "animalDexNumber": 760
+        },
+        {
+          "slug": "asian-elephant",
+          "name": "Asian Elephant",
+          "animalDexNumber": 816
+        },
+        {
+          "slug": "african-forest-elephant",
+          "name": "African Forest Elephant",
+          "animalDexNumber": 944
+        },
+        {
+          "slug": "sri-lankan-elephant",
+          "name": "Sri Lankan Elephant",
+          "animalDexNumber": 2258
+        }
+      ]
+    },
+    "elephant-beetle": {
+      "speciesProfileId": "eeeab980-90c9-4d27-8546-45bdafb1fd50",
+      "source": "own"
+    },
+    "elk": {
+      "speciesProfileId": "398f48bf-2bf1-47ea-a7d7-582be8ac510a",
+      "source": "own"
+    },
+    "elongated-tortoise": {
+      "speciesProfileId": "a3e065c0-88bd-415c-87e6-6f0564cf9c37",
+      "source": "own"
+    },
+    "emerald-toucanet": {
+      "speciesProfileId": "965f1d03-195f-4538-9991-a3d719ef6912",
+      "source": "own"
+    },
+    "emerald-tree-boa": {
+      "speciesProfileId": "e5da0ccb-8fbc-4d2c-887f-98ed7df433c8",
+      "source": "own"
+    },
+    "emerald-tree-skink": {
+      "speciesProfileId": "f057a9bd-2ce4-4fd2-b5d0-b2216ddb3c21",
+      "source": "own"
+    },
+    "emperor-newt": {
+      "speciesProfileId": "b0876193-5c75-456a-9ea0-2995653c5ee9",
+      "source": "own"
+    },
+    "emperor-penguin": {
+      "speciesProfileId": "94b20d06-3ffd-430c-81ad-f0393251a38f",
+      "source": "own"
+    },
+    "emperor-scorpion": {
+      "speciesProfileId": "d137d6cb-b3cb-4e56-9674-71fcc17f869e",
+      "source": "own"
+    },
+    "emperor-tamarin": {
+      "speciesProfileId": "516defc3-d127-4345-895e-8ec372083e95",
+      "source": "own"
+    },
+    "emu": {
+      "speciesProfileId": "3b8a166c-8356-4da3-ac38-edabca7b5e86",
+      "source": "own"
+    },
+    "eurasian-bittern": {
+      "speciesProfileId": "24cccb1f-5e02-4891-be4f-41528ec3a853",
+      "source": "own"
+    },
+    "eurasian-eagle-owl": {
+      "speciesProfileId": "922c27e8-94a2-41c2-81b0-95571a14adaf",
+      "source": "own"
+    },
+    "eurasian-jay": {
+      "speciesProfileId": "aaeb2f9e-cc81-4411-b627-872857d3221c",
+      "source": "own"
+    },
+    "eurasian-lynx": {
+      "speciesProfileId": "955db4a7-12f8-4000-a088-d78c1cf1b11b",
+      "source": "own"
+    },
+    "eurasian-spoonbill": {
+      "speciesProfileId": "f6018aef-a61c-4b9f-9d91-39dd54e79e18",
+      "source": "own"
+    },
+    "european-badger": {
+      "speciesProfileId": "132cdf8f-9f86-4c1f-bdeb-33715fcf3a6f",
+      "source": "own"
+    },
+    "european-goldfinch": {
+      "speciesProfileId": "082a4855-d20e-48fe-8fd2-d5a0055521d6",
+      "source": "own"
+    },
+    "european-hedgehog": {
+      "speciesProfileId": "8d84bc94-b135-4974-aee8-74faf3e239b0",
+      "source": "own"
+    },
+    "european-robin": {
+      "speciesProfileId": "f31c79b2-a355-482c-bd93-039ce352d597",
+      "source": "own"
+    },
+    "european-roller": {
+      "speciesProfileId": "23081427-3018-4eaf-99a5-e2914c68904c",
+      "source": "own"
+    },
+    "eyelash-viper": {
+      "speciesProfileId": "7be6ba8b-2c7f-410a-97ea-284f4ca8b147",
+      "source": "own"
+    },
+    "fallow-deer": {
+      "speciesProfileId": "00840e62-5e2a-4253-96de-cb347568875f",
+      "source": "own"
+    },
+    "false-gharial": {
+      "speciesProfileId": "4daed9ff-ca47-4c81-843a-08d0cdfa5c91",
+      "source": "own"
+    },
+    "false-water-cobra": {
+      "speciesProfileId": "2e3bfa2c-289f-4a18-959f-94851ae2d249",
+      "source": "own"
+    },
+    "fennec-fox": {
+      "speciesProfileId": "7e428b17-f4e6-4a74-a5c2-22307c871dda",
+      "source": "own"
+    },
+    "finch": {
+      "members": [
+        {
+          "slug": "purple-finch",
+          "name": "Purple Finch",
+          "animalDexNumber": 19
+        },
+        {
+          "slug": "zebra-finch",
+          "name": "Zebra Finch",
+          "animalDexNumber": 49
+        },
+        {
+          "slug": "gouldian-finch",
+          "name": "Gouldian Finch",
+          "animalDexNumber": 925
+        },
+        {
+          "slug": "house-finch",
+          "name": "House Finch",
+          "animalDexNumber": 1175
+        },
+        {
+          "slug": "medium-ground-finch",
+          "name": "Medium Ground Finch",
+          "animalDexNumber": 1680
+        },
+        {
+          "slug": "woodpecker-finch",
+          "name": "Woodpecker Finch",
+          "animalDexNumber": 1887
+        }
+      ]
+    },
+    "fire-bellied-toad": {
+      "speciesProfileId": "a3eafc21-b1ce-4ebc-888d-353cdea43f56",
+      "source": "own"
+    },
+    "fire-salamander": {
+      "speciesProfileId": "b72142d5-6b20-445f-a431-4ec752390957",
+      "source": "own"
+    },
+    "firefly": {
+      "speciesProfileId": "6e2d2914-a609-49f0-96f5-d3dee50e83f8",
+      "source": "own"
+    },
+    "fisher": {
+      "speciesProfileId": "d46b99ee-534f-4f8e-be0d-6f5bcbde9423",
+      "source": "own"
+    },
+    "fishing-cat": {
+      "speciesProfileId": "80075071-dd94-4723-b5ee-96cb93267641",
+      "source": "own"
+    },
+    "flying-dragon": {
+      "speciesProfileId": "94f9f4f4-627e-473e-b613-954ac2c0f323",
+      "source": "own"
+    },
+    "fossa": {
+      "speciesProfileId": "54b356e1-628a-4f43-a331-f7c681c6ecd4",
+      "source": "own"
+    },
+    "four-horned-antelope": {
+      "speciesProfileId": "9641265c-78a2-4244-84ed-9115b928ecb6",
+      "source": "own"
+    },
+    "fox": {
+      "members": [
+        {
+          "slug": "red-fox",
+          "name": "Red Fox",
+          "animalDexNumber": 35
+        },
+        {
+          "slug": "fennec-fox",
+          "name": "Fennec Fox",
+          "animalDexNumber": 120
+        },
+        {
+          "slug": "gray-fox",
+          "name": "Gray Fox",
+          "animalDexNumber": 190
+        },
+        {
+          "slug": "crab-eating-fox",
+          "name": "Crab-eating Fox",
+          "animalDexNumber": 202
+        },
+        {
+          "slug": "tibetan-fox",
+          "name": "Tibetan Fox",
+          "animalDexNumber": 253
+        },
+        {
+          "slug": "bat-eared-fox",
+          "name": "Bat-eared Fox",
+          "animalDexNumber": 275
+        },
+        {
+          "slug": "corsac-fox",
+          "name": "Corsac Fox",
+          "animalDexNumber": 615
+        },
+        {
+          "slug": "darwins-fox",
+          "name": "Darwin's Fox",
+          "animalDexNumber": 840
+        },
+        {
+          "slug": "arctic-fox",
+          "name": "Arctic Fox",
+          "animalDexNumber": 1193
+        },
+        {
+          "slug": "island-fox",
+          "name": "Island Fox",
+          "animalDexNumber": 1579
+        },
+        {
+          "slug": "swift-fox",
+          "name": "Swift Fox",
+          "animalDexNumber": 2149
+        }
+      ]
+    },
+    "francois-langur": {
+      "speciesProfileId": "99d41348-a2c4-4081-8f6c-83d2713f4f43",
+      "source": "own"
+    },
+    "freshwater-butterflyfish": {
+      "speciesProfileId": "c9e5f350-c8dd-4500-9f9b-c9b843cbffa3",
+      "source": "own"
+    },
+    "frilled-lizard": {
+      "speciesProfileId": "712dda89-6fe1-4ae9-a859-c69563293499",
+      "source": "own"
+    },
+    "frogfish": {
+      "speciesProfileId": "c4eada2e-05c8-4ac2-bbc6-c5c9c8eefbd8",
+      "source": "own"
+    },
+    "gaboon-viper": {
+      "speciesProfileId": "52d90ccf-844e-432a-b05f-91cb9ed5bcca",
+      "source": "own"
+    },
+    "galapagos-sea-lion": {
+      "speciesProfileId": "6d13927a-75b6-497e-b2c8-34ee7c138b7c",
+      "source": "own"
+    },
+    "galapagos-tortoise": {
+      "speciesProfileId": "01d35849-9ecb-4f73-962c-85d3b15cdab6",
+      "source": "own"
+    },
+    "gargoyle-gecko": {
+      "speciesProfileId": "c52d048b-befe-4d31-b68b-aa821a7bf8c9",
+      "source": "own"
+    },
+    "gelada": {
+      "speciesProfileId": "cdb79bec-0fd9-4df0-be81-84cc6c0cad7f",
+      "source": "own"
+    },
+    "gemsbok": {
+      "speciesProfileId": "ac3b2253-fb08-453c-8ef1-2c1fd1b6e4ad",
+      "source": "own"
+    },
+    "gentoo-penguin": {
+      "speciesProfileId": "d5097ace-7f13-4e25-bcd0-12aadff2792e",
+      "source": "own"
+    },
+    "geometric-tortoise": {
+      "speciesProfileId": "0d642316-c535-4ae1-976e-860dca33c3ab",
+      "source": "own"
+    },
+    "gerenuk": {
+      "speciesProfileId": "2c99067a-e5c4-4105-ab1c-3b27fa13bdcb",
+      "source": "own"
+    },
+    "gharial": {
+      "members": [
+        {
+          "slug": "false-gharial",
+          "name": "False Gharial",
+          "animalDexNumber": 877
+        }
+      ]
+    },
+    "giant-african-millipede": {
+      "speciesProfileId": "3059c7ed-af58-4025-9077-3960895f524c",
+      "source": "own"
+    },
+    "giant-anteater": {
+      "speciesProfileId": "5336fbdf-1c98-412d-b9d9-07117b6dc160",
+      "source": "own"
+    },
+    "giant-armadillo": {
+      "speciesProfileId": "1f6a9d36-2385-44e7-9f69-7b89408bbd66",
+      "source": "own"
+    },
+    "giant-clam": {
+      "speciesProfileId": "8702e808-a8ae-4ed9-91ba-14277c2fa43e",
+      "source": "own"
+    },
+    "giant-eland": {
+      "speciesProfileId": "92f3b2ca-08f2-43fa-ab82-4b5073951894",
+      "source": "own"
+    },
+    "giant-forest-scorpion": {
+      "speciesProfileId": "8784f4de-8fdc-437d-8723-76cba4c08f29",
+      "source": "own"
+    },
+    "giant-freshwater-stingray": {
+      "speciesProfileId": "5637189b-9d97-4ea3-8249-fb49cf797abc",
+      "source": "own"
+    },
+    "giant-grouper": {
+      "speciesProfileId": "41bfc1fc-baf7-402c-a173-b985969745e4",
+      "source": "own"
+    },
+    "giant-ibis": {
+      "speciesProfileId": "5b71215c-1ea7-4a62-9725-84edb7743f29",
+      "source": "own"
+    },
+    "giant-isopod": {
+      "speciesProfileId": "a8fdd815-e3dd-4824-9365-90df97da39fa",
+      "source": "own"
+    },
+    "giant-leaf-tailed-gecko": {
+      "speciesProfileId": "730bdc2c-2b2a-43ab-b1ef-de84019c74fd",
+      "source": "own"
+    },
+    "giant-pacific-octopus": {
+      "speciesProfileId": "05c17a24-6059-4dc0-af03-d2afc9ecbf59",
+      "source": "own"
+    },
+    "giant-panda": {
+      "speciesProfileId": "4821c5d1-356a-4a7f-b53a-adc98eb594b1",
+      "source": "own"
+    },
+    "giant-tortoise": {
+      "members": [
+        {
+          "slug": "aldabra-giant-tortoise",
+          "name": "Aldabra Giant Tortoise",
+          "animalDexNumber": 756
+        }
+      ]
+    },
+    "giant-trevally": {
+      "speciesProfileId": "32c83d3c-c945-4469-bed0-616a843c56ba",
+      "source": "own"
+    },
+    "giant-water-bug": {
+      "speciesProfileId": "1c3e01ee-095f-4d73-887a-aaf3a5a33e52",
+      "source": "own"
+    },
+    "giant-waxy-monkey-frog": {
+      "speciesProfileId": "d8989fba-f697-4b8a-a888-79bde59f65f7",
+      "source": "own"
+    },
+    "gidgee-skink": {
+      "speciesProfileId": "3cae8a60-3be4-4b79-858b-8ab452e0fd1b",
+      "source": "own"
+    },
+    "gila-monster": {
+      "speciesProfileId": "5ce70093-f0e7-49e7-9103-2ee8d4f01288",
+      "source": "own"
+    },
+    "giraffe": {
+      "speciesProfileId": "bb3a085f-cd13-4073-9ceb-55e9df0428d7",
+      "source": "own"
+    },
+    "giraffe-weevil": {
+      "speciesProfileId": "0c5927f4-5dc5-496b-96e8-43e309731211",
+      "source": "own"
+    },
+    "glasswing-butterfly": {
+      "speciesProfileId": "a2f9b8e6-b154-4361-9f2b-38de2e425827",
+      "source": "own"
+    },
+    "glossy-ibis": {
+      "speciesProfileId": "cd0ab10c-90f2-4021-8e2e-8df102b2c992",
+      "source": "own"
+    },
+    "goblin-shark": {
+      "speciesProfileId": "75fee156-259c-4169-95cf-d4c4f411103e",
+      "source": "own"
+    },
+    "goitered-gazelle": {
+      "speciesProfileId": "e5b82be7-a304-4c44-99e5-3c02ea9834bf",
+      "source": "own"
+    },
+    "golden-eagle": {
+      "speciesProfileId": "dd6c1cdd-777d-466b-a70b-3f9176c6552f",
+      "source": "own"
+    },
+    "golden-headed-lion-tamarin": {
+      "speciesProfileId": "4142c1a7-afc6-4332-9fb7-9ab1798909f6",
+      "source": "own"
+    },
+    "golden-jackal": {
+      "speciesProfileId": "c74f459b-15c0-4e54-8773-57a49444276a",
+      "source": "own"
+    },
+    "golden-lion-tamarin": {
+      "speciesProfileId": "c467dd5d-9e63-4da1-aa9c-300e5587471b",
+      "source": "own"
+    },
+    "golden-mantella": {
+      "speciesProfileId": "d2fe8dd4-6fbd-48ba-9455-d06293961706",
+      "source": "own"
+    },
+    "golden-pheasant": {
+      "speciesProfileId": "d4ec6b36-804e-4be6-871f-d75d53ec3e7a",
+      "source": "own"
+    },
+    "golden-poison-frog": {
+      "speciesProfileId": "09b5b592-d6fa-48f2-a088-54fa816e9f29",
+      "source": "own"
+    },
+    "golden-silk-orb-weaver": {
+      "speciesProfileId": "2bc1771f-5aaa-4920-b8af-95061ca07be2",
+      "source": "own"
+    },
+    "golden-snub-nosed-monkey": {
+      "speciesProfileId": "3df0fcb1-c470-4d90-9caa-fd6156b85ea1",
+      "source": "own"
+    },
+    "goliath-beetle": {
+      "speciesProfileId": "7b683fec-ef90-43d7-8415-afad4ade0ed4",
+      "source": "own"
+    },
+    "goliath-birdeater": {
+      "speciesProfileId": "e0d536de-64f6-4f43-871b-15b140667f07",
+      "source": "own"
+    },
+    "goliath-frog": {
+      "speciesProfileId": "93fd67b9-fb00-45ab-a9e5-3948d4adca28",
+      "source": "own"
+    },
+    "goliath-tigerfish": {
+      "speciesProfileId": "775e93af-f88e-4cee-8861-650c9e77ea0c",
+      "source": "own"
+    },
+    "goose": {
+      "members": [
+        {
+          "slug": "canada-goose",
+          "name": "Canada Goose",
+          "animalDexNumber": 8
+        },
+        {
+          "slug": "snow-goose",
+          "name": "Snow Goose",
+          "animalDexNumber": 24
+        },
+        {
+          "slug": "andean-goose",
+          "name": "Andean Goose",
+          "animalDexNumber": 385
+        },
+        {
+          "slug": "upland-goose",
+          "name": "Upland Goose",
+          "animalDexNumber": 390
+        },
+        {
+          "slug": "magpie-goose",
+          "name": "Magpie Goose",
+          "animalDexNumber": 495
+        },
+        {
+          "slug": "barnacle-goose",
+          "name": "Barnacle Goose",
+          "animalDexNumber": 1016
+        },
+        {
+          "slug": "bar-headed-goose",
+          "name": "Bar-headed Goose",
+          "animalDexNumber": 1183
+        },
+        {
+          "slug": "domestic-goose",
+          "name": "Domestic Goose",
+          "animalDexNumber": 1421
+        },
+        {
+          "slug": "greylag-goose",
+          "name": "Greylag Goose",
+          "animalDexNumber": 1566
+        },
+        {
+          "slug": "emperor-goose",
+          "name": "Emperor Goose",
+          "animalDexNumber": 1567
+        },
+        {
+          "slug": "red-breasted-goose",
+          "name": "Red-breasted Goose",
+          "animalDexNumber": 1832
+        },
+        {
+          "slug": "egyptian-goose",
+          "name": "Egyptian Goose",
+          "animalDexNumber": 1884
+        },
+        {
+          "slug": "cotton-pygmy-goose",
+          "name": "Cotton Pygmy Goose",
+          "animalDexNumber": 2141
+        }
+      ]
+    },
+    "gopher-tortoise": {
+      "speciesProfileId": "7ca30e0b-d7e7-4434-a3cb-79a733f13e20",
+      "source": "own"
+    },
+    "gorilla": {
+      "members": [
+        {
+          "slug": "western-lowland-gorilla",
+          "name": "Western Lowland Gorilla",
+          "animalDexNumber": 792
+        },
+        {
+          "slug": "western-gorilla",
+          "name": "Western Gorilla",
+          "animalDexNumber": 1162
+        },
+        {
+          "slug": "mountain-gorilla",
+          "name": "Mountain Gorilla",
+          "animalDexNumber": 1753
+        }
+      ]
+    },
+    "gouldian-finch": {
+      "speciesProfileId": "d1ae8c16-53f8-4eea-b60f-831a7b0eea33",
+      "source": "own"
+    },
+    "grasshopper": {
+      "members": [
+        {
+          "slug": "differential-grasshopper",
+          "name": "Differential Grasshopper",
+          "animalDexNumber": 1061
+        },
+        {
+          "slug": "slant-faced-grasshopper",
+          "name": "Tobacco Grasshopper",
+          "animalDexNumber": 1914
+        },
+        {
+          "slug": "eastern-lubber-grasshopper",
+          "name": "Eastern Lubber Grasshopper",
+          "animalDexNumber": 1917
+        },
+        {
+          "slug": "javanese-grasshopper",
+          "name": "Javanese Grasshopper",
+          "animalDexNumber": 2116
+        },
+        {
+          "slug": "common-field-grasshopper",
+          "name": "Common Field Grasshopper",
+          "animalDexNumber": 2146
+        },
+        {
+          "slug": "rice-grasshopper",
+          "name": "Rice Grasshopper",
+          "animalDexNumber": 2185
+        },
+        {
+          "slug": "chinese-rice-grasshopper",
+          "name": "Chinese Rice Grasshopper",
+          "animalDexNumber": 2191
+        },
+        {
+          "slug": "oriental-longheaded-grasshopper",
+          "name": "Oriental Longheaded Grasshopper",
+          "animalDexNumber": 2268
+        },
+        {
+          "slug": "cone-headed-grasshopper",
+          "name": "Cone-headed Grasshopper",
+          "animalDexNumber": 2303
+        }
+      ]
+    },
+    "gray-four-eyed-opossum": {
+      "speciesProfileId": "a2d7fafa-4323-4aed-9a57-b979fbe8b460",
+      "source": "own"
+    },
+    "gray-fox": {
+      "speciesProfileId": "f390c6cc-c474-4f1e-829d-71bafaa79239",
+      "source": "own"
+    },
+    "great-argus": {
+      "speciesProfileId": "7c9be723-4598-4ab8-a4c5-1109205cfd87",
+      "source": "own"
+    },
+    "great-blue-heron": {
+      "speciesProfileId": "146786be-4269-4baa-97f3-75cc4e6e2a92",
+      "source": "own"
+    },
+    "great-blue-turaco": {
+      "speciesProfileId": "fb38c025-6845-4461-a74e-09d979150e34",
+      "source": "own"
+    },
+    "great-cormorant": {
+      "speciesProfileId": "6c641a2d-c1aa-41f9-8c26-cbd7b1c0dc08",
+      "source": "own"
+    },
+    "great-curassow": {
+      "speciesProfileId": "ee3fdd41-0a4a-41ac-8fc1-4623afb9ee26",
+      "source": "own"
+    },
+    "great-egret": {
+      "speciesProfileId": "4d02364b-30ba-4f45-8280-1ce36c5ed26a",
+      "source": "own"
+    },
+    "great-frigatebird": {
+      "speciesProfileId": "9e928b21-73b9-468d-b066-bd341f15c902",
+      "source": "own"
+    },
+    "great-gray-owl": {
+      "speciesProfileId": "5fb5ef47-7d9c-4b51-b1b8-43e2b7388774",
+      "source": "own"
+    },
+    "great-hornbill": {
+      "speciesProfileId": "e2b7c4d1-c70a-4a5d-93f1-44a86a631310",
+      "source": "own"
+    },
+    "great-horned-owl": {
+      "speciesProfileId": "c77e38a2-54f7-4577-8ec7-d7f6e7847e71",
+      "source": "own"
+    },
+    "great-kiskadee": {
+      "speciesProfileId": "49e1286c-544f-4616-a35c-67a6c5ad4c92",
+      "source": "own"
+    },
+    "great-potoo": {
+      "speciesProfileId": "6b4d1263-ecda-49fc-b6c9-07923a213e61",
+      "source": "own"
+    },
+    "great-skua": {
+      "speciesProfileId": "2a6296c2-1edb-4817-b63d-ec35572bbfcd",
+      "source": "own"
+    },
+    "great-white-pelican": {
+      "speciesProfileId": "d1ab85a5-0086-4df8-ac4b-1986a8ecefda",
+      "source": "own"
+    },
+    "great-white-shark": {
+      "speciesProfileId": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+      "source": "own"
+    },
+    "greater-adjutant": {
+      "speciesProfileId": "49fd96c3-ad6c-42de-a408-e70efb29fbb9",
+      "source": "own"
+    },
+    "greater-bamboo-lemur": {
+      "speciesProfileId": "d93b1523-3ec7-4db1-96cb-74f57bd48fa7",
+      "source": "own"
+    },
+    "greater-bilby": {
+      "speciesProfileId": "c0ac85ef-8595-46da-ad90-4d387df88844",
+      "source": "own"
+    },
+    "greater-bird-of-paradise": {
+      "speciesProfileId": "baccc40f-57d8-4ede-9a55-901c5a99ce18",
+      "source": "own"
+    },
+    "greater-bulldog-bat": {
+      "speciesProfileId": "efc883ce-5882-4748-89fa-08d389194965",
+      "source": "own"
+    },
+    "greater-flamingo": {
+      "speciesProfileId": "82508ae7-c888-44c7-9cb1-d1a93ed7d2fe",
+      "source": "own"
+    },
+    "greater-glider": {
+      "speciesProfileId": "c043e235-8089-4aab-8d0c-3a9baca3ce87",
+      "source": "own"
+    },
+    "greater-grison": {
+      "speciesProfileId": "8dd627fc-eddb-40ae-8530-cd487d766aea",
+      "source": "own"
+    },
+    "greater-kudu": {
+      "speciesProfileId": "704e5c3c-2d0f-4b39-8edc-e4cc97412203",
+      "source": "own"
+    },
+    "greater-roadrunner": {
+      "speciesProfileId": "43372e3d-4907-4789-8cd2-eb20ea3ac8bd",
+      "source": "own"
+    },
+    "greater-siren": {
+      "speciesProfileId": "63357fad-156c-4feb-90f3-9967ce8c6b96",
+      "source": "own"
+    },
+    "green-anaconda": {
+      "speciesProfileId": "a9c29a84-bca0-4d9a-a760-49cc75530642",
+      "source": "own"
+    },
+    "green-iguana": {
+      "speciesProfileId": "a21ba0e3-3a26-456e-8334-2636e95f526e",
+      "source": "own"
+    },
+    "green-jay": {
+      "speciesProfileId": "de99fa68-8eed-41cb-b8e0-976933fbcd8d",
+      "source": "own"
+    },
+    "green-lacewing": {
+      "speciesProfileId": "db15172c-b854-4464-a4c2-bbbe2b0fb9fc",
+      "source": "own"
+    },
+    "green-mamba": {
+      "speciesProfileId": "66d4a4b0-b4d8-4a2a-aa03-5b08d61f318e",
+      "source": "own"
+    },
+    "green-sea-turtle": {
+      "speciesProfileId": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+      "source": "own"
+    },
+    "green-tree-python": {
+      "speciesProfileId": "7345c4a5-7f12-4b78-8165-4bb91202c496",
+      "source": "own"
+    },
+    "grey-crowned-crane": {
+      "speciesProfileId": "89f5c961-dc56-4a58-af01-a95a049df97c",
+      "source": "own"
+    },
+    "grizzly-bear": {
+      "speciesProfileId": "948715a6-8307-438b-a05e-1851aa81d57c",
+      "source": "own"
+    },
+    "guanaco": {
+      "speciesProfileId": "96d60ddf-9baf-409f-a8ec-156cc31b67ab",
+      "source": "own"
+    },
+    "guianan-cock-of-the-rock": {
+      "speciesProfileId": "3a8b6a1a-000c-4da9-a81e-e17c25bf4f2f",
+      "source": "own"
+    },
+    "guira-cuckoo": {
+      "speciesProfileId": "4dcf8941-aadc-425e-abae-b14ff9fc76ec",
+      "source": "own"
+    },
+    "hamiltons-frog": {
+      "speciesProfileId": "9145111c-a91b-4f6c-a57e-bfab7ef9b051",
+      "source": "own"
+    },
+    "hammerkop": {
+      "speciesProfileId": "0061dff6-a1c2-46e2-b793-f512f20fd4d8",
+      "source": "own"
+    },
+    "harbor-porpoise": {
+      "speciesProfileId": "9cb5381a-b221-42cb-aeca-a555db55ba59",
+      "source": "own"
+    },
+    "harbor-seal": {
+      "speciesProfileId": "739c19a0-5085-4945-af28-3542e74fb3ba",
+      "source": "own"
+    },
+    "harlequin-duck": {
+      "speciesProfileId": "1910d30a-2e14-45ae-9c68-a814aa40aea9",
+      "source": "own"
+    },
+    "harpy-eagle": {
+      "speciesProfileId": "399e4600-79b8-4085-878c-4d4f81b89520",
+      "source": "own"
+    },
+    "hartebeest": {
+      "members": [
+        {
+          "slug": "red-hartebeest",
+          "name": "Red Hartebeest",
+          "animalDexNumber": 394
+        }
+      ]
+    },
+    "harvestman": {
+      "speciesProfileId": "0486ab97-4bb3-4a37-aa5b-59b31f86100c",
+      "source": "own"
+    },
+    "hawksbill-sea-turtle": {
+      "speciesProfileId": "1843ab13-f2c2-479c-b70b-2292c6e67e5e",
+      "source": "own"
+    },
+    "hellbender": {
+      "speciesProfileId": "57eb2e04-6896-43fb-93dd-aa102f0a269f",
+      "source": "own"
+    },
+    "helmeted-guineafowl": {
+      "speciesProfileId": "fd4dd10a-e6c5-4bd1-ae65-52b0c37d82e7",
+      "source": "own"
+    },
+    "helmeted-hornbill": {
+      "speciesProfileId": "c13ecb0e-5e65-4b29-90e6-3cae849a6c22",
+      "source": "own"
+    },
+    "hercules-beetle": {
+      "speciesProfileId": "b766c19f-7f83-41aa-93c1-7c2b1cf60713",
+      "source": "own"
+    },
+    "himalayan-goral": {
+      "speciesProfileId": "70d72cfd-9ec3-4013-8b3a-de753e31d9b4",
+      "source": "own"
+    },
+    "himalayan-tahr": {
+      "speciesProfileId": "4aa04762-c609-412d-b936-3c6830159187",
+      "source": "own"
+    },
+    "hippopotamus": {
+      "members": [
+        {
+          "slug": "pygmy-hippopotamus",
+          "name": "Pygmy Hippopotamus",
+          "animalDexNumber": 924
+        },
+        {
+          "slug": "common-hippopotamus",
+          "name": "Common Hippopotamus",
+          "animalDexNumber": 1024
+        }
+      ]
+    },
+    "hirola": {
+      "speciesProfileId": "e7b770b4-eb31-436c-b383-d92a2ee639a7",
+      "source": "own"
+    },
+    "hoatzin": {
+      "speciesProfileId": "ee03c8f9-6b47-4c91-98f3-fe43d5d21cb4",
+      "source": "own"
+    },
+    "hog-badger": {
+      "speciesProfileId": "9577f13f-2ea1-43b3-af03-91048b9ad44b",
+      "source": "own"
+    },
+    "hog-deer": {
+      "speciesProfileId": "0a6e2636-9a87-402c-b495-583bda4205ca",
+      "source": "own"
+    },
+    "honey-badger": {
+      "speciesProfileId": "50427ced-e3af-4655-9522-935245235325",
+      "source": "own"
+    },
+    "honey-bee": {
+      "members": [
+        {
+          "slug": "asian-honey-bee",
+          "name": "Asian Honey Bee",
+          "animalDexNumber": 1723
+        },
+        {
+          "slug": "western-honey-bee",
+          "name": "Western Honey Bee",
+          "animalDexNumber": 2136
+        }
+      ]
+    },
+    "hooded-vulture": {
+      "speciesProfileId": "51ed71e7-8651-4e4d-8061-a22f6b7fd6bf",
+      "source": "own"
+    },
+    "hoolock-gibbon": {
+      "speciesProfileId": "decb3d60-21f1-4ccd-9e72-d3ce717982e2",
+      "source": "own"
+    },
+    "hoopoe": {
+      "speciesProfileId": "4cdb268a-561f-47b9-a641-bff1076bfb77",
+      "source": "own"
+    },
+    "horned-grebe": {
+      "speciesProfileId": "fad9b6a4-9615-4fa0-abbb-b8bb6dd4867e",
+      "source": "own"
+    },
+    "horned-lizard": {
+      "members": [
+        {
+          "slug": "texas-horned-lizard",
+          "name": "Texas Horned Lizard",
+          "animalDexNumber": 1339
+        }
+      ]
+    },
+    "horned-puffin": {
+      "speciesProfileId": "bc0cd60e-4d4e-454d-b851-a227b575f74f",
+      "source": "own"
+    },
+    "horned-screamer": {
+      "speciesProfileId": "a3b23a93-a8cb-447e-85a8-dbac2d22a85a",
+      "source": "own"
+    },
+    "horseshoe-crab": {
+      "speciesProfileId": "4b3a6874-961f-49d8-b5c3-8a546100abb8",
+      "source": "own"
+    },
+    "hummingbird-hawk-moth": {
+      "speciesProfileId": "c98f9bf0-7dcc-4621-b347-cca11649a8c1",
+      "source": "own"
+    },
+    "humpback-anglerfish": {
+      "speciesProfileId": "ffbdcfce-5f89-4e08-92d2-798dcdb8f81d",
+      "source": "own"
+    },
+    "humpback-whale": {
+      "speciesProfileId": "78277eba-8a75-4f28-a41e-edf73f4d4014",
+      "source": "own"
+    },
+    "humphead-parrotfish": {
+      "speciesProfileId": "408996a3-089c-4e48-8b7c-be1f1d6a61e6",
+      "source": "own"
+    },
+    "hyacinth-macaw": {
+      "speciesProfileId": "7a405044-ada9-458f-8ff3-c23eea5d1673",
+      "source": "own"
+    },
+    "iberian-lynx": {
+      "speciesProfileId": "e39e8681-b14e-4f14-b2a6-fd86c5d2cad7",
+      "source": "own"
+    },
+    "ibisbill": {
+      "speciesProfileId": "df4a7b03-65a4-4061-9a2b-cd987ff05c86",
+      "source": "own"
+    },
+    "impala": {
+      "speciesProfileId": "42fc2bf5-b0f1-44ce-91ee-51b10f959c6a",
+      "source": "own"
+    },
+    "inca-tern": {
+      "speciesProfileId": "468354d0-e348-4878-b161-a52e6fc8b87c",
+      "source": "own"
+    },
+    "indian-muntjac": {
+      "speciesProfileId": "f2af3e04-36b8-4f93-9ce4-1475e882a1ba",
+      "source": "own"
+    },
+    "indian-peafowl": {
+      "speciesProfileId": "134d4e28-0d87-4160-8985-91aff80d7212",
+      "source": "own"
+    },
+    "indian-rhinoceros": {
+      "speciesProfileId": "573f312b-952f-49d4-a8f7-31cbf06bc1dd",
+      "source": "own"
+    },
+    "indian-rock-python": {
+      "speciesProfileId": "674a7979-beaa-4ee6-8414-31236fedccb3",
+      "source": "own"
+    },
+    "indian-star-tortoise": {
+      "speciesProfileId": "bb83f0e2-9f21-4d89-bb29-fc3100ea0802",
+      "source": "own"
+    },
+    "indochinese-box-turtle": {
+      "speciesProfileId": "01d77acf-7ceb-4266-86c1-4c1524380810",
+      "source": "own"
+    },
+    "indri": {
+      "speciesProfileId": "c95f9da0-d497-4a05-a5d1-ca0bdafb934e",
+      "source": "own"
+    },
+    "indus-river-dolphin": {
+      "speciesProfileId": "db91df4e-67d5-4573-a6ff-df1abddca34a",
+      "source": "own"
+    },
+    "jabiru": {
+      "speciesProfileId": "ea40cb7e-c4bf-4a24-ac64-6e824768f2e3",
+      "source": "own"
+    },
+    "jackdaw": {
+      "speciesProfileId": "dffe27ce-ff64-4a50-a723-08309586fb56",
+      "source": "own"
+    },
+    "jaguar": {
+      "speciesProfileId": "a636182e-6fd8-4750-a88e-c8180cebeb22",
+      "source": "own"
+    },
+    "jaguarundi": {
+      "speciesProfileId": "ad2af404-ec6b-465f-8482-23458f7c1686",
+      "source": "own"
+    },
+    "japanese-macaque": {
+      "speciesProfileId": "2ad2b502-f516-44e6-9e20-d62cab298856",
+      "source": "own"
+    },
+    "japanese-serow": {
+      "speciesProfileId": "bf931f13-9b79-4729-9a5b-4e4a0a10aa5f",
+      "source": "own"
+    },
+    "java-mouse-deer": {
+      "speciesProfileId": "7189d9eb-3a0d-4379-a7b5-6c25b8c26241",
+      "source": "own"
+    },
+    "javan-rhinoceros": {
+      "speciesProfileId": "96380cf9-646a-4f91-92e1-bfb93e923338",
+      "source": "own"
+    },
+    "javan-slow-loris": {
+      "speciesProfileId": "954b1f13-0551-48db-a854-52d68d82f874",
+      "source": "own"
+    },
+    "jellyfish": {
+      "members": [
+        {
+          "slug": "spotted-jellyfish",
+          "name": "Spotted Jellyfish",
+          "animalDexNumber": 1013
+        },
+        {
+          "slug": "moon-jellyfish",
+          "name": "Moon Jellyfish",
+          "animalDexNumber": 1034
+        },
+        {
+          "slug": "australian-box-jellyfish",
+          "name": "Australian Box Jellyfish",
+          "animalDexNumber": 1482
+        }
+      ]
+    },
+    "jerboa": {
+      "speciesProfileId": "23a98314-80db-4b85-866a-44b604940a40",
+      "source": "own"
+    },
+    "joro-spider": {
+      "speciesProfileId": "9ae77eb1-0f32-4c2f-9bc2-fb3fff409ef3",
+      "source": "own"
+    },
+    "jumping-spider": {
+      "speciesProfileId": "747e75a1-58dc-4a20-8e26-f842e122fbe4",
+      "source": "own"
+    },
+    "kagu": {
+      "speciesProfileId": "aee72f8c-694a-4e7d-8622-be7f1db460a2",
+      "source": "own"
+    },
+    "kakapo": {
+      "speciesProfileId": "c085d12f-8d3c-4f8e-88f6-1b43149e27b2",
+      "source": "own"
+    },
+    "kangal": {
+      "speciesProfileId": "a8664b8d-5ba5-4807-bedf-4f2660b47263",
+      "source": "own"
+    },
+    "kea": {
+      "speciesProfileId": "0398a6b5-0558-4d70-9913-f0ba84a7730e",
+      "source": "own"
+    },
+    "keel-billed-toucan": {
+      "speciesProfileId": "990d2d22-d288-444b-adb8-7bdc9664cec7",
+      "source": "own"
+    },
+    "kiang": {
+      "speciesProfileId": "812ff784-702b-4cea-89e0-9451001b51b0",
+      "source": "own"
+    },
+    "king-cobra": {
+      "speciesProfileId": "e41b05f8-523b-48eb-b686-4f30ba740fdc",
+      "source": "own"
+    },
+    "king-eider": {
+      "speciesProfileId": "a026f5eb-c8ec-443c-a84a-b793dc7a8d7a",
+      "source": "own"
+    },
+    "king-penguin": {
+      "speciesProfileId": "5b40f43c-2c15-4b9a-85d8-708d312313e3",
+      "source": "own"
+    },
+    "king-vulture": {
+      "speciesProfileId": "e20c2450-c9e5-4397-952f-58c427822a95",
+      "source": "own"
+    },
+    "kinkajou": {
+      "speciesProfileId": "0c5b272e-90fa-4367-9bc6-417cb499dcbb",
+      "source": "own"
+    },
+    "kipunji": {
+      "speciesProfileId": "6faa5634-5c07-4260-99e1-1011b70e4dc9",
+      "source": "own"
+    },
+    "kiwi": {
+      "speciesProfileId": "44462ef9-b0e5-4bfb-9923-18fdb065b463",
+      "source": "own"
+    },
+    "klipspringer": {
+      "speciesProfileId": "a1f8825d-1609-406e-ae2c-13b00d24cf5b",
+      "source": "own"
+    },
+    "koala": {
+      "speciesProfileId": "f6b4e0db-9255-4210-82d0-b14ea270ebae",
+      "source": "own"
+    },
+    "komodo-dragon": {
+      "speciesProfileId": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08",
+      "source": "own"
+    },
+    "korean-rat-snake": {
+      "speciesProfileId": "dfebe9d5-229f-4097-a45d-6a1542e9a9c7",
+      "source": "own"
+    },
+    "kori-bustard": {
+      "speciesProfileId": "de67272f-1350-43d3-b087-2805e96ced17",
+      "source": "own"
+    },
+    "kowari": {
+      "speciesProfileId": "863287c0-e752-4c5d-a5bd-5bd0ea7c11ac",
+      "source": "own"
+    },
+    "lace-monitor": {
+      "speciesProfileId": "a8a74aef-407c-45ef-bf04-eeed9304f248",
+      "source": "own"
+    },
+    "lake-oku-clawed-frog": {
+      "speciesProfileId": "727b3b3f-9373-4ad3-b327-e22ad3197579",
+      "source": "own"
+    },
+    "lammergeier": {
+      "speciesProfileId": "0842a73e-5029-4a19-8732-4aa43cf1f5c0",
+      "source": "canonical"
+    },
+    "lappet-faced-vulture": {
+      "speciesProfileId": "0fb83f57-c508-47b5-81cf-343033b98c69",
+      "source": "own"
+    },
+    "largetooth-sawfish": {
+      "speciesProfileId": "94e1e2a2-b276-4beb-8e9b-99b179093a82",
+      "source": "own"
+    },
+    "laughing-kookaburra": {
+      "speciesProfileId": "30cac9d2-521a-4570-8644-f0d74c2b71d9",
+      "source": "own"
+    },
+    "leafcutter-ant": {
+      "speciesProfileId": "8c188f45-df40-4c7b-b8d0-4fe79f35f1a5",
+      "source": "own"
+    },
+    "leafy-seadragon": {
+      "speciesProfileId": "34c1ff7e-cec0-4c4c-b110-9798fbf1fdc5",
+      "source": "own"
+    },
+    "least-bittern": {
+      "speciesProfileId": "330f9732-95ce-4472-9925-e701a89d43ca",
+      "source": "own"
+    },
+    "leatherback-sea-turtle": {
+      "speciesProfileId": "f8de28f7-83a4-4f60-9b91-3a6774a51076",
+      "source": "own"
+    },
+    "leopard": {
+      "members": [
+        {
+          "slug": "persian-leopard",
+          "name": "Persian Leopard",
+          "animalDexNumber": 452
+        },
+        {
+          "slug": "clouded-leopard",
+          "name": "Clouded Leopard",
+          "animalDexNumber": 859
+        },
+        {
+          "slug": "snow-leopard",
+          "name": "Snow Leopard",
+          "animalDexNumber": 880
+        },
+        {
+          "slug": "amur-leopard",
+          "name": "Amur Leopard",
+          "animalDexNumber": 967
+        },
+        {
+          "slug": "sunda-clouded-leopard",
+          "name": "Sunda Clouded Leopard",
+          "animalDexNumber": 1279
+        }
+      ]
+    },
+    "leopard-gecko": {
+      "speciesProfileId": "c4e069d5-8807-427e-bf5c-655c2a845b55",
+      "source": "own"
+    },
+    "leopard-tortoise": {
+      "speciesProfileId": "f4ebeda9-b13a-46e4-9025-0c8545e7eb98",
+      "source": "own"
+    },
+    "lesser-hedgehog-tenrec": {
+      "speciesProfileId": "c6c36831-c558-4b82-b2e2-1bc23d5dcad2",
+      "source": "own"
+    },
+    "lesser-kudu": {
+      "speciesProfileId": "90d392b3-0743-483c-a38c-512cf92a5401",
+      "source": "own"
+    },
+    "lilac-breasted-roller": {
+      "speciesProfileId": "9a06d043-9758-4322-ad07-28625a6d568d",
+      "source": "own"
+    },
+    "lion-tailed-macaque": {
+      "speciesProfileId": "a5fa083c-b9a1-4408-8975-aa2c17424108",
+      "source": "own"
+    },
+    "lionfish": {
+      "speciesProfileId": "22cc0807-1464-48d4-9c76-de81d0e8951d",
+      "source": "own"
+    },
+    "little-egret": {
+      "speciesProfileId": "f1fc0743-abb6-4713-a8a0-0b88d4d82aa5",
+      "source": "own"
+    },
+    "lizard": {
+      "members": [
+        {
+          "slug": "eastern-collared-lizard",
+          "name": "Eastern Collared Lizard",
+          "animalDexNumber": 72
+        },
+        {
+          "slug": "southern-alligator-lizard",
+          "name": "Southern Alligator Lizard",
+          "animalDexNumber": 228
+        },
+        {
+          "slug": "frilled-lizard",
+          "name": "Frilled Lizard",
+          "animalDexNumber": 349
+        },
+        {
+          "slug": "ocellated-lizard",
+          "name": "Ocellated Lizard",
+          "animalDexNumber": 454
+        },
+        {
+          "slug": "eastern-glass-lizard",
+          "name": "Eastern Glass Lizard",
+          "animalDexNumber": 471
+        },
+        {
+          "slug": "caiman-lizard",
+          "name": "Caiman Lizard",
+          "animalDexNumber": 504
+        },
+        {
+          "slug": "armadillo-girdled-lizard",
+          "name": "Armadillo Girdled Lizard",
+          "animalDexNumber": 657
+        },
+        {
+          "slug": "philippine-sailfin-lizard",
+          "name": "Philippine Sailfin Lizard",
+          "animalDexNumber": 858
+        },
+        {
+          "slug": "mexican-beaded-lizard",
+          "name": "Mexican Beaded Lizard",
+          "animalDexNumber": 908
+        },
+        {
+          "slug": "chinese-crocodile-lizard",
+          "name": "Chinese Crocodile Lizard",
+          "animalDexNumber": 945
+        },
+        {
+          "slug": "earless-monitor-lizard",
+          "name": "Earless Monitor Lizard",
+          "animalDexNumber": 956
+        },
+        {
+          "slug": "amboina-sailfin-lizard",
+          "name": "Amboina Sailfin Lizard",
+          "animalDexNumber": 1062
+        },
+        {
+          "slug": "texas-horned-lizard",
+          "name": "Texas Horned Lizard",
+          "animalDexNumber": 1339
+        },
+        {
+          "slug": "mexican-mole-lizard",
+          "name": "Mexican Mole Lizard",
+          "animalDexNumber": 1512
+        },
+        {
+          "slug": "common-wall-lizard",
+          "name": "Common Wall Lizard",
+          "animalDexNumber": 1531
+        },
+        {
+          "slug": "brazilian-lava-lizard",
+          "name": "Brazilian Lava Lizard",
+          "animalDexNumber": 1904
+        },
+        {
+          "slug": "spiny-lizard",
+          "name": "Eastern Spiny Lizard",
+          "animalDexNumber": 1931
+        },
+        {
+          "slug": "sahara-spiny-tailed-lizard",
+          "name": "Sahara Spiny-tailed Lizard",
+          "animalDexNumber": 1969
+        },
+        {
+          "slug": "four-lined-whiptail-lizard",
+          "name": "Four-lined Whiptail Lizard",
+          "animalDexNumber": 2040
+        },
+        {
+          "slug": "ornate-spiny-tailed-lizard",
+          "name": "Ornate Spiny-tailed Lizard",
+          "animalDexNumber": 2054
+        },
+        {
+          "slug": "bocages-wall-lizard",
+          "name": "Bocage's Wall Lizard",
+          "animalDexNumber": 2063
+        },
+        {
+          "slug": "oriental-garden-lizard",
+          "name": "Oriental Garden Lizard",
+          "animalDexNumber": 2126
+        },
+        {
+          "slug": "oertzens-lizard",
+          "name": "Oertzen's Lizard",
+          "animalDexNumber": 2289
+        },
+        {
+          "slug": "common-green-forest-lizard",
+          "name": "Common Green Forest Lizard",
+          "animalDexNumber": 2336
+        },
+        {
+          "slug": "espanola-lava-lizard",
+          "name": "Española Lava Lizard",
+          "animalDexNumber": 2391
+        },
+        {
+          "slug": "hump-snout-lizard",
+          "name": "Hump Snout Lizard",
+          "animalDexNumber": 2395
+        },
+        {
+          "slug": "san-cristobal-lava-lizard",
+          "name": "San Cristobal Lava Lizard",
+          "animalDexNumber": 2400
+        }
+      ]
+    },
+    "llama": {
+      "speciesProfileId": "c075dcd4-f107-42a4-9f14-cec8eaf2a6d4",
+      "source": "own"
+    },
+    "loggerhead-sea-turtle": {
+      "speciesProfileId": "bf1c746d-9e43-4408-87cb-f3377da6e970",
+      "source": "own"
+    },
+    "long-eared-owl": {
+      "speciesProfileId": "a09415f4-aebe-4a29-ab55-11617edc7065",
+      "source": "own"
+    },
+    "long-nosed-potoroo": {
+      "speciesProfileId": "91da5464-04ba-4bdb-8ad9-209f10cc5574",
+      "source": "own"
+    },
+    "long-tailed-chinchilla": {
+      "speciesProfileId": "2d75db54-f14d-484f-b86e-5211390ea4cb",
+      "source": "own"
+    },
+    "long-wattled-umbrellabird": {
+      "speciesProfileId": "036d356d-ce53-4a1d-ba9c-5f8624188868",
+      "source": "own"
+    },
+    "longnose-gar": {
+      "speciesProfileId": "af162db5-ff7a-4761-9063-cd7ec3347d84",
+      "source": "own"
+    },
+    "lowland-anoa": {
+      "speciesProfileId": "538076de-aab6-4662-90fc-4bfcc7a82af3",
+      "source": "own"
+    },
+    "lumpfish": {
+      "speciesProfileId": "fbf2cc1d-39bf-47b0-9e11-01a7a38ea118",
+      "source": "own"
+    },
+    "luna-moth": {
+      "speciesProfileId": "8cdd048c-a311-4f6a-bc70-8b5de80a8427",
+      "source": "own"
+    },
+    "madagascar-day-gecko": {
+      "speciesProfileId": "9de10da4-8e4d-457c-86a7-48c4966c0b79",
+      "source": "own"
+    },
+    "madagascar-ground-boa": {
+      "speciesProfileId": "1900be23-7b80-4f31-8f92-f0af5e709942",
+      "source": "own"
+    },
+    "madagascar-hognose-snake": {
+      "speciesProfileId": "57507079-7d7b-4eaa-b451-424a52b3d95b",
+      "source": "own"
+    },
+    "madagascar-pochard": {
+      "speciesProfileId": "04476691-a71d-48ad-8197-389a3f21815e",
+      "source": "own"
+    },
+    "magnificent-frigatebird": {
+      "speciesProfileId": "399c7650-ab71-40f3-9f8b-91da027fa2ec",
+      "source": "own"
+    },
+    "magpie-goose": {
+      "speciesProfileId": "802bcba9-6b61-4220-96b4-18d0736763ea",
+      "source": "own"
+    },
+    "mahi-mahi": {
+      "speciesProfileId": "5c4cc124-9f71-4441-b4cb-d74e262290d5",
+      "source": "own"
+    },
+    "maine-coon-cat": {
+      "speciesProfileId": "5c5fab8a-0426-4588-8024-a1d30bcbbca2",
+      "source": "canonical"
+    },
+    "mainland-serow": {
+      "speciesProfileId": "cf444ab6-a7bb-4c16-9713-f203196a21c6",
+      "source": "own"
+    },
+    "malachite-kingfisher": {
+      "speciesProfileId": "83f2e89b-22ef-4dcb-9d51-6faf14c9b794",
+      "source": "own"
+    },
+    "malayan-horned-frog": {
+      "speciesProfileId": "3e1482e6-9c8e-43d5-a819-5dcff8abf702",
+      "source": "own"
+    },
+    "malayan-tapir": {
+      "speciesProfileId": "16d8d11b-4e60-49a7-8b61-266483997094",
+      "source": "own"
+    },
+    "malayan-tiger": {
+      "speciesProfileId": "56dacd2c-d1ae-4f20-b3ed-65117d961249",
+      "source": "own"
+    },
+    "manatee": {
+      "speciesProfileId": "51854f58-8b5c-4af3-bc33-374b8bf96aa7",
+      "source": "own"
+    },
+    "mandarin-duck": {
+      "speciesProfileId": "a7ec8c64-0c87-4f55-afd3-bad7b80470ad",
+      "source": "own"
+    },
+    "mandarinfish": {
+      "speciesProfileId": "08965a45-e74e-4b3f-b2ff-7ceee13db7f1",
+      "source": "own"
+    },
+    "mandrill": {
+      "speciesProfileId": "b723e85e-3fc8-403d-b3a3-94cf264c1c1a",
+      "source": "own"
+    },
+    "maned-wolf": {
+      "speciesProfileId": "96997d83-4c9d-473f-82ee-8bcf2aff39cc",
+      "source": "own"
+    },
+    "mangrove-monitor": {
+      "speciesProfileId": "ff8def93-c512-4f32-8e4a-c770d7da65ed",
+      "source": "own"
+    },
+    "mangrove-snake": {
+      "speciesProfileId": "a04fe90f-21e3-45e4-8551-6b33521a7993",
+      "source": "own"
+    },
+    "mangshan-pit-viper": {
+      "speciesProfileId": "0b59e979-a95c-4bd0-93ae-264db174f93a",
+      "source": "own"
+    },
+    "manta-ray": {
+      "speciesProfileId": "da419727-8089-486d-a583-ea687d6fbe5a",
+      "source": "own"
+    },
+    "mantidfly": {
+      "speciesProfileId": "3c247c48-5c29-409a-b897-9b42fe242f28",
+      "source": "own"
+    },
+    "mantis-shrimp": {
+      "members": [
+        {
+          "slug": "peacock-mantis-shrimp",
+          "name": "Peacock Mantis Shrimp",
+          "animalDexNumber": 1526
+        }
+      ]
+    },
+    "mantled-howler-monkey": {
+      "speciesProfileId": "deaf44dd-c112-48b0-b4e8-bd6c8e483ce6",
+      "source": "own"
+    },
+    "marabou-stork": {
+      "speciesProfileId": "399a7192-9ee2-496c-b26c-1ee73acefd30",
+      "source": "own"
+    },
+    "marbled-godwit": {
+      "speciesProfileId": "5575b711-d895-4cc7-a0cc-64c74bbd3316",
+      "source": "own"
+    },
+    "marbled-newt": {
+      "speciesProfileId": "7884a1bb-88d0-4f8a-b5fb-b1e47f7d5f30",
+      "source": "own"
+    },
+    "marbled-salamander": {
+      "speciesProfileId": "ccd46144-3111-42cb-8ea0-2a38f8a9f1dc",
+      "source": "own"
+    },
+    "margay": {
+      "speciesProfileId": "fa17d62b-ecae-4ad9-899d-17b7704cff03",
+      "source": "own"
+    },
+    "marine-iguana": {
+      "speciesProfileId": "a2271b75-76f7-4e78-9bf6-da790d789144",
+      "source": "own"
+    },
+    "markhor": {
+      "speciesProfileId": "628d61b3-2cbe-49f3-a811-cea9f9f5dff3",
+      "source": "own"
+    },
+    "marsh-frog": {
+      "speciesProfileId": "97108390-ef0f-44d7-a16a-0ddb6f6f76da",
+      "source": "own"
+    },
+    "marsh-mongoose": {
+      "speciesProfileId": "56a82acc-88d1-439b-adf8-d7773751c68a",
+      "source": "own"
+    },
+    "martial-eagle": {
+      "speciesProfileId": "4b4c0931-2ea3-4392-8dbc-9892ec8618c4",
+      "source": "own"
+    },
+    "mary-river-turtle": {
+      "speciesProfileId": "bc9632c6-8574-4c9c-a0e5-ad7acef2472f",
+      "source": "own"
+    },
+    "masked-owl": {
+      "speciesProfileId": "54dee560-68b1-4eef-bd6c-09177a48eb0d",
+      "source": "own"
+    },
+    "mata-mata": {
+      "speciesProfileId": "ec3815b3-f3c4-4392-a2f1-1419a46a60e3",
+      "source": "own"
+    },
+    "mata-mata-turtle": {
+      "members": [
+        {
+          "slug": "orinoco-mata-mata-turtle",
+          "name": "Orinoco Mata Mata Turtle",
+          "animalDexNumber": 1967
+        }
+      ]
+    },
+    "matschies-tree-kangaroo": {
+      "speciesProfileId": "9d0730c8-5b68-4317-95f8-b4e5671d1339",
+      "source": "own"
+    },
+    "mayfly": {
+      "speciesProfileId": "90f14d65-4f5c-4625-a6f0-5516ae48cb04",
+      "source": "own"
+    },
+    "meerkat": {
+      "speciesProfileId": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+      "source": "own"
+    },
+    "mexican-beaded-lizard": {
+      "speciesProfileId": "28203c18-f117-41c6-99b7-a1709c7ac791",
+      "source": "own"
+    },
+    "midwife-toad": {
+      "speciesProfileId": "4cf3ccca-7212-4bce-b5ca-32b7a94042b6",
+      "source": "own"
+    },
+    "mimic-octopus": {
+      "speciesProfileId": "040a057a-c0eb-4d2f-911f-13fd524ea0f9",
+      "source": "own"
+    },
+    "mississippi-kite": {
+      "speciesProfileId": "4d2dde4a-7ec5-4a82-ada8-618bed2e43a8",
+      "source": "own"
+    },
+    "mole-viper": {
+      "speciesProfileId": "6d2a12f6-e8c7-43be-9493-e69db8597869",
+      "source": "own"
+    },
+    "monarch-butterfly": {
+      "speciesProfileId": "565360de-d10a-4f17-80ac-da1701cf4ddd",
+      "source": "own"
+    },
+    "monkey-tailed-skink": {
+      "speciesProfileId": "d22af4b1-43b3-4f42-a4ef-6ee557805247",
+      "source": "own"
+    },
+    "monocled-cobra": {
+      "speciesProfileId": "875794eb-e04a-4447-b320-69888d3e6171",
+      "source": "own"
+    },
+    "monte-iberia-eleuth": {
+      "speciesProfileId": "3b0c4056-be4d-4ab9-a83e-72e6e4af24ee",
+      "source": "own"
+    },
+    "moorish-idol": {
+      "speciesProfileId": "abba435a-0d88-43d1-bf97-169a664e3271",
+      "source": "own"
+    },
+    "moose": {
+      "speciesProfileId": "0297c681-020a-4ce4-80c5-54193eb984d4",
+      "source": "own"
+    },
+    "moray-eel": {
+      "speciesProfileId": "b58836cc-2e81-4bd8-9def-9a54b0f252ff",
+      "source": "own"
+    },
+    "mossy-frog": {
+      "speciesProfileId": "45e95294-4f14-49bd-93db-0246013cf24d",
+      "source": "own"
+    },
+    "mouflon": {
+      "speciesProfileId": "1db2ad71-ef3d-43dc-b7a2-f341f9dff8c7",
+      "source": "own"
+    },
+    "mountain-beaver": {
+      "speciesProfileId": "f9f7cd2a-763d-4694-9269-d675700c0bd5",
+      "source": "own"
+    },
+    "mountain-goat": {
+      "speciesProfileId": "dc508c6a-d334-4927-8ca2-4def799476d7",
+      "source": "own"
+    },
+    "mountain-nyala": {
+      "speciesProfileId": "45672b1c-201a-455d-9569-803edebe4a96",
+      "source": "own"
+    },
+    "mountain-tapir": {
+      "speciesProfileId": "a244f370-5d67-4119-b582-48480bab891f",
+      "source": "own"
+    },
+    "mountain-zebra": {
+      "speciesProfileId": "5fb9ea26-9fb3-41e8-9b95-36bc5fde8dd6",
+      "source": "own"
+    },
+    "mudpuppy": {
+      "speciesProfileId": "33d7fdf2-5699-4c08-9112-efa959e3efeb",
+      "source": "own"
+    },
+    "mudskipper": {
+      "speciesProfileId": "9714c7bd-0bd4-4514-bb85-70b8c25831ab",
+      "source": "own"
+    },
+    "musk-deer": {
+      "speciesProfileId": "3331eb2f-496f-440a-bcea-14ef2471c826",
+      "source": "own"
+    },
+    "musk-ox": {
+      "speciesProfileId": "d491897a-7d5b-4747-b51a-9d384c06a7f2",
+      "source": "own"
+    },
+    "nacunda-nighthawk": {
+      "speciesProfileId": "eac6f24d-d6ee-44e2-ae4d-e7a14e1ddc8d",
+      "source": "own"
+    },
+    "naked-mole-rat": {
+      "speciesProfileId": "a41ac48b-05a8-4101-8401-4f4338e7b8ad",
+      "source": "own"
+    },
+    "napoleon-wrasse": {
+      "speciesProfileId": "12570e09-e82d-4e6a-bc32-54730c092b7b",
+      "source": "own"
+    },
+    "narwhal": {
+      "speciesProfileId": "8c1b93ad-4f4f-49b7-b401-fd4ecbcb6691",
+      "source": "own"
+    },
+    "nene": {
+      "speciesProfileId": "538977eb-e1e4-4869-ab83-18e977a6f5d4",
+      "source": "own"
+    },
+    "new-zealand-fur-seal": {
+      "speciesProfileId": "ac1cac36-b301-4595-a414-09a7df2f49e7",
+      "source": "own"
+    },
+    "nicobar-pigeon": {
+      "speciesProfileId": "bd323bf4-312a-48ef-9f26-fe9e117b3afa",
+      "source": "own"
+    },
+    "nile-lechwe": {
+      "speciesProfileId": "8821719e-a4f4-4c30-ae2a-468f010e0597",
+      "source": "own"
+    },
+    "nile-monitor": {
+      "speciesProfileId": "09471121-fd7b-446b-98ba-88636d80dfa4",
+      "source": "own"
+    },
+    "nilgai": {
+      "speciesProfileId": "0848aa1a-50ee-4126-ad4a-7de1aadb76e7",
+      "source": "own"
+    },
+    "nilgiri-tahr": {
+      "speciesProfileId": "f4c68e15-c1e0-4365-9762-63d88765dd79",
+      "source": "own"
+    },
+    "nine-banded-armadillo": {
+      "speciesProfileId": "88a8dbad-28d6-4516-a2a2-04abe454baf2",
+      "source": "own"
+    },
+    "north-american-beaver": {
+      "speciesProfileId": "552fe522-889f-43d6-a131-023fff7d0659",
+      "source": "own"
+    },
+    "north-american-raccoon": {
+      "speciesProfileId": "e498205a-9ccf-4c96-a2eb-adeebf10b59b",
+      "source": "own"
+    },
+    "northern-bald-ibis": {
+      "speciesProfileId": "1c34bfdb-f363-4b0e-bff6-5a001d054ecd",
+      "source": "own"
+    },
+    "northern-cardinal": {
+      "speciesProfileId": "2f46d8f9-5de0-4629-9877-2bb92b28208b",
+      "source": "own"
+    },
+    "northern-fulmar": {
+      "speciesProfileId": "5971167b-6ee0-4f0c-9adb-09e31d2b2c53",
+      "source": "own"
+    },
+    "northern-gannet": {
+      "speciesProfileId": "3ecac902-aec7-4481-9ddb-77f3b34e2177",
+      "source": "own"
+    },
+    "northern-hairy-nosed-wombat": {
+      "speciesProfileId": "a04b8c28-e438-480e-93dd-9bbbd4394956",
+      "source": "own"
+    },
+    "northern-hawk-owl": {
+      "speciesProfileId": "338face2-86a2-4ea2-8ae4-39e58884752c",
+      "source": "own"
+    },
+    "northern-lapwing": {
+      "speciesProfileId": "df2cb1a3-fb6e-4863-aef9-c70a7448ac50",
+      "source": "own"
+    },
+    "northern-shoveler": {
+      "speciesProfileId": "4af4494d-5a6e-4d9d-9c27-0a4d9ecc0ec3",
+      "source": "own"
+    },
+    "northern-tamandua": {
+      "speciesProfileId": "461642f5-ebaa-4ae6-94a2-a2500ca32a3a",
+      "source": "own"
+    },
+    "numbat": {
+      "speciesProfileId": "6b44eb91-a19b-4868-9f90-085f8e74ec3e",
+      "source": "own"
+    },
+    "nurse-shark": {
+      "speciesProfileId": "da7c5805-afeb-49bf-b0a8-496e092e5f4c",
+      "source": "own"
+    },
+    "nyala": {
+      "speciesProfileId": "ca59b578-2109-4d91-9318-a9851d2134c8",
+      "source": "own"
+    },
+    "oarfish": {
+      "speciesProfileId": "d6901abe-5e0e-4143-865f-1e724ed49b51",
+      "source": "own"
+    },
+    "ocean-sunfish": {
+      "speciesProfileId": "319e2891-3e83-4d75-ad81-790930c7ed40",
+      "source": "own"
+    },
+    "oceanic-whitetip-shark": {
+      "speciesProfileId": "e3958269-307d-4d00-bd8d-2037461567a9",
+      "source": "own"
+    },
+    "ocellated-lizard": {
+      "speciesProfileId": "2e2d307c-a967-47cf-a817-c099093c2712",
+      "source": "own"
+    },
+    "ocelot": {
+      "speciesProfileId": "fc722870-7724-459d-878a-0f9ac7db4515",
+      "source": "own"
+    },
+    "octopus": {
+      "members": [
+        {
+          "slug": "coconut-octopus",
+          "name": "Coconut Octopus",
+          "animalDexNumber": 418
+        },
+        {
+          "slug": "giant-pacific-octopus",
+          "name": "Giant Pacific Octopus",
+          "animalDexNumber": 447
+        },
+        {
+          "slug": "blue-ringed-octopus",
+          "name": "Blue-ringed Octopus",
+          "animalDexNumber": 716
+        },
+        {
+          "slug": "mimic-octopus",
+          "name": "Mimic Octopus",
+          "animalDexNumber": 727
+        },
+        {
+          "slug": "blanket-octopus",
+          "name": "Blanket Octopus",
+          "animalDexNumber": 1079
+        },
+        {
+          "slug": "dumbo-octopus",
+          "name": "Dumbo Octopus",
+          "animalDexNumber": 1081
+        },
+        {
+          "slug": "glass-octopus",
+          "name": "Glass Octopus",
+          "animalDexNumber": 1571
+        },
+        {
+          "slug": "wonderpus-octopus",
+          "name": "Wonderpus Octopus",
+          "animalDexNumber": 1629
+        },
+        {
+          "slug": "common-octopus",
+          "name": "Common Octopus",
+          "animalDexNumber": 2363
+        }
+      ]
+    },
+    "ogre-faced-spider": {
+      "speciesProfileId": "8a66ae73-9677-429a-8c99-c783dccf1b38",
+      "source": "own"
+    },
+    "oilbird": {
+      "speciesProfileId": "d64514fb-de7f-4012-ae98-039da92a111f",
+      "source": "own"
+    },
+    "okapi": {
+      "speciesProfileId": "f56774d0-4adc-4ac1-b04c-51f341f85d5d",
+      "source": "own"
+    },
+    "olingo": {
+      "speciesProfileId": "bcf9292b-a3f7-4725-8e94-dea5b7020f6b",
+      "source": "own"
+    },
+    "olm": {
+      "speciesProfileId": "4c109b10-d515-4f21-b890-6f2fa1b2a520",
+      "source": "own"
+    },
+    "onager": {
+      "speciesProfileId": "3350602e-1833-4f94-a030-d984d203f3f4",
+      "source": "own"
+    },
+    "opah": {
+      "speciesProfileId": "142e8045-c930-4d93-96fd-4889f16dca2d",
+      "source": "own"
+    },
+    "orangutan": {
+      "members": [
+        {
+          "slug": "bornean-orangutan",
+          "name": "Bornean Orangutan",
+          "animalDexNumber": 891
+        },
+        {
+          "slug": "tapanuli-orangutan",
+          "name": "Tapanuli Orangutan",
+          "animalDexNumber": 911
+        },
+        {
+          "slug": "sumatran-orangutan",
+          "name": "Sumatran Orangutan",
+          "animalDexNumber": 964
+        }
+      ]
+    },
+    "orca": {
+      "speciesProfileId": "c26bc483-cfd7-4524-9eeb-b24874bf6c65",
+      "source": "own"
+    },
+    "orchid-bee": {
+      "speciesProfileId": "e68c35ed-e511-420f-b323-d252fb290531",
+      "source": "own"
+    },
+    "orchid-mantis": {
+      "speciesProfileId": "4821e879-6d1d-4268-afdb-d762e432c68c",
+      "source": "own"
+    },
+    "ornate-box-turtle": {
+      "speciesProfileId": "f988550f-543e-4443-9909-961cf506a9a6",
+      "source": "own"
+    },
+    "ornate-horned-frog": {
+      "speciesProfileId": "0d6760ac-1820-43d3-b3f8-57e18d8530e9",
+      "source": "own"
+    },
+    "osprey": {
+      "speciesProfileId": "360d1b44-2874-4312-aa80-c4f99d5e1156",
+      "source": "own"
+    },
+    "ostrich": {
+      "speciesProfileId": "77e28d3c-678d-473e-989b-d6e09d02b94e",
+      "source": "own"
+    },
+    "otter": {
+      "members": [
+        {
+          "slug": "giant-otter",
+          "name": "Giant Otter",
+          "animalDexNumber": 166
+        },
+        {
+          "slug": "smooth-coated-otter",
+          "name": "Smooth-coated Otter",
+          "animalDexNumber": 286
+        },
+        {
+          "slug": "sea-otter",
+          "name": "Sea Otter",
+          "animalDexNumber": 561
+        },
+        {
+          "slug": "asian-small-clawed-otter",
+          "name": "Asian Small-clawed Otter",
+          "animalDexNumber": 1014
+        },
+        {
+          "slug": "north-american-river-otter",
+          "name": "North American River Otter",
+          "animalDexNumber": 1490
+        }
+      ]
+    },
+    "owl": {
+      "members": [
+        {
+          "slug": "spotted-wood-owl",
+          "name": "Spotted Wood Owl",
+          "animalDexNumber": 20
+        },
+        {
+          "slug": "eurasian-eagle-owl",
+          "name": "Eurasian Eagle-Owl",
+          "animalDexNumber": 29
+        },
+        {
+          "slug": "tawny-owl",
+          "name": "Tawny Owl",
+          "animalDexNumber": 53
+        },
+        {
+          "slug": "great-horned-owl",
+          "name": "Great Horned Owl",
+          "animalDexNumber": 79
+        },
+        {
+          "slug": "barn-owl",
+          "name": "Barn Owl",
+          "animalDexNumber": 134
+        },
+        {
+          "slug": "boobook-owl",
+          "name": "Boobook Owl",
+          "animalDexNumber": 251
+        },
+        {
+          "slug": "northern-hawk-owl",
+          "name": "Northern Hawk Owl",
+          "animalDexNumber": 271
+        },
+        {
+          "slug": "short-eared-owl",
+          "name": "Short-eared Owl",
+          "animalDexNumber": 299
+        },
+        {
+          "slug": "long-eared-owl",
+          "name": "Long-eared Owl",
+          "animalDexNumber": 351
+        },
+        {
+          "slug": "great-gray-owl",
+          "name": "Great Gray Owl",
+          "animalDexNumber": 378
+        },
+        {
+          "slug": "spectacled-owl",
+          "name": "Spectacled Owl",
+          "animalDexNumber": 498
+        },
+        {
+          "slug": "burrowing-owl",
+          "name": "Burrowing Owl",
+          "animalDexNumber": 558
+        },
+        {
+          "slug": "snowy-owl",
+          "name": "Snowy Owl",
+          "animalDexNumber": 590
+        },
+        {
+          "slug": "masked-owl",
+          "name": "Masked Owl",
+          "animalDexNumber": 628
+        },
+        {
+          "slug": "buffy-fish-owl",
+          "name": "Buffy Fish Owl",
+          "animalDexNumber": 1012
+        },
+        {
+          "slug": "barred-eagle-owl",
+          "name": "Barred Eagle-Owl",
+          "animalDexNumber": 1047
+        },
+        {
+          "slug": "elf-owl",
+          "name": "Elf Owl",
+          "animalDexNumber": 1398
+        },
+        {
+          "slug": "blakistons-fish-owl",
+          "name": "Blakiston's Fish Owl",
+          "animalDexNumber": 1399
+        },
+        {
+          "slug": "eastern-screech-owl",
+          "name": "Eastern Screech Owl",
+          "animalDexNumber": 1881
+        },
+        {
+          "slug": "little-owl",
+          "name": "Little Owl",
+          "animalDexNumber": 1933
+        },
+        {
+          "slug": "brown-wood-owl",
+          "name": "Brown Wood Owl",
+          "animalDexNumber": 2234
+        },
+        {
+          "slug": "sunda-scops-owl",
+          "name": "Sunda Scops Owl",
+          "animalDexNumber": 2294
+        }
+      ]
+    },
+    "owl-butterfly": {
+      "speciesProfileId": "04086dd8-abbd-41ea-8e33-e11ae887e329",
+      "source": "own"
+    },
+    "paca": {
+      "speciesProfileId": "5d9db45e-5b6b-4981-b01f-54a80b7242bf",
+      "source": "own"
+    },
+    "pacarana": {
+      "speciesProfileId": "a0b3db3e-d8b8-4b70-85ba-124ea0bf9c00",
+      "source": "own"
+    },
+    "painted-bunting": {
+      "speciesProfileId": "b21f1f1f-878c-4394-9ee4-7f96ae5329b0",
+      "source": "own"
+    },
+    "painted-stork": {
+      "speciesProfileId": "e559642b-c8c1-4150-9d8a-a3d58b1a9dc1",
+      "source": "own"
+    },
+    "palm-cockatoo": {
+      "speciesProfileId": "9a78b9f8-c1a6-4970-a075-84e158e58db0",
+      "source": "own"
+    },
+    "palm-warbler": {
+      "speciesProfileId": "02136ce0-4a1f-4ddb-aed1-6d8ec106b5e6",
+      "source": "own"
+    },
+    "panamanian-golden-frog": {
+      "speciesProfileId": "d7f7d882-30f1-45cf-a578-3c3952a86ec3",
+      "source": "own"
+    },
+    "pancake-tortoise": {
+      "speciesProfileId": "f3f19e82-4288-4b62-b8d7-b9b517a41510",
+      "source": "own"
+    },
+    "panther-chameleon": {
+      "speciesProfileId": "3bb77594-9e2b-4902-967f-3643fa591336",
+      "source": "own"
+    },
+    "paradise-flying-snake": {
+      "speciesProfileId": "1882a32d-d9de-4644-bbde-090b2afc8b23",
+      "source": "own"
+    },
+    "paradoxical-frog": {
+      "speciesProfileId": "07ee7043-4381-4918-a64f-a8b9d623cb9f",
+      "source": "own"
+    },
+    "parma-wallaby": {
+      "speciesProfileId": "8c1b4081-657c-4201-8083-f0428c13f9fb",
+      "source": "own"
+    },
+    "patagonian-hog-nosed-skunk": {
+      "speciesProfileId": "b6c347b4-455a-4308-b79f-9d660385c807",
+      "source": "own"
+    },
+    "patagonian-mara": {
+      "speciesProfileId": "5a80b59c-103b-41fa-a11a-541c5741d737",
+      "source": "own"
+    },
+    "patas-monkey": {
+      "speciesProfileId": "d81ce1df-7935-48d6-9b26-5ac4b703c96e",
+      "source": "own"
+    },
+    "peacock-spider": {
+      "speciesProfileId": "d476e6fe-84f1-41bd-b965-403bc73d6ae3",
+      "source": "own"
+    },
+    "penguin": {
+      "members": [
+        {
+          "slug": "macaroni-penguin",
+          "name": "Macaroni Penguin",
+          "animalDexNumber": 270
+        },
+        {
+          "slug": "king-penguin",
+          "name": "King Penguin",
+          "animalDexNumber": 339
+        },
+        {
+          "slug": "gentoo-penguin",
+          "name": "Gentoo Penguin",
+          "animalDexNumber": 358
+        },
+        {
+          "slug": "adelie-penguin",
+          "name": "Adelie Penguin",
+          "animalDexNumber": 554
+        },
+        {
+          "slug": "southern-rockhopper-penguin",
+          "name": "Southern Rockhopper Penguin",
+          "animalDexNumber": 827
+        },
+        {
+          "slug": "emperor-penguin",
+          "name": "Emperor Penguin",
+          "animalDexNumber": 884
+        },
+        {
+          "slug": "humboldt-penguin",
+          "name": "Humboldt Penguin",
+          "animalDexNumber": 1095
+        },
+        {
+          "slug": "african-penguin",
+          "name": "African Penguin",
+          "animalDexNumber": 1246
+        },
+        {
+          "slug": "galapagos-penguin",
+          "name": "Galapagos Penguin",
+          "animalDexNumber": 1681
+        },
+        {
+          "slug": "magellanic-penguin",
+          "name": "Magellanic Penguin",
+          "animalDexNumber": 1835
+        }
+      ]
+    },
+    "peregrine-falcon": {
+      "speciesProfileId": "d1ee13c5-c5a4-462c-8535-0a97831517aa",
+      "source": "own"
+    },
+    "perentie": {
+      "speciesProfileId": "faeae090-40fd-45ea-904b-5b8ff52c9699",
+      "source": "own"
+    },
+    "philippine-crocodile": {
+      "speciesProfileId": "eea5409e-a36e-4685-846a-4c112de0a4e7",
+      "source": "own"
+    },
+    "philippine-eagle": {
+      "speciesProfileId": "c24fad6c-9313-4d29-8d7a-ce0f68c0b106",
+      "source": "own"
+    },
+    "philippine-sailfin-lizard": {
+      "speciesProfileId": "d281f2ba-ac4a-4f33-9e87-32d7eb060e6e",
+      "source": "own"
+    },
+    "pied-avocet": {
+      "speciesProfileId": "c76c900c-b6a3-4fd7-9970-89591dd39ccb",
+      "source": "own"
+    },
+    "pied-kingfisher": {
+      "speciesProfileId": "6875e4d6-1986-45d9-8724-cd8b86b8c625",
+      "source": "own"
+    },
+    "pig": {
+      "speciesProfileId": "31df92dc-8e74-4ac4-b7ec-0afbf47c467d",
+      "source": "own"
+    },
+    "pig-nosed-turtle": {
+      "speciesProfileId": "b379d2eb-0161-49b8-a4db-175ddc01cbdd",
+      "source": "own"
+    },
+    "pigeon": {
+      "members": [
+        {
+          "slug": "crested-pigeon",
+          "name": "Crested Pigeon",
+          "animalDexNumber": 77
+        },
+        {
+          "slug": "nicobar-pigeon",
+          "name": "Nicobar Pigeon",
+          "animalDexNumber": 662
+        },
+        {
+          "slug": "western-crowned-pigeon",
+          "name": "Western Crowned Pigeon",
+          "animalDexNumber": 729
+        },
+        {
+          "slug": "victoria-crowned-pigeon",
+          "name": "Victoria Crowned Pigeon",
+          "animalDexNumber": 907
+        },
+        {
+          "slug": "pink-pigeon",
+          "name": "Pink Pigeon",
+          "animalDexNumber": 934
+        },
+        {
+          "slug": "tooth-billed-pigeon",
+          "name": "Tooth-billed Pigeon",
+          "animalDexNumber": 984
+        },
+        {
+          "slug": "rock-pigeon",
+          "name": "Domestic Pigeon",
+          "animalDexNumber": 1167
+        },
+        {
+          "slug": "pink-necked-green-pigeon",
+          "name": "Pink-necked Green Pigeon",
+          "animalDexNumber": 2169
+        },
+        {
+          "slug": "common-wood-pigeon",
+          "name": "Common Wood Pigeon",
+          "animalDexNumber": 2337
+        }
+      ]
+    },
+    "pika": {
+      "speciesProfileId": "6fcbdefe-2b82-424a-9180-9cb4d2f84548",
+      "source": "own"
+    },
+    "pileated-woodpecker": {
+      "speciesProfileId": "56aee282-0caf-4b59-96ea-63edbe59e64f",
+      "source": "own"
+    },
+    "pine-marten": {
+      "speciesProfileId": "ea633b40-1a24-47b5-92b1-874e188c9adf",
+      "source": "own"
+    },
+    "pinecone-fish": {
+      "speciesProfileId": "d39d8f87-d00d-4ac2-8b1f-e7aad8c1383a",
+      "source": "own"
+    },
+    "pink-pigeon": {
+      "speciesProfileId": "803b989e-7b95-42ee-93bb-a42e9da59830",
+      "source": "own"
+    },
+    "piping-plover": {
+      "speciesProfileId": "4e900624-cb09-4588-8dcd-2b4daeed54f7",
+      "source": "own"
+    },
+    "plains-vizcacha": {
+      "speciesProfileId": "076ea250-b429-4e5c-bca1-9b1222af2c2e",
+      "source": "own"
+    },
+    "plains-zebra": {
+      "speciesProfileId": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+      "source": "own"
+    },
+    "platypus": {
+      "speciesProfileId": "58eddabe-6de4-4256-ba34-c9866b4feea3",
+      "source": "own"
+    },
+    "ploughshare-tortoise": {
+      "speciesProfileId": "a20aacbb-d96e-449e-9639-a8c9e64f6cb1",
+      "source": "own"
+    },
+    "poison-dart-frog": {
+      "members": [
+        {
+          "slug": "strawberry-poison-dart-frog",
+          "name": "Strawberry Poison Dart Frog",
+          "animalDexNumber": 526
+        }
+      ]
+    },
+    "polar-bear": {
+      "speciesProfileId": "832e1e7e-8059-4d6b-8d05-4b9101eb9ce5",
+      "source": "own"
+    },
+    "polyphemus-moth": {
+      "speciesProfileId": "d225b128-0de6-41f2-b1ea-2e23f7740b64",
+      "source": "own"
+    },
+    "pool-frog": {
+      "speciesProfileId": "42f152a9-7696-49cf-a9a6-92db6e138ac5",
+      "source": "own"
+    },
+    "porcupinefish": {
+      "speciesProfileId": "e2737ba8-948f-44c5-9dc5-0511c109b72a",
+      "source": "own"
+    },
+    "portuguese-man-o-war": {
+      "speciesProfileId": "b90ca8bb-4327-4a4f-8bda-b353517cb33d",
+      "source": "own"
+    },
+    "potto": {
+      "speciesProfileId": "8b0d6699-487d-4a8f-891c-9f08a65bfa3d",
+      "source": "own"
+    },
+    "prairie-dog": {
+      "speciesProfileId": "edf50852-5858-4be3-afa3-d0ab0fa62296",
+      "source": "own"
+    },
+    "praying-mantis": {
+      "speciesProfileId": "dfaac2ce-f56e-40e0-b908-b3198c8eaec6",
+      "source": "own"
+    },
+    "proboscis-monkey": {
+      "speciesProfileId": "4848471d-2654-4627-b583-51776b70edd6",
+      "source": "own"
+    },
+    "pronghorn": {
+      "speciesProfileId": "7dc0d3cd-096a-4396-b6bc-9f782f3e9052",
+      "source": "own"
+    },
+    "pufferfish": {
+      "speciesProfileId": "5e0e864f-68a9-4be8-ac96-cc2dd17c0d6e",
+      "source": "own"
+    },
+    "puku": {
+      "speciesProfileId": "c18ae943-8b6b-44fa-85c5-fc29731d72cf",
+      "source": "own"
+    },
+    "purple-frog": {
+      "speciesProfileId": "e9ca3ceb-745f-4994-86d7-6ab282c7b565",
+      "source": "own"
+    },
+    "purple-gallinule": {
+      "speciesProfileId": "c772c57d-8ba4-4105-a9a0-3ddcf87eeb07",
+      "source": "own"
+    },
+    "pygmy-hippopotamus": {
+      "speciesProfileId": "e97d4aad-be90-4d0f-a2b9-a3efa3fa4f8d",
+      "source": "own"
+    },
+    "pygmy-marmoset": {
+      "speciesProfileId": "932cb91b-9a39-4d4b-be98-9e75c4ddcd04",
+      "source": "own"
+    },
+    "pygmy-seahorse": {
+      "speciesProfileId": "5b2289c1-a047-46c3-b888-2c9141294248",
+      "source": "own"
+    },
+    "pygmy-slow-loris": {
+      "speciesProfileId": "92c5e9a3-5299-4757-a111-c56fc3447c52",
+      "source": "own"
+    },
+    "pyrenean-brook-newt": {
+      "speciesProfileId": "f0d857dd-5c15-40fe-be55-43e4ef4beacc",
+      "source": "own"
+    },
+    "quenda": {
+      "speciesProfileId": "7c20fff8-09bd-42ad-bbc2-6f70958f0840",
+      "source": "own"
+    },
+    "quokka": {
+      "speciesProfileId": "8e0e589a-ba10-43f8-8bb2-1207c802cbec",
+      "source": "own"
+    },
+    "raccoon-dog": {
+      "speciesProfileId": "e348284b-509e-4a15-82ed-d184ab2e7808",
+      "source": "own"
+    },
+    "radiated-tortoise": {
+      "speciesProfileId": "bc65efaa-4131-49ff-84e3-16be75bd71a1",
+      "source": "own"
+    },
+    "rainbow-bee-eater": {
+      "speciesProfileId": "31209a35-b390-410f-ae45-3c598f5c17cc",
+      "source": "own"
+    },
+    "rainbow-runner": {
+      "speciesProfileId": "0f04ac23-0de9-4bdb-a80c-2d975a5ffef6",
+      "source": "own"
+    },
+    "raven": {
+      "members": [
+        {
+          "slug": "common-raven",
+          "name": "Common Raven",
+          "animalDexNumber": 12
+        },
+        {
+          "slug": "chihuahuan-raven",
+          "name": "Chihuahuan Raven",
+          "animalDexNumber": 1870
+        }
+      ]
+    },
+    "razorbill": {
+      "speciesProfileId": "2cf6225e-b28f-4c84-b070-3d924bda17d5",
+      "source": "own"
+    },
+    "red-backed-poison-frog": {
+      "speciesProfileId": "afa822ae-b90e-4781-9ba9-94bbdbc02d3b",
+      "source": "own"
+    },
+    "red-bellied-piranha": {
+      "speciesProfileId": "2c519194-962c-40f5-8b33-64e2198c816f",
+      "source": "own"
+    },
+    "red-billed-tropicbird": {
+      "speciesProfileId": "9b44d47d-7734-4377-b8d8-de662b027296",
+      "source": "own"
+    },
+    "red-capped-manakin": {
+      "speciesProfileId": "0721d33a-e705-4cda-814d-d79c8a102514",
+      "source": "own"
+    },
+    "red-crested-pochard": {
+      "speciesProfileId": "29c01228-41ff-474b-83d4-367077ffcca3",
+      "source": "own"
+    },
+    "red-crowned-crane": {
+      "speciesProfileId": "4641397e-9e18-486e-a087-d36c4e2b6555",
+      "source": "own"
+    },
+    "red-deer": {
+      "speciesProfileId": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
+      "source": "own"
+    },
+    "red-eyed-crocodile-skink": {
+      "speciesProfileId": "d52cb629-262d-46d8-b26a-7e5e8ef99cc5",
+      "source": "own"
+    },
+    "red-eyed-tree-frog": {
+      "speciesProfileId": "5e607d69-e8cc-4785-ab6e-ca8d616a18c0",
+      "source": "canonical"
+    },
+    "red-footed-tortoise": {
+      "speciesProfileId": "ca6d12ad-69ce-4c4d-815c-3176f6460ea5",
+      "source": "own"
+    },
+    "red-fox": {
+      "speciesProfileId": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+      "source": "own"
+    },
+    "red-hartebeest": {
+      "speciesProfileId": "a0591498-ea1b-4f13-b50e-638074efd4d5",
+      "source": "own"
+    },
+    "red-kangaroo": {
+      "speciesProfileId": "dd9f86ef-08e2-4393-a4ee-509e026d2437",
+      "source": "own"
+    },
+    "red-kite": {
+      "speciesProfileId": "0bc5e2dd-d2cb-4341-ac84-0e759faed436",
+      "source": "own"
+    },
+    "red-kneed-tarantula": {
+      "speciesProfileId": "b41fa5b6-bd4a-4e68-91af-41e7177fa557",
+      "source": "own"
+    },
+    "red-knobbed-coot": {
+      "speciesProfileId": "c4ed4d6b-25bf-40cb-8bdc-adbb4cc3a9b9",
+      "source": "own"
+    },
+    "red-legged-honeycreeper": {
+      "speciesProfileId": "87c78177-f017-463c-8261-314bfe6e09d4",
+      "source": "own"
+    },
+    "red-legged-seriema": {
+      "speciesProfileId": "f18a8729-6034-443d-9cc4-e5ec0bac78b5",
+      "source": "own"
+    },
+    "red-panda": {
+      "speciesProfileId": "34657509-d276-44a4-a19c-6d81c933a7ee",
+      "source": "own"
+    },
+    "red-river-hog": {
+      "speciesProfileId": "8676fe9d-3726-41df-9884-f82681b0bd7d",
+      "source": "own"
+    },
+    "red-salamander": {
+      "speciesProfileId": "5178e35a-c707-451d-a793-5fa425ac7011",
+      "source": "own"
+    },
+    "red-shanked-douc": {
+      "speciesProfileId": "358fe9c7-6953-47ac-a7f7-b8066e46bb3d",
+      "source": "own"
+    },
+    "red-sided-garter-snake": {
+      "speciesProfileId": "e9c2ada5-872f-47ac-a01f-3757a227e65c",
+      "source": "own"
+    },
+    "red-squirrel": {
+      "speciesProfileId": "0dc31b55-7102-4391-9616-0cab092062a5",
+      "source": "own"
+    },
+    "red-tailed-hawk": {
+      "speciesProfileId": "7e2ffcc3-79dc-4677-87be-b2481eec26c2",
+      "source": "own"
+    },
+    "red-wolf": {
+      "speciesProfileId": "7093e03a-669f-452b-a61a-021d619db4d4",
+      "source": "own"
+    },
+    "reeves-muntjac": {
+      "speciesProfileId": "8280ba6f-70b5-4748-aa83-a93655cd7a8b",
+      "source": "own"
+    },
+    "regent-bowerbird": {
+      "speciesProfileId": "d2c7d6f9-e1a0-4b6c-8773-cf03b2836812",
+      "source": "own"
+    },
+    "reindeer": {
+      "speciesProfileId": "3e2f4d77-f261-473d-9bcf-139083b20c5d",
+      "source": "own"
+    },
+    "remora": {
+      "speciesProfileId": "08eb6ca9-f304-4f88-93f7-eec838cee4f3",
+      "source": "own"
+    },
+    "resplendent-quetzal": {
+      "speciesProfileId": "46570c7a-4374-4719-abde-d748e14436f7",
+      "source": "own"
+    },
+    "reticulated-python": {
+      "speciesProfileId": "52b5d5ea-4f03-470d-ad65-55a40fb3b624",
+      "source": "own"
+    },
+    "rhinoceros-beetle": {
+      "members": [
+        {
+          "slug": "european-rhinoceros-beetle",
+          "name": "European Rhinoceros Beetle",
+          "animalDexNumber": 1108
+        },
+        {
+          "slug": "asiatic-rhinoceros-beetle",
+          "name": "Asiatic Rhinoceros Beetle",
+          "animalDexNumber": 1976
+        }
+      ]
+    },
+    "rhinoceros-hornbill": {
+      "speciesProfileId": "a2756177-8d44-4041-a5e9-66f75a25bc8b",
+      "source": "own"
+    },
+    "rhinoceros-iguana": {
+      "speciesProfileId": "02e97d4c-f1ba-4afe-a7ba-a047cfe68e0a",
+      "source": "own"
+    },
+    "rhinoceros-rat-snake": {
+      "speciesProfileId": "040309da-41aa-4738-b7d3-571e78f6fedb",
+      "source": "own"
+    },
+    "rhinoceros-viper": {
+      "speciesProfileId": "453bc9a4-f5f7-497f-accc-8eb307311f84",
+      "source": "own"
+    },
+    "ribbon-eel": {
+      "speciesProfileId": "0d6921fe-368f-4fa1-bfd2-81b4d37134d6",
+      "source": "own"
+    },
+    "ring-tailed-lemur": {
+      "speciesProfileId": "872bf2ba-8b58-4fed-b8e9-0ee32cb406ad",
+      "source": "own"
+    },
+    "ringed-seal": {
+      "speciesProfileId": "f236cc4d-ad80-4b38-a29d-baed321a2d24",
+      "source": "own"
+    },
+    "ringtail": {
+      "speciesProfileId": "9f879bdb-6677-4acf-9652-09f37bea35c3",
+      "source": "own"
+    },
+    "roan-antelope": {
+      "speciesProfileId": "10a2faa7-28f3-4b8c-b12c-8c6e297613ae",
+      "source": "own"
+    },
+    "robber-fly": {
+      "speciesProfileId": "e947a4ef-d2be-48e2-82be-055ba82348b2",
+      "source": "own"
+    },
+    "robin": {
+      "members": [
+        {
+          "slug": "european-robin",
+          "name": "European Robin",
+          "animalDexNumber": 1
+        },
+        {
+          "slug": "oriental-magpie-robin",
+          "name": "Oriental Magpie-Robin",
+          "animalDexNumber": 196
+        },
+        {
+          "slug": "american-robin",
+          "name": "American Robin",
+          "animalDexNumber": 1103
+        },
+        {
+          "slug": "seychelles-magpie-robin",
+          "name": "Seychelles Magpie Robin",
+          "animalDexNumber": 1581
+        }
+      ]
+    },
+    "rock-hyrax": {
+      "speciesProfileId": "1e6b78ac-b52b-406a-b136-aae466a13028",
+      "source": "own"
+    },
+    "rook": {
+      "speciesProfileId": "cf7c5d7b-8d58-4e02-82f8-dde991e7a78a",
+      "source": "own"
+    },
+    "roosterfish": {
+      "speciesProfileId": "72a4b975-e7eb-46e0-b2e7-d8e2ebf5f141",
+      "source": "own"
+    },
+    "roseate-spoonbill": {
+      "speciesProfileId": "7ca66e9b-6280-46f6-9686-7dbc9739492c",
+      "source": "own"
+    },
+    "roseate-tern": {
+      "speciesProfileId": "b1f4cf22-7aa2-45a3-8db0-f00a4a3befae",
+      "source": "own"
+    },
+    "rosy-maple-moth": {
+      "speciesProfileId": "28f1dc16-aeb0-49c4-bf8f-a204438cc51c",
+      "source": "own"
+    },
+    "royal-antelope": {
+      "speciesProfileId": "132c104d-fe4e-4e2f-8de2-8462ad9f0b56",
+      "source": "own"
+    },
+    "ruby-throated-hummingbird": {
+      "speciesProfileId": "1d80086f-d739-4f1a-bbaa-963f037aeb1c",
+      "source": "own"
+    },
+    "ruddy-shelduck": {
+      "speciesProfileId": "9a33d433-8cfb-42e8-aed8-ba8ad62ac2c6",
+      "source": "own"
+    },
+    "ruffed-grouse": {
+      "speciesProfileId": "9e94c5c8-5e25-493e-b434-bba2c134eb01",
+      "source": "own"
+    },
+    "rufous-tailed-jacamar": {
+      "speciesProfileId": "fbe3e14b-9af6-4f19-a9fc-8f497718fa93",
+      "source": "own"
+    },
+    "russian-tortoise": {
+      "speciesProfileId": "7c55f6e4-375a-4852-b2ca-fbb5ba50ee9c",
+      "source": "own"
+    },
+    "rusty-spotted-cat": {
+      "speciesProfileId": "d705f56c-a299-48a2-aa0e-e2b1d5197a55",
+      "source": "own"
+    },
+    "sable-antelope": {
+      "speciesProfileId": "9e047306-d5fb-4b83-b18a-152e66267cda",
+      "source": "own"
+    },
+    "sacred-ibis": {
+      "speciesProfileId": "672796aa-7038-4a0d-9c68-1eb53d35f13b",
+      "source": "own"
+    },
+    "sacred-kingfisher": {
+      "speciesProfileId": "28568cd9-5808-4ff7-99ec-ad08b5ef517a",
+      "source": "own"
+    },
+    "saddle-billed-stork": {
+      "speciesProfileId": "d9f0f83b-5032-4427-ba42-b2fb39705459",
+      "source": "own"
+    },
+    "saiga-antelope": {
+      "speciesProfileId": "94911516-a71b-4400-963f-286a2b48de9b",
+      "source": "own"
+    },
+    "sailfish": {
+      "members": [
+        {
+          "slug": "atlantic-sailfish",
+          "name": "Atlantic Sailfish",
+          "animalDexNumber": 557
+        }
+      ]
+    },
+    "saimaa-ringed-seal": {
+      "speciesProfileId": "a134f7a5-0bf2-4cc8-9f53-b81eff7889f2",
+      "source": "own"
+    },
+    "sand-cat": {
+      "speciesProfileId": "1a74e765-4802-49fe-89d9-2ff22a0c6f37",
+      "source": "own"
+    },
+    "saola": {
+      "speciesProfileId": "aaec5cc0-391d-440d-987d-cb6802d36f2f",
+      "source": "own"
+    },
+    "sarcastic-fringehead": {
+      "speciesProfileId": "16646ac7-e9ca-4be3-a4c9-bf9537811e08",
+      "source": "own"
+    },
+    "sarus-crane": {
+      "speciesProfileId": "4bd9d7b5-45fc-4e04-bca9-b4a4b6505745",
+      "source": "own"
+    },
+    "satanic-leaf-tailed-gecko": {
+      "speciesProfileId": "e6e46b17-5964-4ba0-97fb-558b3e55a315",
+      "source": "own"
+    },
+    "satin-bowerbird": {
+      "speciesProfileId": "2b8fcef5-bd8f-46f8-b5c6-0cc61f0164cf",
+      "source": "own"
+    },
+    "scalloped-hammerhead": {
+      "speciesProfileId": "6efe574c-77a5-4b9f-9c19-ce25a360d673",
+      "source": "own"
+    },
+    "scarlet-ibis": {
+      "speciesProfileId": "293367cd-b064-44cf-9319-6576ea715d51",
+      "source": "own"
+    },
+    "scarlet-macaw": {
+      "speciesProfileId": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+      "source": "own"
+    },
+    "scarlet-rumped-cacique": {
+      "speciesProfileId": "1d1b99a7-fb6e-43b2-b674-e5b4065a98b3",
+      "source": "own"
+    },
+    "sea-krait": {
+      "speciesProfileId": "ddbc5e18-9d6c-4fe4-838c-2b655e812ece",
+      "source": "own"
+    },
+    "sea-otter": {
+      "speciesProfileId": "ceeb0fe4-fb5b-4136-912b-0b46a699d281",
+      "source": "own"
+    },
+    "sea-turtle": {
+      "members": [
+        {
+          "slug": "olive-ridley-sea-turtle",
+          "name": "Olive Ridley Sea Turtle",
+          "animalDexNumber": 199
+        },
+        {
+          "slug": "loggerhead-sea-turtle",
+          "name": "Loggerhead Sea Turtle",
+          "animalDexNumber": 641
+        },
+        {
+          "slug": "green-sea-turtle",
+          "name": "Green Sea Turtle",
+          "animalDexNumber": 775
+        },
+        {
+          "slug": "hawksbill-sea-turtle",
+          "name": "Hawksbill Sea Turtle",
+          "animalDexNumber": 824
+        },
+        {
+          "slug": "leatherback-sea-turtle",
+          "name": "Leatherback Sea Turtle",
+          "animalDexNumber": 833
+        },
+        {
+          "slug": "kemps-ridley-sea-turtle",
+          "name": "Kemp's Ridley Sea Turtle",
+          "animalDexNumber": 1828
+        }
+      ]
+    },
+    "seahorse": {
+      "members": [
+        {
+          "slug": "pygmy-seahorse",
+          "name": "Pygmy Seahorse",
+          "animalDexNumber": 696
+        },
+        {
+          "slug": "yellow-seahorse",
+          "name": "Common Seahorse",
+          "animalDexNumber": 1101
+        },
+        {
+          "slug": "pot-bellied-seahorse",
+          "name": "Pot-bellied Seahorse",
+          "animalDexNumber": 2056
+        }
+      ]
+    },
+    "seal": {
+      "members": [
+        {
+          "slug": "grey-seal",
+          "name": "Grey Seal",
+          "animalDexNumber": 85
+        },
+        {
+          "slug": "harbor-seal",
+          "name": "Harbor Seal",
+          "animalDexNumber": 112
+        },
+        {
+          "slug": "bearded-seal",
+          "name": "Bearded Seal",
+          "animalDexNumber": 527
+        },
+        {
+          "slug": "ringed-seal",
+          "name": "Ringed Seal",
+          "animalDexNumber": 572
+        },
+        {
+          "slug": "saimaa-ringed-seal",
+          "name": "Saimaa Ringed Seal",
+          "animalDexNumber": 954
+        },
+        {
+          "slug": "weddell-seal",
+          "name": "Weddell Seal",
+          "animalDexNumber": 1207
+        },
+        {
+          "slug": "southern-elephant-seal",
+          "name": "Southern Elephant Seal",
+          "animalDexNumber": 1208
+        },
+        {
+          "slug": "leopard-seal",
+          "name": "Leopard Seal",
+          "animalDexNumber": 1209
+        },
+        {
+          "slug": "northern-elephant-seal",
+          "name": "Northern Elephant Seal",
+          "animalDexNumber": 1254
+        },
+        {
+          "slug": "hooded-seal",
+          "name": "Hooded Seal",
+          "animalDexNumber": 1633
+        },
+        {
+          "slug": "new-zealand-fur-seal",
+          "name": "New Zealand Fur Seal",
+          "animalDexNumber": 1895
+        }
+      ]
+    },
+    "secretary-bird": {
+      "speciesProfileId": "6c2d9e68-e991-4d77-8933-3b0379e4f9de",
+      "source": "own"
+    },
+    "sedge-wren": {
+      "speciesProfileId": "4c13099f-eac9-4392-b088-a22f10106902",
+      "source": "own"
+    },
+    "senegal-bichir": {
+      "speciesProfileId": "95b5fad0-aa56-4a6d-89e3-21a9a70347fd",
+      "source": "own"
+    },
+    "senegal-bushbaby": {
+      "speciesProfileId": "81e23bdd-80ea-49b7-b9d5-fe5f79f1213e",
+      "source": "own"
+    },
+    "serval": {
+      "speciesProfileId": "656dc11e-271e-41d9-ac6a-ae6fbfa69fe2",
+      "source": "own"
+    },
+    "shark": {
+      "members": [
+        {
+          "slug": "epaulette-shark",
+          "name": "Epaulette Shark",
+          "animalDexNumber": 157
+        },
+        {
+          "slug": "nurse-shark",
+          "name": "Nurse Shark",
+          "animalDexNumber": 239
+        },
+        {
+          "slug": "tiger-shark",
+          "name": "Tiger Shark",
+          "animalDexNumber": 338
+        },
+        {
+          "slug": "bull-shark",
+          "name": "Bull Shark",
+          "animalDexNumber": 342
+        },
+        {
+          "slug": "whale-shark",
+          "name": "Whale Shark",
+          "animalDexNumber": 661
+        },
+        {
+          "slug": "great-white-shark",
+          "name": "Great White Shark",
+          "animalDexNumber": 665
+        },
+        {
+          "slug": "thresher-shark",
+          "name": "Thresher Shark",
+          "animalDexNumber": 707
+        },
+        {
+          "slug": "basking-shark",
+          "name": "Basking Shark",
+          "animalDexNumber": 726
+        },
+        {
+          "slug": "zebra-shark",
+          "name": "Zebra Shark",
+          "animalDexNumber": 734
+        },
+        {
+          "slug": "goblin-shark",
+          "name": "Goblin Shark",
+          "animalDexNumber": 829
+        },
+        {
+          "slug": "oceanic-whitetip-shark",
+          "name": "Oceanic Whitetip Shark",
+          "animalDexNumber": 876
+        },
+        {
+          "slug": "blacktip-reef-shark",
+          "name": "Blacktip Reef Shark",
+          "animalDexNumber": 1048
+        },
+        {
+          "slug": "greenland-shark",
+          "name": "Greenland Shark",
+          "animalDexNumber": 1187
+        },
+        {
+          "slug": "frilled-shark",
+          "name": "Frilled Shark",
+          "animalDexNumber": 1452
+        },
+        {
+          "slug": "salmon-shark",
+          "name": "Salmon Shark",
+          "animalDexNumber": 1607
+        },
+        {
+          "slug": "brownbanded-bamboo-shark",
+          "name": "Brownbanded Bamboo Shark",
+          "animalDexNumber": 1963
+        },
+        {
+          "slug": "leopard-shark",
+          "name": "Leopard Shark",
+          "animalDexNumber": 1987
+        }
+      ]
+    },
+    "shingleback-skink": {
+      "speciesProfileId": "2a9a8dff-8986-4be5-b3ea-54c5a45b7bdf",
+      "source": "own"
+    },
+    "shoebill": {
+      "speciesProfileId": "e030342e-79a3-4de9-80fe-2389514eefa5",
+      "source": "own"
+    },
+    "short-billed-dowitcher": {
+      "speciesProfileId": "d07bb308-0f93-4c70-bd3c-53a9c720282e",
+      "source": "own"
+    },
+    "short-eared-owl": {
+      "speciesProfileId": "2a192589-10bf-4fc5-8162-3dfb5820a866",
+      "source": "own"
+    },
+    "shortfin-mako": {
+      "speciesProfileId": "9e9cbc95-67b8-4455-b3b3-177697eb81d2",
+      "source": "own"
+    },
+    "siamang": {
+      "speciesProfileId": "c513ebce-0421-4b92-8d29-a85ecc8e161d",
+      "source": "own"
+    },
+    "siamese-crocodile": {
+      "speciesProfileId": "78a04935-7ccf-4910-9819-3e1fbbe367c3",
+      "source": "own"
+    },
+    "siberian-crane": {
+      "speciesProfileId": "ea07d488-4d0f-46ea-91a2-c16036d27392",
+      "source": "own"
+    },
+    "sidewinder": {
+      "speciesProfileId": "df7bdfa6-dfe2-4159-852d-8be9267e0b1b",
+      "source": "own"
+    },
+    "sika-deer": {
+      "speciesProfileId": "6156ebe8-fa99-49b2-bf89-5e13fed4db5c",
+      "source": "own"
+    },
+    "silky-anteater": {
+      "speciesProfileId": "52125b1f-f947-433e-90ce-b135593d75a1",
+      "source": "own"
+    },
+    "silver-arowana": {
+      "speciesProfileId": "9c65cf08-99b5-49e9-84ee-998fe9375829",
+      "source": "own"
+    },
+    "silvery-lutung": {
+      "speciesProfileId": "032b8bae-afaa-42ac-ac17-0d57abe58a7d",
+      "source": "own"
+    },
+    "sitatunga": {
+      "speciesProfileId": "a83717ca-02b3-493c-85a1-0e4c798ef052",
+      "source": "own"
+    },
+    "sloth-bear": {
+      "speciesProfileId": "04fd7a1a-bf04-4e2d-9146-0a322403d8a0",
+      "source": "own"
+    },
+    "small-indian-civet": {
+      "speciesProfileId": "77381a7d-dca5-47fb-b7ee-58bfee1369e1",
+      "source": "own"
+    },
+    "smalltooth-sawfish": {
+      "speciesProfileId": "cf5944db-a2a8-486a-9637-ec8484bd4756",
+      "source": "own"
+    },
+    "smew": {
+      "speciesProfileId": "22c1ae5b-d3c4-4b53-bdcf-f16f738958e8",
+      "source": "own"
+    },
+    "smooth-newt": {
+      "speciesProfileId": "2e18970e-4bdc-41da-ab53-fa980048f029",
+      "source": "own"
+    },
+    "snake": {
+      "members": [
+        {
+          "slug": "corn-snake",
+          "name": "Corn Snake",
+          "animalDexNumber": 34
+        },
+        {
+          "slug": "western-hognose-snake",
+          "name": "Western Hognose Snake",
+          "animalDexNumber": 136
+        },
+        {
+          "slug": "red-sided-garter-snake",
+          "name": "Red-sided Garter Snake",
+          "animalDexNumber": 200
+        },
+        {
+          "slug": "sunbeam-snake",
+          "name": "Sunbeam Snake",
+          "animalDexNumber": 445
+        },
+        {
+          "slug": "paradise-flying-snake",
+          "name": "Paradise Flying Snake",
+          "animalDexNumber": 496
+        },
+        {
+          "slug": "mangrove-snake",
+          "name": "Mangrove Snake",
+          "animalDexNumber": 580
+        },
+        {
+          "slug": "tentacled-snake",
+          "name": "Tentacled Snake",
+          "animalDexNumber": 583
+        },
+        {
+          "slug": "rhinoceros-rat-snake",
+          "name": "Rhinoceros Rat Snake",
+          "animalDexNumber": 718
+        },
+        {
+          "slug": "madagascar-hognose-snake",
+          "name": "Madagascar Hognose Snake",
+          "animalDexNumber": 728
+        },
+        {
+          "slug": "eastern-indigo-snake",
+          "name": "Eastern Indigo Snake",
+          "animalDexNumber": 797
+        },
+        {
+          "slug": "milk-snake",
+          "name": "Milk Snake",
+          "animalDexNumber": 1070
+        },
+        {
+          "slug": "eastern-rat-snake",
+          "name": "Eastern Rat Snake",
+          "animalDexNumber": 1125
+        },
+        {
+          "slug": "korean-rat-snake",
+          "name": "Korean Rat Snake",
+          "animalDexNumber": 1892
+        },
+        {
+          "slug": "common-wolf-snake",
+          "name": "Common Wolf Snake",
+          "animalDexNumber": 2085
+        },
+        {
+          "slug": "asian-vine-snake",
+          "name": "Asian Vine Snake",
+          "animalDexNumber": 2203
+        },
+        {
+          "slug": "common-rat-snake",
+          "name": "Common Rat Snake",
+          "animalDexNumber": 2339
+        },
+        {
+          "slug": "common-madagascar-cat-snake",
+          "name": "Common Madagascar Cat Snake",
+          "animalDexNumber": 2386
+        },
+        {
+          "slug": "dice-snake",
+          "name": "Dice Snake",
+          "animalDexNumber": 2388
+        },
+        {
+          "slug": "ladder-snake",
+          "name": "Ladder Snake",
+          "animalDexNumber": 2396
+        }
+      ]
+    },
+    "snow-goose": {
+      "speciesProfileId": "4289e022-0e4a-49b6-8ca8-9035b93c6006",
+      "source": "own"
+    },
+    "snow-leopard": {
+      "speciesProfileId": "a3443f40-ec07-428d-a235-3501905e42ac",
+      "source": "own"
+    },
+    "snowy-egret": {
+      "speciesProfileId": "91a9711a-078b-4048-ac9a-28a21fee339f",
+      "source": "own"
+    },
+    "snowy-owl": {
+      "speciesProfileId": "21e20ddd-60f6-4a84-8fe1-82579a54aeb8",
+      "source": "own"
+    },
+    "snowy-sheathbill": {
+      "speciesProfileId": "e84bf81c-8472-4500-a6b5-cf3bf38253f5",
+      "source": "own"
+    },
+    "sooty-shearwater": {
+      "speciesProfileId": "775ac069-d15b-4f19-8a90-ccdf3ad7a29f",
+      "source": "own"
+    },
+    "southern-alligator-lizard": {
+      "speciesProfileId": "0dae86a3-0fef-459a-ac30-c0725936126b",
+      "source": "own"
+    },
+    "southern-cassowary": {
+      "speciesProfileId": "c9a44c8e-8425-4c51-9238-a04b94266773",
+      "source": "own"
+    },
+    "southern-ground-hornbill": {
+      "speciesProfileId": "b793cc1f-acdb-4e21-b7c3-84c292b62295",
+      "source": "own"
+    },
+    "southern-hairy-nosed-wombat": {
+      "speciesProfileId": "2364b6bc-fcd0-432f-a537-1144880204e0",
+      "source": "own"
+    },
+    "southern-pudu": {
+      "speciesProfileId": "6be3c6cd-a6bf-41c9-931b-a7eb90a0abaf",
+      "source": "own"
+    },
+    "southern-rockhopper-penguin": {
+      "speciesProfileId": "6737da3f-82ea-427c-9f35-9bd1f30fe20f",
+      "source": "own"
+    },
+    "southern-screamer": {
+      "speciesProfileId": "43d17344-e0fc-4783-a7bf-a62b7acbdaf0",
+      "source": "own"
+    },
+    "southern-tamandua": {
+      "speciesProfileId": "c368b870-b16e-4866-8ced-46d92a92df05",
+      "source": "own"
+    },
+    "spadefoot-toad": {
+      "speciesProfileId": "770717bd-df2c-43af-bdab-0034252429aa",
+      "source": "own"
+    },
+    "spanish-dancer": {
+      "speciesProfileId": "82dd1d89-b561-4cbc-841b-a40f6cfc1d34",
+      "source": "own"
+    },
+    "spanish-ribbed-newt": {
+      "speciesProfileId": "4063df3f-9208-4c75-b56d-c68984247db2",
+      "source": "own"
+    },
+    "spectacled-owl": {
+      "speciesProfileId": "5a6c5e57-9e96-484a-9a52-f44ad30dfccc",
+      "source": "own"
+    },
+    "spectral-tarsier": {
+      "speciesProfileId": "7fb7d387-60de-40a6-a583-f6deef46ecc5",
+      "source": "own"
+    },
+    "sperm-whale": {
+      "speciesProfileId": "4b13e976-6aea-4920-9425-7e8e5a12a262",
+      "source": "own"
+    },
+    "spiny-devil-katydid": {
+      "speciesProfileId": "0847a9c2-ffef-4701-8e5b-7270db8811cf",
+      "source": "own"
+    },
+    "spiny-tailed-lizard": {
+      "members": [
+        {
+          "slug": "sahara-spiny-tailed-lizard",
+          "name": "Sahara Spiny-tailed Lizard",
+          "animalDexNumber": 1969
+        },
+        {
+          "slug": "ornate-spiny-tailed-lizard",
+          "name": "Ornate Spiny-tailed Lizard",
+          "animalDexNumber": 2054
+        }
+      ]
+    },
+    "splendid-fairywren": {
+      "speciesProfileId": "81fef65d-fb9b-4fc8-8880-e7d4f01104fe",
+      "source": "own"
+    },
+    "spoon-billed-sandpiper": {
+      "speciesProfileId": "d7aede2c-62df-4986-b893-80f8970d463f",
+      "source": "own"
+    },
+    "spotted-cuscus": {
+      "speciesProfileId": "77224cee-14c5-46bb-9296-586c6665e4d3",
+      "source": "own"
+    },
+    "spotted-hyena": {
+      "speciesProfileId": "8baa3fba-b3dd-4328-b3f6-e2c2d9ebdab0",
+      "source": "own"
+    },
+    "spotted-salamander": {
+      "speciesProfileId": "1e05a3f2-bc26-47ae-a404-b9ec8e0b8f04",
+      "source": "own"
+    },
+    "spotted-tailed-quoll": {
+      "speciesProfileId": "eaceeaeb-0ab4-4303-83f7-0abffee7bfbc",
+      "source": "own"
+    },
+    "spotted-turtle": {
+      "speciesProfileId": "206d7d3c-815f-4f30-8ccb-017d75baf9ff",
+      "source": "own"
+    },
+    "springbok": {
+      "speciesProfileId": "97ea24d6-124b-4ea9-9b4a-61420bb0afd4",
+      "source": "own"
+    },
+    "springhare": {
+      "speciesProfileId": "a7c92036-39a2-4f42-8fc2-fd4552c9a9a0",
+      "source": "own"
+    },
+    "squirrel-monkey": {
+      "speciesProfileId": "acc88b8a-4771-49f3-97ee-5e7923887c6d",
+      "source": "own"
+    },
+    "squirrelfish": {
+      "speciesProfileId": "17b70ca8-d084-4328-8531-04440d0723e2",
+      "source": "own"
+    },
+    "sri-lanka-frogmouth": {
+      "speciesProfileId": "3e5699a1-5ce1-490e-888c-04e6286dca62",
+      "source": "own"
+    },
+    "stag-beetle": {
+      "speciesProfileId": "1f687aaa-5547-4ec1-ad27-ddcf3565ac4c",
+      "source": "own"
+    },
+    "steenbok": {
+      "speciesProfileId": "00bf3df6-7413-4f7f-ae2b-81e66eb9f6a3",
+      "source": "own"
+    },
+    "stellers-sea-eagle": {
+      "speciesProfileId": "0d6c96d3-f44d-443f-aa36-dbae28e697c0",
+      "source": "own"
+    },
+    "stoat": {
+      "speciesProfileId": "2f447b26-e66c-47f2-8496-38648a71ff4f",
+      "source": "own"
+    },
+    "stonefly": {
+      "speciesProfileId": "f35c8753-8474-4d29-adf2-1048b63dfadf",
+      "source": "own"
+    },
+    "strawberry-poison-dart-frog": {
+      "speciesProfileId": "72be1da4-e42f-4f40-aed8-642caf100997",
+      "source": "own"
+    },
+    "striped-hyena": {
+      "speciesProfileId": "1b86c7bb-d8ac-403e-b238-2b6114922621",
+      "source": "own"
+    },
+    "striped-skunk": {
+      "speciesProfileId": "5b181c04-2d59-416d-9eb2-004eccd196f9",
+      "source": "own"
+    },
+    "sulphur-crested-cockatoo": {
+      "speciesProfileId": "325e2b70-5065-4ab1-a9c0-3c73628217bd",
+      "source": "own"
+    },
+    "sumatran-orangutan": {
+      "speciesProfileId": "d90efbaf-f0f3-4e68-919e-5ecad35777b1",
+      "source": "own"
+    },
+    "sumatran-rhinoceros": {
+      "speciesProfileId": "76681aa3-8074-4bf9-8c9e-34aa7eabcb1d",
+      "source": "own"
+    },
+    "sumatran-tiger": {
+      "speciesProfileId": "c66e4916-7b1a-4bee-9933-f88c5d65c920",
+      "source": "own"
+    },
+    "sun-bear": {
+      "speciesProfileId": "0925d486-070a-4f4c-84cb-dc770434dc1b",
+      "source": "own"
+    },
+    "sun-conure": {
+      "speciesProfileId": "b3326a5c-5e61-4fb5-bcdc-52ce823557fc",
+      "source": "own"
+    },
+    "sunbeam-snake": {
+      "speciesProfileId": "fbda1b5c-1e63-477b-805d-039c387b7610",
+      "source": "own"
+    },
+    "sunbittern": {
+      "speciesProfileId": "02f567dc-bc16-4b9d-844e-e8122dafd92c",
+      "source": "own"
+    },
+    "sunda-pangolin": {
+      "speciesProfileId": "05655a91-2b64-457f-adb6-c3a171cede6f",
+      "source": "own"
+    },
+    "suni": {
+      "speciesProfileId": "d6897e23-648e-4ef1-b952-5f40b1366337",
+      "source": "own"
+    },
+    "sunset-moth": {
+      "speciesProfileId": "61aaba69-c65d-44c5-ba1c-ecb207a78736",
+      "source": "own"
+    },
+    "superb-bird-of-paradise": {
+      "speciesProfileId": "f80f8c7b-5bf4-4711-934e-3b4a0de1d089",
+      "source": "own"
+    },
+    "superb-lyrebird": {
+      "speciesProfileId": "0c3832c6-3b5d-4439-8a02-003d1344096d",
+      "source": "own"
+    },
+    "surinam-horned-frog": {
+      "speciesProfileId": "9d9329cb-529e-4d7c-81e3-4ec120d89c38",
+      "source": "own"
+    },
+    "surinam-toad": {
+      "speciesProfileId": "5918c3c7-9d5e-4311-82d0-55cb4e8d7946",
+      "source": "own"
+    },
+    "swallow-tailed-kite": {
+      "speciesProfileId": "6b06e6c4-eafb-40d0-a080-65cc512deedd",
+      "source": "own"
+    },
+    "swamp-harrier": {
+      "speciesProfileId": "bc909db4-cf37-46fd-8b96-ce839c0c74d7",
+      "source": "own"
+    },
+    "sword-billed-hummingbird": {
+      "speciesProfileId": "076f0266-83fe-4af3-827e-ce6f158a6be2",
+      "source": "own"
+    },
+    "tailless-whip-scorpion": {
+      "speciesProfileId": "4c076ec4-2396-4276-9053-39d8aba42c7b",
+      "source": "own"
+    },
+    "tailless-whip-spider": {
+      "speciesProfileId": "879ade8d-d5a1-4a49-9ddd-39828ea95e5c",
+      "source": "own"
+    },
+    "takahe": {
+      "speciesProfileId": "6b51edbe-f466-442e-a706-6f8f8d58b0e0",
+      "source": "own"
+    },
+    "takhi": {
+      "speciesProfileId": "cc9d855f-82e6-4c15-aa65-5887eda6a544",
+      "source": "own"
+    },
+    "takin": {
+      "speciesProfileId": "2dc2cfc6-1daf-449e-b920-2999989a7b4e",
+      "source": "own"
+    },
+    "tapanuli-orangutan": {
+      "speciesProfileId": "c80827d3-a90d-4d4d-ada0-a9dc771fc214",
+      "source": "own"
+    },
+    "tarantula-hawk-wasp": {
+      "speciesProfileId": "3a90599d-922d-4d92-a38a-370f0a90dab2",
+      "source": "own"
+    },
+    "tasmanian-devil": {
+      "speciesProfileId": "fe7ac8a8-390c-45fd-be72-e504d17deb00",
+      "source": "own"
+    },
+    "tasselled-wobbegong": {
+      "speciesProfileId": "20f11372-4c50-40ef-ad4a-07e257570e18",
+      "source": "own"
+    },
+    "tawny-frogmouth": {
+      "speciesProfileId": "284ef298-2893-433b-880d-82056f1a7a66",
+      "source": "own"
+    },
+    "tawny-owl": {
+      "speciesProfileId": "426316e4-99d6-4e49-9d2e-722b90f7cdf2",
+      "source": "own"
+    },
+    "tayra": {
+      "speciesProfileId": "894eb708-4365-48a4-a09f-feb9d76230d0",
+      "source": "own"
+    },
+    "tent-tortoise": {
+      "speciesProfileId": "2e74a858-d3af-4419-ac3b-b2b122df5bdf",
+      "source": "own"
+    },
+    "tentacled-snake": {
+      "speciesProfileId": "61c3a5eb-8d26-4ad2-9a42-b7e652d8f6f1",
+      "source": "own"
+    },
+    "termite": {
+      "speciesProfileId": "70907582-ca24-5f74-bdd6-8e0563101882",
+      "source": "own"
+    },
+    "thorny-devil": {
+      "speciesProfileId": "7fd42ebb-8cf9-4c66-8eb0-d672083e6cac",
+      "source": "own"
+    },
+    "three-toed-sloth": {
+      "speciesProfileId": "a9389cc2-dbd1-4709-9488-8aaba5540bd4",
+      "source": "own"
+    },
+    "thresher-shark": {
+      "speciesProfileId": "504bd35f-6478-4c88-9e41-f317cdf2c58e",
+      "source": "own"
+    },
+    "tiger": {
+      "members": [
+        {
+          "slug": "indochinese-tiger",
+          "name": "Indochinese Tiger",
+          "animalDexNumber": 600
+        },
+        {
+          "slug": "bengal-tiger",
+          "name": "Bengal Tiger",
+          "animalDexNumber": 794
+        },
+        {
+          "slug": "sumatran-tiger",
+          "name": "Sumatran Tiger",
+          "animalDexNumber": 930
+        },
+        {
+          "slug": "malayan-tiger",
+          "name": "Malayan Tiger",
+          "animalDexNumber": 976
+        }
+      ]
+    },
+    "tiger-salamander": {
+      "speciesProfileId": "1efe3c95-33e6-4de5-beac-c8126301a5c8",
+      "source": "own"
+    },
+    "tiger-shark": {
+      "speciesProfileId": "96a42dc5-227d-49a9-bbcd-e627dd37c385",
+      "source": "own"
+    },
+    "titicaca-water-frog": {
+      "speciesProfileId": "1407e26d-aa17-4af3-864d-7a69f66a5587",
+      "source": "own"
+    },
+    "toco-toucan": {
+      "speciesProfileId": "feed9cc8-e852-4655-8c74-6611e5c341a1",
+      "source": "own"
+    },
+    "tokay-gecko": {
+      "speciesProfileId": "ef800cf1-1d07-4d79-8f52-94eedfede477",
+      "source": "own"
+    },
+    "tomato-frog": {
+      "speciesProfileId": "706e3a77-b767-4249-b9c8-55267d4198e7",
+      "source": "own"
+    },
+    "tooth-billed-pigeon": {
+      "speciesProfileId": "5f031f7d-c6da-4bdc-a4a0-fb61f6595c64",
+      "source": "own"
+    },
+    "topi": {
+      "speciesProfileId": "20877b46-5226-44f2-9d96-d3e189afcae9",
+      "source": "own"
+    },
+    "trap-jaw-ant": {
+      "speciesProfileId": "cc228597-a4a3-47cc-a8c9-73b411141d03",
+      "source": "own"
+    },
+    "trapdoor-spider": {
+      "speciesProfileId": "15113af9-e76c-4d3d-8f02-c4bb88c72b8c",
+      "source": "own"
+    },
+    "tree-hyrax": {
+      "speciesProfileId": "73393154-0022-443b-80ff-81fa0c64b85a",
+      "source": "own"
+    },
+    "tripod-fish": {
+      "speciesProfileId": "a3ba12e8-6eef-4431-b452-a7c44cf055b0",
+      "source": "own"
+    },
+    "trumpeter-hornbill": {
+      "speciesProfileId": "35009fec-c445-484f-b4fa-eff9d8c7fd79",
+      "source": "own"
+    },
+    "trumpeter-swan": {
+      "speciesProfileId": "ee54273a-1820-4464-b734-1dea388198a7",
+      "source": "own"
+    },
+    "tuatara": {
+      "speciesProfileId": "60482da2-b677-492d-9c55-ad04cfd22d74",
+      "source": "own"
+    },
+    "tufted-deer": {
+      "speciesProfileId": "c7186a25-3a02-4692-b65e-c81e03b1263e",
+      "source": "own"
+    },
+    "tufted-puffin": {
+      "speciesProfileId": "c2c1e2d6-2005-4e90-bbe0-d787ecc0f239",
+      "source": "own"
+    },
+    "turkey-vulture": {
+      "speciesProfileId": "d6a681ca-5928-4ac3-8ccc-3d7ac1584b23",
+      "source": "own"
+    },
+    "turquoise-browed-motmot": {
+      "speciesProfileId": "1d66fe44-7cfa-458e-a451-0e1c9e4a836c",
+      "source": "own"
+    },
+    "uakari": {
+      "speciesProfileId": "d8e3ce70-f3c5-4841-b6a4-5d651d4e98ee",
+      "source": "canonical"
+    },
+    "ugandan-kob": {
+      "speciesProfileId": "3018067f-e635-4264-9fc4-f6ffd833b382",
+      "source": "own"
+    },
+    "uinta-ground-squirrel": {
+      "speciesProfileId": "bc812bb9-be7c-413b-be71-4bfad5aaf1e0",
+      "source": "own"
+    },
+    "ultramarine-lorikeet": {
+      "speciesProfileId": "10e9be4c-27ce-4c77-9b4b-325d78647134",
+      "source": "own"
+    },
+    "upland-goose": {
+      "speciesProfileId": "cff7dcb0-94fb-4ea2-9c7d-e7b58a884fa5",
+      "source": "own"
+    },
+    "urial": {
+      "speciesProfileId": "191c43be-e287-4202-a9d1-0001ee5dba2e",
+      "source": "own"
+    },
+    "vampire-squid": {
+      "speciesProfileId": "82b9245d-fef6-4a02-905f-77e017107a0c",
+      "source": "own"
+    },
+    "vaquita": {
+      "speciesProfileId": "62091192-88f4-4bee-aa99-576c43d8a292",
+      "source": "own"
+    },
+    "velvet-ant": {
+      "speciesProfileId": "72c8e5dc-0649-46f7-a0e6-6fdffd8c4399",
+      "source": "own"
+    },
+    "verdin": {
+      "speciesProfileId": "9a6131c4-6e72-46b1-9e17-b6472c3c2112",
+      "source": "own"
+    },
+    "victoria-crowned-pigeon": {
+      "speciesProfileId": "d73d574d-7f30-4491-a2a5-05b2b30395b9",
+      "source": "own"
+    },
+    "vicuna": {
+      "speciesProfileId": "62c540dc-f438-4819-beae-946ce36a2b91",
+      "source": "own"
+    },
+    "vinegaroon": {
+      "speciesProfileId": "b71ba753-abf6-4708-803a-7006d1caa511",
+      "source": "own"
+    },
+    "visayan-warty-pig": {
+      "speciesProfileId": "08907d05-a4dd-430f-a7c7-dd54816b68f1",
+      "source": "own"
+    },
+    "wahoo": {
+      "speciesProfileId": "68445bfc-4ca9-4bd0-a066-5417477b871d",
+      "source": "own"
+    },
+    "walia-ibex": {
+      "speciesProfileId": "11c06b94-3289-4cc2-a4cd-3ba4d5c66f7d",
+      "source": "own"
+    },
+    "walking-leaf": {
+      "speciesProfileId": "1ffee780-fae5-4c09-a0f3-eb1a0d7fe804",
+      "source": "own"
+    },
+    "wallaces-flying-frog": {
+      "speciesProfileId": "8d99cc0b-635b-479e-a027-4612927e7113",
+      "source": "own"
+    },
+    "wallcreeper": {
+      "speciesProfileId": "955f269b-384e-44d0-9bea-e76b5b63b7ec",
+      "source": "own"
+    },
+    "walrus": {
+      "speciesProfileId": "c2deb1e8-6c35-42f6-9c93-441e99037eed",
+      "source": "own"
+    },
+    "wandering-albatross": {
+      "speciesProfileId": "ffb28d5b-8879-4c32-8516-e703acbe13bc",
+      "source": "own"
+    },
+    "water-deer": {
+      "speciesProfileId": "53e98323-ced8-49b3-aefb-7edbebb1bd60",
+      "source": "own"
+    },
+    "water-monitor": {
+      "speciesProfileId": "8084dcc0-3207-473e-979e-8f0bf4ae1d14",
+      "source": "own"
+    },
+    "water-scorpion": {
+      "speciesProfileId": "af1425b3-c489-44d2-9bbf-b2a72a2f223d",
+      "source": "own"
+    },
+    "waterbuck": {
+      "speciesProfileId": "dd316113-5fc0-434a-bbb6-5915a27b842f",
+      "source": "own"
+    },
+    "wedge-tailed-eagle": {
+      "speciesProfileId": "86471de2-2035-4863-a237-1e18a95d7626",
+      "source": "own"
+    },
+    "weedy-seadragon": {
+      "speciesProfileId": "022eb280-d72e-4ad3-92d4-dd3a595554a6",
+      "source": "own"
+    },
+    "wels-catfish": {
+      "speciesProfileId": "cb32db87-7e9f-45e0-a109-f030878824ef",
+      "source": "own"
+    },
+    "western-crowned-pigeon": {
+      "speciesProfileId": "75f71d55-d49a-4470-aaeb-a6fc6860726d",
+      "source": "own"
+    },
+    "western-hognose-snake": {
+      "speciesProfileId": "6288ca68-8ffe-4671-a119-59d54ebf40bf",
+      "source": "own"
+    },
+    "western-lowland-gorilla": {
+      "speciesProfileId": "a9878375-f941-476f-b560-4a6385da5f8e",
+      "source": "own"
+    },
+    "whale-shark": {
+      "speciesProfileId": "4031b3f1-b319-4ac0-9fec-35c4276f4b9f",
+      "source": "own"
+    },
+    "wheel-bug": {
+      "speciesProfileId": "aa73e13b-87f8-40f4-b535-dd5b430f2266",
+      "source": "own"
+    },
+    "whirligig-beetle": {
+      "speciesProfileId": "95116ee6-d90b-43d3-a00f-1642d985efcc",
+      "source": "own"
+    },
+    "white-backed-vulture": {
+      "speciesProfileId": "4663291e-d13a-4706-89fa-f0f158e5a352",
+      "source": "own"
+    },
+    "white-bellied-sea-eagle": {
+      "speciesProfileId": "4a556da7-aec5-4d39-b5e7-fc73780c3efd",
+      "source": "own"
+    },
+    "white-faced-capuchin": {
+      "speciesProfileId": "0df9d5f9-9a50-477e-834f-65f24c58ca8c",
+      "source": "own"
+    },
+    "white-faced-saki": {
+      "speciesProfileId": "9ede73e1-efa1-4812-aece-5c1c3d075472",
+      "source": "own"
+    },
+    "white-faced-whistling-duck": {
+      "speciesProfileId": "2de0fbc5-8e0e-4214-8764-f3dd2611bfce",
+      "source": "own"
+    },
+    "white-headed-vulture": {
+      "speciesProfileId": "dbd6ac71-d816-4d71-96a4-d4b052948930",
+      "source": "own"
+    },
+    "white-nosed-coati": {
+      "speciesProfileId": "1aa1a67f-07b9-4193-9a43-183c0b7c7f3a",
+      "source": "own"
+    },
+    "white-rhinoceros": {
+      "speciesProfileId": "1d47ff56-57dc-4f5e-ba16-fcb98a78d82a",
+      "source": "own"
+    },
+    "white-stork": {
+      "speciesProfileId": "7b96c59b-a3df-4b31-a705-553240db6ea1",
+      "source": "own"
+    },
+    "white-tailed-tropicbird": {
+      "speciesProfileId": "8c1017eb-446f-497d-ab7b-64fa051fcd15",
+      "source": "own"
+    },
+    "whooping-crane": {
+      "speciesProfileId": "5818fca1-9e5d-48e7-9627-b81a1e6286a6",
+      "source": "own"
+    },
+    "wild-yak": {
+      "speciesProfileId": "538e67e8-15b0-4523-b303-febff78e5686",
+      "source": "own"
+    },
+    "wilsons-bird-of-paradise": {
+      "speciesProfileId": "3799a378-c52b-49b5-95ad-d9be0897064c",
+      "source": "own"
+    },
+    "wolf": {
+      "members": [
+        {
+          "slug": "ethiopian-wolf",
+          "name": "Ethiopian Wolf",
+          "animalDexNumber": 360
+        },
+        {
+          "slug": "maned-wolf",
+          "name": "Maned Wolf",
+          "animalDexNumber": 668
+        },
+        {
+          "slug": "red-wolf",
+          "name": "Red Wolf",
+          "animalDexNumber": 992
+        },
+        {
+          "slug": "gray-wolf",
+          "name": "Gray Wolf",
+          "animalDexNumber": 1025
+        },
+        {
+          "slug": "eurasian-wolf",
+          "name": "Eurasian Wolf",
+          "animalDexNumber": 1377
+        }
+      ]
+    },
+    "wolf-eel": {
+      "speciesProfileId": "40be5c65-10c1-4ce5-9202-69e372f5e1d1",
+      "source": "own"
+    },
+    "wolverine": {
+      "speciesProfileId": "12bddce2-0d71-47b8-b330-3e5338a5774f",
+      "source": "own"
+    },
+    "wombat": {
+      "speciesProfileId": "88b4dbc1-171d-42e1-aac3-e8e0c263c77f",
+      "source": "canonical"
+    },
+    "wood-duck": {
+      "speciesProfileId": "644a65de-15fb-474a-9c61-776511005c95",
+      "source": "own"
+    },
+    "wood-frog": {
+      "speciesProfileId": "298a240f-9146-4dfe-868b-4e63e9217151",
+      "source": "own"
+    },
+    "wood-stork": {
+      "speciesProfileId": "c88b0c38-c716-4bc8-90d6-c3fb8e1f0ce7",
+      "source": "own"
+    },
+    "woolly-monkey": {
+      "speciesProfileId": "bfee546f-24fc-4bf7-bb9e-b918f45cf9fa",
+      "source": "own"
+    },
+    "woylie": {
+      "speciesProfileId": "328627db-4c5d-48e7-a3c9-c0e3db7e1062",
+      "source": "own"
+    },
+    "x-ray-tetra": {
+      "speciesProfileId": "d09dd0e0-f79f-4ce4-b019-e2dc51e1a2c3",
+      "source": "own"
+    },
+    "xantus-hummingbird": {
+      "speciesProfileId": "5c5e4013-e0a3-4661-a7cf-d84a7d6c3363",
+      "source": "own"
+    },
+    "xantus-murrelet": {
+      "speciesProfileId": "ee119243-2870-441c-bd93-d1a69e6ad3d9",
+      "source": "own"
+    },
+    "xeme": {
+      "speciesProfileId": "8619be9f-a893-40a8-8fd1-e4cd7774bff5",
+      "source": "own"
+    },
+    "yacare-caiman": {
+      "speciesProfileId": "2e85b3a8-2553-4f69-b344-17d686759957",
+      "source": "own"
+    },
+    "yak": {
+      "members": [
+        {
+          "slug": "wild-yak",
+          "name": "Wild Yak",
+          "animalDexNumber": 871
+        }
+      ]
+    },
+    "yangtze-finless-porpoise": {
+      "speciesProfileId": "f2f2c627-dd0d-46c8-94b8-a168c8d30eff",
+      "source": "own"
+    },
+    "yellow-anaconda": {
+      "speciesProfileId": "92857459-f5ac-4384-8777-1a5bb0e7a8b0",
+      "source": "own"
+    },
+    "yellow-billed-stork": {
+      "speciesProfileId": "42eb1376-ed09-4896-9a29-c7d86de67156",
+      "source": "own"
+    },
+    "yellow-footed-tortoise": {
+      "speciesProfileId": "b7a4350a-dc7b-4b57-969f-de8e06d9d5dd",
+      "source": "own"
+    },
+    "yellow-spotted-river-turtle": {
+      "speciesProfileId": "c9e70d79-8886-4889-aa9a-e57aa05d2f33",
+      "source": "own"
+    },
+    "yellow-throated-marten": {
+      "speciesProfileId": "22c59315-8a37-4387-a683-0cc396aab729",
+      "source": "own"
+    },
+    "zander": {
+      "speciesProfileId": "0c05a278-0732-44a5-bbbe-8708261fb449",
+      "source": "own"
+    },
+    "zebra-duiker": {
+      "speciesProfileId": "e81a83de-0896-48ba-beec-4b329e0ca16d",
+      "source": "own"
+    },
+    "zebra-finch": {
+      "speciesProfileId": "3d70b2ce-04ad-478d-9d93-0df26dd51f01",
+      "source": "own"
+    },
+    "zebra-longwing": {
+      "speciesProfileId": "0289fd6b-f18c-45ae-a3f4-e6f47c42d829",
+      "source": "own"
+    },
+    "zebra-shark": {
+      "speciesProfileId": "d472b20c-e88d-4da7-96df-cb0ba4b67139",
+      "source": "own"
+    },
+    "zebra-swallowtail": {
+      "speciesProfileId": "1828f482-88f3-464d-8e9e-a70a2009388e",
+      "source": "own"
+    },
+    "zokor": {
+      "speciesProfileId": "d6a908a5-dd7c-4403-9adb-8fedd4f95e9f",
+      "source": "own"
+    },
+    "zone-tailed-hawk": {
+      "speciesProfileId": "c6de2735-dcb8-4e69-969f-fc772d4745c1",
+      "source": "own"
+    },
+    "zorilla": {
+      "speciesProfileId": "99b13cc5-130f-42f2-84b3-2698e48e64e0",
+      "source": "own"
+    }
+  }
+}

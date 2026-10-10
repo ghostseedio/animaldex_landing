@@ -47,7 +47,7 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
     const title = t("detailMetaTitle", {animal: lesson.displayName, principle: lesson.principleName});
     const metadata = buildContentMetadata({
         locale: params.locale,
-        pathname: `/animal-lessons/${lesson.slug}`,
+        pathname: `/animal-powers/${lesson.slug}`,
         title,
         description: t("detailMetaDescription", {
             animal: lesson.displayName,
@@ -55,13 +55,13 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
         }),
         keywords: [
             `what can we learn from ${lesson.displayName.toLowerCase()}`,
-            `lessons from ${lesson.displayName.toLowerCase()}`,
-            `${lesson.displayName.toLowerCase()} lesson`,
+            `${lesson.displayName.toLowerCase()} power`,
+            `${lesson.displayName.toLowerCase()} animal power`,
             `${lesson.displayName.toLowerCase()} symbolism`,
-            `${lesson.principleName.toLowerCase()} lessons from nature`,
-            "animal behavior lessons"
+            `${lesson.principleName.toLowerCase()} animal power`,
+            "animal powers"
         ],
-        featuredImage: ogContentImage(`${lesson.displayName} lesson from nature on AnimalDex`, "lesson", lesson.slug)
+        featuredImage: ogContentImage(`${lesson.displayName} power from nature on AnimalDex`, "lesson", lesson.slug)
     });
 
     return {...metadata, title: {absolute: title}};
@@ -95,7 +95,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
         ?? lesson.principleName
     );
     const symbolismPost = getBlogPost(`${lesson.slug}-symbolism`);
-    const pageUrl = getAbsoluteUrl(params.locale, `/animal-lessons/${lesson.slug}`);
+    const pageUrl = getAbsoluteUrl(params.locale, `/animal-powers/${lesson.slug}`);
     const faqItems = [
         {
             question: t("faqLearnQuestion", {animal: lesson.displayName}),
@@ -136,7 +136,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                 "@type": "ListItem",
                 position: 2,
                 name: t("breadcrumbLessons"),
-                item: getAbsoluteUrl(params.locale, "/animal-lessons")
+                item: getAbsoluteUrl(params.locale, "/animal-powers")
             },
             {
                 "@type": "ListItem",
@@ -183,7 +183,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
             <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-ink-300">
                 <Link href="/animal-wisdom" className="hover:text-primary-100">{t("breadcrumbWisdom")}</Link>
                 <span aria-hidden="true">/</span>
-                <Link href="/animal-lessons" className="hover:text-primary-100">{t("breadcrumbLessons")}</Link>
+                <Link href="/animal-powers" className="hover:text-primary-100">{t("breadcrumbLessons")}</Link>
                 <span aria-hidden="true">/</span>
                 <span className="text-ink-100">{lesson.displayName}</span>
             </nav>
@@ -241,7 +241,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                             <div className="relative overflow-hidden ">
                                 <SpeciesArtworkImage
                                     slug={lesson.slug}
-                                    alt={speciesEntry ? getSpeciesImageAltText(speciesEntry, "featured") : `${lesson.displayName} animal lesson image on AnimalDex`}
+                                    alt={speciesEntry ? getSpeciesImageAltText(speciesEntry, "featured") : `${lesson.displayName} animal power image on AnimalDex`}
                                     imageFile={lesson.imageFile}
                                     priority
                                     className="aspect-[4/3] "
@@ -365,7 +365,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                         </Link>
                     ) : null}
                     {preferredPrincipleSlug ? (
-                        <Link href={`/powers/${preferredPrincipleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
+                        <Link href={`/qualities/${preferredPrincipleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">{t("relatedPrinciples", {principle: lesson.principleName})}</p>
                             <p className="mt-2 text-lg font-semibold text-white">{lesson.principleName}</p>
                         </Link>
@@ -385,10 +385,10 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                         <div className="mt-5 grid gap-4 md:grid-cols-3">
                             {relatedLessons.map((relatedLesson) => (
                                 <article key={relatedLesson.slug} className="overflow-hidden  bg-surface-900/55">
-                                    <Link href={`/animal-lessons/${relatedLesson.slug}`} className="block">
+                                    <Link href={`/animal-powers/${relatedLesson.slug}`} className="block">
                                         <SpeciesArtworkImage
                                             slug={relatedLesson.slug}
-                                            alt={`${relatedLesson.displayName} lesson from nature`}
+                                            alt={`${relatedLesson.displayName} power from nature`}
                                             imageFile={relatedLesson.imageFile}
                                             className="aspect-[16/9]"
                                             sizes="(min-width: 768px) 30vw, 100vw"
@@ -397,7 +397,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                                     <div className="p-5">
                                         <h4 className="font-display text-2xl font-bold text-white">{relatedLesson.displayName}</h4>
                                         <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-200">{relatedLesson.coreLesson}</p>
-                                        <Link href={`/animal-lessons/${relatedLesson.slug}`} className="mt-4 inline-block text-sm font-semibold text-primary-200 hover:text-primary-100">
+                                        <Link href={`/animal-powers/${relatedLesson.slug}`} className="mt-4 inline-block text-sm font-semibold text-primary-200 hover:text-primary-100">
                                             {t("openLesson")} →
                                         </Link>
                                     </div>
@@ -421,12 +421,12 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                 <section aria-labelledby="next-animal-lesson-title">
                     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">{t("nextLessonEyebrow")}</p>
                     <Link
-                        href={`/animal-lessons/${nextLesson.slug}`}
+                        href={`/animal-powers/${nextLesson.slug}`}
                         className="group grid overflow-hidden rounded-[1.75rem] bg-white/[0.055] transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.075] sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-center"
                     >
                         <SpeciesArtworkImage
                             slug={nextLesson.slug}
-                            alt={`${nextLesson.displayName} lesson from nature`}
+                            alt={`${nextLesson.displayName} power from nature`}
                             imageFile={nextLesson.imageFile}
                             className="aspect-[16/8] sm:aspect-square"
                             sizes="(min-width: 640px) 160px, 100vw"

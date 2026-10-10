@@ -99,7 +99,7 @@ function main() {
         "/principles",
         "/animal-meanings",
         "/animal-symbolism",
-        "/animal-lessons"
+        "/animal-powers"
     ];
     const routeLinkCounts = coreRoutes.map((route) => {
         const pattern = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -129,7 +129,7 @@ function main() {
         principleDetail: sitemapSource.includes("`/principles/${item.principleSlug}`"),
         meanings: sitemapSource.includes('"/animal-meanings"'),
         symbolism: sitemapSource.includes('"/animal-symbolism"'),
-        lessons: sitemapSource.includes('"/animal-lessons"'),
+        lessons: sitemapSource.includes('"/animal-powers"'),
         animals: sitemapSource.includes("`/animals/${entry.slug}`"),
         comparisons: sitemapSource.includes("`/comparisons/${entry.slug}`")
     };
@@ -145,7 +145,7 @@ function main() {
         meaningPages: [
             read("src/app/[locale]/(composited)/(answers)/animal-meanings/page.tsx"),
             read("src/app/[locale]/(composited)/(answers)/animal-symbolism/page.tsx"),
-            read("src/app/[locale]/(composited)/(answers)/animal-lessons/page.tsx")
+            read("src/app/[locale]/(composited)/(answers)/animal-powers/page.tsx")
         ].every((source) => source.includes("alternates:") && source.includes("canonical"))
     };
 
@@ -285,7 +285,7 @@ function main() {
                 ["/principles/[slug]", "Yes (dynamic)", "Yes (from animal pages + principle index + meaning/symbolism/lessons indexes)"],
                 ["/animal-meanings", "Yes", routeLinkCounts.find((r) => r.route === "/animal-meanings").count > 0 ? "Yes" : "No"],
                 ["/animal-symbolism", "Yes", routeLinkCounts.find((r) => r.route === "/animal-symbolism").count > 0 ? "Yes" : "No"],
-                ["/animal-lessons", "Yes", routeLinkCounts.find((r) => r.route === "/animal-lessons").count > 0 ? "Yes" : "No"]
+                ["/animal-powers", "Yes", routeLinkCounts.find((r) => r.route === "/animal-powers").count > 0 ? "Yes" : "No"]
             ]
         ),
         "",

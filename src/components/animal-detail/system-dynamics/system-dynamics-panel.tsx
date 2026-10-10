@@ -11,8 +11,10 @@ import {
     resolveVisualSignature,
     shortExplanation,
     showsMechanismSeparately,
-    summaryStateLine
+    summaryStateLine,
+    systemDynamicsIntro
 } from "@/lib/system-dynamics";
+import {commonNameInSentence} from "@/lib/animal-dream-reading";
 import SystemStateRow, {FrequencyStateChip} from "@/components/animal-detail/system-dynamics/frequency-chip";
 import SystemWaveform from "@/components/animal-detail/system-dynamics/system-waveform";
 import CrossDomainBrowser from "@/components/animal-detail/system-dynamics/cross-domain-browser";
@@ -109,6 +111,7 @@ export default function SystemDynamicsPanel({
     const stateLine = summaryStateLine(dynamics);
     const full = dynamics.signatureExplanation?.trim() ?? null;
     const short = shortExplanation(dynamics);
+    const intro = systemDynamicsIntro(dynamics, commonNameInSentence(animalName));
 
     const identity = (
         <>
@@ -139,6 +142,8 @@ export default function SystemDynamicsPanel({
                 </div>
 
                 <div className="flex flex-col gap-0.5">{summaryIdentity}</div>
+
+                <p className="text-sm leading-6 text-white/60">{intro}</p>
 
                 <SystemStateRow signature={signature} profile={dynamics.frequencyProfile} style="compact" />
                 <SystemWaveform signature={signature} fallbackWaveform={dynamics.waveform} style="compact" />

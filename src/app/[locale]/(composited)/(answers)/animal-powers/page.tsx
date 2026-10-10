@@ -94,7 +94,7 @@ function buildLessonsHref({query, tag, page}: {query: string; tag: LessonTag; pa
     if (tag !== "popular") params.set("tag", tag);
     if (page > 1) params.set("page", String(page));
     const queryString = params.toString();
-    return queryString ? `/animal-lessons?${queryString}` : "/animal-lessons";
+    return queryString ? `/animal-powers?${queryString}` : "/animal-powers";
 }
 
 function getDailyIndex(length: number, offset = 0) {
@@ -106,7 +106,7 @@ function getDailyIndex(length: number, offset = 0) {
 
 function getImageAlt(lesson: SpeciesBehaviorLesson) {
     const species = getSpeciesBySlug(lesson.slug);
-    return species ? getSpeciesImageAltText(species, "thumbnail") : `${lesson.displayName} animal lesson on AnimalDex`;
+    return species ? getSpeciesImageAltText(species, "thumbnail") : `${lesson.displayName} animal power on AnimalDex`;
 }
 
 function pickBySlugs(lessons: SpeciesBehaviorLesson[], slugs: string[]) {
@@ -132,7 +132,7 @@ function pickCollectionLessons(
 function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorLesson; wide?: boolean; readLabel: string}) {
     return (
         <article className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${wide ? "md:col-span-2" : ""}`}>
-            <Link href={`/animal-lessons/${lesson.slug}`} className="theme-dark relative block overflow-hidden">
+            <Link href={`/animal-powers/${lesson.slug}`} className="theme-dark relative block overflow-hidden">
                 <SpeciesArtworkImage
                     slug={lesson.slug}
                     imageFile={lesson.imageFile}
@@ -153,7 +153,7 @@ function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorL
                         {lesson.bestUseCases.slice(0, 2).map((item) => <span key={item} className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs text-ink-300">{item}</span>)}
                     </div>
                 ) : null}
-                <Link href={`/animal-lessons/${lesson.slug}`} className="mt-auto pt-4 text-sm font-bold text-primary-200 transition group-hover:translate-x-0.5">{readLabel} →</Link>
+                <Link href={`/animal-powers/${lesson.slug}`} className="mt-auto pt-4 text-sm font-bold text-primary-200 transition group-hover:translate-x-0.5">{readLabel} →</Link>
             </div>
         </article>
     );
@@ -186,22 +186,22 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
     return withOgCard({
         title: templateSafeTitle(t("metaTitle")),
         description: pageDescription,
-        keywords: ["animal lessons", "lessons from animals", "animal behavior lessons", "biology backed lessons"],
+        keywords: ["animal powers", "powers from animals", "animal behavior powers", "biology backed animal powers"],
         alternates: {
-            canonical: getLocalePath(params.locale, "/animal-lessons"),
+            canonical: getLocalePath(params.locale, "/animal-powers"),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
-                acc[localeItem] = getLocalePath(localeItem, "/animal-lessons");
+                acc[localeItem] = getLocalePath(localeItem, "/animal-powers");
                 return acc;
-            }, {"x-default": getLocalePath(localeConfig.defaultLocale, "/animal-lessons")} as Record<string, string>)
+            }, {"x-default": getLocalePath(localeConfig.defaultLocale, "/animal-powers")} as Record<string, string>)
         },
         openGraph: {
             type: "website",
             locale: getMetadataLocale(params.locale),
             title: t("metaTitle"),
             description: pageDescription,
-            url: getLocalePath(params.locale, "/animal-lessons")
+            url: getLocalePath(params.locale, "/animal-powers")
         }
-    }, "Animal lessons on AnimalDex", "page", "animal-lessons");
+    }, "Animal powers on AnimalDex", "page", "animal-powers");
 }
 
 export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
@@ -244,7 +244,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
         {key: "family", title: t("collections.family.title"), description: t("collections.family.description"), lessons: pickCollectionLessons(lessons, used, /parent|child|young|family|teach|nurtur|care|protect the group/)},
         {key: "surprising", title: t("collections.surprising.title"), description: t("collections.surprising.description"), lessons: pickCollectionLessons(lessons, used, /unexpected|surpris|unusual|remarkable|hidden|ingenious|specialized/)}
     ];
-    const schemaPath = isFiltering ? buildLessonsHref({query, tag: activeTag, page: currentPage}) : "/animal-lessons";
+    const schemaPath = isFiltering ? buildLessonsHref({query, tag: activeTag, page: currentPage}) : "/animal-powers";
     const schemaLessons = isFiltering ? paginatedLessons : collections.flatMap((collection) => collection.lessons);
     const schema = {
         "@context": "https://schema.org",
@@ -253,7 +253,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
         description: t("description"),
         url: getAbsoluteUrl(params.locale, schemaPath),
         numberOfItems: filteredLessons.length,
-        hasPart: schemaLessons.map((lesson) => ({"@type": "Article", headline: t("detailHeroTitle", {animal: lesson.displayName}), description: lesson.coreLesson, url: getAbsoluteUrl(params.locale, `/animal-lessons/${lesson.slug}`) }))
+        hasPart: schemaLessons.map((lesson) => ({"@type": "Article", headline: t("detailHeroTitle", {animal: lesson.displayName}), description: lesson.coreLesson, url: getAbsoluteUrl(params.locale, `/animal-powers/${lesson.slug}`) }))
     };
 
     return (
@@ -281,13 +281,13 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                         <h2 className="mt-4 font-display text-4xl font-bold text-white md:text-6xl">{featured.displayName}</h2>
                         <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-100">{t("learnLabel")} {featured.principleName}</p>
                         <p className="mt-3 line-clamp-2 max-w-2xl text-base leading-7 text-ink-100 md:text-lg">{featured.applicationExample || featured.coreLesson}</p>
-                        <Link href={`/animal-lessons/${featured.slug}`} className="mt-6 inline-flex rounded-full bg-white light:bg-primary-400 px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">{t("openLesson")} →</Link>
+                        <Link href={`/animal-powers/${featured.slug}`} className="mt-6 inline-flex rounded-full bg-white light:bg-primary-400 px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">{t("openLesson")} →</Link>
                     </div>
                 </section>
             ) : null}
 
             <section className="mt-8">
-                <form action={getLocalePath(params.locale, "/animal-lessons")} method="get" className="relative">
+                <form action={getLocalePath(params.locale, "/animal-powers")} method="get" className="relative">
                     {activeTag !== "popular" ? <input type="hidden" name="tag" value={activeTag} /> : null}
                     <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-xl text-ink-400" aria-hidden="true">⌕</span>
                     <input name="q" defaultValue={query} aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} className="h-16 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-14 pr-32 text-base text-white shadow-xl shadow-black/10 outline-none placeholder:text-ink-400 focus:border-primary-400/60 md:text-lg" />
@@ -316,7 +316,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                                     <h2 className="font-display text-3xl font-bold text-white">{t("noResultsTitle")}</h2>
                                     <p className="mt-3 text-ink-200">{t("noResultsDescription")}</p>
                                     <div className="mt-6 flex flex-wrap justify-center gap-2">
-                                        {["Lion", "Fox", "Owl", "Eagle", "Teamwork", "Focus"].map((suggestion) => <Link key={suggestion} href={`/animal-lessons?q=${encodeURIComponent(suggestion)}`} className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-200 hover:border-primary-400/50 hover:text-white">{suggestion}</Link>)}
+                                        {["Lion", "Fox", "Owl", "Eagle", "Teamwork", "Focus"].map((suggestion) => <Link key={suggestion} href={`/animal-powers?q=${encodeURIComponent(suggestion)}`} className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-200 hover:border-primary-400/50 hover:text-white">{suggestion}</Link>)}
                                     </div>
                                 </div>
                             )}
@@ -335,18 +335,18 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                     <div className="sticky top-24 space-y-7 border-l border-white/10 pl-6">
                         <div>
                             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.trending")}</h2>
-                            <ol className="mt-3 divide-y divide-white/10">{popularLessons.slice(0, 3).map((lesson, index) => <li key={lesson.slug}><Link href={`/animal-lessons/${lesson.slug}`} className="flex gap-3 py-3 text-sm font-semibold text-ink-200 hover:text-primary-100"><span className="text-ink-500">0{index + 1}</span><span>{lesson.displayName}</span></Link></li>)}</ol>
+                            <ol className="mt-3 divide-y divide-white/10">{popularLessons.slice(0, 3).map((lesson, index) => <li key={lesson.slug}><Link href={`/animal-powers/${lesson.slug}`} className="flex gap-3 py-3 text-sm font-semibold text-ink-200 hover:text-primary-100"><span className="text-ink-500">0{index + 1}</span><span>{lesson.displayName}</span></Link></li>)}</ol>
                         </div>
                         <div>
                             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.recent")}</h2>
-                            <div className="mt-3 space-y-3">{recentLessons.map((lesson) => <Link key={lesson.slug} href={`/animal-lessons/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
+                            <div className="mt-3 space-y-3">{recentLessons.map((lesson) => <Link key={lesson.slug} href={`/animal-powers/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
                         </div>
                         <div>
                             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.mostViewed")}</h2>
-                            <div className="mt-3 space-y-3">{popularLessons.slice(3, 6).map((lesson) => <Link key={lesson.slug} href={`/animal-lessons/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
+                            <div className="mt-3 space-y-3">{popularLessons.slice(3, 6).map((lesson) => <Link key={lesson.slug} href={`/animal-powers/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
                         </div>
                         {featuredPrinciple ? <div className="  border border-primary-400/20 bg-primary-400/[0.06] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-200">{t("sidebar.featuredPrinciple")}</p><p className="mt-2 font-display text-xl font-bold text-white">{featuredPrinciple[0]}</p><p className="mt-1 text-sm text-ink-300">{t("sidebar.lessonCount", {count: featuredPrinciple[1]})}</p></div> : null}
-                        {surpriseLesson ? <div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.randomAnimal")}</h2><p className="mt-3 font-display text-xl font-bold text-white">{surpriseLesson.displayName}</p><p className="mt-1 text-sm text-ink-300">{surpriseLesson.principleName}</p><Link href={`/animal-lessons/${surpriseLesson.slug}`} className="mt-4 inline-flex rounded-full bg-primary-400 px-4 py-2 text-sm font-bold text-black">{t("sidebar.surpriseMe")} →</Link></div> : null}
+                        {surpriseLesson ? <div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.randomAnimal")}</h2><p className="mt-3 font-display text-xl font-bold text-white">{surpriseLesson.displayName}</p><p className="mt-1 text-sm text-ink-300">{surpriseLesson.principleName}</p><Link href={`/animal-powers/${surpriseLesson.slug}`} className="mt-4 inline-flex rounded-full bg-primary-400 px-4 py-2 text-sm font-bold text-black">{t("sidebar.surpriseMe")} →</Link></div> : null}
                     </div>
                 </aside>
             </div>
@@ -355,7 +355,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">{t("strategyEyebrow")}</p>
                 <h2 className="mt-2 font-display text-3xl font-bold text-white">{t("strategyTitle")}</h2>
                 <p className="mt-3 max-w-3xl text-ink-200">{t("strategyDescription")}</p>
-                <Link href="/powers" className="mt-5 inline-flex font-bold text-primary-200 hover:text-primary-100">{t("strategyLink")} →</Link>
+                <Link href="/qualities" className="mt-5 inline-flex font-bold text-primary-200 hover:text-primary-100">{t("strategyLink")} →</Link>
             </section>
 
             <div className="mt-10">

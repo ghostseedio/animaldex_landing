@@ -9,9 +9,11 @@ import {
     getMemberListedPacks,
     getOwnerTradeUnlockSummary,
     getProfileCreditsSummary,
+    getProfileSocialState,
     getProfileViewerState
 } from "@/data/profile-authenticated";
 import {getPublicGuideListingsForUser} from "@/data/guide-marketplace";
+import {getCollectionBinders} from "@/data/collection-binders";
 import {getScopedTranslator} from "@/loaders/translation";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
@@ -103,9 +105,12 @@ export async function ProfilePageBody({
 
     if (viewer.isOwner) {
         const completedSets = buildOwnerCompletedSets(profile.powerSetCompletions);
-        const [credits, tradeUnlock] = await Promise.all([
+        const [credits, tradeUnlock, collection] = await Promise.all([
             getProfileCreditsSummary(),
-            getOwnerTradeUnlockSummary(profile.collectorScore)
+            getOwnerTradeUnlockSummary(profile.collectorScore),
+            // The owner's real binders, as on iOS (`collectionBinders.filter(\.isComplete)`).
+            // Binder progress is built from the viewer's own captures, so only the owner has it.
+            getCollectionBinders().catch(() => null)
         ]);
 
         ownerExtras = {
@@ -113,6 +118,19 @@ export async function ProfilePageBody({
             tradeUnlock,
             completedSets,
             completedSetsCount: completedSets.length,
+            completedBinders: collection
+                ? collection.binders.filter((binder) => binder.isComplete).map((binder) => ({
+                    key: binder.definition.id,
+                    title: binder.definition.title,
+                    shortTitle: binder.definition.shortTitle,
+                    found: binder.collectedCount,
+                    total: binder.totalCount,
+                    accentHex: binder.definition.accentHex,
+                    primaryHex: binder.definition.primaryHex,
+                    secondaryHex: binder.definition.secondaryHex,
+                    href: binder.href
+                }))
+                : null,
             signOutButton: (
                 <ProfileSignOutButton label={t("signOut")} loadingLabel={t("signingOut")} />
             )
@@ -121,7 +139,12 @@ export async function ProfilePageBody({
 
     const listedPacksPromise = getMemberListedPacks(profile.userId);
     const listedGuidesPromise = getPublicGuideListingsForUser(profile.userId);
-    const [listedPacks, listedGuides] = await Promise.all([listedPacksPromise, listedGuidesPromise]);
+    const [listedPacks, listedGuides, social] = await Promise.all([
+        listedPacksPromise,
+        listedGuidesPromise,
+        // Also records this visit as a profile view for a signed-in non-owner.
+        getProfileSocialState(profile.userId)
+    ]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
     const canViewLocations = viewer.isOwner || profile.locationVisibility === "everyone";
@@ -189,7 +212,8 @@ export async function ProfilePageBody({
                     locationVisits: profile.locationVisits,
                     topCaptures: profile.topCaptures,
                     recentCaptures: profile.recentCaptures,
-                    canViewLocations
+                    canViewLocations,
+                    captureGridSort: profile.captureGridSort
                 }}
                 labels={{
                     profileTitle: t("title"),
@@ -266,6 +290,8 @@ export async function ProfilePageBody({
                 ownerExtras={ownerExtras}
                 listedPacks={listedPacks}
                 listedGuides={listedGuides}
+                social={social}
+                signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}
                 surface={surface}
                 appStoreUrl={appStoreUrl}
                 shareButton={

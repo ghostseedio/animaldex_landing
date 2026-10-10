@@ -60,7 +60,7 @@ test("published EN animal and lesson static params cover the slug index", () => 
 
 test("stable SEO detail pages are static English SSG with dynamicParams=false", () => {
     const animals = read("app/[locale]/(composited)/animals/[slug]/page.tsx");
-    const lessons = read("app/[locale]/(composited)/(answers)/animal-lessons/[slug]/page.tsx");
+    const lessons = read("app/[locale]/(composited)/(answers)/animal-powers/[slug]/page.tsx");
     const pokemon = read("app/[locale]/(composited)/pokemon-animals/[slug]/page.tsx");
     const hybrids = read("app/[locale]/(composited)/animal-hybrids/[slug]/page.tsx");
     const tierList = read("app/[locale]/(composited)/tier-list/[slug]/page.tsx");
@@ -121,14 +121,14 @@ test("collapsed /id detail families redirect to English and are not advertised",
 
     assert.match(nextConfig, /source: "\/id\/animals\/:slug"/);
     assert.match(nextConfig, /destination: "\/animals\/:slug"/);
-    assert.match(nextConfig, /source: "\/id\/animal-lessons\/:slug"/);
+    assert.match(nextConfig, /source: "\/id\/animal-powers\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/pokemon-animals\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/animal-hybrids\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/comparisons\/:slug"/);
     assert.match(nextConfig, /destination: "\/comparisons\/:slug"/);
     assert.match(nextConfig, /source: "\/id\/tier-list\/:slug"/);
     assert.match(nextConfig, /destination: "\/tier-list\/:slug"/);
-    assert.doesNotMatch(nextConfig, /source: "\/id\/powers\/:slug"/);
+    assert.doesNotMatch(nextConfig, /source: "\/id\/qualities\/:slug"/);
     assert.match(middleware, /matchCollapsedIdDetailPath/);
     assert.match(middleware, /NextResponse.redirect\(destination, 308\)/);
     assert.match(middleware, /resolveClosedSeoNamespacePath/);
@@ -155,8 +155,8 @@ test("collapsed /id detail families redirect to English and are not advertised",
         family: "comparisons",
         englishPath: "/comparisons/aardwolf-vs-nurse-shark"
     });
-    assert.equal(matchCollapsedIdDetailPath("/id/powers/resilience"), null);
-    assert.equal(isCollapsedEnglishDetailPath("/powers/resilience"), false);
+    assert.equal(matchCollapsedIdDetailPath("/id/qualities/resilience"), null);
+    assert.equal(isCollapsedEnglishDetailPath("/qualities/resilience"), false);
     assert.equal(isCollapsedEnglishDetailPath("/comparisons/aardwolf-vs-nurse-shark"), true);
     assert.equal(matchCollapsedIdDetailPath("/id/animals"), null);
     assert.deepEqual(matchCollapsedIdDetailPath("/id/tier-list/strongest-animals"), {

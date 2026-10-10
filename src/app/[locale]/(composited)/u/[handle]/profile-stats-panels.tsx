@@ -758,16 +758,70 @@ export function ProfileInsightsSection({
 export type ProfileBinder = {
     key: string;
     title: string;
+    shortTitle: string;
     found: number;
     total: number;
-    tier: string;
+    accentHex: string;
+    primaryHex: string;
+    secondaryHex: string;
+    href: string;
 };
 
-const BINDER_TIER_ACCENTS: Record<string, string> = {
-    Gold: "#FFCC00",
-    Silver: "#C7C9CC",
-    Bronze: "#CD7F32"
-};
+const hex = (value: string) => `#${value.replace(/^#/, "")}`;
+
+/**
+ * iOS `BinderCoverCard`: the set's two-tone board lit from the top-left, an
+ * accent spine, the short title, and a footer plate with the count and a
+ * full-width progress band. Every binder here is complete, so it always
+ * carries the COMPLETE stamp and the accent glow.
+ */
+function BinderCover({binder}: {binder: ProfileBinder}) {
+    const accent = hex(binder.accentHex);
+    const primary = hex(binder.primaryHex);
+    const secondary = hex(binder.secondaryHex);
+    const fraction = binder.total > 0 ? Math.min(1, binder.found / binder.total) : 0;
+
+    return (
+        <div
+            className="relative aspect-[0.76] overflow-hidden rounded-l-[10px] rounded-r-[16px] border"
+            style={{
+                borderColor: `${accent}8C`,
+                background: `radial-gradient(circle at 16% 6%, rgba(255,255,255,.18), transparent 70%), linear-gradient(135deg, ${primary}, ${primary}E0, ${secondary})`,
+                boxShadow: `0 6px 16px rgba(0,0,0,.35), 0 0 24px ${accent}47`
+            }}
+        >
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20" />
+            {/* Spine: a darkened cut of the board with the accent as its hinge line. */}
+            <div
+                className="absolute inset-y-0 left-0 w-2.5"
+                style={{
+                    background: `linear-gradient(${secondary}, ${primary}8C, ${secondary})`,
+                    boxShadow: `inset -1px 0 0 ${accent}8C, 1px 0 2px rgba(0,0,0,.45)`
+                }}
+            />
+            <div className="relative flex flex-col items-center gap-2 px-4 pl-[22px] pt-[26px] text-center">
+                <span className="h-0.5 w-6" style={{backgroundColor: accent}} />
+                <p className="text-[13px] font-extrabold uppercase leading-tight tracking-[0.1em] text-white [text-shadow:0_1px_3px_rgba(0,0,0,.45)]">
+                    {binder.shortTitle}
+                </p>
+                <p className="text-[8px] font-black tabular-nums tracking-[0.16em]" style={{color: `${accent}D9`}}>
+                    {binder.total} SPECIES
+                </p>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 bg-gradient-to-b from-transparent via-black/55 to-black/80 pt-[30px]">
+                <div className="flex items-baseline justify-between gap-1.5 pl-4 pr-2.5">
+                    <span className="text-sm font-extrabold tabular-nums text-white">{binder.found} / {binder.total}</span>
+                    <span className="px-1.5 py-[3px] text-[8px] font-black tracking-[0.1em] text-black/80" style={{backgroundColor: accent}}>
+                        COMPLETE
+                    </span>
+                </div>
+                <div className="h-1 bg-black/45">
+                    <div className="h-full" style={{width: `${Math.max(fraction * 100, 2)}%`, backgroundColor: accent}} />
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function SealCheckIcon() {
     return (
@@ -778,13 +832,7 @@ function SealCheckIcon() {
     );
 }
 
-export function CompletedBindersSection({
-    binders,
-    href
-}: {
-    binders: ProfileBinder[];
-    href: string;
-}) {
+export function CompletedBindersSection({binders}: {binders: ProfileBinder[]}) {
     if (binders.length === 0) return null;
 
     return (
@@ -800,35 +848,12 @@ export function CompletedBindersSection({
             </StatsPanel>
             <StatsPanel>
                 <div className="flex gap-3.5 overflow-x-auto px-[18px] py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {binders.map((binder) => {
-                        const accent = BINDER_TIER_ACCENTS[binder.tier] ?? "#CD7F32";
-                        return (
-                            <Link
-                                key={binder.key}
-                                href={href}
-                                className="flex w-[148px] shrink-0 flex-col gap-2"
-                            >
-                                <div
-                                    className="flex aspect-[3/4] flex-col justify-between  border p-3"
-                                    style={{
-                                        borderColor: `${accent}59`,
-                                        background: `linear-gradient(150deg, ${accent}2E, rgba(0,0,0,0.35))`
-                                    }}
-                                >
-                                    <span
-                                        className="self-start rounded-full px-2 py-1 text-[9px] font-black uppercase leading-none"
-                                        style={{color: accent, backgroundColor: `${accent}24`}}
-                                    >
-                                        {binder.tier}
-                                    </span>
-                                    <span className="text-[11px] font-extrabold text-white/[0.62]">
-                                        {binder.found}/{binder.total}
-                                    </span>
-                                </div>
-                                <p className="line-clamp-2 text-xs font-extrabold text-white">{binder.title}</p>
-                            </Link>
-                        );
-                    })}
+                    {binders.map((binder) => (
+                        <Link key={binder.key} href={binder.href} className="flex w-[148px] shrink-0 flex-col gap-2">
+                            <BinderCover binder={binder} />
+                            <p className="line-clamp-2 text-sm font-semibold text-white">{binder.title}</p>
+                        </Link>
+                    ))}
                 </div>
             </StatsPanel>
         </>

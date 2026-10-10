@@ -94,6 +94,10 @@ export default function CrossDomainBrowser({
                 <h3 className="text-xs font-bold uppercase tracking-[0.11em] text-white">Across Reality</h3>
                 <span className="text-[10px] text-white/40">AnimalDex system mapping</span>
             </div>
+            <p className="text-xs leading-5 text-white/55">
+                The same frequency outside the animal. Pick a domain to see its equivalent in that part of life, from
+                history and sport to business and human behaviour, and why the pattern matches.
+            </p>
 
             {!ordered.length ? (
                 <p className="text-xs text-white/40">No cross-domain mappings yet.</p>

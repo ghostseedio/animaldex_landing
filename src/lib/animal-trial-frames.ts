@@ -38,10 +38,29 @@ function loadMetadata(video: HTMLVideoElement) {
     });
 }
 
-function toBlob(canvas: HTMLCanvasElement) {
+function toBlob(canvas: HTMLCanvasElement, quality: number) {
     return new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), "image/jpeg", FRAME_QUALITY);
+        canvas.toBlob((blob) => resolve(blob), "image/jpeg", quality);
     });
+}
+
+export type FrameSampling = {
+    /**
+     * Fraction of the clip for the first and last frames, spaced evenly
+     * between. Omitted: the Trial spacing, each frame centred in its slice.
+     */
+    firstFraction?: number;
+    lastFraction?: number;
+    /** Scale each frame down so its long edge is at most this many pixels. */
+    maxLongEdge?: number;
+    quality?: number;
+};
+
+function sampleFraction(index: number, count: number, sampling: FrameSampling) {
+    const {firstFraction, lastFraction} = sampling;
+    if (firstFraction === undefined || lastFraction === undefined) return (index + 0.5) / count;
+    if (count <= 1) return (firstFraction + lastFraction) / 2;
+    return firstFraction + (lastFraction - firstFraction) * (index / (count - 1));
 }
 
 /**
@@ -49,7 +68,7 @@ function toBlob(canvas: HTMLCanvasElement) {
  * usable frames means the recording cannot be judged, and the caller must say
  * so rather than submitting a sequence the model cannot read.
  */
-export async function extractTrialFrames(file: File, count = 4): Promise<File[]> {
+export async function extractTrialFrames(file: File, count = 4, sampling: FrameSampling = {}): Promise<File[]> {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "auto";
@@ -64,8 +83,13 @@ export async function extractTrialFrames(file: File, count = 4): Promise<File[]>
         if (!duration) return [];
 
         const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || 720;
-        canvas.height = video.videoHeight || 1280;
+        const sourceWidth = video.videoWidth || 720;
+        const sourceHeight = video.videoHeight || 1280;
+        const scale = sampling.maxLongEdge
+            ? Math.min(1, sampling.maxLongEdge / Math.max(sourceWidth, sourceHeight))
+            : 1;
+        canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+        canvas.height = Math.max(1, Math.round(sourceHeight * scale));
         const context = canvas.getContext("2d");
         if (!context) return [];
 
@@ -73,14 +97,14 @@ export async function extractTrialFrames(file: File, count = 4): Promise<File[]>
         for (let index = 0; index < count; index += 1) {
             // Evenly spaced, nudged inside the clip so the first and last frames
             // are real content rather than a black lead-in or trailing frame.
-            const time = duration * ((index + 0.5) / count);
+            const time = duration * sampleFraction(index, count, sampling);
             try {
                 await seek(video, Math.min(time, Math.max(0, duration - 0.05)));
             } catch {
                 break;
             }
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const blob = await toBlob(canvas);
+            const blob = await toBlob(canvas, sampling.quality ?? FRAME_QUALITY);
             if (blob) frames.push(new File([blob], `frame-${index}.jpg`, {type: "image/jpeg"}));
         }
 

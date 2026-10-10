@@ -148,7 +148,7 @@ test("known disaster paths stay bounded and cacheable", () => {
 
     const home = readFileSync(join(root, "app/[locale]/(composited)/(home)/page.tsx"), "utf8");
     const comparisonsHub = readFileSync(join(root, "app/[locale]/(composited)/comparisons/page.tsx"), "utf8");
-    const lessonsHub = readFileSync(join(root, "app/[locale]/(composited)/(answers)/animal-lessons/page.tsx"), "utf8");
+    const lessonsHub = readFileSync(join(root, "app/[locale]/(composited)/(answers)/animal-powers/page.tsx"), "utf8");
     const powersHub = readFileSync(join(root, "app/[locale]/(composited)/qualities/page.tsx"), "utf8");
 
     assert.doesNotMatch(home, /signHomeFeatureCaptureImages|createSignedStorageUrl|cache:\s*["']no-store["']/);
