@@ -125,10 +125,10 @@ const blogPostsData: BlogPost[] = [
         updatedAt: "2026-06-14",
         featuredImage: axolotlSymbolismImage(
             "axolotl-symbolism-hero.webp",
-            "Historical axolotl illustration representing endangered wonder, regeneration, child-like energy, and creative rebirth",
-            925,
-            377,
-            "The axolotl may be one of the clearest symbols of endangered wonder."
+            "An axolotl with its feathery external gills",
+            1400,
+            933,
+            "Photo: Ruben Undheim from Trondheim, Norway, CC BY-SA 2.0, via Wikimedia Commons."
         ),
         readingMinutes: 9,
         author: "AnimalDex",
@@ -822,10 +822,10 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-06-14",
         updatedAt: "2026-06-14",
         featuredImage: snakeSymbolismImage(
-            "snake-symbolism-hero.webp",
+            "snake-symbolism-hero-wide.webp",
             "A symbolic snake in a dark mystical naturalist scene, representing spine, DNA, transformation, and hidden sight",
             1350,
-            1179,
+            844,
             "The snake is one of the oldest and most powerful animal symbols in human history."
         ),
         readingMinutes: 10,
@@ -2301,10 +2301,10 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-06-08",
         updatedAt: "2026-06-08",
         featuredImage: forbiddenAnimalFilesImage(
-            "animal-kingdom-connected-consciousness-field.webp",
+            "animal-kingdom-connected-consciousness-field-wide.webp",
             "World map style image showing animals connected through a shared consciousness field, representing the AnimalDex view of nature as a living network",
             1548,
-            1296,
+            968,
             "The AnimalDex view treats the animal kingdom as a living archive of intelligence, instinct, myth, and meaning."
         ),
         readingMinutes: 22,
@@ -3263,10 +3263,10 @@ const blogPostsData: BlogPost[] = [
         publishedAt: "2026-04-09",
         updatedAt: "2026-04-09",
         featuredImage: {
-            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/wild-animal-game-like-pokemon-in-real-life.webp",
+            src: "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/real-life-pokemon-animals-you-can-collect-in-the-wild/share-2026-10.webp",
             alt: "Wild animal collection image for a real-life Pokemon-style discovery article on AnimalDex",
-            width: 3024,
-            height: 4032,
+            width: 1600,
+            height: 1000,
             caption: "The creature-collection instinct gets more interesting when the animals are real and the habitats actually matter."
         },
         readingMinutes: 9,

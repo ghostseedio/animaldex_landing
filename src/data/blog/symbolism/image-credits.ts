@@ -1,6 +1,34 @@
 import type {ContentImage} from "@/data/content-schema";
 
 export const symbolismImageCredits: Record<string, Pick<ContentImage, "alt" | "caption" | "width" | "height"> & {source?: string}> = {
+    "jellyfish/jellyfish-symbolism-hero.webp": {
+        "alt": "",
+        "width": 1200,
+        "height": 800
+    },
+    "cat/cat-symbolism-hero.webp": {
+        "alt": "",
+        "width": 1200,
+        "height": 800
+    },
+    "eagle/eagle-symbolism-hero.webp": {
+        "alt": "An eagle in flight",
+        "caption": "Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933
+    },
+    "dolphin/dolphin-symbolism-hero.webp": {
+        "alt": "Wild dolphins swimming at the surface of the sea",
+        "caption": "Photo: incidencematrix, CC BY 2.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 857
+    },
+    "orangutan/orangutan-symbolism-hero.webp": {
+        "alt": "An orangutan in the forest",
+        "caption": "Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons.",
+        "width": 1400,
+        "height": 933
+    },
     "aardwolf/what-is-a-aardwolf.webp": {
         "alt": "Aardwolf: Proteles cristatus1",
         "caption": "Photo by by Dkaeuferle = Dominik Käuferle, CC BY-SA",
