@@ -21,7 +21,10 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app", label: "Home", icon: "home"},
     {href: "/app/collection", label: "Collection", icon: "collection"},
     {href: "/app/arena", label: "Play", icon: "arena"},
-    {href: "/app/profile", label: "Profile", icon: "profile"}
+    {href: "/app/profile", label: "Profile", icon: "profile"},
+    // iOS opens Settings & Activity as a drawer from the profile's ☰; on the
+    // web it is a tab of its own.
+    {href: "/app/settings", label: "Settings", icon: "settings"}
 ];
 
 const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
@@ -34,6 +37,7 @@ const PREFETCH_ROUTES = [
     "/app/collection",
     "/app/arena",
     "/app/profile",
+    "/app/settings",
     "/app/missions",
     "/app/trades",
     "/app/messages",

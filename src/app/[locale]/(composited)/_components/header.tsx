@@ -5,7 +5,7 @@ import ThemeToggle from "@/components/theme/theme-toggle";
 import type {ScopedTranslator} from "@/loaders/translation";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import HeaderMenu from "@/app/[locale]/(composited)/_components/header-menu";
-import HeaderAuthLink from "@/app/[locale]/(composited)/_components/header-auth-link";
+import HeaderAuthLink, {HeaderAccountButton} from "@/app/[locale]/(composited)/_components/header-auth-link";
 import HeaderDropdown, {HeaderDropdownProvider} from "@/app/[locale]/(composited)/_components/header-dropdown";
 import HeaderMobileNav from "@/app/[locale]/(composited)/_components/header-mobile-nav";
 import {
@@ -55,7 +55,9 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                             width={320}
                             height={76}
                             priority
-                            className="h-[1.625rem] w-auto max-w-[7.25rem] md:h-7 md:max-w-[8.25rem]"
+                            // Signed in on a narrow phone, the avatar needs the room: the
+                            // logo mark stays, the wordmark steps aside.
+                            className="h-[1.625rem] w-auto max-w-[7.25rem] md:h-7 md:max-w-[8.25rem] header-wordmark"
                         />
                     </Link>
                     {/* A hairline separates identity from navigation, the way a field
@@ -80,12 +82,14 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                             >
                                 {startCollectionLabel}
                             </Link>
+                            <HeaderAccountButton myAnimalsLabel={t("myAnimals")} />
                         </>
                     )}
                     mobileLocale={(
                         <div className="flex items-center gap-2">
                             <LocaleToggle currentLocale={locale} />
                             <ThemeToggle toLightLabel={t("themeToLight")} toDarkLabel={t("themeToDark")} />
+                            <HeaderAccountButton myAnimalsLabel={t("myAnimals")} compact />
                         </div>
                     )}
                     mobileLinks={(

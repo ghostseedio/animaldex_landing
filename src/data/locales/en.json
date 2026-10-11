@@ -381,15 +381,15 @@
   "rankings": {
     "eyebrow": "AnimalDex Tier Lists",
     "title": "Animal Tier Lists",
-    "description": "Explore AnimalDex animal tier lists and rankings. See how animals rank for strength, intelligence, speed, danger, adaptability, agility, defense, and more.",
+    "description": "Explore AnimalDex animal tier lists and rankings. See how animals rank for strength, intelligence, speed, danger, adaptability, agility, defense, and more, and what the animals at the top can teach you.",
     "metaTitle": "Animal Tier List: Fastest, Strongest & Smartest Animals",
     "metaDescription": "Animal tier list from S to D tier. Fastest: {fastest}. Strongest: {strongest}. Smartest: {smartest}. Most dangerous: {dangerous}. 100+ species ranked per list.",
     "credibilityEvidence": "Evidence-informed rankings",
     "credibilityMethodology": "Transparent methodology",
-    "credibilitySpecies": "Species-level comparisons",
+    "credibilitySpecies": "Every animal has a lesson",
     "introTitle": "What is an animal tier list?",
     "introParagraphOne": "An animal tier list sorts species into bands instead of one score: S tier holds the standout animals, and the A, B, C and D tiers hold animals that fit the trait less and less. It is a more honest format than a single top 10, because it shows when several animals are effectively tied.",
-    "introParagraphTwo": "Every AnimalDex tier list ranks 100 or more species on one trait — speed, strength, intelligence, danger, agility, adaptability and more — and explains the methodology behind the order. The quick answers below come straight from the same data as the full lists.",
+    "introParagraphTwo": "Every AnimalDex tier list ranks 100 or more species on one trait — speed, strength, intelligence, danger, agility, adaptability and more — and explains the methodology behind the order. The quick answers below come straight from the same data as the full lists. Behind every animal is the same set of five AnimalDex stats, and a lesson you can use.",
     "quickAnswersTitle": "Quick answers",
     "quickAnswersDescription": "The #1 animal on each featured tier list, with the next two behind it.",
     "quickAnswerFollowedBy": "Followed by {second} and {third}",
@@ -491,7 +491,7 @@
     "breakdownTitle": "Breakdown and nuance",
     "breakdownDescription": "The strongest ranking pages explain where the headline answer is solid, where the category splits, and where readers should avoid overclaiming.",
     "entryCardsTitle": "Animal highlights",
-    "entryCardsDescription": "Use these species-linked highlights to move from the ranking into deeper AnimalDex guides.",
+    "entryCardsDescription": "Each highlight links to the animal's AnimalDex guide: its five stats, its story and the lesson it teaches.",
     "relatedChallengesTitle": "Related comparisons",
     "relatedBlogTitle": "Related articles",
     "relatedBlogDescription": "Longer reads that answer the same question with sources, numbers, and photos.",
@@ -508,8 +508,8 @@
     "topTeachPrincipleLabel": "Principle",
     "topTeachBestForLabel": "Best for",
     "topTeachLessonLink": "What the {animal} teaches",
-    "ctaTitle": "Collect animals like these in AnimalDex",
-    "ctaDescription": "Move from headline lists into species guides, real sightings, and a collection built around the fastest, strongest, and smartest animals you care about.",
+    "ctaTitle": "Collect animals like these, and learn their lessons",
+    "ctaDescription": "AnimalDex turns every animal you spot into a card with five stats and a lesson: the behaviour that keeps it alive, and how to use it in your own life. Start with the fastest, strongest and smartest animals you care about.",
     "ctaButton": "Build your animal collection",
     "ctaSupportOne": "Fastest, strongest, smartest",
     "ctaSupportTwo": "Real species pages",
@@ -549,6 +549,70 @@
       "stealth": "Stealth",
       "durability": "Durability",
       "agility": "Agility"
+    },
+    "pageTitle": "Animal Tier Lists — Page {page}",
+    "pageDescription": "Page {page} of {pages}: more AnimalDex animal tier lists, each ranking 100 or more species on one trait, with the lesson behind the animals at the top.",
+    "paginationLabel": "Tier list pages",
+    "statLessons": {
+      "eyebrow": "Five stats, one lesson",
+      "title": "Every animal has five stats. Each one changes how you live its lesson.",
+      "description": "AnimalDex scores every species on speed, dominance, size, intelligence and rarity. The tier lists rank on them. The lessons read them.",
+      "highLabel": "High",
+      "lowLabel": "Low",
+      "pause": "Pause",
+      "play": "Play",
+      "sectionTitle": "The five AnimalDex stats",
+      "sectionDescription": "The numbers behind every tier list, every battle and every card in your collection, and what each one says about the animal's lesson.",
+      "recordedTitle": "How AnimalDex records them",
+      "recordedOne": "When an animal is identified in the app, its species gets one canonical stat profile: five whole numbers from 0 to 100 for a typical healthy adult in the wild. An unremarkable species sits near the middle of each scale, not near zero, and reference species anchor every score so the order stays biologically honest: no fish outsizes a whale, no beetle out-dominates a bear.",
+      "recordedTwo": "Those base stats are the same for everyone. Your own capture can move away from them for real reasons, such as a zoo, farm or juvenile animal, but the species' numbers stay the species' numbers. They power the tier lists, battles and your collection, and they shape how each animal's lesson is meant to be lived.",
+      "readsTitle": "How a stat reads as a lesson",
+      "stats": {
+        "speed": {
+          "name": "Speed",
+          "question": "How fast should you move?",
+          "recorded": "How fast the animal moves when it matters: its sprint, flight, swim or strike, on one scale across every species.",
+          "high": "Act while the window is open. A fast animal's lesson rewards momentum: decide, move, and don't wait for perfect.",
+          "low": "Be calm about it. A slow animal's lesson is patience: a steady pace, no rush, and letting things come to you."
+        },
+        "dominance": {
+          "name": "Dominance",
+          "question": "How hard should you push?",
+          "recorded": "How much the animal imposes itself: its strength, its weapons, and how readily it takes on rivals and predators.",
+          "high": "Be brave. A dominant animal's lesson asks for courage, and for force or physical effort when the lesson calls for it.",
+          "low": "Don't force it. A low-dominance animal wins by cooperation, timing or staying out of the fight."
+        },
+        "size": {
+          "name": "Size",
+          "question": "How big a step should you take?",
+          "recorded": "Biological scale for a typical adult: mass, length and height, not how impressive it looks for its family.",
+          "high": "Go all in. A big animal's lesson compounds: commit fully and let the weight build over time.",
+          "low": "Step by step. A small animal's lesson works in small, repeated moves that add up."
+        },
+        "intelligence": {
+          "name": "Intelligence",
+          "question": "How much should you think first?",
+          "recorded": "Observed problem solving, memory, learning, tool use and communication in the species.",
+          "high": "Think it through. A smart animal's lesson is mindful and mental: notice, plan, adjust.",
+          "low": "Trust the routine. Instinct and habit carry this lesson: repeat what works without overthinking it."
+        },
+        "rarity": {
+          "name": "Rarity",
+          "question": "When will the lesson show up?",
+          "recorded": "How rarely you would meet the animal in the wild, from everyday species to the critically endangered.",
+          "high": "Watch for the moment. A rare animal's lesson shows up rarely, at specific times. Recognise it when it comes.",
+          "low": "Use it every day. A common animal's lesson is an everyday one, there in ordinary moments."
+        }
+      },
+      "listTitle": "Read {stat} as a lesson",
+      "listDescription": "This tier list leans on {stat}, one of the five stats every AnimalDex animal carries. Here is how it changes the way an animal's lesson is lived.",
+      "listGenericTitle": "The five stats behind every animal here",
+      "listGenericDescription": "This list isn't built on one of the five AnimalDex stats, but every animal on it still carries all five, and each one changes how its lesson is lived.",
+      "listOtherStats": "The other four stats",
+      "listSeeAll": "How AnimalDex records all five stats",
+      "exampleValue": "{stat} {value}",
+      "faqQuestion": "What do AnimalDex animal stats mean for an animal's lesson?",
+      "faqAnswer": "Every AnimalDex animal has five stats from 0 to 100: speed, dominance, size, intelligence and rarity, and each one changes how its lesson is lived. A fast animal's lesson rewards acting quickly and a slow one's asks for calm. A dominant animal's asks for courage. A big animal's compounds, while a small one's works step by step. A smart animal's is mindful and planned. A rare animal's lesson shows up rarely, at specific moments."
     }
   },
   "locations": {
@@ -1878,6 +1942,9 @@
     "appButton": "Get the app"
   },
   "account": {
+    "welcomeHeadline": "Collect animals.\nLearn their lessons.",
+    "welcomeSoundOn": "Turn sound on",
+    "welcomeSoundOff": "Turn sound off",
     "signIn": "Sign in",
     "loginEyebrow": "Your collection · web access",
     "loginTitle": "Sign in to AnimalDex",

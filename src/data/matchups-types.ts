@@ -142,4 +142,4 @@ export type MatchupResolveResult = {
     overallDraw: boolean;
 };
 
-export type MatchupArenaFilter = "all" | "nearTier" | "lowStake" | "highReward";
+export type MatchupArenaFilter = "all" | "following" | "nearTier" | "lowStake" | "highReward";

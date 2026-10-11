@@ -7,6 +7,7 @@ export type HeaderAuthSession = {
     user: {id: string; email: string | null} | null;
     username: string | null;
     displayName: string | null;
+    avatarUrl: string | null;
 };
 
 type HeaderAuthContextValue = {
@@ -16,7 +17,8 @@ type HeaderAuthContextValue = {
 const anonymousSession: HeaderAuthSession = {
     user: null,
     username: null,
-    displayName: null
+    displayName: null,
+    avatarUrl: null
 };
 
 const HeaderAuthContext = createContext<HeaderAuthContextValue>({
@@ -36,8 +38,8 @@ export function HeaderAuthProvider({children}: {children: ReactNode}) {
         async function loadSession() {
             try {
                 const response = await fetch("/api/auth/session", {cache: "no-store"});
-                const payload = await response.json() as HeaderAuthSession;
-                if (isMounted) setSession(payload);
+                const payload = await response.json() as Partial<HeaderAuthSession>;
+                if (isMounted) setSession({...anonymousSession, ...payload});
             } catch {
                 if (isMounted) setSession(anonymousSession);
             }

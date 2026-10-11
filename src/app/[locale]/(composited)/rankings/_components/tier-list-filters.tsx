@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {type ReactNode, useMemo, useState} from "react";
 import TierListCard, {TierListCardData} from "@/app/[locale]/(composited)/rankings/_components/tier-list-card";
 
 type TierListFiltersProps = {
@@ -13,6 +13,16 @@ type TierListFiltersProps = {
     actionLabel: string;
     rankedSpeciesLabel?: string;
     methodLabel?: string;
+    /**
+     * The lists on this hub page, in order. Unfiltered, only these show (they
+     * are what the server rendered for this URL); a search or category covers
+     * every list. Omitted: every list shows.
+     */
+    pageSlugs?: string[];
+    /** The page links, shown under the unfiltered grid only. */
+    pagination?: ReactNode;
+    /** Scroll target for the page links. */
+    id?: string;
 };
 
 export default function TierListFilters({
@@ -24,7 +34,10 @@ export default function TierListFilters({
     resultPluralLabel,
     actionLabel,
     rankedSpeciesLabel,
-    methodLabel
+    methodLabel,
+    pageSlugs,
+    pagination,
+    id
 }: TierListFiltersProps) {
     const [query, setQuery] = useState("");
     const [category, setCategory] = useState("all");
@@ -50,9 +63,15 @@ export default function TierListFilters({
         return matchesCategory && matchesQuery;
     });
     const resultLabel = filteredItems.length === 1 ? resultSingularLabel : resultPluralLabel;
+    const isFiltering = category !== "all" || normalizedQuery.length > 0;
+    const shownItems = useMemo(() => {
+        if (isFiltering || !pageSlugs) return filteredItems;
+        const bySlug = new Map(items.map((item) => [item.slug, item]));
+        return pageSlugs.map((slug) => bySlug.get(slug)).filter((item): item is TierListCardData => Boolean(item));
+    }, [filteredItems, isFiltering, items, pageSlugs]);
 
     return (
-        <section className="flex w-[calc(100vw-2rem)] min-w-0 max-w-full flex-col gap-5 md:w-auto" aria-labelledby="tier-list-browse-heading">
+        <section id={id} className="flex w-[calc(100vw-2rem)] min-w-0 max-w-full scroll-mt-24 flex-col gap-5 md:w-auto" aria-labelledby="tier-list-browse-heading">
             <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-line-300 bg-surface-900/75 p-4 lg:flex-row lg:items-center">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <label htmlFor="tier-list-search" className="text-sm font-semibold text-white">
@@ -92,7 +111,7 @@ export default function TierListFilters({
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {filteredItems.map((item, index) => (
+                {shownItems.map((item, index) => (
                     <TierListCard
                         key={item.slug}
                         item={item}
@@ -104,6 +123,7 @@ export default function TierListFilters({
                     />
                 ))}
             </div>
+            {isFiltering ? null : pagination}
         </section>
     );
 }

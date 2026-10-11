@@ -1,6 +1,7 @@
 import {redirect} from "next/navigation";
 import {Metadata} from "next";
 import AccountLoginForm from "@/app/[locale]/(composited)/account/account-login-form";
+import AccountWelcome from "@/app/[locale]/(composited)/account/account-welcome";
 import {getAuthenticatedUserId} from "@/data/user-captures";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -41,32 +42,28 @@ export default async function AccountPage({params, searchParams}: AccountPagePro
     const t = await getScopedTranslator(params.locale, "account");
 
     return (
-        <section className="mx-auto w-full max-w-[88rem] px-4 py-12 md:px-8 md:py-20">
+        <AccountWelcome
+            headline={t("welcomeHeadline")}
+            soundOnLabel={t("welcomeSoundOn")}
+            soundOffLabel={t("welcomeSoundOff")}
+        >
             <AccountLoginForm
                 redirectTo={redirectTo}
                 labels={{
-                    eyebrow: t("loginEyebrow"),
-                    title: t("loginTitle"),
-                    description: t("loginDescription"),
                     emailLabel: t("emailLabel"),
                     passwordLabel: t("passwordLabel"),
                     submit: t("submit"),
                     loading: t("loading"),
                     errorGeneric: t("errorGeneric"),
-                    supportOne: t("loginSupportOne"),
-                    supportTwo: t("loginSupportTwo"),
-                    supportThree: t("loginSupportThree"),
                     browseAnimalsLink: t("browseAnimalsLink"),
                     downloadPrompt: t("downloadPrompt"),
                     downloadApp: t("downloadApp"),
-                    backHome: t("backHome"),
                     loginFormTitle: t("loginFormTitle"),
-                    loginCardLabel: t("loginCardLabel"),
                     continueWithGoogle: t("continueWithGoogle"),
                     continueWithApple: t("continueWithApple"),
                     emailSeparator: t("emailSeparator")
                 }}
             />
-        </section>
+        </AccountWelcome>
     );
 }

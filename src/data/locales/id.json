@@ -386,7 +386,7 @@
     "metaDescription": "Tier list hewan dari tier S sampai D. Tercepat: {fastest}. Terkuat: {strongest}. Terpintar: {smartest}. Paling berbahaya: {dangerous}. Lebih dari 100 spesies per daftar.",
     "credibilityEvidence": "Ranking berbasis bukti",
     "credibilityMethodology": "Metodologi transparan",
-    "credibilitySpecies": "Perbandingan tingkat spesies",
+    "credibilitySpecies": "Setiap hewan punya pelajaran",
     "introTitle": "Apa itu tier list hewan?",
     "introParagraphOne": "Tier list hewan mengelompokkan spesies ke dalam beberapa tingkatan, bukan satu skor tunggal: tier S berisi hewan yang paling menonjol, lalu tier A, B, C, dan D berisi hewan yang makin kurang sesuai dengan kriterianya. Format ini lebih jujur daripada sekadar top 10 karena memperlihatkan kapan beberapa hewan nyaris setara.",
     "introParagraphTwo": "Setiap tier list AnimalDex memeringkat 100 spesies atau lebih berdasarkan satu sifat — kecepatan, kekuatan, kecerdasan, bahaya, kelincahan, kemampuan beradaptasi, dan lainnya — serta menjelaskan metodologi di balik urutannya. Jawaban cepat di bawah ini diambil langsung dari data yang sama dengan daftar lengkapnya.",
@@ -514,8 +514,8 @@
     "topTeachPrincipleLabel": "Prinsip",
     "topTeachBestForLabel": "Paling cocok untuk",
     "topTeachLessonLink": "Apa yang diajarkan {animal}",
-    "ctaTitle": "Koleksi hewan-hewan seperti ini di AnimalDex",
-    "ctaDescription": "Bergerak dari headline list ke panduan spesies, spotting nyata, dan koleksi yang dibangun dari hewan tercepat, terkuat, dan terpintar yang kamu ikuti.",
+    "ctaTitle": "Koleksi hewan-hewan seperti ini, dan pelajari pelajarannya",
+    "ctaDescription": "AnimalDex mengubah setiap hewan yang kamu temui menjadi kartu dengan lima stat dan satu pelajaran: perilaku yang membuatnya bertahan hidup, dan cara menggunakannya dalam hidupmu. Mulailah dari hewan tercepat, terkuat, dan terpintar yang kamu sukai.",
     "ctaButton": "Bangun koleksi hewanmu",
     "ctaSupportOne": "Tercepat, terkuat, terpintar",
     "ctaSupportTwo": "Halaman spesies nyata",
@@ -555,6 +555,70 @@
       "stealth": "Stealth",
       "durability": "Durability",
       "agility": "Agility"
+    },
+    "pageTitle": "Tier List Hewan — Halaman {page}",
+    "pageDescription": "Halaman {page} dari {pages}: lebih banyak tier list hewan AnimalDex, masing-masing menyusun 100 spesies atau lebih berdasarkan satu sifat.",
+    "paginationLabel": "Halaman tier list",
+    "statLessons": {
+      "eyebrow": "Lima stat, satu pelajaran",
+      "title": "Setiap hewan punya lima stat. Masing-masing mengubah cara kamu menjalani pelajarannya.",
+      "description": "AnimalDex menilai setiap spesies dari kecepatan, dominasi, ukuran, kecerdasan, dan kelangkaan. Tier list menyusun peringkat dari stat ini. Pelajarannya membacanya.",
+      "highLabel": "Tinggi",
+      "lowLabel": "Rendah",
+      "pause": "Jeda",
+      "play": "Putar",
+      "sectionTitle": "Lima stat AnimalDex",
+      "sectionDescription": "Angka di balik setiap tier list, setiap battle, dan setiap kartu di koleksimu, serta arti masing-masing untuk pelajaran hewan itu.",
+      "recordedTitle": "Cara AnimalDex mencatatnya",
+      "recordedOne": "Saat seekor hewan teridentifikasi di aplikasi, spesiesnya mendapat satu profil stat kanonik: lima angka bulat dari 0 sampai 100 untuk individu dewasa yang sehat di alam liar. Spesies yang biasa saja berada di tengah skala, bukan di dekat nol, dan spesies acuan menjaga setiap skor agar urutannya tetap jujur secara biologis: tidak ada ikan yang lebih besar dari paus, tidak ada kumbang yang lebih dominan dari beruang.",
+      "recordedTwo": "Stat dasar ini sama untuk semua orang. Tangkapanmu sendiri bisa bergeser karena alasan nyata, seperti hewan kebun binatang, ternak, atau anakan, tetapi angka spesiesnya tetap milik spesies itu. Stat ini menggerakkan tier list, battle, dan koleksimu, sekaligus membentuk cara pelajaran setiap hewan dijalani.",
+      "readsTitle": "Cara stat dibaca sebagai pelajaran",
+      "stats": {
+        "speed": {
+          "name": "Kecepatan",
+          "question": "Seberapa cepat kamu harus bergerak?",
+          "recorded": "Seberapa cepat hewan bergerak saat penting: lari, terbang, berenang, atau serangannya, dalam satu skala untuk semua spesies.",
+          "high": "Bertindak selagi ada kesempatan. Pelajaran hewan cepat menghargai momentum: putuskan, bergerak, jangan menunggu sempurna.",
+          "low": "Tenang saja. Pelajaran hewan lambat adalah kesabaran: langkah stabil, tanpa terburu-buru, biarkan semuanya datang."
+        },
+        "dominance": {
+          "name": "Dominasi",
+          "question": "Seberapa keras kamu harus mendorong?",
+          "recorded": "Seberapa besar hewan memaksakan dirinya: kekuatan, senjata, dan seberapa siap ia menghadapi pesaing dan pemangsa.",
+          "high": "Berani. Pelajaran hewan dominan menuntut keberanian, juga tenaga atau usaha fisik bila pelajarannya memerlukannya.",
+          "low": "Jangan dipaksakan. Hewan dengan dominasi rendah menang lewat kerja sama, waktu yang tepat, atau menghindari pertarungan."
+        },
+        "size": {
+          "name": "Ukuran",
+          "question": "Seberapa besar langkah yang harus kamu ambil?",
+          "recorded": "Skala biologis untuk individu dewasa: massa, panjang, dan tinggi, bukan seberapa mengesankan ia untuk kelompoknya.",
+          "high": "Totalitas. Pelajaran hewan besar bersifat berlipat: berkomitmen penuh dan biarkan hasilnya menumpuk seiring waktu.",
+          "low": "Selangkah demi selangkah. Pelajaran hewan kecil bekerja lewat langkah kecil yang diulang hingga terkumpul."
+        },
+        "intelligence": {
+          "name": "Kecerdasan",
+          "question": "Seberapa banyak kamu harus berpikir dulu?",
+          "recorded": "Kemampuan memecahkan masalah, ingatan, belajar, menggunakan alat, dan berkomunikasi yang teramati pada spesies itu.",
+          "high": "Pikirkan matang-matang. Pelajaran hewan cerdas bersifat sadar dan mental: amati, rencanakan, sesuaikan.",
+          "low": "Percayai rutinitas. Naluri dan kebiasaan membawa pelajaran ini: ulangi yang berhasil tanpa terlalu banyak berpikir."
+        },
+        "rarity": {
+          "name": "Kelangkaan",
+          "question": "Kapan pelajarannya akan muncul?",
+          "recorded": "Seberapa jarang kamu bisa menjumpai hewan itu di alam liar, dari spesies sehari-hari hingga yang kritis terancam punah.",
+          "high": "Waspadai momennya. Pelajaran hewan langka jarang muncul, pada waktu tertentu. Kenali saat ia datang.",
+          "low": "Gunakan setiap hari. Pelajaran hewan umum adalah pelajaran sehari-hari, hadir di momen biasa."
+        }
+      },
+      "listTitle": "Baca {stat} sebagai pelajaran",
+      "listDescription": "Tier list ini bertumpu pada {stat}, salah satu dari lima stat yang dimiliki setiap hewan AnimalDex. Begini cara stat itu mengubah cara pelajaran seekor hewan dijalani.",
+      "listGenericTitle": "Lima stat di balik setiap hewan di sini",
+      "listGenericDescription": "List ini tidak disusun dari salah satu dari lima stat AnimalDex, tetapi setiap hewan di dalamnya tetap memiliki kelimanya, dan masing-masing mengubah cara pelajarannya dijalani.",
+      "listOtherStats": "Empat stat lainnya",
+      "listSeeAll": "Cara AnimalDex mencatat kelima stat",
+      "exampleValue": "{stat} {value}",
+      "faqQuestion": "Apa arti stat hewan AnimalDex untuk pelajaran seekor hewan?",
+      "faqAnswer": "Setiap hewan AnimalDex punya lima stat dari 0 sampai 100: kecepatan, dominasi, ukuran, kecerdasan, dan kelangkaan, dan masing-masing mengubah cara pelajarannya dijalani. Pelajaran hewan cepat menghargai tindakan cepat, sedangkan hewan lambat meminta ketenangan. Hewan dominan meminta keberanian. Pelajaran hewan besar berlipat, sedangkan hewan kecil bekerja selangkah demi selangkah. Hewan cerdas mengajak berpikir matang. Pelajaran hewan langka jarang muncul, pada momen tertentu."
     }
   },
   "locations": {
@@ -1868,6 +1932,9 @@
     "appButton": "Dapatkan aplikasinya"
   },
   "account": {
+    "welcomeHeadline": "Kumpulkan hewan.\nPetik pelajarannya.",
+    "welcomeSoundOn": "Nyalakan suara",
+    "welcomeSoundOff": "Matikan suara",
     "signIn": "Masuk",
     "loginEyebrow": "Koleksimu · akses web",
     "loginTitle": "Masuk ke AnimalDex",

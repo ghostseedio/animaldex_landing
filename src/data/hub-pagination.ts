@@ -1,5 +1,6 @@
 /**
- * Path-based paging for long hub lists (/animal-trials, /animal-frequencies).
+ * Path-based paging for long hub lists (/animal-trials, /animal-frequencies,
+ * /tier-list).
  *
  * Page 1 is the hub itself; later pages live at <hub>/page/<n> so each one is
  * a static, cacheable URL with its own canonical. /page/1 is 308'd to the hub
@@ -63,4 +64,22 @@ export const animalFrequenciesPagination = createHubPagination({
     basePath: "/animal-frequencies",
     perPage: 24,
     anchor: "behaviour-signatures"
+});
+
+/**
+ * The tier-list hub's list grid. Search and category filters still cover every
+ * list; paging only applies to the unfiltered grid. Hub order puts the
+ * Search-Console winners first (FEATURED_TIER_LIST_SLUGS), so they stay on page 1.
+ */
+export const tierListPagination = createHubPagination({
+    basePath: "/tier-list",
+    perPage: 12,
+    anchor: "browse-tier-lists"
+});
+
+/** The Animal Hybrid Lab grid (514 hybrids + app fusions). Search goes through /api/animal-hybrids/search. */
+export const animalHybridsPagination = createHubPagination({
+    basePath: "/animal-hybrids",
+    perPage: 24,
+    anchor: "hybrids-and-fusions"
 });

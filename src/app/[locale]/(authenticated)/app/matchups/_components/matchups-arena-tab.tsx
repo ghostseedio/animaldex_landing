@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {AppEmpty} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import MatchupOpponentCard from "@/app/[locale]/(authenticated)/app/matchups/_components/matchup-opponent-card";
 import PopularBreakdownsRail from "@/app/[locale]/(authenticated)/app/matchups/_components/popular-breakdowns-rail";
@@ -8,11 +8,13 @@ import type {MatchupArenaFilter, MatchupOpponent, MatchupRosterCapture} from "@/
 import type {SpeciesComparisonSummary} from "@/data/species-comparisons";
 import {tierRank} from "@/lib/matchup-stats";
 
+/** iOS `MatchupArenaFilter`, titles and order. */
 const FILTERS: Array<{id: MatchupArenaFilter; label: string; icon: string}> = [
-    {id: "all", label: "All", icon: "◎"},
-    {id: "nearTier", label: "Near my tier", icon: "≈"},
-    {id: "lowStake", label: "Low stake", icon: "↓"},
-    {id: "highReward", label: "High reward", icon: "★"}
+    {id: "all", label: "All", icon: "▦"},
+    {id: "following", label: "Following", icon: "👥"},
+    {id: "nearTier", label: "Near tier", icon: "≈"},
+    {id: "lowStake", label: "Low stake", icon: "🍃"},
+    {id: "highReward", label: "High reward", icon: "⚡"}
 ];
 
 function filterOpponents(
@@ -20,7 +22,8 @@ function filterOpponents(
     filter: MatchupArenaFilter,
     roster: MatchupRosterCapture[]
 ) {
-    if (filter === "all") return opponents;
+    // Following membership was applied by `following_challenge_feed_v1` before its limit.
+    if (filter === "all" || filter === "following") return opponents;
 
     const rosterTiers = roster.map((capture) => tierRank(capture.battleTier));
 
@@ -50,32 +53,66 @@ export default function MatchupsArenaTab({
     onChallenge: (opponent: MatchupOpponent) => void;
 }) {
     const [filter, setFilter] = useState<MatchupArenaFilter>("all");
+    const [following, setFollowing] = useState<MatchupOpponent[] | null>(null);
+    const [loadingFollowing, setLoadingFollowing] = useState(false);
+    const [failure, setFailure] = useState<string | null>(null);
+    const request = useRef(0);
+
+    // The Following chip re-reads the arena from the follow-scoped view (iOS `selectArenaFollowingOnly`).
+    useEffect(() => {
+        if (filter !== "following") return;
+        const id = ++request.current;
+        setLoadingFollowing(true);
+        setFailure(null);
+        fetch("/api/app/matchup-arena?following=1", {cache: "no-store"})
+            .then(async (response) => {
+                if (!response.ok) throw new Error("Couldn't load animals from people you follow.");
+                return response.json() as Promise<{arena?: MatchupOpponent[]}>;
+            })
+            .then((payload) => {
+                if (id === request.current) setFollowing(Array.isArray(payload.arena) ? payload.arena : []);
+            })
+            .catch((error: Error) => {
+                if (id === request.current) setFailure(error.message);
+            })
+            .finally(() => {
+                if (id === request.current) setLoadingFollowing(false);
+            });
+    }, [filter]);
 
     const filtered = useMemo(
-        () => filterOpponents(opponents, filter, roster),
-        [filter, opponents, roster]
+        () => filterOpponents(filter === "following" ? following ?? [] : opponents, filter, roster),
+        [filter, following, opponents, roster]
     );
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-2">
             <PopularBreakdownsRail items={popularBreakdowns} />
 
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="sticky top-16 z-10 -mx-4 flex gap-2 overflow-x-auto bg-black px-4 py-1.5 [scrollbar-width:none] lg:top-0 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
                 {FILTERS.map((item) => (
                     <button
                         key={item.id}
                         type="button"
                         onClick={() => setFilter(item.id)}
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold transition ${filter === item.id ? "bg-primary-400 text-black" : "border border-white/10 bg-white/[0.03] text-white/55 hover:text-white"}`}
+                        aria-pressed={filter === item.id}
+                        className={`inline-flex shrink-0 items-center gap-[5px] rounded-full px-3 py-2 text-xs font-bold transition ${filter === item.id ? "bg-primary-400 text-black/90" : "border border-white/10 bg-white/[0.03] text-white/60 hover:text-white"}`}
                     >
-                        <span aria-hidden="true" className="text-[0.72rem] opacity-80">{item.icon}</span>
+                        <span aria-hidden="true" className="text-[11px]">{item.icon}</span>
                         {item.label}
                     </button>
                 ))}
             </div>
 
-            {filtered.length ? (
-                <div className="grid gap-4 xl:grid-cols-2">
+            {filter === "following" && loadingFollowing && !filtered.length ? (
+                <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#141414] p-3.5 text-sm text-white/60">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-400 border-t-transparent" aria-hidden="true" />
+                    Finding animals…
+                </div>
+            ) : failure && !filtered.length ? (
+                <AppEmpty icon="spark" title="Comparisons unavailable" detail={failure} />
+            ) : filtered.length ? (
+                <div className="-mx-4 grid grid-cols-2 md:mx-0 md:gap-2 lg:grid-cols-3">
                     {filtered.map((opponent) => (
                         <MatchupOpponentCard
                             key={opponent.captureId}
@@ -86,15 +123,18 @@ export default function MatchupsArenaTab({
                 </div>
             ) : (
                 <AppEmpty
-                    icon="spark"
+                    icon="search"
                     title="No animals to compare"
                     detail="Make an animal public and comparison-ready, or check back soon."
                     action={(
                         <button
                             type="button"
                             onClick={onOpenSettings}
-                            className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white"
+                            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[13px] font-extrabold text-white"
                         >
+                            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+                                <path d="M3.5 6.5h13M5.5 10h9M7.5 13.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
                             Settings
                         </button>
                     )}

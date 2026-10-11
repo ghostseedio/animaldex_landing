@@ -1,99 +1,81 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
+import {type ReactNode, useEffect, useState} from "react";
+import type {AnimalHybridCard} from "@/data/animal-hybrid-cards";
 import Link from "@/app/[locale]/_components/link";
 import SpeciesArtworkImage from "@/app/[locale]/(composited)/animals/species-artwork-image";
 
-/** One card in the lab: a curated hybrid creature or an app fusion. */
-export type AnimalHybridCard = {
-    kind: "hybrid" | "fusion";
-    slug: string;
-    href: string;
-    title: string;
-    /** Hybrid creature name, or the fusion's learned power. */
-    label: string;
-    summary: string;
-    abilityLabel: string;
-    abilityName: string;
-    abilityDescription: string;
-    parents: Array<{slug: string; name: string}>;
-};
-
-const PAGE_SIZE = 24;
-
-function getPageNumbers(currentPage: number, totalPages: number) {
-    const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-    const end = Math.min(totalPages, start + 4);
-    return Array.from({length: end - start + 1}, (_, index) => start + index);
-}
+export type {AnimalHybridCard};
 
 /**
- * The index stays statically rendered (no searchParams), so it ships page 1
- * and paginates on the client; `?page=N` is mirrored into the URL and read
- * back on load so a shared link lands on the same page.
+ * The lab grid. The server renders one page of cards (src/data/hub-pagination.ts:
+ * /animal-hybrids, then /animal-hybrids/page/<n>) with real page links, so the
+ * page stays small and every card is crawlable. Typing two or more letters
+ * searches every hybrid and fusion through /api/animal-hybrids/search.
  */
-export default function AnimalHybridGrid({cards}: {cards: AnimalHybridCard[]}) {
+export default function AnimalHybridGrid({
+    cards,
+    total,
+    rangeStart,
+    pagination,
+    id
+}: {
+    /** This page's cards. */
+    cards: AnimalHybridCard[];
+    /** Every card in the lab. */
+    total: number;
+    /** 1-based position of this page's first card. */
+    rangeStart: number;
+    /** The page links, shown when not searching. */
+    pagination: ReactNode;
+    id: string;
+}) {
     const [query, setQuery] = useState("");
-    const needle = query.trim().toLowerCase();
-    const matching = needle
-        ? cards.filter((card) => `${card.title} ${card.label} ${card.parents.map((parent) => parent.name).join(" ")}`.toLowerCase().includes(needle))
-        : cards;
-    const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
-    const [page, setPage] = useState(1);
-    const gridRef = useRef<HTMLElement>(null);
+    const [results, setResults] = useState<{query: string; total: number; cards: AnimalHybridCard[]} | null>(null);
+    const needle = query.trim();
+    const searching = needle.length >= 2;
 
     useEffect(() => {
-        const requested = Number(new URLSearchParams(window.location.search).get("page"));
-        if (Number.isInteger(requested) && requested > 1) {
-            setPage(Math.min(requested, Math.ceil(cards.length / PAGE_SIZE)));
+        if (!searching) {
+            setResults(null);
+            return undefined;
         }
-    }, [cards.length]);
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => {
+            fetch(`/api/animal-hybrids/search?q=${encodeURIComponent(needle)}`, {signal: controller.signal})
+                .then((response) => response.json())
+                .then((data: {total?: number; cards?: AnimalHybridCard[]}) => setResults({query: needle, total: data.total ?? 0, cards: data.cards ?? []}))
+                .catch(() => undefined);
+        }, 200);
+        return () => {
+            controller.abort();
+            window.clearTimeout(timer);
+        };
+    }, [needle, searching]);
 
-    function syncPageParam(next: number) {
-        const url = new URL(window.location.href);
-        if (next > 1) {
-            url.searchParams.set("page", String(next));
-        } else {
-            url.searchParams.delete("page");
-        }
-        window.history.replaceState(window.history.state, "", url);
-    }
-
-    function goToPage(next: number) {
-        setPage(next);
-        syncPageParam(next);
-
-        const grid = gridRef.current;
-        if (grid) {
-            window.scrollTo({top: grid.getBoundingClientRect().top + window.scrollY - 96});
-        }
-    }
-
-    const currentPage = Math.min(page, totalPages);
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const visible = matching.slice(start, start + PAGE_SIZE);
-    const pagerButton = "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-ink-200 hover:border-white/25 hover:text-white";
+    const visible = searching ? (results?.cards ?? []) : cards;
+    const status = searching
+        ? results === null
+            ? "Searching…"
+            : results.total === 0
+                ? "No hybrids match. Try the Fuse tool above for any pair."
+                : results.total > results.cards.length
+                    ? `Showing the first ${results.cards.length} of ${results.total} matches`
+                    : `${results.total} ${results.total === 1 ? "match" : "matches"}`
+        : `Showing ${rangeStart}–${rangeStart + cards.length - 1} of ${total} hybrids and fusions`;
 
     return (
-        <section ref={gridRef} className="flex flex-col gap-6" aria-label="Animal hybrids">
+        <section id={id} className="flex scroll-mt-24 flex-col gap-6" aria-label="Animal hybrids">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <input
                     type="search"
                     value={query}
-                    onChange={(event) => {
-                        setQuery(event.target.value);
-                        setPage(1);
-                        syncPageParam(1);
-                    }}
+                    onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search hybrids and fusions, e.g. lion or shark"
                     aria-label="Search hybrids"
                     className="w-full md:max-w-md border border-line-300 bg-surface-800 px-4 py-3 text-white placeholder:text-ink-400 focus:outline-none focus:border-primary-500/60"
                 />
-                <p className="text-ink-300">
-                    {matching.length > 0
-                        ? `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, matching.length)} of ${matching.length} hybrids`
-                        : "No hybrids match. Try the Fuse tool above for any pair."}
-                </p>
+                <p className="text-ink-300" aria-live="polite">{status}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -138,23 +120,7 @@ export default function AnimalHybridGrid({cards}: {cards: AnimalHybridCard[]}) {
                 ))}
             </div>
 
-            {totalPages > 1 ? (
-                <nav aria-label="Hybrid pages" className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                    {currentPage > 1 ? <button type="button" onClick={() => goToPage(currentPage - 1)} className={pagerButton}>Previous</button> : null}
-                    {getPageNumbers(currentPage, totalPages).map((number) => (
-                        <button
-                            key={number}
-                            type="button"
-                            onClick={() => goToPage(number)}
-                            aria-current={number === currentPage ? "page" : undefined}
-                            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${number === currentPage ? "bg-primary-400 text-black" : "border border-white/10 text-ink-200 hover:border-white/25 hover:text-white"}`}
-                        >
-                            {number}
-                        </button>
-                    ))}
-                    {currentPage < totalPages ? <button type="button" onClick={() => goToPage(currentPage + 1)} className={pagerButton}>Next</button> : null}
-                </nav>
-            ) : null}
+            {searching ? null : pagination}
         </section>
     );
 }

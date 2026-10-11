@@ -1,4 +1,4 @@
-export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "volume" | "volumeOff" | "boltShield" | "refresh";
+export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "volume" | "volumeOff" | "boltShield" | "refresh" | "settings";
 
 export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconName; className?: string}) {
     const path: Record<AppIconName, React.ReactNode> = {
@@ -32,7 +32,8 @@ export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconNam
         close: <path d="m6 6 12 12M18 6 6 18"/>,
         volume: <><path d="M4 9v6h4l5 4V5L8 9Z"/><path d="M16 9.5a4 4 0 0 1 0 5M19 7a8 8 0 0 1 0 10"/></>,
         volumeOff: <><path d="M4 9v6h4l5 4V5L8 9Z"/><path d="m16 9 5 5m0-5-5 5"/></>,
-        refresh: <><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v4h-4"/></>
+        refresh: <><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v4h-4"/></>,
+        settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></>
     };
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{path[name]}</svg>;
 }

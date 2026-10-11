@@ -13,6 +13,8 @@
 export const TRAINING_COPY = {
     title: "Training",
     start: "Start Training",
+    /** Web only: iOS has no signed-out reader. */
+    signInToStart: "Sign in to start Training",
     complete: "Training complete",
     readPowerAgain: "Read the Power again",
     tryAgain: "Try again",

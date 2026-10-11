@@ -139,6 +139,8 @@ function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorL
                     alt={getImageAlt(lesson)}
                     className={`w-full transition-transform duration-700 group-hover:scale-105 ${wide ? "h-72 md:h-80" : "h-64"}`}
                     sizes={wide ? "(min-width: 1024px) 55vw, 100vw" : "(min-width: 1024px) 28vw, (min-width: 768px) 50vw, 100vw"}
+                    // The whole animal, sitting above the name laid over the bottom.
+                    imageClassName={`object-contain px-[8%] pt-5 ${wide ? "pb-28" : "pb-24"}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/5 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
@@ -274,7 +276,16 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
 
             {!isFiltering && featured ? (
                 <section className="relative mt-8 overflow-hidden  border border-white/10 light:border-line-200 bg-surface-900 shadow-2xl shadow-black/25 light:shadow-[0_24px_70px_rgba(12,26,17,0.08)]">
-                    <SpeciesArtworkImage slug={featured.slug} imageFile={featured.imageFile} alt={getImageAlt(featured)} priority className="h-[24rem] w-full md:h-[34rem]" sizes="(min-width: 1280px) 1400px, 100vw" />
+                    <SpeciesArtworkImage
+                        slug={featured.slug}
+                        imageFile={featured.imageFile}
+                        alt={getImageAlt(featured)}
+                        priority
+                        className="h-[24rem] w-full md:h-[34rem]"
+                        sizes="(min-width: 1280px) 1400px, 100vw"
+                        // Above the text on a phone; to the right of it from md up.
+                        imageClassName="object-contain px-6 pb-64 pt-5 md:py-10 md:pl-[48%] md:pr-12"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/35 to-transparent light:from-surface-900 light:via-surface-900/60" />
                     <div className="absolute inset-x-0 bottom-0 max-w-3xl p-6 md:p-10">
                         <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-black">{t("featuredEyebrow")}</span>

@@ -1,44 +1,14 @@
-import {Suspense} from "react";
-import MatchupsHub from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-hub";
-import {getAuthenticatedAppContext} from "@/data/authenticated-app";
-import {getMatchupArenaTarget, getMatchupHubBundle} from "@/data/matchups";
-import {fetchSpeciesComparisonSummaries} from "@/data/species-comparisons";
 import {redirect} from "next/navigation";
+import {getLocalePath} from "@/lib/site";
 
-type MatchupsPageProps = {
-    params: {locale: string};
-    searchParams?: {target?: string};
-};
-
-export default async function MatchupsPage({params, searchParams}: MatchupsPageProps) {
-    const context = await getAuthenticatedAppContext();
-    if (!context) redirect(`/${params.locale}/account`);
-
-    const targetId = searchParams?.target?.trim() ?? null;
-    const [bundle, popularBreakdowns] = await Promise.all([
-        getMatchupHubBundle(context.profile.id),
-        fetchSpeciesComparisonSummaries(12).catch(() => [])
-    ]);
-
-    let arena = bundle.arena;
-    if (targetId && !arena.some((item) => item.captureId === targetId)) {
-        const target = await getMatchupArenaTarget(context.profile.id, targetId);
-        if (target) {
-            arena = [target, ...arena.filter((item) => item.captureId !== targetId)];
-        }
-    }
-
-    return (
-        <Suspense fallback={<div className="py-10 text-sm text-white/45">Loading matchup arena…</div>}>
-            <MatchupsHub
-                locale={params.locale}
-                viewerUserId={context.profile.id}
-                initialArena={arena}
-                initialRoster={bundle.roster}
-                initialHistory={bundle.history}
-                initialPopularBreakdowns={popularBreakdowns}
-                initialTargetId={targetId}
-            />
-        </Suspense>
-    );
+/**
+ * The matchup hub is the Play tab itself now (iOS `IdentityHomeView` embeds
+ * `MatchupsHubView`). Old links — "Compare" on a card, a shared target — land
+ * on its Comparisons page, the way iOS's `requestOpenPlayComparisons` does.
+ */
+export default function MatchupsPage({params, searchParams}: {params: {locale: string}; searchParams?: {target?: string}}) {
+    const query = new URLSearchParams({segment: "comparisons"});
+    const target = searchParams?.target?.trim();
+    if (target) query.set("target", target);
+    redirect(getLocalePath(params.locale, `/app/arena?${query.toString()}`));
 }

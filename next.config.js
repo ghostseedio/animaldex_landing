@@ -83,10 +83,20 @@ module.exports = withNextIntl({
                 destination: "/animal-powers/:slug",
                 permanent: true
             },
+            // The Hybrid Lab used to page on the client at ?page=<n>; shared links
+            // land on the matching /page/<n> URL now.
+            ...["", "/id"].map((prefix) => ({
+                source: `${prefix}/animal-hybrids`,
+                has: [{type: "query", key: "page", value: "(?<page>[2-9]|[1-9]\\d+)"}],
+                destination: `${prefix}/animal-hybrids/page/:page`,
+                permanent: true
+            })),
             // Page 1 of a paged hub (src/data/hub-pagination.ts) is the hub itself.
             ...[
                 ["/animal-trials", "/animal-trials"],
                 ["/animal-frequencies", "/animal-frequencies"],
+                ["/tier-list", "/tier-list"],
+                ["/animal-hybrids", "/animal-hybrids"],
                 ["/challenge-yourself", "/animal-trials"],
                 ["/animal-behaviours", "/animal-frequencies"]
             ].flatMap(([from, to]) => ["", "/id"].map((prefix) => ({

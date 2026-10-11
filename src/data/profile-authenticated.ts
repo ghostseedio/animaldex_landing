@@ -6,6 +6,7 @@ import {
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import type {PublicProfileCapture, ProfilePowerSetCompletion} from "@/data/public-profiles";
 import {getAuthenticatedUserProfile} from "@/data/user-captures";
+import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -116,8 +117,42 @@ export type ProfileFollowCounts = {followers: number; following: number};
 
 export type ProfileViewStats = {thisWeek: number; previousWeek: number; allTime: number};
 
+/** iOS `ProfileStatsWeek`: "This Week" on the Stats tab, server-aggregated. */
+export type ProfileStatsWeek = {
+    currentStart: string;
+    currentEnd: string;
+    captures: number;
+    newSpecies: number;
+    collectorPoints: number;
+    previousCaptures: number;
+    previousNewSpecies: number;
+    daily: Array<{date: string; captures: number; newSpecies: number}>;
+};
+
+function decodeStatsWeek(value: unknown): ProfileStatsWeek | null {
+    const row = value as QueryRow | null;
+    if (!row || typeof row !== "object") return null;
+    const currentStart = typeof row.current_start === "string" ? row.current_start : null;
+    const currentEnd = typeof row.current_end === "string" ? row.current_end : null;
+    if (!currentStart || !currentEnd) return null;
+    return {
+        currentStart,
+        currentEnd,
+        captures: toCount(row.captures),
+        newSpecies: toCount(row.new_species),
+        collectorPoints: toCount(row.collector_points),
+        previousCaptures: toCount(row.previous_captures),
+        previousNewSpecies: toCount(row.previous_new_species),
+        daily: (Array.isArray(row.daily) ? row.daily : [])
+            .filter((day: QueryRow) => typeof day?.date === "string")
+            .map((day: QueryRow) => ({date: day.date as string, captures: toCount(day.captures), newSpecies: toCount(day.new_species)}))
+    };
+}
+
 export type ProfileSocialState = {
     followCounts: ProfileFollowCounts | null;
+    /** "This Week" (iOS `ProfileWeeklyStatsCard`); null when the overview could not be read. */
+    week?: ProfileStatsWeek | null;
     /** Owner only, as on iOS: the server omits it for anyone else. */
     profileViews: ProfileViewStats | null;
     isFollowing: boolean;
@@ -183,6 +218,7 @@ export async function getProfileSocialState(profileUserId: string): Promise<Prof
         followCounts: counts
             ? {followers: toCount(counts.followers), following: toCount(counts.following)}
             : await fetchFollowCountsAsServer(profileUserId),
+        week: decodeStatsWeek(data?.week),
         profileViews: isOwner && views
             ? {thisWeek: toCount(views.this_week), previousWeek: toCount(views.previous_week), allTime: toCount(views.all_time)}
             : null,
@@ -336,8 +372,24 @@ export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndor
         }
     }
 
+    // The grid's index chip, as iOS `AnimalDexNumberBadge` shows it.
+    const numberBySpecies = new Map<string, number>();
+    const numberBySlug = new Map<string, number>();
+    for (const entry of speciesEntries) {
+        const number = getAnimalDexNumberFromEntry(entry);
+        if (!number) continue;
+        numberBySlug.set(entry.slug, number);
+        if (entry.speciesProfileId) numberBySpecies.set(entry.speciesProfileId.toLowerCase(), number);
+    }
+
     const capturesById = new Map(
-        ((feedRows ?? []) as QueryRow[]).map((row) => [row.capture_id, toCaptureFromFeedRow(row, speciesByIdentity)])
+        ((feedRows ?? []) as QueryRow[]).map((row) => {
+            const capture = toCaptureFromFeedRow(row, speciesByIdentity);
+            const animalDexNumber = (capture.speciesProfileId ? numberBySpecies.get(capture.speciesProfileId) : undefined)
+                ?? (capture.speciesSlug ? numberBySlug.get(capture.speciesSlug) : undefined)
+                ?? null;
+            return [row.capture_id, {...capture, animalDexNumber}];
+        })
     );
 
     return endorsements

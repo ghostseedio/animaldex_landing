@@ -1831,12 +1831,13 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     };
 }
 
-export async function getChallengeArenaCaptures(excludeUserId: string | null, limit = 48): Promise<DiscoverCaptureItem[]> {
+export async function getChallengeArenaCaptures(excludeUserId: string | null, limit = 48, followingOnly = false): Promise<DiscoverCaptureItem[]> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
 
+    // `following_challenge_feed_v1` applies follow membership before the LIMIT (iOS `fetchChallengeFeed`).
     let query = supabase
-        .from("challenge_feed_v1")
+        .from(followingOnly ? "following_challenge_feed_v1" : "challenge_feed_v1")
         .select(richFeedSelect)
         .order("capture_created_at", {ascending: false})
         .limit(limit);

@@ -559,7 +559,7 @@ export default function NearbyWildlifeExplorer({locale, animalNames, copy}: Near
                                                     src={item.artworkUrl}
                                                     alt=""
                                                     loading="lazy"
-                                                    className="h-9 w-9 shrink-0 rounded-lg bg-white/[0.06] object-cover"
+                                                    className="h-9 w-9 shrink-0 rounded-lg bg-white/[0.06] object-contain p-0.5"
                                                 />
                                             ) : (
                                                 <span className="h-9 w-9 shrink-0 rounded-lg bg-white/[0.06]" aria-hidden="true" />

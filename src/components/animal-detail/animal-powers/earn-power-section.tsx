@@ -7,6 +7,7 @@ import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
 import TrainingBand from "@/components/animal-detail/species-training/training-band";
 import {type SpeciesTrainingState, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
+import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
 import {PowerLoopEyebrow} from "@/components/animal-detail/power-loop/power-loop-context";
 import {TRAINING_COPY, notingTrainingResult, showsTrainingStep, trainingGatesPlay} from "@/lib/species-training";
 
@@ -81,14 +82,11 @@ function UnlockRows({earned, powerName, isViewersOwnAnimal, underEyebrow = false
     earned: boolean;
     powerName: string | null;
     isViewersOwnAnimal: boolean;
-    /** Under "STEP 3 · BATTLE & FUSE", which already spaces it from what is above. */
+    /** Under "STEP 3 · BATTLE & FUSE": drawn as a loop step card. */
     underEyebrow?: boolean;
 }) {
-    return (
-        <div className={`flex flex-col gap-2.5 px-5 ${underEyebrow ? "pt-1 pb-[18px]" : `pt-4 ${earned ? "pb-[18px]" : "pb-1"}`}`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: earned ? NEON : "rgba(255,255,255,0.4)"}}>
-                {earned ? "Play unlocked" : lockedHeading(powerName)}
-            </p>
+    const rows = (
+        <>
             <UnlockRow
                 icon="⚡"
                 title="Comparison Battles"
@@ -101,6 +99,25 @@ function UnlockRows({earned, powerName, isViewersOwnAnimal, underEyebrow = false
                 detail={isViewersOwnAnimal ? "Enhance this animal through Fusion." : "Enhance your own captures of this animal."}
                 earned={earned}
             />
+        </>
+    );
+    const heading = earned ? "Play unlocked" : lockedHeading(powerName);
+
+    if (underEyebrow) {
+        // Step 3 of the Power Loop: the same rail-and-body card as Training and the Trials.
+        return (
+            <LoopStepCard accent={NEON} tone={earned ? "lit" : "quiet"} label={heading} state={earned ? "✓" : "🔒"}>
+                {rows}
+            </LoopStepCard>
+        );
+    }
+
+    return (
+        <div className={`flex flex-col gap-2.5 px-5 pt-4 ${earned ? "pb-[18px]" : "pb-1"}`}>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: earned ? NEON : "rgba(255,255,255,0.4)"}}>
+                {heading}
+            </p>
+            {rows}
         </div>
     );
 }
@@ -117,7 +134,8 @@ export default function EarnPowerSection({
     trialsRouteRequest = 0,
     onTrialsChange,
     showsLoopSteps = false,
-    battleFuseContinues = false
+    battleFuseContinues = false,
+    powerReadFailed = false
 }: {
     speciesProfileId: string | null | undefined;
     power: AnimalPower | null;
@@ -155,6 +173,11 @@ export default function EarnPowerSection({
     showsLoopSteps?: boolean;
     /** The caller draws more of step 3 straight after (the card's comparisons and Fusion). */
     battleFuseContinues?: boolean;
+    /**
+     * The Power read failed, so a null `power` means "unknown", not "this
+     * species has none": step 3 stays locked rather than claiming Play is open.
+     */
+    powerReadFailed?: boolean;
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
@@ -261,13 +284,13 @@ export default function EarnPowerSection({
     const unlockRows = didLoad && power
         ? <UnlockRows earned={power.isEarned} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow={showsLoopSteps} />
         : showsLoopSteps
-            ? <UnlockRows earned={didLoad} powerName={null} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow />
+            ? <UnlockRows earned={didLoad && !powerReadFailed} powerName={null} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow />
             : null;
     const leadingUnlockRows = showsLoopSteps ? null : unlockRows;
 
     if (!didLoad) {
         // The Trials never depend on the Power, so they show while it loads.
-        content = trials(true);
+        content = trials(!showsLoopSteps);
     } else if (power?.isEarned) {
         content = (
             <>
@@ -279,12 +302,12 @@ export default function EarnPowerSection({
                 {leadingUnlockRows}
                 {/* Earned, so there is nothing left to choose. The Trials stay —
                     they are still worth doing for the XP and the Credits. */}
-                {trials(true)}
+                {trials(!showsLoopSteps)}
             </>
         );
     } else if (!power) {
         // No Power authored for this species: the Trials stand alone.
-        content = trials(true);
+        content = trials(!showsLoopSteps);
     } else if (power.hasTrial) {
         content = (
             <>
@@ -338,6 +361,7 @@ export default function EarnPowerSection({
             ) : null}
             <TrainingBand
                 training={speciesTraining.training}
+                isSignedIn={speciesTraining.isSignedIn}
                 power={power}
                 onPassed={(result) => {
                     speciesTraining.setTraining((current) => current ? notingTrainingResult(current, result) : current);
@@ -346,12 +370,13 @@ export default function EarnPowerSection({
                     void speciesTraining.reload();
                 }}
                 openRequest={trainingOpenRequest}
+                asLoopStep={showsLoopSteps}
             />
             {showsLoopSteps ? <PowerLoopEyebrow step="prove" /> : null}
             {content}
             {showsLoopSteps && (unlockRows || battleFuseContinues) ? (
                 <>
-                    <PowerLoopEyebrow step="battleFuse" className="border-t border-white/[0.08]" />
+                    <PowerLoopEyebrow step="battleFuse" />
                     {unlockRows}
                 </>
             ) : null}

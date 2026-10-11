@@ -9,7 +9,25 @@ type SpeciesArtworkImageProps = {
     priority?: boolean;
     className?: string;
     sizes?: string;
-    fit?: "cover" | "contain";
+    /**
+     * "padded" (default): the whole animal, with breathing room that scales with
+     * the box. Species artwork is a cut-out on a transparent background, so
+     * cropping it to fill ("cover") cuts off heads, tails and wings.
+     * "contain": the whole animal with a small fixed inset, for callers that pad
+     * the box themselves. "cover": fill and crop; only for true photos.
+     */
+    fit?: "padded" | "contain" | "cover";
+    /**
+     * Replaces the fit's own classes on the image, for boxes with text laid
+     * over one edge: e.g. extra bottom padding so the animal sits above a title.
+     */
+    imageClassName?: string;
+};
+
+const FIT_CLASS: Record<NonNullable<SpeciesArtworkImageProps["fit"]>, string> = {
+    padded: "object-contain p-[8%]",
+    contain: "object-contain p-2",
+    cover: "object-cover"
 };
 
 export default function SpeciesArtworkImage({
@@ -20,7 +38,8 @@ export default function SpeciesArtworkImage({
     priority = false,
     className = "",
     sizes = "(min-width: 1536px) 27vw, (min-width: 768px) 42vw, 100vw",
-    fit = "cover"
+    fit = "padded",
+    imageClassName
 }: SpeciesArtworkImageProps) {
     return (
         <div className={`relative overflow-hidden bg-surface-800/60 ${className}`}>
@@ -33,7 +52,7 @@ export default function SpeciesArtworkImage({
                 unoptimized
                 priority={priority}
                 sizes={sizes}
-                className={fit === "contain" ? "object-contain p-2" : "object-cover"}
+                className={imageClassName ?? FIT_CLASS[fit]}
             />
         </div>
     );

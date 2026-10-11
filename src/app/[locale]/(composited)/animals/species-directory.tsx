@@ -1215,8 +1215,6 @@ export default function SpeciesDirectory({
                         <Link
                             key={entry.slug}
                             href={`/animals/${entry.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="group block bg-black focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primary-200"
                             aria-label={`${copy.readSpecies}: ${entry.name}`}
                         >

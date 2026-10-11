@@ -282,8 +282,8 @@ export function mapResolveRow(row: QueryRow): MatchupResolveResult {
     };
 }
 
-export async function getMatchupArena(userId: string, limit = 48) {
-    const captures = await getChallengeArenaCaptures(userId, limit);
+export async function getMatchupArena(userId: string, limit = 48, followingOnly = false) {
+    const captures = await getChallengeArenaCaptures(userId, limit, followingOnly);
     return captures.map(toOpponent);
 }
 

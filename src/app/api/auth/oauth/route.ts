@@ -3,6 +3,7 @@ import {cookies} from "next/headers";
 import {NextRequest, NextResponse} from "next/server";
 import {getSupabaseAuthKey, getSupabasePublicKey, getSupabaseUrl, isSupabaseJwtKey} from "@/lib/supabase-http";
 import {getSiteUrl} from "@/lib/site";
+import {AUTH_NEXT_COOKIE} from "@/lib/auth-next";
 
 type OAuthProvider = "google" | "apple";
 
@@ -16,9 +17,10 @@ function sanitizeNextPath(value: string | null) {
 
 function accountErrorRedirect(request: NextRequest, nextPath: string, error: string) {
     const locale = nextPath.match(/^\/(en|id)(?:\/|$)/)?.[1] ?? "en";
-    const url = new URL(`/${locale}/account`, request.url);
+    // Not `request.url`: behind the proxy its origin is the container's own.
+    const url = new URL(`/${locale}/account`, getSiteUrl());
     url.searchParams.set("error", error);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, 303);
 }
 
 function getAuthConfigError() {
@@ -35,10 +37,35 @@ function getAuthConfigError() {
     return null;
 }
 
+/**
+ * The sign-in buttons POST here. Every start writes a fresh PKCE verifier
+ * cookie, so a second start before Google returns (a browser preloading the
+ * link on hover, a double click) replaces the verifier and the callback fails
+ * with "code challenge does not match previously saved code verifier".
+ * Browsers never preload a POST.
+ */
+export async function POST(request: NextRequest) {
+    const form = await request.formData().catch(() => null);
+    const provider = form?.get("provider");
+    const next = form?.get("next");
+    return startOAuth(
+        request,
+        typeof provider === "string" ? provider as OAuthProvider : null,
+        sanitizeNextPath(typeof next === "string" ? next : null)
+    );
+}
+
+/** Kept for old links; the account page POSTs (see above). */
 export async function GET(request: NextRequest) {
     const requestUrl = new URL(request.url);
-    const provider = requestUrl.searchParams.get("provider") as OAuthProvider | null;
-    const nextPath = sanitizeNextPath(requestUrl.searchParams.get("next"));
+    return startOAuth(
+        request,
+        requestUrl.searchParams.get("provider") as OAuthProvider | null,
+        sanitizeNextPath(requestUrl.searchParams.get("next"))
+    );
+}
+
+async function startOAuth(request: NextRequest, provider: OAuthProvider | null, nextPath: string) {
 
     if (!provider || !PROVIDERS.has(provider)) {
         return accountErrorRedirect(request, nextPath, "Unsupported sign-in provider.");
@@ -89,10 +116,13 @@ export async function GET(request: NextRequest) {
         return accountErrorRedirect(request, nextPath, error?.message ?? "OAuth sign-in could not start.");
     }
 
-    const redirectResponse = NextResponse.redirect(data.url);
+    const redirectResponse = NextResponse.redirect(data.url, 303);
     response.cookies.getAll().forEach((cookie) => {
         redirectResponse.cookies.set(cookie);
     });
+    // Supabase drops a `redirect_to` it does not allow-list and returns to the
+    // Site URL, losing `next`; the callback falls back to this.
+    redirectResponse.cookies.set({name: AUTH_NEXT_COOKIE, value: nextPath, path: "/", httpOnly: true, sameSite: "lax", maxAge: 600});
 
     return redirectResponse;
 }

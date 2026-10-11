@@ -34,6 +34,12 @@ const RESERVED_SLUGS: Partial<Record<ClosedSeoFamily, ReadonlySet<string>>> = {
     animals: new Set(["search"])
 };
 
+/**
+ * Hubs that page their grid at /<family>/page/<n> (src/data/hub-pagination.ts).
+ * Only a canonical page number passes; the route itself 404s a page past the end.
+ */
+const PAGED_HUB_FAMILIES: ReadonlySet<ClosedSeoFamily> = new Set<ClosedSeoFamily>(["animal-hybrids"]);
+
 export const CLOSED_SEO_NAMESPACE_HEADER = "x-animaldex-closed-seo-namespace";
 
 const CLOSED_SEO_404_HTML = `<!doctype html>
@@ -78,7 +84,7 @@ export function isPublishedClosedSeoSlug(family: ClosedSeoFamily, slug: string) 
 }
 
 export type ClosedSeoNamespaceResolution =
-    | {action: "allow"; reason: "hub" | "reserved" | "published"; family: ClosedSeoFamily; slug?: string}
+    | {action: "allow"; reason: "hub" | "reserved" | "published" | "paged-hub"; family: ClosedSeoFamily; slug?: string}
     | {action: "block"; reason: "unknown-slug" | "nested"; family: ClosedSeoFamily; slug?: string};
 
 export function resolveClosedSeoNamespacePath(pathname: string): ClosedSeoNamespaceResolution | null {
@@ -97,6 +103,10 @@ export function resolveClosedSeoNamespacePath(pathname: string): ClosedSeoNamesp
     const slug = normalizePublishedSeoSlug(parts[1] ?? "");
     if (parts.length === 2 && RESERVED_SLUGS[closedFamily]?.has(slug)) {
         return {action: "allow", reason: "reserved", family: closedFamily, slug};
+    }
+
+    if (parts.length === 3 && parts[1] === "page" && /^[1-9]\d*$/.test(parts[2]) && PAGED_HUB_FAMILIES.has(closedFamily)) {
+        return {action: "allow", reason: "paged-hub", family: closedFamily};
     }
 
     if (parts.length > 2) {

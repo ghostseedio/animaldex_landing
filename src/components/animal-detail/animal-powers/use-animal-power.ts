@@ -9,10 +9,14 @@ import type {AnimalPower, CapturePlayEligibilityMap} from "@/lib/animal-powers";
  * `power` is null until the read lands, and stays null when the species has no
  * Power at all — the surfaces built on it are simply absent in both cases
  * rather than claiming "not yet earned" about something that does not exist.
+ *
+ * `didFail` tells those two apart: a read that failed knows nothing, so it must
+ * never be taken for "this species has no Power" (which opens Play).
  */
 export function useAnimalPower(speciesProfileId: string | null | undefined) {
     const [power, setPower] = useState<AnimalPower | null>(null);
     const [didLoad, setDidLoad] = useState(false);
+    const [didFail, setDidFail] = useState(false);
     const requestRef = useRef(0);
 
     const reload = useCallback(async () => {
@@ -21,6 +25,7 @@ export function useAnimalPower(speciesProfileId: string | null | undefined) {
 
         if (!speciesProfileId) {
             setPower(null);
+            setDidFail(false);
             setDidLoad(true);
             return null;
         }
@@ -32,12 +37,18 @@ export function useAnimalPower(speciesProfileId: string | null | undefined) {
             );
             const payload = response.ok ? await response.json() : null;
             if (requestRef.current !== request) return null;
-            const loaded: AnimalPower | null = payload?.power ?? null;
+            if (!payload) {
+                setDidFail(true);
+                return null;
+            }
+            const loaded: AnimalPower | null = payload.power ?? null;
             setPower(loaded);
+            setDidFail(false);
             return loaded;
         } catch {
             // A failed read leaves the Power surfaces blank rather than asserting
             // that this species has none.
+            if (requestRef.current === request) setDidFail(true);
             return null;
         } finally {
             if (requestRef.current === request) setDidLoad(true);
@@ -47,10 +58,11 @@ export function useAnimalPower(speciesProfileId: string | null | undefined) {
     useEffect(() => {
         setPower(null);
         setDidLoad(false);
+        setDidFail(false);
         void reload();
     }, [reload]);
 
-    return {power, didLoad, reload, setPower};
+    return {power, didLoad, didFail, reload, setPower};
 }
 
 /**

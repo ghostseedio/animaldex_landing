@@ -150,7 +150,7 @@ export default function ComparisonVotePanel({
                             <div className="flex items-center gap-4">
                                 <span className="relative h-16 w-16 shrink-0 overflow-hidden  bg-surface-800/70">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={option.artwork} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    <img src={option.artwork} alt="" loading="lazy" className="h-full w-full object-contain p-[8%]" />
                                 </span>
                                 <span className="min-w-0 flex-1">
                                     <span className="block truncate font-display text-xl font-bold text-white">{option.name}</span>

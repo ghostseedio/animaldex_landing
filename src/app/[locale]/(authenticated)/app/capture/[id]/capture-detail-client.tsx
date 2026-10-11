@@ -3,7 +3,7 @@
 import {type ReactNode, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import Image from "next/image";
-import {useRouter} from "next/navigation";
+import {useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
@@ -16,7 +16,6 @@ import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/sy
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
 import EarnPowerSection from "@/components/animal-detail/animal-powers/earn-power-section";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
-import PowerLoopBar from "@/components/animal-detail/power-loop/power-loop-bar";
 import {PowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
 import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useFusedPowers} from "@/components/animal-detail/fused-powers/use-fused-powers";
@@ -155,7 +154,9 @@ export default function CaptureDetailClient({
     fusion = null
 }: CaptureDetailClientProps) {
     const router = useRouter();
-    const [tab, setTab] = useState<AnimalDetailTab>("learn");
+    // `?tab=play` opens the card on its Play tab, as the Play hub's Powers rows do (iOS `initialDetailTab`).
+    const requestedTab = useSearchParams()?.get("tab");
+    const [tab, setTab] = useState<AnimalDetailTab>(requestedTab === "play" || requestedTab === "stats" ? requestedTab : "learn");
     // The one earning destination for this screen. The Learn Power band's "Earn
     // this Power" opens it; on close the earned state is re-read so a Power
     // earned inside the sheet transforms the band without a reload.
@@ -174,9 +175,8 @@ export default function CaptureDetailClient({
         && capture.isEligibleCapture;
     const speciesTraining = useSpeciesTraining(showsPowerLoop ? speciesProfileId : null);
     const [loopTrials, setLoopTrials] = useState<AnimalTrial[] | null>(null);
-    const [trialsRouteRequest, setTrialsRouteRequest] = useState(0);
-    const [fusionOpenRequest, setFusionOpenRequest] = useState(0);
-    const loopContext = useMemo(() => ({fusionOpenRequest}), [fusionOpenRequest]);
+    // The bar's Next strip (and its Fuse Powers button) is gone; Fusion opens from its own row.
+    const loopContext = useMemo(() => ({fusionOpenRequest: 0}), []);
     // This card's fused Powers: the section under Fuse Powers and the bar's
     // Fusion step both read this one list. The owner's own card only.
     const fusedPowers = useFusedPowers(viewer.isOwner ? capture.id : null);
@@ -189,6 +189,8 @@ export default function CaptureDetailClient({
     }), [fusedPowers, router, speciesName]);
     const loop = useMemo(() => {
         if (!showsPowerLoop || !speciesTraining.didLoad || !animalPower.didLoad) return null;
+        // A failed Power read cannot say whether there is a Power to earn.
+        if (animalPower.didFail) return null;
         const power = animalPower.power;
         // A Power with no Trial shows only Apply It Your Way, which mounts no
         // Trials list to wait for.
@@ -204,7 +206,7 @@ export default function CaptureDetailClient({
             stake: capture.challengeStake,
             fused: fusedSummary
         });
-    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusedSummary, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
+    }, [animalPower.didFail, animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusedSummary, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
     const [reveal, setReveal] = useState<CaptureReveal | null>(null);
@@ -574,17 +576,6 @@ export default function CaptureDetailClient({
                         hidden={tab !== "play"}
                         className={tab === "play" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
-                        {loop ? (
-                            <div className="-mx-5">
-                                <PowerLoopBar
-                                    loop={loop}
-                                    onProveIt={() => setTrialsRouteRequest((value) => value + 1)}
-                                    battleHref="/app/matchups"
-                                    canBattle={!capture.isZooComparisonBanned}
-                                    onFuse={fusion?.canFuse ? () => setFusionOpenRequest((value) => value + 1) : null}
-                                />
-                            </div>
-                        ) : null}
                         {/* One mount. `EarnPowerSection` owns the choice between the
                             two routes and shows the Trials as the Trial arm of it. */}
                         <div className="-mx-5 mb-5">
@@ -592,11 +583,11 @@ export default function CaptureDetailClient({
                                 speciesProfileId={speciesProfileId}
                                 power={animalPower.power}
                                 didLoad={animalPower.didLoad}
+                                powerReadFailed={animalPower.didFail}
                                 onReload={animalPower.reload}
                                 isViewersOwnAnimal={viewer.isOwner}
                                 canAttemptTrials={trialUnlock.canAttempt}
                                 speciesTraining={showsPowerLoop ? speciesTraining : undefined}
-                                trialsRouteRequest={trialsRouteRequest}
                                 onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
                                 showsLoopSteps={Boolean(loop)}
                                 battleFuseContinues={Boolean(loop)}

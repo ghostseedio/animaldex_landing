@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
-import SettingsActivityDrawer from "@/app/[locale]/(composited)/u/[handle]/settings-activity-drawer";
+import ProfileFollowListSheet from "@/app/[locale]/(composited)/u/[handle]/profile-follow-list";
+import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyAnimalPowersSection from "@/components/animal-detail/animal-powers/my-animal-powers-section";
@@ -41,10 +44,13 @@ import type {
     ProfileViewerState
 } from "@/data/profile-authenticated";
 import ProfileSocialControls from "@/app/[locale]/(composited)/u/[handle]/profile-social-controls";
-import {formatAppInteger, formatAppUsd} from "@/lib/format-numbers";
+import {formatAppInteger} from "@/lib/format-numbers";
 import {categoryLabel, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
 export type ProfileTab = "history" | "stats" | "shop" | "locations";
+
+/** iOS `historyPageSize`. */
+const HISTORY_PAGE_SIZE = 18;
 
 export type ProfileContentLabels = {
     profileTitle: string;
@@ -178,13 +184,18 @@ type ProfileContentProps = {
         completedSetsCount: number;
         /** Null when the binders could not be loaded: the count is then unknown, not zero. */
         completedBinders: ProfileBinder[] | null;
-        signOutButton: React.ReactNode;
+        /** The owner's whole library for History (iOS reads every card, not public rows). */
+        historyCaptures: PublicProfileCapture[];
+        /** iOS Shop tab badge: Wildlife Guide requests waiting on this seller. */
+        pendingGuideRequests: number;
     } | null;
     listedPacks: ProfileListedPack[];
     listedGuides?: PublicGuideListing[];
     social?: ProfileSocialState | null;
     signInHref?: string;
     surface?: "marketing" | "app";
+    /** Settings → Currency (iOS converts the USD collection value). */
+    displayCurrency?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -346,14 +357,22 @@ function ShopDestinationRow({href, external = false, tint, title, subtitle, stat
 }
 
 /** iOS `followCountsRow`: two counts under the score card, on every profile. */
-function FollowCountsRow({counts}: {counts: {followers: number; following: number}}) {
+function FollowCountsRow({counts, onOpen}: {counts: {followers: number; following: number}; onOpen?: (kind: "followers" | "following") => void}) {
     return (
         <div className="flex items-center border-b border-white/[0.06] bg-[#12351C]/40 py-3.5">
-            {([["Followers", counts.followers], ["Following", counts.following]] as const).map(([label, value], index) => (
-                <div key={label} className={`flex flex-1 flex-col items-center gap-0.5 ${index > 0 ? "border-l border-white/10" : ""}`}>
+            {([["followers", "Followers", counts.followers], ["following", "Following", counts.following]] as const).map(([kind, label, value], index) => (
+                <button
+                    key={label}
+                    type="button"
+                    disabled={!onOpen}
+                    onClick={() => onOpen?.(kind)}
+                    aria-label={`${value} ${label}`}
+                    title={onOpen ? "Opens the list" : undefined}
+                    className={`flex flex-1 flex-col items-center gap-0.5 transition enabled:hover:opacity-80 ${index > 0 ? "border-l border-white/10" : ""}`}
+                >
                     <span className="text-xl font-extrabold tabular-nums text-white">{formatAppInteger(value)}</span>
                     <span className="text-[11px] font-medium uppercase text-[#7E8781]">{label}</span>
-                </div>
+                </button>
             ))}
         </div>
     );
@@ -485,31 +504,34 @@ export default function ProfileContent({
     listedGuides = [],
     social = null,
     signInHref = "/account",
-    surface = "marketing"
+    surface = "marketing",
+    displayCurrency = "USD"
 }: ProfileContentProps) {
     const [activeTab, setActiveTab] = useState<ProfileTab>("history");
-    const [activeChromePreset, setActiveChromePreset] = useState(profile.chromePreset);
-    const [showProfileStyle, setShowProfileStyle] = useState(false);
-    const [isSavingProfileStyle, setIsSavingProfileStyle] = useState(false);
-    const [profileStyleError, setProfileStyleError] = useState<string | null>(null);
+    const activeChromePreset = profile.chromePreset;
     const [chromeCollapsed, setChromeCollapsed] = useState(false);
     const [isWildInsightScope, setIsWildInsightScope] = useState(false);
     const [showHeadToHead, setShowHeadToHead] = useState(false);
-    const [showSettingsActivity, setShowSettingsActivity] = useState(false);
+    const [followList, setFollowList] = useState<"followers" | "following" | null>(null);
+    const {unreadMessageCount} = useAppShellChrome();
+    // iOS History: the owner's whole library; everyone else the public rows.
+    const historyCaptures = viewer.isOwner && ownerExtras ? ownerExtras.historyCaptures : profile.recentCaptures;
+    const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
+    const historySentinel = useRef<HTMLDivElement>(null);
 
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
-        ? formatAppUsd(profile.collectionValueUsd, locale)
+        ? formatDisplayMoney(profile.collectionValueUsd, displayCurrency, locale)
         : null;
-    const friendPets = profile.recentCaptures
+    const friendPets = historyCaptures
         .filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm")
         .slice(0, 8);
 
     const tabs = useMemo<ProfileTab[]>(
-        () => (profile.canViewLocations
+        () => (profile.canViewLocations || viewer.isOwner
             ? ["history", "stats", "shop", "locations"]
             : ["history", "stats", "shop"]),
-        [profile.canViewLocations]
+        [profile.canViewLocations, viewer.isOwner]
     );
     const tabLabel = (tab: ProfileTab) => {
         if (tab === "history") return labels.tabHistory;
@@ -524,9 +546,22 @@ export default function ProfileContent({
         : null;
 
     const gridItems = useMemo(
-        () => buildProfileGridItems(profile.recentCaptures, profile.captureGridSort),
-        [profile.recentCaptures, profile.captureGridSort]
+        () => buildProfileGridItems(historyCaptures, profile.captureGridSort),
+        [historyCaptures, profile.captureGridSort]
     );
+
+    // iOS reveals 18 cells at a time as the grid nears the bottom.
+    useEffect(() => {
+        const sentinel = historySentinel.current;
+        if (!sentinel || activeTab !== "history") return;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setHistoryLimit((limit) => limit + HISTORY_PAGE_SIZE);
+            }
+        }, {rootMargin: "260px 0px"});
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, gridItems.length, historyLimit]);
 
     // iOS lists the owner's completed collection binders and nothing for another
     // member: binder progress is built from the viewer's own captures. The old
@@ -575,7 +610,7 @@ export default function ProfileContent({
             // iOS omits the chip when the count is not known.
             ...(binders ? [{title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"}] : []),
             {
-                title: "Challenges",
+                title: "Battles",
                 value: `${profile.challengeWins}/${profile.challengeWins + profile.challengeLosses}`,
                 tint: THEME.neon
             },
@@ -603,26 +638,6 @@ export default function ProfileContent({
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    async function saveProfileStyle(preset: typeof activeChromePreset) {
-        setIsSavingProfileStyle(true);
-        setProfileStyleError(null);
-        try {
-            const response = await fetch("/api/app/profile", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({chromePreset: preset})
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(payload.error ?? "Could not update profile style.");
-            setActiveChromePreset(preset);
-            setShowProfileStyle(false);
-        } catch (error) {
-            setProfileStyleError(error instanceof Error ? error.message : "Could not update profile style.");
-        } finally {
-            setIsSavingProfileStyle(false);
-        }
-    }
-
     return (
         <div className={`flex flex-col gap-6 ${surface === "app" ? "md:gap-7" : "md:gap-8"}`}>
             {viewer.isLoggedIn && !viewer.isOwner && viewer.viewerUsername ? (
@@ -633,20 +648,22 @@ export default function ProfileContent({
 
             {viewer.isOwner && surface === "app" ? (
                 <div className="sticky top-16 z-20 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-canvas-950/95 px-[18px] py-2.5 backdrop-blur-xl sm:-mx-7 lg:top-0 lg:-mx-10">
-                    <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
-                        <ProfileMessagesIcon />
-                    </ProfileChromeButton>
+                    <span className="relative">
+                        <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
+                            <ProfileMessagesIcon />
+                        </ProfileChromeButton>
+                        {unreadMessageCount > 0 ? <span className="pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-orange-400" aria-label="Unread messages" /> : null}
+                    </span>
                     <p className={`truncate px-3 text-center font-display text-sm font-bold text-white transition ${chromeCollapsed ? "opacity-100" : "opacity-0"}`}>
                         {profile.displayName}
                     </p>
-                    <button
-                        type="button"
-                        onClick={() => setShowSettingsActivity(true)}
-                        aria-label={labels.settingsActivity}
+                    <Link
+                        href={`${localePrefix}/app/settings`}
+                        aria-label="Settings and activity"
                         className="grid h-8 w-8 place-items-center text-primary-200 transition hover:text-primary-100"
                     >
                         <ProfileSettingsIcon />
-                    </button>
+                    </Link>
                 </div>
             ) : null}
 
@@ -680,7 +697,7 @@ export default function ProfileContent({
                         ) : null}
                         <div className="ml-auto flex shrink-0 items-center gap-2">
                             {viewer.isOwner ? (
-                                <ProfileChromeButton onClick={() => setShowProfileStyle(true)} ariaLabel={labels.editProfile}>
+                                <ProfileChromeButton href={`${localePrefix}/app/profile/edit`} ariaLabel="Edit profile">
                                     <ProfileEditIcon />
                                 </ProfileChromeButton>
                             ) : viewer.isLoggedIn ? (
@@ -706,24 +723,22 @@ export default function ProfileContent({
                                 </div>
                             ) : null}
                             {viewer.isOwner && surface !== "app" ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSettingsActivity(true)}
-                                    aria-label={labels.settingsActivity}
+                                <Link
+                                    href={`${localePrefix}/app/settings`}
+                                    aria-label="Settings and activity"
                                     className="grid h-9 w-9 place-items-center text-primary-200 transition hover:text-primary-100"
                                 >
                                     <ProfileSettingsIcon />
-                                </button>
+                                </Link>
                             ) : null}
                         </div>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2">
                         <p className="truncate text-[15px] font-medium text-white/55">@{profile.username}</p>
                         {viewer.isOwner && ownerExtras?.credits ? (
-                            <a
-                                href={appStoreUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <Link
+                                href={`${localePrefix}/app/credits`}
+                                aria-label={`${ownerExtras.credits.balance} credits. Open credits and unlocks.`}
                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold tabular-nums ${
                                     ownerExtras.credits.isLow
                                         ? "bg-primary-400 text-black"
@@ -732,7 +747,7 @@ export default function ProfileContent({
                             >
                                 <span aria-hidden="true">⚡</span>
                                 {ownerExtras.credits.balance}
-                            </a>
+                            </Link>
                         ) : null}
                     </div>
                 </div>
@@ -744,8 +759,8 @@ export default function ProfileContent({
                     ? <WildIdentityCard identity={profile.wildIdentity} labels={labels} />
                     : viewer.isOwner ? (
                         <Link href={`${localePrefix}/app/train/wild-profile`} className="rounded-2xl border border-primary-300/20 bg-primary-400/[0.08] p-4">
-                            <p className="font-display text-lg font-bold text-white">{labels.discoverWildProfileTitle}</p>
-                            <p className="mt-1 text-sm text-white/55">{labels.discoverWildProfileDetail}</p>
+                            <p className="font-display text-lg font-bold text-white">Discover My Animals</p>
+                            <p className="mt-1 text-sm text-white/55">Take the animal quiz to unlock your Origin, Apex, and Active animals.</p>
                         </Link>
                     ) : null
             ) : null}
@@ -820,8 +835,16 @@ export default function ProfileContent({
                                 aria-label={tabLabel(tab)}
                                 className="flex flex-col items-center gap-1.5 pt-2.5"
                             >
-                                <span className={`flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
+                                <span className={`relative flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
                                     {TAB_ICONS[tab]}
+                                    {tab === "shop" && viewer.isOwner && ownerExtras && ownerExtras.pendingGuideRequests > 0 ? (
+                                        <span
+                                            className="absolute -right-3 -top-1.5 min-w-[16px] rounded-full bg-primary-400 px-1 text-center text-[9px] font-black leading-4 text-black"
+                                            aria-label={`${ownerExtras.pendingGuideRequests} guide requests`}
+                                        >
+                                            {ownerExtras.pendingGuideRequests}
+                                        </span>
+                                    ) : null}
                                 </span>
                                 <span className={`h-0.5 w-full ${isActive ? "bg-white" : "bg-transparent"}`} />
                             </button>
@@ -840,7 +863,10 @@ export default function ProfileContent({
                             : null}
                         tradeUnlock={ownerExtras?.tradeUnlock ?? null}
                     />
-                    {followCounts ? <FollowCountsRow counts={followCounts} /> : null}
+                    {followCounts ? (
+                        <FollowCountsRow counts={followCounts} onOpen={viewer.isLoggedIn ? setFollowList : undefined} />
+                    ) : null}
+                    {social?.week ? <ProfileWeeklyStatsCard week={social.week} /> : null}
                     <SettingComparisonCard
                         wild={profile.wildCount}
                         zoo={profile.zooCount}
@@ -869,6 +895,15 @@ export default function ProfileContent({
                         isOwner={viewer.isOwner}
                         usernameHandle={`@${profile.username}`}
                     />
+                    {viewer.isOwner ? (
+                        <Link
+                            href={`${localePrefix}/app/collection?segment=binders`}
+                            className="flex items-center justify-end gap-1 border-b border-white/[0.06] px-[18px] py-3 text-xs font-bold"
+                            style={{color: THEME.neon}}
+                        >
+                            Browse collection binders <span aria-hidden="true">↗</span>
+                        </Link>
+                    ) : null}
                     <AverageTraitsCard stats={profile.averageTraits} />
                     {viewer.isOwner && social?.profileViews ? <ProfileViewsCard stats={social.profileViews} /> : null}
                     <ProfileInsightsSection
@@ -895,8 +930,7 @@ export default function ProfileContent({
                     // iOS `ownerDashboard`: destinations, not product cards.
                     <div className="-mx-4 flex flex-col md:-mx-8">
                         <ShopDestinationRow
-                            href={appStoreUrl}
-                            external
+                            href={`${localePrefix}/app/train/packs`}
                             tint="#FF9500"
                             title="Sealed Packs"
                             subtitle="Bundle eligible captures into mystery packs. Sold for Credits."
@@ -907,7 +941,7 @@ export default function ProfileContent({
                             tint="#32ADE6"
                             title="Wildlife Guides"
                             subtitle="Create real-world wildlife experiences. Paid in real money."
-                            status={listedGuides.length > 0 ? `${listedGuides.length} published` : "Set up on the web"}
+                            status={listedGuides.length > 0 ? `${listedGuides.length} published` : "Application available"}
                         />
                         <Link
                             href={`${localePrefix}/earn-on-animaldex`}
@@ -1014,7 +1048,9 @@ export default function ProfileContent({
 
             {activeTab === "history" ? (
                 <section>
-                    {profile.recentCaptures.length === 0 ? (
+                    {historyCaptures.length === 0 && viewer.isOwner ? (
+                        <p className="px-[18px] py-10 text-center text-[15px] font-medium text-white/[0.62]">No captures yet.</p>
+                    ) : historyCaptures.length === 0 ? (
                         <div className="mt-4  border border-dashed border-white/10 px-6 py-10 text-center">
                             <h3 className="font-display text-2xl font-bold text-white">{labels.noPublicCapturesTitle}</h3>
                             <p className="mx-auto mt-3 max-w-xl text-sm text-white/45">
@@ -1023,11 +1059,12 @@ export default function ProfileContent({
                         </div>
                     ) : (
                         <div className="-mx-4 mt-2 grid grid-cols-3 gap-0.5 md:-mx-8">
-                            {gridItems.map((item) => (
+                            {gridItems.slice(0, historyLimit).map((item) => (
                                 <ProfileGridCell key={item.id} item={item} />
                             ))}
                         </div>
                     )}
+                    {gridItems.length > historyLimit ? <div ref={historySentinel} className="h-px" aria-hidden="true" /> : null}
                 </section>
             ) : null}
 
@@ -1048,57 +1085,8 @@ export default function ProfileContent({
                 />
             ) : null}
 
-            {showSettingsActivity ? (
-                <SettingsActivityDrawer
-                    labels={labels}
-                    localePrefix={localePrefix}
-                    appStoreUrl={appStoreUrl}
-                    credits={ownerExtras?.credits ?? null}
-                    onClose={() => setShowSettingsActivity(false)}
-                    signOutButton={ownerExtras?.signOutButton}
-                />
-            ) : null}
-
-            {showProfileStyle ? (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 light:bg-black/40 p-4 md:items-center" role="dialog" aria-modal="true" aria-label="Profile style">
-                    <div className="w-full max-w-md  border border-white/10 bg-[#171717] light:bg-surface-900 p-5 shadow-2xl">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h2 className="font-display text-2xl font-bold text-white">Profile style</h2>
-                                <p className="mt-1 text-sm text-white/45">Choose what appears beneath your profile header.</p>
-                            </div>
-                            <button type="button" onClick={() => setShowProfileStyle(false)} className="text-sm font-bold text-primary-200">Close</button>
-                        </div>
-                        <div className="mt-5 grid gap-2">
-                            {([
-                                ["spirit", "Spirit profile", "Origin, Apex, and Active animals", "✦"],
-                                ["friend", "Friend profile", "Your pets", "♥"],
-                                ["professional", "Professional profile", "Bio, joined date, and Instagram", "▣"],
-                                ["business", "Business profile", "Net worth, overall score, and catalog %", "↗"]
-                            ] as const).map(([preset, title, detail, icon]) => (
-                                <button
-                                    key={preset}
-                                    type="button"
-                                    disabled={isSavingProfileStyle}
-                                    onClick={() => saveProfileStyle(preset)}
-                                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
-                                        activeChromePreset === preset
-                                            ? "border-primary-300/40 bg-primary-400/10"
-                                            : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
-                                    }`}
-                                >
-                                    <span className="grid h-10 w-10 place-items-center  bg-white/[0.06] text-primary-100">{icon}</span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block font-bold text-white">{title}</span>
-                                        <span className="mt-0.5 block text-xs text-white/45">{detail}</span>
-                                    </span>
-                                    {activeChromePreset === preset ? <span className="text-primary-200">✓</span> : null}
-                                </button>
-                            ))}
-                        </div>
-                        {profileStyleError ? <p className="mt-3 text-sm text-red-300">{profileStyleError}</p> : null}
-                    </div>
-                </div>
+            {followList ? (
+                <ProfileFollowListSheet userId={profile.userId} kind={followList} onClose={() => setFollowList(null)} />
             ) : null}
         </div>
     );

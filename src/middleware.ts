@@ -61,6 +61,35 @@ function matchMisroutedAuthCallback(request: NextRequest) {
 }
 
 /**
+ * A plain `/account` link (the header, a "Sign in" button) carries no `next`,
+ * so signing in would land on /app. Fill it from the page the link was on —
+ * the Referer, same site only — so sign-in goes back to where the person was.
+ * Next's client navigations send the current page as the Referer too.
+ */
+function matchAccountWithoutNext(request: NextRequest) {
+    if (!/^\/(?:(?:en|id)\/)?account\/?$/.test(request.nextUrl.pathname)) return null;
+    if (request.nextUrl.searchParams.has("next")) return null;
+
+    const referer = request.headers.get("referer");
+    if (!referer) return null;
+    let from: URL;
+    try {
+        from = new URL(referer);
+    } catch {
+        return null;
+    }
+    // Behind the proxy `nextUrl.host` can be the internal one; the browser sent the public host.
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+    if (from.host !== host) return null;
+    if (/^\/(?:(?:en|id)\/)?account(?:\/|$)/.test(from.pathname)) return null;
+    if (from.pathname.startsWith("/auth/") || from.pathname.startsWith("/api/")) return null;
+
+    const destination = request.nextUrl.clone();
+    destination.searchParams.set("next", `${from.pathname}${from.search}`);
+    return destination;
+}
+
+/**
  * Middleware stays broad so next-intl can handle `as-needed` locale routing
  * and legacy public URLs keep working. That does **not** mean every public
  * request may contact Supabase.
@@ -79,6 +108,11 @@ export async function middleware(request: NextRequest) {
         const misroutedAuthCallback = matchMisroutedAuthCallback(request);
         if (misroutedAuthCallback) {
             return NextResponse.redirect(misroutedAuthCallback);
+        }
+
+        const accountWithNext = matchAccountWithoutNext(request);
+        if (accountWithNext) {
+            return NextResponse.redirect(accountWithNext);
         }
 
         // Collapse external /en URLs here (not next.config) so next-intl's

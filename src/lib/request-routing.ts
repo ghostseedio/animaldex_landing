@@ -32,6 +32,7 @@ export const protectedAppPrefixes = [
     "/app/missions",
     "/app/notifications",
     "/app/profile",
+    "/app/settings",
     "/app/earnings",
     "/app/guides",
     "/app/sets",

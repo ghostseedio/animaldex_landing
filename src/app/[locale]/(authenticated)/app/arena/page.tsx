@@ -1,23 +1,54 @@
-import ArenaMatchupsHero from "@/app/[locale]/(authenticated)/app/arena/_components/arena-matchups-hero";
-import ArenaModuleCarousel from "@/app/[locale]/(authenticated)/app/arena/_components/arena-module-carousel";
-import {getArenaPageData} from "@/data/train-modules";
+import {Suspense} from "react";
+import {redirect} from "next/navigation";
+import MatchupsHub, {type PlayHubSegment} from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-hub";
+import {getAuthenticatedAppContext} from "@/data/authenticated-app";
+import {getMatchupArenaTarget, getMatchupHubBundle} from "@/data/matchups";
+import {fetchSpeciesComparisonSummaries} from "@/data/species-comparisons";
+import {getLocalePath} from "@/lib/site";
 
 type ArenaPageProps = {
     params: {locale: string};
+    searchParams?: {target?: string; segment?: string};
 };
 
-export default async function ArenaPage({params}: ArenaPageProps) {
-    const {modules, opponentCount} = await getArenaPageData(`/${params.locale}`);
+const SEGMENTS: PlayHubSegment[] = ["powers", "comparisons", "history"];
+
+/**
+ * The Play tab. On iOS the tab root (`IdentityHomeView`) IS the matchups hub,
+ * embedded: Powers, Comparisons and History. The old Featured Matchups hero
+ * and Training Modules carousel are gone from the phone, so they are gone here.
+ */
+export default async function ArenaPage({params, searchParams}: ArenaPageProps) {
+    const context = await getAuthenticatedAppContext();
+    if (!context) redirect(getLocalePath(params.locale, "/account"));
+
+    const targetId = searchParams?.target?.trim() || null;
+    const requestedSegment = searchParams?.segment?.trim() as PlayHubSegment | undefined;
+    const [bundle, popularBreakdowns] = await Promise.all([
+        getMatchupHubBundle(context.profile.id),
+        fetchSpeciesComparisonSummaries(12).catch(() => [])
+    ]);
+
+    let arena = bundle.arena;
+    if (targetId && !arena.some((item) => item.captureId === targetId)) {
+        const target = await getMatchupArenaTarget(context.profile.id, targetId);
+        if (target) {
+            arena = [target, ...arena.filter((item) => item.captureId !== targetId)];
+        }
+    }
 
     return (
-        <div className="mx-auto max-w-[640px] space-y-7">
-            <header className="space-y-2">
-                <h1 className="font-display text-[34px] font-black leading-none text-white">Play</h1>
-                <p className="text-base text-white/55">Start with Matchups, then open a training module below.</p>
-            </header>
-
-            <ArenaMatchupsHero opponentCount={opponentCount} />
-            <ArenaModuleCarousel modules={modules} />
-        </div>
+        <Suspense fallback={<div className="py-10 text-sm text-white/45">Loading Play…</div>}>
+            <MatchupsHub
+                locale={params.locale}
+                viewerUserId={context.profile.id}
+                initialArena={arena}
+                initialRoster={bundle.roster}
+                initialHistory={bundle.history}
+                initialPopularBreakdowns={popularBreakdowns}
+                initialTargetId={targetId}
+                initialSegment={requestedSegment && SEGMENTS.includes(requestedSegment) ? requestedSegment : "powers"}
+            />
+        </Suspense>
     );
 }

@@ -179,7 +179,7 @@ export default function ComparisonGenerating({
                 <figure className="flex flex-col items-center gap-3">
                     <span className={`relative h-24 w-24 overflow-hidden  border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={animalAArtwork} alt="" className="h-full w-full object-cover" />
+                        <img src={animalAArtwork} alt="" className="h-full w-full object-contain p-[8%]" />
                     </span>
                     <figcaption className="max-w-[9rem] truncate text-sm font-bold text-white">{animalAName}</figcaption>
                 </figure>
@@ -189,7 +189,7 @@ export default function ComparisonGenerating({
                 <figure className="flex flex-col items-center gap-3">
                     <span className={`relative h-24 w-24 overflow-hidden  border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={animalBArtwork} alt="" className="h-full w-full object-cover" />
+                        <img src={animalBArtwork} alt="" className="h-full w-full object-contain p-[8%]" />
                     </span>
                     <figcaption className="max-w-[9rem] truncate text-sm font-bold text-white">{animalBName}</figcaption>
                 </figure>

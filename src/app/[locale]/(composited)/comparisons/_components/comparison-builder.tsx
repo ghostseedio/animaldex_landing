@@ -54,7 +54,7 @@ function AnimalThumb({animal, className = "h-11 w-11"}: {animal: ComparableAnima
         <span className={`relative shrink-0 overflow-hidden  bg-white/[0.06] ${className}`}>
             {/* Storage artwork is already thumbnail-sized; skip the optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={animal.artworkUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <img src={animal.artworkUrl} alt="" loading="lazy" className="h-full w-full object-contain p-[8%]" />
         </span>
     );
 }

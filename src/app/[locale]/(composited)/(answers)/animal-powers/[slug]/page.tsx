@@ -246,6 +246,8 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                                     priority
                                     className="aspect-[4/3] "
                                     sizes="(min-width: 1024px) 40vw, 100vw"
+                                    // The whole animal, above the label laid over the bottom.
+                                    imageClassName="object-contain px-[8%] pb-24 pt-5"
                                 />
                                 <div className="theme-dark absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-5 pb-5 pt-16">
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">{t("imageLabel")}</p>

@@ -10,6 +10,7 @@ import HomeArchiveModule from "@/app/[locale]/(composited)/(home)/_components/ho
 import FaqSection from "@/app/[locale]/(composited)/(home)/_components/faq-section";
 import Phone from "@/app/[locale]/(composited)/(home)/_components/phone";
 import {checkedIcons} from "@/loaders/icons";
+import {animalSilhouetteImages} from "@/data/animal-silhouettes";
 import Marquee from "@/app/[locale]/_components/marquee";
 import {default as phone} from "@/data/phone.json";
 import {default as features} from "@/data/features.json";
@@ -37,19 +38,6 @@ const heroBackgroundImage =
 
 const heroLaurelWreathImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/laurel-wreath-ede0a9b0-7b2e-45c3-a4fa-12bf9615c29d.webp";
-
-const animalBackgroundImages = [
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mantis-shrimp.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/mountain-tapir.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/pekin-duck.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/red-kite.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/rex-rabbit.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/zander.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/thorny-devil.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/tibetan-fox.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/samoyed.webp",
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/swamp-harrier.webp"
-];
 
 export const revalidate = 86400;
 
@@ -316,7 +304,7 @@ export default async function Home({params}: HomePageProps) {
             <IconCanvas
                 probability={0.02}
                 paths={checkedIcons}
-                imageSources={animalBackgroundImages}
+                imageSources={animalSilhouetteImages}
                 color="#21C05E"
                 height={2000}
             />

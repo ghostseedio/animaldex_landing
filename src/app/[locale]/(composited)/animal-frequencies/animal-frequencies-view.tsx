@@ -15,6 +15,8 @@ import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagina
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
+import FrequencyExplainer, {type FrequencyExplainerItem} from "@/components/explainers/frequency-explainer";
+import {FREQUENCY_LESSONS} from "@/lib/frequency-lessons";
 
 export const animalFrequenciesPageCount = pagination.pageCount(behaviourSignatures.length);
 
@@ -29,6 +31,20 @@ const letterPages: Array<{letter: string; page: number}> = (() => {
 })();
 
 const ICON_SIZE = 96;
+
+/** The explainer's four examples with their real snapshot rows (archetype, waveform). */
+const frequencyExplainerItems: FrequencyExplainerItem[] = FREQUENCY_LESSONS.flatMap((lesson) => {
+    const entry = behaviourSignatures.find((signature) => signature.slug === lesson.slug);
+    if (!entry) return [];
+    return [{
+        ...lesson,
+        name: entry.name,
+        archetype: entry.archetype,
+        pathD: entry.waveform?.pathD ?? null,
+        viewBox: entry.waveform?.viewBox ?? "0 0 100 50",
+        waveDescription: entry.waveform?.description ?? null
+    }];
+});
 
 const TITLE = "Animal Frequencies: The Science Behind Animal Behaviour Rhythms and Signatures";
 const DESCRIPTION =
@@ -75,6 +91,15 @@ const FAQ: Array<{question: string; answer: string}> = [
             + "frequency profile and a waveform that traces the rhythm. They are summaries of published natural history, "
             + "not measurements taken from an individual animal, and they describe typical behaviour for a species rather than "
             + "predicting what one animal will do."
+    },
+    {
+        question: "What does an animal's frequency mean for its lesson?",
+        answer:
+            "In AnimalDex every animal has a lesson, and its frequency says how to live it. A low-frequency animal's lesson "
+            + "is patience: commit rarely and hold it long. A mid-frequency animal's works by steady repetition. A "
+            + "high-frequency animal's rewards many quick, cheap attempts. A two-speed animal, like a crocodile that waits "
+            + "and then strikes, teaches timing. Each animal page shows its wave and where the same pattern turns up in "
+            + "business, history, sport and everyday life."
     }
 ];
 
@@ -179,6 +204,16 @@ export default function AnimalFrequenciesView({locale, page, icons}: {locale: st
                         Below is that tempo for {behaviourSignatures.length.toLocaleString(params.locale)} species: an
                         archetype, a frequency, and a waveform tracing the rhythm.
                     </p>
+                    <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-200">
+                        In AnimalDex, every animal has a lesson, and its frequency tells you how to live it: patiently,
+                        steadily, quickly, or by waiting for the moment.
+                    </p>
+                </div>
+            </section>
+
+            <section className="border-b border-line-300 px-5 py-12 sm:px-8">
+                <div className="mx-auto max-w-5xl">
+                    <FrequencyExplainer items={frequencyExplainerItems} />
                 </div>
             </section>
 
@@ -215,6 +250,29 @@ export default function AnimalFrequenciesView({locale, page, icons}: {locale: st
                             </div>
                         ))}
                     </dl>
+                </div>
+            </section>
+
+            <section className="border-b border-line-300 px-5 py-16 sm:px-8">
+                <div className="mx-auto max-w-5xl">
+                    <h2 className="font-display text-3xl text-white">How frequency shapes an animal&rsquo;s lesson</h2>
+                    <p className="mt-4 max-w-3xl leading-7 text-ink-200">
+                        Every AnimalDex animal has a lesson: the behaviour that keeps it alive, put into words you can use.
+                        Its frequency is how that lesson is meant to be lived. On each animal page you can see the wave,
+                        and the places the same pattern turns up in business, history, sport and everyday life.
+                    </p>
+                    <div className="mt-8 grid gap-px border border-line-300 bg-line-300 sm:grid-cols-2">
+                        {frequencyExplainerItems.map((item) => (
+                            <div key={item.key} className="flex flex-col gap-2 bg-canvas-950 p-6">
+                                <p className="font-mono text-[11px] font-bold tracking-wide text-primary-300">{item.label}</p>
+                                <h3 className="font-display text-xl text-white">{item.title}</h3>
+                                <p className="text-sm leading-6 text-ink-200">{item.lesson}</p>
+                                <Link href={`/animals/${item.slug}`} className="mt-auto pt-2 text-sm font-semibold text-primary-200 underline-offset-4 hover:underline">
+                                    See the {item.name}&rsquo;s frequency
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
 

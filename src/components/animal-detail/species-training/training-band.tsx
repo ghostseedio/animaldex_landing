@@ -11,6 +11,7 @@ import {
     trainingIntroText,
     trainingRewardLine
 } from "@/lib/species-training";
+import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
 import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
 
 const NEON = "#A7F432";
@@ -39,7 +40,9 @@ export default function TrainingBand({
     power,
     onPassed,
     onClosed,
-    openRequest = 0
+    openRequest = 0,
+    isSignedIn = true,
+    asLoopStep = false
 }: {
     training: SpeciesTraining | null;
     power: AnimalPower | null;
@@ -49,10 +52,19 @@ export default function TrainingBand({
     onClosed: () => void;
     /** Bumped by the Power Loop's "Start Training"; each bump opens the quiz once. */
     openRequest?: number;
+    /** False: a signed-out preview. The step and its lock show; starting goes to sign-in first. */
+    isSignedIn?: boolean | null;
+    /**
+     * Under a Power Loop step eyebrow: drawn as a Trial card (rail over a
+     * washed body), so step 1 matches the Trial cards and step 3.
+     */
+    asLoopStep?: boolean;
 }) {
     const [showsQuiz, setShowsQuiz] = useState(false);
     const [showsPower, setShowsPower] = useState(false);
-    const canStart = Boolean(training?.available && training.unlocked && !training.completed);
+    // Playing needs an account: a signed-out reader sees the step and its
+    // questions' count, and "Sign in to start Training" instead of the quiz.
+    const canStart = Boolean(isSignedIn !== false && training?.available && training.unlocked && !training.completed && training.questions.length > 0);
 
     useEffect(() => {
         if (!openRequest || !canStart) return;
@@ -66,7 +78,7 @@ export default function TrainingBand({
 
     // The quiz stays open over a pass: the band behind it flips to complete
     // while the person reads the explanations, and Continue closes it.
-    const quiz = showsQuiz ? (
+    const quiz = showsQuiz && isSignedIn !== false && training.questions.length > 0 ? (
         <TrainingQuiz
             training={training}
             powerName={power?.principleName}
@@ -81,6 +93,21 @@ export default function TrainingBand({
             }}
         />
     ) : null;
+
+    if (training.completed && asLoopStep) {
+        return (
+            <>
+                <LoopStepCard accent={NEON} tone="done" label={TRAINING_COPY.title} state="✓ Complete">
+                    <h3 className="font-display text-2xl font-black leading-tight text-white">{power?.principleName ?? TRAINING_COPY.title}</h3>
+                    <p className="flex items-center gap-2 text-sm font-semibold" style={{color: NEON_TEXT}}>
+                        <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
+                        {TRAINING_COPY.complete}
+                    </p>
+                </LoopStepCard>
+                {quiz}
+            </>
+        );
+    }
 
     if (training.completed) {
         // iOS keeps the band once passed, its heading over one "Training
@@ -105,46 +132,86 @@ export default function TrainingBand({
     const reward = trainingRewardLine(training.rewardXP, training.rewardCredits);
     const lesson = power ? [power.coreLesson, power.principleExpression].filter((text): text is string => Boolean(text)) : [];
 
+    // As a loop step the buttons take the Trial card's type, so steps 1 and 2 match.
+    const buttonText = asLoopStep ? "text-sm font-black" : "text-base font-bold";
+    const intro = <p className="text-sm leading-6 text-white/70">{trainingIntroText(training.questions.length)}</p>;
+    const details = (
+        <>
+            {showsPower && power ? (
+                <div className="flex flex-col gap-1.5 border-l-2 pl-3" style={{borderColor: `${NEON}8C`}}>
+                    <p className="text-sm font-bold text-white">{power.principleName}</p>
+                    {lesson.map((text) => (
+                        <p key={text} className="text-sm leading-6 text-white/60">{text}</p>
+                    ))}
+                </div>
+            ) : null}
+
+            {isSignedIn === false ? (
+                <a
+                    href="/account"
+                    onClick={(event) => {
+                        // Back to this animal after signing in, where Training can start.
+                        event.preventDefault();
+                        const next = `${window.location.pathname}${window.location.search}`;
+                        window.location.assign(`/account?next=${encodeURIComponent(next)}`);
+                    }}
+                    className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full ${buttonText} text-black/90`}
+                    style={{backgroundColor: NEON}}
+                >
+                    {TRAINING_COPY.signInToStart} <span aria-hidden="true">→</span>
+                </a>
+            ) : training.unlocked ? (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setShowsPower(false);
+                        setShowsQuiz(true);
+                    }}
+                    className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full ${buttonText} text-black/90`}
+                    style={{backgroundColor: NEON}}
+                >
+                    {TRAINING_COPY.start} <span aria-hidden="true">→</span>
+                </button>
+            ) : (
+                <>
+                    <button
+                        type="button"
+                        disabled
+                        className={`flex min-h-[48px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-white/[0.08] ${buttonText} text-white/60`}
+                    >
+                        🔒 {NOT_YET_CAPTURED_TITLE}
+                    </button>
+                    <p className="text-center text-[10px] text-white/40">{NOT_YET_CAPTURED_NOTE}</p>
+                </>
+            )}
+        </>
+    );
+
+    if (asLoopStep) {
+        return (
+            <>
+                <LoopStepCard
+                    accent={NEON}
+                    tone={training.unlocked || isSignedIn === false ? "lit" : "quiet"}
+                    label={TRAINING_COPY.title}
+                    state={reward}
+                >
+                    <h3 className="font-display text-2xl font-black leading-tight text-white">{power?.principleName ?? TRAINING_COPY.title}</h3>
+                    {intro}
+                    {details}
+                </LoopStepCard>
+                {quiz}
+            </>
+        );
+    }
+
     return (
         <>
             <section className="flex flex-col gap-3 border-b border-white/[0.08] bg-white/[0.03] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
                 <TrainingHeading />
-                <p className="text-sm leading-6 text-white/70">{trainingIntroText(training.questions.length)}</p>
+                {intro}
                 {reward ? <p className="text-[11px] font-black" style={{color: NEON}}>{reward}</p> : null}
-
-                {showsPower && power ? (
-                    <div className="flex flex-col gap-1.5 border-l-2 pl-3" style={{borderColor: `${NEON}8C`}}>
-                        <p className="text-sm font-bold text-white">{power.principleName}</p>
-                        {lesson.map((text) => (
-                            <p key={text} className="text-sm leading-6 text-white/60">{text}</p>
-                        ))}
-                    </div>
-                ) : null}
-
-                {training.unlocked ? (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setShowsPower(false);
-                            setShowsQuiz(true);
-                        }}
-                        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
-                        style={{backgroundColor: NEON}}
-                    >
-                        {TRAINING_COPY.start} <span aria-hidden="true">→</span>
-                    </button>
-                ) : (
-                    <>
-                        <button
-                            type="button"
-                            disabled
-                            className="flex min-h-[48px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-white/[0.08] text-base font-bold text-white/60"
-                        >
-                            🔒 {NOT_YET_CAPTURED_TITLE}
-                        </button>
-                        <p className="text-center text-[10px] text-white/40">{NOT_YET_CAPTURED_NOTE}</p>
-                    </>
-                )}
+                {details}
             </section>
             {quiz}
         </>

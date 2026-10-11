@@ -37,6 +37,8 @@ import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import {RankingStatLessonSection} from "@/app/[locale]/(composited)/rankings/_components/stat-lessons-section";
+import {statForRanking} from "@/lib/stat-lessons";
 
 type RankingPageProps = {
     params: {
@@ -487,6 +489,10 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                     ))}
                 </div>
             </section>
+
+            {/* The list's stat read as a lesson: the AnimalDex lens on the
+                ranking, after the ranking content itself. */}
+            <RankingStatLessonSection t={t} stat={statForRanking(ranking)} subject={rankingSubject} />
 
             {lifeLessons ? <RankingWhySection lessons={lifeLessons} /> : null}
 

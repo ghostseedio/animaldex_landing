@@ -1,30 +1,20 @@
 "use client";
 
-import {FormEvent, useState} from "react";
-import Image from "next/image";
+import {FormEvent, useEffect, useState} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 
 type AccountLoginFormProps = {
     labels: {
-        eyebrow: string;
-        title: string;
-        description: string;
         emailLabel: string;
         passwordLabel: string;
         submit: string;
         loading: string;
         errorGeneric: string;
-        supportOne: string;
-        supportTwo: string;
-        supportThree: string;
         browseAnimalsLink: string;
         downloadPrompt: string;
         downloadApp: string;
-        backHome: string;
         loginFormTitle: string;
-        loginCardLabel: string;
         continueWithGoogle: string;
         continueWithApple: string;
         emailSeparator: string;
@@ -32,15 +22,13 @@ type AccountLoginFormProps = {
     redirectTo: string;
 };
 
-const previewCards = [
-    {slug: "barn-owl", name: "Barn Owl", rotate: "-rotate-6", offset: "translate-x-0"},
-    {slug: "mantis-shrimp", name: "Mantis Shrimp", rotate: "rotate-3", offset: "translate-x-6 md:translate-x-10"},
-    {slug: "red-fox", name: "Red Fox", rotate: "-rotate-2", offset: "translate-x-3 md:translate-x-6"}
-] as const;
+/** Square edges throughout, as on the hub pages: no rounded containers. */
+const FIELD_CLASS = "flex h-12 items-center gap-3 border border-line-300 bg-transparent px-4 transition-colors focus-within:border-primary-400";
+const OAUTH_CLASS = "flex h-12 items-center justify-center gap-3 rounded-[2px] px-5 text-[0.9375rem] font-bold transition-colors disabled:cursor-wait disabled:opacity-60";
 
 function FieldIcon({path}: {path: string}) {
     return (
-        <svg aria-hidden="true" className="h-5 w-5 text-ink-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path d={path} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
@@ -66,9 +54,54 @@ function AppleMark() {
     );
 }
 
-function oauthHref(provider: "google" | "apple", redirectTo: string) {
-    const params = new URLSearchParams({provider, next: redirectTo});
-    return `/api/auth/oauth?${params.toString()}`;
+/**
+ * Starts OAuth with a POST, not a link: each start writes a new PKCE verifier,
+ * so a browser preloading a link on hover (or a second click) would replace the
+ * one Google's return needs. Browsers never preload a POST, and it is sent once.
+ *
+ * The button sits inside the email sign-in <form>, and forms cannot nest, so it
+ * submits a form of its own built on <body>.
+ */
+function OAuthButton({provider, redirectTo, className, children}: {
+    provider: "google" | "apple";
+    redirectTo: string;
+    className: string;
+    children: React.ReactNode;
+}) {
+    const [submitted, setSubmitted] = useState(false);
+    // Back from Google restores this page from the back/forward cache with the
+    // button still marked as sent; let it be pressed again.
+    useEffect(() => {
+        const reset = () => setSubmitted(false);
+        window.addEventListener("pageshow", reset);
+        return () => window.removeEventListener("pageshow", reset);
+    }, []);
+    return (
+        <button
+            type="button"
+            disabled={submitted}
+            onClick={() => {
+                if (submitted) return;
+                setSubmitted(true);
+                const form = document.createElement("form");
+                form.method = "post";
+                form.action = "/api/auth/oauth";
+                form.hidden = true;
+                for (const [name, value] of [["provider", provider], ["next", redirectTo]]) {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                }
+                document.body.appendChild(form);
+                form.submit();
+            }}
+            className={`w-full ${className}`}
+        >
+            {children}
+        </button>
+    );
 }
 
 export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormProps) {
@@ -115,167 +148,101 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-            <Link href="/" className="text-sm text-primary-200 transition-colors hover:text-primary-100 w-fit" underline>
-                {labels.backHome}
-            </Link>
-
-            <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(26,34,28,0.96),rgba(12,17,14,0.98))] shadow-2xl shadow-black/30">
-                <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-                    <aside className="relative overflow-hidden border-b border-white/10 p-8 md:p-10 lg:border-b-0 lg:border-r lg:p-12">
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(180,139,72,0.18),transparent_38%),radial-gradient(circle_at_85%_85%,rgba(50,219,101,0.12),transparent_34%)]" />
-
-                        <div className="relative flex h-full flex-col justify-between gap-10">
-                            <div className="max-w-md">
-                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/85">
-                                    {labels.eyebrow}
-                                </p>
-                                <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-white md:text-5xl">
-                                    {labels.title}
-                                </h1>
-                                <p className="mt-4 text-lg leading-8 text-ink-200">
-                                    {labels.description}
-                                </p>
-                            </div>
-
-                            <div className="relative mx-auto h-56 w-full max-w-sm md:h-64">
-                                {previewCards.map((card, index) => (
-                                    <div
-                                        key={card.slug}
-                                        className={`absolute bottom-0 w-[11.5rem] overflow-hidden rounded-[1.35rem] border border-white/15 bg-black/25 shadow-2xl shadow-black/40 md:w-[13rem] ${card.rotate} ${card.offset}`}
-                                        style={{left: `${index * 18}%`, zIndex: index + 1}}
-                                    >
-                                        <div className="relative aspect-[4/5]">
-                                            <Image
-                                                src={getSpeciesArtworkRoute(card.slug)}
-                                                alt={card.name}
-                                                fill
-                                                unoptimized
-                                                className="object-cover"
-                                                sizes="208px"
-                                            />
-                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent px-4 pb-4 pt-12">
-                                                <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-amber-100">
-                                                    {labels.loginCardLabel}
-                                                </p>
-                                                <p className="mt-1 font-display text-xl font-bold text-white">{card.name}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <ul className="relative flex flex-col gap-3">
-                                {[labels.supportOne, labels.supportTwo, labels.supportThree].map((item) => (
-                                    <li key={item} className="flex items-start gap-3 text-sm leading-6 text-ink-100 md:text-base">
-                                        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-400/15 text-xs font-bold text-primary-100">
-                                            ✓
-                                        </span>
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </aside>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col justify-center gap-6 p-8 md:p-10 lg:p-12">
-                        <div className="space-y-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-300">
-                                Account
-                            </p>
-                            <h2 className="font-display text-3xl font-bold text-white">
-                                {labels.loginFormTitle}
-                            </h2>
-                        </div>
-
-                        <div className="grid gap-3">
-                            <a
-                                href={oauthHref("google", redirectTo)}
-                                className="flex min-h-[3.25rem] items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 text-base font-bold text-black transition-colors hover:bg-white/90"
-                            >
-                                <GoogleMark />
-                                {labels.continueWithGoogle}
-                            </a>
-                            <a
-                                href={oauthHref("apple", redirectTo)}
-                                className="flex min-h-[3.25rem] items-center justify-center gap-3 rounded-2xl border border-white/15 bg-black px-5 text-base font-bold text-white transition-colors hover:bg-black/80"
-                            >
-                                <AppleMark />
-                                {labels.continueWithApple}
-                            </a>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="h-px flex-1 bg-white/[0.08]" />
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">{labels.emailSeparator}</span>
-                            <span className="h-px flex-1 bg-white/[0.08]" />
-                        </div>
-
-                        <label className="flex flex-col gap-2.5">
-                            <span className="text-sm font-semibold text-ink-100">{labels.emailLabel}</span>
-                            <span className="flex min-h-[3.25rem] items-center gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 transition-colors focus-within:border-primary-400/35 focus-within:bg-black/35">
-                                <FieldIcon path="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                <input
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    value={email}
-                                    onChange={(event) => setEmail(event.target.value)}
-                                    placeholder="you@example.com"
-                                    className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-400"
-                                />
-                            </span>
-                        </label>
-
-                        <label className="flex flex-col gap-2.5">
-                            <span className="text-sm font-semibold text-ink-100">{labels.passwordLabel}</span>
-                            <span className="flex min-h-[3.25rem] items-center gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 transition-colors focus-within:border-primary-400/35 focus-within:bg-black/35">
-                                <FieldIcon path="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                <input
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    value={password}
-                                    onChange={(event) => setPassword(event.target.value)}
-                                    className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-400"
-                                />
-                            </span>
-                        </label>
-
-                        {displayedError ? (
-                            <p className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100">
-                                {displayedError}
-                            </p>
-                        ) : null}
-
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="min-h-[3.5rem] rounded-2xl bg-primary-400 px-5 text-base font-bold text-canvas-950 transition-all hover:bg-primary-300 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {isSubmitting ? labels.loading : labels.submit}
-                        </button>
-
-                        <div className="border-t border-white/[0.08] pt-6">
-                            <p className="text-sm text-ink-300">{labels.downloadPrompt}</p>
-                            <div className="mt-4 flex flex-wrap gap-3">
-                                <Link
-                                    href="/#download"
-                                    className="inline-flex min-h-[2.75rem] items-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100"
-                                >
-                                    {labels.downloadApp}
-                                </Link>
-                                <Link
-                                    href="/animals"
-                                    className="inline-flex min-h-[2.75rem] items-center rounded-xl px-1 text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-primary-100 hover:underline focus-visible:underline"
-                                >
-                                    {labels.browseAnimalsLink}
-                                </Link>
-                            </div>
-                        </div>
-                    </form>
+        <div className="mx-auto w-full max-w-[28rem]">
+            <form onSubmit={handleSubmit} className="flex flex-col border border-line-300 bg-canvas-950">
+                <div className="border-b border-line-300 px-6 py-6 sm:px-8">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-400">Account</p>
+                    <h2 className="mt-2 font-display text-3xl leading-tight text-white">{labels.loginFormTitle}</h2>
                 </div>
-            </div>
+
+                <div className="flex flex-col gap-3 px-6 pt-6 sm:px-8">
+                    <OAuthButton
+                        provider="google"
+                        redirectTo={redirectTo}
+                        className={`${OAUTH_CLASS} border border-line-300 bg-white text-black hover:bg-white/90 light:border-black/15`}
+                    >
+                        <GoogleMark />
+                        {labels.continueWithGoogle}
+                    </OAuthButton>
+                    <OAuthButton
+                        provider="apple"
+                        redirectTo={redirectTo}
+                        className={`${OAUTH_CLASS} border border-line-300 bg-black text-[#fff] hover:bg-black/80`}
+                    >
+                        <AppleMark />
+                        {labels.continueWithApple}
+                    </OAuthButton>
+                </div>
+
+                <div className="flex items-center gap-3 px-6 py-6 sm:px-8">
+                    <span className="h-px flex-1 bg-line-300" />
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">{labels.emailSeparator}</span>
+                    <span className="h-px flex-1 bg-line-300" />
+                </div>
+
+                <div className="flex flex-col gap-5 px-6 sm:px-8">
+                    <label className="flex flex-col gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-300">{labels.emailLabel}</span>
+                        <span className={FIELD_CLASS}>
+                            <FieldIcon path="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <input
+                                type="email"
+                                autoComplete="email"
+                                required
+                                value={email}
+                                onChange={(event) => setEmail(event.target.value)}
+                                placeholder="you@example.com"
+                                className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-400"
+                            />
+                        </span>
+                    </label>
+
+                    <label className="flex flex-col gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-300">{labels.passwordLabel}</span>
+                        <span className={FIELD_CLASS}>
+                            <FieldIcon path="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <input
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                value={password}
+                                onChange={(event) => setPassword(event.target.value)}
+                                className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-400"
+                            />
+                        </span>
+                    </label>
+
+                    {displayedError ? (
+                        <p role="alert" className="border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100">
+                            {displayedError}
+                        </p>
+                    ) : null}
+
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="inline-flex h-12 items-center justify-center rounded-[2px] bg-primary-400 px-5 text-[0.9375rem] font-black uppercase tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+                    >
+                        {isSubmitting ? labels.loading : labels.submit}
+                    </button>
+                </div>
+
+                <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line-300 px-6 py-5 sm:px-8">
+                    <p className="w-full text-sm text-ink-300">{labels.downloadPrompt}</p>
+                    <Link
+                        href="/#download"
+                        className="inline-flex h-10 items-center rounded-[2px] border border-line-300 px-4 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100"
+                    >
+                        {labels.downloadApp}
+                    </Link>
+                    <Link
+                        href="/animals"
+                        className="text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-primary-100 hover:underline focus-visible:underline"
+                    >
+                        {labels.browseAnimalsLink}
+                    </Link>
+                </div>
+            </form>
         </div>
     );
 }
