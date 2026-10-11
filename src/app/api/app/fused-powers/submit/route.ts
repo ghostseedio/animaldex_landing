@@ -5,7 +5,6 @@ import {OFFERED_APPLICATION_DOMAINS, POWER_APPLICATION_EVIDENCE, POWER_APPLICATI
 import {decodeFusedSubmitResult, fusedRefusalMessage} from "@/lib/fused-powers";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 /**
  * Proving a fused Power: the fused Trial (`kind: trial`) or Apply It Your Way

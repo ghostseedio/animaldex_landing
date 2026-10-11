@@ -5,8 +5,6 @@ import {decodeFusedPowers, decodePrepareStage, fusedRefusalMessage} from "@/lib/
 import {decodeSpeciesTrainingResult} from "@/lib/species-training";
 
 export const runtime = "nodejs";
-// `prepare` writes the content when nobody has, which can take a minute.
-export const maxDuration = 90;
 
 /**
  * Fused Powers on one of the viewer's own cards.
