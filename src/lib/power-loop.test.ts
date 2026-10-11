@@ -94,7 +94,7 @@ test("Training crossing a level shows a chip and a rise line", () => {
 test("Trials current once Training is done; the preview starts from the card's XP", () => {
     const loop = powerLoop(input({xp: 100, training: {...TRAINING, completed: true}}));
     assert.deepEqual(loop.steps.map((step) => step.status), ["done", "current", "upcoming", "upcoming"]);
-    assert.deepEqual(loop.steps[0].caption, ["+10 XP", "+1 Credit"]);
+    assert.deepEqual(loop.steps[0].caption, ["Training complete"]);
     assert.equal(loop.next.step, "trials");
     assert.equal(loop.next.title, "Next: Trials");
     assert.equal(loop.next.sentence, POWER_LOOP_COPY.trialsSentence);
@@ -122,6 +122,9 @@ test("Power earned: Battles is next with the stake; Battles and Fusion repeat", 
     assert.deepEqual(loop.steps[1].caption, ["Power earned"]);
     assert.equal(loop.steps[1].levelChip, null);
     assert.equal(loop.steps[2].repeats, true);
+    // Fusion opens with Battles, also repeating.
+    assert.equal(loop.steps[3].status, "current");
+    assert.equal(loop.steps[3].repeats, true);
     assert.equal(loop.steps[2].levelChip, "Lv↑ in 2 wins");
     assert.deepEqual(loop.next, {
         step: "battles",
@@ -158,4 +161,12 @@ test("nothing to earn: Trials are Not needed and Battles open", () => {
     const loop = powerLoop(input({training: null, trials: [], hasPowerToEarn: false}));
     assert.deepEqual(loop.steps[1].caption, ["Not needed"]);
     assert.equal(loop.next.step, "battles");
+});
+
+test("a Power with no Trial: Trials caption is Apply It Your Way, with no chip", () => {
+    const loop = powerLoop(input({xp: 0, training: {...TRAINING, completed: true}, trials: []}));
+    assert.equal(loop.steps[1].status, "current");
+    assert.deepEqual(loop.steps[1].caption, ["Apply It Your Way"]);
+    assert.equal(loop.steps[1].levelChip, null);
+    assert.equal(loop.next.step, "trials");
 });

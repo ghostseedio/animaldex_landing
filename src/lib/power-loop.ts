@@ -25,6 +25,8 @@ export const POWER_LOOP_COPY = {
     fusion: "Fusion",
     notNeeded: "Not needed",
     powerEarned: "Power earned",
+    trainingComplete: TRAINING_COPY.complete,
+    applyItYourWay: "Apply It Your Way",
     newPower: "New Power",
     costsCredits: "Costs Credits",
     creditsStaked: "Credits are staked",
@@ -180,9 +182,12 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
     const trialsDone = !trialsNeeded || input.powerEarned || anyTrialComplete;
     const x2 = x1 + (trialsDone ? 0 : remaining.xp);
     const trialsReward = trainingRewardLine(remaining.xp, remaining.credits);
+    // A Power with no Trial is earned only by Apply It Your Way, which pays no
+    // XP the client can preview — so that is the caption, with no chip.
+    const applyOnly = input.hasPowerToEarn && input.trials.length === 0;
 
     const trainingLevel = trainingDone ? null : levelReached(x0, x1);
-    const trialsLevel = trialsDone ? null : levelReached(x1, x2);
+    const trialsLevel = trialsDone || applyOnly ? null : levelReached(x1, x2);
     const wins = winsToNextLevel(x2);
     const repeatOpen = trialsDone;
 
@@ -193,7 +198,9 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             title: POWER_LOOP_COPY.training,
             status: trainingDone ? "done" : "current",
             repeats: false,
-            caption: !trainingNeeded ? [POWER_LOOP_COPY.notNeeded] : splitReward(trainingReward),
+            caption: !trainingNeeded
+                ? [POWER_LOOP_COPY.notNeeded]
+                : trainingDone ? [POWER_LOOP_COPY.trainingComplete] : splitReward(trainingReward),
             levelChip: trainingLevel == null ? null : levelChipText(trainingLevel),
             levelChipHasArrow: trainingLevel != null
         },
@@ -205,7 +212,9 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             repeats: false,
             caption: !trialsNeeded
                 ? [POWER_LOOP_COPY.notNeeded]
-                : trialsDone ? [POWER_LOOP_COPY.powerEarned] : splitReward(trialsReward),
+                : trialsDone
+                    ? [POWER_LOOP_COPY.powerEarned]
+                    : applyOnly ? [POWER_LOOP_COPY.applyItYourWay] : splitReward(trialsReward),
             levelChip: trialsLevel == null ? null : levelChipText(trialsLevel),
             levelChipHasArrow: trialsLevel != null
         },
