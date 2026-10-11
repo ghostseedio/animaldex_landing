@@ -216,6 +216,14 @@ test("a pending fused Power makes Fusion current with '{n} to finish'", () => {
     assert.equal(owed.steps[3].status, "current");
     assert.deepEqual(owed.steps[3].caption, ["1 to finish", "Costs 4 Credits"]);
     assert.equal(owed.next.step, "training");
+    // Battles count from 100 + 10 Training + 15 Trials + 20 fused = 145 (Lv 25, 26 needs 157): 2 wins.
+    assert.equal(owed.steps[2].levelChip, "Lv↑ in 2 wins");
+    assert.equal(powerLoop(input({xp: 100})).steps[2].levelChip, "Lv↑ in 1 win");
+
+    // Trials still open: Fusion is current too, and Next stays on Trials.
+    const trialsOpen = powerLoop(input({xp: 100, training: {...TRAINING, completed: true}, fused: FUSED}));
+    assert.deepEqual(trialsOpen.steps.map((step) => step.status), ["done", "current", "upcoming", "current"]);
+    assert.equal(trialsOpen.next.step, "trials");
 
     const two = powerLoop(input({xp: 100, fused: {...FUSED, pending: 2}}));
     assert.deepEqual(two.steps[3].caption, ["2 to finish", "Costs 4 Credits"]);
@@ -232,6 +240,8 @@ test("both one-time steps done and a fused Power pending: Next is Finish {name}"
     // 100 (level 21) → 120 reaches 22, which needs 111.
     assert.equal(loop.steps[3].levelChip, `Lv ${animalLevel(120)}`);
     assert.equal(loop.steps[3].levelChipHasArrow, true);
+    // Battles count from 120 (Lv 22, 23 needs 121): 1 win.
+    assert.equal(loop.steps[2].levelChip, "Lv↑ in 1 win");
     assert.deepEqual(loop.next, {
         step: "fusion",
         title: "Next: Finish Lookout Turn",
@@ -250,10 +260,10 @@ test("a fused Power already trained pays only its earn XP; a long name says Cont
         xp: 100,
         training: {...TRAINING, completed: true},
         powerEarned: true,
-        fused: {...FUSED, firstStage: "proving", firstXP: 10, firstCredits: 1, firstName: "Sentinel Rotation Under Pressure"}
+        fused: {...FUSED, firstStage: "proving", firstXP: 10, firstCredits: 1, firstName: "Patient Lookout"}
     }));
     assert.equal(loop.next.reward, "+10 XP · +1 Credit");
-    assert.equal(loop.next.title, "Next: Finish Sentinel Rotation Under Pressure");
+    assert.equal(loop.next.title, "Next: Finish Patient Lookout");
     assert.equal(loop.next.button, "Continue");
     assert.equal(loop.next.level, "1 XP to Lv 22");
     assert.equal(loop.steps[3].levelChip, null);

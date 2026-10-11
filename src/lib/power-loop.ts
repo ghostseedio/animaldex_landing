@@ -202,7 +202,6 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
 
     const trainingLevel = trainingDone ? null : levelReached(x0, x1);
     const trialsLevel = trialsDone || applyOnly ? null : levelReached(x1, x2);
-    const wins = winsToNextLevel(x2);
     const repeatOpen = trialsDone;
 
     // 4. A fused Power still to finish is a one-time step too: its Training,
@@ -211,6 +210,8 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
     const fusedXP = fused ? Math.max(0, fused.firstXP) : 0;
     const x3 = x2 + fusedXP;
     const fusedLevel = fused ? levelReached(x2, x3) : null;
+    // Battles count from after every one-time step, pending fused XP included (iOS).
+    const wins = winsToNextLevel(x3);
 
     const steps: PowerLoopStep[] = [
         {

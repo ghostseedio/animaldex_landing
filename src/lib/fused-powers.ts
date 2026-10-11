@@ -48,7 +48,7 @@ export const whenEarnedLine = (amount: number, stat: string) => `+${amount} ${st
  * "Finish Lookout Turn", or "Continue" when the name would not fit a 360px
  * button on one line next to its arrow.
  */
-export const FINISH_BUTTON_MAX_NAME = 18;
+export const FINISH_BUTTON_MAX_NAME = 14;
 export function finishButtonTitle(name: string) {
     const trimmed = name.trim();
     return trimmed && trimmed.length <= FINISH_BUTTON_MAX_NAME ? `Finish ${trimmed}` : FUSED_COPY.continue;

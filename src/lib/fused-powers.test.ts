@@ -140,6 +140,9 @@ test("boost chips, state text and reward lines", () => {
     assert.equal(toFinishLine(1), "1 to finish");
     assert.equal(toFinishLine(3), "3 to finish");
     assert.equal(finishButtonTitle("Lookout Turn"), "Finish Lookout Turn");
+    // iOS: over 14 characters says Continue.
+    assert.equal(finishButtonTitle("Quiet Patience"), "Finish Quiet Patience");
+    assert.equal(finishButtonTitle("Patient Lookout"), "Continue");
     assert.equal(finishButtonTitle("A Very Long Fused Power Name"), "Continue");
 });
 
