@@ -25,7 +25,6 @@ function scrollToStep(step: PowerLoopStep["id"]) {
  */
 export default function PowerLoopBar({
     loop,
-    onStartTraining,
     onProveIt,
     battleHref,
     canBattle,
@@ -33,7 +32,6 @@ export default function PowerLoopBar({
     fuseHref = null
 }: {
     loop: PowerLoop;
-    onStartTraining: () => void;
     /** Puts the earn fork on its Trial arm; the bar then scrolls to it. */
     onProveIt: () => void;
     battleHref: string;
@@ -86,7 +84,8 @@ export default function PowerLoopBar({
                     </div>
                 ) : null}
 
-                {next.action === "none" ? null : (
+                {/* No button for Train: the Training band right below has it. */}
+                {!next.button && next.action !== "battleAndFuse" ? null : (
                     <div className="mt-1 flex flex-col gap-2">
                         {next.action === "signIn" ? (
                             // The signed-out Training band's button: sign in, then back here.
@@ -102,8 +101,6 @@ export default function PowerLoopBar({
                             >
                                 {next.button} <span aria-hidden="true">→</span>
                             </a>
-                        ) : next.action === "startTraining" ? (
-                            <PrimaryButton onClick={onStartTraining}>{next.button}</PrimaryButton>
                         ) : next.action === "finishFused" && next.fusedPowerId ? (
                             // "Finish {name}": to that fused Power's row under Fuse Powers.
                             <PrimaryButton

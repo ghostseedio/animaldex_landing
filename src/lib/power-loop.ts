@@ -37,10 +37,7 @@ export const POWER_LOOP_COPY = {
     catchIt: "Catch it",
     catchSentence: "Capture this animal to start.",
     signInSentence: "Sign in to start.",
-    /** The signed-out Training band's button, word for word. */
-    signInToStartTraining: "Sign in to start Training",
     signInToStart: "Sign in to start",
-    startTraining: TRAINING_COPY.start,
     proveItButton: "Prove it",
     battle: "Battle",
     fusePowers: "Fuse Powers",
@@ -91,7 +88,7 @@ export type PowerLoopStep = {
 };
 
 /** What the Next strip's button does. */
-export type PowerLoopAction = "startTraining" | "proveIt" | "battleAndFuse" | "finishFused" | "signIn" | "none";
+export type PowerLoopAction = "train" | "proveIt" | "battleAndFuse" | "finishFused" | "signIn" | "none";
 
 export type PowerLoopNext = {
     step: PowerLoopStepId;
@@ -109,7 +106,10 @@ export type PowerLoopNext = {
     stake: string | null;
     /** Finishing a fused Power only: the row the button scrolls to. */
     fusedPowerId?: string;
-    /** The button's label; absent when there is no button. */
+    /**
+     * The button's label; absent when there is no button. Train never has
+     * one: the Training band directly under the bar carries it.
+     */
     button?: string;
 };
 
@@ -249,8 +249,14 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
     // Battles count from after every one-time step, pending fused XP included (iOS).
     const wins = knowsXP ? winsToNextLevel(x3) : null;
 
-    const trainStatus: PowerLoopStepStatus = !canProgress ? "upcoming" : trainingDone ? "done" : "current";
-    const proveStatus: PowerLoopStepStatus = !canProgress ? "upcoming" : trialsDone ? "done" : trainingDone ? "current" : "upcoming";
+    // Someone without the animal is shown where the loop starts: the first
+    // step it actually has is current, the rest upcoming.
+    const trainStatus: PowerLoopStepStatus = !canProgress
+        ? trainingNeeded ? "current" : "upcoming"
+        : trainingDone ? "done" : "current";
+    const proveStatus: PowerLoopStepStatus = !canProgress
+        ? trainingNeeded ? "upcoming" : "current"
+        : trialsDone ? "done" : trainingDone ? "current" : "upcoming";
     // Open once the Power is proved, and also whenever a fused Power waits to be finished.
     const battleOpen = canProgress && (trialsDone || Boolean(fused));
 
@@ -303,8 +309,7 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             sentence: POWER_LOOP_COPY.signInSentence,
             reward: steps[0].caption.join(" · "),
             level: null,
-            stake: null,
-            button: POWER_LOOP_COPY.signInToStartTraining
+            stake: null
         } : {
             step: "prove",
             action: "signIn",
@@ -328,13 +333,12 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
     } else if (!trainingDone) {
         next = {
             step: "train",
-            action: "startTraining",
+            action: "train",
             title: nextStepTitle(POWER_LOOP_COPY.train),
             sentence: trainingIntroText(training?.questionCount ?? 0),
             reward: steps[0].caption.join(" · "),
             level: knowsXP ? oneTimeLevelLine(x0, x1) : null,
-            stake: null,
-            button: POWER_LOOP_COPY.startTraining
+            stake: null
         };
     } else if (!trialsDone) {
         next = {

@@ -46,7 +46,6 @@ export default function EarnPowerMount({
     const unlock = useSpeciesUnlock([speciesProfileId], {ownsThisCapture});
     const speciesTraining = useSpeciesTraining(showsPowerLoop ? speciesProfileId : null);
     const [loopTrials, setLoopTrials] = useState<AnimalTrial[] | null>(null);
-    const [trainingOpenRequest, setTrainingOpenRequest] = useState(0);
     const [trialsRouteRequest, setTrialsRouteRequest] = useState(0);
 
     const loop = useMemo(() => {
@@ -78,7 +77,6 @@ export default function EarnPowerMount({
             {loop ? (
                 <PowerLoopBar
                     loop={loop}
-                    onStartTraining={() => setTrainingOpenRequest((value) => value + 1)}
                     onProveIt={() => setTrialsRouteRequest((value) => value + 1)}
                     // No card on this page: Battle goes to the Arena, Fuse
                     // Powers to the viewer's animals, where Fusion lives on a card.
@@ -96,7 +94,6 @@ export default function EarnPowerMount({
                 isViewersOwnAnimal={isViewersOwnAnimal || unlock.unlocked === true}
                 canAttemptTrials={unlock.canAttempt}
                 speciesTraining={showsPowerLoop ? speciesTraining : undefined}
-                trainingOpenRequest={trainingOpenRequest}
                 trialsRouteRequest={trialsRouteRequest}
                 onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
                 showsLoopSteps={Boolean(loop)}

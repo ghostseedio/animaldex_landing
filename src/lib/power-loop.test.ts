@@ -79,14 +79,15 @@ test("Train current: Train is next, Prove it and Battle & Fuse upcoming", () => 
     assert.equal(loop.steps[2].levelChip, "Lv↑ in 1 win");
     assert.deepEqual(loop.next, {
         step: "train",
-        action: "startTraining",
+        action: "train",
         title: "Next: Train",
         sentence: "Answer 3 quick questions about this animal's Power.",
         reward: "+10 XP · +1 Credit",
         level: "1 XP to Lv 22",
-        stake: null,
-        button: "Start Training"
+        stake: null
     });
+    // No button: the Training band right under the bar carries it.
+    assert.equal(loop.next.button, undefined);
 });
 
 test("Training crossing a level shows a chip and a rise line", () => {
@@ -206,7 +207,8 @@ test("animal page, caught, with no card XP: the state shows, no chips, no level 
     const owed = powerLoop(input({viewer: "animalPageCaught", xp: null, stake: null, fused: FUSED_PENDING()}));
     assert.deepEqual(owed.steps.map((step) => step.status), ["current", "upcoming", "upcoming"]);
     assert.ok(owed.steps.every((step) => step.levelChip === null));
-    assert.equal(owed.next.action, "startTraining");
+    assert.equal(owed.next.action, "train");
+    assert.equal(owed.next.button, undefined);
     assert.equal(owed.next.level, null);
     // Fused Powers are per card: the animal page never counts them.
     assert.deepEqual(owed.steps[2].caption, ["+10 XP a win", "Fuse new Powers"]);
@@ -223,9 +225,9 @@ test("animal page, caught, with no card XP: the state shows, no chips, no level 
     assert.equal(withXP.steps[1].levelChip, "Lv 23");
 });
 
-test("animal page, not caught: all upcoming with rewards, Next: Catch it, no button", () => {
+test("animal page, not caught: Train current (where to start), the rest upcoming, Next: Catch it, no button", () => {
     const loop = powerLoop(input({viewer: "animalPageNotCaught", xp: null, stake: null}));
-    assert.deepEqual(loop.steps.map((step) => step.status), ["upcoming", "upcoming", "upcoming"]);
+    assert.deepEqual(loop.steps.map((step) => step.status), ["current", "upcoming", "upcoming"]);
     assert.deepEqual(loop.steps[0].caption, ["+10 XP", "+1 Credit"]);
     assert.deepEqual(loop.steps[1].caption, ["+15 XP", "+8 Credits"]);
     assert.deepEqual(loop.steps[2].caption, ["+10 XP a win", "Fuse new Powers"]);
@@ -243,9 +245,9 @@ test("animal page, not caught: all upcoming with rewards, Next: Catch it, no but
     assert.ok(powerLoop(input({viewer: "animalPageNotCaught", xp: 100})).steps.every((step) => step.levelChip === null));
 });
 
-test("signed out: all upcoming with rewards, Next: Train, Sign in to start Training", () => {
+test("signed out: Train current (where to start), the rest upcoming, Next: Train with no button", () => {
     const loop = powerLoop(input({viewer: "signedOut", xp: null, stake: null}));
-    assert.deepEqual(loop.steps.map((step) => step.status), ["upcoming", "upcoming", "upcoming"]);
+    assert.deepEqual(loop.steps.map((step) => step.status), ["current", "upcoming", "upcoming"]);
     assert.ok(loop.steps.every((step) => step.levelChip === null));
     assert.deepEqual(loop.next, {
         step: "train",
@@ -254,19 +256,19 @@ test("signed out: all upcoming with rewards, Next: Train, Sign in to start Train
         sentence: "Sign in to start.",
         reward: "+10 XP · +1 Credit",
         level: null,
-        stake: null,
-        button: "Sign in to start Training"
+        stake: null
     });
     assert.equal(
         loop.accessibilityLabel,
-        "Power Loop. Step 1 Train, upcoming, plus 10 XP and 1 Credit. Step 2 Prove it, upcoming, plus 15 XP and 8 Credits. Step 3 Battle and Fuse, upcoming, repeats."
+        "Power Loop. Step 1 Train, current, plus 10 XP and 1 Credit. Step 2 Prove it, upcoming, plus 15 XP and 8 Credits. Step 3 Battle and Fuse, upcoming, repeats."
     );
-    // An animal with no Training starts at Prove it.
+    // An animal with no Training starts at Prove it, which keeps its button.
     const noTraining = powerLoop(input({viewer: "signedOut", xp: null, training: null}));
-    assert.equal(noTraining.steps[0].status, "upcoming");
+    assert.deepEqual(noTraining.steps.map((step) => step.status), ["upcoming", "current", "upcoming"]);
     assert.deepEqual(noTraining.steps[0].caption, ["Not needed"]);
     assert.equal(noTraining.next.title, "Next: Prove it");
     assert.equal(noTraining.next.action, "signIn");
+    assert.equal(noTraining.next.button, "Sign in to start");
 });
 
 test("STEP eyebrows read STEP n · TITLE", () => {
