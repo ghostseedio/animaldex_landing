@@ -255,9 +255,14 @@ export default function EarnPowerSection({
     let content: React.ReactNode;
     // What earning unlocks. Above the fork on its own ("what you get, then how
     // to get it"); under the Power Loop it is step 3 and sits below the fork.
+    // Under the loop, step 3 is always there: locked while the Power is still
+    // being read (the common state, and the one a slow read must not hide),
+    // and open when the animal has no Power to earn.
     const unlockRows = didLoad && power
         ? <UnlockRows earned={power.isEarned} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow={showsLoopSteps} />
-        : null;
+        : showsLoopSteps
+            ? <UnlockRows earned={didLoad} powerName={null} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow />
+            : null;
     const leadingUnlockRows = showsLoopSteps ? null : unlockRows;
 
     if (!didLoad) {

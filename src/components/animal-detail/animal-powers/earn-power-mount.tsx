@@ -96,7 +96,9 @@ export default function EarnPowerMount({
                 speciesTraining={showsPowerLoop ? speciesTraining : undefined}
                 trialsRouteRequest={trialsRouteRequest}
                 onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
-                showsLoopSteps={Boolean(loop)}
+                // The steps don't wait for the bar: it needs every read to
+                // land, and the sections must read in loop order before then.
+                showsLoopSteps={showsPowerLoop}
             />
         </>
     );
