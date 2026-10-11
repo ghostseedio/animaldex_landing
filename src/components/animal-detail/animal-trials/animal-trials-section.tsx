@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {
     type AnimalTrial,
     NOT_YET_CAPTURED_NOTE,
@@ -42,7 +42,8 @@ export default function AnimalTrialsSection({
     onTrialCompleted,
     onUpdated,
     onApplyYourWay,
-    isApplying = false
+    isApplying = false,
+    onTrialsChange
 }: {
     speciesProfileId: string | null | undefined;
     /**
@@ -62,13 +63,19 @@ export default function AnimalTrialsSection({
     /** Offered beside each Trial when set: the written route to the same Power. */
     onApplyYourWay?: (trial: AnimalTrial) => void;
     isApplying?: boolean;
+    /** The list as loaded and as it changes, for the Power Loop bar above. */
+    onTrialsChange?: (trials: AnimalTrial[]) => void;
 }) {
     const [trials, setTrials] = useState<AnimalTrial[]>([]);
+    const [didLoad, setDidLoad] = useState(false);
     const [openTrialId, setOpenTrialId] = useState<string | null>(null);
+    const onTrialsChangeRef = useRef(onTrialsChange);
+    onTrialsChangeRef.current = onTrialsChange;
 
     const load = useCallback(async (signal: AbortSignal) => {
         if (!speciesProfileId) {
             setTrials([]);
+            setDidLoad(true);
             return;
         }
         try {
@@ -78,16 +85,25 @@ export default function AnimalTrialsSection({
             );
             if (!response.ok) {
                 setTrials([]);
+                setDidLoad(true);
                 return;
             }
             const payload = await response.json();
             setTrials(Array.isArray(payload.trials) ? payload.trials : []);
+            setDidLoad(true);
         } catch {
             // An aborted or failed load leaves the section blank, exactly as a
             // species with no Trials does.
-            if (!signal.aborted) setTrials([]);
+            if (!signal.aborted) {
+                setTrials([]);
+                setDidLoad(true);
+            }
         }
     }, [speciesProfileId]);
+
+    useEffect(() => {
+        if (didLoad) onTrialsChangeRef.current?.(trials);
+    }, [didLoad, trials]);
 
     useEffect(() => {
         const controller = new AbortController();

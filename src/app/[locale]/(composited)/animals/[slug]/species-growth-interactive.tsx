@@ -8,6 +8,7 @@ import {apexGrowthMatchTitle, apexGrowthPresentation} from "@/data/apex-growth";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
 import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
+import {POWER_LOOP_ANCHORS, PowerLoopEyebrow, usePowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
 import {gateIsLocked, powerGateAnalytics} from "@/lib/animal-powers";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
@@ -492,6 +493,18 @@ export default function SpeciesGrowthInteractive({
     const canFuse = Boolean(growth.primaryCaptureId && growth.principle && growth.fusionDonors.length > 0);
     const canChallenge = Boolean(growth.challengeRequest);
 
+    // Under the Power Loop bar the comparison tools and Fusion read as steps 3
+    // and 4, and the bar's "Fuse Powers" opens the same sheet as the row.
+    const powerLoop = usePowerLoopContext();
+    const showsLoopSteps = Boolean(powerLoop && compareOnly);
+    const fusionOpenRequest = powerLoop?.fusionOpenRequest ?? 0;
+
+    useEffect(() => {
+        if (fusionOpenRequest > 0 && canFuse) setFusionOpen(true);
+        // Only a new request opens it, not a change in what it can open.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fusionOpenRequest]);
+
     const wide = layout === "wide";
     const compareCardClass = `  border p-3.5 ${wide ? "lg:h-full lg:  lg:p-6" : ""}`;
     const refresh = () => router.refresh();
@@ -779,23 +792,26 @@ export default function SpeciesGrowthInteractive({
                         // hero card under a tab whose job is a single choice.
                         // This keeps the entry point and the count, and lets the
                         // sheet do the explaining.
-                        <button
-                            type="button"
-                            disabled={!canFuse}
-                            onClick={() => setFusionOpen(true)}
-                            className="-mx-5 flex items-center gap-3 border-y border-white/[0.08] px-5 py-4 text-left font-sans disabled:cursor-not-allowed disabled:opacity-55"
-                        >
-                            <span aria-hidden="true" className="w-6 text-center text-sm font-bold text-primary-400">△</span>
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-semibold text-white">Fuse Powers</span>
-                                <span className={`mt-0.5 line-clamp-2 block text-[10px] leading-4 ${growth.learnedPrinciples.length > 0 ? "text-primary-400" : "text-white/60"}`}>
-                                    {growth.learnedPrinciples.length > 0
-                                        ? `${growth.learnedPrinciples.length} extra lesson${growth.learnedPrinciples.length === 1 ? "" : "s"} learned`
-                                        : "Combine two animals to learn something neither teaches alone."}
+                        <div className="flex flex-col">
+                            {showsLoopSteps ? <PowerLoopEyebrow step={4} anchor={POWER_LOOP_ANCHORS.fusion} className="-mx-5" /> : null}
+                            <button
+                                type="button"
+                                disabled={!canFuse}
+                                onClick={() => setFusionOpen(true)}
+                                className="-mx-5 flex items-center gap-3 border-y border-white/[0.08] px-5 py-4 text-left font-sans disabled:cursor-not-allowed disabled:opacity-55"
+                            >
+                                <span aria-hidden="true" className="w-6 text-center text-sm font-bold text-primary-400">△</span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-semibold text-white">Fuse Powers</span>
+                                    <span className={`mt-0.5 line-clamp-2 block text-[10px] leading-4 ${growth.learnedPrinciples.length > 0 ? "text-primary-400" : "text-white/60"}`}>
+                                        {growth.learnedPrinciples.length > 0
+                                            ? `${growth.learnedPrinciples.length} extra lesson${growth.learnedPrinciples.length === 1 ? "" : "s"} learned`
+                                            : "Combine two animals to learn something neither teaches alone."}
+                                    </span>
                                 </span>
-                            </span>
-                            <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
-                        </button>
+                                <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
+                            </button>
+                        </div>
                     ) : growth.principle ? (
                         <section
                             className="  border p-4 font-sans"
@@ -863,34 +879,37 @@ export default function SpeciesGrowthInteractive({
                 // not hiding them: the summary row carries the state a person
                 // actually has to SEE, because empty hearts are the reason a
                 // comparison will not start.
-                <button
-                    type="button"
-                    onClick={() => setShowsComparisonTools((value) => !value)}
-                    aria-expanded={showsComparisonTools}
-                    aria-label={showsComparisonTools ? "Hide comparison tools" : "Show comparison tools"}
-                    className="-mx-5 flex min-h-11 items-center gap-2.5 px-5 py-3 text-left font-sans"
-                >
-                    <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Comparisons</span>
-                    <span className="ml-auto flex items-center gap-2">
-                        {isZooComparisonBanned ? (
-                            <span className="text-[10px] text-orange-300">Disabled for zoo animals</span>
-                        ) : (
-                            <>
-                                <span className={`flex gap-1 ${comparison.challengeHealth > 0 ? "text-primary-400" : "text-orange-300"}`}>
-                                    {[0, 1, 2].map((index) => (
-                                        <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-                                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
-                                        </svg>
-                                    ))}
-                                </span>
-                                {comparison.challengeHealth <= 0 ? (
-                                    <span className="text-[10px] font-bold text-orange-300">Empty</span>
-                                ) : null}
-                            </>
-                        )}
-                        <span aria-hidden="true" className="text-[10px] font-bold text-white/40">{showsComparisonTools ? "▴" : "▾"}</span>
-                    </span>
-                </button>
+                <div className="flex flex-col">
+                    {showsLoopSteps ? <PowerLoopEyebrow step={3} anchor={POWER_LOOP_ANCHORS.battles} className="-mx-5" /> : null}
+                    <button
+                        type="button"
+                        onClick={() => setShowsComparisonTools((value) => !value)}
+                        aria-expanded={showsComparisonTools}
+                        aria-label={showsComparisonTools ? "Hide comparison tools" : "Show comparison tools"}
+                        className="-mx-5 flex min-h-11 items-center gap-2.5 px-5 py-3 text-left font-sans"
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Comparisons</span>
+                        <span className="ml-auto flex items-center gap-2">
+                            {isZooComparisonBanned ? (
+                                <span className="text-[10px] text-orange-300">Disabled for zoo animals</span>
+                            ) : (
+                                <>
+                                    <span className={`flex gap-1 ${comparison.challengeHealth > 0 ? "text-primary-400" : "text-orange-300"}`}>
+                                        {[0, 1, 2].map((index) => (
+                                            <svg key={index} aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill={index < comparison.challengeHealth ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                                                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+                                            </svg>
+                                        ))}
+                                    </span>
+                                    {comparison.challengeHealth <= 0 ? (
+                                        <span className="text-[10px] font-bold text-orange-300">Empty</span>
+                                    ) : null}
+                                </>
+                            )}
+                            <span aria-hidden="true" className="text-[10px] font-bold text-white/40">{showsComparisonTools ? "▴" : "▾"}</span>
+                        </span>
+                    </button>
+                </div>
             ) : null}
 
             {comparison ? compareOnly ? !showsComparisonTools ? null : (

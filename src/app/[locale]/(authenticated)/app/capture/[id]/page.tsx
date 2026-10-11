@@ -201,6 +201,11 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             rankings={rankings}
             nativeRange={nativeRange}
             play={play}
+            fusion={growth?.principle && growth.primaryCaptureId ? {
+                // The cost the Fusion sheet shows, for the Power Loop bar.
+                cost: growth.fusionCost,
+                canFuse: growth.fusionDonors.length > 0
+            } : null}
         />
     );
 }

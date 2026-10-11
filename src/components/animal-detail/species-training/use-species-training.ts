@@ -50,6 +50,8 @@ export function useSpeciesTraining(speciesProfileId: string | null | undefined) 
     return {training, didLoad, reload, setTraining};
 }
 
+export type SpeciesTrainingState = ReturnType<typeof useSpeciesTraining>;
+
 /** The route already decoded it; this only re-validates the shape it was sent in. */
 function decodeSpeciesTrainingPayload(value: unknown): SpeciesTraining | null {
     if (!value || typeof value !== "object") return null;

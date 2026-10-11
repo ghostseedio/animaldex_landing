@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import type {AnimalPower} from "@/lib/animal-powers";
 import {NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE} from "@/lib/animal-trials";
 import {
@@ -27,7 +27,8 @@ export default function TrainingBand({
     training,
     power,
     onPassed,
-    onClosed
+    onClosed,
+    openRequest = 0
 }: {
     training: SpeciesTraining | null;
     power: AnimalPower | null;
@@ -35,9 +36,20 @@ export default function TrainingBand({
     onPassed: (result: SpeciesTrainingResult) => void;
     /** The quiz closed; the caller re-reads Training and the Power. */
     onClosed: () => void;
+    /** Bumped by the Power Loop's "Start Training"; each bump opens the quiz once. */
+    openRequest?: number;
 }) {
     const [showsQuiz, setShowsQuiz] = useState(false);
     const [showsPower, setShowsPower] = useState(false);
+    const canStart = Boolean(training?.available && training.unlocked && !training.completed);
+
+    useEffect(() => {
+        if (!openRequest || !canStart) return;
+        setShowsPower(false);
+        setShowsQuiz(true);
+        // Only a new request opens it, not a change in what it can open.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openRequest]);
 
     if (!training || !showsTrainingStep(training)) return null;
 

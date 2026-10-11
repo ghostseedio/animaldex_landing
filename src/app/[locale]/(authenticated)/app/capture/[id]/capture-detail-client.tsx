@@ -16,6 +16,9 @@ import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/sy
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
 import EarnPowerSection from "@/components/animal-detail/animal-powers/earn-power-section";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
+import PowerLoopBar from "@/components/animal-detail/power-loop/power-loop-bar";
+import {PowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
+import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useSpeciesUnlock} from "@/components/animal-detail/animal-trials/use-species-unlock";
 import {useAnimalPower, usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
@@ -25,6 +28,8 @@ import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
+import type {AnimalTrial} from "@/lib/animal-trials";
+import {powerLoop} from "@/lib/power-loop";
 import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
 import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
 
@@ -60,6 +65,11 @@ type CaptureDetailClientProps = {
     rankings?: ReactNode;
     nativeRange?: ReactNode;
     play?: ReactNode;
+    /**
+     * The fusion UI's cost and whether this card has anything to fuse with,
+     * for the Power Loop bar. Null when the Play tab shows no Fusion.
+     */
+    fusion?: {cost: number | null; canFuse: boolean} | null;
 };
 
 type CohortPage = {
@@ -138,7 +148,8 @@ export default function CaptureDetailClient({
     principle,
     rankings,
     nativeRange,
-    play
+    play,
+    fusion = null
 }: CaptureDetailClientProps) {
     const router = useRouter();
     const [tab, setTab] = useState<AnimalDetailTab>("learn");
@@ -150,6 +161,43 @@ export default function CaptureDetailClient({
     // have unlocked the species themselves (iOS `viewerCanAttemptTrials`).
     const trialUnlock = useSpeciesUnlock([speciesProfileId], {ownsThisCapture: viewer.isOwner});
     const animalPower = useAnimalPower(speciesProfileId);
+    // The Power Loop bar: the viewer's own, certain, eligible card only — the
+    // same cards whose Play tab can actually be played. It shares the Training
+    // read with the Training band and takes the Trials list from the Trials
+    // section, so it costs no request of its own.
+    const showsPowerLoop = viewer.isOwner
+        && Boolean(speciesProfileId)
+        && !capture.hasUncertaintyFallback
+        && capture.isEligibleCapture;
+    const speciesTraining = useSpeciesTraining(showsPowerLoop ? speciesProfileId : null);
+    const [loopTrials, setLoopTrials] = useState<AnimalTrial[] | null>(null);
+    const [trainingOpenRequest, setTrainingOpenRequest] = useState(0);
+    const [fusionOpenRequest, setFusionOpenRequest] = useState(0);
+    const loopContext = useMemo(() => ({fusionOpenRequest}), [fusionOpenRequest]);
+    const loop = useMemo(() => {
+        if (!showsPowerLoop || !speciesTraining.didLoad || !animalPower.didLoad) return null;
+        const power = animalPower.power;
+        // A Power with no Trial shows only Apply It Your Way, which mounts no
+        // Trials list to wait for.
+        const trialsMounted = !power || power.isEarned || power.hasTrial;
+        if (trialsMounted && loopTrials === null) return null;
+        const training = speciesTraining.training;
+        return powerLoop({
+            xp: capture.totalProgressionXP,
+            training: training ? {
+                available: training.available,
+                completed: training.completed,
+                rewardXP: training.rewardXP,
+                rewardCredits: training.rewardCredits,
+                questionCount: training.questions.length
+            } : null,
+            trials: loopTrials ?? [],
+            powerEarned: Boolean(power?.isEarned),
+            hasPowerToEarn: Boolean(power),
+            stake: capture.challengeStake,
+            fusionCost: fusion?.cost ?? null
+        });
+    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusion?.cost, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
     const [reveal, setReveal] = useState<CaptureReveal | null>(null);
@@ -519,6 +567,16 @@ export default function CaptureDetailClient({
                         hidden={tab !== "play"}
                         className={tab === "play" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
+                        {loop ? (
+                            <div className="-mx-5">
+                                <PowerLoopBar
+                                    loop={loop}
+                                    onStartTraining={() => setTrainingOpenRequest((value) => value + 1)}
+                                    battleHref="/app/matchups"
+                                    onFuse={fusion?.canFuse ? () => setFusionOpenRequest((value) => value + 1) : null}
+                                />
+                            </div>
+                        ) : null}
                         {/* One mount. `EarnPowerSection` owns the choice between the
                             two routes and shows the Trials as the Trial arm of it. */}
                         <div className="-mx-5 mb-5">
@@ -529,9 +587,15 @@ export default function CaptureDetailClient({
                                 onReload={animalPower.reload}
                                 isViewersOwnAnimal={viewer.isOwner}
                                 canAttemptTrials={trialUnlock.canAttempt}
+                                speciesTraining={showsPowerLoop ? speciesTraining : undefined}
+                                trainingOpenRequest={trainingOpenRequest}
+                                onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
+                                showsLoopSteps={Boolean(loop)}
                             />
                         </div>
-                        {play}
+                        <PowerLoopContext.Provider value={loop ? loopContext : null}>
+                            {play}
+                        </PowerLoopContext.Provider>
                         {!viewer.isOwner ? (
                             // iOS Play tab for another collector's card: Offer + Compare
                             // buttons and the challenge-availability line.

@@ -6,8 +6,9 @@ import {type AnimalTrial, NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE, isCompl
 import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
 import TrainingBand from "@/components/animal-detail/species-training/training-band";
-import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
-import {TRAINING_COPY, notingTrainingResult, trainingGatesPlay} from "@/lib/species-training";
+import {type SpeciesTrainingState, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
+import {POWER_LOOP_ANCHORS, PowerLoopEyebrow} from "@/components/animal-detail/power-loop/power-loop-context";
+import {TRAINING_COPY, notingTrainingResult, showsTrainingStep, trainingGatesPlay} from "@/lib/species-training";
 
 /**
  * The Play tab: one Power, two ways to earn it, one of them on screen. Ported
@@ -104,7 +105,11 @@ export default function EarnPowerSection({
     didLoad,
     onReload,
     isViewersOwnAnimal = true,
-    canAttemptTrials = true
+    canAttemptTrials = true,
+    speciesTraining: sharedTraining,
+    trainingOpenRequest = 0,
+    onTrialsChange,
+    showsLoopSteps = false
 }: {
     speciesProfileId: string | null | undefined;
     power: AnimalPower | null;
@@ -123,12 +128,24 @@ export default function EarnPowerSection({
      * show — they are the reason to catch it — and neither can be taken.
      */
     canAttemptTrials?: boolean;
+    /**
+     * The caller's Training read, when the Power Loop bar above needs it too,
+     * so the two share one fetch. Without it this section reads its own.
+     */
+    speciesTraining?: SpeciesTrainingState;
+    /** Bumped by the Power Loop's "Start Training". */
+    trainingOpenRequest?: number;
+    /** The Trials list as loaded, for the Power Loop bar. */
+    onTrialsChange?: (trials: AnimalTrial[]) => void;
+    /** "STEP 1" / "STEP 2" over Training and the Trials, under the Power Loop bar. */
+    showsLoopSteps?: boolean;
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
     // Training comes first: until it is passed, the Trials and Apply It Your
     // Way show locked. An animal with no Training gates nothing.
-    const speciesTraining = useSpeciesTraining(speciesProfileId);
+    const ownTraining = useSpeciesTraining(sharedTraining ? null : speciesProfileId);
+    const speciesTraining = sharedTraining ?? ownTraining;
     const lockedByTraining = trainingGatesPlay(speciesTraining.training);
 
     const isLocked = Boolean(power && !power.isEarned);
@@ -164,6 +181,7 @@ export default function EarnPowerSection({
             lockedByTraining={lockedByTraining}
             onTrialCompleted={handleTrialCompleted}
             onUpdated={trialDidUpdate}
+            onTrialsChange={onTrialsChange}
         />
     );
 
@@ -282,6 +300,9 @@ export default function EarnPowerSection({
 
     return (
         <section className="flex flex-col">
+            {showsLoopSteps && showsTrainingStep(speciesTraining.training) ? (
+                <PowerLoopEyebrow step={1} anchor={POWER_LOOP_ANCHORS.training} />
+            ) : null}
             <TrainingBand
                 training={speciesTraining.training}
                 power={power}
@@ -291,7 +312,9 @@ export default function EarnPowerSection({
                 onClosed={() => {
                     void speciesTraining.reload();
                 }}
+                openRequest={trainingOpenRequest}
             />
+            {showsLoopSteps ? <PowerLoopEyebrow step={2} anchor={POWER_LOOP_ANCHORS.trials} /> : null}
             {content}
             {showsApply && power ? (
                 <ApplyItYourWay
