@@ -9,6 +9,9 @@ import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-grow
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
 import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import {POWER_LOOP_ANCHORS, PowerLoopEyebrow, usePowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
+import {FusedPowersSlot} from "@/components/animal-detail/fused-powers/fused-powers-section";
+import {useFusedPowersContext} from "@/components/animal-detail/fused-powers/fused-powers-context";
+import {FUSED_COPY, whenEarnedLine, statDisplayName} from "@/lib/fused-powers";
 import {gateIsLocked, powerGateAnalytics} from "@/lib/animal-powers";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 
@@ -304,15 +307,19 @@ function PrincipleFusionModal({
     const learned = result?.result && typeof result.result === "object" ? result.result : result;
     const learnedName = String(learned?.learned_sub_principle_name ?? learned?.learnedSubPrincipleName ?? "Sub-principle learned");
     const learnedExpression = String(learned?.learned_sub_principle_expression ?? learned?.learnedSubPrincipleExpression ?? "");
+    // The boost is off until the fused Power's Training and Trial are done,
+    // so it reads "+1 Intelligence when earned", never as already active.
     const boostParts = [
         learned?.primary_stat && Number(learned?.stat_boost_primary ?? 0) > 0
-            ? `+${Number(learned.stat_boost_primary)} ${String(learned.primary_stat).replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase())}`
+            ? whenEarnedLine(Number(learned.stat_boost_primary), statDisplayName(String(learned.primary_stat)))
             : null,
         learned?.secondary_stat && Number(learned?.stat_boost_secondary ?? 0) > 0
-            ? `+${Number(learned.stat_boost_secondary)} ${String(learned.secondary_stat).replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase())}`
+            ? whenEarnedLine(Number(learned.stat_boost_secondary), statDisplayName(String(learned.secondary_stat)))
             : null
     ].filter(Boolean);
-    const statBoostSummary = String(learned?.stat_boost_summary ?? learned?.statBoostSummary ?? (boostParts.length > 0 ? boostParts.join(" · ") : "Scenario fit only"));
+    const statBoostSummary = boostParts.length > 0
+        ? boostParts.join(" · ")
+        : String(learned?.stat_boost_summary ?? learned?.statBoostSummary ?? "Scenario fit only");
     const scenarioTags = Array.isArray(learned?.scenario_tags)
         ? learned.scenario_tags
         : Array.isArray(learned?.scenarioTags) ? learned.scenarioTags : [];
@@ -385,6 +392,7 @@ function PrincipleFusionModal({
                                 </div>
                             </div>
                             {learnedExpression ? <p className="mt-3 text-[15px] font-medium leading-6 text-white/60">{learnedExpression}</p> : null}
+                            <p className="mt-3 text-xs font-semibold leading-5 text-primary-400">{FUSED_COPY.fusionResultLine}</p>
                             <div className="mt-3 grid gap-2 sm:grid-cols-3">
                                 <span className="rounded-lg border border-primary-400/20 bg-primary-400/10 p-2.5 text-[11px] font-semibold text-primary-400">▥ &nbsp; {statBoostSummary}</span>
                                 <span className="rounded-lg border border-orange-300/20 bg-orange-300/10 p-2.5 text-[11px] font-semibold text-orange-300">▣ &nbsp; {spent} credits spent</span>
@@ -496,6 +504,7 @@ export default function SpeciesGrowthInteractive({
     // Under the Power Loop bar the comparison tools and Fusion read as steps 3
     // and 4, and the bar's "Fuse Powers" opens the same sheet as the row.
     const powerLoop = usePowerLoopContext();
+    const fusedPowers = useFusedPowersContext();
     const showsLoopSteps = Boolean(powerLoop && compareOnly);
     const fusionOpenRequest = powerLoop?.fusionOpenRequest ?? 0;
 
@@ -677,6 +686,8 @@ export default function SpeciesGrowthInteractive({
                 </span>
                 <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
             </button>
+            {/* The owner's fused Powers, each to train and prove. */}
+            <FusedPowersSlot />
         </div>
     );
 
@@ -1145,7 +1156,11 @@ export default function SpeciesGrowthInteractive({
                         powerGateAnalytics.lockedFusionEarnTap(receiverSpeciesProfileId);
                         setShowsEarnPower(true);
                     }}
-                    onSuccess={refresh}
+                    onSuccess={() => {
+                        refresh();
+                        // The new fused Power, still to train and prove.
+                        void fusedPowers?.state.reload();
+                    }}
                 />
             ) : null}
 

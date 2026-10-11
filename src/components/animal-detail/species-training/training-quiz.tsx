@@ -27,6 +27,15 @@ import {
 const NEON = "#A7F432";
 const ORANGE = "#FB923C";
 
+/**
+ * Where the answers go when it is not an animal's own Training — a fused
+ * Power's. Same result shape; a refusal resolves with the copy to show.
+ */
+export type TrainingAnswerSubmitter = (answers: number[]) => Promise<
+    | {ok: true; result: SpeciesTrainingResult}
+    | {ok: false; error: string}
+>;
+
 type Phase =
     | {kind: "answering"}
     | {kind: "submitting"}
@@ -38,7 +47,8 @@ export default function TrainingQuiz({
     powerName,
     onPassed,
     onReadPower,
-    onClose
+    onClose,
+    submitAnswers
 }: {
     training: SpeciesTraining;
     powerName: string | null | undefined;
@@ -48,6 +58,8 @@ export default function TrainingQuiz({
     onReadPower: () => void;
     /** Closing, by Continue or ✕. The caller re-reads the Play area. */
     onClose: () => void;
+    /** Set for a fused Power's Training; otherwise the animal's own Training route. */
+    submitAnswers?: TrainingAnswerSubmitter;
 }) {
     const questions = training.questions;
     const [quiz, setQuiz] = useState(() => startTrainingQuiz(questions.length));
@@ -64,6 +76,16 @@ export default function TrainingQuiz({
     const submit = useCallback(async (answers: number[]) => {
         setPhase({kind: "submitting"});
         try {
+            if (submitAnswers) {
+                const outcome = await submitAnswers(answers);
+                if (!outcome.ok) {
+                    setPhase({kind: "error", message: outcome.error});
+                    return;
+                }
+                setPhase({kind: "result", result: outcome.result});
+                if (outcome.result.passed) onPassed(outcome.result);
+                return;
+            }
             const response = await fetch("/api/app/species-training", {
                 method: "POST",
                 headers: {"Content-Type": "application/json", Accept: "application/json"},
@@ -80,7 +102,7 @@ export default function TrainingQuiz({
         } catch {
             setPhase({kind: "error", message: trainingRefusalMessage("")});
         }
-    }, [onPassed, training.speciesProfileId]);
+    }, [onPassed, submitAnswers, training.speciesProfileId]);
 
     const choose = (choice: number) => {
         if (phase.kind !== "answering") return;

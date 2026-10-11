@@ -19,6 +19,8 @@ import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-
 import PowerLoopBar from "@/components/animal-detail/power-loop/power-loop-bar";
 import {PowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
 import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
+import {useFusedPowers} from "@/components/animal-detail/fused-powers/use-fused-powers";
+import {FusedPowersContext, type FusedPowersContextValue} from "@/components/animal-detail/fused-powers/fused-powers-context";
 import {useSpeciesUnlock} from "@/components/animal-detail/animal-trials/use-species-unlock";
 import {useAnimalPower, usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
@@ -30,6 +32,7 @@ import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import {powerLoop} from "@/lib/power-loop";
+import {pendingFusedSummary} from "@/lib/fused-powers";
 import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
 import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
 
@@ -175,6 +178,16 @@ export default function CaptureDetailClient({
     const [trialsRouteRequest, setTrialsRouteRequest] = useState(0);
     const [fusionOpenRequest, setFusionOpenRequest] = useState(0);
     const loopContext = useMemo(() => ({fusionOpenRequest}), [fusionOpenRequest]);
+    // This card's fused Powers: the section under Fuse Powers and the bar's
+    // Fusion step both read this one list. The owner's own card only.
+    const fusedPowers = useFusedPowers(viewer.isOwner ? capture.id : null);
+    const fusedSummary = useMemo(() => pendingFusedSummary(fusedPowers.items), [fusedPowers.items]);
+    const fusedContext = useMemo<FusedPowersContextValue>(() => ({
+        state: fusedPowers,
+        receiverName: speciesName,
+        // XP and stats moved: re-read the card.
+        onCardChanged: () => router.refresh()
+    }), [fusedPowers, router, speciesName]);
     const loop = useMemo(() => {
         if (!showsPowerLoop || !speciesTraining.didLoad || !animalPower.didLoad) return null;
         const power = animalPower.power;
@@ -196,9 +209,10 @@ export default function CaptureDetailClient({
             powerEarned: Boolean(power?.isEarned),
             hasPowerToEarn: Boolean(power),
             stake: capture.challengeStake,
-            fusionCost: fusion?.cost ?? null
+            fusionCost: fusion?.cost ?? null,
+            fused: fusedSummary
         });
-    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusion?.cost, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
+    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusedSummary, fusion?.cost, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
     const [reveal, setReveal] = useState<CaptureReveal | null>(null);
@@ -598,7 +612,9 @@ export default function CaptureDetailClient({
                             />
                         </div>
                         <PowerLoopContext.Provider value={loop ? loopContext : null}>
-                            {play}
+                            <FusedPowersContext.Provider value={viewer.isOwner ? fusedContext : null}>
+                                {play}
+                            </FusedPowersContext.Provider>
                         </PowerLoopContext.Provider>
                         {!viewer.isOwner ? (
                             // iOS Play tab for another collector's card: Offer + Compare

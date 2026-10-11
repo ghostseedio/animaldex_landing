@@ -3,6 +3,7 @@
 import Link from "@/app/[locale]/_components/link";
 import {POWER_LOOP_ANCHORS} from "@/components/animal-detail/power-loop/power-loop-context";
 import {POWER_LOOP_COPY, type PowerLoop, type PowerLoopStep} from "@/lib/power-loop";
+import {fusedPowerAnchor} from "@/lib/fused-powers";
 
 const NEON = "#A7F432";
 const NEON_TEXT = "rgb(var(--c-primary-text-400))";
@@ -80,6 +81,15 @@ export default function PowerLoopBar({
                 <div className="mt-1 flex flex-col gap-2">
                     {next.step === "training" ? (
                         <PrimaryButton onClick={onStartTraining}>{POWER_LOOP_COPY.startTraining}</PrimaryButton>
+                    ) : next.step === "fusion" && next.fusedPowerId ? (
+                        // "Finish {name}": to that fused Power's row under Fuse Powers.
+                        <PrimaryButton
+                            onClick={() => {
+                                document.getElementById(fusedPowerAnchor(next.fusedPowerId!))?.scrollIntoView({behavior: "smooth", block: "start"});
+                            }}
+                        >
+                            {next.button ?? next.title}
+                        </PrimaryButton>
                     ) : next.step === "trials" ? (
                         <PrimaryButton
                             onClick={() => {

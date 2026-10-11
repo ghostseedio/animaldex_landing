@@ -198,3 +198,64 @@ test("the spoken bar matches iOS: upcoming steps say what they pay, Battles its 
     assert.ok(open.accessibilityLabel.includes("Step 3 Battles, current, repeats, plus 10 XP a win and 3 XP a loss, Lv↑ in 1 win"));
     assert.ok(open.accessibilityLabel.endsWith("Step 4 Fusion, current, repeats, New Power and Costs Credits."));
 });
+
+// MARK: - Fused Powers (FUSED_SPEC B)
+
+const FUSED = {pending: 1, firstId: "lp-1", firstName: "Lookout Turn", firstStage: "training" as const, firstXP: 20, firstCredits: 3};
+
+test("the repeat line names fused Powers' own Training and Trial", () => {
+    assert.equal(
+        POWER_LOOP_COPY.repeatLine,
+        "Each fused Power brings its own Training and Trial. Battles repeat as often as you like."
+    );
+});
+
+test("a pending fused Power makes Fusion current with '{n} to finish'", () => {
+    // Training still owed: Fusion is current anyway, and Next stays on Training.
+    const owed = powerLoop(input({xp: 100, fused: FUSED}));
+    assert.equal(owed.steps[3].status, "current");
+    assert.deepEqual(owed.steps[3].caption, ["1 to finish", "Costs 4 Credits"]);
+    assert.equal(owed.next.step, "training");
+
+    const two = powerLoop(input({xp: 100, fused: {...FUSED, pending: 2}}));
+    assert.deepEqual(two.steps[3].caption, ["2 to finish", "Costs 4 Credits"]);
+
+    // None pending: unchanged.
+    const none = powerLoop(input({xp: 100, fused: {...FUSED, pending: 0}}));
+    assert.deepEqual(none.steps[3].caption, ["New Power", "Costs 4 Credits"]);
+    assert.equal(none.steps[3].status, "upcoming");
+});
+
+test("both one-time steps done and a fused Power pending: Next is Finish {name}", () => {
+    const loop = powerLoop(input({xp: 100, training: {...TRAINING, completed: true}, powerEarned: true, fused: FUSED}));
+    assert.equal(loop.steps[3].status, "current");
+    // 100 (level 21) → 120 reaches 22, which needs 111.
+    assert.equal(loop.steps[3].levelChip, `Lv ${animalLevel(120)}`);
+    assert.equal(loop.steps[3].levelChipHasArrow, true);
+    assert.deepEqual(loop.next, {
+        step: "fusion",
+        title: "Next: Finish Lookout Turn",
+        sentence: "Train it, then prove it. Its boost switches on when it's earned.",
+        reward: "+20 XP · +3 Credits",
+        level: `Lv 21 → Lv ${animalLevel(120)}`,
+        stake: null,
+        fusedPowerId: "lp-1",
+        button: "Finish Lookout Turn"
+    });
+    assert.ok(loop.accessibilityLabel.endsWith(`Step 4 Fusion, current, 1 to finish, plus 20 XP, reaches level ${animalLevel(120)}.`));
+});
+
+test("a fused Power already trained pays only its earn XP; a long name says Continue", () => {
+    const loop = powerLoop(input({
+        xp: 100,
+        training: {...TRAINING, completed: true},
+        powerEarned: true,
+        fused: {...FUSED, firstStage: "proving", firstXP: 10, firstCredits: 1, firstName: "Sentinel Rotation Under Pressure"}
+    }));
+    assert.equal(loop.next.reward, "+10 XP · +1 Credit");
+    assert.equal(loop.next.title, "Next: Finish Sentinel Rotation Under Pressure");
+    assert.equal(loop.next.button, "Continue");
+    assert.equal(loop.next.level, "1 XP to Lv 22");
+    assert.equal(loop.steps[3].levelChip, null);
+    assert.ok(loop.accessibilityLabel.endsWith("Step 4 Fusion, current, 1 to finish, plus 10 XP."));
+});

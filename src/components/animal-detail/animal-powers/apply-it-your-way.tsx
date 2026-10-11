@@ -1,21 +1,24 @@
 "use client";
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useMemo, useState} from "react";
 import {
     type AnimalPower,
-    type PowerApplicationEvidenceType,
     type PowerApplicationResult,
     OFFERED_APPLICATION_DOMAINS,
-    POWER_APPLICATION_EVIDENCE,
     POWER_APPLICATION_LIMITS,
     applicationDomainShortlist,
     powerRefusalMessage
 } from "@/lib/animal-powers";
-import {extractTrialFrames} from "@/lib/animal-trial-frames";
 import {type SystemDynamicsDomain, domainDisplayTitle} from "@/lib/system-dynamics";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import {journalAskBrief, journalAskKey, journalAskSuggestions} from "@/lib/animal-trial-ask";
 import {AskTrialBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {
+    type AttachedEvidence,
+    EvidencePicker,
+    appendEvidence,
+    useAttachedEvidence
+} from "@/components/animal-detail/animal-powers/power-evidence";
 
 /**
  * The written route to an Animal Power, ported from iOS `ApplyItYourWayView`:
@@ -51,43 +54,25 @@ function Eyebrow({children, color}: {children: React.ReactNode; color?: string})
     );
 }
 
-/** What is attached: one photo, or the frames sampled from a video. */
-type AttachedEvidence = {
-    type: PowerApplicationEvidenceType;
-    files: File[];
-    /** Object URL of the photo, or of the first sampled frame of a video. */
-    previewUrl: string;
-};
-
 /**
- * Turns a picked file into evidence. Only frames of a video are kept; the clip
- * itself is never uploaded. Throws with the copy to show when it cannot be used.
+ * Sends one application somewhere other than the Animal Power route — a fused
+ * Power's. Resolves with the verdict, or with the code and copy of a refusal.
  */
-async function prepareEvidence(file: File): Promise<AttachedEvidence> {
-    if (file.type.startsWith("video/")) {
-        const frames = await extractTrialFrames(file, POWER_APPLICATION_EVIDENCE.frameCount, {
-            firstFraction: POWER_APPLICATION_EVIDENCE.firstFrameFraction,
-            lastFraction: POWER_APPLICATION_EVIDENCE.lastFrameFraction,
-            maxLongEdge: POWER_APPLICATION_EVIDENCE.maxLongEdge,
-            quality: POWER_APPLICATION_EVIDENCE.jpegQuality
-        }).catch(() => [] as File[]);
-        if (frames.length < POWER_APPLICATION_EVIDENCE.minFrames) {
-            throw new Error(powerRefusalMessage("video_frames_required"));
-        }
-        return {type: "video", files: frames, previewUrl: URL.createObjectURL(frames[0])};
-    }
-    // The bucket takes JPEG, PNG and WebP only.
-    if (!POWER_APPLICATION_EVIDENCE.photoTypes.includes(file.type)) {
-        throw new Error(powerRefusalMessage("evidence_download_failed"));
-    }
-    return {type: "photo", files: [file], previewUrl: URL.createObjectURL(file)};
-}
+export type ApplicationSubmitter = (submission: {
+    domain: string;
+    account: string;
+    evidence: AttachedEvidence;
+}) => Promise<
+    | {ok: true; result: PowerApplicationResult}
+    | {ok: false; status: number; code: string; error: string}
+>;
 
 export default function ApplyItYourWay({
     power,
     trial = null,
     onFinished,
-    onClose
+    onClose,
+    submitApplication
 }: {
     power: AnimalPower;
     /** The Arena Trial this writing stands in for; null on the Power page. */
@@ -98,6 +83,8 @@ export default function ApplyItYourWay({
      */
     onFinished: (result: PowerApplicationResult, power: AnimalPower | null) => void;
     onClose: () => void;
+    /** Set for a fused Power: where the application goes instead of the Animal Power route. */
+    submitApplication?: ApplicationSubmitter;
 }) {
     const [selectedDomain, setSelectedDomain] = useState<SystemDynamicsDomain | null>(null);
     const [account, setAccount] = useState("");
@@ -108,31 +95,12 @@ export default function ApplyItYourWay({
     /** The server said this Power is already held, so another write-up is not accepted. */
     const [earnedLocally, setEarnedLocally] = useState(false);
     const {open: openAsk} = useAskAnimalDex();
-    const [evidence, setEvidence] = useState<AttachedEvidence | null>(null);
-    const [isPreparingEvidence, setIsPreparingEvidence] = useState(false);
-    const photoInputRef = useRef<HTMLInputElement>(null);
-    const videoInputRef = useRef<HTMLInputElement>(null);
-    const libraryInputRef = useRef<HTMLInputElement>(null);
-
-    // Each preview is an object URL; release it once it is replaced or the sheet closes.
-    useEffect(() => {
-        const url = evidence?.previewUrl;
-        return () => {
-            if (url) URL.revokeObjectURL(url);
-        };
-    }, [evidence]);
-
-    const attachEvidence = useCallback(async (file: File) => {
-        setIsPreparingEvidence(true);
-        setErrorMessage(null);
-        try {
-            setEvidence(await prepareEvidence(file));
-        } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : powerRefusalMessage("evidence_download_failed"));
-        } finally {
-            setIsPreparingEvidence(false);
-        }
-    }, []);
+    const {
+        evidence,
+        setEvidence,
+        isPreparing: isPreparingEvidence,
+        attach: attachEvidence
+    } = useAttachedEvidence(setErrorMessage);
 
     const trimmed = account.trim();
     const hasEnough = trimmed.length >= POWER_APPLICATION_LIMITS.minCharacters;
@@ -160,13 +128,26 @@ export default function ApplyItYourWay({
         setIsWorking(true);
         setErrorMessage(null);
         try {
+            if (submitApplication) {
+                const outcome = await submitApplication({domain: selectedDomain, account: trimmed, evidence});
+                if (!outcome.ok) {
+                    if (outcome.code === "already_earned") {
+                        setEarnedLocally(true);
+                        return;
+                    }
+                    setErrorMessage(outcome.error);
+                    return;
+                }
+                setResult(outcome.result);
+                onFinished(outcome.result, null);
+                return;
+            }
+
             const form = new FormData();
             form.set("speciesProfileId", power.speciesProfileId);
             form.set("domain", selectedDomain);
             form.set("account", trimmed);
-            form.set("evidenceType", evidence.type);
-            if (evidence.type === "photo") form.set("evidence", evidence.files[0]);
-            else for (const frame of evidence.files) form.append("frames", frame);
+            appendEvidence(form, evidence);
 
             const response = await fetch("/api/app/animal-powers/application", {method: "POST", body: form});
             const payload = await response.json().catch(() => ({}));
@@ -198,7 +179,7 @@ export default function ApplyItYourWay({
         } finally {
             setIsWorking(false);
         }
-    }, [evidence, onFinished, power.speciesProfileId, selectedDomain, trimmed]);
+    }, [evidence, onFinished, power.speciesProfileId, selectedDomain, submitApplication, trimmed]);
 
     const actionTitle = holdsPower
         ? "DONE"
@@ -370,70 +351,13 @@ export default function ApplyItYourWay({
                                 <p className="text-sm leading-6 text-white">
                                     Show what you did, what you did it to, or how it turned out. A screenshot works if it happened on a screen.
                                 </p>
-                                {evidence ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-black/25">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={evidence.previewUrl}
-                                                alt={evidence.type === "video" ? "Video attached" : "Photo attached"}
-                                                className="h-full w-full object-cover"
-                                            />
-                                            {evidence.type === "video" ? (
-                                                <span className="absolute bottom-1 left-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
-                                                    Video
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEvidence(null)}
-                                            disabled={isWorking}
-                                            className="min-h-9 rounded-full border border-white/10 bg-black/25 px-3 text-xs font-semibold text-white/80 transition hover:border-white/25 hover:text-white disabled:opacity-50"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ) : null}
-                                <div className="flex flex-wrap gap-2">
-                                    {[
-                                        {title: "Take photo", ref: photoInputRef},
-                                        {title: "Record video", ref: videoInputRef},
-                                        {title: "Choose from library", ref: libraryInputRef}
-                                    ].map((action) => (
-                                        <button
-                                            key={action.title}
-                                            type="button"
-                                            onClick={() => action.ref.current?.click()}
-                                            disabled={isWorking || isPreparingEvidence}
-                                            className="min-h-9 rounded-full border border-white/10 bg-black/25 px-3 text-xs font-semibold text-white/80 transition hover:border-white/25 hover:text-white disabled:opacity-50"
-                                        >
-                                            {action.title}
-                                        </button>
-                                    ))}
-                                    {isPreparingEvidence ? (
-                                        <span aria-live="polite" className="self-center text-[10px] text-white/40">…</span>
-                                    ) : null}
-                                </div>
-                                {[
-                                    {ref: photoInputRef, accept: "image/*", capture: true},
-                                    {ref: videoInputRef, accept: "video/*", capture: true},
-                                    {ref: libraryInputRef, accept: "image/*,video/*", capture: false}
-                                ].map((input) => (
-                                    <input
-                                        key={input.accept}
-                                        ref={input.ref}
-                                        type="file"
-                                        accept={input.accept}
-                                        capture={input.capture ? "environment" : undefined}
-                                        className="hidden"
-                                        onChange={(event) => {
-                                            const file = event.target.files?.[0];
-                                            event.target.value = "";
-                                            if (file) void attachEvidence(file);
-                                        }}
-                                    />
-                                ))}
+                                <EvidencePicker
+                                    evidence={evidence}
+                                    onRemove={() => setEvidence(null)}
+                                    onPick={(file) => void attachEvidence(file)}
+                                    isPreparing={isPreparingEvidence}
+                                    disabled={isWorking}
+                                />
                             </Band>
                         ) : null}
 

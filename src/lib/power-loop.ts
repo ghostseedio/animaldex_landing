@@ -12,6 +12,7 @@
 
 import {MAX_ANIMAL_LEVEL, animalLevel, xpForAnimalLevel} from "@/lib/animal-level";
 import type {AnimalTrial} from "@/lib/animal-trials";
+import {FUSED_COPY, type PendingFusedSummary, finishButtonTitle, finishTitle, toFinishLine} from "@/lib/fused-powers";
 import {TRAINING_COPY, trainingIntroText, trainingRewardLine} from "@/lib/species-training";
 
 // MARK: - Copy (identical on iOS, Android and web)
@@ -30,7 +31,7 @@ export const POWER_LOOP_COPY = {
     newPower: "New Power",
     costsCredits: "Costs Credits",
     creditsStaked: "Credits are staked",
-    repeatLine: "Battles and Fusion repeat as often as you like. Every new animal starts a new loop.",
+    repeatLine: FUSED_COPY.repeatLine,
     trialsSentence: "Prove the Power in real life. One Trial earns it.",
     battlesSentence: "Put this animal up against others. Win or lose, it earns XP.",
     startTraining: TRAINING_COPY.start,
@@ -90,6 +91,9 @@ export type PowerLoopNext = {
     level: string | null;
     /** Battles only. */
     stake: string | null;
+    /** Finishing a fused Power only: the row the button scrolls to, and its label. */
+    fusedPowerId?: string;
+    button?: string;
 };
 
 export type PowerLoop = {
@@ -113,6 +117,8 @@ export type PowerLoopInput = {
     stake: number | null;
     /** The fusion UI's cost for this card, when known. */
     fusionCost: number | null;
+    /** This card's fused Powers not yet earned; null or 0 pending when there are none. */
+    fused?: PendingFusedSummary | null;
 };
 
 // MARK: - Rewards and levels
@@ -199,6 +205,13 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
     const wins = winsToNextLevel(x2);
     const repeatOpen = trialsDone;
 
+    // 4. A fused Power still to finish is a one-time step too: its Training,
+    // then earning it. The preview walks on from the other one-time steps.
+    const fused = input.fused && input.fused.pending > 0 ? input.fused : null;
+    const fusedXP = fused ? Math.max(0, fused.firstXP) : 0;
+    const x3 = x2 + fusedXP;
+    const fusedLevel = fused ? levelReached(x2, x3) : null;
+
     const steps: PowerLoopStep[] = [
         {
             id: "training",
@@ -240,12 +253,17 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             id: "fusion",
             number: 4,
             title: POWER_LOOP_COPY.fusion,
-            status: repeatOpen ? "current" : "upcoming",
+            // A fused Power to finish makes Fusion the step to do now.
+            status: repeatOpen || fused ? "current" : "upcoming",
             repeats: true,
-            // Fusion pays a stat boost's worth of XP (1–2): too small to preview.
-            caption: [POWER_LOOP_COPY.newPower, input.fusionCost != null && input.fusionCost > 0 ? costsCreditsLine(input.fusionCost) : POWER_LOOP_COPY.costsCredits],
-            levelChip: null,
-            levelChipHasArrow: false
+            // Fusion itself pays a stat boost's worth of XP (1–2): too small to
+            // preview. Finishing a fused Power pays enough to.
+            caption: [
+                fused ? toFinishLine(fused.pending) : POWER_LOOP_COPY.newPower,
+                input.fusionCost != null && input.fusionCost > 0 ? costsCreditsLine(input.fusionCost) : POWER_LOOP_COPY.costsCredits
+            ],
+            levelChip: fusedLevel == null ? null : levelChipText(fusedLevel),
+            levelChipHasArrow: fusedLevel != null
         }
     ];
 
@@ -269,6 +287,18 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             level: oneTimeLevelLine(x1, x2),
             stake: null
         };
+    } else if (fused) {
+        const name = fused.firstName ?? "";
+        next = {
+            step: "fusion",
+            title: finishTitle(name),
+            sentence: FUSED_COPY.finishSentence,
+            reward: trainingRewardLine(fusedXP, fused.firstCredits),
+            level: oneTimeLevelLine(x2, x3),
+            stake: null,
+            fusedPowerId: fused.firstId ?? undefined,
+            button: finishButtonTitle(name)
+        };
     } else {
         next = {
             step: "battles",
@@ -280,8 +310,8 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
         };
     }
 
-    const reached: Record<PowerLoopStepId, number | null> = {training: trainingLevel, trials: trialsLevel, battles: null, fusion: null};
-    return {steps, next, accessibilityLabel: spokenLoop(steps, reached, wins)};
+    const reached: Record<PowerLoopStepId, number | null> = {training: trainingLevel, trials: trialsLevel, battles: null, fusion: fusedLevel};
+    return {steps, next, accessibilityLabel: spokenLoop(steps, reached, wins, fused ? {pending: fused.pending, xp: fusedXP} : null)};
 }
 
 /** "+10 XP · +1 Credit" → ["+10 XP", "+1 Credit"], so a narrow column wraps on the dot. */
@@ -298,8 +328,20 @@ function splitReward(line: string) {
  * Credits, reaches level 5. Step 3 Battles, upcoming, plus 10 XP a win and 3 XP
  * a loss, Lv↑ in 2 wins. Step 4 Fusion, upcoming, New Power and Costs 4 Credits."
  */
-function spokenLoop(steps: PowerLoopStep[], reached: Record<PowerLoopStepId, number | null>, wins: number | null) {
+function spokenLoop(
+    steps: PowerLoopStep[],
+    reached: Record<PowerLoopStepId, number | null>,
+    wins: number | null,
+    fused: {pending: number; xp: number} | null
+) {
     const parts = steps.map((step) => {
+        if (step.id === "fusion" && fused) {
+            // "Step 4 Fusion, current, 1 to finish, plus 20 XP, reaches level 6."
+            let sentence = `Step ${step.number} ${step.title}, current, ${toFinishLine(fused.pending)}`;
+            if (fused.xp > 0) sentence += `, plus ${fused.xp} XP`;
+            if (reached.fusion != null) sentence += `, reaches level ${reached.fusion}`;
+            return `${sentence}.`;
+        }
         const status = step.status === "current" && step.repeats ? "current, repeats" : step.status;
         let sentence = `Step ${step.number} ${step.title}, ${status}`;
         if (step.status !== "done" && step.caption.length > 0) {
