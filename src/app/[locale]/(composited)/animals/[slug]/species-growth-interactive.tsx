@@ -654,6 +654,32 @@ export default function SpeciesGrowthInteractive({
         });
     };
 
+    // The compact Fusion row (see where it is placed below). Under the Power
+    // Loop bar it moves below the comparison tools, so the steps read 1-4 top
+    // to bottom; everywhere else it stays where it was.
+    const compactFusionRow = (
+        <div className="flex flex-col">
+            {showsLoopSteps ? <PowerLoopEyebrow step={4} anchor={POWER_LOOP_ANCHORS.fusion} className="-mx-5" /> : null}
+            <button
+                type="button"
+                disabled={!canFuse}
+                onClick={() => setFusionOpen(true)}
+                className="-mx-5 flex items-center gap-3 border-y border-white/[0.08] px-5 py-4 text-left font-sans disabled:cursor-not-allowed disabled:opacity-55"
+            >
+                <span aria-hidden="true" className="w-6 text-center text-sm font-bold text-primary-400">△</span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-white">Fuse Powers</span>
+                    <span className={`mt-0.5 line-clamp-2 block text-[10px] leading-4 ${growth.learnedPrinciples.length > 0 ? "text-primary-400" : "text-white/60"}`}>
+                        {growth.learnedPrinciples.length > 0
+                            ? `${growth.learnedPrinciples.length} extra lesson${growth.learnedPrinciples.length === 1 ? "" : "s"} learned`
+                            : "Combine two animals to learn something neither teaches alone."}
+                    </span>
+                </span>
+                <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
+            </button>
+        </div>
+    );
+
     return (
         <div className={`mx-auto flex w-full max-w-[720px] flex-col gap-3 font-sans ${wide ? "lg:max-w-none lg:gap-5" : ""}`}>
             {!compareOnly && growth.match && (!growth.hasCapture || (presentation !== "profileRequired" && presentation !== "pathUnavailable")) ? (
@@ -792,26 +818,7 @@ export default function SpeciesGrowthInteractive({
                         // hero card under a tab whose job is a single choice.
                         // This keeps the entry point and the count, and lets the
                         // sheet do the explaining.
-                        <div className="flex flex-col">
-                            {showsLoopSteps ? <PowerLoopEyebrow step={4} anchor={POWER_LOOP_ANCHORS.fusion} className="-mx-5" /> : null}
-                            <button
-                                type="button"
-                                disabled={!canFuse}
-                                onClick={() => setFusionOpen(true)}
-                                className="-mx-5 flex items-center gap-3 border-y border-white/[0.08] px-5 py-4 text-left font-sans disabled:cursor-not-allowed disabled:opacity-55"
-                            >
-                                <span aria-hidden="true" className="w-6 text-center text-sm font-bold text-primary-400">△</span>
-                                <span className="min-w-0 flex-1">
-                                    <span className="block text-sm font-semibold text-white">Fuse Powers</span>
-                                    <span className={`mt-0.5 line-clamp-2 block text-[10px] leading-4 ${growth.learnedPrinciples.length > 0 ? "text-primary-400" : "text-white/60"}`}>
-                                        {growth.learnedPrinciples.length > 0
-                                            ? `${growth.learnedPrinciples.length} extra lesson${growth.learnedPrinciples.length === 1 ? "" : "s"} learned`
-                                            : "Combine two animals to learn something neither teaches alone."}
-                                    </span>
-                                </span>
-                                <span aria-hidden="true" className="text-[11px] font-bold text-white/40">›</span>
-                            </button>
-                        </div>
+                        showsLoopSteps ? null : compactFusionRow
                     ) : growth.principle ? (
                         <section
                             className="  border p-4 font-sans"
@@ -1118,6 +1125,8 @@ export default function SpeciesGrowthInteractive({
                     {comparisonError ? <p className="text-xs font-medium text-orange-300">{comparisonError}</p> : null}
                 </section>
             ) : null}
+
+            {showsLoopSteps && growth.isAuthenticated && growth.hasCapture && growth.principle ? compactFusionRow : null}
 
             {growth.primaryCaptureId ? (
                 <PrincipleFusionModal
