@@ -55,7 +55,7 @@ function CaptureGradeExplanationSheet({
       aria-labelledby={titleId}
     >
       <button type="button" aria-label="Close grade details" className="absolute inset-0" onClick={onClose} />
-      <div className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-[#101010] p-5 shadow-2xl md:rounded-[22px]">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-[#101010] p-5 shadow-2xl">
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 id={titleId} className="text-lg font-bold text-white">
             Grade {breakdown.grade}
@@ -66,7 +66,7 @@ function CaptureGradeExplanationSheet({
         </div>
 
         <div className="space-y-5">
-          <div className={`rounded-2xl border bg-black/40 p-4 ${tint.soft}`}>
+          <div className={`border bg-black/40 p-4 ${tint.soft}`}>
             <div className="flex items-baseline gap-2">
               <span className="font-display text-5xl font-black text-white">{breakdown.grade}</span>
               <span className="text-lg font-bold text-white/45">/10</span>
@@ -84,7 +84,7 @@ function CaptureGradeExplanationSheet({
               </div>
               <div className="space-y-2">
                 {breakdown.checklist.map((item) => (
-                  <div key={item.id} className="rounded-xl bg-black/30 p-3">
+                  <div key={item.id} className="bg-black/30 p-3">
                     <div className="flex items-center gap-2">
                       <span className={`grid h-5 w-5 place-items-center rounded-full text-[0.65rem] font-black ${item.met ? "bg-primary-400 text-black" : "bg-red-500/80 text-white"}`}>
                         {item.met ? "✓" : "×"}
@@ -102,7 +102,7 @@ function CaptureGradeExplanationSheet({
             <h3 className="text-sm font-bold text-white">Factors</h3>
             <div className="space-y-2">
               {breakdown.factors.map((factor) => (
-                <div key={factor.id} className="rounded-xl bg-white/[0.04] p-3">
+                <div key={factor.id} className="bg-white/[0.04] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-white">{factor.title}</p>
                     <p className="shrink-0 text-[0.68rem] font-bold text-white/40">
@@ -123,7 +123,7 @@ function CaptureGradeExplanationSheet({
               <h3 className="text-sm font-bold text-white">Bonuses & Penalties</h3>
               <div className="space-y-2">
                 {breakdown.adjustments.map((adjustment) => (
-                  <div key={adjustment.id} className="rounded-xl bg-white/[0.04] p-3">
+                  <div key={adjustment.id} className="bg-white/[0.04] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ function CaptureGradeExplanationSheet({
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white">Score</h3>
-            <div className="space-y-2 rounded-xl bg-white/[0.04] p-3">
+            <div className="space-y-2 bg-white/[0.04] p-3">
               <div className="flex justify-between gap-3 text-sm">
                 <span className="text-white/45">Weighted base</span>
                 <span className="font-semibold text-white">{percentText(breakdown.weightedScore)}</span>

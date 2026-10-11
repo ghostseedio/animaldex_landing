@@ -316,7 +316,7 @@ export function TrialCard({
             {showsTwoPaths ? (
                 <div className="flex flex-col gap-2 px-5 pb-[18px]">
                     <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Earn the Power</p>
-                    <div className="flex h-10 overflow-hidden rounded-xl border border-white/10">
+                    <div className="flex h-10 overflow-hidden border border-white/10">
                         <button
                             type="button"
                             onClick={onOpen}

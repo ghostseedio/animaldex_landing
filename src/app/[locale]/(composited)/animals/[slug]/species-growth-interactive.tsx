@@ -349,7 +349,7 @@ function PrincipleFusionModal({
                 <div className="overflow-y-auto p-5">
                     <section className="rounded-lg border border-white/15 bg-[#1f1f1f] p-3.5">
                         <div className="flex items-start gap-3">
-                            {receiverImageSrc ? <Image src={receiverImageSrc} alt={receiverName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#121212] text-primary-400">●</div>}
+                            {receiverImageSrc ? <Image src={receiverImageSrc} unoptimized alt={receiverName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#121212] text-primary-400">●</div>}
                             <div>
                                 <p className="text-[11px] font-semibold text-white/40">Receiver</p>
                                 <p className="mt-1 text-[17px] font-semibold text-white">{receiverName}</p>
@@ -411,7 +411,7 @@ function PrincipleFusionModal({
                                         const selected = donor.captureId === selectedDonorId;
                                         return <button key={donor.captureId} type="button" disabled={!donor.principleName} onClick={() => { setSelectedDonorId(donor.captureId); setError(null); }} className={`flex w-full items-start gap-2.5 rounded-lg border p-3 text-left ${selected ? "border-primary-400/35 bg-primary-400/10" : "border-white/15 bg-[#1f1f1f]"} disabled:opacity-55`}>
                                             <span className={`mt-3 text-lg ${selected ? "text-primary-400" : "text-white/40"}`}>{selected ? "●" : "○"}</span>
-                                            <Image src={donor.imageSrc} alt={donor.animalName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" />
+                                            <Image src={donor.imageSrc} unoptimized alt={donor.animalName} width={44} height={44} className="h-11 w-11 rounded-lg object-cover" />
                                             <span className="min-w-0">
                                                 <span className="block text-[15px] font-medium text-white">{donor.animalName}</span>
                                                 <span className={`mt-1 block text-xs font-medium ${donor.principleName ? "text-primary-400" : "text-white/40"}`}>{donor.principleName ?? "Loading Animal Principle"}</span>

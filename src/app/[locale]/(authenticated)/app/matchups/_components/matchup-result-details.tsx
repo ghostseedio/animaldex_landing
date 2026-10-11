@@ -64,7 +64,7 @@ function Metric({label, value, accent}: {label: string; value: string | number; 
             : "text-white";
 
     return (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+        <div className="border border-white/10 bg-white/[0.03] px-3 py-3">
             <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">{label}</p>
             <p className={`mt-1 text-sm font-bold ${tone}`}>{value}</p>
         </div>
@@ -163,14 +163,14 @@ export default function MatchupResultDetails({
             ) : null}
 
             {result.winnerExplanation ? (
-                <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">Why it won</p>
                     <p className="mt-2 text-sm leading-6 text-white/65">{result.winnerExplanation}</p>
                 </div>
             ) : null}
 
             {result.strategicInsight ? (
-                <div className="rounded-[1.15rem] border border-violet-400/20 bg-violet-400/5 p-4">
+                <div className="border border-violet-400/20 bg-violet-400/5 p-4">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-violet-200">
                         {insightTitle(result.scenarioDomain)}
                     </p>
@@ -179,7 +179,7 @@ export default function MatchupResultDetails({
             ) : null}
 
             {showMatchDetails ? (
-                <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03]">
+                <div className="border border-white/10 bg-white/[0.03]">
                     <button
                         type="button"
                         onClick={() => setDetailsOpen((open) => !open)}

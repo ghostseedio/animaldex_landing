@@ -118,18 +118,18 @@ function CapturePickerSheet({
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
             <button type="button" aria-label="Close picker" className="absolute inset-0" onClick={onClose} />
-            <div className="relative z-10 flex max-h-[min(88vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.5rem] border border-white/10 bg-[#121212] shadow-2xl sm:rounded-[1.5rem]">
+            <div className="relative z-10 flex max-h-[min(88vh,720px)] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#121212] shadow-2xl">
                 <div className="border-b border-white/10 px-5 py-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                             <p className="text-xs font-black uppercase tracking-[0.14em] text-primary-200">{title}</p>
                             {description ? <p className="mt-1 text-sm text-white/45">{description}</p> : null}
                         </div>
-                        <button type="button" onClick={onClose} aria-label="Close" className="rounded-xl border border-white/10 p-2 text-white/55">
+                        <button type="button" onClick={onClose} aria-label="Close" className="border border-white/10 p-2 text-white/55">
                             <AppIcon name="close" />
                         </button>
                     </div>
-                    <label className="mt-4 flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-black/50 px-4 py-3 focus-within:border-primary-400/40">
+                    <label className="mt-4 flex items-center gap-3 border border-white/10 bg-black/50 px-4 py-3 focus-within:border-primary-400/40">
                         <AppIcon name="search" className="h-5 w-5 shrink-0 text-white/35" />
                         <input
                             value={query}
@@ -153,7 +153,7 @@ function CapturePickerSheet({
 
                 <div className="min-h-0 flex-1 overflow-y-auto p-4">
                     {visible.length === 0 ? (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/45">
+                        <div className="border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/45">
                             {emptyLabel}
                         </div>
                     ) : (
@@ -166,9 +166,9 @@ function CapturePickerSheet({
                                         key={option.id}
                                         type="button"
                                         onClick={() => onSelect(option.id)}
-                                        className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/[0.08] bg-white/[0.03] hover:border-white/18"}`}
+                                        className={`flex items-center gap-3 border p-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/[0.08] bg-white/[0.03] hover:border-white/18"}`}
                                     >
-                                        <img src={option.imageSrc} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-white/10" />
+                                        <img src={option.imageSrc} alt="" className="h-16 w-16 shrink-0 object-cover ring-1 ring-white/10" />
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-sm font-bold text-white">{option.animalName}</p>
                                             <p className="mt-0.5 truncate text-xs text-white/45">{option.subtitle}</p>
@@ -185,7 +185,7 @@ function CapturePickerSheet({
                         <button
                             type="button"
                             onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-primary-200 transition hover:border-white/20"
+                            className="mt-4 w-full border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-primary-200 transition hover:border-white/20"
                         >
                             Load more ({filtered.length - visible.length} remaining)
                         </button>
@@ -225,11 +225,11 @@ export default function TradeCapturePicker({
                 <button
                     type="button"
                     onClick={() => setOpen(true)}
-                    className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-xl border border-white/10 bg-black px-3 py-3 text-left transition hover:border-primary-400/30"
+                    className="flex min-h-[4.5rem] w-full items-center gap-3 border border-white/10 bg-black px-3 py-3 text-left transition hover:border-primary-400/30"
                 >
                     {selected ? (
                         <>
-                            <img src={selected.imageSrc} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-white/10" />
+                            <img src={selected.imageSrc} alt="" className="h-14 w-14 shrink-0 object-cover ring-1 ring-white/10" />
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-bold text-white">{selected.animalName}</p>
                                 <p className="mt-0.5 truncate text-xs text-white/45">{selected.subtitle}</p>
@@ -238,7 +238,7 @@ export default function TradeCapturePicker({
                         </>
                     ) : (
                         <>
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/30 ring-1 ring-white/10">
+                            <span className="flex h-14 w-14 shrink-0 items-center justify-center bg-white/[0.04] text-white/30 ring-1 ring-white/10">
                                 <AppIcon name="collection" className="h-6 w-6" />
                             </span>
                             <span className="text-sm text-white/45">{placeholder}</span>

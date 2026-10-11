@@ -41,7 +41,7 @@ function InlineSegment({segment}: {segment: AskInlineSegment}) {
             return <em className="italic text-white">{segment.text}</em>;
         case "code":
             return (
-                <code className="rounded bg-white/8 px-1 py-0.5 font-mono text-[0.9em] text-primary-100">
+                <code className="bg-white/8 px-1 py-0.5 font-mono text-[0.9em] text-primary-100">
                     {segment.text}
                 </code>
             );
@@ -122,7 +122,7 @@ function Block({block, photoUrl, photoAlt}: {
             );
         case "code":
             return (
-                <pre className="overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-3 font-mono text-xs leading-5 text-ink-200">
+                <pre className="overflow-x-auto border border-white/10 bg-black/40 p-3 font-mono text-xs leading-5 text-ink-200">
                     {block.text}
                 </pre>
             );
@@ -167,7 +167,7 @@ function Block({block, photoUrl, photoAlt}: {
             // drawing will take, rather than flashing a wall of JSON first.
             return (
                 <div
-                    className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/[0.03]"
+                    className="h-24 animate-pulse border border-white/10 bg-white/[0.03]"
                     aria-hidden="true"
                 />
             );

@@ -442,7 +442,7 @@ export function EarningsClient() {
                     {progress && (
                         <>
                             <section
-                                className={`rounded-2xl border p-5 ${
+                                className={`border p-5 ${
                                     accent
                                         ? "border-primary-500/35 bg-primary-500/10"
                                         : "border-white/10 bg-white/[0.04]"
@@ -459,7 +459,7 @@ export function EarningsClient() {
                                 )}
                             </section>
 
-                            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                            <section className="border border-white/10 bg-white/[0.04] p-5">
                                 {progress.period ? (
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                                         <ProgressRing fraction={progress.period.timelineFraction ?? 0} />
@@ -505,7 +505,7 @@ export function EarningsClient() {
                             </section>
 
                             {progress.period && progress.signals.length > 0 && (
-                                <section className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                                <section className="space-y-4 border border-white/10 bg-white/[0.04] p-5">
                                     <div>
                                         <h2 className="text-lg font-bold">Your contribution signals</h2>
                                         <p className="mt-1 text-xs text-white/40">
@@ -527,7 +527,7 @@ export function EarningsClient() {
                                 </section>
                             )}
 
-                            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                            <section className="border border-white/10 bg-white/[0.04] p-5">
                                 <div className="flex items-center justify-between gap-3">
                                     <h2 className="text-lg font-bold">Set up payouts</h2>
                                     <span className="text-sm font-bold text-primary-500">
@@ -567,7 +567,7 @@ export function EarningsClient() {
 
                     {hasBalances &&
                         data.balances.map((b) => (
-                            <section key={b.currencyCode} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                            <section key={b.currencyCode} className="border border-white/10 bg-white/[0.04] p-5">
                                 <p className="text-xs font-bold uppercase tracking-wide text-white/40">{b.currencyCode}</p>
                                 <p className="mt-2 text-sm text-white/50">Available</p>
                                 <p className="text-3xl font-bold tabular-nums">
@@ -597,7 +597,7 @@ export function EarningsClient() {
                         ))}
 
                     {showPayoutCard && (
-                        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <section className="border border-white/10 bg-white/[0.03] p-4">
                             <p className="text-xs font-bold uppercase text-white/40">{EARNINGS_COPY.payoutsTitle}</p>
                             {scrubConsumerPayoutCopy(setup?.blockerTitle) && (!setupComplete || !setup?.payoutsEnabled) && (
                                 <>
@@ -635,12 +635,12 @@ export function EarningsClient() {
                                                 <button
                                                     type="button"
                                                     onClick={() => void openRequestSheet()}
-                                                    className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
+                                                    className="bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
                                                 >
                                                     {EARNINGS_COPY.requestPayoutTitle}
                                                 </button>
                                                 {showRequestSheet && (
-                                                    <div className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-3">
+                                                    <div className="space-y-3 border border-white/10 bg-black/40 p-3">
                                                         <div>
                                                             <p className="text-xs text-white/45">{EARNINGS_COPY.requestPayoutYouSend}</p>
                                                             <p className="font-bold">
@@ -688,7 +688,7 @@ export function EarningsClient() {
                                                             type="button"
                                                             disabled={requestBusy}
                                                             onClick={() => void requestPayout()}
-                                                            className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                            className="bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
                                                         >
                                                             {requestBusy ? "Requesting…" : EARNINGS_COPY.requestPayoutCTA}
                                                         </button>
@@ -707,7 +707,7 @@ export function EarningsClient() {
                                     {!showSetup && (
                                         <button
                                             type="button"
-                                            className="mt-3 rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
+                                            className="mt-3 bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950"
                                             onClick={() => setShowSetup(true)}
                                             disabled={!setup?.setupProviderReady || enabledCorridors.length === 0}
                                         >
@@ -721,7 +721,7 @@ export function EarningsClient() {
                                             <label className="block text-xs text-white/45">
                                                 {EARNINGS_COPY.countryLabel}
                                                 <select
-                                                    className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                                                    className="mt-1 w-full border border-white/15 bg-black px-3 py-2 text-sm text-white"
                                                     value={selectedCountryCode}
                                                     onChange={(e) => applyCountry(e.target.value)}
                                                     required
@@ -736,7 +736,7 @@ export function EarningsClient() {
                                                 <label className="block text-xs text-white/45">
                                                     {EARNINGS_COPY.currencyLabel}
                                                     <select
-                                                        className="mt-1 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                                                        className="mt-1 w-full border border-white/15 bg-black px-3 py-2 text-sm text-white"
                                                         value={selectedCorridorId}
                                                         onChange={(e) => {
                                                             const id = e.target.value;
@@ -830,7 +830,7 @@ export function EarningsClient() {
                                                 <button
                                                     type="submit"
                                                     disabled={setupBusy || !legalCapacityAttested || !selectedCorridorId || fieldsLoading}
-                                                    className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
+                                                    className="bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"
                                                 >
                                                     {setupBusy ? "Saving…" : EARNINGS_COPY.setUpPayoutsTitle}
                                                 </button>
@@ -849,7 +849,7 @@ export function EarningsClient() {
                                 {data.creatorRewardReceipts.map((r) => (
                                     <li
                                         key={r.periodId}
-                                        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3"
+                                        className="border border-white/10 bg-white/[0.04] px-4 py-3"
                                     >
                                         <p className="font-semibold">{r.periodDisplayName}</p>
                                         <p className="text-sm text-white/50">
@@ -900,7 +900,7 @@ export function EarningsClient() {
                 </div>
             )}
 
-            <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <section className="mt-10 border border-white/10 bg-white/[0.03] p-4">
                 <p className="font-bold">{EARNINGS_COPY.creditsAreSeparateTitle}</p>
                 <p className="mt-1 text-sm text-white/55">{EARNINGS_COPY.creditsAreSeparateBody}</p>
                 <p className="mt-3 text-sm text-white/45">{EARNINGS_COPY.giftsSignal}</p>

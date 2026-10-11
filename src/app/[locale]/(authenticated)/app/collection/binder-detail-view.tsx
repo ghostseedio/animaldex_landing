@@ -43,7 +43,7 @@ function SlotCard({slot, accent}: {slot: BinderSlot; accent: string}) {
         return (
             <Link
                 href={slot.captureId ? `/app/capture/${slot.captureId}` : `/animals/${slot.slug}`}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212] transition hover:border-white/25"
+                className="overflow-hidden border border-white/10 bg-[#121212] transition hover:border-white/25"
                 style={{boxShadow: `inset 0 0 0 1px ${accent}22`}}
             >
                 {content}
@@ -54,7 +54,7 @@ function SlotCard({slot, accent}: {slot: BinderSlot; accent: string}) {
     return (
         <Link
             href={`/animals/${slot.slug}`}
-            className="overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#0f0f0f] transition hover:border-white/20"
+            className="overflow-hidden border border-dashed border-white/10 bg-[#0f0f0f] transition hover:border-white/20"
         >
             {content}
         </Link>
@@ -84,7 +84,7 @@ export default function BinderDetailView({binder}: {binder: BinderProgress}) {
         <div className="space-y-6">
             <AppSurface>
                 <div className="grid gap-5 lg:grid-cols-[12rem_1fr]">
-                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
+                    <div className="overflow-hidden border border-white/10 bg-black">
                         <img src={binder.coverImageSrc} alt="" className="aspect-[4/5] w-full object-cover" />
                     </div>
                     <div className="min-w-0">
@@ -107,7 +107,7 @@ export default function BinderDetailView({binder}: {binder: BinderProgress}) {
                             </div>
                         </div>
                         {binder.isComplete ? (
-                            <p className="mt-4 rounded-2xl border border-primary-400/30 bg-primary-400/10 px-4 py-3 text-sm font-bold text-primary-100">
+                            <p className="mt-4 border border-primary-400/30 bg-primary-400/10 px-4 py-3 text-sm font-bold text-primary-100">
                                 Binder complete — every slot is filled.
                             </p>
                         ) : null}

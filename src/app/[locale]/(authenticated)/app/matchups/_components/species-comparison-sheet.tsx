@@ -91,7 +91,7 @@ export default function SpeciesComparisonSheet({
     return (
         <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
             <button type="button" aria-label="Close comparison" className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={onClose} />
-            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.75rem] border border-white/10 bg-[#0d0d0d] shadow-2xl sm:rounded-[1.75rem]">
+            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div>
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-200">Species comparison</p>
@@ -120,7 +120,7 @@ export default function SpeciesComparisonSheet({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="mt-2 rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white"
+                                className="mt-2 border border-white/10 px-4 py-3 text-sm font-black text-white"
                             >
                                 Close
                             </button>
@@ -134,11 +134,11 @@ export default function SpeciesComparisonSheet({
                                 <img
                                     src={comparison.featuredImage.src}
                                     alt={comparison.featuredImage.alt || fightTitle}
-                                    className="aspect-[16/9] w-full rounded-[1.15rem] object-cover"
+                                    className="aspect-[16/9] w-full object-cover"
                                 />
                             ) : null}
 
-                            <div className="rounded-[1.15rem] border border-primary-400/25 bg-primary-400/10 px-4 py-4">
+                            <div className="border border-primary-400/25 bg-primary-400/10 px-4 py-4">
                                 <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Quick verdict</p>
                                 <p className="mt-2 text-sm leading-6 text-white/80">{comparison.quickVerdict}</p>
                             </div>
@@ -165,7 +165,7 @@ export default function SpeciesComparisonSheet({
                                                         ? "Even"
                                                         : "Depends";
                                             return (
-                                                <div key={stat.key} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
+                                                <div key={stat.key} className="border border-white/10 bg-white/[0.03] px-3.5 py-3">
                                                     <div className="flex items-center justify-between gap-3">
                                                         <p className="text-sm font-bold text-white">{stat.label}</p>
                                                         <span className="text-[0.68rem] font-black uppercase tracking-[0.1em] text-primary-200">{edge}</span>
@@ -184,7 +184,7 @@ export default function SpeciesComparisonSheet({
                                 <div className="space-y-2.5">
                                     <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">Scenarios</p>
                                     {comparison.scenarioBreakdown.slice(0, 3).map((scenario) => (
-                                        <div key={scenario.slug} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
+                                        <div key={scenario.slug} className="border border-white/10 bg-white/[0.03] px-3.5 py-3">
                                             <p className="text-sm font-bold text-white">{scenario.title}</p>
                                             <p className="mt-1 text-xs leading-5 text-white/50">{scenario.verdict}</p>
                                         </div>
@@ -193,7 +193,7 @@ export default function SpeciesComparisonSheet({
                             ) : null}
 
                             {comparison.finalTake.length ? (
-                                <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] px-4 py-4">
+                                <div className="border border-white/10 bg-white/[0.03] px-4 py-4">
                                     <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">Final take</p>
                                     <p className="mt-2 text-sm leading-6 text-white/65">{comparison.finalTake[0]}</p>
                                 </div>
@@ -206,7 +206,7 @@ export default function SpeciesComparisonSheet({
                     <div className="border-t border-white/10 p-5">
                         <Link
                             href={`/comparisons/${comparison.slug}`}
-                            className="flex w-full items-center justify-center rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black"
+                            className="flex w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black"
                         >
                             Open full page
                         </Link>

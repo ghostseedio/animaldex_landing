@@ -49,8 +49,8 @@ export default function JournalHistoryCalendar({logs, captures, proofsByLogId, l
         return (
             <AppSurface>
                 <AppSectionTitle icon="calendar" title={DailyCompanionCopy.historyTitle} />
-                <div className="mt-5 rounded-[1.1rem] border border-white/[0.08] bg-white/[0.03] p-5">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/30">
+                <div className="mt-5 border border-white/[0.08] bg-white/[0.03] p-5">
+                    <span className="flex h-12 w-12 items-center justify-center bg-white/5 text-white/30">
                         <AppIcon name="calendar" />
                     </span>
                     <h3 className="mt-4 font-display text-xl font-bold text-white">{DailyCompanionCopy.noHistoryTitle}</h3>
@@ -64,7 +64,7 @@ export default function JournalHistoryCalendar({logs, captures, proofsByLogId, l
         <AppSurface className="space-y-5">
             <AppSectionTitle icon="calendar" title={DailyCompanionCopy.historyTitle} detail="Tap a date to review that day’s companion plan." />
 
-            <div className="rounded-[1.1rem] border border-white/[0.08] bg-white/[0.03] p-4">
+            <div className="border border-white/[0.08] bg-white/[0.03] p-4">
                 <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-white/55">
                     <AppIcon name="calendar" className="h-4 w-4 text-primary-200" />
                     {DailyCompanionCopy.selectDate}
@@ -77,7 +77,7 @@ export default function JournalHistoryCalendar({logs, captures, proofsByLogId, l
                                 key={log.id}
                                 type="button"
                                 onClick={() => selectLog(log.id)}
-                                className={`relative shrink-0 rounded-[0.9rem] border px-4 py-3 text-center transition ${
+                                className={`relative shrink-0 border px-4 py-3 text-center transition ${
                                     selected
                                         ? "border-primary-400 bg-primary-400 text-black"
                                         : "border-white/[0.08] bg-white/[0.04] text-white hover:border-white/20"
@@ -119,7 +119,7 @@ function HistoryLogDetail({
     const rewardLabel = statBoostRewardLabel(log.alignmentXpAwarded, log.proofStatBoostStat, log.proofRewardDomains);
 
     return (
-        <article className="space-y-4 rounded-[1.2rem] border border-white/[0.08] bg-[#101010] p-5">
+        <article className="space-y-4 border border-white/[0.08] bg-[#101010] p-5">
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <h3 className="font-display text-2xl font-bold text-white">{formatAppShortDateWithYear(log.logDate, locale)}</h3>
@@ -137,7 +137,7 @@ function HistoryLogDetail({
             <AppBadge tone="primary">{log.alignmentTier ?? completionDisplay(log.completionState)}</AppBadge>
 
             {insight ? (
-                <section className="rounded-[1rem] border border-violet-400/15 bg-violet-500/10 p-4">
+                <section className="border border-violet-400/15 bg-violet-500/10 p-4">
                     <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-violet-200">{DailyCompanionCopy.companionAdvice}</p>
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-white/70">{insight}</p>
                 </section>
@@ -162,14 +162,14 @@ function HistoryLogDetail({
             ) : null}
 
             {moveToday ? (
-                <section className="rounded-[1rem] border border-white/[0.08] bg-white/[0.03] p-4">
+                <section className="border border-white/[0.08] bg-white/[0.03] p-4">
                     <SectionHeading icon="mission" title={DailyCompanionCopy.todaysTask} />
                     <p className="mt-3 text-sm leading-7 text-white/70">{moveToday}</p>
                 </section>
             ) : null}
 
             {log.alignmentProofStatus !== "not_started" || proof ? (
-                <section className="rounded-[1rem] border border-white/[0.08] bg-white/[0.03] p-4">
+                <section className="border border-white/[0.08] bg-white/[0.03] p-4">
                     <SectionHeading icon="camera" title="Task Proof" />
                     <AppBadge tone={log.alignmentProofStatus === "accepted" ? "success" : log.alignmentProofStatus === "rejected" ? "warning" : "neutral"}>
                         {proofStatusLabel(log.alignmentProofStatus)}
@@ -203,7 +203,7 @@ function SectionHeading({icon, title}: {icon: "spark" | "check" | "mission" | "c
 
 function FormulaHistoryRow({slot}: {slot: DailyJournalLog["requestedFormula"][number]}) {
     return (
-        <div className="rounded-[0.95rem] border border-white/[0.08] bg-white/[0.03] p-3">
+        <div className="border border-white/[0.08] bg-white/[0.03] p-3">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="font-display text-base font-bold text-white">{slot.animal}</p>
@@ -225,8 +225,8 @@ function FormulaHistoryRow({slot}: {slot: DailyJournalLog["requestedFormula"][nu
 
 function UsedFormulaHistoryRow({slot, capture}: {slot: DailyJournalLog["usedFormula"][number]; capture: AppCapture | null}) {
     return (
-        <div className="flex items-center gap-3 rounded-[0.95rem] border border-white/[0.08] bg-white/[0.03] p-3">
-            {capture ? <img src={capture.imageSrc} alt="" className="h-12 w-12 rounded-xl object-cover ring-1 ring-white/10" /> : null}
+        <div className="flex items-center gap-3 border border-white/[0.08] bg-white/[0.03] p-3">
+            {capture ? <img src={capture.imageSrc} alt="" className="h-12 w-12 object-cover ring-1 ring-white/10" /> : null}
             <div className="min-w-0">
                 <p className="truncate font-display text-base font-bold text-white">{slot.displayName || slot.animalName}</p>
                 <p className="mt-1 text-xs text-white/45">{companionRoleLabel(slot.bestMatchRole)} · Grade {slot.imageGrade}</p>

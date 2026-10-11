@@ -109,7 +109,7 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
     }
 
     return (
-        <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <section className="mt-5 border border-white/10 bg-white/[0.03] p-4">
             <h3 className="text-sm font-black text-white">Gifts</h3>
             <p className="mt-1 text-xs text-white/55">
                 Recognise a stat on this animal. You spend Credits. The recipient does not receive Credits.
@@ -138,7 +138,7 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
                             type="button"
                             disabled={sendingSlug != null}
                             onClick={() => void sendGift(definition.id, definition.slug)}
-                            className="rounded-xl border border-white/10 px-3 py-2 text-left text-sm text-white hover:bg-white/5 disabled:opacity-50"
+                            className="border border-white/10 px-3 py-2 text-left text-sm text-white hover:bg-white/5 disabled:opacity-50"
                         >
                             {definition.displayName} · Supports {definition.endorsedStat ?? "this animal"} · {definition.creditCost} Credits
                         </button>

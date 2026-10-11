@@ -72,10 +72,10 @@ export default function PickAnimalStep({
 
     return (
         <div className="space-y-5">
-            <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="border border-white/10 bg-white/[0.03] p-4">
                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Opponent</p>
                 <div className="mt-3 flex items-center gap-3">
-                    <img src={opponent.imageSrc} alt="" className="h-16 w-16 rounded-2xl border border-white/10 object-cover" />
+                    <img src={opponent.imageSrc} alt="" className="h-16 w-16 border border-white/10 object-cover" />
                     <div>
                         <p className="font-display text-xl font-bold text-white">{opponent.animalName}</p>
                         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/45">
@@ -98,9 +98,9 @@ export default function PickAnimalStep({
                             key={capture.captureId}
                             type="button"
                             onClick={() => onSelect(capture.captureId)}
-                            className={`flex w-full items-center gap-3 rounded-[1.15rem] border px-3 py-3 text-left transition ${selected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"}`}
+                            className={`flex w-full items-center gap-3 border px-3 py-3 text-left transition ${selected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"}`}
                         >
-                            <img src={capture.imageSrc} alt="" className="h-14 w-14 rounded-xl object-cover" />
+                            <img src={capture.imageSrc} alt="" className="h-14 w-14 object-cover" />
                             <div className="min-w-0 flex-1">
                                 <p className="truncate font-display text-lg font-bold text-white">{capture.animalName}</p>
                                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/45">
@@ -117,7 +117,7 @@ export default function PickAnimalStep({
                         </button>
                     );
                 }) : (
-                    <p className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-white/45">
+                    <p className="border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-white/45">
                         No eligible challengers are ready for this matchup. Make an animal public, challenge-ready, and stocked with enough credits.
                     </p>
                 )}
@@ -126,7 +126,7 @@ export default function PickAnimalStep({
             {blocked.length ? (
                 <details
                     open={blocked.some((capture) => capture.challengeHealth > 0 && powerLock(capture, eligibility)) || undefined}
-                    className="rounded-[1.15rem] border border-white/10 bg-white/[0.02] px-4 py-3"
+                    className="border border-white/10 bg-white/[0.02] px-4 py-3"
                 >
                     <summary className="cursor-pointer text-sm font-bold text-white/45">
                         {blocked.length} unavailable animal{blocked.length === 1 ? "" : "s"}

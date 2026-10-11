@@ -748,7 +748,7 @@ function TimelineShell({
 }) {
   const formatted = formatAppShortDate(date, locale);
   return (
-    <article className="flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition  hover:border-white/14">
+    <article className="flex h-full min-h-0 snap-start snap-always scroll-mt-4 flex-col justify-center overflow-hidden border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition  hover:border-white/14">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
         <ActivityBadge label={badge} />
         <div className="flex items-center gap-2.5">
@@ -1317,7 +1317,7 @@ function AlignmentCard({
       <div className="grid gap-4 p-4 md:grid-cols-[7.5rem_1fr]">
         <Link
           href={`/app/capture/${encodeURIComponent(item.rewardedCaptureId)}`}
-          className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+          className="block overflow-hidden border border-white/10 bg-white/5"
         >
           <img
             src={item.imageSrc}
@@ -1363,7 +1363,7 @@ function FusionCard({
     <TimelineShell badge="Principle fusion" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="space-y-4 p-4">
         <div className="flex items-center gap-3">
-          <div className="h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          <div className="h-16 w-16 overflow-hidden border border-white/10 bg-white/5">
             <img
               src={item.receiverImageSrc}
               alt={item.receiverAnimalName}
@@ -1372,7 +1372,7 @@ function FusionCard({
             />
           </div>
           <AppIcon name="chevron" />
-          <div className="h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          <div className="h-16 w-16 overflow-hidden border border-white/10 bg-white/5">
             {item.donorImageSrc ? (
               <img
                 src={item.donorImageSrc}
@@ -1707,7 +1707,7 @@ function ChallengeCard({
   }
 
   const statusPanel = isVoting ? (
-    <div className="pointer-events-auto space-y-2 rounded-[14px] bg-black/[0.72] p-3">
+    <div className="pointer-events-auto space-y-2 bg-black/[0.72] p-3">
       <p className="text-[11px] font-black text-primary-200">Round 2: Who would win?</p>
       <p className="text-xs font-medium tabular-nums text-white">{voteProgressText(votesCount)}</p>
       {item.votingDeadlineAt ? (
@@ -1737,7 +1737,7 @@ function ChallengeCard({
       {voteError ? <p className="text-[11px] font-medium text-red-400">{voteError}</p> : null}
     </div>
   ) : isV2 && isComplete ? (
-    <div className="pointer-events-auto space-y-1.5 rounded-[14px] bg-black/[0.72] p-3">
+    <div className="pointer-events-auto space-y-1.5 bg-black/[0.72] p-3">
       <div className="flex items-center gap-2">
         <p className="text-[11px] font-black text-primary-200">BATTLE COMPLETE</p>
         <p className="text-sm font-black text-white">
@@ -1810,8 +1810,8 @@ function TradeCard({
   return (
     <TimelineShell badge="Trade" date={item.date} locale={locale} onInfo={onInfo} share={share}>
       <div className="grid gap-3 p-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-          <div className="aspect-[4/3] overflow-hidden rounded-xl bg-white/5">
+        <div className="border border-white/10 bg-white/[0.03] p-3">
+          <div className="aspect-[4/3] overflow-hidden bg-white/5">
             <img
               src={item.offerer.imageSrc}
               alt={item.offerer.animalName}
@@ -1831,8 +1831,8 @@ function TradeCard({
             <p className="text-xs text-white/45">{item.offerer.name}</p>
           )}
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-          <div className="aspect-[4/3] overflow-hidden rounded-xl bg-white/5">
+        <div className="border border-white/10 bg-white/[0.03] p-3">
+          <div className="aspect-[4/3] overflow-hidden bg-white/5">
             <img
               src={item.receiver.imageSrc}
               alt={item.receiver.animalName}
@@ -1884,7 +1884,7 @@ function BoostRows({label, boosts}: {label: string; boosts: Record<string, numbe
       <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">{label}</p>
       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {entries.map(([stat, value]) => (
-          <div key={stat} className="rounded-xl bg-white/[0.04] px-3 py-2">
+          <div key={stat} className="bg-white/[0.04] px-3 py-2">
             <p className="text-[0.6rem] font-black uppercase tracking-[0.12em] text-white/30">{stat}</p>
             <p className="mt-0.5 text-sm font-black text-primary-200">+{value}</p>
           </div>
@@ -1899,14 +1899,14 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 md:items-center md:p-4" role="dialog" aria-modal="true" aria-label="Post information">
-      <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-black p-5 shadow-2xl md:rounded-[22px]">
+      <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-black p-5 shadow-2xl">
         <div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-bold text-white">Post information</h2><button type="button" onClick={onClose} className="text-sm font-semibold text-primary-400">Close</button></div>
 
         {item.kind === "capture" ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-primary-400/10 px-2.5 py-1 text-[11px] font-black text-primary-400">{item.animalDexNumber ? `#${String(item.animalDexNumber).padStart(3, "0")}` : "CAPTURE"}</span><span className="text-xs font-semibold text-white/35">{date}</span></div>
             <div className="flex items-center gap-3">{item.collector.avatarUrl ? <img src={item.collector.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover"/> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">{item.collector.name.slice(0,1)}</span>}<div><p className="text-sm font-semibold text-white">{item.collector.name}</p>{item.collector.username ? <p className="text-xs text-white/40">@{item.collector.username}</p> : null}</div></div>
-            <div className="overflow-hidden rounded-[20px]"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} /></div>
+            <div className="overflow-hidden"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} /></div>
             <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3><CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} /></div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
             <div className="flex flex-wrap gap-2 text-[11px] font-bold">
               {item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}
@@ -1926,8 +1926,8 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
               <FeedPill tone="violet">Rarity {item.rarity}</FeedPill>
               {item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}
             </div>
-            {item.mediaCount > 1 ? <div className="rounded-[20px] border border-white/10 bg-[#1f1f1f] p-4"><p className="text-[11px] font-semibold text-white/40">Media</p><p className="mt-2 text-sm text-white/60">{item.mediaCount} media items attached to this capture{item.hasVideoMedia ? ", including video/loop media." : "."}</p></div> : null}
-            <div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3">
+            {item.mediaCount > 1 ? <div className="border border-white/10 bg-[#1f1f1f] p-4"><p className="text-[11px] font-semibold text-white/40">Media</p><p className="mt-2 text-sm text-white/60">{item.mediaCount} media items attached to this capture{item.hasVideoMedia ? ", including video/loop media." : "."}</p></div> : null}
+            <div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3">
               <DetailRow label="Principle" value={item.learnedPrinciple}/>
               <DetailRow label="Core lesson" value={item.coreLesson}/>
               <DetailPills label="Best for" values={item.bestForTags}/>
@@ -1936,17 +1936,17 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
             </div>
           </div>
         ) : item.kind === "alignment" ? (
-          <div className="space-y-4"><img src={item.imageSrc} alt={item.rewardedAnimalName} className="aspect-square w-full rounded-[20px] object-cover"/><h3 className="text-xl font-bold text-white">Daily Companion</h3><p className="text-sm leading-6 text-white/65">{item.summary ?? item.moveTodayText ?? "Shared a Daily Alignment proof."}</p><div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Collector" value={item.collector.name}/><DetailRow label="Rewarded animal" value={item.rewardedAnimalName}/><DetailRow label="Stat boost" value={item.statBoostStat}/><DetailRow label="Post ID" value={item.proofId}/></div></div>
+          <div className="space-y-4"><img src={item.imageSrc} alt={item.rewardedAnimalName} className="aspect-square w-full object-cover"/><h3 className="text-xl font-bold text-white">Daily Companion</h3><p className="text-sm leading-6 text-white/65">{item.summary ?? item.moveTodayText ?? "Shared a Daily Alignment proof."}</p><div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Collector" value={item.collector.name}/><DetailRow label="Rewarded animal" value={item.rewardedAnimalName}/><DetailRow label="Stat boost" value={item.statBoostStat}/><DetailRow label="Post ID" value={item.proofId}/></div></div>
         ) : item.kind === "challenge" ? (
-          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.outcomeLine}</h3>{item.winningsLine ? <p className="text-sm text-amber-200">{item.winningsLine}</p> : null}<p className="text-sm leading-6 text-white/65">{item.activitySummary}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full rounded-2xl object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Scenario" value={item.scenarioTitle}/><DetailRow label="Deciding edge" value={item.decidingEdgeLabel ?? item.chosenStat}/><DetailRow label="Winner" value={item.overallDraw ? "Draw" : item.winnerCaptureId === item.attacker.captureId ? item.attacker.displayName : item.defender.displayName}/><DetailRow label="Credits wagered" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/>{item.overallDraw ? <DetailRow label="Credits returned to each player" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/> : <DetailRow label={item.battleStatus === "completed" || item.challengeFormat !== "best_of_3_v2" ? "Credits paid to winner" : "Potential winner payout"} value={`${item.payoutAmount} ${item.payoutAmount === 1 ? "credit" : "credits"}`}/>}<DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
+          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.outcomeLine}</h3>{item.winningsLine ? <p className="text-sm text-amber-200">{item.winningsLine}</p> : null}<p className="text-sm leading-6 text-white/65">{item.activitySummary}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Scenario" value={item.scenarioTitle}/><DetailRow label="Deciding edge" value={item.decidingEdgeLabel ?? item.chosenStat}/><DetailRow label="Winner" value={item.overallDraw ? "Draw" : item.winnerCaptureId === item.attacker.captureId ? item.attacker.displayName : item.defender.displayName}/><DetailRow label="Credits wagered" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/>{item.overallDraw ? <DetailRow label="Credits returned to each player" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/> : <DetailRow label={item.battleStatus === "completed" || item.challengeFormat !== "best_of_3_v2" ? "Credits paid to winner" : "Potential winner payout"} value={`${item.payoutAmount} ${item.payoutAmount === 1 ? "credit" : "credits"}`}/>}<DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
         ) : item.kind === "fusion" ? (
           <div className="space-y-4"><h3 className="text-xl font-bold text-white">Principle Fusion</h3><p className="text-sm leading-6 text-white/65">{item.receiverAnimalName} learned from {item.donorAnimalName}.</p><DetailRow label="Learned sub-principle" value={item.learnedPrinciple}/><DetailRow label="Expression" value={item.learnedExpression}/><DetailRow label="Post ID" value={item.fusionId}/></div>
         ) : item.kind === "animal-trial" ? (
           <div className="space-y-4">
-            <div className="aspect-[4/5] max-h-80 w-full overflow-hidden rounded-[20px]"><AnimalTrialEvidence item={item} /></div>
+            <div className="aspect-[4/5] max-h-80 w-full overflow-hidden"><AnimalTrialEvidence item={item} /></div>
             <h3 className="text-xl font-bold text-white">{item.isFailed ? "Animal Trial · Evidence not accepted" : "Animal Trial"}</h3>
             <p className="whitespace-pre-line text-sm leading-6 text-white/65">{item.title}</p>
-            <div className="space-y-3 rounded-[14px] border border-white/[0.06] bg-white/[0.025] p-3">
+            <div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3">
               <DetailRow label="Collector" value={item.collector.name}/>
               <DetailRow label="Animal" value={item.speciesName}/>
               <DetailRow label="Power" value={item.principleName || null}/>

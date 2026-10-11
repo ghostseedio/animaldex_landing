@@ -27,7 +27,7 @@ export default function MatchupResultDetailSheet({
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
             <button type="button" aria-label="Close result" className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" onClick={onClose} />
-            <div className="relative z-10 max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 shadow-2xl">
+            <div className="relative z-10 max-h-[85vh] w-full max-w-lg overflow-y-auto border border-white/10 bg-[#101010] p-5 shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Matchup result</p>
@@ -40,12 +40,12 @@ export default function MatchupResultDetailSheet({
 
                 <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <div className="text-center">
-                        <img src={item.attackerImageSrc} alt="" className="mx-auto h-16 w-16 rounded-xl object-cover" />
+                        <img src={item.attackerImageSrc} alt="" className="mx-auto h-16 w-16 object-cover" />
                         <p className="mt-2 text-xs font-bold text-white">{item.attackerAnimalName}</p>
                     </div>
                     <span className="text-xs font-black text-white/35">VS</span>
                     <div className="text-center">
-                        <img src={item.defenderImageSrc} alt="" className="mx-auto h-16 w-16 rounded-xl object-cover" />
+                        <img src={item.defenderImageSrc} alt="" className="mx-auto h-16 w-16 object-cover" />
                         <p className="mt-2 text-xs font-bold text-white">{item.defenderAnimalName}</p>
                     </div>
                 </div>

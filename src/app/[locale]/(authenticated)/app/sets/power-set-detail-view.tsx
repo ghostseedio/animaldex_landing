@@ -57,7 +57,7 @@ export default function PowerSetDetailView({album, catalogSuggestions}: PowerSet
                 ) : null}
             </header>
 
-            <section className={`rounded-[1.5rem] border p-5 ${album.isCompleted ? "border-primary-400/30 bg-primary-400/[0.05]" : "border-white/10 bg-[#151515]"}`}>
+            <section className={`border p-5 ${album.isCompleted ? "border-primary-400/30 bg-primary-400/[0.05]" : "border-white/10 bg-[#151515]"}`}>
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <p className="text-[0.63rem] font-black uppercase tracking-[0.18em] text-primary-200">Current tier</p>
@@ -82,7 +82,7 @@ export default function PowerSetDetailView({album, catalogSuggestions}: PowerSet
                 </div>
 
                 {album.completionRewardBreakdown ? (
-                    <div className="mt-5 space-y-2 rounded-[1rem] border border-white/8 bg-black/20 p-4 text-sm">
+                    <div className="mt-5 space-y-2 border border-white/8 bg-black/20 p-4 text-sm">
                         {[
                             ["Base points", album.completionRewardBreakdown.basePoints],
                             ["Habitat weight", album.completionRewardBreakdown.habitatAdjustment],
@@ -126,9 +126,9 @@ export default function PowerSetDetailView({album, catalogSuggestions}: PowerSet
                             <Link
                                 key={entry.speciesProfileId}
                                 href={entry.href}
-                                className="rounded-[1.4rem] border border-white/10 bg-[#151515] p-3 transition hover:border-primary-400/30"
+                                className="border border-white/10 bg-[#151515] p-3 transition hover:border-primary-400/30"
                             >
-                                <div className="aspect-square overflow-hidden rounded-[1rem] bg-white/5">
+                                <div className="aspect-square overflow-hidden bg-white/5">
                                     <img src={entry.imageSrc} alt={entry.name} className="h-full w-full object-cover" />
                                 </div>
                                 <p className="mt-3 line-clamp-2 font-display text-lg font-bold text-white">{entry.name}</p>
@@ -152,9 +152,9 @@ export default function PowerSetDetailView({album, catalogSuggestions}: PowerSet
                             <Link
                                 key={item.captureId}
                                 href={item.href}
-                                className="rounded-[1.4rem] border border-white/10 bg-[#151515] p-3 transition hover:border-primary-400/30"
+                                className="border border-white/10 bg-[#151515] p-3 transition hover:border-primary-400/30"
                             >
-                                <div className="aspect-[4/3] overflow-hidden rounded-[1rem] bg-white/5">
+                                <div className="aspect-[4/3] overflow-hidden bg-white/5">
                                     <img src={item.imageSrc} alt={item.animalName} className="h-full w-full object-cover" />
                                 </div>
                                 <div className="mt-3 flex items-start justify-between gap-3">

@@ -161,7 +161,7 @@ export default function MatchupRevealStep({
 
     return (
         <div className="space-y-5">
-            <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[linear-gradient(160deg,rgba(16,24,18,0.98),rgba(8,10,9,0.98))] p-4 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.95)]">
+            <div className="overflow-hidden border border-white/10 bg-[linear-gradient(160deg,rgba(16,24,18,0.98),rgba(8,10,9,0.98))] p-4 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.95)]">
                 <div className="relative space-y-4">
                     <div className="text-center">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-primary-200">
@@ -175,20 +175,20 @@ export default function MatchupRevealStep({
 
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                         <div className={`text-center transition ${hasResolvedReveal && result.winnerCaptureId !== attacker.captureId ? "opacity-45" : ""}`}>
-                            <img src={attacker.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === attacker.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
+                            <img src={attacker.imageSrc} alt="" className={`mx-auto h-16 w-16 border object-cover ${hasResolvedReveal && result.winnerCaptureId === attacker.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
                             <p className="mt-2 text-xs font-bold text-white">{attacker.animalName}</p>
                             <p className="text-[0.62rem] text-white/35">You</p>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-black ${hasResolvedReveal ? "bg-primary-400 text-black" : "bg-white/10 text-white/55"}`}>VS</span>
                         <div className={`text-center transition ${hasResolvedReveal && result.winnerCaptureId !== opponent.captureId ? "opacity-45" : ""}`}>
-                            <img src={opponent.imageSrc} alt="" className={`mx-auto h-16 w-16 rounded-2xl border object-cover ${hasResolvedReveal && result.winnerCaptureId === opponent.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
+                            <img src={opponent.imageSrc} alt="" className={`mx-auto h-16 w-16 border object-cover ${hasResolvedReveal && result.winnerCaptureId === opponent.captureId ? "border-primary-400 shadow-[0_0_24px_rgba(167,244,50,0.35)]" : "border-white/10"}`} />
                             <p className="mt-2 text-xs font-bold text-white">{opponent.animalName}</p>
                             <p className="text-[0.62rem] text-white/35">Opponent</p>
                         </div>
                     </div>
 
                     <div
-                        className="rounded-[1.2rem] border px-4 py-4 transition duration-200"
+                        className="border px-4 py-4 transition duration-200"
                         style={{
                             borderColor: `${theme.color}55`,
                             background: `linear-gradient(180deg, ${theme.glow}, rgba(255,255,255,0.02))`,
@@ -237,7 +237,7 @@ export default function MatchupRevealStep({
                     </div>
 
                     {hasResolvedReveal && winnerName ? (
-                        <div className={`rounded-[1.1rem] border px-4 py-4 text-center transition ${viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
+                        <div className={`border px-4 py-4 text-center transition ${viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
                             <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">
                                 {viewerWon ? "You won" : "You lost"}
                             </p>

@@ -311,7 +311,7 @@ export default function ApplyItYourWay({
                             <button
                                 type="button"
                                 onClick={() => openAsk()}
-                                className="flex min-h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-4 text-left text-sm text-white/55"
+                                className="flex min-h-11 w-full items-center justify-between border border-white/10 bg-black/25 px-4 text-left text-sm text-white/55"
                             >
                                 Ask how to write this…
                                 <span aria-hidden="true" className="font-black" style={{color: NEON}}>→</span>
@@ -332,7 +332,7 @@ export default function ApplyItYourWay({
                                     maxLength={POWER_APPLICATION_LIMITS.maxCharacters}
                                     rows={7}
                                     aria-label="What did you do?"
-                                    className="min-h-[160px] w-full resize-y rounded-[14px] border border-primary-400/30 bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
+                                    className="min-h-[160px] w-full resize-y border border-primary-400/30 bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
                                 />
                                 <div className="flex items-center justify-between gap-3">
                                     <span className={`text-[10px] ${hasEnough ? "text-white/40" : "text-orange-400"}`}>

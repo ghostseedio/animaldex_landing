@@ -159,7 +159,7 @@ export default function TrainingQuiz({
                                             onClick={() => choose(index)}
                                             disabled={phase.kind === "submitting"}
                                             aria-pressed={selected}
-                                            className={`flex min-h-[56px] w-full items-center rounded-2xl border px-4 py-3 text-left text-base font-semibold transition disabled:opacity-60 ${selected ? "text-black" : "border-white/10 bg-white/[0.04] text-white hover:border-white/25"}`}
+                                            className={`flex min-h-[56px] w-full items-center border px-4 py-3 text-left text-base font-semibold transition disabled:opacity-60 ${selected ? "text-black" : "border-white/10 bg-white/[0.04] text-white hover:border-white/25"}`}
                                             style={selected ? {backgroundColor: NEON, borderColor: NEON} : undefined}
                                         >
                                             {choice}

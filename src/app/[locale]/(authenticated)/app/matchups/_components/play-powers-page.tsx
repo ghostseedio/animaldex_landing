@@ -87,7 +87,7 @@ function Overview({journey}: {journey: PlayJourney}) {
     };
 
     return (
-        <div className="-mx-4 border-b border-white/[0.08] bg-[#141414] md:mx-0 md:rounded-t-[1.2rem] md:border md:border-white/[0.08]">
+        <div className="-mx-4 border-b border-white/[0.08] bg-[#141414] md:mx-0 md:border md:border-white/[0.08]">
             <div className="flex items-stretch px-3 py-3.5">
                 {PLAY_JOURNEY_LOOP_STEPS.map((step, index) => {
                     const count = journey[step].length;
@@ -99,7 +99,7 @@ function Overview({journey}: {journey: PlayJourney}) {
                                 type="button"
                                 onClick={() => scrollToStep(step)}
                                 aria-label={`${PLAY_JOURNEY_STEP_TITLE[step]}, ${count} ${captions[step]}`}
-                                className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl border py-2.5 transition ${isFocus ? "border-primary-400/55 bg-primary-400/10" : "border-transparent hover:bg-white/[0.03]"}`}
+                                className={`flex min-w-0 flex-1 flex-col items-center gap-1 border py-2.5 transition ${isFocus ? "border-primary-400/55 bg-primary-400/10" : "border-transparent hover:bg-white/[0.03]"}`}
                             >
                                 <span className="text-[9px] font-black tracking-[0.1em]" style={{color: isFocus ? NEON : "rgba(255,255,255,0.4)"}}>
                                     STEP {PLAY_JOURNEY_STEP_NUMBER[step]}{step === "battleAndFuse" ? " ↻" : ""}
@@ -254,7 +254,7 @@ export function PlayPowersPage({
         return loaded ? (
             <AppEmpty icon="camera" title={PLAY_JOURNEY_COPY.emptyTitle} detail={PLAY_JOURNEY_COPY.emptyDetail} />
         ) : (
-            <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#141414] p-3.5 text-sm text-white/60">
+            <div className="flex items-center gap-2.5 border border-white/[0.08] bg-[#141414] p-3.5 text-sm text-white/60">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-400 border-t-transparent" aria-hidden="true" />
                 Finding animals…
             </div>
@@ -262,7 +262,7 @@ export function PlayPowersPage({
     }
 
     return (
-        <div className="md:overflow-hidden md:rounded-[1.2rem]">
+        <div className="md:overflow-hidden">
             <Overview journey={journey} />
             <div className="mt-3 space-y-3">
                 {PLAY_JOURNEY_LOOP_STEPS.map((step) => (
@@ -287,7 +287,7 @@ export function PowerHistoryList({items, loaded}: {items: PlayPowerHistoryItem[]
         ) : null;
     }
     return (
-        <div className="-mx-4 md:mx-0 md:overflow-hidden md:rounded-[1.2rem] md:border md:border-white/[0.08]">
+        <div className="-mx-4 md:mx-0 md:overflow-hidden md:border md:border-white/[0.08]">
             {items.map((item) => {
                 const row = (
                     <>

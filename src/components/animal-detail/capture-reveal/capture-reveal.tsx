@@ -69,7 +69,7 @@ export function RewardShowcase({items, onFinished}: {items: RewardShowcaseItem[]
             <span
                 key={index}
                 role="status"
-                className="flex w-full max-w-xs flex-col gap-3 rounded-[1.5rem] border border-primary-400/40 bg-gradient-to-b from-primary-400/25 to-primary-400/5 px-5 py-6 text-left shadow-2xl"
+                className="flex w-full max-w-xs flex-col gap-3 border border-primary-400/40 bg-gradient-to-b from-primary-400/25 to-primary-400/5 px-5 py-6 text-left shadow-2xl"
             >
                 <span className="flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/60">
                     <span aria-hidden="true" style={{color: NEON}}>✦</span>
@@ -110,7 +110,7 @@ export function CaptureContinuationBar() {
         // Above the floating Ask AnimalDex pill, which on a capture card sits
         // just over the tab bar and would otherwise cover "Scan Another".
         <div className="pointer-events-none fixed inset-x-0 bottom-[9.5rem] z-30 flex justify-center px-4 font-sans lg:bottom-6">
-            <div className="pointer-events-auto flex w-full max-w-md flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-black/85 p-4 shadow-2xl backdrop-blur">
+            <div className="pointer-events-auto flex w-full max-w-md flex-col gap-3 border border-white/10 bg-black/85 p-4 shadow-2xl backdrop-blur">
                 <p className="flex items-center gap-2 text-sm text-white">
                     <span aria-hidden="true" className="text-[13px] font-bold" style={{color: NEON}}>✓</span>
                     {CONTINUATION_NOTE}
@@ -118,14 +118,14 @@ export function CaptureContinuationBar() {
                 <div className="flex gap-2">
                     <Link
                         href="/app/collection"
-                        className="flex min-h-12 flex-1 items-center justify-center rounded-[1.1rem] text-sm font-black text-black/90"
+                        className="flex min-h-12 flex-1 items-center justify-center text-sm font-black text-black/90"
                         style={{backgroundColor: NEON}}
                     >
                         View in My Dex
                     </Link>
                     <Link
                         href="/app/capture"
-                        className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[1.1rem] border border-white/10 bg-white/[0.06] text-sm font-black"
+                        className="flex min-h-12 flex-1 items-center justify-center gap-2 border border-white/10 bg-white/[0.06] text-sm font-black"
                         style={{color: NEON}}
                     >
                         Scan Another

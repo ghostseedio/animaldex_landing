@@ -44,7 +44,7 @@ import Link from "@/app/[locale]/_components/link";
 /**
  * One Trial, full screen. Ported from iOS `AnimalTrialDetailView`.
  *
- * Every section is a full-bleed band divided by a hairline, not a rounded card
+ * Every section is a full-bleed band divided by a hairline, not a card
  * in a gutter: this is a page about one thing, not a list of widgets.
  *
  * DISCLOSURE IS KEYED TO THE LIFECYCLE, not to a fixed layout. Before a Trial
@@ -99,10 +99,10 @@ function SubmittedEvidence({submission}: {submission: Submission}) {
         <div className="flex flex-col gap-2">
             {submission.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={submission.image} alt="Your evidence" className="max-h-[220px] w-full rounded-2xl object-cover" />
+                <img src={submission.image} alt="Your evidence" className="max-h-[220px] w-full object-cover" />
             ) : null}
             {submission.text ? (
-                <p className="whitespace-pre-line rounded-2xl bg-black/30 p-3 text-sm leading-6 text-white/85">{submission.text}</p>
+                <p className="whitespace-pre-line bg-black/30 p-3 text-sm leading-6 text-white/85">{submission.text}</p>
             ) : null}
         </div>
     );
@@ -507,7 +507,7 @@ export default function AnimalTrialDetail({
             <button
                 type="button"
                 onClick={() => openAsk()}
-                className="flex min-h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-4 text-left text-sm text-white/55"
+                className="flex min-h-11 w-full items-center justify-between border border-white/10 bg-black/25 px-4 text-left text-sm text-white/55"
             >
                 Ask about this Trial…
                 <span aria-hidden="true" className="font-black" style={{color: NEON}}>→</span>
@@ -542,7 +542,7 @@ export default function AnimalTrialDetail({
                             aria-label={`${attempt.collector.name}. ${attempt.isFailed ? "Failed." : "Completed."}`}
                             className="flex w-[148px] shrink-0 flex-col gap-1.5"
                         >
-                            <span className="relative block h-[168px] w-[148px] overflow-hidden rounded-xl bg-white/[0.04]">
+                            <span className="relative block h-[168px] w-[148px] overflow-hidden bg-white/[0.04]">
                                 {attempt.evidenceSrc ? (
                                     <AnimalTrialEvidence item={attempt} />
                                 ) : (
@@ -730,7 +730,7 @@ export default function AnimalTrialDetail({
                                     maxLength={MAX_TEXT_PROOF_CHARACTERS}
                                     rows={5}
                                     aria-label="Your answer"
-                                    className="min-h-[120px] w-full resize-y rounded-[14px] border bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
+                                    className="min-h-[120px] w-full resize-y border bg-black/25 p-2.5 text-sm leading-6 text-white outline-none"
                                     style={{borderColor: `${accent}4D`}}
                                 />
                                 <div className="flex items-center justify-between gap-3">

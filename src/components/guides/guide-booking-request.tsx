@@ -127,7 +127,7 @@ export function GuideBookingRequestCta({
                     min={minDate}
                     value={requestedDate}
                     onChange={(event) => setRequestedDate(event.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 focus:ring-2"
+                    className="w-full border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 focus:ring-2"
                 />
             </label>
             <label className="block text-sm text-white/70">
@@ -135,7 +135,7 @@ export function GuideBookingRequestCta({
                 <select
                     value={guestCount}
                     onChange={(event) => setGuestCount(Number(event.target.value))}
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 focus:ring-2"
+                    className="w-full border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 focus:ring-2"
                 >
                     {Array.from({length: maxGuests}, (_, index) => index + 1).map((count) => (
                         <option key={count} value={count} className="bg-canvas-950">
@@ -152,7 +152,7 @@ export function GuideBookingRequestCta({
                     rows={3}
                     maxLength={1000}
                     placeholder="Share timing constraints or anything the Guide should know."
-                    className="w-full resize-y rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 placeholder:text-white/25 focus:ring-2"
+                    className="w-full resize-y border border-white/10 bg-black/20 px-4 py-3 text-white outline-none ring-primary-300/40 placeholder:text-white/25 focus:ring-2"
                 />
             </label>
             <button

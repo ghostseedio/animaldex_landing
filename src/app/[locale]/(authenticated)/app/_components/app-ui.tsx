@@ -37,7 +37,7 @@ export function AppPageHeader({eyebrow, title, description, action}: {eyebrow: s
 
 export function AppSurface({children, className = "", padding = true}: {children: React.ReactNode; className?: string; padding?: boolean}) {
     return (
-        <div className={`rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.9)] backdrop-blur-sm ${padding ? "p-5 md:p-6" : ""} ${className}`}>
+        <div className={`border border-white/[0.08] bg-[#121212]/90 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.9)] backdrop-blur-sm ${padding ? "p-5 md:p-6" : ""} ${className}`}>
             {children}
         </div>
     );
@@ -46,7 +46,7 @@ export function AppSurface({children, className = "", padding = true}: {children
 export function AppMetric({label, value, accent = "green", detail}: {label: string; value: string | number; accent?: "green" | "violet" | "gold" | "blue"; detail?: string}) {
     const accents = {green: "from-primary-400/80 to-primary-400/20", violet: "from-violet-400/80 to-violet-400/20", gold: "from-amber-400/80 to-amber-400/20", blue: "from-sky-400/80 to-sky-400/20"};
     return (
-        <div className="rounded-[1.25rem] border border-white/[0.08] bg-white/[0.03] p-4 transition hover:border-white/15">
+        <div className="border border-white/[0.08] bg-white/[0.03] p-4 transition hover:border-white/15">
             <p className="text-[0.65rem] font-black uppercase tracking-[0.15em] text-white/35">{label}</p>
             <p className="mt-2 font-display text-2xl font-bold tabular-nums text-white">{value}</p>
             {detail ? <p className="mt-1 text-xs leading-5 text-white/35">{detail}</p> : null}
@@ -68,7 +68,7 @@ export function AppSectionTitle({icon, title, detail, action}: {icon: AppIconNam
     return (
         <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10">
                     <AppIcon name={icon} />
                 </span>
                 <div className="min-w-0">
@@ -93,7 +93,7 @@ export function AppBadge({children, tone = "neutral"}: {children: React.ReactNod
 }
 
 export function AppAvatar({src, name, size = "md"}: {src?: string | null; name: string; size?: "sm" | "md" | "lg"}) {
-    const sizes = {sm: "h-10 w-10 rounded-xl text-sm", md: "h-12 w-12 rounded-2xl text-base", lg: "h-16 w-16 rounded-[1.1rem] text-xl"};
+    const sizes = {sm: "h-10 w-10 text-sm", md: "h-12 w-12 text-base", lg: "h-16 w-16 text-xl"};
     if (src) {
         return <img src={src} alt="" className={`${sizes[size]} shrink-0 object-cover ring-1 ring-white/10`} />;
     }
@@ -102,7 +102,7 @@ export function AppAvatar({src, name, size = "md"}: {src?: string | null; name: 
 
 export function AppSegmentedControl<T extends string>({value, options, onChange, fullWidth = false}: {value: T; options: Array<{id: T; label: string}>; onChange: (value: T) => void; fullWidth?: boolean}) {
     return (
-        <div className={`${fullWidth ? "flex w-full" : "inline-flex"} rounded-2xl border border-white/10 bg-white/[0.04] p-1`} role="tablist">
+        <div className={`${fullWidth ? "flex w-full" : "inline-flex"} border border-white/10 bg-white/[0.04] p-1`} role="tablist">
             {options.map((option) => (
                 <button
                     key={option.id}
@@ -110,7 +110,7 @@ export function AppSegmentedControl<T extends string>({value, options, onChange,
                     role="tab"
                     aria-selected={value === option.id}
                     onClick={() => onChange(option.id)}
-                    className={`${fullWidth ? "flex-1" : ""} rounded-[0.9rem] px-4 py-2.5 text-sm font-black transition ${value === option.id ? "bg-primary-400 text-black shadow-sm" : `text-white/55 hover:text-white ${focusRing}`}`}
+                    className={`${fullWidth ? "flex-1" : ""} px-4 py-2.5 text-sm font-black transition ${value === option.id ? "bg-primary-400 text-black shadow-sm" : `text-white/55 hover:text-white ${focusRing}`}`}
                 >
                     {option.label}
                 </button>
@@ -122,7 +122,7 @@ export function AppSegmentedControl<T extends string>({value, options, onChange,
 export function AppEmpty({icon, title, detail, action}: {icon: AppIconName; title: string; detail: string; action?: React.ReactNode}) {
     return (
         <AppSurface className="text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-white/35 ring-1 ring-white/10">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center bg-white/5 text-white/35 ring-1 ring-white/10">
                 <AppIcon name={icon} className="h-6 w-6" />
             </span>
             <h2 className="mt-5 font-display text-2xl font-bold text-white">{title}</h2>
@@ -153,7 +153,7 @@ export function AppListRow({
     badge?: React.ReactNode;
     unread?: boolean;
 }) {
-    const className = `group flex gap-4 rounded-[1.35rem] border p-4 transition md:p-5 ${unread ? "border-primary-400/25 bg-primary-400/[0.04]" : "border-white/[0.08] bg-[#121212]/80 hover:border-white/18 hover:bg-[#161616]"}`;
+    const className = `group flex gap-4 border p-4 transition md:p-5 ${unread ? "border-primary-400/25 bg-primary-400/[0.04]" : "border-white/[0.08] bg-[#121212]/80 hover:border-white/18 hover:bg-[#161616]"}`;
     const content = (
         <>
             {avatar}
@@ -186,7 +186,7 @@ export function AppCaptureCard({capture, compact = false, locale = "en", layout 
 
     if (layout === "peekTop") {
         return (
-            <article className="group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:border-primary-400/30">
+            <article className="group overflow-hidden border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:border-primary-400/30">
                 <Link href={capture.href} className="relative block aspect-[4/3] overflow-hidden bg-white/5">
                     <img src={capture.imageSrc} alt={capture.displayName} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black/75" />
@@ -237,7 +237,7 @@ export function AppCaptureCard({capture, compact = false, locale = "en", layout 
                                     />
                                 ) : null}
                                 {capture.coreLesson ? (
-                                    <p className="w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-black/50 px-3.5 py-2 text-center text-[0.8125rem] font-medium leading-snug text-white/95 backdrop-blur-sm">
+                                    <p className="w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap bg-black/50 px-3.5 py-2 text-center text-[0.8125rem] font-medium leading-snug text-white/95 backdrop-blur-sm">
                                         {truncateCoreLesson(capture.coreLesson)}
                                     </p>
                                 ) : null}
@@ -250,7 +250,7 @@ export function AppCaptureCard({capture, compact = false, locale = "en", layout 
     }
 
     return (
-        <article className={`group overflow-hidden rounded-[1.4rem] border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/30 ${compact ? "flex" : ""}`}>
+        <article className={`group overflow-hidden border border-white/[0.09] bg-[#121212] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/30 ${compact ? "flex" : ""}`}>
             <Link href={capture.href} className={`relative block overflow-hidden bg-white/5 ${compact ? "h-32 w-32 shrink-0" : "aspect-[4/3]"}`}>
                 <img src={capture.imageSrc} alt={capture.displayName} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
@@ -282,7 +282,7 @@ export function AppCaptureCard({capture, compact = false, locale = "en", layout 
 
 export function AppPrimaryLink({href, children, icon, className = ""}: {href: string; children: React.ReactNode; icon?: AppIconName; className?: string}) {
     return (
-        <Link href={href} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black shadow-[0_12px_30px_-18px_rgba(74,222,128,0.8)] transition hover:bg-primary-200 ${focusRing} ${className}`}>
+        <Link href={href} className={`inline-flex min-h-11 items-center justify-center gap-2 bg-primary-400 px-5 py-3 text-sm font-black text-black shadow-[0_12px_30px_-18px_rgba(74,222,128,0.8)] transition hover:bg-primary-200 ${focusRing} ${className}`}>
             {icon ? <AppIcon name={icon} /> : null}
             {children}
         </Link>
@@ -291,7 +291,7 @@ export function AppPrimaryLink({href, children, icon, className = ""}: {href: st
 
 export function AppSecondaryLink({href, children, icon, className = ""}: {href: string; children: React.ReactNode; icon?: AppIconName; className?: string}) {
     return (
-        <Link href={href} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white/75 transition hover:border-white/20 hover:text-white ${focusRing} ${className}`}>
+        <Link href={href} className={`inline-flex min-h-11 items-center justify-center gap-2 border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white/75 transition hover:border-white/20 hover:text-white ${focusRing} ${className}`}>
             {icon ? <AppIcon name={icon} /> : null}
             {children}
         </Link>
@@ -300,7 +300,7 @@ export function AppSecondaryLink({href, children, icon, className = ""}: {href: 
 
 export function AppIconButton({href, icon, label, badge}: {href: string; icon: AppIconName; label: string; badge?: number}) {
     return (
-        <Link href={href} aria-label={label} className={`relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/20 hover:text-white ${focusRing}`}>
+        <Link href={href} aria-label={label} className={`relative flex h-11 w-11 items-center justify-center border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/20 hover:text-white ${focusRing}`}>
             <AppIcon name={icon} />
             {badge ? <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-400 px-1 text-[0.62rem] font-black text-black">{badge}</span> : null}
         </Link>

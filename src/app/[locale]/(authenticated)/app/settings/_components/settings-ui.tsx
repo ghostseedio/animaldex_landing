@@ -54,7 +54,7 @@ export function SettingsSection({title, footer, children}: {title?: string; foot
     return (
         <section>
             {title ? <h2 className="mb-2 px-4 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40">{title}</h2> : null}
-            <div className="-mx-4 overflow-hidden border-y border-white/[0.08] bg-[#141414] md:mx-0 md:rounded-2xl md:border">
+            <div className="-mx-4 overflow-hidden border-y border-white/[0.08] bg-[#141414] md:mx-0 md:border">
                 {children}
             </div>
             {footer ? <p className="mt-2 px-4 text-xs leading-5 text-white/40">{footer}</p> : null}

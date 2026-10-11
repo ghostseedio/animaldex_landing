@@ -63,7 +63,7 @@ type JourneyPayload = {
 /** iOS's two-figure strip over a history page. */
 function StatsStrip({figures}: {figures: Array<{value: string | number; label: string; tint: string}>}) {
     return (
-        <div className="flex items-center rounded-xl border border-white/[0.08] bg-[#141414] py-2">
+        <div className="flex items-center border border-white/[0.08] bg-[#141414] py-2">
             {figures.map((figure, index) => (
                 <div key={figure.label} className="flex flex-1 items-center">
                     {index > 0 ? <span className="h-3.5 w-px bg-white/[0.08]" aria-hidden="true" /> : null}
@@ -315,7 +315,7 @@ export default function MatchupsHub({
         <AppPage narrow>
             <div className="sticky top-16 z-20 -mx-4 space-y-4 bg-black px-4 pb-3 pt-1.5 lg:top-0 md:mx-0 md:px-0">
                 <div className="flex items-center gap-3">
-                    <div role="tablist" aria-label="Play" className="flex min-w-0 flex-1 rounded-[14px] border border-white/10 bg-white/[0.04] p-[3px]">
+                    <div role="tablist" aria-label="Play" className="flex min-w-0 flex-1 border border-white/10 bg-white/[0.04] p-[3px]">
                         {SEGMENTS.map((item) => {
                             const isOn = segment === item.id;
                             return (
@@ -325,7 +325,7 @@ export default function MatchupsHub({
                                     role="tab"
                                     aria-selected={isOn}
                                     onClick={() => selectSegment(item.id)}
-                                    className={`min-w-0 flex-1 truncate rounded-xl px-1 py-[9px] text-[13px] font-black transition ${isOn ? "bg-primary-400 text-black/90" : "text-white/60 hover:text-white"}`}
+                                    className={`min-w-0 flex-1 truncate px-1 py-[9px] text-[13px] font-black transition ${isOn ? "bg-primary-400 text-black/90" : "text-white/60 hover:text-white"}`}
                                 >
                                     {item.label}
                                 </button>
@@ -383,7 +383,7 @@ export default function MatchupsHub({
                 ) : null}
 
                 {targetError ? (
-                    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
+                    <div className="border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
                         {targetError}
                     </div>
                 ) : null}

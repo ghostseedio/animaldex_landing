@@ -105,7 +105,7 @@ export default function MatchupsArenaTab({
             </div>
 
             {filter === "following" && loadingFollowing && !filtered.length ? (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[#141414] p-3.5 text-sm text-white/60">
+                <div className="flex items-center gap-2.5 border border-white/[0.08] bg-[#141414] p-3.5 text-sm text-white/60">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-400 border-t-transparent" aria-hidden="true" />
                     Finding animals…
                 </div>

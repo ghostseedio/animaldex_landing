@@ -439,7 +439,7 @@ export default function CaptureDetailClient({
                 <section
                     onTouchStart={handleHeroTouchStart}
                     onTouchEnd={handleHeroTouchEnd}
-                    className="relative aspect-[4/5] max-h-[48rem] overflow-hidden rounded-[2rem] border border-white/10 bg-black lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:aspect-auto"
+                    className="relative aspect-[4/5] max-h-[48rem] overflow-hidden border border-white/10 bg-black lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:aspect-auto"
                 >
                     {canManageMedia ? (
                         <CaptureMediaManager
@@ -456,7 +456,7 @@ export default function CaptureDetailClient({
                         </div>
                     ) : (
                         <Image
-                            src={capture.imageSrc}
+                            src={capture.imageSrc} unoptimized
                             alt={capture.animalName}
                             fill
                             priority
@@ -486,7 +486,7 @@ export default function CaptureDetailClient({
                     </div>
                 </section>
 
-                <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-black font-sans">
+                <section className="overflow-hidden border border-white/[0.08] bg-black font-sans">
                     <div className="px-5 pt-5">
                         <AnimalDetailTabBar value={tab} onChange={setTab} />
                     </div>
@@ -601,7 +601,7 @@ export default function CaptureDetailClient({
                         {!viewer.isOwner ? (
                             // iOS Play tab for another collector's card: Offer + Compare
                             // buttons and the challenge-availability line.
-                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                            <div className="border border-white/10 bg-white/[0.03] p-4">
                                 <p className="text-sm font-black text-white">Challenge this animal</p>
                                 <p className="mt-1 text-xs leading-5 text-white/55">
                                     {capture.isZooComparisonBanned
@@ -623,7 +623,7 @@ export default function CaptureDetailClient({
                                                 <Link
                                                     href={`/app/matchups?target=${encodeURIComponent(capture.id)}`}
                                                     aria-label="Compare, locked. Earn a Power with one of your animals first."
-                                                    className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white/70"
+                                                    className="inline-flex min-h-11 items-center gap-2 border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white/70"
                                                 >
                                                     <span aria-hidden="true">🔒</span>
                                                     <span className="flex flex-col leading-tight">
@@ -635,19 +635,19 @@ export default function CaptureDetailClient({
                                                 <Link
                                                     href={canCompare ? `/app/matchups?target=${encodeURIComponent(capture.id)}` : "/app/matchups"}
                                                     aria-disabled={!canCompare || isCheckingComparePower}
-                                                    className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black ${canCompare && !isCheckingComparePower ? "bg-primary-400 text-black" : "pointer-events-none bg-white/10 text-white/35"}`}
+                                                    className={`inline-flex min-h-11 items-center gap-2 px-4 text-sm font-black ${canCompare && !isCheckingComparePower ? "bg-primary-400 text-black" : "pointer-events-none bg-white/10 text-white/35"}`}
                                                 >
                                                     <AppIcon name="arena" /> {isCheckingComparePower ? "Checking your animals…" : "Compare"}
                                                 </Link>
                                             )}
                                             {canOffer ? (
-                                                <Link href={`/app/trades?theirCapture=${encodeURIComponent(capture.id)}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white">
+                                                <Link href={`/app/trades?theirCapture=${encodeURIComponent(capture.id)}`} className="inline-flex min-h-11 items-center gap-2 border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white">
                                                     <AppIcon name="trade" /> Offer
                                                 </Link>
                                             ) : null}
                                         </>
                                     ) : (
-                                        <Link href="/account" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary-400 px-4 text-sm font-black text-black">
+                                        <Link href="/account" className="inline-flex min-h-11 items-center gap-2 bg-primary-400 px-4 text-sm font-black text-black">
                                             <AppIcon name="profile" /> Sign in to compare
                                         </Link>
                                     )}

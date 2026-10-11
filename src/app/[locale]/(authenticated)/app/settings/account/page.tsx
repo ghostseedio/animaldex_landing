@@ -40,7 +40,7 @@ export default async function AccountSettingsPage({params}: {params: {locale: st
             </SettingsSection>
 
             {overview.canChangePassword ? (
-                <section id="change-password" className="-mx-4 border-y border-white/[0.08] bg-[#141414] p-4 md:mx-0 md:rounded-2xl md:border">
+                <section id="change-password" className="-mx-4 border-y border-white/[0.08] bg-[#141414] p-4 md:mx-0 md:border">
                     <h2 className="mb-3 text-[15px] font-bold text-white">Change password</h2>
                     <ChangePasswordForm />
                 </section>

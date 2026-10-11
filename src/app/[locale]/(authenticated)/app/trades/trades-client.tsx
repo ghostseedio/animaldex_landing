@@ -9,7 +9,7 @@ import TradeCapturePicker, {useTradeCaptureOptions} from "@/app/[locale]/(authen
 import type {AppCapture, AppCreditOffer, AppDiscoverItem, AppTrade} from "@/data/authenticated-app";
 import {formatAppDateTime} from "@/lib/app-dates";
 
-const inputClass = "w-full rounded-xl border border-white/10 bg-black px-3 py-3 text-sm text-white outline-none transition focus:border-primary-400/40";
+const inputClass = "w-full border border-white/10 bg-black px-3 py-3 text-sm text-white outline-none transition focus:border-primary-400/40";
 const MIN_CREDIT_AMOUNT = 1;
 const MAX_CREDIT_AMOUNT = 5000;
 const DEFAULT_CREDIT_AMOUNT = 25;
@@ -134,7 +134,7 @@ export default function TradesClient({
                 <AppSurface className="border-violet-400/15 bg-gradient-to-br from-violet-500/10 to-[#121212]">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/10">
+                            <span className="flex h-11 w-11 items-center justify-center bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/10">
                                 <AppIcon name="trade" />
                             </span>
                             <div>
@@ -181,7 +181,7 @@ export default function TradesClient({
                                 type="button"
                                 disabled={creating || !myCapture || !theirCapture}
                                 onClick={createAnimalOffer}
-                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
+                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
                             >
                                 {creating ? "Creating offer…" : "Review and send trade"}
                             </button>
@@ -200,7 +200,7 @@ export default function TradesClient({
                                     onChange={setCreditTarget}
                                 />
                             </div>
-                            <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-4">
+                            <div className="mt-4 border border-amber-300/15 bg-amber-300/[0.05] p-4">
                                 <p className="text-xs font-bold uppercase tracking-wider text-amber-200/70">Credit bid</p>
                                 <div className="mt-3 flex flex-wrap items-end gap-3">
                                     <label className="min-w-[8rem] flex-1">
@@ -227,7 +227,7 @@ export default function TradesClient({
                                 type="button"
                                 disabled={creating || !canCreateCreditOffer}
                                 onClick={createCreditOffer}
-                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
+                                className="mt-5 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-200 disabled:opacity-40 sm:w-auto"
                             >
                                 {creating ? "Sending offer…" : "Review and send credit offer"}
                             </button>
@@ -236,7 +236,7 @@ export default function TradesClient({
                 </AppSurface>
             ) : null}
 
-            {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
+            {error ? <p className="border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
 
             {offerItems.length === 0 ? (
                 <AppSurface className="text-center">
@@ -264,13 +264,13 @@ export default function TradesClient({
                                 <AppBadge tone={statusTone}>{trade.status}</AppBadge>
                             </div>
                             <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
+                                <div className="bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
                                     <p className="text-xs text-white/35">{incoming ? "They offer" : "You offer"}</p>
                                     <h2 className="mt-2 font-display text-xl font-bold text-white">{trade.offererName}</h2>
                                     <p className="mt-1 text-xs font-bold text-primary-200">Value {trade.offererValue}</p>
                                 </div>
                                 <AppIcon name="trade" className="h-6 w-6 text-violet-300" />
-                                <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
+                                <div className="bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
                                     <p className="text-xs text-white/35">{incoming ? "For your" : "For their"}</p>
                                     <h2 className="mt-2 font-display text-xl font-bold text-white">{trade.receiverName}</h2>
                                     <p className="mt-1 text-xs font-bold text-primary-200">Value {trade.receiverValue}</p>
@@ -280,11 +280,11 @@ export default function TradesClient({
                                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                                     {incoming ? (
                                         <>
-                                            <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "accept")} className="min-h-11 flex-1 rounded-xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50">Accept trade</button>
-                                            <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "reject")} className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Reject</button>
+                                            <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "accept")} className="min-h-11 flex-1 bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50">Accept trade</button>
+                                            <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "reject")} className="min-h-11 border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Reject</button>
                                         </>
                                     ) : (
-                                        <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "cancel")} className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Cancel offer</button>
+                                        <button type="button" disabled={working === workingId} onClick={() => actTrade(trade.id, "cancel")} className="min-h-11 border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Cancel offer</button>
                                     )}
                                 </div>
                             ) : null}
@@ -308,12 +308,12 @@ export default function TradesClient({
                             <AppBadge tone={statusTone}>{offer.status}</AppBadge>
                         </div>
                         <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-                            <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
+                            <div className="bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
                                 <p className="text-xs text-white/35">Requested animal</p>
                                 <h2 className="mt-2 font-display text-xl font-bold text-white">{offer.targetAnimalName}</h2>
                                 <p className="mt-1 text-xs text-white/45">{incoming ? `From ${offer.bidderName}` : `Owned by ${offer.ownerName}`}</p>
                             </div>
-                            <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-4 text-center md:min-w-[10rem]">
+                            <div className="border border-amber-300/15 bg-amber-300/[0.05] p-4 text-center md:min-w-[10rem]">
                                 <p className="text-xs font-bold uppercase tracking-wider text-amber-200/70">Credit bid</p>
                                 <p className="mt-2 font-display text-3xl font-bold text-amber-200">{offer.amount.toLocaleString()}</p>
                             </div>
@@ -322,11 +322,11 @@ export default function TradesClient({
                             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                                 {incoming ? (
                                     <>
-                                        <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "accept")} className="min-h-11 flex-1 rounded-xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50">Accept credits</button>
-                                        <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "reject")} className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Reject</button>
+                                        <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "accept")} className="min-h-11 flex-1 bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50">Accept credits</button>
+                                        <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "reject")} className="min-h-11 border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Reject</button>
                                     </>
                                 ) : (
-                                    <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "cancel")} className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Cancel offer</button>
+                                    <button type="button" disabled={working === workingId} onClick={() => actCreditOffer(offer, "cancel")} className="min-h-11 border border-white/10 px-4 py-3 text-sm font-black text-white/60 disabled:opacity-50">Cancel offer</button>
                                 )}
                             </div>
                         ) : null}

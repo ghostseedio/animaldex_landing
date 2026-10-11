@@ -198,7 +198,7 @@ export default function DiscoverCaptureActions({
             aria-modal="true"
             aria-label="Send a Gift"
         >
-            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-semibold text-white">Send a Gift</h3>
@@ -217,7 +217,7 @@ export default function DiscoverCaptureActions({
                             type="button"
                             disabled={sendingSlug != null}
                             onClick={() => void sendGift(definition)}
-                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-xs font-semibold text-white disabled:opacity-40"
+                            className="border border-white/10 bg-white/5 px-3 py-2.5 text-left text-xs font-semibold text-white disabled:opacity-40"
                         >
                             {definition.displayName} · Supports {definition.endorsedStat ?? "this animal"} · {definition.creditCost} Credits
                         </button>
@@ -235,7 +235,7 @@ export default function DiscoverCaptureActions({
             aria-modal="true"
             aria-label="Endorse this animal"
         >
-            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-semibold text-white">Endorse this animal</h3>

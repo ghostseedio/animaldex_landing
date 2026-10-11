@@ -74,7 +74,7 @@ export default function ConversationClient({
     return (
         <AppPage narrow>
             <div className="mb-5 flex items-center gap-3">
-                <Link href="/app/messages" aria-label="Back to inbox" className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
+                <Link href="/app/messages" aria-label="Back to inbox" className="flex h-10 w-10 items-center justify-center border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
                     <AppIcon name="back" className="h-5 w-5" />
                 </Link>
                 <div className="min-w-0 flex-1">
@@ -96,11 +96,11 @@ export default function ConversationClient({
                             <div key={message.id} className={`flex ${outgoing ? "justify-end" : "justify-start"}`}>
                                 <div className={`max-w-[85%] space-y-1 ${outgoing ? "text-right" : "text-left"}`}>
                                     {message.body.includes("[[adex-article:") ? (
-                                        <div className={`inline-block max-w-full rounded-[1.1rem] px-4 py-3 text-left ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                        <div className={`inline-block max-w-full px-4 py-3 text-left ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
                                             <SupportMessageBody body={message.body} />
                                         </div>
                                     ) : (
-                                        <p className={`inline-block rounded-[1.1rem] px-4 py-3 text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                        <p className={`inline-block px-4 py-3 text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
                                             {message.body}
                                         </p>
                                     )}
@@ -133,7 +133,7 @@ export default function ConversationClient({
                             rows={1}
                             maxLength={1000}
                             placeholder="Write a message"
-                            className="min-h-[3rem] flex-1 resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-primary-400/40"
+                            className="min-h-[3rem] flex-1 resize-none border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-primary-400/40"
                         />
                         <button
                             type="button"

@@ -120,7 +120,7 @@ export function EvidencePicker({
         <>
             {evidence ? (
                 <div className="flex items-center gap-3">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-black/25">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden border border-white/10 bg-black/25">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={evidence.previewUrl}

@@ -251,7 +251,7 @@ export default function CaptureMediaManager({
                     {showsMenu ? (
                         <div
                             role="menu"
-                            className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#141414] py-1 shadow-2xl"
+                            className="absolute right-0 mt-2 w-52 overflow-hidden border border-white/10 bg-[#141414] py-1 shadow-2xl"
                         >
                             {menuItems.map((item) => (
                                 <button
@@ -277,7 +277,7 @@ export default function CaptureMediaManager({
             ) : null}
 
             {errorMessage ? (
-                <p role="alert" className="absolute inset-x-3 top-16 z-20 rounded-xl bg-black/80 px-3 py-2 text-center text-xs font-semibold text-orange-300 ring-1 ring-orange-300/20">
+                <p role="alert" className="absolute inset-x-3 top-16 z-20 bg-black/80 px-3 py-2 text-center text-xs font-semibold text-orange-300 ring-1 ring-orange-300/20">
                     {errorMessage}
                 </p>
             ) : null}
@@ -305,7 +305,7 @@ export default function CaptureMediaManager({
                     aria-label={deleteConfirmTitle(pendingDelete.length)}
                     className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-4 sm:items-center"
                 >
-                    <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#141414] p-5">
+                    <div className="w-full max-w-sm border border-white/10 bg-[#141414] p-5">
                         <h3 className="text-base font-bold text-white">{deleteConfirmTitle(pendingDelete.length)}</h3>
                         <p className="mt-2 text-sm leading-6 text-white/60">{DELETE_CONFIRM_MESSAGE}</p>
                         <div className="mt-5 flex flex-col gap-2">

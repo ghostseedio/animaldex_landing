@@ -275,7 +275,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
                         {photoUrl ? (
                             <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-white/15">
-                                <Image src={photoUrl} alt="" fill sizes="28px" className="object-cover" />
+                                <Image src={photoUrl} unoptimized alt="" fill sizes="28px" className="object-cover" />
                             </span>
                         ) : (
                             <span
@@ -359,7 +359,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                         key={suggestion.prompt}
                                         type="button"
                                         onClick={() => submit(suggestion.prompt, "chip")}
-                                        className="group flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.035] px-3.5 py-3 text-left transition-colors hover:border-primary-300/35 hover:bg-white/[0.06]"
+                                        className="group flex items-start gap-2.5 border border-white/10 bg-white/[0.035] px-3.5 py-3 text-left transition-colors hover:border-primary-300/35 hover:bg-white/[0.06]"
                                     >
                                         <span className="min-w-0 flex-1">
                                             <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-primary-200/85">
@@ -420,7 +420,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     )}
 
                     {quota.reached ? (
-                        <div className="mt-5 rounded-2xl border border-amber-300/25 bg-amber-400/[0.08] p-4">
+                        <div className="mt-5 border border-amber-300/25 bg-amber-400/[0.08] p-4">
                             <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
                             <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.limitBody}</p>
                             <Link
@@ -445,7 +445,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             event.preventDefault();
                             submit(composer, "form");
                         }}
-                        className="flex items-end gap-2 rounded-3xl border border-white/12 bg-white/[0.05] pl-4 pr-1.5 py-1.5 focus-within:border-primary-300/45"
+                        className="flex items-end gap-2 border border-white/12 bg-white/[0.05] pl-4 pr-1.5 py-1.5 focus-within:border-primary-300/45"
                     >
                         <label className="sr-only" htmlFor="ask-animaldex-composer">{placeholder}</label>
                         <textarea
@@ -544,7 +544,7 @@ function MessageBlock({
     if (message.role === "user") {
         return (
             <div ref={questionRef} className="flex justify-end pl-8" aria-label={`${labels.youAsked} ${message.text}`}>
-                <p className="rounded-3xl bg-primary-400/14 px-3.5 py-2.5 text-[15px] leading-7 text-white">
+                <p className="bg-primary-400/14 px-3.5 py-2.5 text-[15px] leading-7 text-white">
                     {message.text}
                 </p>
             </div>
@@ -557,7 +557,7 @@ function MessageBlock({
 
     if (message.status === "failed") {
         return (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3.5">
+            <div className="border border-white/10 bg-white/[0.035] p-3.5">
                 <p className="text-sm leading-6 text-ink-200">{message.text}</p>
                 <button
                     type="button"

@@ -52,7 +52,7 @@ export default async function MessagesPage({params}: {params: {locale: string}})
                             unread={summary.unreadCount > 0}
                             avatar={
                                 summary.otherUser.isSystem ? (
-                                    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-primary-400/30 bg-[#071B0F]">
+                                    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border border-primary-400/30 bg-[#071B0F]">
                                         <Image src="/images/logo.webp" alt="" width={32} height={32} className="h-8 w-8 object-contain" />
                                     </span>
                                 ) : (

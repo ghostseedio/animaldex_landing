@@ -31,7 +31,7 @@ export default function PopularBreakdownsRail({
                                 key={summary.id}
                                 type="button"
                                 onClick={() => setOpenSlug(summary.slug)}
-                                className="group relative h-[196px] w-[296px] shrink-0 overflow-hidden bg-[#141414] text-left transition md:rounded-[18px]"
+                                className="group relative h-[196px] w-[296px] shrink-0 overflow-hidden bg-[#141414] text-left transition"
                                 aria-label={title}
                             >
                                 {summary.featuredImageUrl ? (

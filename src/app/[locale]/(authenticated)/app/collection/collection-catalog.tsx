@@ -269,7 +269,7 @@ function FilterChip({title, selected, onClick}: {title: string; selected: boolea
         <button
             type="button"
             onClick={onClick}
-            className={`rounded-2xl border px-3 py-2.5 text-sm font-bold transition ${selected ? "border-primary-400 bg-primary-400 text-black" : "border-white/10 bg-white/[0.03] text-white hover:border-white/20"}`}
+            className={`border px-3 py-2.5 text-sm font-bold transition ${selected ? "border-primary-400 bg-primary-400 text-black" : "border-white/10 bg-white/[0.03] text-white hover:border-white/20"}`}
         >
             {title}
         </button>
@@ -281,7 +281,7 @@ function SortOption<T extends string>({id, title, detail, selected, onSelect}: {
         <button
             type="button"
             onClick={() => onSelect(id)}
-            className={`flex w-full items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition ${selected ? "border-primary-400/35 bg-white/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/20"}`}
+            className={`flex w-full items-start gap-3 border px-3.5 py-3 text-left transition ${selected ? "border-primary-400/35 bg-white/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/20"}`}
         >
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-black text-white">{title}</p>
@@ -507,8 +507,8 @@ export default function CollectionCatalog({
                 </span>
             </div>
 
-            <div className="sticky top-16 z-20 space-y-3 rounded-[1.35rem] border border-white/[0.08] bg-[#0d0d0d]/90 p-3 backdrop-blur-xl lg:top-0 lg:bg-[#121212]/90">
-                <label className="flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-black/50 px-4 py-3 focus-within:border-primary-400/40">
+            <div className="sticky top-16 z-20 space-y-3 border border-white/[0.08] bg-[#0d0d0d]/90 p-3 backdrop-blur-xl lg:top-0 lg:bg-[#121212]/90">
+                <label className="flex items-center gap-3 border border-white/10 bg-black/50 px-4 py-3 focus-within:border-primary-400/40">
                     <AppIcon name="search" className="h-5 w-5 shrink-0 text-white/35" />
                     <input
                         value={query}
@@ -534,21 +534,21 @@ export default function CollectionCatalog({
                     <button
                         type="button"
                         onClick={openFilters}
-                        className={`flex min-h-11 flex-1 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black transition ${activeFilters ? "border-primary-400 bg-primary-400 text-black" : "border-white/10 bg-black/40 text-white"}`}
+                        className={`flex min-h-11 flex-1 items-center gap-2 border px-4 py-3 text-sm font-black transition ${activeFilters ? "border-primary-400 bg-primary-400 text-black" : "border-white/10 bg-black/40 text-white"}`}
                     >
                         <AppIcon name="filter" />
                         Filters
                         {activeFilters ? <span className="ml-auto h-2 w-2 rounded-full bg-black" /> : null}
                     </button>
                     {appliedFilters.contentMode === "animals" ? (
-                        <div className="flex rounded-2xl border border-white/10 bg-black/40 p-1">
+                        <div className="flex border border-white/10 bg-black/40 p-1">
                             {(["grid", "list"] as Layout[]).map((item) => (
                                 <button
                                     key={item}
                                     type="button"
                                     aria-label={`${item} layout`}
                                     onClick={() => setLayout(item)}
-                                    className={`rounded-xl p-2.5 transition ${layout === item ? "bg-primary-400 text-black" : "text-white/45 hover:text-white"}`}
+                                    className={`p-2.5 transition ${layout === item ? "bg-primary-400 text-black" : "text-white/45 hover:text-white"}`}
                                 >
                                     <AppIcon name={item} />
                                 </button>
@@ -566,7 +566,7 @@ export default function CollectionCatalog({
                         className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
                         onClick={() => setFiltersOpen(false)}
                     />
-                    <div className="relative z-10 flex max-h-[min(80vh,520px)] w-full max-w-md flex-col overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_-24px_rgba(0,0,0,0.95)]">
+                    <div className="relative z-10 flex max-h-[min(80vh,520px)] w-full max-w-md flex-col overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_-24px_rgba(0,0,0,0.95)]">
                         <div className="overflow-y-auto p-5">
                             <h2 className="font-display text-lg font-bold text-white">Catalog filters</h2>
 
@@ -574,7 +574,7 @@ export default function CollectionCatalog({
                                 type="button"
                                 disabled={!hasPendingChanges}
                                 onClick={applyPendingFilters}
-                                className={`mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${hasPendingChanges ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/[0.04] text-white/35"}`}
+                                className={`mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-black transition ${hasPendingChanges ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/[0.04] text-white/35"}`}
                             >
                                 <AppIcon name="search" className="h-4 w-4" />
                                 Apply {pendingChangeCount} changes
@@ -723,7 +723,7 @@ export default function CollectionCatalog({
                             <Link
                                 key={item.slug}
                                 href={`/animals/${item.slug}`}
-                                className={`group overflow-hidden rounded-[1.35rem] border shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/35 ${item.captured ? "border-white/10 bg-[#121212]" : "border-white/[0.06] bg-[#101010]"} ${layout === "list" ? "flex items-center" : "block"}`}
+                                className={`group overflow-hidden border shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/35 ${item.captured ? "border-white/10 bg-[#121212]" : "border-white/[0.06] bg-[#101010]"} ${layout === "list" ? "flex items-center" : "block"}`}
                             >
                                 <div className={`relative overflow-hidden bg-white/[0.03] ${layout === "list" ? "h-28 w-28 shrink-0" : "aspect-square"}`}>
                                     <img src={item.imageSrc} alt="" loading="lazy" className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${item.captured ? "" : "grayscale opacity-25"}`} />

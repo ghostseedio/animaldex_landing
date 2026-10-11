@@ -1,5 +1,5 @@
 function Block({className}: {className?: string}) {
-    return <div className={`animate-pulse rounded-[1.25rem] border border-white/[0.08] bg-white/[0.03] ${className ?? ""}`} />;
+    return <div className={`animate-pulse border border-white/[0.08] bg-white/[0.03] ${className ?? ""}`} />;
 }
 
 export function AppPageHeaderSkeleton() {
@@ -37,9 +37,9 @@ export function HomeTabSkeleton() {
         <div className="space-y-8 md:space-y-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <Block className="h-12 w-48" />
-                <Block className="h-11 w-36 rounded-2xl" />
+                <Block className="h-11 w-36" />
             </div>
-            <Block className="h-11 w-full max-w-xs rounded-2xl" />
+            <Block className="h-11 w-full max-w-xs" />
             <div className="flex gap-3 overflow-hidden">
                 {Array.from({length: 4}).map((_, index) => (
                     <Block key={index} className="h-36 w-[7.75rem] shrink-0" />
@@ -59,12 +59,12 @@ export function CollectionTabSkeleton() {
         <div className="space-y-8 md:space-y-10">
             <AppPageHeaderSkeleton />
             <Block className="h-28" />
-            <div className="space-y-3 rounded-[1.35rem] border border-white/[0.08] bg-[#0d0d0d]/90 p-3">
-                <Block className="h-12 rounded-[1.15rem]" />
+            <div className="space-y-3 border border-white/[0.08] bg-[#0d0d0d]/90 p-3">
+                <Block className="h-12" />
                 <Block className="h-4 w-2/3" />
                 <div className="flex gap-3">
-                    <Block className="h-11 flex-1 rounded-2xl" />
-                    <Block className="h-11 w-24 rounded-2xl" />
+                    <Block className="h-11 flex-1" />
+                    <Block className="h-11 w-24" />
                 </div>
             </div>
             <AppCardGridSkeleton count={10} />
@@ -75,7 +75,7 @@ export function CollectionTabSkeleton() {
 export function ProfileTabSkeleton() {
     return (
         <div className="space-y-8 md:space-y-10">
-            <Block className="h-56 !rounded-[1.35rem]" />
+            <Block className="h-56 !" />
             <AppMetricRowSkeleton count={4} />
             <div className="space-y-4">
                 <Block className="h-6 w-40" />

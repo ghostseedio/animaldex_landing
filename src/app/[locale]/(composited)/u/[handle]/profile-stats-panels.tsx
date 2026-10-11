@@ -173,9 +173,9 @@ export function CollectorScoreCard({
             {showsTradeUnlock && tradeUnlock ? (
                 <div className="mt-[18px] flex flex-col gap-2">
                     <p className="text-xs font-medium text-white/40">Trade unlock</p>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.08]">
+                    <div className="h-2.5 overflow-hidden bg-white/[0.08]">
                         <div
-                            className="h-full rounded-full"
+                            className="h-full"
                             style={{width: `max(18px, ${tradeRatio * 100}%)`, backgroundColor: accent}}
                         />
                     </div>
@@ -312,7 +312,7 @@ export function TierDistributionCard({
                                 <span className="ml-auto text-[11px] font-semibold tabular-nums text-white/40">{total}</span>
                             </div>
                         ) : null}
-                        <div className="flex h-[26px] w-full items-stretch overflow-hidden rounded-full bg-white/[0.05]">
+                        <div className="flex h-[26px] w-full items-stretch overflow-hidden bg-white/[0.05]">
                             {total === 0 ? (
                                 <span className="flex items-center pl-2.5 text-[11px] font-semibold text-white/40">
                                     No ranked captures yet
@@ -343,7 +343,7 @@ export function TierDistributionCard({
                 {ORDERED_TIERS.map((tier) => (
                     <div key={tier} className="flex items-center gap-1.5">
                         <span
-                            className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+                            className="h-2.5 w-2.5 shrink-0 "
                             style={{backgroundColor: TIER_CHART_COLORS[tier]}}
                         />
                         <span className="text-[11px] font-black text-white/[0.62]">{tier}</span>
@@ -359,7 +359,7 @@ export function TierDistributionCard({
     );
 
     if (!flush) {
-        return <section className="w-full  border border-white/10 bg-[#1F1F1F] light:bg-surface-900 p-4">{content}</section>;
+        return <section className="w-full border border-white/10 bg-[#1F1F1F] light:bg-surface-900 p-4">{content}</section>;
     }
 
     return <StatsPanel className="p-4">{content}</StatsPanel>;
@@ -383,7 +383,7 @@ export function StatChipScroller({items}: {items: ProfileStatChip[]}) {
                 {items.map((item) => (
                     <div
                         key={item.title}
-                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between  border border-white/10 bg-[#1F1F1F] light:bg-surface-900 px-2.5 py-[9px]"
+                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between border border-white/10 bg-[#1F1F1F] light:bg-surface-900 px-2.5 py-[9px]"
                     >
                         <p className="truncate text-[8px] font-extrabold uppercase text-white/40">{item.title}</p>
                         <p className="flex items-baseline gap-px">
@@ -392,7 +392,7 @@ export function StatChipScroller({items}: {items: ProfileStatChip[]}) {
                                 <span className="text-[8px] font-bold text-white/40">{item.denominator}</span>
                             ) : null}
                         </p>
-                        <span className="block h-0.5 w-full rounded-[2px]" style={{backgroundColor: item.tint}} />
+                        <span className="block h-0.5 w-full " style={{backgroundColor: item.tint}} />
                     </div>
                 ))}
             </div>
@@ -420,7 +420,7 @@ export function StatTile({
             <p className="text-[11px] font-semibold uppercase text-white/40">{title}</p>
             <p className="truncate text-[28px] font-extrabold leading-none text-white">{value}</p>
             {footerText ? <p className="text-[11px] font-semibold text-white/40">{footerText}</p> : null}
-            <span className="block h-[3px] w-full rounded-[3px]" style={{backgroundColor: tint}} />
+            <span className="block h-[3px] w-full " style={{backgroundColor: tint}} />
         </StatsPanel>
     );
 }
@@ -483,9 +483,9 @@ export function BestForTagsChartCard({
                                     <span className="h-3.5 text-[11px] font-semibold leading-none text-white/[0.62]">
                                         {score.score}
                                     </span>
-                                    <div className="relative flex h-32 w-6 items-end rounded-[5px] bg-white/[0.045]">
+                                    <div className="relative flex h-32 w-6 items-end bg-white/[0.045]">
                                         <div
-                                            className="w-full rounded-[5px] border border-white/[0.18] shadow-[0_0_8px_rgba(167,244,50,0.16)]"
+                                            className="w-full border border-white/[0.18] shadow-[0_0_8px_rgba(167,244,50,0.16)]"
                                             style={{
                                                 height: `${Math.max(10, (score.score / maxScore) * 128)}px`,
                                                 background: `linear-gradient(to bottom, ${THEME.neon}F2, ${THEME.violet}C7, rgba(50,173,230,0.62))`
@@ -655,7 +655,7 @@ function InsightCaptureIcon({capture}: {capture: PublicProfileCapture}) {
             width={34}
             height={34}
             unoptimized
-            className="h-[34px] w-[34px] shrink-0 rounded-lg border border-white/10 object-cover"
+            className="h-[34px] w-[34px] shrink-0 border border-white/10 object-cover"
         />
     );
 }
@@ -783,7 +783,7 @@ function BinderCover({binder}: {binder: ProfileBinder}) {
 
     return (
         <div
-            className="relative aspect-[0.76] overflow-hidden rounded-l-[10px] rounded-r-[16px] border"
+            className="relative aspect-[0.76] overflow-hidden border"
             style={{
                 borderColor: `${accent}8C`,
                 background: `radial-gradient(circle at 16% 6%, rgba(255,255,255,.18), transparent 70%), linear-gradient(135deg, ${primary}, ${primary}E0, ${secondary})`,

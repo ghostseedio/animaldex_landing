@@ -247,7 +247,7 @@ export default function ShareSheet({
             onClick={onClose}
         >
             <div
-                className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-black p-5 shadow-2xl md: "
+                className="max-h-[94vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-black p-5 shadow-2xl md: "
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="mb-5 flex items-center justify-between gap-4">
@@ -282,7 +282,7 @@ export default function ShareSheet({
                                 key={option.id}
                                 type="button"
                                 onClick={() => void handleOption(option.id)}
-                                className="flex flex-col items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 py-3 text-center transition hover:border-white/15 hover:bg-white/[0.06]"
+                                className="flex flex-col items-center gap-2 border border-white/[0.06] bg-white/[0.03] px-2 py-3 text-center transition hover:border-white/15 hover:bg-white/[0.06]"
                             >
                                 <span className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.06] text-white">
                                     <ShareGlyph id={option.id} />
@@ -299,12 +299,12 @@ export default function ShareSheet({
                         <textarea
                             readOnly
                             value={buildEmbedCode(url, title)}
-                            className="min-h-[8.5rem] w-full rounded-2xl border border-white/10 bg-[#121212] p-4 font-mono text-xs leading-5 text-white/70 outline-none"
+                            className="min-h-[8.5rem] w-full border border-white/10 bg-[#121212] p-4 font-mono text-xs leading-5 text-white/70 outline-none"
                         />
                         <button
                             type="button"
                             onClick={() => void copyEmbed()}
-                            className="inline-flex min-h-[3rem] w-full items-center justify-center rounded-2xl bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-300"
+                            className="inline-flex min-h-[3rem] w-full items-center justify-center bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-300"
                         >
                             Copy embed code
                         </button>
@@ -325,7 +325,7 @@ export default function ShareSheet({
                                         setStatus("Could not copy link");
                                     }
                                 }}
-                                className="inline-flex min-h-[3rem] flex-1 items-center justify-center rounded-2xl bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-300"
+                                className="inline-flex min-h-[3rem] flex-1 items-center justify-center bg-primary-400 px-5 text-sm font-black text-black transition hover:bg-primary-300"
                             >
                                 Copy link
                             </button>
@@ -333,7 +333,7 @@ export default function ShareSheet({
                                 href={appStoreUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex min-h-[3rem] flex-1 items-center justify-center rounded-2xl border border-white/15 px-5 text-sm font-bold text-white transition hover:border-primary-300 hover:text-primary-100"
+                                className="inline-flex min-h-[3rem] flex-1 items-center justify-center border border-white/15 px-5 text-sm font-bold text-white transition hover:border-primary-300 hover:text-primary-100"
                             >
                                 Open App Store
                             </a>

@@ -150,7 +150,7 @@ export default function DailyCompanionClient({
                 <button
                     type="button"
                     onClick={() => setShowHistory((value) => !value)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-primary-200 transition hover:border-white/20"
+                    className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-primary-200 transition hover:border-white/20"
                 >
                     <AppIcon name="calendar" className="h-4 w-4" />
                     {showHistory ? "Hide history" : "Companion history"}
@@ -259,7 +259,7 @@ function StepProgress({
                             type="button"
                             disabled={!enabled}
                             onClick={() => enabled && onStepChange(step.id)}
-                            className={`rounded-[0.95rem] px-2 py-3 text-center transition ${enabled ? "" : "opacity-40"} ${active ? "bg-primary-400/10 ring-1 ring-primary-400/25" : "bg-white/[0.03]"}`}
+                            className={`px-2 py-3 text-center transition ${enabled ? "" : "opacity-40"} ${active ? "bg-primary-400/10 ring-1 ring-primary-400/25" : "bg-white/[0.03]"}`}
                         >
                             <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${index <= currentIndex ? "bg-primary-400 text-black" : "bg-white/10 text-white/45"}`}>
                                 {index + 1}
@@ -285,7 +285,7 @@ function ProblemStep({problem, onProblemChange}: {problem: string; onProblemChan
                 maxLength={1200}
                 rows={6}
                 placeholder="Describe the challenge, decision, or habit you want to train..."
-                className="w-full resize-none rounded-2xl border border-white/10 bg-black p-4 text-sm leading-7 text-white outline-none focus:border-primary-400"
+                className="w-full resize-none border border-white/10 bg-black p-4 text-sm leading-7 text-white outline-none focus:border-primary-400"
             />
             <div className="flex flex-wrap gap-2">
                 {dayQuickChips.map((chip) => (
@@ -324,7 +324,7 @@ function FormulaStep({
                     const selectedId = selectedBySlot[index];
                     const selectedCapture = captures.find((capture) => capture.captureId === selectedId) ?? null;
                     return (
-                        <div key={`${slot.animal}-${slot.role}`} className="rounded-[1rem] border border-white/[0.08] bg-white/[0.03] p-4">
+                        <div key={`${slot.animal}-${slot.role}`} className="border border-white/[0.08] bg-white/[0.03] p-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="font-display text-lg font-bold text-white">{slot.animal}</p>
@@ -348,11 +348,11 @@ function FormulaStep({
                                 type="button"
                                 disabled={disabled}
                                 onClick={() => onOpenPicker(index)}
-                                className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-black/40 px-4 py-3 text-left transition hover:border-primary-400/35 disabled:opacity-50"
+                                className="mt-4 flex w-full items-center gap-3 border border-dashed border-white/15 bg-black/40 px-4 py-3 text-left transition hover:border-primary-400/35 disabled:opacity-50"
                             >
                                 {selectedCapture ? (
                                     <>
-                                        <img src={selectedCapture.imageSrc} alt="" className="h-12 w-12 rounded-xl object-cover ring-1 ring-white/10" />
+                                        <img src={selectedCapture.imageSrc} alt="" className="h-12 w-12 object-cover ring-1 ring-white/10" />
                                         <div className="min-w-0">
                                             <p className="truncate font-bold text-white">{selectedCapture.animalName}</p>
                                             <p className="text-xs text-white/45">Tap to change companion</p>
@@ -360,7 +360,7 @@ function FormulaStep({
                                     </>
                                 ) : (
                                     <>
-                                        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-white/35">
+                                        <span className="flex h-12 w-12 items-center justify-center bg-white/5 text-white/35">
                                             <AppIcon name="plus" />
                                         </span>
                                         <div>
@@ -390,8 +390,8 @@ function ResultsStep({today, captures}: {today: DailyJournalLog; captures: AppCa
                     {today.usedFormula.map((slot, index) => {
                         const capture = captures.find((entry) => entry.captureId === slot.captureId) ?? null;
                         return (
-                            <div key={slot.captureId} className="flex items-center gap-3 rounded-[1rem] border border-white/[0.08] bg-white/[0.03] p-4">
-                                {capture ? <img src={capture.imageSrc} alt="" className="h-14 w-14 rounded-xl object-cover ring-1 ring-white/10" /> : null}
+                            <div key={slot.captureId} className="flex items-center gap-3 border border-white/[0.08] bg-white/[0.03] p-4">
+                                {capture ? <img src={capture.imageSrc} alt="" className="h-14 w-14 object-cover ring-1 ring-white/10" /> : null}
                                 <div>
                                     <p className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-primary-200">{index === 0 ? "Lead Companion" : "Support"}</p>
                                     <p className="mt-1 font-display text-lg font-bold text-white">{slot.displayName || slot.animalName}</p>
@@ -473,7 +473,7 @@ function CompletedTodayView({
                 {proof?.verificationReason ? <p className="text-sm leading-6 text-white/55">{proof.verificationReason}</p> : null}
                 {rewardLabel ? <p className="text-sm font-bold text-primary-200">{rewardLabel}</p> : null}
                 {today.alignmentProofStatus !== "accepted" ? (
-                    <a href={appStoreUrl} className="inline-flex rounded-2xl bg-primary-400 px-4 py-2.5 text-sm font-black text-black">
+                    <a href={appStoreUrl} className="inline-flex bg-primary-400 px-4 py-2.5 text-sm font-black text-black">
                         Complete proof in AnimalDex
                     </a>
                 ) : null}
@@ -503,7 +503,7 @@ function StepActions({
                 <button
                     type="button"
                     onClick={onBack}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3.5 text-sm font-black text-white"
+                    className="inline-flex flex-1 items-center justify-center gap-2 border border-white/10 bg-white/[0.04] px-5 py-3.5 text-sm font-black text-white"
                 >
                     <AppIcon name="back" className="h-4 w-4" />
                     Back
@@ -513,7 +513,7 @@ function StepActions({
                 type="button"
                 disabled={primaryDisabled || submitting}
                 onClick={onPrimary}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary-400 px-5 py-3.5 text-sm font-black text-black disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-2 bg-primary-400 px-5 py-3.5 text-sm font-black text-black disabled:opacity-40"
             >
                 <AppIcon name="spark" />
                 {submitting ? "Working…" : primaryTitle}
@@ -555,13 +555,13 @@ function CapturePickerModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-            <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#121212] shadow-2xl">
+            <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden border border-white/10 bg-[#121212] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-primary-200">Choose companion</p>
                         <h3 className="mt-1 font-display text-xl font-bold text-white">{slot.animal}</h3>
                     </div>
-                    <button type="button" onClick={onClose} className="rounded-xl border border-white/10 p-2 text-white/55">
+                    <button type="button" onClick={onClose} className="border border-white/10 p-2 text-white/55">
                         <AppIcon name="close" />
                     </button>
                 </div>
@@ -573,9 +573,9 @@ function CapturePickerModal({
                                 key={capture.captureId}
                                 type="button"
                                 onClick={() => onSelect(capture.captureId)}
-                                className={`rounded-2xl border p-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/[0.08] bg-white/[0.03] hover:border-white/18"}`}
+                                className={`border p-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/[0.08] bg-white/[0.03] hover:border-white/18"}`}
                             >
-                                <img src={capture.imageSrc} alt="" className="h-20 w-full rounded-xl object-cover" />
+                                <img src={capture.imageSrc} alt="" className="h-20 w-full object-cover" />
                                 <p className="mt-2 truncate text-sm font-bold text-white">{capture.animalName}</p>
                             </button>
                         );

@@ -21,7 +21,7 @@ function RoleCard({
     confidence: number | null;
 }) {
     return (
-        <div className="rounded-[1.2rem] border border-white/10 bg-[#151515] p-4">
+        <div className="border border-white/10 bg-[#151515] p-4">
             <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{label}</p>
             {speciesSlug ? (
                 <Link href={`/animals/${speciesSlug}`} className="mt-2 block font-display text-2xl font-bold text-white hover:text-primary-200">
@@ -52,7 +52,7 @@ export default async function WildProfilePage({params}: {params: {locale: string
                 </div>
             </div>
 
-            <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#151515]">
+            <section className="overflow-hidden border border-white/10 bg-[#151515]">
                 <div className="relative aspect-[16/10]">
                     <Image src={HERO_IMAGE} alt="" fill unoptimized className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -70,10 +70,10 @@ export default async function WildProfilePage({params}: {params: {locale: string
             </section>
 
             {showConversion ? (
-                <section className="space-y-5 rounded-[1.5rem] border border-white/10 bg-[#151515] p-6">
+                <section className="space-y-5 border border-white/10 bg-[#151515] p-6">
                     <div className="grid gap-3 sm:grid-cols-3">
                         {["Origin", "Apex", "Active"].map((role) => (
-                            <div key={role} className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center">
+                            <div key={role} className="border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center">
                                 <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">{role}</p>
                                 <p className="mt-3 text-sm text-white/45">?</p>
                             </div>
@@ -85,10 +85,10 @@ export default async function WildProfilePage({params}: {params: {locale: string
                             : "Take the animal interview to unlock your Origin, Apex, and Active animals. It takes about five minutes, and your profile syncs with the AnimalDex app."}
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
-                        <Link href={INTERVIEW_PATH} className="inline-flex rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                        <Link href={INTERVIEW_PATH} className="inline-flex bg-primary-400 px-5 py-3 text-sm font-black text-black">
                             {profile.hasInProgressInterview ? "Continue interview" : "Start interview"}
                         </Link>
-                        <a href={appStoreUrl} className="inline-flex rounded-2xl border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
+                        <a href={appStoreUrl} className="inline-flex border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
                             {profile.hasInProgressInterview ? "Continue in app" : "Use the app instead"}
                         </a>
                         <AppPrimaryLink href="/what-animal-am-i">Learn about Wild Profile</AppPrimaryLink>

@@ -253,7 +253,7 @@ export function ChangePasswordForm() {
         }
     }
 
-    const field = "w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-primary-400/60";
+    const field = "w-full border border-white/10 bg-black/40 px-3.5 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-primary-400/60";
     return (
         <form onSubmit={submit} className="space-y-3">
             <p className="text-sm text-white/55">Enter your current password, then choose a new one.</p>
@@ -336,7 +336,7 @@ export function DeleteAccountRow() {
             </SettingsSection>
             {confirming ? (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:items-center" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
-                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#1c1c1c] p-5 text-center">
+                    <div className="w-full max-w-sm border border-white/10 bg-[#1c1c1c] p-5 text-center">
                         <h2 id="delete-account-title" className="text-[17px] font-bold text-white">Delete your AnimalDex account?</h2>
                         <p className="mt-2 text-sm text-white/60">
                             This permanently deletes your profile and associated AnimalDex data. Active App Store subscriptions must be cancelled from your Apple account. A web subscription can be cancelled from Credits &amp; Unlocks → Manage subscription.

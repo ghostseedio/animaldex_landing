@@ -11,7 +11,7 @@
  *
  * Marks follow the house data-viz rules: one y axis for every series, 2px
  * strokes, markers only where they carry information, a recessive grid, 4px
- * rounded bar ends anchored to the baseline with a 2px surface gap, a legend
+ * bar ends anchored to the baseline with a 2px surface gap, a legend
  * whenever there are two or more series plus direct labels, and text in ink
  * tokens rather than the series colour. Series hues are assigned in fixed order
  * from the validated dark palette and are never cycled.
@@ -102,7 +102,7 @@ export default function AskVisualChart({spec, summary}: {spec: AskChartSpec; sum
     const hovered = hover === null ? null : model.scaled.map((series) => series.points[hover.index]).filter(Boolean);
 
     return (
-        <figure className="ask-chart rounded-2xl border border-white/10 bg-white/[0.035] p-4" aria-label={summary}>
+        <figure className="ask-chart border border-white/10 bg-white/[0.035] p-4" aria-label={summary}>
             {spec.title ? (
                 <figcaption className="mb-1 text-[13px] font-semibold leading-5 text-white">{spec.title}</figcaption>
             ) : null}
@@ -313,7 +313,7 @@ export default function AskVisualChart({spec, summary}: {spec: AskChartSpec; sum
 
                 {hover && hovered ? (
                     <div
-                        className="pointer-events-none absolute z-10 min-w-[7rem] -translate-x-1/2 -translate-y-full rounded-lg border border-white/15 bg-canvas-950/95 px-2.5 py-1.5 text-[11px] leading-4 shadow-lg"
+                        className="pointer-events-none absolute z-10 min-w-[7rem] -translate-x-1/2 -translate-y-full border border-white/15 bg-canvas-950/95 px-2.5 py-1.5 text-[11px] leading-4 shadow-lg"
                         style={{left: `${hover.x}%`, top: `${Math.max(hover.y, 14)}%`}}
                     >
                         {model.scaled.map((series, index) => {

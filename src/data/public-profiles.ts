@@ -151,6 +151,17 @@ type IdentityRow = {
     show_active_publicly?: boolean | null;
 };
 
+export type PublicProfilePet = {
+    captureId: string;
+    /** The card's nickname (`captures.title`) when it has one, else the species name, as iOS shows it. */
+    name: string;
+    /** For the species artwork icon; null shows the placeholder. */
+    speciesSlug: string | null;
+};
+
+/** iOS `ProfilePetSelectionResolver.defaultMaxPets`. */
+const PROFILE_PET_LIMIT = 6;
+
 export type PublicProfileCapture = {
     id: string;
     animalName: string;
@@ -269,6 +280,8 @@ export type PublicProfileCard = {
     locationVisits: ProfileLocationVisit[];
     topCaptures: PublicProfileCapture[];
     recentCaptures: PublicProfileCapture[];
+    /** iOS ProfilePetSelectionResolver: the captures the owner marked as pets (`profile_pets`), newest first, at most 6. */
+    pets: PublicProfilePet[];
     battleTierCounts: ProfileBattleTierCounts;
     challengeWins: number;
     challengeLosses: number;
@@ -695,6 +708,42 @@ export async function getAuthenticatedPublicProfileCard(): Promise<PublicProfile
     return getPublicProfileCard(viewer.username);
 }
 
+/**
+ * The profile's pets, as iOS picks them: only captures the owner explicitly
+ * marked (`profile_pets`, publicly readable), newest capture first, at most six.
+ * Read separately because a pet is often older than the recent-captures page.
+ * Only discoverable captures appear, since this reads the public feed view.
+ */
+async function fetchProfilePets(
+    userId: string,
+    captureSelect: string,
+    mapCaptureRow: (row: PublicCaptureRow) => PublicProfileCapture
+): Promise<PublicProfilePet[]> {
+    const marked = await fetchRows<{capture_id: string}>("profile_pets", new URLSearchParams({
+        select: "capture_id",
+        user_id: `eq.${userId}`,
+        limit: "50"
+    })).catch(() => []);
+    const ids = marked.map((row) => row.capture_id).filter(Boolean);
+    if (!ids.length) return [];
+
+    const rows = await fetchRows<PublicCaptureRow & {capture_title?: string | null}>("discover_feed_v1", new URLSearchParams({
+        select: `${captureSelect},capture_title`,
+        capture_id: `in.(${ids.join(",")})`,
+        order: "capture_created_at.desc",
+        limit: String(PROFILE_PET_LIMIT)
+    })).catch(() => []);
+
+    return rows.map((row) => {
+        const capture = mapCaptureRow(row);
+        return {
+            captureId: capture.id,
+            name: row.capture_title?.trim() || capture.animalName,
+            speciesSlug: capture.speciesSlug
+        };
+    });
+}
+
 export async function getPublicProfileCard(rawHandle: string): Promise<PublicProfileCard | null> {
     const handle = normalizePublicHandle(rawHandle);
     if (!handle) return null;
@@ -822,6 +871,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
 
     const topCaptures = topRows.map(mapCaptureRow);
     const recentCaptures = recentRows.map(mapCaptureRow);
+    const pets = await fetchProfilePets(profile.id, captureSelect, mapCaptureRow);
     const allCaptures = recentCaptures.length > 0 ? recentCaptures : topCaptures;
 
     // Insight leaders are ranked across the whole collection, so the winners
@@ -963,6 +1013,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         locationVisits,
         topCaptures,
         recentCaptures,
+        pets,
         battleTierCounts: buildBattleTierCounts(tierSampleRows),
         challengeWins: Number(summary?.challenge_wins ?? 0),
         challengeLosses: Number(summary?.challenge_losses ?? 0),

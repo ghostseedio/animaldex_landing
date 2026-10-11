@@ -42,7 +42,7 @@ export default function ChallengeSettingsSheet({
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
             <button type="button" aria-label="Close settings" className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" onClick={onClose} />
-            <div className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 shadow-2xl">
+            <div className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-y-auto border border-white/10 bg-[#101010] p-5 shadow-2xl">
                 <h3 className="font-display text-2xl font-bold text-white">Challenge settings</h3>
                 <p className="mt-2 text-sm text-white/45">
                     Toggle which of your public animals are ready for Scenario Arena matchups and review their stake.
@@ -50,7 +50,7 @@ export default function ChallengeSettingsSheet({
                 {message ? <p className="mt-4 text-sm text-primary-200">{message}</p> : null}
                 <div className="mt-5 space-y-2">
                     {roster.length ? roster.map((capture) => (
-                        <div key={capture.captureId} className="flex items-center justify-between gap-3 rounded-[1.1rem] border border-white/10 bg-white/[0.03] px-3 py-3">
+                        <div key={capture.captureId} className="flex items-center justify-between gap-3 border border-white/10 bg-white/[0.03] px-3 py-3">
                             <div className="min-w-0">
                                 <p className="truncate font-bold text-white">{capture.animalName}</p>
                                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/35">
@@ -65,7 +65,7 @@ export default function ChallengeSettingsSheet({
                                 type="button"
                                 disabled={busyId === capture.captureId}
                                 onClick={() => toggleReady(capture)}
-                                className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-white/70"
+                                className="shrink-0 border border-white/10 px-3 py-2 text-xs font-black text-white/70"
                             >
                                 {capture.isChallengeReady ? "Hide" : "Ready"}
                             </button>

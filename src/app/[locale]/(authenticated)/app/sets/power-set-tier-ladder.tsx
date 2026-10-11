@@ -39,7 +39,7 @@ function tierProgressPercent(status: PowerSetTierStatus) {
 
 export default function PowerSetTierLadder({statuses, catalogLinkedCount, activeTier}: PowerSetTierLadderProps) {
     return (
-        <section className="rounded-[1.75rem] border border-white/10 bg-[#121212] p-5">
+        <section className="border border-white/10 bg-[#121212] p-5">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="text-[0.63rem] font-black uppercase tracking-[0.18em] text-primary-200">Collector tiers</p>
@@ -52,7 +52,7 @@ export default function PowerSetTierLadder({statuses, catalogLinkedCount, active
                         return (
                             <div
                                 key={status.tier}
-                                className={`rounded-xl px-2 py-2 text-center ${status.isCompleted ? style.chip : "bg-white/[0.04] text-white/35"}`}
+                                className={`px-2 py-2 text-center ${status.isCompleted ? style.chip : "bg-white/[0.04] text-white/35"}`}
                             >
                                 <p className="text-[0.62rem] font-black uppercase">{status.tier.slice(0, 1)}</p>
                                 <p className="mt-1 text-xs font-bold">{status.targetCount}</p>
@@ -79,7 +79,7 @@ export default function PowerSetTierLadder({statuses, catalogLinkedCount, active
                                 {index < statuses.length - 1 ? <div className="mt-2 h-7 w-px bg-white/10" /> : null}
                             </div>
 
-                            <div className={`flex-1 rounded-[1.25rem] border p-4 ${isActive ? style.border : "border-white/8"} bg-white/[0.025]`}>
+                            <div className={`flex-1 border p-4 ${isActive ? style.border : "border-white/8"} bg-white/[0.025]`}>
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <p className="text-sm font-black uppercase tracking-[0.14em] text-white">{status.tier}</p>

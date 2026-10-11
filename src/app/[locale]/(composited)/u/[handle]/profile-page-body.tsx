@@ -206,6 +206,7 @@ export async function ProfilePageBody({
                     locationVisits: profile.locationVisits,
                     topCaptures: profile.topCaptures,
                     recentCaptures: profile.recentCaptures,
+                    pets: profile.pets,
                     canViewLocations,
                     captureGridSort: profile.captureGridSort
                 }}

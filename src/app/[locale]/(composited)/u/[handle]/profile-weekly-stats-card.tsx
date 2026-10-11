@@ -63,7 +63,7 @@ export default function ProfileWeeklyStatsCard({week}: {week: ProfileStatsWeek})
                                     <span className="flex h-[68px] items-end">
                                         {entry.captures > 0 ? (
                                             <span
-                                                className="block w-[18px] rounded"
+                                                className="block w-[18px] "
                                                 style={{
                                                     height: Math.max(6, (entry.captures / peak) * 68),
                                                     backgroundImage: `linear-gradient(to bottom, ${NEON}${isToday ? "FA" : "CC"}, ${NEON}${isToday ? "B3" : "7A"})`

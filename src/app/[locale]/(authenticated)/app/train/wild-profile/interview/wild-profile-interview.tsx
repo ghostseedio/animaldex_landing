@@ -133,7 +133,7 @@ function GenerationLoading() {
     }, []);
 
     return (
-        <div className="flex min-h-[24rem] flex-col items-center justify-center gap-4 rounded-[1.5rem] border border-white/10 bg-[#151515] p-8 text-center" role="status" aria-live="polite">
+        <div className="flex min-h-[24rem] flex-col items-center justify-center gap-4 border border-white/10 bg-[#151515] p-8 text-center" role="status" aria-live="polite">
             <span className="text-4xl text-primary-300" aria-hidden="true">🐾</span>
             <h2 className="font-display text-3xl font-bold text-white">Revealing Wild Profile</h2>
             <p className="text-sm font-semibold text-primary-200">{GENERATION_STAGES[stage]}</p>
@@ -327,7 +327,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-[20rem] items-center justify-center rounded-[1.5rem] border border-white/10 bg-[#151515] text-sm text-white/55" role="status">
+            <div className="flex min-h-[20rem] items-center justify-center border border-white/10 bg-[#151515] text-sm text-white/55" role="status">
                 Loading interview
             </div>
         );
@@ -345,9 +345,9 @@ export default function WildProfileInterview({locale}: {locale: string}) {
     if (!question) {
         if (!response) {
             return (
-                <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-[#151515] p-6">
+                <div className="space-y-4 border border-white/10 bg-[#151515] p-6">
                     <p className="text-sm font-semibold text-red-400">{errorMessage ?? "Identity Profile is unavailable right now."}</p>
-                    <button type="button" onClick={() => void load()} className="rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                    <button type="button" onClick={() => void load()} className="bg-primary-400 px-5 py-3 text-sm font-black text-black">
                         Try again
                     </button>
                 </div>
@@ -355,7 +355,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
         }
 
         return (
-            <section className="space-y-4 rounded-[1.5rem] border border-white/10 bg-[#151515] p-6 md:p-8">
+            <section className="space-y-4 border border-white/10 bg-[#151515] p-6 md:p-8">
                 <span className="text-4xl text-primary-300" aria-hidden="true">✦</span>
                 <h2 className="font-display text-3xl font-bold text-white">Ready to reveal your animals</h2>
                 <p className="text-sm font-semibold leading-6 text-white/60">
@@ -364,7 +364,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                 <button
                     type="button"
                     onClick={() => void generate()}
-                    className="w-full rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-300"
+                    className="w-full bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-300"
                 >
                     🐾 Reveal My Wild Profile
                 </button>
@@ -392,7 +392,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                 : "Strong signal. AnimalDex has enough clues to build your Origin, Apex, and Active profile.";
 
     return (
-        <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101010]">
+        <section className="overflow-hidden border border-white/10 bg-[#101010]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
                 <p className="font-display text-lg font-bold text-white">Wild Profile</p>
                 {signalBadge}
@@ -410,7 +410,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                             ["Skipped", state?.skipped_count ?? 0],
                             ["Ready", `${Math.round((state?.readiness_score ?? 0) * 100)}%`]
                         ].map(([label, value]) => (
-                            <div key={label} className="rounded-lg bg-black/40 p-2.5">
+                            <div key={label} className="bg-black/40 p-2.5">
                                 <p className="text-sm font-black text-white">{value}</p>
                                 <p className="text-[0.55rem] font-black uppercase text-white/40">{label}</p>
                             </div>
@@ -425,7 +425,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                             <p className="text-sm font-black text-white">{title as string}</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                                 {(items as string[]).map((item) => (
-                                    <span key={item} className="rounded-lg bg-black/40 px-2.5 py-1.5 text-xs font-black text-primary-300">{item}</span>
+                                    <span key={item} className="bg-black/40 px-2.5 py-1.5 text-xs font-black text-primary-300">{item}</span>
                                 ))}
                             </div>
                         </div>
@@ -435,16 +435,16 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                             <p className="text-sm font-black text-white">Recent things you shared</p>
                             <ul className="mt-2 space-y-2">
                                 {sharedAnswers.map((answer, index) => (
-                                    <li key={`${index}-${answer}`} className="line-clamp-3 rounded-lg bg-black/40 p-2.5 text-xs font-semibold text-white/60">{answer}</li>
+                                    <li key={`${index}-${answer}`} className="line-clamp-3 bg-black/40 p-2.5 text-xs font-semibold text-white/60">{answer}</li>
                                 ))}
                             </ul>
                         </div>
                     ) : null}
                     <div className="grid gap-2 sm:grid-cols-2">
-                        <button type="button" onClick={() => void generate()} className="rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                        <button type="button" onClick={() => void generate()} className="bg-primary-400 px-5 py-3 text-sm font-black text-black">
                             🐾 Reveal My Wild Profile
                         </button>
-                        <button type="button" onClick={() => setShowSignal(false)} className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-bold text-white">
+                        <button type="button" onClick={() => setShowSignal(false)} className="border border-white/15 px-5 py-3 text-sm font-bold text-white">
                             Keep Answering
                         </button>
                     </div>
@@ -453,7 +453,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
 
             <div className="max-h-[60vh] min-h-[22rem] space-y-3.5 overflow-y-auto p-5" aria-live="polite">
                 {showIntro ? (
-                    <div className="space-y-3 rounded-xl border border-white/10 bg-[#151515] p-4">
+                    <div className="space-y-3 border border-white/10 bg-[#151515] p-4">
                         <h2 className="text-xl font-black text-white">Find your three animals</h2>
                         <p className="text-sm leading-6 text-white/60">
                             Answer a few animal-style questions. AnimalDex will match you to your Origin, Apex, and Active animals.
@@ -469,7 +469,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                                 setHasDismissedIntro(true);
                                 inputRef.current?.focus();
                             }}
-                            className="w-full rounded-2xl bg-primary-400 px-5 py-2.5 text-sm font-bold text-black"
+                            className="w-full bg-primary-400 px-5 py-2.5 text-sm font-bold text-black"
                         >
                             Start
                         </button>
@@ -487,7 +487,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     const canSkip = isCurrentQuestion && question.skip_allowed === true && message.content.includes("?");
                     return (
                         <div key={message.id} className={`flex ${isUser ? "justify-end pl-10" : "justify-start pr-10"}`}>
-                            <div className={`max-w-xl space-y-1 rounded-lg p-3 ${isUser ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1a1a1a] text-white"}`}>
+                            <div className={`max-w-xl space-y-1 p-3 ${isUser ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1a1a1a] text-white"}`}>
                                 {shouldShowLabel(message) ? <GuideLabel isUser={isUser} /> : null}
                                 <p className="whitespace-pre-line text-[0.95rem] font-semibold leading-6">{message.content}</p>
                                 {canSkip ? (
@@ -495,7 +495,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                                         type="button"
                                         onClick={() => void submit(true)}
                                         disabled={isSaving}
-                                        className="mt-1 rounded-md border border-white/20 px-2.5 py-1 text-xs font-black text-white/80 hover:border-white/40 disabled:opacity-50"
+                                        className="mt-1 border border-white/20 px-2.5 py-1 text-xs font-black text-white/80 hover:border-white/40 disabled:opacity-50"
                                     >
                                         ⏭ Skip
                                     </button>
@@ -507,7 +507,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
 
                 {busy ? (
                     <div className="flex justify-start pr-10">
-                        <div className="space-y-1.5 rounded-lg border border-white/10 bg-[#1a1a1a] p-3">
+                        <div className="space-y-1.5 border border-white/10 bg-[#1a1a1a] p-3">
                             <GuideLabel isUser={false} />
                             <TypingDots />
                         </div>
@@ -551,13 +551,13 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                         rows={1}
                         maxLength={1200}
                         disabled={busy}
-                        className="max-h-32 min-h-[2.75rem] flex-1 resize-none rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-[0.95rem] font-medium text-white placeholder:text-white/35 focus:border-primary-300/60 focus:outline-none disabled:opacity-60"
+                        className="max-h-32 min-h-[2.75rem] flex-1 resize-none border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-[0.95rem] font-medium text-white placeholder:text-white/35 focus:border-primary-300/60 focus:outline-none disabled:opacity-60"
                     />
                     <button
                         type="submit"
                         aria-label="Send"
                         disabled={busy || !answerText.trim()}
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary-400 text-lg font-black text-black transition hover:bg-primary-300 disabled:opacity-40"
+                        className="grid h-11 w-11 shrink-0 place-items-center bg-primary-400 text-lg font-black text-black transition hover:bg-primary-300 disabled:opacity-40"
                     >
                         {isSaving ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" /> : "↑"}
                     </button>

@@ -32,7 +32,7 @@ export default function PowerSetCard({album}: PowerSetCardProps) {
 
     return (
         <Link href={`/app/sets/${encodeURIComponent(album.key)}`} className="block">
-            <article className={`overflow-hidden rounded-[1.5rem] border bg-gradient-to-br from-primary-400/[0.08] to-[#141414] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/35 ${album.isCompleted ? "border-primary-400/30" : album.isNearComplete ? "border-violet-400/30" : "border-white/10"}`}>
+            <article className={`overflow-hidden border bg-gradient-to-br from-primary-400/[0.08] to-[#141414] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/35 ${album.isCompleted ? "border-primary-400/30" : album.isNearComplete ? "border-violet-400/30" : "border-white/10"}`}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-[0.63rem] font-black uppercase tracking-wider text-primary-200">Power collection</p>

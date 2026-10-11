@@ -113,7 +113,7 @@ export default async function CollectionPage() {
                 </div>
             </AppSurface>
 
-            <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/[0.04]" />}>
+            <Suspense fallback={<div className="h-40 animate-pulse bg-white/[0.04]" />}>
                 <CollectionPageClient
                     species={species}
                     discoveryStats={discoveryStats}

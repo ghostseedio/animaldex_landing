@@ -3,6 +3,7 @@
 import Image from "next/image";
 import {useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
 import ProfileFollowListSheet from "@/app/[locale]/(composited)/u/[handle]/profile-follow-list";
 import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
@@ -33,6 +34,7 @@ import type {
     ProfileLocationVisit,
     ProfilePowerSetCompletion,
     PublicProfileCapture,
+    PublicProfilePet,
     PublicWildIdentity
 } from "@/data/public-profiles";
 import type {
@@ -167,6 +169,8 @@ type ProfileContentProps = {
         locationVisits: ProfileLocationVisit[];
         topCaptures: PublicProfileCapture[];
         recentCaptures: PublicProfileCapture[];
+        /** Only the captures the owner marked as pets (iOS ProfilePetSelectionResolver). */
+        pets: PublicProfilePet[];
         canViewLocations: boolean;
         captureGridSort: "recent" | "index";
     };
@@ -303,7 +307,7 @@ function WildIdentityCard({
     ];
 
     return (
-        <section className="  border border-white/10 bg-surface-900/60 p-4">
+        <section className=" border border-white/10 bg-surface-900/60 p-4">
             <div className="flex items-center justify-between gap-3">
                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-primary-200">{labels.wildProfileTitle}</p>
                 <span className="text-xs font-semibold text-white/35">{labels.wildProfilePublic}</span>
@@ -312,7 +316,7 @@ function WildIdentityCard({
             {identity.summary ? <p className="mt-2 text-sm leading-relaxed text-white/55">{identity.summary}</p> : null}
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 {roles.map(({key, role, label}) => (
-                    <div key={key} className="  border border-white/[0.08] bg-black/20 p-3 light:bg-surface-900">
+                    <div key={key} className=" border border-white/[0.08] bg-black/20 p-3 light:bg-surface-900">
                         <p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-white/35">{label}</p>
                         {role.speciesSlug ? (
                             <Link href={`/animals/${role.speciesSlug}`} className="mt-2 block font-display text-lg font-bold text-white hover:text-primary-200">
@@ -523,9 +527,14 @@ export default function ProfileContent({
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
         ? formatDisplayMoney(profile.collectionValueUsd, displayCurrency, locale)
         : null;
-    const friendPets = historyCaptures
-        .filter((capture) => capture.contextLabel === "Domestic" || capture.contextLabel === "Farm")
-        .slice(0, 8);
+    // iOS shows only captures the owner marked as pets, never a guess from the
+    // capture's setting.
+    const friendPets = profile.pets;
+    // Full-width sections. On /app the column has no side padding, so they sit
+    // flush; on the public page they bleed past its px-4 / md:px-8 padding.
+    // Everything inside then uses the same 18px inset, as iOS does.
+    const bleed = surface === "app" ? "" : "-mx-4 md:-mx-8";
+    const inset = surface === "app" ? "px-[18px]" : "px-[18px] md:px-0";
 
     const tabs = useMemo<ProfileTab[]>(
         () => (profile.canViewLocations || viewer.isOwner
@@ -641,13 +650,13 @@ export default function ProfileContent({
     return (
         <div className={`flex flex-col gap-6 ${surface === "app" ? "md:gap-7" : "md:gap-8"}`}>
             {viewer.isLoggedIn && !viewer.isOwner && viewer.viewerUsername ? (
-                <p className="  border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-sm text-white/45">
+                <p className=" border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-sm text-white/45">
                     {labels.viewSignedInAs.replace("{username}", viewer.viewerUsername)}
                 </p>
             ) : null}
 
             {viewer.isOwner && surface === "app" ? (
-                <div className="sticky top-16 z-20 -mx-4 flex items-center justify-between border-b border-white/[0.06] bg-canvas-950/95 px-[18px] py-2.5 backdrop-blur-xl sm:-mx-7 lg:top-0 lg:-mx-10">
+                <div className="sticky top-16 z-20 flex items-center justify-between border-b border-white/[0.06] bg-canvas-950/95 px-[18px] py-2.5 backdrop-blur-xl lg:top-0">
                     <span className="relative">
                         <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
                             <ProfileMessagesIcon />
@@ -669,12 +678,12 @@ export default function ProfileContent({
 
             <div
                 className={`overflow-hidden transition-[max-height,opacity,transform,margin] duration-300 ease-out ${
-                    chromeCollapsed
+ chromeCollapsed
                         ? "max-h-0 -mb-6 -translate-y-2 opacity-0 md:-mb-8"
                         : "max-h-[28rem] mb-0 translate-y-0 opacity-100"
                 }`}
             >
-            <header className="flex items-center gap-3 px-[18px] pb-1 pt-1 md:px-0">
+            <header className={`flex items-center gap-3 pb-1 pt-1 ${inset}`}>
                 {profile.avatarUrl ? (
                     <Image
                         src={profile.avatarUrl}
@@ -740,7 +749,7 @@ export default function ProfileContent({
                                 href={`${localePrefix}/app/credits`}
                                 aria-label={`${ownerExtras.credits.balance} credits. Open credits and unlocks.`}
                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold tabular-nums ${
-                                    ownerExtras.credits.isLow
+ ownerExtras.credits.isLow
                                         ? "bg-primary-400 text-black"
                                         : "border border-primary-200/35 bg-primary-400/14 text-primary-200"
                                 }`}
@@ -753,12 +762,12 @@ export default function ProfileContent({
                 </div>
             </header>
 
-            <div key={activeChromePreset} className="mt-6 motion-safe:animate-[profileChromeFade_220ms_ease-out]">
+            <div key={activeChromePreset} className={`mt-5 motion-safe:animate-[profileChromeFade_220ms_ease-out] ${inset}`}>
             {activeChromePreset === "spirit" ? (
                 profile.wildIdentity
                     ? <WildIdentityCard identity={profile.wildIdentity} labels={labels} />
                     : viewer.isOwner ? (
-                        <Link href={`${localePrefix}/app/train/wild-profile`} className="rounded-2xl border border-primary-300/20 bg-primary-400/[0.08] p-4">
+                        <Link href={`${localePrefix}/app/train/wild-profile`} className=" border border-primary-300/20 bg-primary-400/[0.08] p-4">
                             <p className="font-display text-lg font-bold text-white">Discover My Animals</p>
                             <p className="mt-1 text-sm text-white/55">Take the animal quiz to unlock your Origin, Apex, and Active animals.</p>
                         </Link>
@@ -775,10 +784,21 @@ export default function ProfileContent({
                         </div>
                     ) : (
                         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                            {friendPets.map((capture) => (
-                                <Link key={capture.id} href={capture.href} className="w-[4.75rem] shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-center">
-                                    <Image src={capture.imageSrc} alt="" width={48} height={48} unoptimized className="mx-auto h-10 w-10 rounded-lg object-cover" />
-                                    <p className="mt-1 truncate text-[0.68rem] font-black text-white">{capture.animalName}</p>
+                            {friendPets.map((pet) => (
+                                // iOS ProfilePetCell: the species artwork over the pet's name.
+                                <Link
+                                    key={pet.captureId}
+                                    href={`${localePrefix}/app/capture/${encodeURIComponent(pet.captureId)}`}
+                                    className="flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-1.5 border border-white/[0.08] bg-white/[0.04] px-1.5 transition hover:border-primary-400/40"
+                                >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={pet.speciesSlug ? getSpeciesArtworkRoute(pet.speciesSlug) : "/images/placeholders/species-no-image.svg"}
+                                        alt=""
+                                        loading="lazy"
+                                        className="h-[30px] w-[30px] object-contain"
+                                    />
+                                    <p className="w-full truncate text-center text-[12px] font-black text-white">{pet.name}</p>
                                 </Link>
                             ))}
                         </div>
@@ -807,7 +827,7 @@ export default function ProfileContent({
                         ["Overall", formatAppInteger(profile.collectorScore, locale)],
                         ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—"]
                     ].map(([title, value]) => (
-                        <div key={title} className="  border border-white/10 bg-white/[0.04] p-3">
+                        <div key={title} className=" border border-white/10 bg-white/[0.04] p-3">
                             <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/35">{title}</p>
                             <p className="mt-1 truncate font-display text-base font-bold text-primary-100">{value}</p>
                         </div>
@@ -817,8 +837,8 @@ export default function ProfileContent({
             </div>
             </div>
 
-            <nav aria-label="Profile sections" className={`sticky z-20 -mx-4 border-b border-white/[0.08] bg-canvas-950/95 backdrop-blur-xl md:-mx-8 ${
-                surface === "app"
+            <nav aria-label="Profile sections" className={`sticky z-20 border-b border-white/[0.08] bg-canvas-950/95 backdrop-blur-xl ${bleed} ${
+ surface === "app"
                     ? viewer.isOwner ? "top-[6.65rem] lg:top-[2.65rem]" : "top-16 lg:top-0"
                     : "top-0"
             }`}>
@@ -833,7 +853,7 @@ export default function ProfileContent({
                                 aria-selected={isActive}
                                 onClick={() => setActiveTab(tab)}
                                 aria-label={tabLabel(tab)}
-                                className="flex flex-col items-center gap-1.5 pt-2.5"
+                                className="flex flex-col items-center gap-1.5 pt-2.5 outline-none focus-visible:bg-white/[0.05]"
                             >
                                 <span className={`relative flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
                                     {TAB_ICONS[tab]}
@@ -854,7 +874,7 @@ export default function ProfileContent({
             </nav>
 
             {activeTab === "stats" ? (
-                <div className="-mx-4 flex flex-col md:-mx-8">
+                <div className={`flex flex-col ${bleed}`}>
                     <CollectorScoreCard
                         score={profile.collectorScore}
                         archetype={profile.collectionArchetype}
@@ -928,7 +948,7 @@ export default function ProfileContent({
             {activeTab === "shop" ? (
                 viewer.isOwner ? (
                     // iOS `ownerDashboard`: destinations, not product cards.
-                    <div className="-mx-4 flex flex-col md:-mx-8">
+                    <div className={`flex flex-col ${bleed}`}>
                         <ShopDestinationRow
                             href={`${localePrefix}/app/train/packs`}
                             tint="#FF9500"
@@ -964,7 +984,7 @@ export default function ProfileContent({
                             </div>
                         ) : null}
                         {listedPacks.map((pack) => (
-                            <div key={pack.id} className="  border border-white/10 bg-surface-900/60 p-4">
+                            <div key={pack.id} className=" border border-white/10 bg-surface-900/60 p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <h3 className="font-display text-xl font-bold text-white">{pack.themeTitle}</h3>
@@ -978,7 +998,7 @@ export default function ProfileContent({
                                     </div>
                                     <a
                                         href={appStoreUrl}
-                                        className="shrink-0 rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-black"
+                                        className="shrink-0 bg-primary-400 px-3 py-2 text-xs font-black text-black"
                                     >
                                         {labels.packBuyInApp}
                                     </a>
@@ -995,7 +1015,7 @@ export default function ProfileContent({
                             <Link
                                 key={guide.id}
                                 href={guidePath(guide)}
-                                className="rounded-[1.2rem] border border-white/10 bg-surface-900/60 p-4 transition hover:bg-surface-900/80"
+                                className=" border border-white/10 bg-surface-900/60 p-4 transition hover:bg-surface-900/80"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
@@ -1010,7 +1030,7 @@ export default function ProfileContent({
                                             <p className="mt-2 line-clamp-2 text-xs text-white/35">{guide.public_summary}</p>
                                         ) : null}
                                     </div>
-                                    <span className="shrink-0  bg-primary-400 px-3 py-2 text-xs font-black text-black">
+                                    <span className="shrink-0 bg-primary-400 px-3 py-2 text-xs font-black text-black">
                                         View
                                     </span>
                                 </div>
@@ -1021,7 +1041,7 @@ export default function ProfileContent({
             ) : null}
 
             {activeTab === "locations" ? (
-                <div className="-mx-4 flex flex-col md:-mx-8">
+                <div className={`flex flex-col ${bleed}`}>
                     {profile.locationVisits.length === 0 ? (
                         <p className="px-[18px] py-7 text-center text-[15px] font-medium text-white/[0.62]">
                             {labels.locationsEmpty}
@@ -1032,7 +1052,7 @@ export default function ProfileContent({
                             <StatsPanel>
                                 <div className="flex gap-3 overflow-x-auto px-[18px] py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {profile.locationVisits.map((visit) => (
-                                        <div key={visit.id} className="w-52 shrink-0  border border-white/10 bg-[#1F1F1F] p-4 light:bg-surface-900">
+                                        <div key={visit.id} className="w-52 shrink-0 border border-white/10 bg-[#1F1F1F] p-4 light:bg-surface-900">
                                             <p className="text-[11px] font-semibold uppercase text-white/40">
                                                 {labels.locationCaptures.replace("{count}", String(visit.captureCount))}
                                             </p>
@@ -1051,14 +1071,14 @@ export default function ProfileContent({
                     {historyCaptures.length === 0 && viewer.isOwner ? (
                         <p className="px-[18px] py-10 text-center text-[15px] font-medium text-white/[0.62]">No captures yet.</p>
                     ) : historyCaptures.length === 0 ? (
-                        <div className="mt-4  border border-dashed border-white/10 px-6 py-10 text-center">
+                        <div className="mt-4 border border-dashed border-white/10 px-6 py-10 text-center">
                             <h3 className="font-display text-2xl font-bold text-white">{labels.noPublicCapturesTitle}</h3>
                             <p className="mx-auto mt-3 max-w-xl text-sm text-white/45">
                                 {labels.noPublicCapturesDescription.replace("{username}", profile.username)}
                             </p>
                         </div>
                     ) : (
-                        <div className="-mx-4 mt-2 grid grid-cols-3 gap-0.5 md:-mx-8">
+                        <div className={`mt-2 grid grid-cols-3 gap-0.5 ${bleed}`}>
                             {gridItems.slice(0, historyLimit).map((item) => (
                                 <ProfileGridCell key={item.id} item={item} />
                             ))}

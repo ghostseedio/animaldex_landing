@@ -124,11 +124,11 @@ export function ArenaTrialsTab({
 
     return (
         <>
-            <div className="-mx-4 flex flex-col md:mx-0 md:overflow-hidden md:rounded-[1.35rem] md:border md:border-white/[0.08]">
+            <div className="-mx-4 flex flex-col md:mx-0 md:overflow-hidden md:border md:border-white/[0.08]">
                 {groups.map((group) => (
                     <section key={group.id}>
                         <header className="flex items-center gap-3 px-5 pb-2 pt-[18px]">
-                            <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-white/[0.06] text-sm">🐾</span>
+                            <span aria-hidden="true" className="grid h-8 w-8 place-items-center bg-white/[0.06] text-sm">🐾</span>
                             <h3 className="min-w-0 flex-1 truncate text-base font-bold text-white">{group.name}</h3>
                             {group.trials.length > 1 ? (
                                 <span className="text-[10px] font-bold text-white/40">{group.completedCount}/{group.trials.length} complete</span>
@@ -271,7 +271,7 @@ export function TrialHistoryList({
     const section = (title: string, trials: AnimalTrial[]) => trials.length ? (
         <section key={title}>
             <h3 className="px-1 pb-2 pt-4 text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">{title}</h3>
-            <div className="-mx-4 md:mx-0 md:overflow-hidden md:rounded-[1.2rem] md:border md:border-white/[0.08]">
+            <div className="-mx-4 md:mx-0 md:overflow-hidden md:border md:border-white/[0.08]">
                 {trials.map((trial) => (
                     <TrialHistoryRow
                         key={trialId(trial)}
@@ -313,7 +313,7 @@ export function TrialStatsRow({history}: {history: AnimalTrial[]}) {
                 {label: "Completed", value: completed, tint: NEON},
                 {label: "Failed", value: failed, tint: FAIL}
             ].map((metric) => (
-                <div key={metric.label} className="min-w-0 rounded-[18px] border border-white/[0.06] bg-white/[0.04] p-3">
+                <div key={metric.label} className="min-w-0 border border-white/[0.06] bg-white/[0.04] p-3">
                     <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.08em] text-white/30">{metric.label}</p>
                     <p className="mt-1.5 truncate font-display text-xl font-black tabular-nums text-white">{metric.value}</p>
                     <div className="mt-2 h-[3px] rounded-full" style={{backgroundColor: metric.tint}} />

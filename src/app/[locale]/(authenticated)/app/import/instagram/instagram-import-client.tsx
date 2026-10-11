@@ -711,7 +711,7 @@ function InstagramImportClientInner() {
 
     const connectScreen = (
         <AppSurface className="flex min-h-[28rem] flex-col items-center justify-center px-6 py-16 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/20">
+            <span className="flex h-16 w-16 items-center justify-center bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/20">
                 <AppIcon name="camera" className="h-7 w-7" />
             </span>
             <h2 className="mt-6 max-w-md font-display text-3xl font-bold text-white">Bring your Instagram animals into AnimalDex</h2>
@@ -721,7 +721,7 @@ function InstagramImportClientInner() {
             {connected ? (
                 <>
                     <p className="mt-5 text-sm font-bold text-primary-200">{connectionStatusLabel(connection)}</p>
-                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching} className="mt-6 inline-flex min-h-11 items-center justify-center bg-primary-400 px-5 py-3 text-sm font-black text-black">
                         Check for new posts
                     </button>
                     <button type="button" onClick={() => void connect()} className="mt-3 text-sm font-bold text-white/45 hover:text-white">
@@ -729,7 +729,7 @@ function InstagramImportClientInner() {
                     </button>
                 </>
             ) : (
-                <button type="button" onClick={() => void connect()} className="mt-8 inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                <button type="button" onClick={() => void connect()} className="mt-8 inline-flex min-h-11 items-center justify-center bg-primary-400 px-5 py-3 text-sm font-black text-black">
                     Connect Instagram
                 </button>
             )}
@@ -750,13 +750,13 @@ function InstagramImportClientInner() {
                 title="Import from Instagram"
                 description="Find animal posts you already photographed and add the ones you choose to your Dex."
                 action={phase === "reviewing" ? (
-                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching || busy} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/80">
+                    <button type="button" onClick={() => void runRefresh()} disabled={isSearching || busy} className="inline-flex min-h-11 items-center justify-center border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/80">
                         Check for new posts
                     </button>
                 ) : null}
             />
             {billingNotice ? (
-                <p className="mb-4 rounded-2xl border border-primary-400/20 bg-primary-400/10 px-4 py-3 text-sm text-primary-100" role="status" aria-live="polite">
+                <p className="mb-4 border border-primary-400/20 bg-primary-400/10 px-4 py-3 text-sm text-primary-100" role="status" aria-live="polite">
                     {billingNotice}
                 </p>
             ) : null}
@@ -788,7 +788,7 @@ function InstagramImportClientInner() {
                                 void importRequest("pause-operation", {jobId: jobIdRef.current}).catch(() => undefined);
                             }
                         }}
-                        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-white/70"
+                        className="mt-6 inline-flex min-h-11 items-center justify-center border border-white/10 px-5 py-3 text-sm font-bold text-white/70"
                     >
                         Pause
                     </button>
@@ -798,7 +798,7 @@ function InstagramImportClientInner() {
                 visibleCandidates.length === 0 ? (
                     <div className="space-y-4">
                         {notice && /could not be checked/i.test(notice) ? (
-                            <p className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</p>
+                            <p className="border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</p>
                         ) : null}
                     <AppEmpty
                         icon="search"
@@ -808,15 +808,15 @@ function InstagramImportClientInner() {
                             : notice && /could not be checked/i.test(notice)
                                 ? "Photos may still appear after another check. Videos this browser could not sample were skipped."
                             : "We did not spot any animals we could identify in your recent posts."}
-                        action={<button type="button" onClick={() => void runRefresh()} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-white">Check for new posts</button>}
+                        action={<button type="button" onClick={() => void runRefresh()} className="inline-flex min-h-11 items-center justify-center border border-white/10 px-5 py-3 text-sm font-bold text-white">Check for new posts</button>}
                     />
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
-                        {notice ? <p className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</p> : null}
+                        {error ? <p className="border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
+                        {notice ? <p className="border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{notice}</p> : null}
                         {unscreenedPostsBanner(unscreenedCount) ? (
-                            <div className="flex items-center gap-3 rounded-2xl border border-primary-400/20 bg-primary-400/10 px-4 py-3">
+                            <div className="flex items-center gap-3 border border-primary-400/20 bg-primary-400/10 px-4 py-3">
                                 <AppIcon name="refresh" className="h-4 w-4 shrink-0 text-primary-200" />
                                 <p className="flex-1 text-sm text-primary-100">{unscreenedPostsBanner(unscreenedCount)}</p>
                                 <button
@@ -852,7 +852,7 @@ function InstagramImportClientInner() {
                                                 return next;
                                             });
                                         }}
-                                        className={`overflow-hidden rounded-[1.2rem] border text-left transition ${!selectable ? "cursor-not-allowed opacity-55" : ""} ${isSelected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-[#121212]"}`}
+                                        className={`overflow-hidden border text-left transition ${!selectable ? "cursor-not-allowed opacity-55" : ""} ${isSelected ? "border-primary-400 bg-primary-400/10" : "border-white/10 bg-[#121212]"}`}
                                     >
                                         <div className="relative aspect-square bg-white/5">
                                             {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : null}
@@ -880,7 +880,7 @@ function InstagramImportClientInner() {
                                 );
                             })}
                         </div>
-                        <div className="sticky bottom-20 z-20 space-y-3 rounded-[1.35rem] border border-white/10 bg-[#101010]/95 p-4 backdrop-blur md:bottom-6">
+                        <div className="sticky bottom-20 z-20 space-y-3 border border-white/10 bg-[#101010]/95 p-4 backdrop-blur md:bottom-6">
                             {blocker ? <p className={`text-xs font-bold ${blocker.tone === "warn" ? "text-amber-200" : "text-white/45"}`}>{blocker.message}</p> : null}
                             {lastScreeningBillingSummary ? (
                                 <div className="space-y-0.5">
@@ -895,7 +895,7 @@ function InstagramImportClientInner() {
                                     type="button"
                                     disabled={selected.size === 0 || busy}
                                     onClick={() => setSheet("location")}
-                                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white"
+                                    className="inline-flex min-h-11 items-center justify-center border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white"
                                 >
                                     {locationButtonTitle(selected.size)}
                                 </button>
@@ -919,7 +919,7 @@ function InstagramImportClientInner() {
                                             });
                                         }
                                     }}
-                                    className={`inline-flex min-h-11 items-center justify-center rounded-2xl px-4 py-3 text-sm font-black ${action === "disabled" ? "bg-white/10 text-white/35" : "bg-primary-400 text-black"}`}
+                                    className={`inline-flex min-h-11 items-center justify-center px-4 py-3 text-sm font-black ${action === "disabled" ? "bg-white/10 text-white/35" : "bg-primary-400 text-black"}`}
                                 >
                                     {primaryButtonTitle(action, selected.size)}
                                 </button>
@@ -947,7 +947,7 @@ function InstagramImportClientInner() {
                     {failures.length ? (
                         <ul className="mt-6 w-full max-w-md space-y-3 text-left">
                             {failures.map((failure) => (
-                                <li key={`${failure.name}-${failure.reason}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                <li key={`${failure.name}-${failure.reason}`} className="border border-white/10 bg-white/[0.03] p-4">
                                     <p className="font-bold text-white">{failure.name}</p>
                                     <p className="mt-1 text-sm text-white/45">{failure.reason}</p>
                                 </li>
@@ -961,7 +961,7 @@ function InstagramImportClientInner() {
                     ) : null}
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                         {imported > 0 ? <AppPrimaryLink href="/app/collection">View my AnimalDex</AppPrimaryLink> : null}
-                        <button type="button" onClick={() => void reload()} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-white/70">
+                        <button type="button" onClick={() => void reload()} className="inline-flex min-h-11 items-center justify-center border border-white/10 px-5 py-3 text-sm font-bold text-white/70">
                             {imported > 0 ? "Import more" : "Back to posts"}
                         </button>
                     </div>
@@ -1119,7 +1119,7 @@ function QuoteSheet({
                     : ""}
             </p>
             <p className="mt-3 text-xs leading-5 text-white/40">{SCREENING_QUOTE_EXPLAINER}</p>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="mt-5 border border-white/10 bg-white/[0.04] p-4">
                 <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">Screening cost</p>
                 <p className="mt-2 font-display text-3xl font-bold text-white">{costLabel}</p>
                 <p className="mt-2 text-xs leading-5 text-white/45">{quote.pricing_explanation}</p>
@@ -1145,7 +1145,7 @@ function QuoteSheet({
                         type="button"
                         disabled={busy}
                         onClick={onAccept}
-                        className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-5 py-3 text-sm font-black text-black"
+                        className="inline-flex min-h-11 items-center justify-center bg-primary-400 px-5 py-3 text-sm font-black text-black"
                     >
                         {quote.pro_included
                             ? "Continue — included with Pro"
@@ -1168,7 +1168,7 @@ function SheetFrame({title, children, onCancel}: {title: string; children: React
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="import-sheet-title"
-                className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-[1.6rem] border border-white/10 bg-[#101010] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl md:inset-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[1.6rem]"
+                className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto border border-white/10 bg-[#101010] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl md:inset-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2"
             >
                 <div className="mb-4 flex items-center justify-between gap-4">
                     <h3 id="import-sheet-title" className="font-display text-2xl font-bold text-white">{title}</h3>
@@ -1234,7 +1234,7 @@ function LocationSheet({
                     placeholder="Search for a place"
                     enterKeyHint="search"
                     autoComplete="off"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none focus:border-primary-400/50"
+                    className="w-full border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none focus:border-primary-400/50"
                     onFocus={(event) => event.currentTarget.scrollIntoView({block: "center", behavior: "smooth"})}
                 />
             </label>
@@ -1245,7 +1245,7 @@ function LocationSheet({
                         key={`${place.latitude}-${place.longitude}-${place.label}`}
                         type="button"
                         onClick={() => setSelected(place)}
-                        className={`w-full rounded-2xl border px-4 py-3 text-left text-sm ${selected?.label === place.label ? "border-primary-400 bg-primary-400/10 text-white" : "border-white/10 text-white/75"}`}
+                        className={`w-full border px-4 py-3 text-left text-sm ${selected?.label === place.label ? "border-primary-400 bg-primary-400/10 text-white" : "border-white/10 text-white/75"}`}
                     >
                         {place.label}
                     </button>
@@ -1255,7 +1255,7 @@ function LocationSheet({
                 type="button"
                 disabled={!selected || busy}
                 onClick={() => selected && onConfirm(selected)}
-                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
+                className="mt-5 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
             >
                 {count === 1 ? "Confirm location" : `Confirm for ${count} posts`}
             </button>
@@ -1305,7 +1305,7 @@ function SpeciesSheet({
                                 key={match.species_profile_id}
                                 type="button"
                                 onClick={() => setSelectedId(match.species_profile_id)}
-                                className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedId === match.species_profile_id ? "border-primary-400 bg-primary-400/10" : "border-white/10"}`}
+                                className={`w-full border px-4 py-3 text-left ${selectedId === match.species_profile_id ? "border-primary-400 bg-primary-400/10" : "border-white/10"}`}
                             >
                                 {index === 0 && choices.length > 1 ? <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-primary-200">Best match</p> : null}
                                 <p className="font-bold text-white">{indexedTitle(match)}</p>
@@ -1318,7 +1318,7 @@ function SpeciesSheet({
                         type="button"
                         disabled={!selectedId || busy}
                         onClick={() => onConfirm(selectedId)}
-                        className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
+                        className="mt-5 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
                     >
                         Confirm species
                     </button>
@@ -1353,7 +1353,7 @@ function AccuracySheet({
     return (
         <SheetFrame title="Confirm details" onCancel={onCancel}>
             <p className="text-sm leading-6 text-white/55">Confirm these details are accurate. Imported posts are published to Discover.</p>
-            <div className="mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="mt-4 space-y-2 border border-white/10 bg-white/[0.03] p-4">
                 {candidates.map((candidate) => (
                     <div key={candidate.candidate_id}>
                         <p className="font-bold text-white">{titleText(candidate)}</p>
@@ -1362,7 +1362,7 @@ function AccuracySheet({
                 ))}
             </div>
             {quote ? (
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="mt-5 border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">Import cost</p>
                     <p className="mt-2 font-display text-3xl font-bold text-white">{costLabel}</p>
                     <p className="mt-2 text-xs leading-5 text-white/45">{quote.pricing_explanation}</p>
@@ -1402,7 +1402,7 @@ function AccuracySheet({
                 type="button"
                 disabled={!attested || busy}
                 onClick={() => onConfirm(setting)}
-                className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
+                className="mt-5 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/35"
             >
                 Confirm and import
             </button>

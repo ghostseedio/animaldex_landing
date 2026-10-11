@@ -17,7 +17,7 @@ import {
 } from "@/lib/guide-listing-quality";
 
 const fieldClass =
-    "mt-2 w-full rounded-2xl border border-white/[0.08] bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-primary-200/40";
+    "mt-2 w-full border border-white/[0.08] bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-primary-200/40";
 
 async function guidesPost(body: Record<string, unknown>) {
     const response = await fetch("/api/app/guides", {
@@ -181,8 +181,8 @@ export default function ListingEditorClient({listing}: {listing: OwnedGuideListi
                 action={<Link href="/app/guides" className="text-sm font-bold text-primary-200 hover:text-white">← Back to guides</Link>}
             />
 
-            {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
-            {notice ? <p className="rounded-2xl border border-primary-200/20 bg-primary-400/10 px-4 py-3 text-sm text-primary-100">{notice}</p> : null}
+            {error ? <p className="border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
+            {notice ? <p className="border border-primary-200/20 bg-primary-400/10 px-4 py-3 text-sm text-primary-100">{notice}</p> : null}
 
             <AppSurface className="space-y-5">
                 <div>
@@ -190,9 +190,9 @@ export default function ListingEditorClient({listing}: {listing: OwnedGuideListi
                     <div className="mt-2 flex flex-wrap items-center gap-4">
                         {coverUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={coverUrl} alt="" className="h-24 w-24 rounded-2xl object-cover ring-1 ring-white/10" />
+                            <img src={coverUrl} alt="" className="h-24 w-24 object-cover ring-1 ring-white/10" />
                         ) : (
-                            <div className="grid h-24 w-24 place-items-center rounded-2xl border border-dashed border-white/10 text-xs text-white/35">Required</div>
+                            <div className="grid h-24 w-24 place-items-center border border-dashed border-white/10 text-xs text-white/35">Required</div>
                         )}
                         <input type="file" accept="image/*" disabled={busy} onChange={(event) => void onCoverChange(event.target.files?.[0] ?? null)} />
                     </div>
@@ -252,7 +252,7 @@ export default function ListingEditorClient({listing}: {listing: OwnedGuideListi
                 </div>
 
                 {locationMismatch ? (
-                    <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                    <div className="border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
                         <p>{locationMismatchMessage(draft.title, draft.publicAreaLabel)}</p>
                         <p className="mt-2 text-amber-100/80">
                             If the title names the real place, search and select that public area. If the selected area is correct, edit the title so it no longer names a different place. Submitting stays blocked until they agree.

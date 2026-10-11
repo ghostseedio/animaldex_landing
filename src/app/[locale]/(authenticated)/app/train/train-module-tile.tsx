@@ -7,7 +7,7 @@ export default function TrainModuleTile({module}: {module: TrainModuleDefinition
         <AppListRow
             href={module.href}
             avatar={(
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/70 ring-1 ring-white/[0.08]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-white/[0.04] text-white/70 ring-1 ring-white/[0.08]">
                     <AppIcon name={module.icon} className="h-5 w-5" />
                 </span>
             )}

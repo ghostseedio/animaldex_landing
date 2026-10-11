@@ -90,7 +90,7 @@ export default function NotificationsClient({items, locale}: {items: AppNotifica
                         href={href}
                         unread={!item.readAt}
                         avatar={(
-                            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-white/10 ${item.readAt ? "bg-white/5 text-white/35" : "bg-primary-400 text-black"}`}>
+                            <span className={`flex h-12 w-12 items-center justify-center ring-1 ring-white/10 ${item.readAt ? "bg-white/5 text-white/35" : "bg-primary-400 text-black"}`}>
                                 <AppIcon name={text.icon} />
                             </span>
                         )}

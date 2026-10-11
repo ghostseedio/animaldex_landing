@@ -160,7 +160,7 @@ export default function ChallengeWizardSheet({
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
             <button type="button" aria-label="Close challenge wizard" className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" onClick={onClose} />
-            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.75rem] border border-white/10 bg-[#0d0d0d] shadow-2xl sm:rounded-[1.75rem]">
+            <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div>
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-200">Scenario Arena</p>
@@ -234,7 +234,7 @@ export default function ChallengeWizardSheet({
                             type="button"
                             disabled={!selectedCaptureId}
                             onClick={() => setStep("preview")}
-                            className={`w-full rounded-2xl px-4 py-3 text-sm font-black ${selectedCaptureId ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
+                            className={`w-full px-4 py-3 text-sm font-black ${selectedCaptureId ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
                         >
                             Continue to preview
                         </button>
@@ -243,10 +243,10 @@ export default function ChallengeWizardSheet({
 
                 {step === "preview" && attacker ? (
                     <div className="grid grid-cols-2 gap-3 border-t border-white/10 p-5">
-                        <button type="button" onClick={() => setStep("pick")} className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white/70">
+                        <button type="button" onClick={() => setStep("pick")} className="border border-white/10 px-4 py-3 text-sm font-black text-white/70">
                             Back
                         </button>
-                        <button type="button" onClick={() => void resolveMatchup()} className="rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black">
+                        <button type="button" onClick={() => void resolveMatchup()} className="bg-primary-400 px-4 py-3 text-sm font-black text-black">
                             Run matchup
                         </button>
                     </div>

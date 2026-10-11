@@ -72,9 +72,9 @@ function HistoryRow({item, now, onOpen}: {item: MatchupHistoryItem; now: number;
         >
             <span className="relative flex shrink-0 gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.attackerImageSrc} alt="" className="h-11 w-11 rounded-[10px] border border-white/10 object-cover" />
+                <img src={item.attackerImageSrc} alt="" className="h-11 w-11 border border-white/10 object-cover" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.defenderImageSrc} alt="" className="h-11 w-11 rounded-[10px] border border-white/10 object-cover" />
+                <img src={item.defenderImageSrc} alt="" className="h-11 w-11 border border-white/10 object-cover" />
                 <span className="absolute left-1/2 top-1/2 grid h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-black/35 bg-primary-400 text-[9px] font-black text-black/90" aria-hidden="true">⇄</span>
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
@@ -130,7 +130,7 @@ export default function MatchupsHistoryTab({
     const section = (title: string, items: MatchupHistoryItem[]) => items.length ? (
         <section key={title}>
             <h3 className="px-4 pb-2 pt-1 text-xs font-black uppercase tracking-[0.08em] text-white/60 md:px-1">{title}</h3>
-            <div className="-mx-4 md:mx-0 md:overflow-hidden md:rounded-[1.2rem] md:border md:border-white/[0.08]">
+            <div className="-mx-4 md:mx-0 md:overflow-hidden md:border md:border-white/[0.08]">
                 {items.map((item) => (
                     <HistoryRow key={item.id} item={item} now={now} onOpen={() => setSelected(item)} />
                 ))}

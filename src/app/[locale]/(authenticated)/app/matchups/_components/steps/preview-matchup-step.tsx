@@ -19,13 +19,13 @@ export default function PreviewMatchupStep({
         <div className="space-y-5">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div className="text-center">
-                    <img src={attacker.imageSrc} alt="" className="mx-auto aspect-square w-full max-w-[6.5rem] rounded-2xl border border-white/10 object-cover" />
+                    <img src={attacker.imageSrc} alt="" className="mx-auto aspect-square w-full max-w-[6.5rem] border border-white/10 object-cover" />
                     <p className="mt-2 text-sm font-bold text-white">{attacker.animalName}</p>
                     <p className="text-xs text-white/35">You · Tier {attacker.battleTier}</p>
                 </div>
                 <span className="rounded-full bg-primary-400 px-3 py-1 text-xs font-black text-black">VS</span>
                 <div className="text-center">
-                    <img src={opponent.imageSrc} alt="" className="mx-auto aspect-square w-full max-w-[6.5rem] rounded-2xl border border-white/10 object-cover" />
+                    <img src={opponent.imageSrc} alt="" className="mx-auto aspect-square w-full max-w-[6.5rem] border border-white/10 object-cover" />
                     <p className="mt-2 text-sm font-bold text-white">{opponent.animalName}</p>
                     <p className="text-xs text-white/35">Opponent · Tier {opponent.battleTier}</p>
                 </div>
@@ -45,7 +45,7 @@ export default function PreviewMatchupStep({
                     ["Best fit gets", `${payout}`],
                     ["Burn", `${burn}`]
                 ].map(([label, value]) => (
-                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+                    <div key={label} className="border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">{label}</p>
                         <p className="mt-1 text-lg font-black text-primary-200">{value}</p>
                     </div>

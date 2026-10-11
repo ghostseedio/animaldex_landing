@@ -5,6 +5,7 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {AppEmpty, AppPrimaryLink, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
+import LessonVideoFeed, {PlayRectangleIcon} from "@/app/[locale]/(authenticated)/app/lesson-video-feed";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
 import type {DiscoverFeaturedItem, DiscoverTimelineCursor, DiscoverTimelineItem} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
@@ -71,24 +72,45 @@ function CountBadge({count}: {count: number}) {
     );
 }
 
+/** iOS `DiscoverTopBar.lessonVideosButton`: switches the feed to lesson videos, and back. */
+function LessonVideosButton({active, onToggle, className = ""}: {active: boolean; onToggle: () => void; className?: string}) {
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-label={active ? "Show posts" : "Animal lesson videos"}
+            aria-pressed={active}
+            className={`grid place-items-center rounded-[2px] ${active ? "text-primary-400" : "text-white"} ${className}`}
+        >
+            <PlayRectangleIcon filled={active} />
+        </button>
+    );
+}
+
 /**
- * iOS `DiscoverTopBar`: collectors toggle + challenges on the left, wordmark in
- * the middle, notifications on the right. Sits in the flow above the snap feed
- * so nothing floats over the first post's collector chrome.
+ * iOS `DiscoverTopBar`: collectors toggle, challenges and lesson videos on the
+ * left, wordmark in the middle, notifications on the right. One row, like iOS
+ * since the third left button: the wordmark takes only the space between the
+ * two groups and shrinks to fit it, so it never covers a button. Sits in the
+ * flow above the snap feed so nothing floats over the first post.
  */
 function DiscoverTopBar({
     segment,
-    onToggleCollectors
+    showsLessonVideos,
+    onToggleCollectors,
+    onToggleLessonVideos
 }: {
     segment: DiscoverSegment;
+    showsLessonVideos: boolean;
     onToggleCollectors: () => void;
+    onToggleLessonVideos: () => void;
 }) {
     const chrome = useAppShellChrome();
     const showsCollectors = segment === "collectors";
 
     return (
-        <div className="relative flex h-14 shrink-0 items-center justify-between px-3 lg:hidden">
-            <div className="flex items-center gap-1">
+        <div className="flex h-14 shrink-0 items-center gap-1 px-3 lg:hidden">
+            <div className="flex shrink-0 items-center gap-1">
                 <button
                     type="button"
                     onClick={onToggleCollectors}
@@ -111,13 +133,14 @@ function DiscoverTopBar({
                         <path d="M5 4h13l-2.5 4L18 12H5" />
                     </svg>
                 </Link>
+                <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className="h-11 w-11" />
             </div>
 
-            <Link href="/app" aria-label="AnimalDex" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto max-w-[9.5rem] object-contain" />
+            <Link href="/app" aria-label="AnimalDex" className="flex h-7 min-w-0 flex-1 justify-center overflow-hidden">
+                <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto min-w-0 max-w-full object-contain" />
             </Link>
 
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
                 <Link
                     href={chrome.isAuthenticated ? "/app/notifications" : "/account"}
                     aria-label="Notifications"
@@ -141,7 +164,7 @@ function DiscoverTopBar({
 
 function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
     return (
-        <aside className="hidden h-[90svh] min-h-[42rem] overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:flex lg:flex-col">
+        <aside className="hidden h-[90svh] min-h-[42rem] overflow-hidden border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:flex lg:flex-col">
             <div className="space-y-3 border-b border-white/[0.06] p-3">
                 <AppPrimaryLink href="/app/capture" icon="camera" className="w-full">Scan an animal</AppPrimaryLink>
             </div>
@@ -155,9 +178,9 @@ function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
                         <Link
                             key={`${item.kind}-${item.captureId}`}
                             href={`/app/capture/${encodeURIComponent(item.captureId)}`}
-                            className="group grid grid-cols-[4.5rem_1fr] gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-2 transition hover:border-primary-400/25 hover:bg-white/[0.05]"
+                            className="group grid grid-cols-[4.5rem_1fr] gap-3 border border-white/[0.06] bg-white/[0.025] p-2 transition hover:border-primary-400/25 hover:bg-white/[0.05]"
                         >
-                            <div className="aspect-square overflow-hidden rounded-xl bg-black">
+                            <div className="aspect-square overflow-hidden bg-black">
                                 <img
                                     src={item.imageSrc}
                                     alt={item.animalName}
@@ -175,7 +198,7 @@ function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
                         </Link>
                     ))
                 ) : (
-                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 text-sm leading-6 text-white/40">
+                    <div className="border border-white/[0.06] bg-white/[0.025] p-4 text-sm leading-6 text-white/40">
                         No featured captures yet.
                     </div>
                 )}
@@ -209,9 +232,9 @@ function CollectorLoadingSkeleton() {
             {[0, 1].map((item) => (
                 <article
                     key={item}
-                    className="flex gap-4 rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] md:p-5"
+                    className="flex gap-4 border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] md:p-5"
                 >
-                    <div className="h-16 w-16 shrink-0 animate-pulse rounded-2xl bg-white/10 ring-1 ring-white/10" />
+                    <div className="h-16 w-16 shrink-0 animate-pulse bg-white/10 ring-1 ring-white/10" />
                     <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 space-y-2">
@@ -231,7 +254,7 @@ function CollectorLoadingSkeleton() {
                             <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-white/[0.055]" />
                         </div>
                     </div>
-                    <div className="hidden w-20 shrink-0 animate-pulse rounded-2xl border border-white/10 bg-white/[0.06] sm:block" />
+                    <div className="hidden w-20 shrink-0 animate-pulse border border-white/10 bg-white/[0.06] sm:block" />
                 </article>
             ))}
         </div>
@@ -240,10 +263,10 @@ function CollectorLoadingSkeleton() {
 
 function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
     const content = (
-        <article className="flex gap-4 rounded-[1.35rem] border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-primary-400/25 hover:bg-[#161616] md:p-5">
+        <article className="flex gap-4 border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-primary-400/25 hover:bg-[#161616] md:p-5">
             {collector.avatarUrl
-                ? <img src={collector.avatarUrl} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-white/10" />
-                : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-lg font-black text-white/35 ring-1 ring-white/10">{(collector.displayName || "C").slice(0, 1)}</div>}
+                ? <img src={collector.avatarUrl} alt="" className="h-16 w-16 shrink-0 object-cover ring-1 ring-white/10" />
+                : <div className="flex h-16 w-16 shrink-0 items-center justify-center bg-white/5 text-lg font-black text-white/35 ring-1 ring-white/10">{(collector.displayName || "C").slice(0, 1)}</div>}
             <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -264,7 +287,7 @@ function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
                 {collector.bio ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/40">{collector.bio}</p> : null}
             </div>
             {collector.bestFindImageSrc ? (
-                <div className="hidden w-20 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 sm:block">
+                <div className="hidden w-20 shrink-0 overflow-hidden border border-white/10 bg-white/5 sm:block">
                     <img src={collector.bestFindImageSrc} alt={collector.bestFindAnimalName ?? "Best find"} loading="lazy" className="aspect-square h-full w-full object-cover" />
                 </div>
             ) : null}
@@ -312,6 +335,12 @@ export default function DiscoverHome({
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
     const segmentRef = useRef<DiscoverSegment>(initialSegment);
     segmentRef.current = segment;
+    /** The play button in the header: the Discover segment shows lesson videos. */
+    const [showsLessonVideos, setShowsLessonVideos] = useState(false);
+    /** The post timeline is on screen (Discover segment, not in video mode). */
+    const timelineVisible = segment === "discover" && !showsLessonVideos;
+    const timelineVisibleRef = useRef(timelineVisible);
+    timelineVisibleRef.current = timelineVisible;
     const [timelineItems, setTimelineItems] = useState(timeline);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
@@ -405,7 +434,7 @@ export default function DiscoverHome({
                 leadingDwellTimerRef.current = null;
             }
             const leading = leadingPostIdRef.current;
-            if (leading && segmentRef.current === "discover") markItemsSeen([leading], {keepalive: true});
+            if (leading && timelineVisibleRef.current) markItemsSeen([leading], {keepalive: true});
             else void seenOutbox.flush({keepalive: true});
         };
         const onLeave = () => {
@@ -623,7 +652,7 @@ export default function DiscoverHome({
     // Signed-in readers get the live feed straight away; anonymous readers on
     // the first swipe/scroll. Both keep the shared post in view.
     useEffect(() => {
-        if (segment !== "discover" || feedHydrationRef.current !== "pending") return undefined;
+        if (!timelineVisible || feedHydrationRef.current !== "pending") return undefined;
         if (typeof document !== "undefined" && requestHasSupabaseAuthCookie(document.cookie)) {
             void hydrateLiveFeed();
             return undefined;
@@ -644,7 +673,7 @@ export default function DiscoverHome({
             scroller.removeEventListener("pointerdown", onIntent);
             window.removeEventListener("keydown", onIntent);
         };
-    }, [segment, hydrateLiveFeed, seedTimelineKey]);
+    }, [timelineVisible, hydrateLiveFeed, seedTimelineKey]);
 
     const snapTimeline = useCallback((direction: 1 | -1) => {
         const scroller = timelineScrollerRef.current;
@@ -704,7 +733,7 @@ export default function DiscoverHome({
     }, [hasMoreTimeline, loadNextTimelinePage, snapTimeline]);
 
     useEffect(() => {
-        if (segment !== "discover" || !hasMoreTimeline) return undefined;
+        if (!timelineVisible || !hasMoreTimeline) return undefined;
         const scroller = timelineScrollerRef.current;
         const node = timelineSentinelRef.current;
         if (!scroller || !node) return undefined;
@@ -716,7 +745,7 @@ export default function DiscoverHome({
         }, {root: scroller, rootMargin: "200% 0px"});
         observer.observe(node);
         return () => observer.disconnect();
-    }, [segment, hasMoreTimeline, loadNextTimelinePage, timelineItems.length]);
+    }, [timelineVisible, hasMoreTimeline, loadNextTimelinePage, timelineItems.length]);
 
     useEffect(() => {
         if (segment !== "collectors" || !hasMoreCollectors) return undefined;
@@ -732,7 +761,7 @@ export default function DiscoverHome({
     }, [segment, hasMoreCollectors, loadNextCollectorPage]);
 
     useLayoutEffect(() => {
-        if (segment !== "discover") return;
+        if (!timelineVisible) return;
         const scroller = timelineScrollerRef.current;
         if (!scroller) return;
 
@@ -753,10 +782,10 @@ export default function DiscoverHome({
         if (Math.abs(scroller.scrollTop - target.offsetTop) > 48) {
             scroller.scrollTo({top: target.offsetTop, behavior: "auto"});
         }
-    }, [segment, initialFocusPostId, timelineItems, isLoadingTimeline, syncUrlToPost]);
+    }, [timelineVisible, initialFocusPostId, timelineItems, isLoadingTimeline, syncUrlToPost]);
 
     useEffect(() => {
-        if (segment !== "discover" || (!syncPostUrls && !seenOutbox)) return undefined;
+        if (!timelineVisible || (!syncPostUrls && !seenOutbox)) return undefined;
         const scroller = timelineScrollerRef.current;
         if (!scroller) return undefined;
 
@@ -785,18 +814,33 @@ export default function DiscoverHome({
         }
 
         return () => observer.disconnect();
-    }, [segment, syncPostUrls, seenOutbox, timelineItems, syncUrlToPost, handleLeadingPost]);
+    }, [timelineVisible, syncPostUrls, seenOutbox, timelineItems, syncUrlToPost, handleLeadingPost]);
+
+    /**
+     * iOS `onLessonVideosTap`: back to the Discover segment and toggle. The
+     * button only lights up on Discover, so from Collectors it always turns
+     * the videos on (iOS toggles a state it was not showing there).
+     */
+    function toggleLessonVideos() {
+        const next = !(showsLessonVideos && segment === "discover");
+        if (segment !== "discover") handleSegmentChange("discover");
+        setShowsLessonVideos(next);
+    }
+
+    const lessonVideosActive = showsLessonVideos && segment === "discover";
 
     return (
         <div className="flex h-full min-h-0 flex-col lg:block lg:h-auto lg:space-y-8">
             <DiscoverTopBar
                 segment={segment}
+                showsLessonVideos={lessonVideosActive}
                 onToggleCollectors={() => handleSegmentChange(segment === "collectors" ? "discover" : "collectors")}
+                onToggleLessonVideos={toggleLessonVideos}
             />
 
             {/* Desktop keeps the floating segment toggle beside the feed column. */}
-            <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:block">
-                <div className="pointer-events-auto rounded-[1.25rem] border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+            <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:flex lg:items-center lg:gap-2">
+                <div className="pointer-events-auto border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
                     <AppSegmentedControl
                         value={segment}
                         options={[
@@ -806,19 +850,26 @@ export default function DiscoverHome({
                         onChange={handleSegmentChange}
                     />
                 </div>
+                <LessonVideosButton
+                    active={lessonVideosActive}
+                    onToggle={toggleLessonVideos}
+                    className="pointer-events-auto h-11 w-11 border border-white/10 bg-black"
+                />
             </div>
 
             {segment === "discover" ? (
                 <div className="min-h-0 flex-1 lg:grid lg:w-full lg:grid-cols-[10rem_minmax(0,42rem)_20rem] lg:items-start lg:justify-between lg:gap-4 xl:grid-cols-[12rem_minmax(0,42rem)_20rem]">
                     <div aria-hidden="true" className="hidden lg:block" />
                     <div className="h-full min-h-0 min-w-0">
-                        {timelineItems.length ? (
+                        {showsLessonVideos ? (
+                            <LessonVideoFeed locale={locale} />
+                        ) : timelineItems.length ? (
                             <section
                                 ref={timelineScrollerRef}
                                 onWheel={handleTimelineWheel}
                                 // Phones: the feed is the whole area between the top bar and the tab
                                 // bar (iOS `feedViewportHeight`), one post per snap slot.
-                                className="h-full min-h-0 snap-y snap-mandatory overflow-y-auto overscroll-contain bg-black [scrollbar-width:none] lg:h-[90svh] lg:min-h-[42rem] lg:rounded-[1.35rem] lg:border lg:border-white/[0.08] [&::-webkit-scrollbar]:hidden"
+                                className="h-full min-h-0 snap-y snap-mandatory overflow-y-auto overscroll-contain bg-black [scrollbar-width:none] lg:h-[90svh] lg:min-h-[42rem] lg:border lg:border-white/[0.08] [&::-webkit-scrollbar]:hidden"
                             >
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}

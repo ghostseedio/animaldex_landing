@@ -174,7 +174,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
                 ))}
             </div>
 
-            {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
+            {error ? <p className="border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</p> : null}
 
             {loading ? (
                 <AppSurface><p className="text-sm text-white/45">Loading Wildlife Guides…</p></AppSurface>
@@ -357,9 +357,9 @@ function ListingRow({
             <div className="flex min-w-0 items-start gap-4">
                 {listing.coverImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={listing.coverImageUrl} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-white/10" />
+                    <img src={listing.coverImageUrl} alt="" className="h-16 w-16 shrink-0 object-cover ring-1 ring-white/10" />
                 ) : (
-                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-xs font-bold text-white/35">Cover</div>
+                    <div className="grid h-16 w-16 shrink-0 place-items-center bg-white/[0.05] text-xs font-bold text-white/35">Cover</div>
                 )}
                 <div className="min-w-0">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-white/35">{statusLabel(listing.status)}</p>

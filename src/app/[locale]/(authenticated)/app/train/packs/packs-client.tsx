@@ -298,7 +298,7 @@ function Metric({label, value, detail, accent}: {label: string; value: number | 
     };
 
     return (
-        <div className="rounded-[1.25rem] border border-white/[0.08] bg-white/[0.03] p-4">
+        <div className="border border-white/[0.08] bg-white/[0.03] p-4">
             <p className="text-[0.65rem] font-black uppercase tracking-[0.15em] text-white/35">{label}</p>
             <p className="mt-2 font-display text-2xl font-bold tabular-nums text-white">{value}</p>
             {detail ? <p className="mt-1 text-xs leading-5 text-white/35">{detail}</p> : null}
@@ -311,7 +311,7 @@ function SectionHeader({icon, title, action}: {icon: string; title: string; acti
     return (
         <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-400/10 ring-1 ring-orange-400/10">{icon}</span>
+                <span className="flex h-10 w-10 items-center justify-center bg-orange-400/10 ring-1 ring-orange-400/10">{icon}</span>
                 <h2 className="font-display text-xl font-bold text-white md:text-2xl">{title}</h2>
             </div>
             {action}
@@ -367,8 +367,8 @@ function PackCard({
     const artwork = packArtworkUrls(pack);
 
     return (
-        <article className={`w-[min(20rem,calc(100vw-3.5rem))] shrink-0 rounded-[1.4rem] border bg-[#121212] p-3 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.95)] ${accentClasses.border}`}>
-            <div className="relative h-46 overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-gradient-to-br from-orange-400/20 via-[#151515] to-black">
+        <article className={`w-[min(20rem,calc(100vw-3.5rem))] shrink-0 border bg-[#121212] p-3 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.95)] ${accentClasses.border}`}>
+            <div className="relative h-46 overflow-hidden border border-white/[0.08] bg-gradient-to-br from-orange-400/20 via-[#151515] to-black">
                 <img src={artwork[0]} alt="" className="h-full w-full object-contain p-3" onError={(event) => {
                     const image = event.currentTarget;
                     const currentIndex = artwork.indexOf(image.src);
@@ -421,7 +421,7 @@ function BuildPackCallout({eligibleCount, onBuild}: {eligibleCount: number; onBu
     }, []);
 
     return (
-        <article className="overflow-hidden rounded-[1.4rem] border border-white/[0.08] bg-[#121212]">
+        <article className="overflow-hidden border border-white/[0.08] bg-[#121212]">
             <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[#181818] via-orange-400/10 to-violet-500/10">
                 <img src={`${STORAGE_BASE}/${SLIDESHOW_IMAGES[index]}`} alt="" className="h-full w-full object-contain p-10" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4">
@@ -509,7 +509,7 @@ function PackBuilderSheet({
                 </header>
 
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4 pb-32">
-                    <section className="rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-[#171717] via-orange-400/10 to-violet-500/10 p-4">
+                    <section className="border border-white/10 bg-gradient-to-br from-[#171717] via-orange-400/10 to-violet-500/10 p-4">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-orange-200">Sealed listing</p>
@@ -536,7 +536,7 @@ function PackBuilderSheet({
                             ))}
                         </div>
 
-                        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3">
+                        <div className="mt-4 flex items-center gap-3 bg-white/[0.04] p-3">
                             <button type="button" onClick={() => setListedPrice((value) => Math.max(5, value - 5))} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-lg font-black text-white">−</button>
                             <span className="text-sm font-bold text-white/55">Listing price</span>
                             <span className="ml-auto text-sm font-black text-white">{listedPrice} credits</span>
@@ -571,7 +571,7 @@ function PackBuilderSheet({
                     <p className="mb-3 text-center text-[0.68rem] font-bold leading-5 text-white/35">
                         Buyers see theme, guarantees, price, and quality bands — never the exact animals.
                     </p>
-                    {error ? <p className="mb-3 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-200">{error}</p> : null}
+                    {error ? <p className="mb-3 border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-200">{error}</p> : null}
                     <button
                         type="button"
                         onClick={submit}
@@ -591,12 +591,12 @@ function BuilderCaptureRow({capture, selected, onToggle}: {capture: TrainPackCap
         <button
             type="button"
             onClick={onToggle}
-            className={`flex w-full items-center gap-3 rounded-[1.1rem] border p-3 text-left transition ${selected ? "border-primary-400/70 bg-primary-400/[0.08]" : "border-white/[0.08] bg-[#151515]"}`}
+            className={`flex w-full items-center gap-3 border p-3 text-left transition ${selected ? "border-primary-400/70 bg-primary-400/[0.08]" : "border-white/[0.08] bg-[#151515]"}`}
         >
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${selected ? "bg-primary-400 text-black" : "bg-white/[0.06] text-white/35"}`}>
                 {selected ? "✓" : "○"}
             </span>
-            <img src={capture.imageSrc} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-white/10" />
+            <img src={capture.imageSrc} alt="" className="h-11 w-11 shrink-0 object-cover ring-1 ring-white/10" />
             <div className="min-w-0 flex-1">
                 <h3 className="truncate text-base font-bold text-white">{capture.animalName}</h3>
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.06em]">
@@ -672,7 +672,7 @@ function PackOpeningOverlay({reveal, onClose, onCollection}: {reveal: PackReveal
 
                 {completed ? (
                     <>
-                        <section className="rounded-[1.4rem] border border-white/10 bg-[#121212] p-4">
+                        <section className="border border-white/10 bg-[#121212] p-4">
                             <h3 className="font-display text-xl font-bold text-white">All Reveals</h3>
                             <div className="mt-4 grid grid-cols-2 gap-3">
                                 {ordered.map((capture, index) => (
@@ -693,8 +693,8 @@ function PackOpeningOverlay({reveal, onClose, onCollection}: {reveal: PackReveal
 
 function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean}) {
     return (
-        <article className={`rounded-[1.5rem] border bg-[#121212] p-4 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.95)] ${final ? "border-orange-300/70" : "border-white/10"}`}>
-            <img src={capture.imageSrc} alt={capture.animalName} className="aspect-[4/3] w-full rounded-[1.2rem] object-cover" />
+        <article className={`border bg-[#121212] p-4 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.95)] ${final ? "border-orange-300/70" : "border-white/10"}`}>
+            <img src={capture.imageSrc} alt={capture.animalName} className="aspect-[4/3] w-full object-cover" />
             <div className="mt-4 flex items-start justify-between gap-4">
                 <div>
                     <h3 className="font-display text-2xl font-bold text-white">{capture.animalName}</h3>
@@ -719,8 +719,8 @@ function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean
 
 function MiniRevealCard({capture, final}: {capture: TrainPackCapture; final: boolean}) {
     return (
-        <article className={`rounded-[1rem] border bg-white/[0.04] p-3 ${final ? "border-orange-300/50" : "border-white/[0.08]"}`}>
-            <img src={capture.imageSrc} alt="" className="aspect-square w-full rounded-xl object-cover" />
+        <article className={`border bg-white/[0.04] p-3 ${final ? "border-orange-300/50" : "border-white/[0.08]"}`}>
+            <img src={capture.imageSrc} alt="" className="aspect-square w-full object-cover" />
             <h4 className="mt-2 line-clamp-2 text-sm font-bold text-white">{capture.animalName}</h4>
             <div className="mt-2 flex flex-wrap gap-1">
                 <Chip small>Tier {capture.battleTier}</Chip>
@@ -736,7 +736,7 @@ function Chip({children, small = false}: {children: React.ReactNode; small?: boo
 
 function RevealMetric({title, value}: {title: string; value: React.ReactNode}) {
     return (
-        <div className="rounded-2xl bg-white/[0.04] px-3 py-2">
+        <div className="bg-white/[0.04] px-3 py-2">
             <p className="text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/30">{title}</p>
             <p className="mt-1 truncate text-sm font-bold text-white">{value}</p>
         </div>
@@ -745,7 +745,7 @@ function RevealMetric({title, value}: {title: string; value: React.ReactNode}) {
 
 function EmptyState({title, detail}: {title: string; detail: string}) {
     return (
-        <div className="rounded-[1.25rem] border border-white/10 bg-[#121212] p-5">
+        <div className="border border-white/10 bg-[#121212] p-5">
             <h3 className="font-display text-xl font-bold text-white">📦 {title}</h3>
             <p className="mt-2 text-sm leading-6 text-white/45">{detail}</p>
         </div>
@@ -755,7 +755,7 @@ function EmptyState({title, detail}: {title: string; detail: string}) {
 function ErrorDialog({message, onClose}: {message: string; onClose: () => void}) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-5 backdrop-blur">
-            <div className="w-full max-w-sm rounded-[1.25rem] border border-white/10 bg-[#121212] p-5">
+            <div className="w-full max-w-sm border border-white/10 bg-[#121212] p-5">
                 <h2 className="font-display text-xl font-bold text-white">Pack Error</h2>
                 <p className="mt-3 text-sm leading-6 text-white/60">{message}</p>
                 <button type="button" onClick={onClose} className="mt-5 w-full rounded-full bg-primary-400 px-4 py-3 text-sm font-black text-black">OK</button>

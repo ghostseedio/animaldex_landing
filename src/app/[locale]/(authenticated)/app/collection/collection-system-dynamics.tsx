@@ -167,7 +167,7 @@ export default function CollectionSystemDynamics({
     }
     if (error && items.length === 0) {
         return (
-            <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-6 text-center">
+            <div className="border border-white/10 bg-white/[0.03] p-6 text-center">
                 <p className="text-sm text-white/60">{error}</p>
                 <button type="button" onClick={() => void loadUntil(TARGET_BATCH)} className="mt-4 rounded-full bg-primary-400 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">
                     Try again
@@ -177,7 +177,7 @@ export default function CollectionSystemDynamics({
     }
     if (displayed.length === 0 && (exhausted || !isLoading)) {
         return (
-            <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-6 text-center">
+            <div className="border border-white/10 bg-white/[0.03] p-6 text-center">
                 <p className="font-display text-lg font-bold text-white">No systems match this view.</p>
                 <p className="mt-2 text-sm text-white/45">Try another frequency or a broader search.</p>
             </div>
@@ -186,7 +186,7 @@ export default function CollectionSystemDynamics({
 
     return (
         <>
-            <div className="overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#121212]">
+            <div className="overflow-hidden border border-white/[0.08] bg-[#121212]">
                 {displayed.map((item) => {
                     const signature = resolveVisualSignature(item.dynamics);
                     return (
@@ -218,7 +218,7 @@ export default function CollectionSystemDynamics({
 
             {selected ? (
                 <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/75 md:items-center md:p-4" role="dialog" aria-modal="true" aria-label={`${selected.animalName} System Dynamics`}>
-                    <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[22px] border border-white/10 bg-black p-4 shadow-2xl md:rounded-[22px]">
+                    <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-black p-4 shadow-2xl">
                         <div className="mb-3 flex items-center justify-between gap-4">
                             <h2 className="text-lg font-bold text-white">{selected.animalName}</h2>
                             <button type="button" onClick={() => setSelected(null)} className="text-sm font-semibold text-primary-200">Done</button>

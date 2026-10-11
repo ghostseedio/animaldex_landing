@@ -216,7 +216,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
                                 type="button"
                                 aria-pressed={selected}
                                 onClick={() => setDraft((current) => ({...current, chromePreset: option.id}))}
-                                className={`relative flex flex-col items-start gap-1 rounded-2xl border p-3.5 text-left transition ${selected ? "border-primary-400/60 bg-primary-400/10" : "border-white/10 bg-[#141414] hover:bg-white/[0.05]"}`}
+                                className={`relative flex flex-col items-start gap-1 border p-3.5 text-left transition ${selected ? "border-primary-400/60 bg-primary-400/10" : "border-white/10 bg-[#141414] hover:bg-white/[0.05]"}`}
                             >
                                 <span className="text-lg" style={{color: NEON}} aria-hidden="true">{STYLE_ICONS[option.id]}</span>
                                 <span className="text-[15px] font-bold text-white">{option.title}</span>
@@ -229,7 +229,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
             </section>
 
             <section className="mb-7">
-                <Link href="/app/train/wild-profile" className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#141414] px-4 py-3.5 transition hover:bg-white/[0.05]">
+                <Link href="/app/train/wild-profile" className="flex items-center gap-3 border border-white/10 bg-[#141414] px-4 py-3.5 transition hover:bg-white/[0.05]">
                     <span className="text-lg" style={{color: NEON}} aria-hidden="true">🐾</span>
                     <span className="min-w-0 flex-1">
                         <span className="block text-[15px] font-semibold text-white">Open Wild Profile</span>
@@ -242,7 +242,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
             <section className="mb-7">
                 <SectionTitle>CAPTURE GRID</SectionTitle>
                 <p className="mb-2 px-1 text-xs text-white/45">Choose how captures are ordered on your public profile.</p>
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]">
+                <div className="overflow-hidden border border-white/10 bg-[#141414]">
                     {CAPTURE_GRID_OPTIONS.map((option, index) => {
                         const selected = draft.captureGridSort === option.id;
                         return (
@@ -267,7 +267,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
 
             <section className="mb-7">
                 <SectionTitle>BASIC INFO</SectionTitle>
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]">
+                <div className="overflow-hidden border border-white/10 bg-[#141414]">
                     <label className="flex items-center gap-3 px-4 py-3">
                         <span className="w-28 shrink-0 text-[15px] font-semibold text-white">Display Name</span>
                         <input value={draft.displayName} onChange={(event) => setDraft((current) => ({...current, displayName: event.target.value}))} placeholder="Your display name" className={field} maxLength={60} />
@@ -310,7 +310,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
 
             <div className="fixed inset-x-0 bottom-[5.5rem] z-30 px-4 lg:bottom-6 lg:left-[17rem]">
                 <div className="mx-auto max-w-2xl">
-                    {error ? <p className="mb-2 rounded-xl bg-red-500/15 px-3 py-2 text-center text-sm text-red-200" role="alert">{error}</p> : null}
+                    {error ? <p className="mb-2 bg-red-500/15 px-3 py-2 text-center text-sm text-red-200" role="alert">{error}</p> : null}
                     <button
                         type="button"
                         onClick={() => void save()}
@@ -324,7 +324,7 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
 
             {confirmDiscard ? (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 md:items-center" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
-                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#1c1c1c] p-5 text-center">
+                    <div className="w-full max-w-sm border border-white/10 bg-[#1c1c1c] p-5 text-center">
                         <h2 id="discard-title" className="text-[17px] font-bold text-white">Discard changes?</h2>
                         <div className="mt-5 grid gap-2">
                             <button type="button" onClick={() => router.push("/app/profile")} className="rounded-full bg-red-500 py-3 text-[15px] font-black text-white">Discard</button>

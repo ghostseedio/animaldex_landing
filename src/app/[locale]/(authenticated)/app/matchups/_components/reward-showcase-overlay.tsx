@@ -25,7 +25,7 @@ export default function RewardShowcaseOverlay({
             aria-hidden={!visible}
         >
             <div
-                className={`w-full max-w-xs rounded-[1.5rem] border bg-gradient-to-b px-5 py-6 text-center shadow-2xl transition duration-300 ${accentClass} ${visible ? "translate-y-0 scale-100" : "translate-y-3 scale-95"}`}
+                className={`w-full max-w-xs border bg-gradient-to-b px-5 py-6 text-center shadow-2xl transition duration-300 ${accentClass} ${visible ? "translate-y-0 scale-100" : "translate-y-3 scale-95"}`}
             >
                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/55">{item.title}</p>
                 <p className="mt-3 font-display text-4xl font-bold text-white">{item.totalValueText}</p>

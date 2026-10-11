@@ -25,7 +25,7 @@ export default function ShareProfileButton({
                 title="Share profile"
                 className={compact
                     ? "grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition hover:bg-white/[0.1]"
-                    : "inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-2xl border border-white/15 px-5 text-sm font-bold text-white transition hover:border-primary-300 hover:text-primary-100"}
+                    : "inline-flex min-h-[3rem] items-center justify-center gap-2  border border-white/15 px-5 text-sm font-bold text-white transition hover:border-primary-300 hover:text-primary-100"}
             >
                 <ShareTriggerGlyph />
                 {compact ? null : "Share profile"}

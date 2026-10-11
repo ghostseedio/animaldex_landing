@@ -99,7 +99,7 @@ export function PurchaseChoice({
                     type="button"
                     disabled={Boolean(busy)}
                     onClick={() => void buy(recommended)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50"
                 >
                     {busy === recommended ? "Opening checkout…" : `Buy ${WEB_STORE_PRODUCTS[recommended].label}`}
                 </button>
@@ -107,7 +107,7 @@ export function PurchaseChoice({
                     type="button"
                     disabled={Boolean(busy)}
                     onClick={() => void buy("pro_upgrade")}
-                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
                 >
                     {busy === "pro_upgrade" ? "Opening checkout…" : "Go Pro"}
                 </button>

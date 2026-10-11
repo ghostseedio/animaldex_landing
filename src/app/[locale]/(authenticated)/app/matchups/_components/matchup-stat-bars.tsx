@@ -28,7 +28,7 @@ export default function MatchupStatBars({
                 const highlighted = highlightStat?.toLowerCase() === key;
 
                 return (
-                    <div key={key} className={`rounded-2xl border px-3 py-2.5 ${highlighted ? "border-primary-400/35 bg-primary-400/5" : "border-white/10 bg-white/[0.03]"}`}>
+                    <div key={key} className={`border px-3 py-2.5 ${highlighted ? "border-primary-400/35 bg-primary-400/5" : "border-white/10 bg-white/[0.03]"}`}>
                         <div className="mb-2 flex items-center justify-between text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/35">
                             <span>{attackerLabel} {left}</span>
                             <span>{formatStatLabel(key)}</span>

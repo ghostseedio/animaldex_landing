@@ -65,7 +65,7 @@ export default function ProfileFollowListSheet({
     return (
         <div className="theme-dark fixed inset-0 z-50 flex items-end justify-center bg-black/70 md:items-center" role="dialog" aria-modal="true" aria-label={title}>
             <button type="button" aria-label="Done" className="absolute inset-0" onClick={onClose} />
-            <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-[1.5rem] border border-white/10 bg-[#0b0b0b] md:rounded-[1.5rem]">
+            <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden border border-white/10 bg-[#0b0b0b] ">
                 <header className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
                     <h2 className="text-[17px] font-bold text-white">{title}</h2>
                     <button type="button" onClick={onClose} aria-label="Done" className="grid h-9 w-9 place-items-center rounded-full text-primary-200 hover:bg-white/[0.06]">

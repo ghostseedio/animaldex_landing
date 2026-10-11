@@ -21,7 +21,7 @@ function VisualFrame({title, summary, children}: {
 }) {
     return (
         <figure
-            className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
+            className="border border-white/10 bg-white/[0.035] p-4"
             role="group"
             aria-label={summary}
         >
@@ -92,7 +92,7 @@ function ScaleVisual({spec, summary}: {spec: Extract<AskVisual, {kind: "scale"}>
                     return (
                         <div
                             key={zone}
-                            className={`rounded-xl border px-3 py-2.5 ${
+                            className={`border px-3 py-2.5 ${
                                 isMarked
                                     ? "border-primary-400/45 bg-primary-400/[0.10]"
                                     : "border-white/10 bg-white/[0.02]"
@@ -132,7 +132,7 @@ function PhotoVisual({callout, photoUrl, photoAlt, summary}: {
 }) {
     if (!photoUrl) {
         return (
-            <p className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-[14px] leading-6 text-ink-200">
+            <p className="border border-white/10 bg-white/[0.035] p-4 text-[14px] leading-6 text-ink-200">
                 <span className="mr-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
                     In your photo
                 </span>
@@ -142,9 +142,9 @@ function PhotoVisual({callout, photoUrl, photoAlt, summary}: {
     }
 
     return (
-        <figure className="overflow-hidden rounded-2xl border border-white/10 bg-black/30" aria-label={summary}>
+        <figure className="overflow-hidden border border-white/10 bg-black/30" aria-label={summary}>
             <div className="relative aspect-[4/3] w-full">
-                <Image src={photoUrl} alt={photoAlt} fill sizes="(max-width: 768px) 92vw, 420px" className="object-cover" />
+                <Image src={photoUrl} unoptimized alt={photoAlt} fill sizes="(max-width: 768px) 92vw, 420px" className="object-cover" />
             </div>
             <figcaption className="border-t border-white/10 px-3.5 py-2.5 text-[13px] leading-6 text-ink-100">
                 <span className="mr-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-200">

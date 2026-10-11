@@ -66,7 +66,7 @@ function SideCard({
     isLoser: boolean;
 }) {
     return (
-        <div className={`rounded-[1.15rem] border px-3.5 py-3.5 ${isWinner ? "border-primary-400/35 bg-primary-400/10" : "border-white/10 bg-white/[0.03]"}`}>
+        <div className={`border px-3.5 py-3.5 ${isWinner ? "border-primary-400/35 bg-primary-400/10" : "border-white/10 bg-white/[0.03]"}`}>
             <div className="flex items-center justify-between gap-2">
                 <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-white/35">{title}</p>
                 {isWinner ? (
@@ -76,7 +76,7 @@ function SideCard({
                 ) : null}
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageSrc} alt="" className="mt-3 aspect-[4/3] w-full rounded-xl object-cover" />
+            <img src={imageSrc} alt="" className="mt-3 aspect-[4/3] w-full object-cover" />
             <p className="mt-2.5 line-clamp-2 text-sm font-bold text-white">{name}</p>
             <p className="mt-1 text-[0.68rem] font-black uppercase tracking-[0.1em] text-white/40">Power {power}</p>
             <div className={`mt-2.5 ${isLoser && health === 0 ? "text-orange-300" : ""}`}>
@@ -207,7 +207,7 @@ export default function ResultStep({
                 <RewardShowcaseOverlay item={showcaseItem} visible={showcaseVisible} />
             ) : null}
 
-            <div className={`relative overflow-hidden rounded-[1.35rem] border px-4 py-5 ${battleDrawn ? "border-white/15 bg-white/[0.05]" : !battleComplete || viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
+            <div className={`relative overflow-hidden border px-4 py-5 ${battleDrawn ? "border-white/15 bg-white/[0.05]" : !battleComplete || viewerWon ? "border-primary-400/35 bg-primary-400/10" : "border-rose-400/25 bg-rose-400/10"}`}>
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(163,230,53,0.16),transparent_55%)]" />
                 <p className="relative text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/40">
                     {battleVoting ? "Round 1 of 3 resolved" : survival ? "Best adapted" : "Scenario fit resolved"}
@@ -226,7 +226,7 @@ export default function ResultStep({
             </div>
 
             {battleVoting ? (
-                <div className="rounded-[1.15rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
+                <div className="border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-100">Round 2: Who would win?</p>
                     <p className="mt-2 font-display text-xl font-bold text-white">{voteProgressText(result.votesCount)}</p>
                     <p className="mt-1 text-sm leading-6 text-white/55">
@@ -239,7 +239,7 @@ export default function ResultStep({
             ) : null}
 
             {isBestOfThree(result) && battleComplete && result.settlementReason === "voting_timeout_round1_fallback" ? (
-                <div className="rounded-[1.15rem] border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-50/80">
+                <div className="border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-50/80">
                     Voting ended before the target was reached. The Round 1 winner takes the battle.
                 </div>
             ) : null}
@@ -305,7 +305,7 @@ export default function ResultStep({
 
             {isBestOfThree(result) && battleComplete && result.settlementReason !== "voting_timeout_round1_fallback" ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
+                    <div className="border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Round 2 of 3 - Community</p>
                         <p className="mt-2 text-sm font-bold text-white">
                             {result.round2Draw
@@ -313,7 +313,7 @@ export default function ResultStep({
                                 : `The community backed ${result.round2WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName}.`}
                         </p>
                     </div>
-                    <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] p-4">
+                    <div className="border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Round 3 of 3 - Species</p>
                         <p className="mt-2 text-sm font-bold text-white">
                             Species comparison favored {(result.round3WinnerCaptureId === attacker.captureId ? attacker.animalName : opponent.animalName)}.
@@ -331,7 +331,7 @@ export default function ResultStep({
                 <button
                     type="button"
                     onClick={() => setComparisonOpen(true)}
-                    className="flex w-full items-center justify-between gap-3 rounded-[1.15rem] border border-white/10 bg-white/[0.03] px-4 py-4 text-left transition hover:border-primary-400/30"
+                    className="flex w-full items-center justify-between gap-3 border border-white/10 bg-white/[0.03] px-4 py-4 text-left transition hover:border-primary-400/30"
                 >
                     <div>
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-primary-200">Species comparison</p>
@@ -349,7 +349,7 @@ export default function ResultStep({
                     type="button"
                     disabled={!battleComplete || !rematchEnabled || isRematching}
                     onClick={onRematch}
-                    className={`w-full rounded-2xl px-4 py-3 text-sm font-black transition ${battleComplete && rematchEnabled && !isRematching ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
+                    className={`w-full px-4 py-3 text-sm font-black transition ${battleComplete && rematchEnabled && !isRematching ? "bg-primary-400 text-black" : "cursor-not-allowed bg-white/5 text-white/30"}`}
                 >
                     {battleComplete ? isRematching ? "Running rematch..." : `Rematch for ${stakeLabel}` : "Battle settling after Round 3"}
                 </button>
@@ -361,14 +361,14 @@ export default function ResultStep({
             <div className="flex flex-wrap gap-2">
                 <Link
                     href={`/app/capture/${result.winnerCaptureId}`}
-                    className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white transition hover:border-white/20"
+                    className="border border-white/10 px-4 py-3 text-sm font-black text-white transition hover:border-white/20"
                 >
                     View capture
                 </Link>
-                <button type="button" onClick={onFindAnother} className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white/70">
+                <button type="button" onClick={onFindAnother} className="border border-white/10 px-4 py-3 text-sm font-black text-white/70">
                     Done
                 </button>
-                <button type="button" onClick={onViewHistory} className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-black text-white/70">
+                <button type="button" onClick={onViewHistory} className="border border-white/10 px-4 py-3 text-sm font-black text-white/70">
                     View history
                 </button>
             </div>

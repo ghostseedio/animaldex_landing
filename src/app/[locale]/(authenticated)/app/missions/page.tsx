@@ -117,7 +117,7 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                         <p className="mt-2 text-xs font-bold text-white/45">{left === 1 ? "1 more to go" : `${left} more to go`}</p>
                     ) : null}
                 </div>
-                <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
+                <div className="mt-4 border border-amber-300/15 bg-amber-300/[0.06] p-3">
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-200/70">Reward</p>
                     <p className="mt-1 text-sm font-bold text-amber-100">{campaignReward(campaign)}</p>
                     {campaign.cashReward ? <p className="mt-1 text-xs text-amber-100/45">{campaign.cashReward.remainingRecipients} cash rewards remaining</p> : null}
@@ -183,7 +183,7 @@ export default async function MissionsPage() {
 
             <AppSurface>
                 <div className="flex items-center gap-3">
-                    <span className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${progression.tradeUnlocked ? "bg-primary-400 text-black ring-primary-400/20" : "bg-white/5 text-white/40 ring-white/10"}`}>
+                    <span className={`flex h-11 w-11 items-center justify-center ring-1 ${progression.tradeUnlocked ? "bg-primary-400 text-black ring-primary-400/20" : "bg-white/5 text-white/40 ring-white/10"}`}>
                         <AppIcon name={progression.tradeUnlocked ? "check" : "lock"} />
                     </span>
                     <div>

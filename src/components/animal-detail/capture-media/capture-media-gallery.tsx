@@ -212,7 +212,7 @@ export default function CaptureMediaGallery({
                                                     ⋯
                                                 </button>
                                                 {menuAssetId === asset.id ? (
-                                                    <div role="menu" className="absolute bottom-9 right-0 z-10 w-44 overflow-hidden rounded-2xl border border-white/10 bg-[#141414] py-1 shadow-2xl">
+                                                    <div role="menu" className="absolute bottom-9 right-0 z-10 w-44 overflow-hidden border border-white/10 bg-[#141414] py-1 shadow-2xl">
                                                         <button
                                                             type="button"
                                                             role="menuitem"

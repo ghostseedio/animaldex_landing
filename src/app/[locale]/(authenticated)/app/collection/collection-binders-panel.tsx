@@ -50,7 +50,7 @@ function BinderCoverCard({binder}: {binder: BinderProgress}) {
     return (
         <Link
             href={binder.href}
-            className="group overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#121212] transition hover:border-white/25"
+            className="group overflow-hidden border border-white/10 bg-[#121212] transition hover:border-white/25"
         >
             <div className="relative aspect-[4/5] overflow-hidden bg-black">
                 <img
@@ -86,7 +86,7 @@ function BinderSpineCard({binder}: {binder: BinderProgress}) {
     return (
         <Link
             href={binder.href}
-            className="group relative flex min-h-[11rem] overflow-hidden rounded-[1.2rem] border border-white/10 transition hover:border-white/25"
+            className="group relative flex min-h-[11rem] overflow-hidden border border-white/10 transition hover:border-white/25"
             style={{background: `linear-gradient(160deg, ${primary}, ${secondary})`}}
         >
             <div className="flex w-10 shrink-0 items-center justify-center border-r border-black/25 bg-black/20">
