@@ -30,7 +30,7 @@ export const FUSED_COPY = {
     attemptsExhausted: "You've used today's 3 tries. Try again tomorrow.",
     oneToFinish: "1 to finish",
     finishSentence: "Train it, then prove it. Its boost switches on when it's earned.",
-    repeatLine: "Each fused Power brings its own Training and Trial. Battles repeat as often as you like.",
+    repeatLine: "Battles repeat as often as you like. Each fused Power brings its own Training and Trial, so the loop starts again.",
     fusionResultLine: "Its boost switches on after its Training and Trial.",
     notReady: "This Power isn't ready yet. Try again in a minute.",
     trainingRequired: "Complete this Power's Training first.",

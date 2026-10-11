@@ -17,6 +17,8 @@ export function useSpeciesUnlock(
 ) {
     const key = speciesProfileIds.filter(Boolean).map((id) => String(id).toLowerCase()).sort().join(",");
     const [unlocked, setUnlocked] = useState<boolean | null>(null);
+    /** Null until the read lands (and for the owner of the capture on screen, who is signed in). */
+    const [signedIn, setSignedIn] = useState<boolean | null>(null);
     const [didLoad, setDidLoad] = useState(false);
 
     useEffect(() => {
@@ -29,8 +31,9 @@ export function useSpeciesUnlock(
         setDidLoad(false);
         void fetch(`/api/app/species-unlock?speciesProfileId=${encodeURIComponent(key)}`, {cache: "no-store"})
             .then((response) => (response.ok ? response.json() : null))
-            .then((payload: {unlocked?: boolean | null} | null) => {
+            .then((payload: {signedIn?: boolean; unlocked?: boolean | null} | null) => {
                 if (cancelled) return;
+                setSignedIn(typeof payload?.signedIn === "boolean" ? payload.signedIn : null);
                 setUnlocked(typeof payload?.unlocked === "boolean" ? payload.unlocked : null);
             })
             .catch(() => {
@@ -47,6 +50,7 @@ export function useSpeciesUnlock(
     return {
         canAttempt: options.ownsThisCapture ? true : unlocked !== false,
         unlocked,
+        signedIn: options.ownsThisCapture ? true : signedIn,
         didLoad
     };
 }

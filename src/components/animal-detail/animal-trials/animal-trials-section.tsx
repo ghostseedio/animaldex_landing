@@ -226,8 +226,12 @@ export function TrialCard({
     onApplyYourWay?: (() => void) | null;
     isApplying?: boolean;
 }) {
-    const accent = frequencyAccent(trial.frequency);
     const complete = isComplete(trial);
+    // While Training is owed the Trial is a later step, so it sits back: a
+    // neutral rail and wash instead of the bright LOW / MID / HIGH fill. It
+    // takes its colour again once Training is passed.
+    const quiet = lockedByTraining && !complete;
+    const accent = quiet ? QUIET_ACCENT : frequencyAccent(trial.frequency);
     const state = lifecycleLabel(trial);
     const social = socialProofText(trial);
     const isLockedByCapture = !canAttempt && !complete;
@@ -237,10 +241,10 @@ export function TrialCard({
 
     const body = (
         <>
-            <h4 className="font-display text-2xl font-black leading-tight text-white">{trial.title}</h4>
+            <h4 className={`font-display text-2xl font-black leading-tight ${quiet ? "text-white/60" : "text-white"}`}>{trial.title}</h4>
 
             {preview ? (
-                <p className="line-clamp-2 text-sm leading-6 text-white/60">{preview}</p>
+                <p className={`line-clamp-2 text-sm leading-6 ${quiet ? "text-white/40" : "text-white/60"}`}>{preview}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
@@ -283,13 +287,13 @@ export function TrialCard({
             {/* The coloured rail: frequency on the left, lifecycle on the right. */}
             <div
                 className="flex w-full items-center gap-2 px-5 py-2"
-                style={{backgroundColor: complete ? `${accent}8C` : accent}}
+                style={{backgroundColor: quiet ? `${accent}33` : complete ? `${accent}8C` : accent}}
             >
-                <span className="text-[10px] font-black uppercase tracking-[0.11em] text-black/85">
+                <span className={`text-[10px] font-black uppercase tracking-[0.11em] ${quiet ? "text-white/60" : "text-black/85"}`}>
                     {frequencyBadge(trial.frequency)}
                 </span>
                 {state ? (
-                    <span className="ml-auto text-[10px] font-black text-black/85">{state}</span>
+                    <span className={`ml-auto text-[10px] font-black ${quiet ? "text-white/60" : "text-black/85"}`}>{state}</span>
                 ) : null}
             </div>
 
@@ -304,7 +308,7 @@ export function TrialCard({
                         ? `Not yet captured. ${NOT_YET_CAPTURED_NOTE}`
                         : isLocked ? TRAINING_COPY.lockedLine : "Opens the Trial"}
                 className="flex w-full flex-col gap-3 px-5 pb-[18px] pt-3.5 text-left disabled:cursor-not-allowed"
-                style={{backgroundImage: `linear-gradient(to bottom, ${accent}${complete ? "1A" : "2E"}, transparent 60%)`}}
+                style={{backgroundImage: `linear-gradient(to bottom, ${accent}${complete || quiet ? "1A" : "2E"}, transparent 60%)`}}
             >
                 {body}
             </button>
@@ -339,6 +343,9 @@ export function TrialCard({
         </div>
     );
 }
+
+/** The locked-by-Training Trial's rail and chips: a neutral grey, not a frequency. */
+const QUIET_ACCENT = "#8C8C8C";
 
 function RewardChip({accent, children}: {accent: string; children: React.ReactNode}) {
     return (

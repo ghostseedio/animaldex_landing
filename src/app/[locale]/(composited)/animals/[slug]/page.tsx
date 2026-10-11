@@ -1205,6 +1205,17 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 )}
                 play={(
                     <div className="flex flex-col gap-5">
+                    <div className="-mx-5 lg:mx-0">
+                        {/* One mount, first on the tab: the Power Loop bar, then
+                            Train, Prove it (the earn fork, with the Trials as its
+                            Trial arm) and Battle & Fuse, in that order. A species
+                            page is about the species, so what earning unlocks is
+                            the reader's own captures of it — until the mount
+                            learns the reader has caught it. */}
+                        <EarnPowerMount speciesProfileId={entry.speciesProfileId} isViewersOwnAnimal={false} showsPowerLoop />
+                    </div>
+                    {/* The group's other animals, after this one's loop rather
+                        than between the bar and its steps. */}
                     <SpeciesGroupMembers
                         members={groupMembers}
                         labels={{
@@ -1215,14 +1226,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             openPlay: t("groupMembersOpenPlay")
                         }}
                     />
-                    <div className="-mx-5 lg:mx-0">
-                        {/* One mount: the earn fork owns the choice between the
-                            two routes and shows the Trials as the Trial arm of it.
-                            A species page is about the species, so what earning
-                            unlocks is the reader's own captures of it — until
-                            the mount learns the reader has caught it. */}
-                        <EarnPowerMount speciesProfileId={entry.speciesProfileId} isViewersOwnAnimal={false} />
-                    </div>
                     <SpeciesGrowthPanel
                         layout="wide"
                         speciesSlug={entry.slug}

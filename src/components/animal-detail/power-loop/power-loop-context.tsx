@@ -1,15 +1,20 @@
 "use client";
 
 import {createContext, useContext} from "react";
-import {stepEyebrow} from "@/lib/power-loop";
+import {POWER_LOOP_COPY, type PowerLoopStepId, stepEyebrow} from "@/lib/power-loop";
 
-/** Scroll targets for the four Power Loop steps, one per section on the Play tab. */
-export const POWER_LOOP_ANCHORS = {
-    training: "power-loop-training",
-    trials: "power-loop-trials",
-    battles: "power-loop-battles",
-    fusion: "power-loop-fusion"
-} as const;
+/** Scroll targets for the three Power Loop steps, one per section on the Play tab. */
+export const POWER_LOOP_ANCHORS: Record<PowerLoopStepId, string> = {
+    train: "power-loop-train",
+    prove: "power-loop-prove",
+    battleFuse: "power-loop-battle-fuse"
+};
+
+const STEP_TITLES: Record<PowerLoopStepId, {number: number; title: string}> = {
+    train: {number: 1, title: POWER_LOOP_COPY.train},
+    prove: {number: 2, title: POWER_LOOP_COPY.proveIt},
+    battleFuse: {number: 3, title: POWER_LOOP_COPY.battleAndFuse}
+};
 
 /**
  * What the Power Loop bar tells the Play sections it sits above. The growth
@@ -28,15 +33,16 @@ export function usePowerLoopContext() {
     return useContext(PowerLoopContext);
 }
 
-/** "STEP 1" over a Play section, in the accent as on iOS, carrying that step's scroll target. */
-export function PowerLoopEyebrow({step, anchor, className = ""}: {step: number; anchor: string; className?: string}) {
+/** "STEP 1 · TRAIN" over a Play section, in the accent as on iOS, carrying that step's scroll target. */
+export function PowerLoopEyebrow({step, className = ""}: {step: PowerLoopStepId; className?: string}) {
+    const {number, title} = STEP_TITLES[step];
     return (
         <p
-            id={anchor}
+            id={POWER_LOOP_ANCHORS[step]}
             className={`scroll-mt-24 px-5 pb-2 pt-4 text-[10px] font-black uppercase tracking-[0.12em] ${className}`}
             style={{color: "rgb(var(--c-primary-text-400))"}}
         >
-            {stepEyebrow(step)}
+            {stepEyebrow(number, title)}
         </p>
     );
 }

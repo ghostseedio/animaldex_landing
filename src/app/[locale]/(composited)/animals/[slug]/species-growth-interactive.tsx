@@ -8,7 +8,7 @@ import {apexGrowthMatchTitle, apexGrowthPresentation} from "@/data/apex-growth";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
 import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
-import {POWER_LOOP_ANCHORS, PowerLoopEyebrow, usePowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
+import {usePowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
 import {FusedPowersSlot} from "@/components/animal-detail/fused-powers/fused-powers-section";
 import {useFusedPowersContext} from "@/components/animal-detail/fused-powers/fused-powers-context";
 import {FUSED_COPY, whenEarnedLine, statDisplayName} from "@/lib/fused-powers";
@@ -501,8 +501,9 @@ export default function SpeciesGrowthInteractive({
     const canFuse = Boolean(growth.primaryCaptureId && growth.principle && growth.fusionDonors.length > 0);
     const canChallenge = Boolean(growth.challengeRequest);
 
-    // Under the Power Loop bar the comparison tools and Fusion read as steps 3
-    // and 4, and the bar's "Fuse Powers" opens the same sheet as the row.
+    // Under the Power Loop bar the comparison tools and Fusion carry on step 3,
+    // "Battle & Fuse" (its eyebrow is drawn above them, over the unlock rows),
+    // and the bar's "Fuse Powers" opens the same sheet as the row.
     const powerLoop = usePowerLoopContext();
     const fusedPowers = useFusedPowersContext();
     const showsLoopSteps = Boolean(powerLoop && compareOnly);
@@ -664,11 +665,10 @@ export default function SpeciesGrowthInteractive({
     };
 
     // The compact Fusion row (see where it is placed below). Under the Power
-    // Loop bar it moves below the comparison tools, so the steps read 1-4 top
-    // to bottom; everywhere else it stays where it was.
+    // Loop bar it moves below the comparison tools, so step 3 reads Battle then
+    // Fuse top to bottom; everywhere else it stays where it was.
     const compactFusionRow = (
         <div className="flex flex-col">
-            {showsLoopSteps ? <PowerLoopEyebrow step={4} anchor={POWER_LOOP_ANCHORS.fusion} className="-mx-5" /> : null}
             <button
                 type="button"
                 disabled={!canFuse}
@@ -898,7 +898,6 @@ export default function SpeciesGrowthInteractive({
                 // actually has to SEE, because empty hearts are the reason a
                 // comparison will not start.
                 <div className="flex flex-col">
-                    {showsLoopSteps ? <PowerLoopEyebrow step={3} anchor={POWER_LOOP_ANCHORS.battles} className="-mx-5" /> : null}
                     <button
                         type="button"
                         onClick={() => setShowsComparisonTools((value) => !value)}

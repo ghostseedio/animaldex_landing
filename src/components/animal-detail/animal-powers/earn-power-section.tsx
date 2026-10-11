@@ -7,7 +7,7 @@ import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
 import TrainingBand from "@/components/animal-detail/species-training/training-band";
 import {type SpeciesTrainingState, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
-import {POWER_LOOP_ANCHORS, PowerLoopEyebrow} from "@/components/animal-detail/power-loop/power-loop-context";
+import {PowerLoopEyebrow} from "@/components/animal-detail/power-loop/power-loop-context";
 import {TRAINING_COPY, notingTrainingResult, showsTrainingStep, trainingGatesPlay} from "@/lib/species-training";
 
 /**
@@ -77,9 +77,15 @@ function UnlockRow({icon, title, detail, earned}: {icon: string; title: string; 
  * Comparison until some invisible condition is met reads as a missing feature
  * rather than a goal.
  */
-function UnlockRows({earned, powerName, isViewersOwnAnimal}: {earned: boolean; powerName: string | null; isViewersOwnAnimal: boolean}) {
+function UnlockRows({earned, powerName, isViewersOwnAnimal, underEyebrow = false}: {
+    earned: boolean;
+    powerName: string | null;
+    isViewersOwnAnimal: boolean;
+    /** Under "STEP 3 · BATTLE & FUSE", which already spaces it from what is above. */
+    underEyebrow?: boolean;
+}) {
     return (
-        <div className={`flex flex-col gap-2.5 px-5 pt-4 ${earned ? "pb-[18px]" : "pb-1"}`}>
+        <div className={`flex flex-col gap-2.5 px-5 ${underEyebrow ? "pt-1 pb-[18px]" : `pt-4 ${earned ? "pb-[18px]" : "pb-1"}`}`}>
             <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: earned ? NEON : "rgba(255,255,255,0.4)"}}>
                 {earned ? "Play unlocked" : lockedHeading(powerName)}
             </p>
@@ -110,7 +116,8 @@ export default function EarnPowerSection({
     trainingOpenRequest = 0,
     trialsRouteRequest = 0,
     onTrialsChange,
-    showsLoopSteps = false
+    showsLoopSteps = false,
+    battleFuseContinues = false
 }: {
     speciesProfileId: string | null | undefined;
     power: AnimalPower | null;
@@ -140,8 +147,14 @@ export default function EarnPowerSection({
     trialsRouteRequest?: number;
     /** The Trials list as loaded, for the Power Loop bar. */
     onTrialsChange?: (trials: AnimalTrial[]) => void;
-    /** "STEP 1" / "STEP 2" over Training and the Trials, under the Power Loop bar. */
+    /**
+     * Under the Power Loop bar: "STEP 1 · TRAIN" over Training, "STEP 2 · PROVE
+     * IT" over the fork and the Trials, then "STEP 3 · BATTLE & FUSE" over the
+     * unlock rows, which move below the fork so the sections read in loop order.
+     */
     showsLoopSteps?: boolean;
+    /** The caller draws more of step 3 straight after (the card's comparisons and Fusion). */
+    battleFuseContinues?: boolean;
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
@@ -240,6 +253,12 @@ export default function EarnPowerSection({
     );
 
     let content: React.ReactNode;
+    // What earning unlocks. Above the fork on its own ("what you get, then how
+    // to get it"); under the Power Loop it is step 3 and sits below the fork.
+    const unlockRows = didLoad && power
+        ? <UnlockRows earned={power.isEarned} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} underEyebrow={showsLoopSteps} />
+        : null;
+    const leadingUnlockRows = showsLoopSteps ? null : unlockRows;
 
     if (!didLoad) {
         // The Trials never depend on the Power, so they show while it loads.
@@ -252,7 +271,7 @@ export default function EarnPowerSection({
                     <span className="text-[10px] font-black uppercase tracking-[0.11em]">Power earned</span>
                     <span className="truncate text-[10px] font-bold text-white">· {power.principleName}</span>
                 </div>
-                <UnlockRows earned powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} />
+                {leadingUnlockRows}
                 {/* Earned, so there is nothing left to choose. The Trials stay —
                     they are still worth doing for the XP and the Credits. */}
                 {trials(true)}
@@ -265,8 +284,8 @@ export default function EarnPowerSection({
         content = (
             <>
                 {/* Locked features first: what you get, then how to get it. */}
-                <UnlockRows earned={false} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} />
-                <div className="flex flex-col gap-1 px-5 pb-3 pt-5">
+                {leadingUnlockRows}
+                <div className={`flex flex-col gap-1 px-5 pb-3 ${showsLoopSteps ? "pt-1" : "pt-5"}`}>
                     <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/40">Choose how to earn it</p>
                     <p className="text-[10px] text-white/40">Either one earns the Power. You only need to do one.</p>
                 </div>
@@ -301,7 +320,7 @@ export default function EarnPowerSection({
     } else {
         content = (
             <>
-                <UnlockRows earned={false} powerName={power.principleName} isViewersOwnAnimal={isViewersOwnAnimal} />
+                {leadingUnlockRows}
                 {applyPanel(true)}
             </>
         );
@@ -310,7 +329,7 @@ export default function EarnPowerSection({
     return (
         <section className="flex flex-col">
             {showsLoopSteps && showsTrainingStep(speciesTraining.training) ? (
-                <PowerLoopEyebrow step={1} anchor={POWER_LOOP_ANCHORS.training} />
+                <PowerLoopEyebrow step="train" />
             ) : null}
             <TrainingBand
                 training={speciesTraining.training}
@@ -323,8 +342,14 @@ export default function EarnPowerSection({
                 }}
                 openRequest={trainingOpenRequest}
             />
-            {showsLoopSteps ? <PowerLoopEyebrow step={2} anchor={POWER_LOOP_ANCHORS.trials} /> : null}
+            {showsLoopSteps ? <PowerLoopEyebrow step="prove" /> : null}
             {content}
+            {showsLoopSteps && (unlockRows || battleFuseContinues) ? (
+                <>
+                    <PowerLoopEyebrow step="battleFuse" className="border-t border-white/[0.08]" />
+                    {unlockRows}
+                </>
+            ) : null}
             {showsApply && power ? (
                 <ApplyItYourWay
                     power={power}

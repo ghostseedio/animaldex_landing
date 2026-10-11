@@ -31,7 +31,7 @@ import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
 import type {AnimalTrial} from "@/lib/animal-trials";
-import {powerLoop} from "@/lib/power-loop";
+import {loopTraining, powerLoop} from "@/lib/power-loop";
 import {pendingFusedSummary} from "@/lib/fused-powers";
 import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
 import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
@@ -195,24 +195,17 @@ export default function CaptureDetailClient({
         // Trials list to wait for.
         const trialsMounted = !power || power.isEarned || power.hasTrial;
         if (trialsMounted && loopTrials === null) return null;
-        const training = speciesTraining.training;
         return powerLoop({
+            viewer: "ownCard",
             xp: capture.totalProgressionXP,
-            training: training ? {
-                available: training.available,
-                completed: training.completed,
-                rewardXP: training.rewardXP,
-                rewardCredits: training.rewardCredits,
-                questionCount: training.questions.length
-            } : null,
+            training: loopTraining(speciesTraining.training),
             trials: loopTrials ?? [],
             powerEarned: Boolean(power?.isEarned),
             hasPowerToEarn: Boolean(power),
             stake: capture.challengeStake,
-            fusionCost: fusion?.cost ?? null,
             fused: fusedSummary
         });
-    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusedSummary, fusion?.cost, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
+    }, [animalPower.didLoad, animalPower.power, capture.challengeStake, capture.totalProgressionXP, fusedSummary, loopTrials, showsPowerLoop, speciesTraining.didLoad, speciesTraining.training]);
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
     const [reveal, setReveal] = useState<CaptureReveal | null>(null);
@@ -587,7 +580,7 @@ export default function CaptureDetailClient({
                                 <PowerLoopBar
                                     loop={loop}
                                     onStartTraining={() => setTrainingOpenRequest((value) => value + 1)}
-                                    onGoToTrials={() => setTrialsRouteRequest((value) => value + 1)}
+                                    onProveIt={() => setTrialsRouteRequest((value) => value + 1)}
                                     battleHref="/app/matchups"
                                     canBattle={!capture.isZooComparisonBanned}
                                     onFuse={fusion?.canFuse ? () => setFusionOpenRequest((value) => value + 1) : null}
@@ -609,6 +602,7 @@ export default function CaptureDetailClient({
                                 trialsRouteRequest={trialsRouteRequest}
                                 onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
                                 showsLoopSteps={Boolean(loop)}
+                                battleFuseContinues={Boolean(loop)}
                             />
                         </div>
                         <PowerLoopContext.Provider value={loop ? loopContext : null}>
