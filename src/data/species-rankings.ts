@@ -5,6 +5,7 @@ import {
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {computeCaptureGrade, type CaptureGradeSource} from "@/lib/capture-grade";
+import {SPECIES_RANKING_ORDER, compareSpeciesRankingRows} from "@/lib/species-ranking-order";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export type SpeciesRankingItem = {
@@ -40,6 +41,11 @@ type DiscoverFeedRankingRow = CaptureGradeSource & {
     image_media_kind?: string | null;
     score?: number | null;
     endorsement_count?: number | null;
+    /** Ranking keys (migration 20261011130000). */
+    total_progression_xp?: number | null;
+    stat_total?: number | null;
+    capture_grade?: number | null;
+    capture_created_at?: string | null;
 };
 
 function getBattleTier(rawJson: unknown) {
@@ -73,15 +79,7 @@ function isRankableRow(row: DiscoverFeedRankingRow) {
 function prepareRankingRows(rows: DiscoverFeedRankingRow[]) {
     return dedupeRows(rows)
         .filter(isRankableRow)
-        .sort((left, right) => {
-            const imageDelta = Number(isUsableRankingImage(right)) - Number(isUsableRankingImage(left));
-
-            if (imageDelta !== 0) {
-                return imageDelta;
-            }
-
-            return (right.score ?? 0) - (left.score ?? 0);
-        });
+        .sort(compareSpeciesRankingRows);
 }
 
 async function resolveSpeciesEntryForRankings(entry: SpeciesEntry): Promise<SpeciesEntry> {
@@ -100,22 +98,6 @@ async function resolveSpeciesEntryForRankings(entry: SpeciesEntry): Promise<Spec
         speciesProfileId: databaseEntry.speciesProfileId ?? entry.speciesProfileId,
         normalizedIdentityKey: databaseEntry.normalizedIdentityKey ?? entry.normalizedIdentityKey
     };
-}
-
-function isUsableRankingImage(row: DiscoverFeedRankingRow) {
-    if (!row.image_bucket || !row.image_path) {
-        return false;
-    }
-
-    if (row.image_media_kind && row.image_media_kind !== "photo") {
-        return false;
-    }
-
-    if (row.image_mime_type && !row.image_mime_type.startsWith("image/")) {
-        return false;
-    }
-
-    return true;
 }
 
 function getContextLabel(row: Pick<DiscoverFeedRankingRow, "zoo_or_wild" | "human_context">) {
@@ -162,15 +144,8 @@ function dedupeRows(rows: DiscoverFeedRankingRow[]) {
 }
 
 function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
-    const sorted = [...rows].sort((left, right) => {
-        const scoreDelta = (right.score ?? 0) - (left.score ?? 0);
-
-        if (scoreDelta !== 0) {
-            return scoreDelta;
-        }
-
-        return (left.capture_id ?? "").localeCompare(right.capture_id ?? "");
-    });
+    // XP, then stats, then grade, then newest — the order iOS ranks by.
+    const sorted = [...rows].sort(compareSpeciesRankingRows);
 
     return sorted.map((row, index) => ({
         captureId: row.capture_id ?? "",
@@ -198,9 +173,9 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
 
     searchParams.set(
         "select",
-        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json"
+        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,total_progression_xp,stat_total,capture_grade,capture_created_at,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json"
     );
-    searchParams.set("order", "score.desc,capture_created_at.desc");
+    searchParams.set("order", SPECIES_RANKING_ORDER);
 
     try {
         const response = await fetch(`${config.supabaseUrl}/rest/v1/discover_feed_v1?${searchParams.toString()}`, {

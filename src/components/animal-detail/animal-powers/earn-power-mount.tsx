@@ -18,6 +18,11 @@ export default function EarnPowerMount({
     ownsThisCapture = false
 }: {
     speciesProfileId: string | null | undefined;
+    /**
+     * False on a species page. Once the signed-in reader is known to have
+     * caught the animal it is theirs, as on the iOS catalog species detail
+     * (`isViewersOwnAnimal: true`), so the unlock rows speak to it directly.
+     */
     isViewersOwnAnimal?: boolean;
     /** The viewer's own capture is on screen, which is itself the unlock. */
     ownsThisCapture?: boolean;
@@ -33,7 +38,7 @@ export default function EarnPowerMount({
             power={power}
             didLoad={didLoad}
             onReload={reload}
-            isViewersOwnAnimal={isViewersOwnAnimal}
+            isViewersOwnAnimal={isViewersOwnAnimal || unlock.unlocked === true}
             canAttemptTrials={unlock.canAttempt}
         />
     );

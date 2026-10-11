@@ -172,6 +172,7 @@ export default function CaptureDetailClient({
     const speciesTraining = useSpeciesTraining(showsPowerLoop ? speciesProfileId : null);
     const [loopTrials, setLoopTrials] = useState<AnimalTrial[] | null>(null);
     const [trainingOpenRequest, setTrainingOpenRequest] = useState(0);
+    const [trialsRouteRequest, setTrialsRouteRequest] = useState(0);
     const [fusionOpenRequest, setFusionOpenRequest] = useState(0);
     const loopContext = useMemo(() => ({fusionOpenRequest}), [fusionOpenRequest]);
     const loop = useMemo(() => {
@@ -572,7 +573,9 @@ export default function CaptureDetailClient({
                                 <PowerLoopBar
                                     loop={loop}
                                     onStartTraining={() => setTrainingOpenRequest((value) => value + 1)}
+                                    onGoToTrials={() => setTrialsRouteRequest((value) => value + 1)}
                                     battleHref="/app/matchups"
+                                    canBattle={!capture.isZooComparisonBanned}
                                     onFuse={fusion?.canFuse ? () => setFusionOpenRequest((value) => value + 1) : null}
                                 />
                             </div>
@@ -589,6 +592,7 @@ export default function CaptureDetailClient({
                                 canAttemptTrials={trialUnlock.canAttempt}
                                 speciesTraining={showsPowerLoop ? speciesTraining : undefined}
                                 trainingOpenRequest={trainingOpenRequest}
+                                trialsRouteRequest={trialsRouteRequest}
                                 onTrialsChange={showsPowerLoop ? setLoopTrials : undefined}
                                 showsLoopSteps={Boolean(loop)}
                             />

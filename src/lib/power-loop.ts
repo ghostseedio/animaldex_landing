@@ -82,8 +82,12 @@ export type PowerLoopNext = {
     title: string;
     sentence: string;
     reward: string;
-    /** "Lv 4 → Lv 5", "6 XP to Lv 5", "Lv↑ in 2 wins" or "Max level". */
-    level: string;
+    /**
+     * "Lv 4 → Lv 5", "6 XP to Lv 5", "Lv↑ in 2 wins" or "Max level". Null when
+     * the step pays no XP the client can preview (Apply It Your Way, a 0 XP
+     * Training), as on iOS, rather than quoting a distance it does not close.
+     */
+    level: string | null;
     /** Battles only. */
     stake: string | null;
 };
@@ -135,10 +139,14 @@ export function levelReached(before: number, after: number) {
     return from < MAX_ANIMAL_LEVEL && to > from ? to : null;
 }
 
-/** The Next strip's level line for a one-time step worth `after - before` XP. */
-export function oneTimeLevelLine(before: number, after: number) {
+/**
+ * The Next strip's level line for a one-time step worth `after - before` XP.
+ * Null when it is worth none: there is no level line to show (iOS `levelLine`).
+ */
+export function oneTimeLevelLine(before: number, after: number): string | null {
     const from = animalLevel(before);
     if (from >= MAX_ANIMAL_LEVEL) return POWER_LOOP_COPY.maxLevel;
+    if (Math.floor(after) <= Math.floor(before)) return null;
     const to = animalLevel(after);
     if (to > from) return levelRiseLine(from, to);
     return xpToLevelLine(xpForAnimalLevel(from + 1) - Math.floor(after), from + 1);
@@ -247,7 +255,7 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             step: "training",
             title: nextStepTitle(POWER_LOOP_COPY.training),
             sentence: trainingIntroText(training?.questionCount ?? 0),
-            reward: trainingReward,
+            reward: steps[0].caption.join(" · "),
             level: oneTimeLevelLine(x0, x1),
             stake: null
         };
@@ -256,7 +264,8 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
             step: "trials",
             title: nextStepTitle(POWER_LOOP_COPY.trials),
             sentence: POWER_LOOP_COPY.trialsSentence,
-            reward: trialsReward,
+            // "Apply It Your Way" for a Power with no Trial, as the node says.
+            reward: steps[1].caption.join(" · "),
             level: oneTimeLevelLine(x1, x2),
             stake: null
         };
@@ -271,8 +280,8 @@ export function powerLoop(input: PowerLoopInput): PowerLoop {
         };
     }
 
-    const reached = {training: trainingLevel, trials: trialsLevel};
-    return {steps, next, accessibilityLabel: spokenLoop(steps, {training: trainingXP, trials: remaining}, reached, training?.rewardCredits ?? 0)};
+    const reached: Record<PowerLoopStepId, number | null> = {training: trainingLevel, trials: trialsLevel, battles: null, fusion: null};
+    return {steps, next, accessibilityLabel: spokenLoop(steps, reached, wins)};
 }
 
 /** "+10 XP · +1 Credit" → ["+10 XP", "+1 Credit"], so a narrow column wraps on the dot. */
@@ -280,35 +289,28 @@ function splitReward(line: string) {
     return line ? line.split(" · ").slice(0, 2) : [];
 }
 
-function creditsWord(count: number) {
-    return `${count} ${count === 1 ? "Credit" : "Credits"}`;
-}
-
 /**
+ * The whole bar as one sentence, word for word with iOS
+ * `PowerLoopCopy.accessibilityLabel`: every step not yet done says what it
+ * pays, upcoming ones included, then its level chip.
+ *
  * "Power Loop. Step 1 Training, done. Step 2 Trials, current, plus 15 XP and 8
- * Credits, reaches level 5. Step 3 Battles, upcoming. Step 4 Fusion, upcoming."
+ * Credits, reaches level 5. Step 3 Battles, upcoming, plus 10 XP a win and 3 XP
+ * a loss, Lv↑ in 2 wins. Step 4 Fusion, upcoming, New Power and Costs 4 Credits."
  */
-function spokenLoop(
-    steps: PowerLoopStep[],
-    xp: {training: number; trials: {xp: number; credits: number}},
-    reached: {training: number | null; trials: number | null},
-    trainingCredits: number
-) {
+function spokenLoop(steps: PowerLoopStep[], reached: Record<PowerLoopStepId, number | null>, wins: number | null) {
     const parts = steps.map((step) => {
-        const head = `Step ${step.number} ${step.title}, ${step.status === "current" && step.repeats ? "current, repeats" : step.status}`;
-        if (step.status !== "current") return `${head}.`;
-        if (step.id === "training" || step.id === "trials") {
-            const gain = step.id === "training" ? {xp: xp.training, credits: trainingCredits} : xp.trials;
-            const reward = [gain.xp > 0 ? `${gain.xp} XP` : null, gain.credits > 0 ? creditsWord(gain.credits) : null]
-                .filter(Boolean)
-                .join(" and ");
-            const level = reached[step.id];
-            return `${head}${reward ? `, plus ${reward}` : ""}${level != null ? `, reaches level ${level}` : ""}.`;
+        const status = step.status === "current" && step.repeats ? "current, repeats" : step.status;
+        let sentence = `Step ${step.number} ${step.title}, ${status}`;
+        if (step.status !== "done" && step.caption.length > 0) {
+            // "+15 XP", "+8 Credits" → "plus 15 XP and 8 Credits".
+            const spoken = step.caption.map((line) => (line.startsWith("+") ? line.slice(1) : line)).join(" and ");
+            sentence += `, ${step.caption[0].startsWith("+") ? "plus " : ""}${spoken}`;
         }
-        if (step.id === "battles") {
-            return `${head}, plus ${BATTLE_WIN_XP} XP a win and ${BATTLE_LOSS_XP} XP a loss.`;
-        }
-        return `${head}, ${step.caption.join(", ")}.`;
+        const level = reached[step.id];
+        if (level != null) sentence += `, reaches level ${level}`;
+        if (step.id === "battles" && wins != null) sentence += `, ${winsToLevelLine(wins)}`;
+        return `${sentence}.`;
     });
     return `${POWER_LOOP_COPY.title}. ${parts.join(" ")}`;
 }

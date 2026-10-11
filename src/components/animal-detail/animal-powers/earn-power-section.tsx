@@ -108,6 +108,7 @@ export default function EarnPowerSection({
     canAttemptTrials = true,
     speciesTraining: sharedTraining,
     trainingOpenRequest = 0,
+    trialsRouteRequest = 0,
     onTrialsChange,
     showsLoopSteps = false
 }: {
@@ -135,6 +136,8 @@ export default function EarnPowerSection({
     speciesTraining?: SpeciesTrainingState;
     /** Bumped by the Power Loop's "Start Training". */
     trainingOpenRequest?: number;
+    /** Bumped by the Power Loop's "Go to Trials": the fork switches to its Trial arm. */
+    trialsRouteRequest?: number;
     /** The Trials list as loaded, for the Power Loop bar. */
     onTrialsChange?: (trials: AnimalTrial[]) => void;
     /** "STEP 1" / "STEP 2" over Training and the Trials, under the Power Loop bar. */
@@ -150,6 +153,12 @@ export default function EarnPowerSection({
 
     const isLocked = Boolean(power && !power.isEarned);
     const lockedSpeciesId = isLocked ? power?.speciesProfileId : null;
+
+    // iOS `onGoToTrials`: "Go to Trials" lands on the Trials even when the
+    // reader had switched the fork to Apply It Your Way.
+    useEffect(() => {
+        if (trialsRouteRequest) setRoute("trial");
+    }, [trialsRouteRequest]);
 
     useEffect(() => {
         if (!lockedSpeciesId) return;

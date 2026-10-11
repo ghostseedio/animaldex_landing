@@ -14,10 +14,21 @@ import {
 import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
 
 const NEON = "#A7F432";
+const NEON_TEXT = "rgb(var(--c-primary-text-400))";
+
+/** iOS: a graduation cap, then "Training". */
+function TrainingHeading() {
+    return (
+        <h3 className="flex items-center gap-2 font-display text-2xl font-black leading-tight text-white">
+            <span aria-hidden="true" className="text-[15px]">🎓</span>
+            {TRAINING_COPY.title}
+        </h3>
+    );
+}
 
 /**
  * The Training step, first in the Play area: a full-width band, never an inset
- * card. Once passed it collapses to one "Training complete" line.
+ * card. Once passed it keeps its heading over one "Training complete" line.
  *
  * "Read the Power again" from a failed quiz closes the quiz and opens the
  * Power's lesson right here, in the band — the same content Learn shows, so it
@@ -72,12 +83,20 @@ export default function TrainingBand({
     ) : null;
 
     if (training.completed) {
+        // iOS keeps the band once passed, its heading over one "Training
+        // complete" line, so the step still reads as step 1 of the Play tab.
         return (
             <>
-                <div className="flex items-center gap-2 border-b border-white/[0.08] bg-primary-400/10 px-5 py-3.5" style={{color: NEON}}>
-                    <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.11em]">{TRAINING_COPY.complete}</span>
-                </div>
+                <section
+                    className="flex flex-col gap-2.5 border-b border-white/[0.08] px-5 pb-[18px] pt-4"
+                    style={{backgroundImage: `linear-gradient(to bottom, ${NEON}0F, transparent)`}}
+                >
+                    <TrainingHeading />
+                    <p className="flex items-center gap-2 text-sm font-semibold" style={{color: NEON_TEXT}}>
+                        <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
+                        {TRAINING_COPY.complete}
+                    </p>
+                </section>
                 {quiz}
             </>
         );
@@ -89,7 +108,7 @@ export default function TrainingBand({
     return (
         <>
             <section className="flex flex-col gap-3 border-b border-white/[0.08] bg-white/[0.03] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
-                <h3 className="font-display text-2xl font-black leading-tight text-white">{TRAINING_COPY.title}</h3>
+                <TrainingHeading />
                 <p className="text-sm leading-6 text-white/70">{trainingIntroText(training.questions.length)}</p>
                 {reward ? <p className="text-[11px] font-black" style={{color: NEON}}>{reward}</p> : null}
 

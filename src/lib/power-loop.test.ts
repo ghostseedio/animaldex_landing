@@ -103,7 +103,7 @@ test("Trials current once Training is done; the preview starts from the card's X
     assert.equal(loop.next.level, "Lv 21 → Lv 22");
     assert.equal(
         loop.accessibilityLabel,
-        "Power Loop. Step 1 Training, done. Step 2 Trials, current, plus 15 XP and 8 Credits, reaches level 22. Step 3 Battles, upcoming. Step 4 Fusion, upcoming."
+        "Power Loop. Step 1 Training, done. Step 2 Trials, current, plus 15 XP and 8 Credits, reaches level 22. Step 3 Battles, upcoming, plus 10 XP a win and 3 XP a loss, Lv↑ in 1 win. Step 4 Fusion, upcoming, New Power and Costs 4 Credits."
     );
 });
 
@@ -169,4 +169,32 @@ test("a Power with no Trial: Trials caption is Apply It Your Way, with no chip",
     assert.deepEqual(loop.steps[1].caption, ["Apply It Your Way"]);
     assert.equal(loop.steps[1].levelChip, null);
     assert.equal(loop.next.step, "trials");
+});
+
+test("Apply It Your Way is also the Next reward, with no level line (iOS)", () => {
+    const loop = powerLoop(input({xp: 0, training: {...TRAINING, completed: true}, trials: []}));
+    assert.equal(loop.next.reward, "Apply It Your Way");
+    assert.equal(loop.next.level, null);
+    assert.match(loop.accessibilityLabel, /Step 2 Trials, current, Apply It Your Way\. /);
+});
+
+test("a step worth no XP has no level line; max level still says so", () => {
+    assert.equal(oneTimeLevelLine(100, 100), null);
+    assert.equal(oneTimeLevelLine(MAX_ANIMAL_LEVEL_XP, MAX_ANIMAL_LEVEL_XP), "Max level");
+    const loop = powerLoop(input({xp: 100, training: {...TRAINING, rewardXP: 0, rewardCredits: 0}}));
+    assert.equal(loop.next.step, "training");
+    assert.equal(loop.next.level, null);
+    assert.equal(loop.next.reward, "");
+});
+
+test("the spoken bar matches iOS: upcoming steps say what they pay, Battles its wins", () => {
+    const owed = powerLoop(input({xp: 100}));
+    assert.ok(owed.accessibilityLabel.startsWith("Power Loop. Step 1 Training, current, plus 10 XP and 1 Credit. Step 2 Trials, upcoming, plus 15 XP and 8 Credits, reaches level 23."));
+    assert.ok(owed.accessibilityLabel.includes("Step 3 Battles, upcoming, plus 10 XP a win and 3 XP a loss, Lv↑ in 1 win."));
+    assert.ok(owed.accessibilityLabel.endsWith("Step 4 Fusion, upcoming, New Power and Costs 4 Credits."));
+
+    // iOS PowerLoopTests: 4 XP, nothing owed, Power earned.
+    const open = powerLoop(input({xp: 4, training: null, trials: [], powerEarned: true, fusionCost: null}));
+    assert.ok(open.accessibilityLabel.includes("Step 3 Battles, current, repeats, plus 10 XP a win and 3 XP a loss, Lv↑ in 1 win"));
+    assert.ok(open.accessibilityLabel.endsWith("Step 4 Fusion, current, repeats, New Power and Costs Credits."));
 });

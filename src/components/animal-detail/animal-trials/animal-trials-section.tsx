@@ -174,7 +174,8 @@ export default function AnimalTrialsSection({
             {openTrial ? (
                 <AnimalTrialDetail
                     trial={openTrial}
-                    canAttempt={canAttempt}
+                    // iOS `mayStart`: an owed Training also stops a start from the sheet.
+                    canAttempt={canAttempt && !lockedByTraining}
                     onChange={applyUpdate}
                     onClose={() => setOpenTrialId(null)}
                 />

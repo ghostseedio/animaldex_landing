@@ -24,12 +24,18 @@ function scrollToStep(step: PowerLoopStep["id"]) {
 export default function PowerLoopBar({
     loop,
     onStartTraining,
+    onGoToTrials,
     battleHref,
+    canBattle,
     onFuse
 }: {
     loop: PowerLoop;
     onStartTraining: () => void;
+    /** Puts the earn fork on its Trial arm; the bar then scrolls to it. */
+    onGoToTrials: () => void;
     battleHref: string;
+    /** False for a card that cannot be compared (a zoo capture): no Battle button, as on iOS. */
+    canBattle: boolean;
     /** Null when this card has nothing to fuse with. */
     onFuse: (() => void) | null;
 }) {
@@ -59,36 +65,55 @@ export default function PowerLoopBar({
 
             {/* The Next strip: lit from the left, like the Training band. */}
             <div className="flex flex-col gap-2 border-t border-white/[0.08] bg-white/[0.03] px-5 py-4" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
-                <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON_TEXT}}>{next.title}</p>
-                <p className="text-sm leading-6 text-white">{next.sentence}</p>
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-black">
-                    {next.reward ? <span style={{color: NEON_TEXT}}>{next.reward}</span> : null}
-                    <span className="text-white/80">{next.level}</span>
-                </p>
-                {next.stake ? <p className="text-[11px] text-white/50">{next.stake}</p> : null}
+                <p className="text-base font-bold leading-6 text-white">{next.title}</p>
+                <p className="text-sm leading-6 text-white/70">{next.sentence}</p>
+                <div className="flex flex-col gap-[3px] text-[11px]">
+                    {next.reward ? <p className="font-black" style={{color: NEON_TEXT}}>{next.reward}</p> : null}
+                    {next.level ? (
+                        <p className="flex items-center gap-1 font-bold text-white">
+                            <span aria-hidden="true">↗</span>{next.level}
+                        </p>
+                    ) : null}
+                    {next.stake ? <p className="text-white/50">{next.stake}</p> : null}
+                </div>
 
                 <div className="mt-1 flex flex-col gap-2">
                     {next.step === "training" ? (
                         <PrimaryButton onClick={onStartTraining}>{POWER_LOOP_COPY.startTraining}</PrimaryButton>
                     ) : next.step === "trials" ? (
-                        <PrimaryButton onClick={() => scrollToStep("trials")}>{POWER_LOOP_COPY.goToTrials}</PrimaryButton>
+                        <PrimaryButton
+                            onClick={() => {
+                                onGoToTrials();
+                                // After the fork has switched arms, so the anchor is in place.
+                                window.requestAnimationFrame(() => scrollToStep("trials"));
+                            }}
+                        >
+                            {POWER_LOOP_COPY.goToTrials}
+                        </PrimaryButton>
                     ) : (
                         <>
-                            <Link
-                                href={battleHref}
-                                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
-                                style={{backgroundColor: NEON}}
-                            >
-                                {POWER_LOOP_COPY.battle} <span aria-hidden="true">→</span>
-                            </Link>
-                            {onFuse ? (
-                                <button
-                                    type="button"
-                                    onClick={onFuse}
-                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-white/15 text-sm font-bold text-white"
+                            {canBattle ? (
+                                <Link
+                                    href={battleHref}
+                                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
+                                    style={{backgroundColor: NEON}}
                                 >
-                                    <span aria-hidden="true" style={{color: NEON_TEXT}}>△</span> {POWER_LOOP_COPY.fusePowers}
-                                </button>
+                                    {POWER_LOOP_COPY.battle} <span aria-hidden="true">→</span>
+                                </Link>
+                            ) : null}
+                            {/* Fuse Powers leads when there is no Battle to lead (iOS). */}
+                            {onFuse ? (
+                                canBattle ? (
+                                    <button
+                                        type="button"
+                                        onClick={onFuse}
+                                        className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-white/15 text-sm font-bold text-white"
+                                    >
+                                        <span aria-hidden="true" style={{color: NEON_TEXT}}>△</span> {POWER_LOOP_COPY.fusePowers}
+                                    </button>
+                                ) : (
+                                    <PrimaryButton onClick={onFuse}>{POWER_LOOP_COPY.fusePowers}</PrimaryButton>
+                                )
                             ) : null}
                         </>
                     )}
@@ -153,10 +178,12 @@ function StepNode({step, isLast}: {step: PowerLoopStep; isLast: boolean}) {
             </span>
             <span className={`mt-0.5 text-[12px] font-bold leading-4 ${upcoming ? "text-white/40" : "text-white"}`}>{step.title}</span>
             <span className={`flex flex-col text-[10px] leading-[13px] ${upcoming ? "text-white/35" : "text-white/60"}`}>
-                {/* One caption line each, never wrapped: "Costs 16 Credits"
-                    just fits a 360px column and a third line would not. */}
+                {/* Reward lines never wrap: "Costs 16 Credits" just fits a
+                    360px column and a third line would not. */}
                 {step.caption.map((line) => (
-                    <span key={line} className="whitespace-nowrap tracking-[-0.01em]">{line}</span>
+                    // Word captions ("Training complete", "Apply It Your Way")
+                    // wrap inside their column instead of running into the next.
+                    <span key={line} className={`tracking-[-0.01em] ${/^[+\d]|^Costs /.test(line) ? "whitespace-nowrap" : "break-words"}`}>{line}</span>
                 ))}
             </span>
             {step.levelChip ? (

@@ -1219,7 +1219,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         {/* One mount: the earn fork owns the choice between the
                             two routes and shows the Trials as the Trial arm of it.
                             A species page is about the species, so what earning
-                            unlocks is the reader's own captures of it. */}
+                            unlocks is the reader's own captures of it — until
+                            the mount learns the reader has caught it. */}
                         <EarnPowerMount speciesProfileId={entry.speciesProfileId} isViewersOwnAnimal={false} />
                     </div>
                     <SpeciesGrowthPanel

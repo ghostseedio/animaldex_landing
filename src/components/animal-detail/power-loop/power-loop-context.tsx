@@ -28,10 +28,14 @@ export function usePowerLoopContext() {
     return useContext(PowerLoopContext);
 }
 
-/** "STEP 1" over a Play section, carrying that step's scroll target. */
+/** "STEP 1" over a Play section, in the accent as on iOS, carrying that step's scroll target. */
 export function PowerLoopEyebrow({step, anchor, className = ""}: {step: number; anchor: string; className?: string}) {
     return (
-        <p id={anchor} className={`scroll-mt-24 px-5 pb-2 pt-4 text-[10px] font-black uppercase tracking-[0.12em] text-white/40 ${className}`}>
+        <p
+            id={anchor}
+            className={`scroll-mt-24 px-5 pb-2 pt-4 text-[10px] font-black uppercase tracking-[0.12em] ${className}`}
+            style={{color: "rgb(var(--c-primary-text-400))"}}
+        >
             {stepEyebrow(step)}
         </p>
     );
