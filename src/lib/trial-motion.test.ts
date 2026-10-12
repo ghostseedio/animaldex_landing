@@ -69,7 +69,7 @@ const Reference = require("./__fixtures__/reference-renderer.cjs") as {
     create: (svg: unknown, sb: unknown, V: unknown, G: unknown) => {draw: (t: number) => void; beatIndexAt: (t: number) => number; poster: number; loop: number};
     compileFigure: (sb: unknown, id: string, V: unknown) => Array<Record<string, unknown>>;
     sampleFigure: (kf: unknown, t: number, V: unknown) => {joints: number[][]; x: number; y: number; o: number; facing: number};
-    ringLabel: (total: number, v: number) => string;
+    ringLabel: (total: number, v: number, countdown?: boolean) => string;
 };
 
 function canonical(node: {tag: string; attrs: Record<string, string>; children: unknown[]}, text: string | null): string {
@@ -232,8 +232,15 @@ test("ring labels: seconds under 100 s, then whole minutes, then whole hours", (
     assert.equal(ringLabel(5, 3), "3");
     assert.equal(ringLabel(1200, 725), "12m");
     assert.equal(ringLabel(7200, 3600), "1h");
-    for (const [total, v] of [[5, 3], [99, 99], [100, 59], [1200, 725], [5999, 5999], [6000, 7199], [7200, 3600], [3600, 0]]) {
-        assert.equal(ringLabel(total, v), Reference.ringLabel(total, v), `${total}, ${v}`);
+    // A countdown (hold) rounds up; a count-up (timer) rounds down.
+    assert.equal(ringLabel(120, 45, true), "1m");
+    assert.equal(ringLabel(120, 61, true), "2m");
+    assert.equal(ringLabel(1200, 725, false), "12m");
+    assert.equal(ringLabel(7200, 3600, true), "1h");
+    for (const countdown of [false, true]) {
+        for (const [total, v] of [[5, 3], [99, 99], [100, 59], [120, 1], [1200, 725], [5999, 5999], [6000, 7199], [7200, 3600], [7200, 3601], [3600, 0]]) {
+            assert.equal(ringLabel(total, v, countdown), Reference.ringLabel(total, v, countdown), `${total}, ${v}, ${countdown}`);
+        }
     }
 });
 
@@ -242,7 +249,7 @@ test("long hold and timer rings match the reference frame by frame", () => {
         v: 1, loop: 8,
         actors: {you: {kind: "figure", x: 70, pose: "sit"}},
         beats: [
-            {at: 0, caption: "Hold still for twenty minutes", events: [{type: "hold", actor: "you", seconds: 1200, at: 0.4, until: 3.6}]},
+            {at: 0, caption: "Hold still for two minutes", events: [{type: "hold", actor: "you", seconds: 120, at: 0.4, until: 3.6}]},
             {at: 3.8, caption: "Rest for two hours", events: [{type: "timer", seconds: 7200, at: 3.9, until: 7.0}]}
         ]
     }) as TrialStoryboard;
@@ -257,4 +264,8 @@ test("long hold and timer rings match the reference frame by frame", () => {
         assert.equal(canonical(svg, null), canonical(refSvg as never, null), `at ${t}`);
     }
     assert.match(virtualMotionInnerMarkup(svg), /\d+h</);
+    // The hold's last stretch reads "1m", never "0m".
+    ours.draw(3.5);
+    assert.match(virtualMotionInnerMarkup(svg), />1m</);
+    assert.doesNotMatch(virtualMotionInnerMarkup(svg), />0m</);
 });

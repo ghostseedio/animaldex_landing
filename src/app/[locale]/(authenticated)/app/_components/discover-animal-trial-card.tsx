@@ -161,7 +161,7 @@ export default function AnimalTrialCard({
             <AnimalTrialEvidence key={current.id} item={current} />
             {showsLoopInPlaceOfEvidence && motionStoryboard ? (
                 <div className="absolute inset-x-0 top-14 px-4">
-                    <TrialMotion storyboard={motionStoryboard} variant="compact" />
+                    <TrialMotion storyboard={motionStoryboard} variant="compact" compactLayout="row" />
                 </div>
             ) : null}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0)_38%,rgba(0,0,0,0.72)_100%)]" />

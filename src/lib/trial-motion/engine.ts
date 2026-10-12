@@ -50,10 +50,13 @@ export const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
  * Ring labels: a total under 100 s counts in seconds; longer totals count in whole minutes
  * ("20m"), and 6000 s or more in whole hours ("2h"), so four-digit seconds never overflow the ring.
  */
-export function ringLabel(total: number, v: number) {
+export function ringLabel(total: number, v: number, countdown = false) {
     if (total < 100) return String(v);
-    if (total < 6000) return Math.floor(v / 60) + "m";
-    return Math.floor(v / 3600) + "h";
+    // A countdown (`hold`) rounds up, so its last minute reads "1m", never "0m";
+    // a count-up (`timer`) rounds down.
+    const r = countdown ? Math.ceil : Math.floor;
+    if (total < 6000) return r(v / 60) + "m";
+    return r(v / 3600) + "h";
 }
 
 /* ------------------------------------------------------------------ figures */
@@ -274,7 +277,7 @@ export function createTrialMotionScene<N>(
                 const f = state(t), p = clamp((t - h.at) / (until - h.at));
                 set(rg, "transform", `translate(${f.P[0][0] - 2} ${f.P[0][1] - 30})`);
                 set(arc, "stroke-dashoffset", L * p);
-                doc.text(num, ringLabel(seconds, Math.max(1, Math.ceil(seconds * (1 - p)))));
+                doc.text(num, ringLabel(seconds, Math.max(1, Math.ceil(seconds * (1 - p))), true));
             });
         }
 

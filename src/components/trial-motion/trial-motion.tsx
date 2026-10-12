@@ -29,7 +29,8 @@ import {
  * as it did before.
  *
  * `full` puts the numbered caption steps under the stage, the active one lit.
- * `compact` is the stage alone (cards); its captions are still its label.
+ * `compact` (cards) is the stage with "STEP n OF m" and the active caption
+ * beside it, stacked under it when the row is narrow.
  */
 
 /** Lime as text steps down to a readable green on the light theme; as a fill it stays lime. */
@@ -56,6 +57,7 @@ export default function TrialMotion({
     variant = "full",
     posterMarkup = null,
     freezeAt = null,
+    compactLayout = "auto",
     className = ""
 }: {
     /** The raw `motion_storyboard` value, or one already parsed. Null renders nothing. */
@@ -65,11 +67,16 @@ export default function TrialMotion({
     posterMarkup?: string | null;
     /** Draw this one frame (seconds) and never animate: stills and visual QA. */
     freezeAt?: number | null;
+    /**
+     * Compact only. `auto` stacks the step under the stage when the row is under
+     * 360px; `row` always keeps it beside (a fixed-height card with no room to stack).
+     */
+    compactLayout?: "auto" | "row";
     className?: string;
 }) {
     const parsed = useMemo(() => parseTrialStoryboard(storyboard), [storyboard]);
     if (!parsed) return null;
-    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} className={className} />;
+    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} compactLayout={compactLayout} className={className} />;
 }
 
 function TrialMotionStage({
@@ -77,12 +84,14 @@ function TrialMotionStage({
     variant,
     posterMarkup,
     freezeAt,
+    compactLayout,
     className
 }: {
     storyboard: TrialStoryboard;
     variant: "full" | "compact";
     posterMarkup: string | null;
     freezeAt: number | null;
+    compactLayout: "auto" | "row";
     className: string;
 }) {
     const captions = useMemo(() => trialMotionCaptions(storyboard), [storyboard]);
@@ -182,52 +191,79 @@ function TrialMotionStage({
 
     const viewBox = `0 0 ${vocabulary.stage.width} ${vocabulary.stage.height}`;
 
+    const stage = (
+        <div
+            ref={stageRef}
+            role="img"
+            aria-label={label}
+            className="relative w-full overflow-hidden"
+            style={{aspectRatio: "16 / 9", background: STAGE_BACKGROUND}}
+        >
+            {posterMarkup && !scene ? (
+                <svg
+                    aria-hidden="true"
+                    viewBox={viewBox}
+                    className="absolute inset-0 h-full w-full"
+                    dangerouslySetInnerHTML={{__html: posterMarkup}}
+                />
+            ) : null}
+            <svg ref={svgRef} aria-hidden="true" viewBox={viewBox} className="absolute inset-0 h-full w-full" />
+        </div>
+    );
+
+    if (variant === "compact") {
+        // The stage with the active step beside it (Android `TrialMotionStyle.Compact`).
+        // The row is a size container: under 360px of row it stacks the step under
+        // the stage. The step is visible text only; the stage's label already reads
+        // every caption, so it is hidden from assistive tech. It renders on the
+        // server at the poster's step, so nothing shifts when the loop starts.
+        return (
+            <figure className={`w-full [container-type:inline-size] ${className}`}>
+                <div
+                    className={compactLayout === "row"
+                        ? "flex flex-row items-center gap-3"
+                        : "flex flex-col gap-2.5 [@container(min-width:360px)]:flex-row [@container(min-width:360px)]:items-center [@container(min-width:360px)]:gap-3"}
+                >
+                    <div className={compactLayout === "row" ? "w-[55%] max-w-[420px] shrink-0" : "w-full max-w-[420px] shrink-0 [@container(min-width:360px)]:w-[55%]"}>{stage}</div>
+                    <div aria-hidden="true" className="flex min-w-0 flex-1 flex-col gap-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.12em] tabular-nums" style={{color: "rgb(var(--c-white) / 0.45)"}}>
+                            Step {activeBeat + 1} of {captions.length}
+                        </p>
+                        <p className="line-clamp-3 text-[13px] font-semibold leading-[18px] text-white">{captions[activeBeat]}</p>
+                    </div>
+                </div>
+            </figure>
+        );
+    }
+
     return (
         // Capped so a wide sheet never blows the figure up or pushes the steps
         // below the fold; left-aligned with the content, 100% width under the cap.
-        <figure className={`flex w-full flex-col ${variant === "full" ? "max-w-[560px]" : "max-w-[420px]"} ${className}`}>
-            <div
-                ref={stageRef}
-                role="img"
-                aria-label={label}
-                className="relative w-full overflow-hidden"
-                style={{aspectRatio: "16 / 9", background: STAGE_BACKGROUND}}
-            >
-                {posterMarkup && !scene ? (
-                    <svg
-                        aria-hidden="true"
-                        viewBox={viewBox}
-                        className="absolute inset-0 h-full w-full"
-                        dangerouslySetInnerHTML={{__html: posterMarkup}}
-                    />
-                ) : null}
-                <svg ref={svgRef} aria-hidden="true" viewBox={viewBox} className="absolute inset-0 h-full w-full" />
-            </div>
-            {variant === "full" ? (
-                <ol aria-hidden="true" className="mt-3 flex flex-col gap-1.5">
-                    {captions.map((caption, index) => {
-                        const active = index === activeBeat;
-                        return (
-                            <li key={`${index}-${caption}`} className="flex items-start gap-2.5">
-                                <span
-                                    className="mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-[10px] font-black tabular-nums transition-colors duration-300"
-                                    style={active
-                                        ? {backgroundColor: NEON_FILL, color: C.dark}
-                                        : {backgroundColor: "rgb(var(--c-white) / 0.08)", color: "rgb(var(--c-white) / 0.45)"}}
-                                >
-                                    {index + 1}
-                                </span>
-                                <span
-                                    className="text-sm leading-5 transition-colors duration-300"
-                                    style={{color: active ? NEON_TEXT : "rgb(var(--c-white) / 0.5)", fontWeight: active ? 700 : 500}}
-                                >
-                                    {caption}
-                                </span>
-                            </li>
-                        );
-                    })}
-                </ol>
-            ) : null}
+        <figure className={`flex w-full max-w-[560px] flex-col ${className}`}>
+            {stage}
+            <ol aria-hidden="true" className="mt-3 flex flex-col gap-1.5">
+                {captions.map((caption, index) => {
+                    const active = index === activeBeat;
+                    return (
+                        <li key={`${index}-${caption}`} className="flex items-start gap-2.5">
+                            <span
+                                className="mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-[10px] font-black tabular-nums transition-colors duration-300"
+                                style={active
+                                    ? {backgroundColor: NEON_FILL, color: C.dark}
+                                    : {backgroundColor: "rgb(var(--c-white) / 0.08)", color: "rgb(var(--c-white) / 0.45)"}}
+                            >
+                                {index + 1}
+                            </span>
+                            <span
+                                className="text-sm leading-5 transition-colors duration-300"
+                                style={{color: active ? NEON_TEXT : "rgb(var(--c-white) / 0.5)", fontWeight: active ? 700 : 500}}
+                            >
+                                {caption}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ol>
         </figure>
     );
 }

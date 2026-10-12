@@ -244,8 +244,8 @@ export function TrialCard({
         <>
             <h4 className={`font-display text-2xl font-black leading-tight ${quiet ? "text-white/60" : "text-white"}`}>{trial.title}</h4>
 
-            {/* Compact Trial Loop: the stage alone. The steps are in the sheet,
-                and in the stage's label. Dimmed with the card while Training is owed. */}
+            {/* Compact Trial Loop: the stage with the active step beside it; every
+                step is in the sheet. Dimmed with the card while Training is owed. */}
             {trial.motionStoryboard && !complete ? (
                 <TrialMotion
                     storyboard={trial.motionStoryboard}
