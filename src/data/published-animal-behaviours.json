@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10",
+  "generatedAt": "2026-10-12",
   "source": "species_system_dynamics, teaser fields only, joined to published SEO species pages",
   "note": "Newly generated rows do not appear on the page until this snapshot is refreshed and deployed. The production build consumes this file only and never fetches Supabase.",
   "entries": [
@@ -896,24 +896,6 @@
       "closingLine": "Because the defence is passive and continuous, it operates as a low-frequency system."
     },
     {
-      "slug": "scolopendra-gigantea",
-      "name": "Amazonian Giant Centipede",
-      "archetype": "Hanging From a Cave Roof",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "The animal climbing a cave wall and anchoring its rear legs to the ceiling • The body held hanging free in the air below, in the flight path bats use to leave the roost • Bats struck in flight and held by the forcipules, the whole capture happening with nothing beneath the centipede at all",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 20 30 L 34 30 L 44 29 L 49 21 L 54 29 L 66 30 L 78 30 L 86 29 L 91 22 L 96 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A long motionless wait broken by sudden strikes, because the animal hangs still until something passes."
-      },
-      "closingLine": "Because the hunt is occasional, it operates as a low-frequency system."
-    },
-    {
       "slug": "amazonian-manatee",
       "name": "Amazonian Manatee",
       "archetype": "Flood-Season Feast, Dry-Season Fast",
@@ -1522,22 +1504,26 @@
       "closingLine": "Because a low-cost body converts poor food into size over very long periods, it is a low-frequency system."
     },
     {
-      "slug": "sitotroga-cerealella",
-      "name": "Angoumois Grain Moth",
-      "archetype": "Development Sealed in a Seed",
+      "slug": "angulate-tortoise",
+      "name": "Angulate Tortoise",
+      "archetype": "Single Gular Ramming Prong",
       "frequency": "LOW",
       "modes": [
         {
-          "label": "An egg laid on the surface of a single grain of wheat, maize or rice • The hatched larva boring in and sealing the entry behind it, then eating out the inside while the husk stays intact • The whole of development and pupation completed inside that one kernel, with the adult cutting a circular exit hole on emergence",
+          "label": "Armoured • Sun-timed • Slow",
           "frequency": "LOW"
+        },
+        {
+          "label": "Ramming • Levering • Overturning",
+          "frequency": "HIGH"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 14 29 L 26 31 L 36 27 L 46 23 L 56 21 L 66 24 L 76 28 L 86 30 L 94 30 L 100 30",
+        "pathD": "M 0 40 L 20 40 L 30 39 L 40 40 L 44 10 L 47 38 L 50 12 L 54 40 L 70 40 L 85 39 L 100 40",
         "viewBox": "0 0 100 50",
-        "description": "A slow internal development cycle, because everything happens inside the grain over weeks with nothing visible."
+        "description": "A slow, flat daily budget broken by one brief bout of sharp ramming charges."
       },
-      "closingLine": "Because development runs over weeks, it operates as a low-frequency system."
+      "closingLine": "A slow, armoured life budget with brief, forceful bouts of combat produces two operating modes: low-frequency living and high-frequency fighting."
     },
     {
       "slug": "anhinga",
@@ -1596,28 +1582,6 @@
         "description": "A long decline levelling into a flat low line, because the wild collapse ended in a small managed population held steady."
       },
       "closingLine": "Because the timescale is generational, it operates as a low-frequency system."
-    },
-    {
-      "slug": "odontomantis-planiceps",
-      "name": "Ant Mimic Mantis",
-      "archetype": "A Nymph Walking as Ant",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "An early nymph black, narrow-waisted and ant-sized, moving in the rapid jerky manner of an ant with the front legs held forward like antennae",
-          "frequency": "MID"
-        },
-        {
-          "label": "A later nymph and adult green and mantis-shaped, too large to pass as an ant, relying on stillness and foliage crypsis instead",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 20 L 5 30 L 10 19 L 15 31 L 20 21 L 26 30 L 31 20 L 37 31 L 44 27 L 52 33 L 60 31 L 68 34 L 76 32 L 84 34 L 92 32 L 100 34",
-        "viewBox": "0 0 100 50",
-        "description": "A quick jerky early rhythm settling into a slow still one, because the animal switches from imitating movement to avoiding it."
-      },
-      "closingLine": "The switch happens because the first stops being available rather than because the second is better, so it operates as a bimodal system."
     },
     {
       "slug": "ant-mimicking-spider",
@@ -2054,24 +2018,6 @@
         "description": "Two long feeding periods over a steady baseline — continuous demand rather than episodes of effort."
       },
       "closingLine": "Because a vast continuous demand is met by steady precise gathering, it is a mid-frequency system."
-    },
-    {
-      "slug": "irena-puella",
-      "name": "Asian Fairy-bluebird",
-      "archetype": "Colour From a Sponge",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Feather barbs containing a spongy keratin structure with air spaces of a consistent size but no regular arrangement • Light scattered by that structure reinforcing one wavelength regardless of the direction it is viewed from • A deep even blue that does not shift or flash with angle, unlike the iridescence of a starling or a sunbird",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 29 L 12 30 L 22 28 L 32 31 L 42 29 L 52 30 L 62 28 L 72 31 L 82 29 L 92 30 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A very even rhythm with little variation, because the property does not change with circumstance."
-      },
-      "closingLine": "Because the property is constant, it operates as a mid-frequency system."
     },
     {
       "slug": "asian-forest-tortoise",
@@ -2892,24 +2838,6 @@
       "closingLine": "Since browsing and moving run as a steady nightly cycle, it is a mid-frequency system."
     },
     {
-      "slug": "balantiocheilos-melanopterus",
-      "name": "Bala Shark",
-      "archetype": "Common in Shops, Gone Home",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Shoaling in fast-flowing river channels in Southeast Asia • Being farmed in enormous numbers for the aquarium trade • Having the wild population collapse over the same period without anyone noticing",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 7 26 L 14 30 L 21 25 L 28 30 L 35 26 L 42 30 L 49 25 L 56 30 L 63 26 L 70 30 L 77 25 L 84 30 L 91 26 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A steady shoaling rhythm without extremes, because a schooling river fish's day is continuous and even."
-      },
-      "closingLine": "Since shoaling and feeding are continuous, it operates as a mid-frequency system."
-    },
-    {
       "slug": "bald-eagle",
       "name": "Bald Eagle",
       "archetype": "Two Foveae in Each Eye",
@@ -2984,6 +2912,24 @@
         "description": "A brisk even rhythm — a small bird feeding and calling continuously through the day."
       },
       "closingLine": "Because feeding and calling run steadily through the day, it is a mid-frequency system."
+    },
+    {
+      "slug": "balkan-pond-turtle",
+      "name": "Balkan Pond Turtle",
+      "archetype": "Patterned Neck Above Plain Shell",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Basking • Submerged • Seasonal",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 10 40 L 16 30 L 24 30 L 30 40 L 40 40 L 46 30 L 54 30 L 60 40 L 72 44 L 88 44 L 100 44",
+        "viewBox": "0 0 100 50",
+        "description": "Low basking plateaus between spells in the water, then a long flat seasonal pause."
+      },
+      "closingLine": "Heat-dependent basking, slow feeding and long seasonal pauses make this a low-frequency system."
     },
     {
       "slug": "ball-python",
@@ -3064,24 +3010,6 @@
         "description": "A near-flat drift with a single slow undulation, the trace of an animal whose fastest state is still barely movement."
       },
       "closingLine": "Because every process is slow and metered against a water budget, it operates as a low-frequency system."
-    },
-    {
-      "slug": "telostylinus-lineolatus",
-      "name": "Banana Stalk Fly",
-      "archetype": "Offspring Shaped by Diet",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Males reared on rich or poor larval diets developing into large or small adults respectively • Those males transferring more than sperm at mating, including material that affects how the offspring develop • Offspring of well-fed fathers growing larger than offspring of poorly fed fathers, with no genetic difference between the two",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 12 28 L 22 31 L 32 27 L 42 24 L 52 22 L 62 25 L 72 28 L 82 30 L 92 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A slow generational cycle, because the effect is transmitted once per generation and appears in the next."
-      },
-      "closingLine": "Because the effect passes once per generation, it operates as a low-frequency system."
     },
     {
       "slug": "band-eyed-drone-fly",
@@ -3822,7 +3750,7 @@
     {
       "slug": "bengal-tiger",
       "name": "Bengal Tiger",
-      "archetype": "Snow-Silent Stalk Rush",
+      "archetype": "Cover-Silent Stalk Rush",
       "frequency": "LOW",
       "modes": [
         {
@@ -4248,6 +4176,24 @@
       "closingLine": "Because feeding runs as a steady daily selection, it is a mid-frequency system."
     },
     {
+      "slug": "black-river-turtle",
+      "name": "Black River Turtle",
+      "archetype": "Low-Contrast River Plunge",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Dark • Slow • Submerged",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 20 40 L 30 38 L 40 40 L 60 40 L 70 39 L 80 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A flat, low line with tiny ripples: a slow grazing life kept hidden by a colour that never switches off."
+      },
+      "closingLine": "A permanent colour doing the hiding, a slow plant diet and a long life leave almost nothing to spend in bursts, which is what makes this a low-frequency system."
+    },
+    {
       "slug": "black-sea-bass",
       "name": "Black Sea Bass",
       "archetype": "A Population That Moved North",
@@ -4354,24 +4300,6 @@
         "description": "A flat, low-activity line showing a deep-sea fish built for long, steady digestion with no separate high-frequency operating mode."
       },
       "closingLine": "That makes this a single-mode, low-frequency system: sparse opportunities, massive one-off intake, and long, steady processing between events."
-    },
-    {
-      "slug": "papilio-polyxenes",
-      "name": "Black Swallowtail",
-      "archetype": "A Pupa Held Upright",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A silk pad spun at the tail end and gripped by the cremaster, holding the base of the pupa to a stem • A loop of silk spun across the thorax and anchored at both ends, forming a girdle • The pupa held upright against the stem rather than hanging, so it sits in the posture and position of a broken twig or a leaf base",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 12 30 L 22 27 L 32 23 L 44 20 L 56 20 L 66 22 L 76 26 L 86 29 L 94 31 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "A long sustained motionless period, because the pupa is fixed in place for weeks or months."
-      },
-      "closingLine": "Because pupation runs across months, it operates as a low-frequency system."
     },
     {
       "slug": "black-swan",
@@ -4484,24 +4412,6 @@
         "description": "A gently undulating mid-line, representing ongoing cycles of web use and repair with a consistently visible structure."
       },
       "closingLine": "Because the spider’s foraging depends on this standing, signposted structure, its whole system runs as a rhythmic, mid-frequency operation: build, signal, intercept, repair, rather than slow stockpiling or brief explosive bursts."
-    },
-    {
-      "slug": "dendrocygna-autumnalis",
-      "name": "Black-bellied Whistling Duck",
-      "archetype": "Clutches Built by Several Females",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Females laying eggs in the nests of other females of the same species as well as in their own • Dump nests accumulating far more eggs than one bird laid or can cover, sometimes over fifty • Some of those nests abandoned because the clutch is uncoverable, while others hatch broods containing the young of several mothers",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 12 29 L 22 25 L 32 21 L 42 19 L 52 21 L 62 25 L 72 28 L 82 31 L 92 31 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "A single seasonal accumulation and decline, because eggs pile up over weeks and the outcome resolves at once."
-      },
-      "closingLine": "Because the cycle is annual, it operates as a low-frequency system."
     },
     {
       "slug": "black-billed-magpie",
@@ -4838,6 +4748,24 @@
         "description": "Calm continuous surface feeding on open water."
       },
       "closingLine": "That makes it a mid-frequency system: steady surface feeding organised around reach and recognition at range."
+    },
+    {
+      "slug": "black-rumped-flameback",
+      "name": "Black-rumped Flameback",
+      "archetype": "Hollow-Wood and Rattle Signalling",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Drumming • Calling • Paired",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 30 L 8 30 L 10 14 L 12 30 L 25 30 L 27 16 L 29 30 L 42 30 L 44 14 L 46 30 L 59 30 L 61 16 L 63 30 L 76 30 L 78 14 L 80 30 L 93 30 L 95 16 L 97 30 L 100 30",
+        "viewBox": "0 0 100 50",
+        "description": "Short, sharp call and drum bursts repeated at even intervals over a steady foraging baseline."
+      },
+      "closingLine": "Foraging and signalling run together on one continuous daily cycle, with no stored reserve to draw on and no single decisive burst, and that steady, repeated output makes the bird a mid-frequency system."
     },
     {
       "slug": "black-shouldered-kite",
@@ -5386,6 +5314,28 @@
       "closingLine": "Because nest building is seasonal, it operates as a low-frequency system."
     },
     {
+      "slug": "blue-crowned-motmot",
+      "name": "Blue-crowned Motmot",
+      "archetype": "Racket-Tipped Tail Wagging",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Still • Perched • Waiting",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Swinging • Racketed • Signalling",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 38 L 10 38 L 14 30 L 18 38 L 22 30 L 26 38 L 40 38 L 46 18 L 50 38 L 62 38 L 66 30 L 70 38 L 74 30 L 78 38 L 100 38",
+        "viewBox": "0 0 100 50",
+        "description": "A long still baseline with pairs of even tail swings and one brief sally for prey."
+      },
+      "closingLine": "A patient, low-cost perch with a rhythmic signal layered on top gives two operating modes, low-frequency waiting and mid-frequency display."
+    },
+    {
       "slug": "blue-footed-booby",
       "name": "Blue-footed Booby",
       "archetype": "Carotenoid Feet, Two-Day Fade",
@@ -5784,24 +5734,6 @@
       "closingLine": "Since the system earns its heat passively and spends its energy only at rare intervals, it is a low-frequency system."
     },
     {
-      "slug": "melanotaenia-boesemani",
-      "name": "Boeseman's Rainbowfish",
-      "archetype": "Colour That Emptied the Lakes",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A species confined to a small group of connected lakes in the Vogelkop peninsula of West Papua and nowhere else on earth • Males carrying a striking split colouring, blue-grey at the front and orange at the rear, that made them highly desirable in the aquarium trade • Enormous numbers exported from those lakes through the 1980s and 1990s, from a total range of a few square kilometres",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 22 L 10 24 L 20 27 L 30 30 L 38 32 L 48 34 L 58 35 L 68 34 L 78 35 L 88 34 L 96 35 L 100 34",
-        "viewBox": "0 0 100 50",
-        "description": "A decline flattening at a low level, because the population fell under collection and has stayed reduced."
-      },
-      "closingLine": "Because the decline runs across decades, it operates as a low-frequency system."
-    },
-    {
       "slug": "bog-turtle",
       "name": "Bog Turtle",
       "archetype": "A Turtle Kept Alive by Spring Seepage",
@@ -5862,24 +5794,6 @@
         "description": "Steady movement broken by very brief full-depth events, because the animal stalks constantly and jumps occasionally."
       },
       "closingLine": "Since jumps recur through the day, it operates as a high-frequency system."
-    },
-    {
-      "slug": "saimiri-boliviensis",
-      "name": "Bolivian Squirrel Monkey",
-      "archetype": "Canopy Fission-Fusion Web",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Social • Networked",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 20 Q 10 18 20 20 T 40 20 Q 50 22 60 20 T 80 20 Q 90 18 100 20",
-        "viewBox": "0 0 100 50",
-        "description": "A gently oscillating mid-level line showing ongoing, regular social and movement activity without extreme peaks or deep troughs."
-      },
-      "closingLine": "The result is a mid-frequency system built on rhythmic, ongoing social and spatial coordination: operational, networked and continuously maintained."
     },
     {
       "slug": "bombardier-beetle",
@@ -6306,24 +6220,6 @@
       "closingLine": "Since matching happens over minutes, it operates as a mid-frequency system."
     },
     {
-      "slug": "madagascar-diadem",
-      "name": "Brilliant Blue",
-      "archetype": "Defending a Sunlit Gap",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A male occupying a sunlit opening in vegetation and perching on a prominent leaf within it • Any passing insect intercepted and pursued, with rival males driven out and females approached • The same gap held for days, so the male is defending a position rather than a resource, because females passing through are what the position delivers",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 8 25 L 14 31 L 22 24 L 30 30 L 38 26 L 46 31 L 54 24 L 62 30 L 70 26 L 78 31 L 86 25 L 94 30 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "A repeating pattern of perching and sallying, because the male returns to the same leaf after every interception."
-      },
-      "closingLine": "Because interceptions recur constantly, it operates as a mid-frequency system."
-    },
-    {
       "slug": "brimstone-butterfly",
       "name": "Brimstone Butterfly",
       "archetype": "Overwintering as an Adult",
@@ -6600,22 +6496,22 @@
       "closingLine": "Since everything runs slowly and continuously, it operates as a low-frequency system."
     },
     {
-      "slug": "lanius-cristatus",
-      "name": "Brown Shrike",
-      "archetype": "Prey Spiked on a Thorn",
-      "frequency": "LOW",
+      "slug": "brown-roofed-turtle",
+      "name": "Brown Roofed Turtle",
+      "archetype": "Low-Profile Basking Shuttle",
+      "frequency": "MID",
       "modes": [
         {
-          "label": "Feet built for perching rather than for gripping and tearing, unlike a raptor's • Prey carried to a thorn, barbed wire or a sharp twig and pushed onto it • The spike holding the carcass while the hooked bill tears it, and the same larder storing surplus for later",
-          "frequency": "LOW"
+          "label": "Basking • Shuttling • Low-profile",
+          "frequency": "MID"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 10 27 L 18 31 L 26 25 L 34 30 L 44 26 L 52 30 L 60 24 L 68 30 L 78 27 L 86 31 L 94 28 L 100 30",
+        "pathD": "M 0 30 L 10 18 L 20 30 L 30 18 L 40 30 L 50 18 L 60 30 L 70 18 L 80 30 L 90 18 L 100 30",
         "viewBox": "0 0 100 50",
-        "description": "A patrolling rhythm with repeated captures, because the bird hunts from perches through the day."
+        "description": "Even rises and falls: haul out to bask, drop back to feed, repeated through the warm day."
       },
-      "closingLine": "Because captures recur through the day, it operates as a low-frequency system."
+      "closingLine": "The short shuttle between sun and water repeats many times a day with no long fasts or sudden bursts, and that even, repeated cycle is what gives a steady mid-frequency rhythm."
     },
     {
       "slug": "brown-shrimp",
@@ -6692,24 +6588,6 @@
         "description": "An almost featureless line, because the whole point of the system is the absence of any disturbance."
       },
       "closingLine": "Because flight is continuous, it operates as a mid-frequency system."
-    },
-    {
-      "slug": "anthreptes-malacensis",
-      "name": "Brown-throated Sunbird",
-      "archetype": "Nectar Taken While Standing Still",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A bird that perches beside a flower rather than hovering in front of it • A decurved bill and tubular tongue reaching into the corolla from that fixed position • Flowers selected partly for whether there is something to stand on, so the plant's structure determines which birds can use it",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 29 L 8 26 L 16 30 L 24 25 L 32 29 L 40 26 L 48 30 L 56 25 L 64 29 L 72 27 L 80 30 L 88 26 L 96 29 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "A busy rhythm of short flights between perches, because the bird moves constantly but never hovers for long."
-      },
-      "closingLine": "Because feeding is continuous, it operates as a mid-frequency system."
     },
     {
       "slug": "brownbanded-bamboo-shark",
@@ -6822,28 +6700,6 @@
         "description": "An almost perfectly level line, because the animal rests without moving for the whole of the day."
       },
       "closingLine": "Because the posture is held all day, it operates as a low-frequency system."
-    },
-    {
-      "slug": "bucephala-albeola",
-      "name": "Bufflehead",
-      "archetype": "Compact Cavity Circuit",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Foraging • Commuting • Social",
-          "frequency": "MID"
-        },
-        {
-          "label": "Sheltered • Stationary • Recovering",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 25 L 10 25 L 20 12 L 30 12 L 40 25 L 50 25 L 60 12 L 70 12 L 80 25 L 90 25 L 100 12",
-        "viewBox": "0 0 100 50",
-        "description": "Alternating mid-level activity plateaus with drops into low, sheltered periods, representing repeated returns to cavities between active bouts."
-      },
-      "closingLine": "Because the bird’s life is organized around cycling between these two structurally different operating states—mobile foraging and stationary cavity use—this is a bimodal system with a mid-frequency commuting mode anchored by a low-frequency shelter-return mode."
     },
     {
       "slug": "buffy-fish-owl",
@@ -7112,24 +6968,6 @@
         "description": "A quiet solitary nocturnal foraging rhythm."
       },
       "closingLine": "Slow, quiet and solitary, this is a low-frequency system."
-    },
-    {
-      "slug": "cichla-ocellaris",
-      "name": "Butterfly Peacock Bass",
-      "archetype": "Hunting Prey With No Defence",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A large visual daytime predator introduced into a lake whose fish had never encountered one • Native species showing no avoidance because nothing in their history selected for it • Whole guilds of small fish removed within a few years, and the effects propagating upward to birds and outward to mosquito numbers",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 24 L 10 22 L 20 25 L 28 28 L 36 31 L 44 33 L 52 35 L 62 35 L 72 36 L 82 35 L 92 36 L 100 36",
-        "viewBox": "0 0 100 50",
-        "description": "A normal rhythm collapsing into a flat depleted line, because the change is one-directional and does not recover."
-      },
-      "closingLine": "Because the collapse runs across years, it operates as a low-frequency system."
     },
     {
       "slug": "by-the-wind-sailor",
@@ -7490,6 +7328,28 @@
       "closingLine": "Since moves occur daily within a slow annual cycle, it operates as a low-frequency system."
     },
     {
+      "slug": "cape-dwarf-chameleon",
+      "name": "Cape Dwarf Chameleon",
+      "archetype": "Shrub-Bound Elastic Tongue Ambush",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Slow • Gripping • Shrub-bound",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Ballistic • Elastic • Tongue-strike",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 15 40 L 30 39 L 45 40 L 55 40 L 58 5 L 61 40 L 75 40 L 88 39 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Long, nearly flat stillness on a twig, then one narrow spike as the tongue fires, then stillness again."
+      },
+      "closingLine": "Patient movement within one patch sets a low baseline, while elastic energy stored and released in the tongue adds a separate explosive moment, so the system is bimodal: low-frequency living, high-frequency capture."
+    },
+    {
       "slug": "cape-golden-mole",
       "name": "Cape Golden Mole",
       "archetype": "Blind Digger Feeling for Footsteps in the Soil",
@@ -7696,24 +7556,6 @@
       "closingLine": "Because the cycle is annual, it operates as a low-frequency system."
     },
     {
-      "slug": "thryothorus-ludovicianus",
-      "name": "Carolina Wren",
-      "archetype": "Concealed Cavity Builder",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Guarded • Site-led",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 Q 10 28 20 30 T 40 30 Q 50 32 60 30 T 80 30 Q 90 28 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A gently undulating mid-level line showing steady, repeated investment in nest concealment and upkeep without extreme peaks or troughs."
-      },
-      "closingLine": "The system’s rhythm is a repeatable cycle of searching, building, lining, and guarding a protected interior space, which makes this a mid-frequency, rhythmic cavity-nesting strategy rather than a slow hoarding or explosive burst pattern."
-    },
-    {
       "slug": "carp",
       "name": "Carp",
       "archetype": "turbidity feedback engine",
@@ -7772,6 +7614,28 @@
       "closingLine": "Because visits are continuous, it operates as a mid-frequency system."
     },
     {
+      "slug": "carpet-chameleon",
+      "name": "Carpet Chameleon",
+      "archetype": "Barred Outline, Compressed Life",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Still • Barred • Outline-breaking",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Fast • Short-lived • Fecund",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 20 40 L 30 30 L 35 15 L 40 25 L 45 12 L 50 25 L 55 14 L 60 28 L 70 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A still baseline, then a short dense run of peaks as several clutches are packed into one brief adult life, then nothing."
+      },
+      "closingLine": "Defence that costs nothing but stillness runs alongside a breeding effort crammed into one short year, and those two opposite paces make the system bimodal, a low-frequency body plan carrying a high-frequency life history."
+    },
+    {
       "slug": "carrion-beetle",
       "name": "Carrion Beetle",
       "archetype": "Sulphide-Tuned Antennal Club",
@@ -7810,24 +7674,6 @@
         "description": "A mostly low, steady line for ongoing caching and memory, with a sharp dip upward (high activity) for a brief tool-use burst before returning to the low baseline."
       },
       "closingLine": "Because their biology is organized around long-horizon storage and memory with intermittent, opportunistic tool-use bursts, this is a bimodal system with a low-frequency caching base and a high-frequency problem-solving spike."
-    },
-    {
-      "slug": "ctenocephalides-felis",
-      "name": "Cat Flea",
-      "archetype": "An Adult That Stays Sealed",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A fully formed adult remaining inside its silk cocoon rather than emerging when development finishes • That adult waiting for weeks or months, resistant to insecticide and to drying while sealed • Emergence triggered by vibration, warmth and carbon dioxide, so it appears only when something is present to feed on",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 34 L 16 34 L 30 33 L 44 33 L 54 32 L 60 27 L 66 20 L 72 24 L 80 28 L 88 32 L 96 34 L 100 34",
-        "viewBox": "0 0 100 50",
-        "description": "A long flat dormant line with one abrupt emergence, because nothing happens until a host arrives and then everything does."
-      },
-      "closingLine": "Because the wait runs across months, it operates as a low-frequency system."
     },
     {
       "slug": "cattle-egret",
@@ -8224,24 +8070,6 @@
       "closingLine": "That makes it a phase-change system: wandering flock foraging and a late, rain-timed nesting season."
     },
     {
-      "slug": "tachycineta-meyeni",
-      "name": "Chilean Swallow",
-      "archetype": "A Bird Eating Only Flight",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A bird catching insects exclusively in flight, with a wide gape, short bill and long pointed wings and no ability to glean from surfaces • That food supply consisting entirely of insects that are airborne at the time, which is a small and variable fraction of the total • Aerial insectivores declining as a guild across several continents, faster than birds that can take insects from vegetation as well",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 27 L 8 31 L 16 25 L 24 30 L 32 26 L 40 31 L 48 25 L 56 30 L 64 26 L 72 31 L 80 25 L 88 30 L 96 27 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A fast continuous rhythm of sallies, because the bird feeds on the wing throughout the day without settling."
-      },
-      "closingLine": "Because feeding is continuous, it operates as a mid-frequency system."
-    },
-    {
       "slug": "chimpanzee",
       "name": "Chimpanzee",
       "archetype": "Watched-and-Copied Technique Transfer",
@@ -8548,6 +8376,28 @@
         "description": "A long flat line rising into one concentrated event and falling back, because everything happens in a few weeks of one month."
       },
       "closingLine": "Since the cycle is annual, it operates as a low-frequency system."
+    },
+    {
+      "slug": "christmas-tree-worm",
+      "name": "Christmas Tree Worm",
+      "archetype": "Ciliated Plume and Snap-Shut Tube",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Filtering • Ciliary • Continuous",
+          "frequency": "MID"
+        },
+        {
+          "label": "Reflex • Retract • Seal",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 22 L 6 20 L 12 22 L 18 20 L 24 22 L 30 20 L 34 22 L 35 48 L 42 48 L 50 36 L 58 26 L 64 22 L 70 20 L 76 22 L 82 20 L 88 22 L 94 20 L 100 22",
+        "viewBox": "0 0 100 50",
+        "description": "A steady filtering rhythm that drops to nothing in one instant, then climbs back slowly as the plumes re-open."
+      },
+      "closingLine": "Since the worm feeds by keeping cilia beating steadily and survives by all-or-nothing withdrawals, it works as a bimodal system: a mid-frequency filtering rhythm cut by high-frequency retractions."
     },
     {
       "slug": "cicada",
@@ -9010,24 +8860,6 @@
       "closingLine": "Because both the cave day and the drifting night are essential, it is a bimodal system."
     },
     {
-      "slug": "cephonodes-hylas",
-      "name": "Coffee hawk-moth",
-      "archetype": "High-Beat Feeding Station",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Rapid • Stabilized • Precision",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 25 L 5 5 L 10 25 L 15 8 L 20 25 L 25 6 L 30 25 L 35 7 L 40 25 L 45 5 L 50 25 L 55 8 L 60 25 L 65 6 L 70 25 L 75 7 L 80 25 L 85 5 L 90 25 L 95 8 L 100 25",
-        "viewBox": "0 0 100 50",
-        "description": "Tight, repeated high spikes around a midline, showing continuous rapid output with small oscillations rather than long rests."
-      },
-      "closingLine": "That makes it a single, high-frequency system built around fast, continuous stabilization rather than slow conservation."
-    },
-    {
       "slug": "coho-salmon",
       "name": "Coho Salmon",
       "archetype": "A Creek Year, Then a Rain-Timed Run",
@@ -9344,24 +9176,6 @@
       "closingLine": "Since soaring is continuous, it operates as a mid-frequency system."
     },
     {
-      "slug": "anthrenus-scrophulariae",
-      "name": "Common Carpet Beetle",
-      "archetype": "Larvae That Break Down Keratin",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A larva with gut conditions and enzymes capable of breaking the disulphide bonds that make keratin indigestible to almost everything • Wool, hair, feather, horn and dried skin therefore usable as food, in a world where those materials are otherwise effectively inert • Museum collections, textiles, carpets and stored specimens consumed as a result, because they are made of exactly that material",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 14 29 L 26 31 L 38 27 L 48 24 L 58 22 L 68 25 L 78 28 L 88 30 L 96 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A slow steady larval progression, because feeding continues over months at a constant low rate."
-      },
-      "closingLine": "Because larval development runs over months, it operates as a low-frequency system."
-    },
-    {
       "slug": "common-carpet-moth",
       "name": "Common Carpet Moth",
       "archetype": "Bands Running Across the Wings",
@@ -9634,24 +9448,6 @@
       "closingLine": "Because the song cycles many times a second, it operates as a mid-frequency system."
     },
     {
-      "slug": "dinopium-javanense",
-      "name": "Common Flameback",
-      "archetype": "Hammering Without Concussion",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Repeated strikes delivered at high speed with the bill, decelerating the head very sharply at each impact • A thickened spongy region of skull bone, an unequal upper and lower bill, and a hyoid apparatus wrapping around the skull, together spreading and absorbing the force • The brain small, tightly enclosed and oriented so the force passes across rather than through it, so almost none of the energy reaches it as damaging motion",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 3 31 L 6 26 L 9 31 L 12 27 L 15 31 L 18 26 L 22 31 L 26 27 L 30 31 L 34 26 L 40 30 L 46 27 L 52 31 L 58 26 L 66 31 L 74 27 L 82 31 L 90 26 L 96 30 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "An extremely rapid regular percussion, because the bird delivers strikes in fast repeated bursts."
-      },
-      "closingLine": "Because strikes come in fast bursts, it operates as a high-frequency system."
-    },
-    {
       "slug": "common-flesh-fly",
       "name": "Common Flesh Fly",
       "archetype": "Live Larvae Instead of Eggs",
@@ -9726,6 +9522,24 @@
         "description": "A steady careful nocturnal rhythm."
       },
       "closingLine": "That makes it a mid-frequency system: steady, careful and continuously mobile in three dimensions."
+    },
+    {
+      "slug": "common-giant-owl-butterfly",
+      "name": "Common Giant Owl Butterfly",
+      "archetype": "Closed-Wing Underside Eye Mark",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Resting • Marked • Still",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 8 30 L 14 40 L 30 42 L 50 42 L 70 42 L 84 40 L 90 30 L 96 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Two small flight humps at dawn and dusk around a long, flat day of still resting."
+      },
+      "closingLine": "A standing, passive display and a day spent mostly motionless keep spending low, which places the system at the low-frequency end."
     },
     {
       "slug": "common-grass-blue",
@@ -9956,6 +9770,24 @@
       "closingLine": "That makes it a bimodal system: long still calculation and one committed blind strike."
     },
     {
+      "slug": "common-land-iguana",
+      "name": "Common Land Iguana",
+      "archetype": "Cactus Water Reservoir Grazer",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Slow • Cactus-fed • Reserve",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 38 L 15 36 L 30 40 L 50 41 L 70 40 L 85 37 L 100 38",
+        "viewBox": "0 0 100 50",
+        "description": "A low, almost flat line with one long gentle sag through the dry months: little spent, much stored."
+      },
+      "closingLine": "A life organised around a stored-water food source, low daily expenditure and a long horizon produces a conservative, low-frequency system."
+    },
+    {
       "slug": "common-limpet",
       "name": "Common Limpet",
       "archetype": "Clamped Cone Returning Home",
@@ -9994,6 +9826,24 @@
         "description": "A working rhythm of descents and returns repeated through a day."
       },
       "closingLine": "Repeated diving through a long day makes this a mid-frequency system."
+    },
+    {
+      "slug": "common-madagascar-cat-snake",
+      "name": "Common Madagascar Cat Snake",
+      "archetype": "Slit-Pupil Dusk Hunt",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Nocturnal • Searching • Slit-pupilled",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 20 40 L 25 15 L 35 15 L 40 40 L 60 40 L 65 15 L 75 15 L 80 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Flat days in hiding and a regular raised block of hunting each night, repeated."
+      },
+      "closingLine": "Falling light, not chance or hunger, starts each hunt, so the same search recurs night after night and the snake runs as a regular mid-frequency system."
     },
     {
       "slug": "common-marble",
@@ -10212,24 +10062,6 @@
         "description": "Ordinary activity rising into a sharp event and then dropping to a sustained flat depressed state, because the collapse is not a return to normal."
       },
       "closingLine": "Since encounters recur through the night, it operates as a mid-frequency system."
-    },
-    {
-      "slug": "phasianus-colchicus",
-      "name": "Common Pheasant",
-      "archetype": "A Wild Bird Reared",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Tens of millions of birds reared in pens each year and released into the countryside before the shooting season • That release adding a very large seasonal mass of birds to the landscape at one time • Predator and scavenger populations, plant communities and invertebrates all responding to a food supply that appears and disappears on a calendar set by people",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 10 32 L 20 30 L 30 24 L 38 18 L 46 20 L 54 25 L 64 29 L 74 32 L 86 33 L 96 33 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "A sharp annual pulse and decline, because the population is created in a few weeks and consumed through the winter."
-      },
-      "closingLine": "Because the cycle is annual, it operates as a low-frequency system."
     },
     {
       "slug": "common-pill-woodlouse",
@@ -10468,24 +10300,6 @@
       "closingLine": "This architecture of staying put, staying hidden, and letting the environment bring resources defines a low-frequency system built on quiet, continuous intake."
     },
     {
-      "slug": "actitis-hypoleucos",
-      "name": "Common Sandpiper",
-      "archetype": "waterline bobbing patrol",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Waterline • Bobbing • Scanning",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 8 22 L 16 28 L 24 22 L 32 28 L 40 22 L 48 28 L 56 22 L 64 28 L 72 22 L 80 28 L 88 22 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "Steady mid-height bobbing pulses along a continuous patrol line."
-      },
-      "closingLine": "Success is measured in uninterrupted scanning loops, not in rare decisive events."
-    },
-    {
       "slug": "common-sawshark",
       "name": "Common Sawshark",
       "archetype": "Seafloor Rostrum Sweep",
@@ -10582,6 +10396,28 @@
         "description": "Long buried stretches alternating with a raised active period, because the animal is either in the sediment or working over it."
       },
       "closingLine": "Since feeding actions repeat through the night, it operates as a mid-frequency system."
+    },
+    {
+      "slug": "common-spider-tortoise",
+      "name": "Common Spider Tortoise",
+      "archetype": "Rain-Timed Patterned Dome",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Sheltered • Dormant • Patterned",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Rain-timed • Foraging • Single-egg",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 30 42 L 40 42 L 45 25 L 52 32 L 59 25 L 66 32 L 73 25 L 80 42 L 100 42",
+        "viewBox": "0 0 100 50",
+        "description": "A long flat dormant stretch, then a short run of regular peaks while the rains last, then back to rest."
+      },
+      "closingLine": "Rain is the switch: months of near-zero spending under a camouflaging shell give way to a short, rhythmic season of feeding and laying, which makes the system bimodal, low-frequency in the dry months and mid-frequency in the wet."
     },
     {
       "slug": "common-stingray",
@@ -10702,24 +10538,6 @@
         "description": "A busy daytime line of short foraging bursts, quiet from dusk to dawn."
       },
       "closingLine": "Because the system is a steady daytime routine of rapid, probing searches rather than either long rest or explosive action, it is a mid-frequency system."
-    },
-    {
-      "slug": "pterophylla-camellifolia",
-      "name": "Common True Katydid",
-      "archetype": "Males Alternating Rather Than Overlapping",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Males calling in an alternating pattern so that each song falls into the gap left by a neighbour • Each individual adjusting its timing within a fraction of a second to avoid overlapping the one before • The result an interleaved chorus in which every call remains separately audible rather than merging into noise",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 4 22 L 8 30 L 12 22 L 16 30 L 20 22 L 24 30 L 28 22 L 32 30 L 38 22 L 44 30 L 50 22 L 56 30 L 62 22 L 68 30 L 76 22 L 84 30 L 92 22 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "A precisely alternating rhythm with no overlap, because each call is fitted into the gap left by the last."
-      },
-      "closingLine": "Because the alternation runs several times a second, it operates as a high-frequency system."
     },
     {
       "slug": "common-vampire-bat",
@@ -10930,24 +10748,6 @@
         "description": "Even, medium-amplitude ripples showing ongoing, rhythmic group activity without long dormancy or explosive bursts."
       },
       "closingLine": "That makes the convict tang a mid-frequency system, defined by steady, rhythmic group activity anchored by always-on visual cohesion."
-    },
-    {
-      "slug": "plecturocebus-cupreus",
-      "name": "Coppery Titi Monkey",
-      "archetype": "Bonded Canopy Weave",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Coordinated • Linked",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 20 Q 5 18 10 20 T 20 20 T 30 20 Q 35 22 40 20 T 50 20 T 60 20 Q 65 18 70 20 T 80 20 T 90 20 Q 95 22 100 20",
-        "viewBox": "0 0 100 50",
-        "description": "A gently undulating midline showing ongoing, steady, shared activity with small, regular fluctuations that never fully separate."
-      },
-      "closingLine": "This produces a mid-frequency pattern: rhythmic, coordinated and networked, where intertwined bodies and behaviours keep the group supported and connected in real time."
     },
     {
       "slug": "coquerels-sifaka",
@@ -11380,6 +11180,24 @@
         "description": "A gently undulating midline showing steady, modest oscillations that represent continuous, precise activity without big bursts."
       },
       "closingLine": "Because its survival depends on this ongoing, well-matched rhythm of movement and feeding instead of extreme endurance or explosive bursts, its system expresses a single, mid-frequency pattern of niche-precise activity."
+    },
+    {
+      "slug": "crested-caracara",
+      "name": "Crested Caracara",
+      "archetype": "Ground-Walking Carrion and Roadside Patrol",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Walking • Patrolling • Scavenging",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 8 22 L 16 30 L 24 24 L 32 32 L 40 26 L 48 32 L 56 24 L 64 30 L 72 26 L 80 32 L 88 28 L 96 38 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A busy daylight line of repeated circuits, rising at dawn and settling at dusk, with no single dominant spike."
+      },
+      "closingLine": "Because the bird repeats these daily circuits through places where food is reliably exposed, rather than waiting for one fast strike, its whole system settles into a single steady mid-frequency rhythm."
     },
     {
       "slug": "crested-coua",
@@ -12016,6 +11834,24 @@
       "closingLine": "Since ripple events recur through the night, it operates as a mid-frequency system."
     },
     {
+      "slug": "dark-sword-grass",
+      "name": "Dark Sword-grass",
+      "archetype": "Night-Wind Seasonal Relay",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Nocturnal • Wind-borne • Seasonal",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 8 40 L 12 22 L 18 22 L 22 40 L 33 40 L 37 20 L 43 20 L 47 40 L 58 40 L 62 21 L 68 21 L 72 40 L 83 40 L 87 22 L 93 22 L 97 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Quiet days broken by sustained night flights, repeated on a steady nightly rhythm through the season."
+      },
+      "closingLine": "Because the movement is built from many similar night flights, repeated generation after generation in a seasonal back-and-forth, the system runs as a regular, repeating rhythm rather than a single burst or a long reserve, which places it in the mid-frequency band."
+    },
+    {
       "slug": "dark-eyed-junco",
       "name": "Dark-eyed Junco",
       "archetype": "Evolving Inside a Human Lifetime",
@@ -12232,6 +12068,24 @@
       "closingLine": "Because the cycle runs daily, it operates as a mid-frequency system."
     },
     {
+      "slug": "desert-dormouse",
+      "name": "Desert Dormouse",
+      "archetype": "Cold-Triggered Metabolic Shutdown",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Torpid • Sheltered • Frugal",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 10 40 L 14 32 L 18 40 L 30 41 L 34 33 L 38 41 L 50 44 L 70 45 L 85 45 L 90 38 L 94 44 L 100 44",
+        "viewBox": "0 0 100 50",
+        "description": "Short night foraging bumps over a low base, then a long flat stretch of torpor before activity returns."
+      },
+      "closingLine": "Because the main move is withdrawal and saving rather than any burst of activity, the operating rhythm is a low-frequency one, built around shutting demand down before reserves run out."
+    },
+    {
       "slug": "desert-hedgehog",
       "name": "Desert Hedgehog",
       "archetype": "Nocturnal Burrowed Forager",
@@ -12396,28 +12250,6 @@
       "closingLine": "That makes it a bimodal system: long sheltered days inside and short nightly gathering runs."
     },
     {
-      "slug": "ocypus-olens",
-      "name": "Devil's Coach Horse Beetle",
-      "archetype": "A Raised Tail Without Sting",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "The abdomen curved up over the back in a posture that reads immediately as a scorpion",
-          "frequency": "LOW"
-        },
-        {
-          "label": "Paired glands at the tip of that raised abdomen releasing a foul-smelling secretion into the air and onto anything close",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 16 31 L 28 30 L 36 18 L 42 30 L 48 16 L 54 31 L 62 27 L 68 24 L 74 28 L 82 26 L 88 29 L 94 26 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A quiet line with paired sharp episodes, because the display and the discharge happen together and briefly."
-      },
-      "closingLine": "The beetle is a fast ground predator of other invertebrates, so it operates as a bimodal system."
-    },
-    {
       "slug": "devils-flower-mantis",
       "name": "Devil's Flower Mantis",
       "archetype": "Petal-Mimic Strike Perch",
@@ -12534,6 +12366,24 @@
       "closingLine": "Because returns come from many small captures repeated nightly, it is a mid-frequency system."
     },
     {
+      "slug": "dice-snake",
+      "name": "Dice Snake",
+      "archetype": "Submerged Crevice Fish Search",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Basking • Diving • Fish-searching",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 35 L 10 35 L 15 15 L 25 15 L 30 35 L 40 35 L 45 15 L 55 15 L 60 35 L 70 35 L 75 15 L 85 15 L 90 35 L 100 35",
+        "viewBox": "0 0 100 50",
+        "description": "Regular blocks of underwater searching between short basks on the bank."
+      },
+      "closingLine": "Each dive is limited by body heat and breath, so warming on land and searching underwater alternate many times a day, and that repeated cycle settles the snake into a mid-frequency pattern."
+    },
+    {
       "slug": "differential-grasshopper",
       "name": "Differential Grasshopper",
       "archetype": "Soil-Banked Egg Outbreak",
@@ -12568,6 +12418,24 @@
         "description": "A low, gently wavering line showing mostly steady, subdued activity in the shade with only small fluctuations."
       },
       "closingLine": "That makes it a single-mode, low-frequency system built around living in the calm shade beneath busier movement above."
+    },
+    {
+      "slug": "dione-ratsnake",
+      "name": "Dione Ratsnake",
+      "archetype": "Generalist Coil Across Climates",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Generalist • Constricting • Wide-ranging",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 45 L 15 45 L 22 25 L 30 32 L 38 22 L 46 30 L 54 22 L 62 30 L 70 22 L 78 30 L 85 45 L 100 45",
+        "viewBox": "0 0 100 50",
+        "description": "Quiet winter at both ends, and a steady repeating rhythm of daytime hunting through the warm months."
+      },
+      "closingLine": "With one repeatable method applied day after day to whatever local prey appears, and no reliance on stored reserves or explosive strikes, the snake works as a steady mid-frequency forager."
     },
     {
       "slug": "discus-fish",
@@ -13222,6 +13090,24 @@
       "closingLine": "Repeated short excursions from cover makes this a mid-frequency system."
     },
     {
+      "slug": "dusky-sleeper",
+      "name": "Dusky Sleeper",
+      "archetype": "Root-Tangle Daylight Refuge",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Hidden • Still • Ambushing",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 44 L 30 44 L 34 43 L 40 44 L 44 34 L 46 44 L 52 44 L 55 33 L 57 44 L 64 44 L 80 44 L 84 43 L 90 44 L 93 34 L 95 44 L 100 44",
+        "viewBox": "0 0 100 50",
+        "description": "A flat, still line through the day with a few short, isolated strikes after dark."
+      },
+      "closingLine": "Staying put in one refuge, spending almost nothing on movement and letting prey arrive keeps its output flat and cheap, and that conserving pattern is what makes it a low-frequency system."
+    },
+    {
       "slug": "dwarf-caiman",
       "name": "Dwarf Caiman",
       "archetype": "Armour Front, Back and Eyelid",
@@ -13260,24 +13146,6 @@
         "description": "Two steady foraging periods over broken ground — a routine set by where fruit has fallen rather than by any event."
       },
       "closingLine": "Because the system converts steady walking and continuous modest intake into dispersal, it is a mid-frequency system."
-    },
-    {
-      "slug": "zenaida-auriculata",
-      "name": "Eared Dove",
-      "archetype": "Breeding at Impossible Density",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Colonies forming in dense scrub where nests are packed at extraordinary density across large areas • Millions of birds breeding within a single colony, with several nests in a single bush • Predators present in numbers but taking a small fraction, because the total is far beyond what any of them can consume",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 12 28 L 22 24 L 32 20 L 42 18 L 52 19 L 62 22 L 72 26 L 82 29 L 92 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A single enormous seasonal event, because the whole colony forms, breeds and disperses together."
-      },
-      "closingLine": "Because the cycle is seasonal, it operates as a low-frequency system."
     },
     {
       "slug": "earless-monitor-lizard",
@@ -13694,6 +13562,28 @@
       "closingLine": "That makes it a bimodal system: concealed daytime roosting and night-time perch-and-pounce hunting."
     },
     {
+      "slug": "eastern-slow-worm",
+      "name": "Eastern Slow-worm",
+      "archetype": "Covert Lizard with Shedding Tail",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Covert • Slow • Lizard-built",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Autotomy • Decoy • Escape",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 20 41 L 40 42 L 50 42 L 52 6 L 56 30 L 65 36 L 80 40 L 100 42",
+        "viewBox": "0 0 100 50",
+        "description": "A slow, low line under cover, one sharp spike when the tail is shed, and a long recovery."
+      },
+      "closingLine": "Slow warming, slow prey and a long life keep spending low almost all the time, yet the fracture plane allows one sudden, costly escape, so the system is bimodal: a low-frequency routine with a high-frequency emergency release."
+    },
+    {
       "slug": "spiny-lizard",
       "name": "Eastern Spiny Lizard",
       "archetype": "A Signal Under the Body",
@@ -13864,24 +13754,6 @@
       "closingLine": "Since encounters recur through the season, it operates as a mid-frequency system."
     },
     {
-      "slug": "anacridium-aegyptium",
-      "name": "Egyptian Grasshopper",
-      "archetype": "A Striped Eye, Hidden Pupil",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Sitting still on bark and stems with vertically striped eyes • Having the dark pseudopupil broken up by those stripes • Feeding on foliage at a slow deliberate pace without gathering into swarms",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 29 Q 16 28 32 29 Q 46 28 60 29 L 66 25 L 72 29 Q 86 28 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A very flat unvarying line with one small rise, because the animal moves slowly and almost nothing about it changes."
-      },
-      "closingLine": "Since the cycle runs across a year, it operates as a low-frequency system."
-    },
-    {
       "slug": "egyptian-mongoose",
       "name": "Egyptian Mongoose",
       "archetype": "Feint, Dodge and a Toxin-Blind Receptor",
@@ -13946,6 +13818,24 @@
         "description": "A flat summer line with one sustained rise through the cool rainy season."
       },
       "closingLine": "The system switches between a low sheltering phase and a productive rainy-season phase."
+    },
+    {
+      "slug": "electric-blue-acara",
+      "name": "Electric Blue Acara",
+      "archetype": "Pair-Guarded Spawning Stone Display",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Displaying • Guarding • Paired",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 30 L 8 18 L 16 30 L 24 18 L 32 30 L 40 18 L 48 30 L 56 18 L 64 30 L 72 18 L 80 30 L 88 18 L 100 30",
+        "viewBox": "0 0 100 50",
+        "description": "An even run of display peaks repeated across the brood period, each one short and similar to the last."
+      },
+      "closingLine": "Because defence is a steady cycle of displays and brief chases kept up across the whole brood period, rather than one long build or a single explosive fight, the system runs at a mid-frequency rhythm."
     },
     {
       "slug": "electric-catfish",
@@ -14114,24 +14004,6 @@
         "description": "A searching line broken by two sharp precisely placed events."
       },
       "closingLine": "That makes it a bimodal system: unremarkable searching and two surgically exact interventions."
-    },
-    {
-      "slug": "hemithea-tritonaria",
-      "name": "Emerald Moth",
-      "archetype": "Colour Dying With It",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A green produced by a pigment in the wing scales rather than by structure, unlike most green in insects • That pigment chemically unstable, breaking down with exposure to light and with time after death • Museum specimens fading to yellow, cream or white within years, so the preserved animal no longer matches the living one",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 24 L 10 26 L 20 25 L 30 28 L 40 27 L 50 30 L 60 29 L 70 32 L 80 31 L 90 33 L 96 32 L 100 34",
-        "viewBox": "0 0 100 50",
-        "description": "A steady line drifting downward, because the colour declines continuously from the moment the animal dies."
-      },
-      "closingLine": "Because the fading runs over years, it operates as a low-frequency system."
     },
     {
       "slug": "emerald-toucanet",
@@ -14324,6 +14196,24 @@
         "description": "A low tolerant line with small slow variation."
       },
       "closingLine": "That makes it a low-frequency system: slow, tolerant and built to persist through what cannot be escaped."
+    },
+    {
+      "slug": "espanola-lava-lizard",
+      "name": "Española Lava Lizard",
+      "archetype": "Island-Specific Push-Up Signal",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Displaying • Territorial • Island-specific",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 30 L 8 30 L 10 18 L 12 30 L 14 18 L 16 30 L 30 30 L 32 18 L 34 30 L 36 18 L 38 30 L 52 30 L 54 18 L 56 30 L 58 18 L 60 30 L 74 30 L 76 18 L 78 30 L 80 18 L 82 30 L 100 30",
+        "viewBox": "0 0 100 50",
+        "description": "Repeated paired bobs on a steady baseline: the same short display performed again and again."
+      },
+      "closingLine": "Holding ground depends on repeating the same cheap signal through the warm hours rather than on rare fights, and that recurring display is why the lizard runs as a mid-frequency system."
     },
     {
       "slug": "ethiopian-wolf",
@@ -14740,6 +14630,28 @@
         "description": "An irregular pattern of varied excursions, because the fish takes very different items and each one demands something different."
       },
       "closingLine": "Since feeding events recur through the day, it operates as a mid-frequency system."
+    },
+    {
+      "slug": "european-crane-fly",
+      "name": "European Crane Fly",
+      "archetype": "Leatherjacket-Funded Breeding Burst",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Underground • Feeding • Accumulating",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Emerging • Mating • Egg-laying",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 10 41 L 20 40 L 30 39 L 40 38 L 50 37 L 60 36 L 70 35 L 78 34 L 82 6 L 86 10 L 90 40 L 94 44 L 100 44",
+        "viewBox": "0 0 100 50",
+        "description": "A long, gently rising underground stretch, then one tall, narrow spike of adult breeding before the line falls away."
+      },
+      "closingLine": "With almost a year of slow saving underground and only days of spending above it, the two stages never overlap, and the crane fly is bimodal: low-frequency accumulation as a larva, high-frequency breeding as an adult."
     },
     {
       "slug": "european-eel",
@@ -15640,24 +15552,6 @@
       "closingLine": "That pattern of ongoing, crafted attraction makes the fire-maned bowerbird a mid-frequency system built on regular cycles of building, editing and showing."
     },
     {
-      "slug": "psilopogon-pyrolophus",
-      "name": "Fire-tufted Barbet",
-      "archetype": "A Call Like a Cicada",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A call consisting of a rising buzzing trill that closely resembles the sound of a cicada rather than of a bird • That call delivered from high in the canopy where the bird itself is invisible among leaves • Listeners including rivals, mates and observers frequently mistaking it for an insect, so the bird is present and unremarked",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 5 31 L 10 26 L 15 31 L 20 27 L 26 31 L 32 26 L 38 31 L 44 27 L 52 31 L 60 26 L 68 31 L 76 27 L 84 31 L 92 27 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A rapid buzzing rhythm with little variation, because the call is a sustained trill rather than a phrase."
-      },
-      "closingLine": "Because the call is a sustained trill, it operates as a mid-frequency system."
-    },
-    {
       "slug": "firebug",
       "name": "Firebug",
       "archetype": "Nymphs That Would Not Mature",
@@ -16224,22 +16118,22 @@
       "closingLine": "Because the sampling is nearly continuous, it operates as a high-frequency system."
     },
     {
-      "slug": "anaxyrus-fowleri",
-      "name": "Fowler's Toad",
-      "archetype": "Species Separated Only by Song",
+      "slug": "fox-moth",
+      "name": "Fox Moth",
+      "archetype": "Overwintered Larva, Sealed Pupa",
       "frequency": "LOW",
       "modes": [
         {
-          "label": "Two toad species overlapping in range, breeding in the same ponds and fully capable of producing fertile hybrids • Males giving distinctly different calls, a short nasal scream in one and a long musical trill in the other • Females responding to their own species' call and not the other, so the boundary between two species rests on an acoustic preference and nothing else",
+          "label": "Banked • Dormant • Sealed",
           "frequency": "LOW"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 12 29 L 22 26 L 32 22 L 42 20 L 52 21 L 62 25 L 72 28 L 82 30 L 92 30 L 100 30",
+        "pathD": "M 0 40 L 10 37 L 20 34 L 30 36 L 38 43 L 60 44 L 66 40 L 72 46 L 88 46 L 94 38 L 100 40",
         "viewBox": "0 0 100 50",
-        "description": "A single concentrated breeding season, because the whole interaction happens during a few weeks of calling."
+        "description": "A low line throughout: a gentle summer feeding rise, a flat winter, a brief spring bask, the stillest sealed pupal stretch, then emergence."
       },
-      "closingLine": "Because breeding is annual, it operates as a low-frequency system."
+      "closingLine": "One long feeding season funds a winter of waiting, a sealed pupal stage and a short adult life, so energy moves in a single slow arc of banking and spending, and that arc is what makes this a low-frequency system."
     },
     {
       "slug": "fox-squirrel",
@@ -16392,6 +16286,28 @@
         "description": "A jittery baseline punctuated by violent instantaneous spikes, because the response is all-or-nothing and extremely fast."
       },
       "closingLine": "Because the response is near-instantaneous, it operates as a high-frequency system."
+    },
+    {
+      "slug": "freshwater-eel",
+      "name": "Freshwater Eel",
+      "archetype": "Fat-Banked Silvering Ocean Run",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Growing • Storing • Settled",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Silvered • Unfed • Travelling",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 15 41 L 30 40 L 45 39 L 58 38 L 62 24 L 68 30 L 74 24 L 80 30 L 86 24 L 92 30 L 96 24 L 100 48",
+        "viewBox": "0 0 100 50",
+        "description": "A long, slowly rising growth phase, then a steady run of daily rises and dives that ends at spawning."
+      },
+      "closingLine": "Long accumulation followed by one sustained, unrefuelled journey gives two structural modes: low-frequency growing and mid-frequency travelling."
     },
     {
       "slug": "freshwater-pearl-mussel",
@@ -16668,6 +16584,24 @@
         "description": "A steady mid-height waveform with small regular oscillations, representing continuous patrolling and frequent local responses rather than long quiet stretches or extreme bursts."
       },
       "closingLine": "Because the system relies on ongoing, rhythmic activity and continuous visual signaling rather than long dormancy or rare explosive efforts, it operates as a mid-frequency pattern built around persistent territorial display and defense."
+    },
+    {
+      "slug": "gau-banded-iguana",
+      "name": "Gau Banded Iguana",
+      "archetype": "One-Island Canopy Leaf Browser",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Leaf-fed • Slow-living • Island-bound",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 41 L 12 40 L 20 37 L 28 40 L 45 41 L 54 37 L 62 40 L 80 41 L 88 37 L 94 40 L 100 41",
+        "viewBox": "0 0 100 50",
+        "description": "A flat, low line with slight daytime rises for basking and feeding in the canopy."
+      },
+      "closingLine": "A cheap diet, little movement, slow breeding and a single small range add up to a low-frequency system that runs on patience and has no second population to fall back on."
     },
     {
       "slug": "gaur",
@@ -17058,6 +16992,28 @@
         "description": "A very long flat floor ending in one narrow burst."
       },
       "closingLine": "That makes it a bimodal system: a very long accumulation and a single unrepeatable expenditure."
+    },
+    {
+      "slug": "giant-chameleon",
+      "name": "Giant Chameleon",
+      "archetype": "Outsized Open-Country Tongue Catapult",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Slow • Swaying • Exposed",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Ballistic • Elastic • Sudden",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 16 40 L 22 38 L 30 40 L 33 6 L 35 40 L 55 40 L 60 38 L 68 40 L 71 8 L 73 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Long, low stretches of slow travel broken by single narrow spikes where the tongue fires."
+      },
+      "closingLine": "Long slow phases of travel and waiting, broken by brief catapult strikes, give two separate operating states: a low baseline and a high-frequency feeding burst, which makes a bimodal system."
     },
     {
       "slug": "giant-clam",
@@ -17786,6 +17742,28 @@
         "description": "A sequence of small identical working strokes climbing gradually — the rhythm of a fold being made one crease at a time."
       },
       "closingLine": "Because the system turns steady daily folding into a small number of well-protected offspring, it is a mid-frequency system."
+    },
+    {
+      "slug": "giraffe-necked-weevil",
+      "name": "Giraffe-necked Weevil",
+      "archetype": "Neck-Lever Contests, Leaf Cradles",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Pushing • Neck-led • Repeated",
+          "frequency": "MID"
+        },
+        {
+          "label": "Folded • Sealed • Provisioned",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 38 L 8 38 L 12 20 L 16 38 L 20 20 L 24 38 L 34 40 L 50 40 L 60 39 L 66 21 L 70 39 L 74 21 L 78 39 L 90 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Bouts of repeated neck contests between long, slow stretches of leaf cutting and rolling."
+      },
+      "closingLine": "Two different rhythms therefore run the species, repeated short contests among males and long, careful building by females, and reproduction would fail without either, which makes it a bimodal system with a mid-frequency contest mode and a low-frequency cradle mode."
     },
     {
       "slug": "glass-catfish",
@@ -18532,24 +18510,6 @@
         "description": "A long even travelling rhythm punctuated twice by narrow spikes, most of the trace being movement that leads to nothing."
       },
       "closingLine": "Because a long economical assessment phase funds a rare and hazardous commitment, this is a bimodal system."
-    },
-    {
-      "slug": "phyllium-bioculatum",
-      "name": "Gray's Leaf Insect",
-      "archetype": "Eggs Carried Away by Ants",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Eggs dropped to the forest floor with a hard sculptured shell that resembles a plant seed • A fleshy structure on the shell corresponding to the elaiosome of an ant-dispersed seed • Ants carrying the eggs into their nests, eating that structure and discarding the intact egg in the refuse chamber, where it develops underground and protected",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 14 29 L 26 31 L 38 28 L 48 25 L 58 22 L 68 25 L 78 28 L 88 30 L 96 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A slow seasonal cycle, because eggs are dropped over months and develop underground over further months."
-      },
-      "closingLine": "Because development runs over months, it operates as a low-frequency system."
     },
     {
       "slug": "grayling",
@@ -19722,24 +19682,6 @@
       "closingLine": "Because their whole build and daily rhythm center on staying tucked into structure and using brief ambush bursts rather than continuous roaming, the green moray is best understood as a single, low-frequency system built around patient, place-based strikes."
     },
     {
-      "slug": "myzus-persicae",
-      "name": "Green Peach Aphid",
-      "archetype": "Generations Nested Inside Each Other",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Females producing live daughters without mating, each daughter genetically identical to the mother • Those daughters already containing their own developing embryos at the moment they are born • Three generations therefore present inside one animal, so the population grows faster than the generation time alone would allow",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 6 27 L 12 31 L 18 26 L 24 30 L 30 25 L 36 30 L 42 24 L 48 29 L 56 23 L 64 28 L 72 22 L 80 27 L 88 21 L 96 26 L 100 24",
-        "viewBox": "0 0 100 50",
-        "description": "A rapid oscillation with a rising trend, because generations turn over quickly and the total keeps climbing."
-      },
-      "closingLine": "Because generations turn over in days, it operates as a high-frequency system."
-    },
-    {
       "slug": "green-peafowl",
       "name": "Green Peafowl",
       "archetype": "A Train That Is Shaken",
@@ -20078,28 +20020,6 @@
         "description": "Active variation giving way to a long flat depressed line, because the animal genuinely alternates between two physiological states."
       },
       "closingLine": "Applying the structural test, these are two physiologies, making it a bimodal system."
-    },
-    {
-      "slug": "cepaea-nemoralis",
-      "name": "Grovesnail",
-      "archetype": "Moisture-Sealed Shell Refuge",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Sealed • Resting • Conserving",
-          "frequency": "LOW"
-        },
-        {
-          "label": "Foraging • Rhythmic • Exposed",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 10 L 20 10 Q 30 25 40 25 L 60 25 Q 70 40 80 40 L 100 40",
-        "viewBox": "0 0 100 50",
-        "description": "A higher-activity plateau that sinks into a lower, flatter level, showing the shift from exposed foraging to sealed retreat."
-      },
-      "closingLine": "Because the snail’s survival depends on switching between an exposed, moderate-paced foraging state and a sealed, low-output refuge state, this is a bimodal system anchored by a low-frequency retreat mode and a mid-frequency activity mode."
     },
     {
       "slug": "guanaco",
@@ -20672,6 +20592,24 @@
         "description": "A flat line broken by nothing at all — the animal's entire strategy is to remain where it is."
       },
       "closingLine": "Because the whole system is built on remaining still in a specific place, it is a low-frequency system."
+    },
+    {
+      "slug": "helmeted-chameleon",
+      "name": "Helmeted Chameleon",
+      "archetype": "Highland Body-Warmed Gestation",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Retaining • Basking • Live-bearing",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 43 L 10 42 L 20 37 L 30 33 L 40 32 L 50 35 L 60 41 L 70 43 L 80 42 L 90 37 L 100 34",
+        "viewBox": "0 0 100 50",
+        "description": "A low, gentle daily swell as a female basks to warm the young she is carrying."
+      },
+      "closingLine": "Long retention, daily basking and a slow reproductive turnover make this a low-frequency system built on holding and warming rather than on speed."
     },
     {
       "slug": "helmeted-curassow",
@@ -21614,6 +21552,24 @@
       "closingLine": "That makes it a high-frequency system: rapid, expensive and dependent on constant refuelling."
     },
     {
+      "slug": "hump-snout-lizard",
+      "name": "Hump Snout Lizard",
+      "archetype": "Male-Enlarged Snout Ornament",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Still • Perched • Ornamented",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 22 42 L 28 38 L 34 42 L 64 42 L 70 37 L 76 42 L 100 42",
+        "viewBox": "0 0 100 50",
+        "description": "Long motionless stretches with rare, small movements between perches."
+      },
+      "closingLine": "Long motionless waits, little travel and a fixed ornament in place of repeated active displays make this a low-frequency system."
+    },
+    {
       "slug": "humpback-anglerfish",
       "name": "Humpback Anglerfish",
       "archetype": "Bacterial Lure and Expandable Gulp",
@@ -21808,28 +21764,6 @@
         "description": "An even feeding rhythm erupting into scattered overlapping peaks."
       },
       "closingLine": "That makes it a bimodal system: steady mixed feeding and a brief co-ordinated scatter."
-    },
-    {
-      "slug": "imperial-moth",
-      "name": "Imperial Fruit-sucking Moth",
-      "archetype": "A Larva Becoming a Face",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A large larva resting stretched along a stem, brown and mottled, resembling a dead twig or a strip of bark",
-          "frequency": "LOW"
-        },
-        {
-          "label": "On disturbance the larva rears and contracts the front segments, expanding a pair of enormous eyespots and a row of white marks that read as a face with teeth",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 22 31 L 38 31 L 48 30 L 52 12 L 56 33 L 60 14 L 64 31 L 72 31 L 84 31 L 92 30 L 96 14 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "A long flat line broken by violent sudden episodes, because the display is instantaneous and everything else is stillness."
-      },
-      "closingLine": "So it operates as a bimodal system."
     },
     {
       "slug": "inca-tern",
@@ -22414,24 +22348,6 @@
       "closingLine": "Since laying and development recur within days, it operates as a high-frequency system."
     },
     {
-      "slug": "oryzias-latipes",
-      "name": "Japanese Rice Fish",
-      "archetype": "Upturned Mouth, Flattened Head",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A mouth opening upward rather than forward, set on a head flattened along the top • Eyes placed high on the skull with an unobstructed view of the underside of the surface film • Feeding on what is trapped in or resting on the top few millimetres, taken continuously through the day",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 6 24 L 11 30 L 17 25 L 23 30 L 29 24 L 35 29 L 41 25 L 47 30 L 53 24 L 59 29 L 65 25 L 71 30 L 77 24 L 83 29 L 89 25 L 95 30 L 100 27",
-        "viewBox": "0 0 100 50",
-        "description": "A close-packed shallow rhythm that never stops and never rises far, because the feeding is a continuous series of very small takes."
-      },
-      "closingLine": "Because the taking is a continuous series of very small events through the day, it operates as a mid-frequency system."
-    },
-    {
       "slug": "japanese-sea-nettle",
       "name": "Japanese Sea Nettle",
       "archetype": "A Bloom From the Seabed",
@@ -22506,46 +22422,6 @@
         "description": "A rapid, even stitch of small movements and small meals — many low peaks, none of them large."
       },
       "closingLine": "Because the animal runs on frequent small returns and continuous cautious movement rather than on stored fat or explosive escape, it is a mid-frequency system."
-    },
-    {
-      "slug": "melogale-orientalis",
-      "name": "Javan Ferret-Badger",
-      "archetype": "Digging With the Snout Leading",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A long mobile flexible snout pushed into leaf litter and soft soil ahead of the body • Prey located by scent at close range and then worked out with the snout and forefeet together • Earthworms, grubs and soil invertebrates taken from a substrate that gives no visual information at all",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 8 32 L 16 28 L 26 23 L 36 19 L 46 20 L 56 24 L 66 28 L 76 31 L 86 33 L 94 33 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "A single nocturnal foraging period, because the animal works after dark and shelters through the day."
-      },
-      "closingLine": "Because foraging is nightly, it operates as a mid-frequency system."
-    },
-    {
-      "slug": "lonchura-leucogastroides",
-      "name": "Javan Munia",
-      "archetype": "Seed-Head Flock, Two-Bird Nest",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Flocking • Seed-cracking • Chattering",
-          "frequency": "MID"
-        },
-        {
-          "label": "Pairing • Weaving • Nesting",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 12 26 L 24 29 L 36 27 L 48 28 L 56 38 L 66 40 L 76 39 L 84 38 L 92 29 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "A busy flocking line that settles into a quieter nesting phase and back."
-      },
-      "closingLine": "That makes it a bimodal system: flock feeding on seeds and paired nest-building."
     },
     {
       "slug": "javan-myna",
@@ -22690,6 +22566,28 @@
         "description": "A rapid series of tall, irregular bounds with no settled rhythm."
       },
       "closingLine": "Short, volatile and explosive, this is a high-frequency system."
+    },
+    {
+      "slug": "jerusalem-cricket",
+      "name": "Jerusalem Cricket",
+      "archetype": "Burrow-Bound Body and Abdomen Drumming",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Burrowing • Slow-growing • Buffered",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Drumming • Patterned • Seismic",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 44 L 20 43 L 40 42 L 50 42 L 52 30 L 54 42 L 56 30 L 58 42 L 60 30 L 62 42 L 64 30 L 66 42 L 80 41 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A low, almost flat underground line with one cluster of evenly spaced drumming beats in the middle."
+      },
+      "closingLine": "Years of slow, soil-buffered growth with little wasted movement, plus a repeated vibration code for finding partners, make it a bimodal system: low-frequency life underground with a mid-frequency drumming rhythm."
     },
     {
       "slug": "golden-jewel-beetle",
@@ -22940,6 +22838,24 @@
         "description": "A sustained travelling and grazing rhythm across open ground."
       },
       "closingLine": "Sustained daily travel makes this a mid-frequency system."
+    },
+    {
+      "slug": "kikiki-huna-fairyfly",
+      "name": "Kikiki Huna Fairyfly",
+      "archetype": "Bristle-Winged Miniature Body",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Miniature • Enclosed • Economical",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 44 L 20 44 L 40 43 L 60 43 L 70 36 L 74 42 L 78 37 L 82 42 L 100 43",
+        "viewBox": "0 0 100 50",
+        "description": "A long flat stretch of enclosed growth, then a short, small flicker of adult flight."
+      },
+      "closingLine": "The design spends very little material on anything, and growth is paid for by one closed parcel rather than by continued feeding, which places the system at the low-frequency end; how the adult finds its hosts remains the main unknown."
     },
     {
       "slug": "killdeer",
@@ -23402,6 +23318,24 @@
       "closingLine": "Since flicks recur constantly, it operates as a mid-frequency system."
     },
     {
+      "slug": "ladder-snake",
+      "name": "Ladder Snake",
+      "archetype": "Ladder-to-Stripe Ontogenetic Shift",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Searching • Constricting • Striped",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 34 L 6 24 L 12 26 L 18 34 L 30 34 L 36 24 L 42 26 L 48 34 L 60 34 L 66 24 L 72 26 L 78 34 L 90 34 L 96 24 L 100 30",
+        "viewBox": "0 0 100 50",
+        "description": "Repeated searching bouts along walls and burrows, each followed by a rest."
+      },
+      "closingLine": "A routine of repeated searching bouts, shifted from daytime in spring toward dusk in hot summers, makes this a steady mid-frequency system."
+    },
+    {
       "slug": "lady-amhersts-pheasant",
       "name": "Lady Amherst's Pheasant",
       "archetype": "Ground Scratcher Hiding a Courtship Cape",
@@ -23620,6 +23554,24 @@
       "closingLine": "Because everything in those years runs very slowly, it is a low-frequency system."
     },
     {
+      "slug": "lasioglossum-albescens",
+      "name": "Lasioglossum albescens",
+      "archetype": "Communal Entrance, Private Cells",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Foraging • Communal • Provisioning",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 32 L 5 20 L 10 32 L 15 20 L 20 32 L 28 34 L 33 20 L 38 32 L 43 20 L 48 32 L 56 34 L 61 20 L 66 32 L 71 20 L 76 32 L 84 34 L 89 20 L 94 32 L 100 34",
+        "viewBox": "0 0 100 50",
+        "description": "Paired foraging trips out and back, repeated cell after cell, with short pauses at the shared entrance."
+      },
+      "closingLine": "Because one steady provisioning rhythm of out-and-back trips, repeated cell after cell through a common door, drives the whole nest, it runs as a mid-frequency system."
+    },
+    {
       "slug": "laughing-kookaburra",
       "name": "Laughing Kookaburra",
       "archetype": "Group-Timed Dawn Call",
@@ -23716,24 +23668,6 @@
         "description": "A low, nearly flat line of continuous slow grazing on one alga."
       },
       "closingLine": "The whole system is a single slow mode: sitting on the food, draining it, and borrowing its colour."
-    },
-    {
-      "slug": "sarasinula-linguaeformis",
-      "name": "Leaf-eating Slug",
-      "archetype": "Seedlings Severed Before They Establish",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A flattened shell-less body moving under litter and soil surface at night in humid conditions • A radula rasping through the soft stems of germinating seedlings at or just below ground level • The seedling severed and dying, so the damage is total for that plant rather than partial, and a field can fail before anything is visible above ground",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 10 31 L 18 27 L 28 22 L 38 20 L 48 22 L 58 26 L 68 30 L 78 33 L 88 33 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "A single nocturnal feeding period, because the animal works after dark in humid conditions and hides by day."
-      },
-      "closingLine": "Because activity is nightly, it operates as a low-frequency system."
     },
     {
       "slug": "leafcutter-ant",
@@ -23834,24 +23768,6 @@
       "closingLine": "This is not a seasonal coat or a growth stage but an active reconfiguration of the same system to the context it is in, which is why it is an adaptive system."
     },
     {
-      "slug": "prionailurus-bengalensis",
-      "name": "Leopard Cat",
-      "archetype": "Living With People Without Joining",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A small wild cat drawn into early farming villages by the rodents that grain stores attract • Remains from Chinese Neolithic sites showing the species living commensally alongside people thousands of years ago • The relationship ending there, with no domestication, so the cats stayed wild while the same process elsewhere produced the domestic cat",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 10 30 L 18 25 L 28 21 L 38 20 L 48 22 L 58 26 L 68 30 L 78 33 L 88 33 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "A nocturnal cycle without any long-term change, because the animal's pattern has stayed the same throughout."
-      },
-      "closingLine": "Because the pattern runs nightly, it operates as a mid-frequency system."
-    },
-    {
       "slug": "leopard-gecko",
       "name": "Leopard Gecko",
       "archetype": "Eyelids, No Toe Pads, Fat in the Tail",
@@ -23944,6 +23860,28 @@
         "description": "A long slow approach rising to a single suspended peak and subsiding, because everything builds toward one prolonged event."
       },
       "closingLine": "Since the cycle runs across a season, it operates as a low-frequency system."
+    },
+    {
+      "slug": "leopard-toby",
+      "name": "Leopard Toby",
+      "archetype": "Toxic Skin, Water-Pumped Swelling",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Chemical • Standing • Unhurried",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Pumping • Swelling • Rigid",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 20 40 L 40 40 L 58 40 L 60 6 L 68 8 L 76 30 L 84 40 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A flat, low-cost line of permanent defence, broken once by a sharp swelling that holds briefly and then subsides."
+      },
+      "closingLine": "With a chemical guard that costs nothing to keep and an inflation response that is costly but rarely used, the fish operates as a bimodal system of low-frequency standing defence and high-frequency swelling."
     },
     {
       "slug": "leopard-tortoise",
@@ -24196,22 +24134,22 @@
       "closingLine": "That makes it a bimodal system: a long still watch and a brief, steep, highly visible commitment."
     },
     {
-      "slug": "aramus-guarauna",
-      "name": "Limpkin",
-      "archetype": "A Bill Matching the Spiral",
-      "frequency": "LOW",
+      "slug": "lined-day-gecko",
+      "name": "Lined Day Gecko",
+      "archetype": "Sunlit Leaf-Matched Forager",
+      "frequency": "MID",
       "modes": [
         {
-          "label": "A long bill whose tip curves slightly to the right and whose mandibles leave a gap along their length rather than closing flush • That curve matching the right-handed spiral of an apple snail shell, so the tip follows the whorl inward • The muscle holding the snail into its shell cut and the body drawn out whole, leaving the shell undamaged and the bird able to take another immediately",
-          "frequency": "LOW"
+          "label": "Basking • Darting • Leaf-matched",
+          "frequency": "MID"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 12 28 L 22 31 L 32 26 L 42 30 L 52 27 L 62 31 L 72 26 L 82 30 L 92 28 L 100 30",
+        "pathD": "M 0 34 L 10 28 L 14 18 L 18 28 L 30 28 L 34 16 L 38 28 L 50 28 L 54 18 L 58 28 L 70 28 L 74 17 L 78 28 L 90 28 L 94 18 L 100 30",
         "viewBox": "0 0 100 50",
-        "description": "A steady deliberate rhythm, because the bird works methodically through snails one after another."
+        "description": "Basking plateaus broken by short, regular dashes for food through the warm hours."
       },
-      "closingLine": "Because feeding is steady, it operates as a low-frequency system."
+      "closingLine": "Repeated cycles of warming, short dashes and feeding through every sunny day give a steady mid-frequency rhythm."
     },
     {
       "slug": "lion-tailed-macaque",
@@ -24292,28 +24230,6 @@
         "description": "A very slow browsing rhythm with no urgency anywhere in it."
       },
       "closingLine": "Slow heavy browsing makes this a single low-frequency system."
-    },
-    {
-      "slug": "egretta-caerulea",
-      "name": "Little Blue Heron",
-      "archetype": "Wearing a Different Species' Colour",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A juvenile in entirely white plumage, indistinguishable at distance from a snowy egret, foraging within egret flocks and tolerated by them",
-          "frequency": "MID"
-        },
-        {
-          "label": "An adult in slate blue plumage, excluded from egret flocks and foraging alone in shallow water with slow deliberate movements",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 24 L 8 29 L 16 23 L 24 30 L 32 25 L 40 30 L 46 32 L 54 35 L 62 33 L 70 36 L 78 34 L 86 36 L 94 34 L 100 36",
-        "viewBox": "0 0 100 50",
-        "description": "An active social rhythm giving way to a slow solitary one, because the bird changes from a flock member to a lone hunter."
-      },
-      "closingLine": "The two states are different systems: one social and dependent on being mistaken for something else, the other solitary and dependent on acquired skill, so it operates as a bimodal system."
     },
     {
       "slug": "little-dragonfish",
@@ -24528,24 +24444,6 @@
         "description": "Daily bouts of web building and trapping between long, flat resting spells."
       },
       "closingLine": "The system is bimodal: renewed trapping and stick-like rest."
-    },
-    {
-      "slug": "condylostylus-longicornis",
-      "name": "Long-legged Fly",
-      "archetype": "Escaping Faster Than Vision Allows",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "A visual system detecting the approach of a looming object in a few thousandths of a second • Take-off initiated before the image has been fully resolved, using a coarse early signal rather than a complete one • The fly airborne within about five milliseconds of the stimulus, faster than any deliberate response could be assembled",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 6 31 L 12 27 L 16 12 L 20 32 L 26 28 L 34 31 L 40 27 L 46 13 L 50 32 L 56 28 L 64 31 L 70 27 L 76 12 L 80 32 L 88 28 L 96 30 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A jittery baseline with instantaneous vertical departures, because the escape is faster than anything else the animal does."
-      },
-      "closingLine": "Because the response is measured in milliseconds, it operates as a high-frequency system."
     },
     {
       "slug": "long-legged-fly",
@@ -25620,24 +25518,6 @@
       "closingLine": "Because the system runs on continuous walking search with many modest returns, it is a mid-frequency system."
     },
     {
-      "slug": "metopograpsus-messor",
-      "name": "Mangrove Crab",
-      "archetype": "Tidal Burrow Bastion",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Anchored • Sheltered • Defensive",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 40 L 15 40 Q 25 38 35 40 L 50 40 Q 60 38 70 40 L 85 40 L 100 40",
-        "viewBox": "0 0 100 50",
-        "description": "A low, steady line with small undulations, showing a stable, continuously maintained defensive base with only minor routine fluctuations."
-      },
-      "closingLine": "That makes it a low-frequency system: anchored, shelter-centric, and built around the quiet stability of a mud fortress in a restless environment."
-    },
-    {
       "slug": "mangrove-horseshoe-crab",
       "name": "Mangrove Horseshoe Crab",
       "archetype": "Eggs Carrying a Nerve Poison",
@@ -25788,28 +25668,6 @@
         "description": "A steady rise and fall like banking flight between wave crests and troughs."
       },
       "closingLine": "Because the system rests on low-cost sustained flight, it is a mid-frequency system."
-    },
-    {
-      "slug": "araschnia-levana",
-      "name": "Map Butterfly",
-      "archetype": "A Form Chosen by Light",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A spring form emerging from overwintered pupae, orange with black markings, flying in April and May",
-          "frequency": "LOW"
-        },
-        {
-          "label": "A summer form emerging from pupae formed in long days, black with a white band and looking like a different species entirely",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 10 30 L 18 24 L 26 21 L 34 25 L 42 31 L 50 33 L 56 25 L 62 15 L 68 12 L 74 17 L 82 26 L 90 32 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "Two distinct episodes of different height and shape, because the two generations are genuinely different insects."
-      },
-      "closingLine": "The two forms are separated by a threshold rather than by a gradient, so it operates as a phase-change system."
     },
     {
       "slug": "marabou-stork",
@@ -26186,6 +26044,24 @@
       "closingLine": "Because everything runs at a very low rate, it is a low-frequency system."
     },
     {
+      "slug": "masked-lovebird",
+      "name": "Masked Lovebird",
+      "archetype": "Bill-Carried Domed Cavity Nest",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Building • Enclosed • Lasting",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 44 L 10 42 L 20 40 L 30 38 L 40 36 L 50 35 L 60 34 L 80 34 L 100 34",
+        "viewBox": "0 0 100 50",
+        "description": "A low, gentle rise of many small bill-loads that levels into a flat, lasting plateau once the chamber stands."
+      },
+      "closingLine": "Because effort goes slowly into one durable structure that the birds then live inside, rather than into quick bursts or a daily circuit, the operating rhythm is low-frequency."
+    },
+    {
       "slug": "masked-owl",
       "name": "Masked Owl",
       "archetype": "One Ear Higher Than the Other",
@@ -26206,24 +26082,6 @@
         "description": "Long flat listening stretches broken by very brief strikes."
       },
       "closingLine": "That is a bimodal system."
-    },
-    {
-      "slug": "fluvicola-nengeta",
-      "name": "Masked Water Tyrant",
-      "archetype": "Edge-wading Scout Forager",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Perch-scan • Darts",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 10 30 Q 15 18 20 30 L 30 30 Q 35 19 40 30 L 50 30 Q 55 20 60 30 L 70 30 Q 75 19 80 30 L 90 30 Q 95 21 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "Even, medium-height ripples: repeated short excursions from a stable level representing regular forays out and back."
-      },
-      "closingLine": "Because its whole system is built around these repeated mid-length cycles rather than long stillness or extreme bursts, the Masked Water Tyrant operates as a single, mid-frequency pattern."
     },
     {
       "slug": "mata-mata",
@@ -26584,46 +26442,6 @@
       "closingLine": "That makes it a bimodal system: productive tunnelling and long rest in the deep nest."
     },
     {
-      "slug": "locusta-migratoria",
-      "name": "Migratory Locust",
-      "archetype": "The Density Phase Switch",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Dispersed • Independent",
-          "frequency": "MID"
-        },
-        {
-          "label": "Collective • Amplifying • Mobile",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 34 L 20 34 L 40 33 L 55 32 L 62 30 L 66 20 L 70 10 L 76 8 L 84 7 L 100 7",
-        "viewBox": "0 0 100 50",
-        "description": "A stable baseline that changes sharply after a density threshold."
-      },
-      "closingLine": "This is best understood as a phase-change system: the important event is the threshold where the rules of the whole system change."
-    },
-    {
-      "slug": "ara-militaris",
-      "name": "Military Macaw",
-      "archetype": "Preening the Head Another Cannot",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A bird able to preen every feather on its body with its own bill except those on its head and neck • Partners working through each other's head feathers, removing parasites and realigning barbs that cannot be reached alone • The exchange repeated daily, so the only part of the plumage that cannot be self-maintained is maintained by someone else",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 27 L 8 31 L 16 25 L 24 30 L 32 26 L 40 31 L 48 25 L 56 30 L 64 26 L 72 31 L 80 25 L 88 30 L 96 27 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A regular daily rhythm, because the exchange happens repeatedly and reliably between the same birds."
-      },
-      "closingLine": "Because the exchange is daily, it operates as a mid-frequency system."
-    },
-    {
       "slug": "milk-snake",
       "name": "Milk Snake",
       "archetype": "Borrowed Coral-Snake Banding",
@@ -26680,28 +26498,6 @@
         "description": "A quick light flutter of small even peaks, because the animal is tiny and works in short sunlit bursts between rests."
       },
       "closingLine": "Because the feeding and flying run at one quick, light, repeated tempo, it operates as a mid-frequency system."
-    },
-    {
-      "slug": "orius-insidiosus",
-      "name": "minute pirate bug",
-      "archetype": "Micro-Perch Piercing Hunter",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Still • Stalking • Waiting",
-          "frequency": "LOW"
-        },
-        {
-          "label": "Rapid • Piercing • Seizure",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 38 L 20 38 L 40 38 L 55 10 L 60 38 L 80 38 L 95 8 L 100 38",
-        "viewBox": "0 0 100 50",
-        "description": "Long flat low-activity stretches broken by brief, sharp spikes representing sudden ambush strikes and rapid return to stillness."
-      },
-      "closingLine": "The system is built around a low-frequency waiting and stalking baseline punctuated by high-frequency, high-intensity ambush events, so the minute pirate bug is best described as a bimodal low–high ambush-strike system."
     },
     {
       "slug": "mirror-spider",
@@ -27172,24 +26968,6 @@
       "closingLine": "That makes it a bimodal system: flattened daytime concealment and night hunting."
     },
     {
-      "slug": "anas-fulvigula",
-      "name": "Mottled Duck",
-      "archetype": "A Life in One Marsh",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A dabbling duck that does not migrate, spending its entire life within one coastal marsh system • Every requirement for the whole year, including moult, breeding and winter feeding, met inside that one area • Nothing about the population buffered by movement, so a change to that marsh affects the birds immediately and completely rather than being escaped",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 29 L 12 27 L 22 30 L 32 26 L 42 29 L 52 27 L 62 30 L 72 26 L 82 29 L 92 28 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A steady even rhythm through the year, because nothing about the animal's life is seasonal in location."
-      },
-      "closingLine": "Because the cycle is annual and local, it operates as a low-frequency system."
-    },
-    {
       "slug": "mouflon",
       "name": "Mouflon",
       "archetype": "Rank Read Off the Curl",
@@ -27648,6 +27426,24 @@
         "description": "Long low stretches of settled activity on the ground, with two moderate, rounded commuting peaks representing regular water-carrying flights before returning to a low, stable baseline."
       },
       "closingLine": "The result is a bimodal rhythm: a low-frequency, ground-based, conservative living mode anchored around chicks and seed patches, coupled with a mid-frequency, timed shuttle mode that regularly extends care far beyond the comfort zone of local resources."
+    },
+    {
+      "slug": "namib-desert-beetle",
+      "name": "Namib Desert Beetle",
+      "archetype": "Waxed Shell with Wetting Bumps",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Sealed • Waxed • Frugal",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 18 43 L 22 34 L 26 42 L 46 43 L 64 44 L 68 33 L 72 42 L 88 43 L 100 43",
+        "viewBox": "0 0 100 50",
+        "description": "A flat, sealed baseline with only small lifts on the occasional fog morning."
+      },
+      "closingLine": "Slow spending against a thin, unreliable trickle of supply places it at the low-frequency end."
     },
     {
       "slug": "napoleon-wrasse",
@@ -29068,24 +28864,6 @@
       "closingLine": "That makes this a low-frequency system defined by durable attachment, patient suspension-feeding and minimal, timing-based movement."
     },
     {
-      "slug": "colias-eurytheme",
-      "name": "Orange Sulphur",
-      "archetype": "Sunlit Wing Signal Panel",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Visual • Broadcast",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 25 Q 5 5 10 25 T 20 25 T 30 25 T 40 25 T 50 25 T 60 25 T 70 25 T 80 25 T 90 25 T 100 25",
-        "viewBox": "0 0 100 50",
-        "description": "Even, repeating peaks representing regular wing flashes produced by continuous flight wingbeats."
-      },
-      "closingLine": "Because the signaling is built into regular movement and relies on ongoing, rhythmic activity rather than rare bursts or deep reserves, this is a mid-frequency system driven by repeated, coordinated visual pulses."
-    },
-    {
       "slug": "orange-headed-thrush",
       "name": "Orange-headed Thrush",
       "archetype": "Flicking Litter to Find",
@@ -29278,24 +29056,6 @@
       "closingLine": "Because the display runs seasonally against a continuous background, it operates as a bimodal system."
     },
     {
-      "slug": "pernis-orientalis",
-      "name": "Oriental Honey Buzzard",
-      "archetype": "Specialized Wasp-Comb Forager",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Targeted • Tool-like • Foraging",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 20 L 15 22 L 30 18 L 45 21 L 60 19 L 75 22 L 90 18 L 100 20",
-        "viewBox": "0 0 100 50",
-        "description": "A steady mid-level waveform with small, regular undulations showing repeated, focused foraging actions rather than long dormancy or explosive bursts."
-      },
-      "closingLine": "This makes it a mid-frequency system: not built for single huge bursts or deep torpor, but for ongoing, repeatable, specialized nest-raiding using anatomical \"tools\" that turn a dangerous resource into a reliable food source."
-    },
-    {
       "slug": "oriental-latrine-fly",
       "name": "Oriental Latrine Fly",
       "archetype": "Timing Death by Who Arrives",
@@ -29366,24 +29126,6 @@
         "description": "A long series of identical delivery events at a steady interval."
       },
       "closingLine": "That makes it a mid-frequency system: rhythmic, sustained and defined by continuous provisioning rather than by any burst of effort."
-    },
-    {
-      "slug": "zosterops-palpebrosus",
-      "name": "Oriental White-eye",
-      "archetype": "A Flock of Several Species",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Small parties moving through canopy and joined by drongos, minivets, babblers, woodpeckers and flycatchers • Each species foraging at a different height and in a different manner, so competition stays low while numbers stay high • Many more eyes watching for raptors, and insects flushed by one species taken by another",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 27 L 8 31 L 16 25 L 24 30 L 32 26 L 40 31 L 48 25 L 56 30 L 64 26 L 72 31 L 80 25 L 88 30 L 96 27 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A continuous busy rhythm, because the flock moves and forages constantly through the canopy."
-      },
-      "closingLine": "Because foraging is continuous, it operates as a mid-frequency system."
     },
     {
       "slug": "orinoco-mata-mata-turtle",
@@ -29934,42 +29676,6 @@
         "description": "A gentle, even ripple showing a calm, repeating mid-level activity pattern without sharp spikes or long flat pauses."
       },
       "closingLine": "Because their whole system is built around a rhythmic, ongoing pattern of moderate activity and conspicuous but calm presence, this is a single mid-frequency system driven by patterned, steady behavior rather than bursts or deep reserves."
-    },
-    {
-      "slug": "campaea-perlata",
-      "name": "Pale Beauty Moth",
-      "archetype": "A Moth Without Outline",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Wings of pale translucent green-white scaled thinly enough that the surface beneath shows faintly through them • The moth resting flat against lichen-covered bark rather than holding the wings up • No clear boundary between the insect and the substrate, so the outline a searching bird looks for does not exist",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 22 31 L 38 31 L 52 31 L 64 30 L 76 31 L 88 31 L 96 31 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "An almost perfectly level line, because the moth rests without moving for the whole of the day."
-      },
-      "closingLine": "Because the posture is held all day, it operates as a low-frequency system."
-    },
-    {
-      "slug": "dicaeum-erythrorhynchos",
-      "name": "Pale-billed Flowerpecker",
-      "archetype": "Seed Passed in Minutes",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Mistletoe berries swallowed whole and passed through a shortened gut that bypasses the gizzard entirely • The seed voided within minutes, still coated in the sticky viscin the fruit carries • The bird wiping its vent along the branch it is perched on to remove that seed, which glues it to bark where mistletoe can germinate",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 27 L 5 31 L 10 25 L 15 31 L 21 26 L 27 31 L 33 25 L 40 30 L 47 26 L 54 31 L 61 25 L 69 30 L 77 26 L 85 31 L 93 26 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A very rapid rhythm with no pauses, because the whole process from swallowing to depositing takes minutes."
-      },
-      "closingLine": "Because the passage takes minutes, it operates as a high-frequency system."
     },
     {
       "slug": "pallass-cat",
@@ -30730,24 +30436,6 @@
       "closingLine": "Because the scanning is continuous, it operates as a high-frequency system."
     },
     {
-      "slug": "hypsipetes-philippinus",
-      "name": "Philippine Bulbul",
-      "archetype": "A Bird Liking Edges",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A generalist frugivore taking fruit from a very wide range of trees rather than specialising on any • Occupying secondary growth, plantation edge and regenerating clearings as readily as closed forest • Depositing seeds of pioneer and forest trees into cleared ground, so the bird that benefits from disturbance also reverses it",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 29 L 10 27 L 20 30 L 30 26 L 40 29 L 50 27 L 60 30 L 70 26 L 80 29 L 90 28 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A steady untroubled rhythm, because the bird moves and feeds continuously without strong seasonal pattern."
-      },
-      "closingLine": "Because feeding is continuous, it operates as a mid-frequency system."
-    },
-    {
       "slug": "philippine-crocodile",
       "name": "Philippine Crocodile",
       "archetype": "Small-Bodied Village Coexistence",
@@ -31022,6 +30710,28 @@
       "closingLine": "Because both the swimming and the breathing run as a continuous steady rhythm, it is a mid-frequency system."
     },
     {
+      "slug": "pigmy-rattlesnake",
+      "name": "Pigmy Rattlesnake",
+      "archetype": "Faint-Buzz Ambush Viper",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Coiled • Waiting • Quiet-warning",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Strike • Envenomate • Release",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 43 L 30 43 L 32 38 L 34 43 L 62 43 L 63 5 L 65 43 L 100 43",
+        "viewBox": "0 0 100 50",
+        "description": "Long, flat waits with a small blip for a warning buzz and one narrow spike for the strike."
+      },
+      "closingLine": "Long, cheap waits and close-range warnings form a low baseline, and the strike is a separate high-frequency burst, so the two states together make a bimodal system."
+    },
+    {
       "slug": "pika",
       "name": "Pika",
       "archetype": "Cut, Dried and Stacked",
@@ -31056,24 +30766,6 @@
         "description": "Bursts of rapid identical blows separated by short pauses."
       },
       "closingLine": "That makes it a mid-frequency system: steady, repetitive and defined by opening access rather than by speed."
-    },
-    {
-      "slug": "glomeris-marginata",
-      "name": "Pill Millipede",
-      "archetype": "Segmented Roll-Armor Body",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Compact • Armored • Conserving",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 40 L 20 40 Q 35 38 50 40 T 80 40 L 100 40",
-        "viewBox": "0 0 100 50",
-        "description": "A low, steady line with a slight dip, representing mostly inactive, tightly protected periods with minimal fluctuation in activity."
-      },
-      "closingLine": "Because the whole system is built around a single, low-activity, armor-first response that trades motion for security, the pill millipede is a clear low-frequency system."
     },
     {
       "slug": "pin-tailed-whydah",
@@ -31212,20 +30904,20 @@
     {
       "slug": "pink-spotted-hawkmoth",
       "name": "Pink-spotted Hawkmoth",
-      "archetype": "A Head Drawn Out",
-      "frequency": "LOW",
+      "archetype": "A Proboscis Past the Body",
+      "frequency": "HIGH",
       "modes": [
         {
-          "label": "Resting head-up along a grass blade or stem • Carrying a long conical head and slanted face that continues the line of the stem • Moving slowly and turning to keep the narrow profile toward an observer",
-          "frequency": "LOW"
+          "label": "Hovering in front of a flower after dark • Uncoiling a proboscis longer than the body into a deep corolla • Taking nectar no shorter-tongued insect can reach",
+          "frequency": "HIGH"
         }
       ],
       "waveform": {
-        "pathD": "M 0 29 Q 18 28 36 29 Q 52 28 66 29 L 72 26 L 78 29 Q 90 29 100 28",
+        "pathD": "M 0 30 L 4 23 L 8 31 L 12 22 L 17 30 L 21 23 L 25 31 L 30 22 L 34 30 L 39 23 L 44 31 L 48 22 L 53 30 L 58 23 L 62 31 L 67 22 L 72 30 L 77 23 L 82 31 L 88 22 L 94 30 L 100 28",
         "viewBox": "0 0 100 50",
-        "description": "A very flat slow line with a single small disturbance, because the animal is motionless for long periods and moves deliberately."
+        "description": "A rapid fine oscillation maintained throughout, because hovering requires continuous wingbeats and the visits follow one another."
       },
-      "closingLine": "Since the cycle runs annually, it operates as a low-frequency system."
+      "closingLine": "Since wingbeats and visits recur constantly, it operates as a high-frequency system."
     },
     {
       "slug": "pinyon-jay",
@@ -34648,6 +34340,24 @@
       "closingLine": "Because its feeding, safety and movement are all organized around this repeated grip-and-return cycle rather than continuous roaming or bursts, its whole biology expresses a low-frequency system built on stable anchoring and rhythmic reuse of the same hold."
     },
     {
+      "slug": "rougheye-rockfish",
+      "name": "Rougheye Rockfish",
+      "archetype": "Cold-Slope Slow-Maturing Live Bearer",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Slow-growing • Sheltering • Long-lived",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 42 L 15 41 L 30 40 L 45 39 L 55 38 L 60 36 L 65 38 L 70 36 L 75 38 L 80 36 L 85 38 L 90 36 L 95 38 L 100 36",
+        "viewBox": "0 0 100 50",
+        "description": "A very slow climb through decades of growth, then a long low run of small yearly breeding pulses."
+      },
+      "closingLine": "Because its output is spread thinly across decades of slow growth and repeated breeding, with little spent on movement, the rockfish is a single low-frequency system."
+    },
+    {
       "slug": "rove-beetle",
       "name": "Rove Beetle",
       "archetype": "A Toxin From Lodgers",
@@ -34862,24 +34572,6 @@
       "closingLine": "This makes their system bimodal: a dominant low-frequency mode of route maintenance and cautious foraging, and a high-frequency mode of explosive, pathway-bound sprinting when danger or movement demands it."
     },
     {
-      "slug": "furnarius-rufus",
-      "name": "Rufous Hornero",
-      "archetype": "A Clay Oven and Corridor",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Mud and dung carried beakful by beakful and built up in courses that are allowed to dry between them • A domed chamber formed with a side entrance and an internal wall creating a curved passage • The nest baking hard in the sun into a rigid shell that lasts years and is used by many other species afterwards",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 12 29 L 22 26 L 32 22 L 42 20 L 52 21 L 62 24 L 72 27 L 82 30 L 92 31 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "A long seasonal build and decline, because the nest takes weeks of accumulation and is then simply occupied."
-      },
-      "closingLine": "Because the cycle is annual, it operates as a low-frequency system."
-    },
-    {
       "slug": "rufous-potoo",
       "name": "Rufous Potoo",
       "archetype": "Motionless Dead-Leaf Roost by Day",
@@ -34900,24 +34592,6 @@
         "description": "A long, flat day roost followed by brief, sharp feeding sallies after dusk."
       },
       "closingLine": "That makes it a bimodal system: prolonged daytime stillness and short, fast nocturnal sallies."
-    },
-    {
-      "slug": "turdus-rufiventris",
-      "name": "Rufous-bellied Thrush",
-      "archetype": "Nesting Timed to Soft Earth",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "A diet dominated by earthworms and soil invertebrates taken from the surface layer of the ground • Those animals accessible only when the soil is moist enough to be soft and for worms to come near the surface • Breeding therefore timed to the rains, because a brood requires a rate of delivery that only wet ground can supply",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 10 27 L 20 23 L 30 19 L 40 17 L 50 19 L 60 23 L 70 26 L 80 29 L 90 30 L 100 30",
-        "viewBox": "0 0 100 50",
-        "description": "A single seasonal peak tied to the rains, because the whole breeding effort falls inside the wet period."
-      },
-      "closingLine": "Because breeding is annual, it operates as a low-frequency system."
     },
     {
       "slug": "rufous-sided-crake",
@@ -35126,24 +34800,6 @@
       "closingLine": "Solitary and unhurried, this is a low-frequency system."
     },
     {
-      "slug": "cataglyphis-bicolor",
-      "name": "Sahara Desert Ant",
-      "archetype": "A Running Total Home",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "An outbound search path of hundreds of metres, winding and doubling back across featureless ground • Direction taken continuously from the polarisation pattern of the sky and distance from the number of steps taken • Those two quantities combined into a running estimate of the straight line home, so the return is made directly rather than by retracing",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 6 31 L 12 26 L 18 31 L 24 27 L 30 31 L 36 26 L 42 30 L 48 21 L 54 27 L 60 31 L 66 26 L 72 31 L 78 27 L 86 31 L 94 26 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A rapid searching rhythm with one direct return, because the outbound path is erratic and the homeward one is not."
-      },
-      "closingLine": "Because the updating runs with every step, it operates as a high-frequency system."
-    },
-    {
       "slug": "sahara-spiny-tailed-lizard",
       "name": "Sahara Spiny-tailed Lizard",
       "archetype": "Darkening to Absorb the Sun",
@@ -35320,6 +34976,24 @@
         "description": "A flat line broken by a short cluster of repeated calls, because the alarm is delivered as an insistent burst and then stops."
       },
       "closingLine": "Because alarms are occasional, it operates as a low-frequency system."
+    },
+    {
+      "slug": "san-cristobal-lava-lizard",
+      "name": "San Cristobal Lava Lizard",
+      "archetype": "Island-Sealed Push-Up Signature",
+      "frequency": "MID",
+      "modes": [
+        {
+          "label": "Basking • Displaying • Island-sealed",
+          "frequency": "MID"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 32 L 8 32 L 10 22 L 12 30 L 14 22 L 16 32 L 30 32 L 32 22 L 34 30 L 36 22 L 38 32 L 52 32 L 54 22 L 56 30 L 58 22 L 60 32 L 74 32 L 76 22 L 78 30 L 80 22 L 82 32 L 100 32",
+        "viewBox": "0 0 100 50",
+        "description": "Paired push-up bobs repeated through the day between basking spells."
+      },
+      "closingLine": "Steady daily cycles of basking, feeding and signalling within a held territory make this a mid-frequency system."
     },
     {
       "slug": "sand-cat",
@@ -35532,24 +35206,6 @@
       "closingLine": "This dependence on a steady scanning perch state plus a repeated, very short, high-agility strike-and-return state makes the Satin Flycatcher a bimodal system with a mid-frequency baseline and high-frequency bursts."
     },
     {
-      "slug": "varanus-exanthematicus",
-      "name": "Savannah Monitor",
-      "archetype": "Subterranean Heat Vault",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Sheltered • Restorative • Reserve-led",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 40 L 20 40 Q 35 38 50 40 T 80 39 L 100 40",
-        "viewBox": "0 0 100 50",
-        "description": "A low, gently undulating line showing long periods of protected, low-output refuge with small fluctuations for surface forays."
-      },
-      "closingLine": "Because the whole system is built to withdraw into a durable, low-expenditure space and emerge only for limited tasks, it operates as a single, low-frequency refuge-centered pattern."
-    },
-    {
       "slug": "scalloped-hammerhead",
       "name": "Scalloped Hammerhead",
       "archetype": "Spread-Cephalofoil Field Sweep",
@@ -35664,6 +35320,28 @@
         "description": "An active patrolling rhythm dropping into a still midday pause."
       },
       "closingLine": "That makes it a bimodal system: active contested patrolling and a still thermal posture."
+    },
+    {
+      "slug": "scarlet-tiger-moth",
+      "name": "Scarlet Tiger Moth",
+      "archetype": "Comfrey-Backed Red Hindwing Reveal",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Feeding • Defended • Slow-growing",
+          "frequency": "LOW"
+        },
+        {
+          "label": "Startle • Flash • Display",
+          "frequency": "HIGH"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 15 39 L 30 38 L 45 37 L 55 36 L 60 36 L 62 6 L 65 30 L 70 36 L 82 36 L 84 8 L 87 30 L 92 36 L 100 36",
+        "viewBox": "0 0 100 50",
+        "description": "A long, slowly building baseline of quiet feeding, punctuated by two instant flashes when the adult is disturbed."
+      },
+      "closingLine": "The backing is built slowly over months of caterpillar feeding and spent in a moment of display, and because those two stages work on such different timescales the moth is bimodal, pairing low-frequency preparation with a high-frequency flash."
     },
     {
       "slug": "scarlet-rumped-cacique",
@@ -36062,6 +35740,24 @@
         "description": "A repeating pattern of settled pauses and fully committed jumps."
       },
       "closingLine": "Repeated committed movement along a remembered network makes this a mid-frequency system."
+    },
+    {
+      "slug": "senkaku-skink",
+      "name": "Senkaku Skink",
+      "archetype": "Islet-Bound Egg-Guarding Lineage",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Sheltered • Brooding • Isolated",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 20 40 L 26 36 L 32 40 L 54 40 L 60 36 L 66 40 L 88 40 L 94 37 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "Short daytime foraging rises on a low baseline of rest under stones."
+      },
+      "closingLine": "Slow breeding, short daily foraging and a population sealed in by the sea make this a low-frequency system."
     },
     {
       "slug": "serval",
@@ -37084,24 +36780,6 @@
         "description": "A long, low larval line under bark followed by a brief adult hunting phase."
       },
       "closingLine": "That makes it a phase-change system: a long hidden larval stage and a brief adult one."
-    },
-    {
-      "slug": "hypena-indicatalis",
-      "name": "Snout Moth",
-      "archetype": "Mouthparts Completing a Dead Leaf",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Labial palps projecting forward from the head into a long pointed snout • Wings held in a triangular tent whose outline resembles a curled dead leaf • The projecting snout continuing that outline as the leaf stalk, so the most animal-like part of the head becomes the least",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 31 L 20 31 L 36 31 L 50 31 L 62 30 L 74 31 L 86 31 L 96 31 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "An almost perfectly level line, because the moth rests motionless in one posture through the whole day."
-      },
-      "closingLine": "Because the posture is held for long periods, it operates as a low-frequency system."
     },
     {
       "slug": "snow-bunting",
@@ -38366,24 +38044,6 @@
       "closingLine": "Since strikes happen in thousandths of a second, it operates as a high-frequency system."
     },
     {
-      "slug": "puntius-binotatus",
-      "name": "Spotted Barb",
-      "archetype": "One Name, Several Species",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Occupying streams, ditches, rice fields and rivers across a vast area of Southeast Asia • Showing considerable variation in form and markings between populations • Having genetic work reveal that the name covers several distinct lineages rather than one fish",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 7 28 L 14 31 L 21 27 L 28 30 L 35 28 L 42 31 L 49 27 L 56 30 L 63 28 L 70 31 L 77 27 L 84 30 L 91 28 L 97 31 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A steady even rhythm with modest variation, because a small stream barb's day is continuous and unremarkable."
-      },
-      "closingLine": "Since feeding is continuous, it operates as a mid-frequency system."
-    },
-    {
       "slug": "spotted-cuscus",
       "name": "Spotted Cuscus",
       "archetype": "A Tail That Works as a Fifth Hand",
@@ -39376,28 +39036,6 @@
       "closingLine": "The two states are distinct architectures, so it operates as a bimodal system."
     },
     {
-      "slug": "macaca-arctoides",
-      "name": "Stump-tailed Macaque",
-      "archetype": "Troop on Foot on the Forest Floor",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Ground-foraging • Troop-bound • Omnivorous",
-          "frequency": "MID"
-        },
-        {
-          "label": "Roosting • Huddled • Arboreal",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 42 L 10 30 L 22 26 L 34 28 L 46 25 L 58 27 L 70 26 L 82 30 L 90 40 L 100 42",
-        "viewBox": "0 0 100 50",
-        "description": "A daylong plateau of ground foraging between two quiet nights huddled in trees."
-      },
-      "closingLine": "That makes it a bimodal system: ground foraging by day and huddled roosting at night."
-    },
-    {
       "slug": "lake-sturgeon",
       "name": "Sturgeon",
       "archetype": "Feeling the Bed With Barbels",
@@ -39924,6 +39562,24 @@
         "description": "Continuous buoyant flight with no returns to the ground."
       },
       "closingLine": "Continuous daylight flight and feeding makes this a mid-frequency system."
+    },
+    {
+      "slug": "swamp-forest-crab",
+      "name": "Swamp Forest Crab",
+      "archetype": "Direct-Developing Freshwater Brood",
+      "frequency": "LOW",
+      "modes": [
+        {
+          "label": "Sheltered • Brooding • Local",
+          "frequency": "LOW"
+        }
+      ],
+      "waveform": {
+        "pathD": "M 0 40 L 12 40 L 20 37 L 28 40 L 50 40 L 58 37 L 66 40 L 88 40 L 94 38 L 100 40",
+        "viewBox": "0 0 100 50",
+        "description": "A low, steady line with small night-time feeding rises and no peaks of travel."
+      },
+      "closingLine": "Small broods, slow local turnover and almost no dispersal make this a low-frequency system held in place by its swamp."
     },
     {
       "slug": "swamp-harrier",
@@ -40888,20 +40544,20 @@
     {
       "slug": "slant-faced-grasshopper",
       "name": "Tobacco Grasshopper",
-      "archetype": "A Proboscis Past the Body",
-      "frequency": "HIGH",
+      "archetype": "A Head Drawn Out",
+      "frequency": "LOW",
       "modes": [
         {
-          "label": "Hovering in front of a flower after dark • Uncoiling a proboscis longer than the body into a deep corolla • Taking nectar no shorter-tongued insect can reach",
-          "frequency": "HIGH"
+          "label": "Resting head-up along a grass blade or stem • Carrying a long conical head and slanted face that continues the line of the stem • Moving slowly and turning to keep the narrow profile toward an observer",
+          "frequency": "LOW"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 4 23 L 8 31 L 12 22 L 17 30 L 21 23 L 25 31 L 30 22 L 34 30 L 39 23 L 44 31 L 48 22 L 53 30 L 58 23 L 62 31 L 67 22 L 72 30 L 77 23 L 82 31 L 88 22 L 94 30 L 100 28",
+        "pathD": "M 0 29 Q 18 28 36 29 Q 52 28 66 29 L 72 26 L 78 29 Q 90 29 100 28",
         "viewBox": "0 0 100 50",
-        "description": "A rapid fine oscillation maintained throughout, because hovering requires continuous wingbeats and the visits follow one another."
+        "description": "A very flat slow line with a single small disturbance, because the animal is motionless for long periods and moves deliberately."
       },
-      "closingLine": "Since wingbeats and visits recur constantly, it operates as a high-frequency system."
+      "closingLine": "Since the cycle runs annually, it operates as a low-frequency system."
     },
     {
       "slug": "toco-toucan",
@@ -41166,24 +40822,6 @@
         "description": "A still line broken by short sequences of escalating events, because the wrapping builds before the spider approaches."
       },
       "closingLine": "Since captures recur, it operates as a mid-frequency system."
-    },
-    {
-      "slug": "egretta-tricolor",
-      "name": "Tricolored Heron",
-      "archetype": "A Heron That Chases",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rapid running through shallow water with wings opened and half raised, rather than the motionless stalking most herons use • Fish flushed out of cover by the disturbance and taken as they break, with the bird turning and pivoting to follow them • Energy spent continuously rather than conserved, so the method depends on flushing enough fish to pay for the running",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 6 23 L 12 30 L 18 22 L 26 29 L 34 24 L 42 30 L 50 22 L 58 29 L 66 25 L 74 30 L 82 23 L 90 29 L 100 27",
-        "viewBox": "0 0 100 50",
-        "description": "An energetic irregular rhythm, because the bird is constantly moving, turning and striking rather than standing still."
-      },
-      "closingLine": "Because the hunting is continuous, it operates as a mid-frequency system."
     },
     {
       "slug": "trilobite-beetle",
@@ -41620,22 +41258,26 @@
       "closingLine": "Since chirps repeat several times a second, it operates as a high-frequency system."
     },
     {
-      "slug": "two-spotted-spider",
-      "name": "Two-spotted Spider Mite",
-      "archetype": "Generations Outrunning a Spray",
-      "frequency": "HIGH",
+      "slug": "two-striped-telamonia",
+      "name": "Two-striped Telamonia",
+      "archetype": "Silk-Anchored Sight-Guided Leap",
+      "frequency": "MID",
       "modes": [
         {
-          "label": "A generation completed in under a week in warm conditions, so a season contains many rounds of selection • Enormous populations on a single plant, so even a very rare resistance variant is present somewhere • Haplodiploid inheritance exposing every male's genes directly to selection, so resistance spreads faster than in an ordinary diploid population",
+          "label": "Scanning • Turning • Approaching",
+          "frequency": "MID"
+        },
+        {
+          "label": "Anchored • Ballistic • Precise",
           "frequency": "HIGH"
         }
       ],
       "waveform": {
-        "pathD": "M 0 30 L 6 27 L 12 31 L 18 26 L 24 30 L 30 25 L 36 30 L 42 24 L 48 29 L 56 23 L 64 28 L 72 22 L 80 27 L 88 21 L 96 26 L 100 24",
+        "pathD": "M 0 30 L 8 26 L 16 30 L 24 26 L 32 30 L 38 30 L 40 6 L 42 34 L 50 30 L 58 26 L 66 30 L 74 26 L 80 30 L 82 6 L 84 34 L 92 30 L 100 28",
         "viewBox": "0 0 100 50",
-        "description": "A very rapid oscillation with a rising trend, because generations turn over in days and numbers climb through the season."
+        "description": "An even searching rhythm broken by sudden, narrow spikes where it leaps."
       },
-      "closingLine": "Because generations run in days, it operates as a high-frequency system."
+      "closingLine": "Continuous scanning and approaching, broken by brief ballistic strikes, gives two distinct operating modes: a mid-frequency search and a high-frequency pounce."
     },
     {
       "slug": "two-tailed-pasha",
@@ -41920,24 +41562,6 @@
       "closingLine": "Because the pushes recur through the season, it operates as a mid-frequency system."
     },
     {
-      "slug": "chamaeleo-calyptratus",
-      "name": "Veiled Chameleon",
-      "archetype": "Color‑matched Sway Gait",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "Rhythmic • Blending • Coordinated",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 25 Q 12.5 20 25 25 T 50 25 T 75 25 T 100 25",
-        "viewBox": "0 0 100 50",
-        "description": "A smooth, even mid-level oscillation representing continuous, rhythmic motion that tracks the background rather than spiking independently."
-      },
-      "closingLine": "Because it relies on matching the pattern and timing of its environment rather than freezing or sprinting, its system is best described as a single mid-frequency mode built on coordinated, ongoing movement with the background."
-    },
-    {
       "slug": "velvet-ant",
       "name": "Velvet Ant",
       "archetype": "One Signal Shared Across Species",
@@ -42008,28 +41632,6 @@
         "description": "A long even line with one late rise, because almost the whole year is uniform and the event falls at the end of it."
       },
       "closingLine": "Since the cycle is annual, it operates as a low-frequency system."
-    },
-    {
-      "slug": "dionaea-muscipula",
-      "name": "Venus Flytrap",
-      "archetype": "Hair-Trigger Leaf Jaws",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Primed • Still • Frugal",
-          "frequency": "LOW"
-        },
-        {
-          "label": "Instant • Binary • Commit",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 40 L 35 40 Q 40 40 45 10 Q 50 5 55 15 Q 60 25 65 32 L 100 32",
-        "viewBox": "0 0 100 50",
-        "description": "A long flat baseline of inactivity followed by a sharp spike and partial return, showing extended waiting, a rapid snap event, then a slower, elevated recovery phase."
-      },
-      "closingLine": "Because most of its life is spent in a low-cost, primed state and its defining action is a short, all-or-nothing closure triggered only when signals cross a threshold, this is a bimodal system with a low baseline and a high-frequency snap mode."
     },
     {
       "slug": "venus-flower-basket",
@@ -43164,24 +42766,6 @@
       "closingLine": "Since song bouts and feeding trips repeat, it operates as a mid-frequency system."
     },
     {
-      "slug": "motacilla-flava",
-      "name": "Western Yellow Wagtail",
-      "archetype": "Doubling Weight Before a Crossing",
-      "frequency": "LOW",
-      "modes": [
-        {
-          "label": "Feeding intensively at a stopover site for days or weeks before the desert crossing • Laying down fat until body mass rises by a large fraction, far beyond any normal condition • Flying across the Sahara without landing, the entire journey funded by reserves accumulated beforehand",
-          "frequency": "LOW"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 32 L 10 30 L 20 26 L 30 22 L 40 20 L 48 22 L 56 27 L 64 31 L 72 33 L 80 31 L 90 29 L 100 31",
-        "viewBox": "0 0 100 50",
-        "description": "A build to a peak followed by a sharp decline, because reserves are accumulated over weeks and spent in days."
-      },
-      "closingLine": "Because the cycle is annual, it operates as a low-frequency system."
-    },
-    {
       "slug": "whale-shark",
       "name": "Whale Shark",
       "archetype": "Cross-Flow Filter Cruise",
@@ -43392,28 +42976,6 @@
       "closingLine": "These are not two settings of one defence but opposite strategies, one built on never being seen and the other on being seen very clearly and then not, so it operates as a bimodal system."
     },
     {
-      "slug": "sogatella-furcifera",
-      "name": "White-backed Planthopper",
-      "archetype": "Wings Grown When Crowded",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "Developing short useless wings when the crop is young and the density is low • Putting everything into reproduction instead of flight muscle • Building the population where it already is",
-          "frequency": "HIGH"
-        },
-        {
-          "label": "Developing full wings and flight muscle when density is high or the crop is deteriorating • Leaving the field entirely • Riding weather systems hundreds of kilometres to new crops",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 22 L 10 20 L 20 23 L 28 21 L 34 34 L 44 37 L 54 35 L 60 22 L 70 20 L 80 23 L 86 35 L 96 37 L 100 36",
-        "viewBox": "0 0 100 50",
-        "description": "Two clearly separated stable levels alternating, because an individual develops into one form or the other with nothing between."
-      },
-      "closingLine": "This is an adaptive system running two states."
-    },
-    {
       "slug": "white-backed-vulture",
       "name": "White-backed Vulture",
       "archetype": "Neighbour-Watching Descent Cue",
@@ -43470,24 +43032,6 @@
         "description": "A rapid erratic rhythm with sharp direction changes, because the flight is all turns and no straight sections."
       },
       "closingLine": "Because the turns come in rapid sequence, it operates as a high-frequency system."
-    },
-    {
-      "slug": "garrulax-leucolophus",
-      "name": "White-crested Laughingthrush",
-      "archetype": "One Bird Starting, All Joining",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A group of birds foraging together on the forest floor in loose contact • One individual beginning a loud cackling call and the others joining within a second or two • The chorus building to full volume across the whole group and stopping as abruptly, so the signal is produced by the group rather than by any individual",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 30 L 8 29 L 14 21 L 18 14 L 24 18 L 30 28 L 40 30 L 48 29 L 54 20 L 58 13 L 64 19 L 70 28 L 80 30 L 90 29 L 96 22 L 100 28",
-        "viewBox": "0 0 100 50",
-        "description": "A quiet baseline broken by sudden collective bursts that build and stop abruptly."
-      },
-      "closingLine": "Because choruses recur through the day, it operates as a mid-frequency system."
     },
     {
       "slug": "white-faced-capuchin",
@@ -43596,24 +43140,6 @@
         "description": "A persistent investigative rhythm with no long pauses."
       },
       "closingLine": "That makes it a mid-frequency system: continuously investigative rather than reactive."
-    },
-    {
-      "slug": "copsychus-malabaricus",
-      "name": "White-rumped Shama",
-      "archetype": "A Syrinx With Two Sides",
-      "frequency": "HIGH",
-      "modes": [
-        {
-          "label": "A vocal organ at the junction of the two bronchi with independently controlled membranes on each side • Each side capable of producing its own note, with separate muscular control of pitch and timing • Two independent voices sounding together, so a single bird produces intervals and overlapping phrases no single larynx could make",
-          "frequency": "HIGH"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 27 L 5 31 L 9 25 L 14 30 L 19 26 L 24 31 L 29 25 L 35 30 L 41 27 L 47 31 L 53 25 L 60 30 L 67 26 L 74 31 L 81 25 L 88 30 L 95 27 L 100 29",
-        "viewBox": "0 0 100 50",
-        "description": "A rapid intricate rhythm with overlapping components, because two independent sources are running at the same time."
-      },
-      "closingLine": "Because the song runs at high rates, it operates as a high-frequency system."
     },
     {
       "slug": "white-rumped-vulture",
@@ -44414,24 +43940,6 @@
       "closingLine": "Yacare reach some of the highest densities of any crocodilian on earth in the Pantanal, taking small fish constantly rather than rarely, which makes this a low-frequency system."
     },
     {
-      "slug": "theretra-nessus",
-      "name": "Yam Hawk-moth",
-      "archetype": "A Tongue Matched to Depth",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A proboscis longer than the body, coiled when not in use and extended while the moth hovers in front of a flower • Nectar reached at the bottom of long tubular corollas that no short-tongued insect can empty • Flowers with tubes of that depth correspondingly dependent on moths of that tongue length, so each is useless to the other unless the two match",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 33 L 10 30 L 18 24 L 26 20 L 34 19 L 44 22 L 54 26 L 64 30 L 74 33 L 86 33 L 100 33",
-        "viewBox": "0 0 100 50",
-        "description": "A single nocturnal foraging period, because the moth flies at dusk and through the night and rests by day."
-      },
-      "closingLine": "Because foraging is continuous through the night, it operates as a mid-frequency system."
-    },
-    {
       "slug": "yangtze-finless-porpoise",
       "name": "Yangtze Finless Porpoise",
       "archetype": "Narrow-Beam Echolocation in Silt",
@@ -45076,24 +44584,6 @@
         "description": "A quick irregular rhythm with frequent changes of direction."
       },
       "closingLine": "That makes it a mid-frequency system: quick, restless searching bounded entirely by where one tree grows."
-    },
-    {
-      "slug": "bos-taurus-indicus",
-      "name": "Zebu",
-      "archetype": "A Body Built to Radiate",
-      "frequency": "MID",
-      "modes": [
-        {
-          "label": "A large loose dewlap and folded skin greatly increasing the surface area available for heat loss • A short pale reflective coat over dark pigmented skin, and a much higher density of sweat glands than temperate cattle • A lower metabolic heat production and higher tolerance of dehydration, so the animal both makes less heat and loses more of it",
-          "frequency": "MID"
-        }
-      ],
-      "waveform": {
-        "pathD": "M 0 28 L 10 25 L 18 30 L 28 24 L 36 29 L 46 25 L 54 30 L 64 24 L 72 29 L 82 26 L 90 30 L 100 27",
-        "viewBox": "0 0 100 50",
-        "description": "A steady even rhythm, because the animal continues grazing through heat that would stop others."
-      },
-      "closingLine": "Because the regulation is continuous, it operates as a mid-frequency system."
     },
     {
       "slug": "zoanthid",
