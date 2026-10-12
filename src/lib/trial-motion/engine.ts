@@ -608,13 +608,16 @@ export function createTrialMotionScene<N>(
 
     const loop = sb.loop;
     const wrap = (t: number) => ((t % loop) + loop) % loop;
-    const draw = (t: number) => {
-        t = wrap(t);
+    // Never reassign these parameters: Next 13.5's minifier inlines draw(poster)
+    // below and, with `t = wrap(t)`, drops the argument ("t is not defined"),
+    // which blanked every server poster and broke the loops in production.
+    const draw = (time: number) => {
+        const t = wrap(time);
         updaters.forEach((u) => u(t));
         set(root, "opacity", Math.min(ease(t / T.fadeIn), 1 - ease((t - (loop - T.fadeOut)) / T.fadeOut)));
     };
-    const beatIndexAt = (t: number) => {
-        t = wrap(t);
+    const beatIndexAt = (time: number) => {
+        const t = wrap(time);
         let cur = 0;
         sb.beats.forEach((b, i) => {
             if (t >= b.at) cur = i;

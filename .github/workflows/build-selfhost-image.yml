@@ -237,5 +237,11 @@ jobs:
           expect_status "/id/animals/tiger" 308 "/animals/tiger"
           expect_status "/animals/definitely-not-a-real-animaldex-slug" 404
           expect_status "/sitemap.xml" 200
+          # Trial Loops: the hub must ship server-rendered posters. Next 13.5's minifier once
+          # blanked them silently (the renderer catches and returns null), so check the markup.
+          if ! curl -sS "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}/animal-trials" | grep -q 'viewBox="0 0 360 202"'; then
+            echo "::error::/animal-trials has no Trial Loop posters"
+            exit 1
+          fi
 
           echo "Smoke tests passed"
