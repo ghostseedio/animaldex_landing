@@ -14,6 +14,9 @@ const DYNAMIC_ALLOWLIST = [
     "app/auth/",
     "app/[locale]/(authenticated)/",
     "app/[locale]/(composited)/checkout/page.tsx",
+    // Sign-in: noindex, already per-request (it reads the session to redirect
+    // signed-in visitors); reads the intro-language cookie and Accept-Language.
+    "app/[locale]/(composited)/account/page.tsx",
     "app/[locale]/(composited)/u/[handle]/page.tsx",
     "app/[locale]/(composited)/animals/search/page.tsx",
     // On-demand comparisons for unpublished pairs: noindex, robots-disallowed,

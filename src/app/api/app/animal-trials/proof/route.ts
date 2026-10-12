@@ -9,6 +9,9 @@ import {
     verifierRefusalMessage
 } from "@/lib/animal-trials";
 
+import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
+import {attachTrialMotionCaptions} from "@/lib/trial-motion/storyboards-server";
+
 export const runtime = "nodejs";
 
 /** Storage bucket the edge function and the storage RLS both assert against. */
@@ -58,6 +61,7 @@ export async function POST(request: Request) {
     const speciesProfileId = String(form.get("speciesProfileId") ?? "").trim();
     const frequency = String(form.get("frequency") ?? "").trim().toUpperCase();
     const proofType = String(form.get("proofType") ?? "photo").trim();
+    const lang = trialMotionCaptionLanguage(String(form.get("lang") ?? ""));
     const proof = form.get("proof");
     const isText = proofType === "text";
     const proofText = isText
@@ -146,11 +150,11 @@ export async function POST(request: Request) {
         .select()
         .eq("species_profile_id", speciesProfileId);
 
-    const trials = sortTrials(
+    const trials = await attachTrialMotionCaptions(supabase, sortTrials(
         (Array.isArray(data) ? data : [])
             .map(decodeAnimalTrial)
             .filter((trial): trial is NonNullable<typeof trial> => trial !== null)
-    );
+    ), lang);
     const trial = trials.find((item) => item.frequency === frequency) ?? null;
 
     if (!invoked.ok) {

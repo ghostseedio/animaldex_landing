@@ -10,6 +10,8 @@ import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import {trialMotionPosterMarkup} from "@/lib/trial-motion/poster-server";
+import {parseTrialStoryboard} from "@/lib/trial-motion/storyboard";
+import {decodeTrialMotionCaptionRow, trialMotionCaptionLanguage, translatedTrialMotionCaptions} from "@/lib/trial-motion/captions";
 
 export const animalTrialsPageCount = pagination.pageCount(animalTrials.length);
 
@@ -246,6 +248,14 @@ export default function AnimalTrialsView({locale, page}: {locale: string; page: 
 export function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: string}) {
     const frequency = frequencyOf(trial.frequency);
     const posterMarkup = trial.motionStoryboard ? trialMotionPosterMarkup(trial.motionStoryboard) : null;
+    // /id pages show the snapshot's Indonesian captions, only while they were
+    // translated from exactly this storyboard's captions.
+    const motionCaptions = posterMarkup && trialMotionCaptionLanguage(locale) === "id"
+        ? translatedTrialMotionCaptions(
+            parseTrialStoryboard(trial.motionStoryboard),
+            decodeTrialMotionCaptionRow({source_captions: trial.motionCaptionsId?.sourceCaptions, captions: trial.motionCaptionsId?.captions})
+        )
+        : null;
 
     return (
         <article className="flex flex-col gap-4 bg-canvas-950 p-6">
@@ -283,7 +293,7 @@ export function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: str
                 {/* The Trial Loop, its finished frame server-rendered so nothing
                     shifts; at most two of the page's loops animate at once. */}
                 {posterMarkup ? (
-                    <TrialMotion storyboard={trial.motionStoryboard} posterMarkup={posterMarkup} className="mb-4" />
+                    <TrialMotion storyboard={trial.motionStoryboard} posterMarkup={posterMarkup} captions={motionCaptions} className="mb-4" />
                 ) : null}
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-300">The Trial</p>
                 <p className="mt-1.5 text-sm leading-6 text-ink-100">{trial.instructions ?? trial.objective}</p>

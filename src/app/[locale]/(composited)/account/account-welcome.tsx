@@ -2,7 +2,9 @@
 
 import {type ReactNode, useEffect, useState} from "react";
 import WelcomeIntroStage from "@/components/welcome/welcome-intro-stage";
-import {WELCOME_INTRO_MUTED_KEY} from "@/lib/welcome-intro";
+import WelcomeLanguageSwitcher from "@/components/welcome/welcome-language-switcher";
+import {WELCOME_INTRO_MUTED_KEY, welcomeText} from "@/lib/welcome-intro";
+import type {WelcomeIntroLanguagePayload} from "@/loaders/welcome-intro";
 
 /**
  * The sign-in page's welcome band, ported from iOS `WelcomeView`: the hero
@@ -14,14 +16,23 @@ import {WELCOME_INTRO_MUTED_KEY} from "@/lib/welcome-intro";
  * Sound starts OFF on the web (iOS starts on): a browser blocks audio until
  * the visitor interacts, so the button is that interaction. A saved choice is
  * remembered under the same key name as the app's setting.
+ *
+ * The language control left of the sound button sets the site's locale; the
+ * intro reads and speaks in `intro.language` (selected on the server).
  */
 export default function AccountWelcome({
     headline,
     soundOnLabel,
     soundOffLabel,
+    locale,
+    intro,
     children
 }: {
     headline: string;
+    /** The site's locale. */
+    locale: string;
+    /** The intro's language, its strings and where its voice comes from. */
+    intro: WelcomeIntroLanguagePayload;
     soundOnLabel: string;
     soundOffLabel: string;
     /** The sign-in panel. */
@@ -73,20 +84,37 @@ export default function AccountWelcome({
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(50,219,101,0.22),transparent_55%)] lg:bg-[radial-gradient(circle_at_32%_42%,rgba(50,219,101,0.22),transparent_45%)]" />
             </div>
 
-            <button
-                type="button"
-                onClick={toggleSound}
-                aria-pressed={!muted}
-                aria-label={muted ? soundOnLabel : soundOffLabel}
-                title={muted ? soundOnLabel : soundOffLabel}
-                className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/[0.14] bg-black/35 text-white/85 transition-colors hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
-            >
-                <SpeakerIcon muted={muted} />
-            </button>
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                <WelcomeLanguageSwitcher
+                    currentLocale={locale}
+                    displayLanguage={intro.language}
+                    languages={intro.languages}
+                    label={welcomeText(intro.strings, "Language")}
+                />
+                <button
+                    type="button"
+                    onClick={toggleSound}
+                    aria-pressed={!muted}
+                    aria-label={muted ? soundOnLabel : soundOffLabel}
+                    title={muted ? soundOnLabel : soundOffLabel}
+                    className="grid h-10 w-10 place-items-center rounded-full border border-white/[0.14] bg-black/35 text-white/85 transition-colors hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                >
+                    <SpeakerIcon muted={muted} />
+                </button>
+            </div>
 
             <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-5 pb-14 pt-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:gap-16 lg:py-20">
                 <div className="flex flex-col items-center">
-                    <WelcomeIntroStage muted={muted} soundGeneration={soundGeneration} cardHeight={cardHeight} />
+                    <WelcomeIntroStage
+                        // A new language starts the loop again at card 1.
+                        key={intro.language}
+                        muted={muted}
+                        soundGeneration={soundGeneration}
+                        cardHeight={cardHeight}
+                        language={intro.language}
+                        strings={intro.strings}
+                        voice={intro.voice}
+                    />
                     <h1 className="mt-7 whitespace-pre-line text-center font-display text-4xl font-bold leading-[1.05] text-white sm:text-5xl">
                         {headline}
                     </h1>

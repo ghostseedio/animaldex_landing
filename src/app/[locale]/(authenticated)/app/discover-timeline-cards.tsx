@@ -1969,12 +1969,12 @@ export function PostInformation({item, locale, onClose}: {item: DiscoverTimeline
 
 /** What the Trial asked, as its Loop, in a Trial post's information sheet. Nothing until the Trial has one. */
 function PostTrialMotion({ speciesProfileId, frequency }: { speciesProfileId: string; frequency: string }) {
-  const storyboard = useTrialMotionStoryboard(speciesProfileId, frequency);
+  const { storyboard, captions } = useTrialMotionStoryboard(speciesProfileId, frequency);
   if (!storyboard) return null;
   return (
     <div>
       <p className="mb-2 text-[11px] font-semibold text-white/40">What the Trial asks</p>
-      <TrialMotion storyboard={storyboard} />
+      <TrialMotion storyboard={storyboard} captions={captions} />
     </div>
   );
 }

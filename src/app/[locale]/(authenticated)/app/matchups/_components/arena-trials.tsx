@@ -24,6 +24,7 @@ import {
 } from "@/lib/animal-trials";
 import {discoverPostPath} from "@/lib/discover-post";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
  * Trials in the Play hub. Ported from iOS `MatchupsHubView` after Trials became
@@ -50,11 +51,13 @@ export function useArenaTrials(enabled: boolean) {
     const [history, setHistory] = useState<AnimalTrial[]>([]);
     const [postIds, setPostIds] = useState<Record<string, string>>({});
     const [didLoad, setDidLoad] = useState(false);
+    /** `id` on /id pages: the open Trials' loops come back with translated captions. */
+    const captionLanguage = useTrialMotionCaptionLanguage();
 
     const refresh = useCallback(async () => {
         if (!enabled) return;
         try {
-            const response = await fetch("/api/app/animal-trials/arena", {cache: "no-store"});
+            const response = await fetch(`/api/app/animal-trials/arena${captionLanguage ? `?lang=${captionLanguage}` : ""}`, {cache: "no-store"});
             if (!response.ok) return;
             const payload = await response.json() as ArenaTrialsPayload;
             setOpenTrials((previous) => mergeOpenTrials(previous, Array.isArray(payload.openTrials) ? payload.openTrials : []));
@@ -66,7 +69,7 @@ export function useArenaTrials(enabled: boolean) {
         } finally {
             setDidLoad(true);
         }
-    }, [enabled]);
+    }, [captionLanguage, enabled]);
 
     useEffect(() => {
         void refresh();

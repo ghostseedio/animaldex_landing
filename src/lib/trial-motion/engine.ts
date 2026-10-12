@@ -40,8 +40,10 @@ export type MotionDoc<N> = {
 type Attrs = Record<string, string | number>;
 
 export const clamp = (v: number) => Math.max(0, Math.min(1, v));
-export const ease = (v: number) => {
-    v = clamp(v);
+// No parameter is ever reassigned in this file: Next 13.5's minifier can drop
+// a reassigned parameter when it inlines the call (see draw below).
+export const ease = (value: number) => {
+    const v = clamp(value);
     return v * v * (3 - 2 * v);
 };
 export const lerp = (a: number, b: number, p: number) => a + (b - a) * p;

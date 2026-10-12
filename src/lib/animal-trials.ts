@@ -83,6 +83,12 @@ export type AnimalTrial = {
      * could not draw; a null storyboard shows the Trial exactly as before.
      */
     motionStoryboard: TrialStoryboard | null;
+    /**
+     * The loop's captions in the page language, pre-translated, when they were
+     * translated from exactly this storyboard's captions. Null shows the
+     * storyboard's own (English) captions. Filled by the routes, never decoded.
+     */
+    motionCaptions: string[] | null;
 };
 
 /**
@@ -571,7 +577,8 @@ export function decodeAnimalTrial(row: any): AnimalTrial | null {
         sharePublicly: row?.share_publicly === true,
         otherCompletionCount: num(row?.other_completion_count),
         bestUseCases: list(row?.best_use_cases),
-        motionStoryboard: parseTrialStoryboard(row?.motion_storyboard)
+        motionStoryboard: parseTrialStoryboard(row?.motion_storyboard),
+        motionCaptions: null
     };
 }
 

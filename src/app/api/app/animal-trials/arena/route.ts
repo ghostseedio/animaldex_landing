@@ -2,7 +2,8 @@ import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {type AnimalTrial, decodeAnimalTrial, isComplete, isFailed, sortTrials} from "@/lib/animal-trials";
 import {animalTrialDiscoverPostId} from "@/lib/animal-trial-post-id";
-import {attachTrialMotionStoryboards} from "@/lib/trial-motion/storyboards-server";
+import {attachTrialMotionCaptions, attachTrialMotionStoryboards} from "@/lib/trial-motion/storyboards-server";
+import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,7 @@ async function readTrialHistory(supabase: Supabase) {
  * The Play hub's Trials: what is open, and what is done. Both read as the
  * signed-in viewer; `arena_caught_trials_v1` is authenticated-only by design.
  */
-export async function GET() {
+export async function GET(request: Request) {
     const supabase = createSupabaseServerClient();
     if (!supabase) {
         return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
@@ -90,7 +91,10 @@ export async function GET() {
         return NextResponse.json({error: "Authentication required."}, {status: 401});
     }
 
-    const [openTrials, history] = await Promise.all([readOpenTrials(supabase), readTrialHistory(supabase)]);
+    const lang = trialMotionCaptionLanguage(new URL(request.url).searchParams.get("lang"));
+    const [openLoops, history] = await Promise.all([readOpenTrials(supabase), readTrialHistory(supabase)]);
+    // One batch for the page: the open Trials' loops in the page language.
+    const openTrials = await attachTrialMotionCaptions(supabase, openLoops, lang);
 
     // A finished Trial is a Discover post. The id is deterministic, so the
     // history row can link straight to the card without a lookup.

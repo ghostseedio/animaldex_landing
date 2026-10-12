@@ -1,22 +1,31 @@
 "use client";
 
-import {type CSSProperties, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {type CSSProperties, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 import BattleTierChip from "@/app/[locale]/(composited)/animals/battle-tier-chip";
 import SystemWaveform from "@/components/animal-detail/system-dynamics/system-waveform";
 import {FrequencyStateChip} from "@/components/animal-detail/system-dynamics/frequency-chip";
 import {getBattleTier} from "@/lib/battle-tier";
-import {behaviorCompactTitle, domainDisplayTitle, resolveVisualSignature} from "@/lib/system-dynamics";
+import {behaviorCompactTitle, resolveVisualSignature} from "@/lib/system-dynamics";
 import {
     WELCOME_INTRO_BEATS,
-    WELCOME_INTRO_LINEUP,
     WELCOME_INTRO_VOICEOVER,
     WELCOME_STAT_METRICS,
     type WelcomeIntroAnimal,
     type WelcomeIntroBeat,
+    type WelcomeIntroStrings,
     type WelcomeSystemStory,
     type WelcomeTrialStory,
+    type WelcomeVoiceSource,
+    localizeWelcomeLineup,
+    selectWelcomeCues,
     welcomeCardLabel,
-    welcomeSystemDynamics
+    welcomeDomainTitle,
+    welcomeLanguageIsRTL,
+    welcomeLanguageTag,
+    welcomeLanguageUsesTracking,
+    welcomeSystemDynamics,
+    welcomeText,
+    welcomeVoiceClip
 } from "@/lib/welcome-intro";
 
 /**
@@ -27,6 +36,13 @@ import {
  * play before the visitor interacts with the page), so the page's sound button
  * turns it on, which restarts the current card so the voice lines up with it;
  * and "reduce motion" comes from the `prefers-reduced-motion` media query.
+ *
+ * Language (CONTRACT.md in the app's docs/welcome-voiceover): the text comes
+ * from `strings`, already selected for one language on the server. English
+ * plays its bundled clips at the lineup's cue times; another language streams
+ * its clips from storage and steps on the manifest's cues and durations, or
+ * runs silently when it has no audio. English audio never plays under
+ * another language's text.
  */
 
 const NEON = "#A7F432";
@@ -40,25 +56,40 @@ type Sfx = "camera_shutter" | "reward_points" | "reward_credits" | "train_comple
 /** The trial's proof frames: iOS draws SF Symbols, the web stands in with emoji. */
 const PROOF_FRAMES = ["🧍", "🤸", "👍"];
 
+/** The intro's on-screen strings for one language; English keys, English fallback. */
+const WelcomeTextContext = createContext<WelcomeIntroStrings>({});
+
+function useWelcomeText() {
+    const strings = useContext(WelcomeTextContext);
+    return useCallback((key: string) => welcomeText(strings, key), [strings]);
+}
+
 function sleep(ms: number, isCancelled: () => boolean) {
     return new Promise<boolean>((resolve) => {
         window.setTimeout(() => resolve(!isCancelled()), Math.max(0, ms));
     });
 }
 
-/** Plays the welcome voiceover and sound effects; silent when the browser refuses. */
-function useWelcomeAudio() {
+/** A clip that started: how long it runs, and its cues when the manifest gives them. */
+type SpokenClip = {duration: number | null; cues: number[] | null};
+
+/** Plays the welcome voiceover and sound effects; silent when the browser refuses or the language has no audio. */
+function useWelcomeAudio(source: WelcomeVoiceSource) {
     const voice = useRef<HTMLAudioElement | null>(null);
+    const sourceRef = useRef(source);
+    sourceRef.current = source;
 
     const stop = useCallback(() => {
         voice.current?.pause();
         voice.current = null;
     }, []);
 
-    /** Starts a clip; resolves with its duration, or null when it can't play. */
-    const playVoice = useCallback(async (name: string): Promise<number | null> => {
+    /** Starts a clip; resolves with its timing, or null when it can't play. */
+    const playVoice = useCallback(async (name: string): Promise<SpokenClip | null> => {
         stop();
-        const audio = new Audio(`/audio/welcome/${name}.mp3`);
+        const clip = welcomeVoiceClip(sourceRef.current, name);
+        if (!clip) return null;
+        const audio = new Audio(clip.url);
         audio.preload = "auto";
         voice.current = audio;
         try {
@@ -67,10 +98,12 @@ function useWelcomeAudio() {
             if (voice.current === audio) voice.current = null;
             return null;
         }
-        if (Number.isFinite(audio.duration) && audio.duration > 0) return audio.duration;
+        // A translated clip's timing is the manifest's, measured when it was generated.
+        if (clip.duration != null) return {duration: clip.duration, cues: clip.cues};
+        if (Number.isFinite(audio.duration) && audio.duration > 0) return {duration: audio.duration, cues: null};
         // Playing but the length isn't known yet: wait briefly for it.
         return new Promise((resolve) => {
-            const done = () => resolve(Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : null);
+            const done = () => resolve({duration: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : null, cues: null});
             audio.addEventListener("loadedmetadata", done, {once: true});
             window.setTimeout(done, 1500);
         });
@@ -102,15 +135,24 @@ function usePrefersReducedMotion() {
 export default function WelcomeIntroStage({
     muted,
     soundGeneration,
-    cardHeight = 340
+    cardHeight = 340,
+    language = "en",
+    strings = {},
+    voice = {kind: "bundled"}
 }: {
     muted: boolean;
     /** Bumped when sound is turned on: the current card restarts so its voice lines up. */
     soundGeneration: number;
     cardHeight?: number;
+    /** The language the card reads and speaks in. Remount (key) the stage to change it: the loop restarts at card 1. */
+    language?: string;
+    /** That language's strings only, English underneath. */
+    strings?: WelcomeIntroStrings;
+    voice?: WelcomeVoiceSource;
 }) {
     const reduceMotion = usePrefersReducedMotion();
-    const {playVoice, playSfx, stop} = useWelcomeAudio();
+    const {playVoice, playSfx, stop} = useWelcomeAudio(voice);
+    const lineup = useMemo(() => localizeWelcomeLineup(strings), [strings]);
 
     const [index, setIndex] = useState(0);
     const [beat, setBeat] = useState<WelcomeIntroBeat>("spot");
@@ -136,7 +178,7 @@ export default function WelcomeIntroStage({
     const mutedRef = useRef(muted);
     mutedRef.current = muted;
 
-    const animal = WELCOME_INTRO_LINEUP[index];
+    const animal = lineup[index];
     // The card is laid out at iOS's largest size and scaled to fit, the way
     // iOS shrinks its text to fit: every card keeps its proportions at any height.
     const scale = cardHeight / DESIGN_HEIGHT;
@@ -163,15 +205,15 @@ export default function WelcomeIntroStage({
             setBeat(next);
             setBeatRun((run) => ({key: run.key + 1, seconds}));
         };
-        const remaining = (duration: number | null, start: number) =>
-            duration == null ? 0 : Math.max(0, duration - (performance.now() - start) / 1000);
+        const remaining = (spoken: SpokenClip | null, start: number) =>
+            spoken?.duration == null ? 0 : Math.max(0, spoken.duration - (performance.now() - start) / 1000);
         const voicesOnLessonSide = (current: WelcomeIntroAnimal) => Boolean(current.system || current.trial);
 
         async function runSystemLesson(current: WelcomeIntroAnimal, story: WelcomeSystemStory) {
             const start = performance.now();
             const spoken = speaks() ? await playVoice(current.voiceover) : null;
-            const cues = spoken == null ? [1.6, 4.4, 7.2] : story.cueSeconds;
-            const total = Math.max((spoken ?? 0) + 0.8, (cues[cues.length - 1] ?? 0) + 3.2);
+            const cues = selectWelcomeCues({spoken: spoken != null, englishCues: story.cueSeconds, clipCues: spoken?.cues ?? null, silentCues: [1.6, 4.4, 7.2]});
+            const total = Math.max((spoken?.duration ?? 0) + 0.8, (cues[cues.length - 1] ?? 0) + 3.2);
             startBeat("learn", total);
             for (let i = 0; i < cues.length; i += 1) {
                 const cue = cues[i];
@@ -185,8 +227,8 @@ export default function WelcomeIntroStage({
             const start = performance.now();
             window.setTimeout(() => !cancelled && setShowForYou(true), 600);
             const spoken = speaks() ? await playVoice(current.voiceover) : null;
-            const cues = spoken == null ? [3.2, 5.6, 8.0, 9.8] : trial.cueSeconds;
-            const total = Math.max((spoken ?? 0) + 1.2, (cues[cues.length - 1] ?? 0) + 3.0);
+            const cues = selectWelcomeCues({spoken: spoken != null, englishCues: trial.cueSeconds, clipCues: spoken?.cues ?? null, silentCues: [3.2, 5.6, 8.0, 9.8]});
+            const total = Math.max((spoken?.duration ?? 0) + 1.2, (cues[cues.length - 1] ?? 0) + 3.0);
             startBeat("learn", total);
             for (let i = 0; i < cues.length; i += 1) {
                 const cue = cues[i];
@@ -249,7 +291,7 @@ export default function WelcomeIntroStage({
             let scan = 1.3;
             if (speaks() && cardIndex === 0) {
                 const intro = await playVoice(WELCOME_INTRO_VOICEOVER);
-                if (intro != null) scan = Math.max(scan, intro + 0.2);
+                if (intro?.duration != null) scan = Math.max(scan, intro.duration + 0.2);
             }
             // One frame at the reset state, so the sweep and the slide-in animate.
             if (!(await pause(0.03))) return;
@@ -310,18 +352,18 @@ export default function WelcomeIntroStage({
             if (process.env.NODE_ENV !== "production" && !startApplied.current) {
                 startApplied.current = true;
                 const start = Number(new URLSearchParams(window.location.search).get("welcomeCard"));
-                if (Number.isInteger(start) && start > 0 && start < WELCOME_INTRO_LINEUP.length) {
+                if (Number.isInteger(start) && start > 0 && start < lineup.length) {
                     indexRef.current = start;
                     setIndex(start);
                 }
             }
             while (!cancelled) {
                 const cardIndex = indexRef.current;
-                const current = WELCOME_INTRO_LINEUP[cardIndex];
+                const current = lineup[cardIndex];
                 if (reduceMotion) await runStillBeat(current);
                 else await runAnimatedBeat(current, cardIndex);
                 if (cancelled) return;
-                const next = (cardIndex + 1) % WELCOME_INTRO_LINEUP.length;
+                const next = (cardIndex + 1) % lineup.length;
                 if (next === 0) lapsRef.current += 1;
                 indexRef.current = next;
                 setIndex(next);
@@ -333,77 +375,84 @@ export default function WelcomeIntroStage({
             cancelled = true;
             stop();
         };
-    }, [reduceMotion, soundGeneration, playVoice, playSfx, stop]);
+    }, [reduceMotion, soundGeneration, playVoice, playSfx, stop, lineup]);
 
     const motion = !reduceMotion;
     const tier = getBattleTier(animal.stats);
 
     return (
-        <div className="flex flex-col items-center gap-6">
+        <WelcomeTextContext.Provider value={strings}>
             <div
-                className="relative"
-                style={{width: (designWidth + 40) * scale, height: (DESIGN_HEIGHT + 16) * scale}}
-                role="img"
-                aria-label={welcomeCardLabel(animal)}
+                lang={welcomeLanguageTag(language)}
+                dir={welcomeLanguageIsRTL(language) ? "rtl" : "ltr"}
+                data-welcome-tracking={welcomeLanguageUsesTracking(language) ? undefined : "off"}
+                className="flex flex-col items-center gap-6"
             >
-              <div
-                className="absolute left-0 top-0"
-                style={{width: designWidth + 40, height: DESIGN_HEIGHT + 16, transform: `scale(${scale})`, transformOrigin: "0 0", perspective: 1100}}
-              >
-                <StackShadows width={designWidth} height={DESIGN_HEIGHT} />
-
-                {/* Slide in and out between animals. */}
                 <div
-                    className="absolute left-5 top-2"
-                    style={{
-                        width: designWidth,
-                        height: DESIGN_HEIGHT,
-                        opacity: cardVisible ? 1 : 0,
-                        transform: `translateX(${cardVisible ? 0 : -designWidth * 0.35}px) scale(${cardVisible ? 1 : 0.92})`,
-                        transition: motion ? "opacity 320ms ease, transform 550ms cubic-bezier(.2,.9,.3,1.1)" : "none",
-                        filter: "drop-shadow(0 22px 30px rgba(0,0,0,0.55))"
-                    }}
+                    className="relative"
+                    style={{width: (designWidth + 40) * scale, height: (DESIGN_HEIGHT + 16) * scale}}
+                    role="img"
+                    aria-label={welcomeCardLabel(animal)}
                 >
-                    {/* A slow idle tilt, so the card feels like an object in the hand. */}
-                    <div className={`h-full w-full ${motion ? "welcome-card-drift" : ""}`} style={{transformStyle: "preserve-3d"}}>
-                        <div
-                            className="relative h-full w-full"
-                            style={{
-                                transformStyle: "preserve-3d",
-                                transform: `rotateY(${flipped ? 180 : 0}deg)`,
-                                transition: motion ? "transform 800ms cubic-bezier(.25,.9,.3,1)" : "none"
-                            }}
-                        >
-                            <CardFront
-                                animal={animal}
-                                tier={tier}
-                                cardHeight={DESIGN_HEIGHT}
-                                revealed={revealed}
-                                bloom={bloom}
-                                shine={shine}
-                                scanSweep={scanSweep}
-                                scanSeconds={scanSeconds}
-                                showStats={showStats}
-                                statsGrow={statsGrow}
-                                motion={motion}
-                            />
-                            <CardBack
-                                animal={animal}
-                                tier={tier}
-                                flipped={flipped}
-                                showForYou={showForYou}
-                                domainIndex={domainIndex}
-                                trialStage={trialStage}
-                                motion={motion}
-                            />
+                  <div
+                    className="absolute left-0 top-0"
+                    style={{width: designWidth + 40, height: DESIGN_HEIGHT + 16, transform: `scale(${scale})`, transformOrigin: "0 0", perspective: 1100}}
+                  >
+                    <StackShadows width={designWidth} height={DESIGN_HEIGHT} />
+
+                    {/* Slide in and out between animals. */}
+                    <div
+                        className="absolute left-5 top-2"
+                        style={{
+                            width: designWidth,
+                            height: DESIGN_HEIGHT,
+                            opacity: cardVisible ? 1 : 0,
+                            transform: `translateX(${cardVisible ? 0 : -designWidth * 0.35}px) scale(${cardVisible ? 1 : 0.92})`,
+                            transition: motion ? "opacity 320ms ease, transform 550ms cubic-bezier(.2,.9,.3,1.1)" : "none",
+                            filter: "drop-shadow(0 22px 30px rgba(0,0,0,0.55))"
+                        }}
+                    >
+                        {/* A slow idle tilt, so the card feels like an object in the hand. */}
+                        <div className={`h-full w-full ${motion ? "welcome-card-drift" : ""}`} style={{transformStyle: "preserve-3d"}}>
+                            <div
+                                className="relative h-full w-full"
+                                style={{
+                                    transformStyle: "preserve-3d",
+                                    transform: `rotateY(${flipped ? 180 : 0}deg)`,
+                                    transition: motion ? "transform 800ms cubic-bezier(.25,.9,.3,1)" : "none"
+                                }}
+                            >
+                                <CardFront
+                                    animal={animal}
+                                    tier={tier}
+                                    cardHeight={DESIGN_HEIGHT}
+                                    revealed={revealed}
+                                    bloom={bloom}
+                                    shine={shine}
+                                    scanSweep={scanSweep}
+                                    scanSeconds={scanSeconds}
+                                    showStats={showStats}
+                                    statsGrow={statsGrow}
+                                    motion={motion}
+                                />
+                                <CardBack
+                                    animal={animal}
+                                    tier={tier}
+                                    flipped={flipped}
+                                    showForYou={showForYou}
+                                    domainIndex={domainIndex}
+                                    trialStage={trialStage}
+                                    motion={motion}
+                                />
+                            </div>
                         </div>
                     </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <BeatRail beat={beat} run={beatRun} width={(designWidth + 24) * scale} />
-        </div>
+                <BeatRail beat={beat} run={beatRun} width={(designWidth + 24) * scale} />
+            </div>
+        </WelcomeTextContext.Provider>
     );
 }
 
@@ -477,6 +526,7 @@ function CardFront({
     statsGrow: number;
     motion: boolean;
 }) {
+    const t = useWelcomeText();
     const ease = (ms: number, what = "all") => (motion ? `${what} ${ms}ms ease` : "none");
 
     return (
@@ -528,7 +578,7 @@ function CardFront({
                 className="absolute inset-x-4 bottom-4 flex flex-col gap-1"
                 style={{opacity: revealed ? 1 : 0, transform: `translateY(${revealed ? 0 : 8}px)`, transition: ease(400)}}
             >
-                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>Collected</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Collected")}</span>
                 <span className="truncate font-display text-[21px] font-bold leading-tight text-white">{animal.name}</span>
             </div>
 
@@ -757,6 +807,7 @@ function CardBack({
 }
 
 function PlainLesson({animal, showForYou, motion}: {animal: WelcomeIntroAnimal; showForYou: boolean; motion: boolean}) {
+    const t = useWelcomeText();
     return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-[18px] pb-4 pt-[38px] text-center">
             <PowerEyebrow>{animal.power}</PowerEyebrow>
@@ -767,7 +818,7 @@ function PlainLesson({animal, showForYou, motion}: {animal: WelcomeIntroAnimal; 
                 className="mt-1 flex flex-col gap-1"
                 style={{opacity: showForYou ? 1 : 0, transform: `translateY(${showForYou ? 0 : 6}px)`, transition: motion ? "all 450ms ease-out" : "none"}}
             >
-                <span className="text-[8px] font-bold uppercase tracking-[0.24em] text-white/45">For you</span>
+                <span className="text-[8px] font-bold uppercase tracking-[0.24em] text-white/45">{t("For you")}</span>
                 <span className="text-[13px] font-semibold leading-snug text-white/90">{animal.forYou}</span>
             </div>
         </div>
@@ -788,6 +839,7 @@ function SystemLesson({
     domainIndex: number;
     motion: boolean;
 }) {
+    const strings = useContext(WelcomeTextContext);
     const dynamics = useMemo(() => welcomeSystemDynamics(story), [story]);
     const signature = useMemo(() => (dynamics ? resolveVisualSignature(dynamics) : null), [dynamics]);
     if (!dynamics || !signature) return <PlainLesson animal={animal} showForYou motion={motion} />;
@@ -828,7 +880,7 @@ function SystemLesson({
                 {line ? (
                     <div key={domainIndex} className={`flex flex-col gap-1 ${motion ? "welcome-rise-in" : ""}`}>
                         <span className="text-[8px] font-bold uppercase tracking-[0.22em]" style={{color: "rgba(167,244,50,0.85)"}}>
-                            Seen in {domainDisplayTitle(line.domain)}
+                            {welcomeText(strings, "Seen in")} {welcomeDomainTitle(strings, line.domain)}
                         </span>
                         <span className="text-[12.5px] font-semibold leading-snug text-white/90">{line.text}</span>
                     </div>
@@ -845,16 +897,17 @@ function SystemLesson({
 
 /** The Trial, then its evidence flow: record → AI check → Power earned. */
 function TrialFlow({animal, trial, stage, motion}: {animal: WelcomeIntroAnimal; trial: WelcomeTrialStory; stage: number; motion: boolean}) {
+    const t = useWelcomeText();
     return (
         <div className={`absolute inset-0 flex flex-col items-center gap-[9px] px-4 pb-3 pt-9 text-center ${motion ? "welcome-rise-in" : ""}`}>
             <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>Trial</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Trial")}</span>
                 <p className="font-display text-[21px] font-black leading-[1.02] text-white">{trial.title}</p>
                 <p className="text-[11.5px] font-medium leading-snug text-white/75">{trial.instruction}</p>
             </div>
 
             <div className="flex gap-[5px]">
-                {[trial.proofLabel, `${trial.minutes} min`, `+${trial.rewardCredits}`].map((chip, i) => (
+                {[trial.proofLabel, `${trial.minutes} ${t("min")}`, `+${trial.rewardCredits}`].map((chip, i) => (
                     <span key={chip} className="inline-flex items-center gap-[3px] border border-white/20 px-1.5 py-[3px] text-[8.5px] font-bold uppercase tracking-[0.08em] text-white/80">
                         <span aria-hidden="true">{["●", "◷", "✦"][i]}</span>
                         {chip}
@@ -878,7 +931,7 @@ function TrialFlow({animal, trial, stage, motion}: {animal: WelcomeIntroAnimal; 
                                     className={`absolute left-1/2 top-1/2 flex flex-col items-center px-2.5 py-1.5 shadow-[0_4px_8px_rgba(0,0,0,0.5)] ${motion ? "welcome-stamp-in" : ""}`}
                                     style={{backgroundColor: NEON, color: NEAR_BLACK, transform: "translate(-50%,-50%) rotate(-6deg)"}}
                                 >
-                                    <span className="whitespace-nowrap font-display text-[15px] font-black uppercase leading-none tracking-[0.08em]">Power earned</span>
+                                    <span className="whitespace-nowrap font-display text-[15px] font-black uppercase leading-none tracking-[0.08em]">{t("Power earned")}</span>
                                     <span className="whitespace-nowrap text-[9px] font-bold opacity-80">{animal.power}</span>
                                 </span>
                             ) : null}
@@ -898,7 +951,7 @@ function TrialFlow({animal, trial, stage, motion}: {animal: WelcomeIntroAnimal; 
             <div className="flex items-center gap-1.5">
                 {["Record", "AI check", "Earned"].map((step, i) => (
                     <span key={step} className="flex items-center gap-1.5">
-                        <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{color: stage >= i + 1 ? NEON : "rgba(255,255,255,0.35)"}}>{step}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{color: stage >= i + 1 ? NEON : "rgba(255,255,255,0.35)"}}>{t(step)}</span>
                         {i < 2 ? <span className="h-px w-3" style={{backgroundColor: stage >= i + 1 ? "rgba(167,244,50,0.6)" : "rgba(255,255,255,0.15)"}} /> : null}
                     </span>
                 ))}
@@ -941,13 +994,14 @@ function RecordingViewfinder() {
 
 /** Three words over thin progress segments, like story progress bars. */
 function BeatRail({beat, run, width}: {beat: WelcomeIntroBeat; run: {key: number; seconds: number}; width: number}) {
+    const t = useWelcomeText();
     const current = WELCOME_INTRO_BEATS.findIndex((step) => step.id === beat);
     return (
         <div aria-hidden="true" className="flex gap-2" style={{width}}>
             {WELCOME_INTRO_BEATS.map((step, i) => (
                 <div key={step.id} className="flex flex-1 flex-col gap-2">
                     <span className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-200 ${i === current ? "text-white" : "text-white/40"}`}>
-                        {step.title}
+                        {t(step.title)}
                     </span>
                     <span className="relative h-0.5 overflow-hidden bg-white/[0.14]">
                         {i < current ? (

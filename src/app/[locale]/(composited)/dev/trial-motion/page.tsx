@@ -4,6 +4,7 @@ import examples from "@/lib/trial-motion/__fixtures__/examples.json";
 import {TrialCard as HubTrialCard} from "@/app/[locale]/(composited)/animal-trials/animal-trials-view";
 import type {AnimalTrialEntry} from "@/data/animal-behaviours";
 import TrialMotionPreviewClient from "./preview-client";
+import {idCaptionFixture} from "./id-caption-fixtures";
 
 /**
  * DEV ONLY: Trial Loops with the spec's worked examples injected, because every
@@ -12,6 +13,8 @@ import TrialMotionPreviewClient from "./preview-client";
  *   /dev/trial-motion                 every surface, every example
  *   /dev/trial-motion?only=koala-MID  one example
  *   /dev/trial-motion?detail=koala-MID  the Trial sheet, open
+ *   /id/dev/trial-motion              the same with the Indonesian caption fixtures
+ *                                     (grizzly-LOW is stale on purpose: English)
  *   /dev/trial-motion?sheet=koala-MID  the Discover post information sheet, open
  *   /dev/trial-motion?only=koala-MID&t=3.22  the full stage frozen at t (compare with qa/reference-frames)
  */
@@ -29,7 +32,7 @@ const SLUGS: Record<string, string> = {
     "observation-sample": "cheetah"
 };
 
-export default function TrialMotionPreviewPage({searchParams}: {searchParams: {only?: string; detail?: string; sheet?: string; t?: string}}) {
+export default function TrialMotionPreviewPage({params, searchParams}: {params: {locale: string}; searchParams: {only?: string; detail?: string; sheet?: string; t?: string}}) {
     if (process.env.NODE_ENV === "production") notFound();
 
     const all = examples as Example[];
@@ -58,9 +61,10 @@ export default function TrialMotionPreviewPage({searchParams}: {searchParams: {o
                             difficulty: 2,
                             estimatedMinutes: 10,
                             completionCount: 0,
-                            motionStoryboard: example.storyboard
+                            motionStoryboard: example.storyboard,
+                            motionCaptionsId: idCaptionFixture(example.key)
                         };
-                        return <HubTrialCard key={example.key} trial={entry} locale="en" />;
+                        return <HubTrialCard key={example.key} trial={entry} locale={params.locale} />;
                     })}
                 </div>
 

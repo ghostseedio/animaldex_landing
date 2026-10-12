@@ -86,11 +86,30 @@ function powerNameKey(name: string): string {
  * not always its species id, and can lag a rename. Power names are unique, so
  * a lookup by the displayed name returns exactly the icon drawn for that name;
  * the species id is the fallback. Each page of rows stays well under Next's
- * 2 MB data-cache entry limit, so the build fetches the table once per window.
+ * 2 MB data-cache entry limit; the in-process memo below makes it one read per window.
  */
-export async function fetchAnimalPowerIconIndex(
+export function fetchAnimalPowerIconIndex(
     {revalidate = ANIMAL_POWER_ICON_REVALIDATE_SECONDS}: {revalidate?: number} = {}
 ): Promise<AnimalPowerIconIndex> {
+    // One read per process per window, whatever Next's data cache does. The table's pages
+    // (~2,600 SVGs) were failing to write to the fetch cache during `next build`
+    // ("Failed to set fetch cache", EPIPE), so every one of thousands of static pages
+    // re-downloaded the whole table and CI page generation went from ~8 min past the 2 h
+    // job limit. An empty result (Supabase unreachable) is not kept, so the next call retries.
+    const now = Date.now();
+    const hit = iconIndexMemo.get(revalidate);
+    if (hit && now - hit.at < revalidate * 1000) return hit.promise;
+    const promise = loadAnimalPowerIconIndex(revalidate).then((index) => {
+        if (!Object.keys(index.byId).length) iconIndexMemo.delete(revalidate);
+        return index;
+    });
+    iconIndexMemo.set(revalidate, {at: now, promise});
+    return promise;
+}
+
+const iconIndexMemo = new Map<number, {at: number; promise: Promise<AnimalPowerIconIndex>}>();
+
+async function loadAnimalPowerIconIndex(revalidate: number): Promise<AnimalPowerIconIndex> {
     const index: AnimalPowerIconIndex = {byId: {}, byName: {}};
     const supabaseUrl = getSupabaseUrl();
     const key = getSupabaseServerReadKey();

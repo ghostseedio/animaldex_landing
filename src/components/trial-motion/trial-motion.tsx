@@ -58,6 +58,7 @@ export default function TrialMotion({
     posterMarkup = null,
     freezeAt = null,
     compactLayout = "auto",
+    captions = null,
     className = ""
 }: {
     /** The raw `motion_storyboard` value, or one already parsed. Null renders nothing. */
@@ -72,11 +73,16 @@ export default function TrialMotion({
      * 360px; `row` always keeps it beside (a fixed-height card with no room to stack).
      */
     compactLayout?: "auto" | "row";
+    /**
+     * Pre-translated captions for the page language, already checked against
+     * this storyboard (`trial-motion/captions`). Null shows the storyboard's own.
+     */
+    captions?: string[] | null;
     className?: string;
 }) {
     const parsed = useMemo(() => parseTrialStoryboard(storyboard), [storyboard]);
     if (!parsed) return null;
-    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} compactLayout={compactLayout} className={className} />;
+    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} compactLayout={compactLayout} translatedCaptions={captions} className={className} />;
 }
 
 function TrialMotionStage({
@@ -85,6 +91,7 @@ function TrialMotionStage({
     posterMarkup,
     freezeAt,
     compactLayout,
+    translatedCaptions,
     className
 }: {
     storyboard: TrialStoryboard;
@@ -92,9 +99,15 @@ function TrialMotionStage({
     posterMarkup: string | null;
     freezeAt: number | null;
     compactLayout: "auto" | "row";
+    translatedCaptions: string[] | null;
     className: string;
 }) {
-    const captions = useMemo(() => trialMotionCaptions(storyboard), [storyboard]);
+    // The captions actually shown, translated when there is one per beat; the
+    // stage's label joins these same captions.
+    const captions = useMemo(
+        () => (translatedCaptions && translatedCaptions.length === storyboard.beats.length ? translatedCaptions : trialMotionCaptions(storyboard)),
+        [storyboard, translatedCaptions]
+    );
     const label = useMemo(() => trialMotionAccessibilityLabel(captions), [captions]);
     const poster = trialMotionPosterTime(storyboard);
     const [activeBeat, setActiveBeat] = useState(() => trialMotionBeatIndexAt(storyboard, poster));

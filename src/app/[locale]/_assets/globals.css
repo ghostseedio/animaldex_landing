@@ -645,6 +645,10 @@ button {
 @keyframes welcome-rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .welcome-rise-in { animation: welcome-rise-in 350ms ease-out both; }
 
+/* Wide tracking pulls apart joined and stacked scripts (Arabic, Devanagari and the
+   other Indic scripts, Thai) and reads oddly in CJK: those languages set it to 0. */
+[data-welcome-tracking="off"] [class*="tracking-"] { letter-spacing: 0 !important; }
+
 @keyframes welcome-evidence-scan { from { left: 0; } to { left: 100%; } }
 .welcome-evidence-scan { animation: welcome-evidence-scan 0.8s ease-in-out infinite alternate; }
 

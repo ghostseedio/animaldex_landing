@@ -6,7 +6,9 @@ import {TrialCard} from "@/components/animal-detail/animal-trials/animal-trials-
 import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
 import AnimalTrialCard from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
 import {PostInformation} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
-import {primeTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
+import {primeTrialMotionStoryboard, useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
+import {translatedTrialMotionCaptions} from "@/lib/trial-motion/captions";
+import {idCaptionFixture} from "./id-caption-fixtures";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import type {DiscoverAnimalTrialItem} from "@/data/discover-timeline";
 
@@ -22,6 +24,8 @@ function frequencyOf(key: string) {
 }
 
 export default function TrialMotionPreviewClient({examples, detailKey, sheetKey, freezeAt}: {examples: Example[]; detailKey: string | null; sheetKey: string | null; freezeAt: number | null}) {
+    // What the routes do on an /id page, with the fixture rows standing in for the table.
+    const captionLanguage = useTrialMotionCaptionLanguage();
     const trials = useMemo(() => examples.map((example, index) => decodeAnimalTrial({
         species_profile_id: fakeId(index),
         frequency: frequencyOf(example.key),
@@ -38,14 +42,18 @@ export default function TrialMotionPreviewClient({examples, detailKey, sheetKey,
         reward_credits: 1,
         status: "notStarted",
         motion_storyboard: example.storyboard
-    })).filter((trial): trial is AnimalTrial => trial !== null), [examples]);
+    })).map((trial, index) => trial && captionLanguage === "id"
+        ? {...trial, motionCaptions: translatedTrialMotionCaptions(trial.motionStoryboard, idCaptionFixture(examples[index].key))}
+        : trial
+    ).filter((trial): trial is AnimalTrial => trial !== null), [captionLanguage, examples]);
 
     const [openKey, setOpenKey] = useState<string | null>(detailKey);
     const openIndex = examples.findIndex((example) => example.key === openKey);
     const openTrial = openIndex >= 0 ? trials[openIndex] : null;
 
     const discoverItems = useMemo(() => examples.map((example, index): DiscoverAnimalTrialItem => {
-        primeTrialMotionStoryboard(fakeId(index), frequencyOf(example.key), example.storyboard);
+        const idCaptions = trials[index] ? translatedTrialMotionCaptions(trials[index].motionStoryboard, idCaptionFixture(example.key)) : null;
+        primeTrialMotionStoryboard(fakeId(index), frequencyOf(example.key), example.storyboard, idCaptions ? {lang: "id", captions: idCaptions} : null);
         return {
             kind: "animal-trial",
             id: `preview-${index}`,
@@ -65,7 +73,7 @@ export default function TrialMotionPreviewClient({examples, detailKey, sheetKey,
             evidenceSrc: null,
             href: "#"
         };
-    }), [examples]);
+    }), [examples, trials]);
 
     return (
         <>

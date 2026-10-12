@@ -20,6 +20,7 @@ import {
 import {TRAINING_COPY} from "@/lib/species-training";
 import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
 import TrialMotion from "@/components/trial-motion/trial-motion";
+import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
  * The Animal Trials entry point on a species. One card per frequency the animal
@@ -71,6 +72,8 @@ export default function AnimalTrialsSection({
     const [didLoad, setDidLoad] = useState(false);
     const [openTrialId, setOpenTrialId] = useState<string | null>(null);
     const onTrialsChangeRef = useRef(onTrialsChange);
+    /** `id` on /id pages: the Trial Loops' captions arrive pre-translated with the rows. */
+    const captionLanguage = useTrialMotionCaptionLanguage();
     onTrialsChangeRef.current = onTrialsChange;
 
     const load = useCallback(async (signal: AbortSignal) => {
@@ -81,7 +84,7 @@ export default function AnimalTrialsSection({
         }
         try {
             const response = await fetch(
-                `/api/app/animal-trials?speciesProfileId=${encodeURIComponent(speciesProfileId)}`,
+                `/api/app/animal-trials?speciesProfileId=${encodeURIComponent(speciesProfileId)}${captionLanguage ? `&lang=${captionLanguage}` : ""}`,
                 {headers: {Accept: "application/json"}, signal}
             );
             if (!response.ok) {
@@ -100,7 +103,7 @@ export default function AnimalTrialsSection({
                 setDidLoad(true);
             }
         }
-    }, [speciesProfileId]);
+    }, [captionLanguage, speciesProfileId]);
 
     useEffect(() => {
         if (didLoad) onTrialsChangeRef.current?.(trials);
@@ -249,6 +252,7 @@ export function TrialCard({
             {trial.motionStoryboard && !complete ? (
                 <TrialMotion
                     storyboard={trial.motionStoryboard}
+                    captions={trial.motionCaptions}
                     variant="compact"
                     className={quiet ? "opacity-50" : ""}
                 />

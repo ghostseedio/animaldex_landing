@@ -41,6 +41,7 @@ import {AnimalTrialEvidence} from "@/app/[locale]/(authenticated)/app/_component
 import {discoverPostPath} from "@/lib/discover-post";
 import Link from "@/app/[locale]/_components/link";
 import TrialMotion from "@/components/trial-motion/trial-motion";
+import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
  * One Trial, full screen. Ported from iOS `AnimalTrialDetailView`.
@@ -139,6 +140,8 @@ export default function AnimalTrialDetail({
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const libraryInputRef = useRef<HTMLInputElement>(null);
     const {open: openAsk} = useAskAnimalDex();
+    /** Re-reads carry the Trial Loop's captions in the page language (`id` on /id pages). */
+    const captionLanguage = useTrialMotionCaptionLanguage();
 
     const accent = frequencyAccent(current.frequency);
     const timed = isTimed(current);
@@ -213,7 +216,8 @@ export default function AnimalTrialDetail({
                     action,
                     speciesProfileId: current.speciesProfileId,
                     frequency: current.frequency,
-                    utcOffsetMinutes: -new Date().getTimezoneOffset()
+                    utcOffsetMinutes: -new Date().getTimezoneOffset(),
+                    lang: captionLanguage
                 })
             });
             const payload = await response.json().catch(() => ({}));
@@ -235,7 +239,7 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, current.frequency, current.speciesProfileId]);
+    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId]);
 
     /**
      * After a verdict: an approval is shown at once and the server's row is
@@ -264,6 +268,7 @@ export default function AnimalTrialDetail({
             const form = new FormData();
             form.set("speciesProfileId", current.speciesProfileId);
             form.set("frequency", current.frequency);
+            if (captionLanguage) form.set("lang", captionLanguage);
             // A screenshot Trial accepts only "screenshot"; sending the same
             // image as "photo" is refused before it is looked at.
             form.set("proofType", video ? "video" : stillProofType(current));
@@ -295,7 +300,7 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, current, settleVerification]);
+    }, [apply, canAttempt, captionLanguage, current, settleVerification]);
 
     const written = requiresText(current);
     const submittable = canSubmitEvidence(current);
@@ -315,6 +320,7 @@ export default function AnimalTrialDetail({
             const form = new FormData();
             form.set("speciesProfileId", current.speciesProfileId);
             form.set("frequency", current.frequency);
+            if (captionLanguage) form.set("lang", captionLanguage);
             form.set("proofType", "text");
             form.set("proofText", trimmedAnswer.slice(0, MAX_TEXT_PROOF_CHARACTERS));
 
@@ -335,7 +341,7 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, current.frequency, current.speciesProfileId, settleVerification, trimmedAnswer]);
+    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId, settleVerification, trimmedAnswer]);
 
     const outOfAttempts = !complete && submittable && !hasProofAttemptsLeft(current);
     const actionTitle = !canAttempt ? NOT_YET_CAPTURED_TITLE : outOfAttempts ? "NO CHECKS LEFT" : primaryActionTitle(current);
@@ -714,7 +720,7 @@ export default function AnimalTrialDetail({
                             </div>
                             {/* The Trial Loop: what the instructions ask, drawn, with
                                 the steps under it. Absent until the Trial has one. */}
-                            <TrialMotion storyboard={current.motionStoryboard} className="mb-1.5 mt-1" />
+                            <TrialMotion storyboard={current.motionStoryboard} captions={current.motionCaptions} className="mb-1.5 mt-1" />
                             <p className="text-base font-bold leading-6 text-white">{current.instructions}</p>
                             {showsRule ? <p className="text-sm leading-6 text-white/70">{current.animalRule}</p> : null}
                             {safetyNote(current) ? (

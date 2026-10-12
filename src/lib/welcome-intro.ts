@@ -195,3 +195,355 @@ export function welcomeSystemDynamics(story: WelcomeSystemStory): SpeciesSystemD
 export function welcomeCardLabel(animal: WelcomeIntroAnimal) {
     return `${animal.name}. ${animal.motto} ${animal.forYou}`;
 }
+
+// MARK: - Languages (docs/welcome-voiceover/CONTRACT.md in the app repo)
+
+/**
+ * One language's on-screen strings, keyed by the English text. The full file
+ * (`src/data/welcome-intro/welcome-intro-text.json`, a byte copy of the app's
+ * `welcome-intro-text.json`) holds every language; the page selects one
+ * language server-side and hands only that to the client.
+ */
+export type WelcomeIntroStrings = Record<string, string>;
+
+export type WelcomeIntroTextFile = {version: number; languages: Record<string, WelcomeIntroStrings>};
+
+/** The chosen language's strings over English's, so any missing key reads in English. */
+export function selectWelcomeIntroStrings(file: WelcomeIntroTextFile, language: string): WelcomeIntroStrings {
+    const english = file.languages?.en ?? {};
+    const chosen = language === "en" ? {} : file.languages?.[language] ?? {};
+    const strings: WelcomeIntroStrings = {};
+    for (const [key, value] of Object.entries({...english, ...chosen})) {
+        if (typeof value === "string" && value.trim()) strings[key] = value;
+        else if (typeof english[key] === "string") strings[key] = english[key];
+    }
+    return strings;
+}
+
+/** The string for an English key; the key itself (the English text) when it isn't there. */
+export function welcomeText(strings: WelcomeIntroStrings, key: string) {
+    const value = strings[key];
+    return typeof value === "string" && value ? value : key;
+}
+
+/** The text file's key for each domain on the cards ("Natural Forces", not the species page's "Natural forces"). */
+const WELCOME_DOMAIN_KEYS: Partial<Record<SystemDynamicsDomain, string>> = {
+    STARS: "Stars",
+    FOOD_NUTRITION: "Food",
+    SPORT_ATHLETICS: "Sport",
+    ENGINEERING: "Engineering",
+    MUSIC: "Music",
+    ENTERTAINMENT: "Entertainment",
+    NATURAL_FORCES: "Natural Forces",
+    TRANSPORT: "Transport",
+    ARCHITECTURE: "Architecture"
+};
+
+export function welcomeDomainTitle(strings: WelcomeIntroStrings, domain: SystemDynamicsDomain) {
+    const key = WELCOME_DOMAIN_KEYS[domain];
+    return key ? welcomeText(strings, key) : domain;
+}
+
+/** The lineup with every on-screen string in the chosen language. Stats, images, cues and clips are unchanged. */
+export function localizeWelcomeLineup(strings: WelcomeIntroStrings, lineup: WelcomeIntroAnimal[] = WELCOME_INTRO_LINEUP): WelcomeIntroAnimal[] {
+    const t = (key: string) => welcomeText(strings, key);
+    return lineup.map((animal) => {
+        const localized: WelcomeIntroAnimal = {
+            ...animal,
+            name: t(animal.name),
+            power: t(animal.power),
+            motto: t(animal.motto),
+            forYou: t(animal.forYou)
+        };
+        if (animal.system) {
+            localized.system = {...animal.system, domains: animal.system.domains.map((line) => ({...line, text: t(line.text)}))};
+        }
+        if (animal.trial) {
+            localized.trial = {
+                ...animal.trial,
+                title: t(animal.trial.title),
+                instruction: t(animal.trial.instruction),
+                proofLabel: t(animal.trial.proofLabel),
+                checks: animal.trial.checks.map(t)
+            };
+        }
+        return localized;
+    });
+}
+
+/** Every voiceover clip the intro plays, in the order it plays them. */
+export const WELCOME_INTRO_CLIPS = [WELCOME_INTRO_VOICEOVER, ...WELCOME_INTRO_LINEUP.map((animal) => animal.voiceover)];
+
+/** How many `[[cue]]` markers each clip carries: one per domain or evidence step. */
+export function welcomeExpectedCueCount(clip: string) {
+    const animal = WELCOME_INTRO_LINEUP.find((candidate) => candidate.voiceover === clip);
+    return animal?.system?.cueSeconds.length ?? animal?.trial?.cueSeconds.length ?? 0;
+}
+
+export const WELCOME_VOICEOVER_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/welcome-voiceover/";
+
+export type WelcomeVoiceoverClip = {
+    /** Absolute (storage) or site-relative URL of the MP3. */
+    url: string;
+    /** Seconds; card timing that follows the voice uses this, not the browser's reading of the file. */
+    duration: number;
+    /** Seconds from the clip's start at each `[[cue]]` marker. */
+    cues: number[];
+};
+
+/**
+ * Where a language's voice comes from:
+ * - `bundled`: English, the site's own `/audio/welcome` files and the cue times in the lineup;
+ * - `remote`: a translated language whose manifest entry was read; clips stream from storage;
+ * - `silent`: no audio for this language (no manifest yet, no entry, or a fetch failure). The
+ *   intro runs in the language's text without sound. English audio never plays under it.
+ */
+export type WelcomeVoiceSource =
+    | {kind: "bundled"}
+    | {kind: "remote"; clips: Record<string, WelcomeVoiceoverClip>}
+    | {kind: "silent"};
+
+export type WelcomeVoiceoverManifest = {
+    version: number;
+    languages: Record<string, {clips: Record<string, {path: string; duration: number; cues: number[]; bytes?: number}>}>;
+};
+
+function isPositiveNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Reads `v1/manifest.json`. Malformed clips are dropped one by one (a clip
+ * with no usable path or duration, or cues that aren't ascending seconds
+ * inside the clip), so one bad entry silences that clip, not the language.
+ * Returns null when the document isn't a manifest at all.
+ */
+export function parseWelcomeVoiceoverManifest(input: unknown): WelcomeVoiceoverManifest | null {
+    if (!input || typeof input !== "object") return null;
+    const raw = input as {version?: unknown; languages?: unknown};
+    if (typeof raw.version !== "number" || !raw.languages || typeof raw.languages !== "object") return null;
+
+    const languages: WelcomeVoiceoverManifest["languages"] = {};
+    for (const [code, entry] of Object.entries(raw.languages as Record<string, unknown>)) {
+        const rawClips = entry && typeof entry === "object" ? (entry as {clips?: unknown}).clips : null;
+        if (!rawClips || typeof rawClips !== "object") continue;
+        const clips: WelcomeVoiceoverManifest["languages"][string]["clips"] = {};
+        for (const [name, clip] of Object.entries(rawClips as Record<string, unknown>)) {
+            if (!clip || typeof clip !== "object") continue;
+            const {path, duration, cues, bytes} = clip as {path?: unknown; duration?: unknown; cues?: unknown; bytes?: unknown};
+            if (typeof path !== "string" || !path.trim() || !isPositiveNumber(duration)) continue;
+            const cueList = cues == null ? [] : cues;
+            if (!Array.isArray(cueList)) continue;
+            const valid = cueList.every((cue, i) =>
+                typeof cue === "number" && Number.isFinite(cue) && cue >= 0 && cue <= duration && (i === 0 || cue >= (cueList[i - 1] as number)));
+            if (!valid) continue;
+            clips[name] = {path: path.trim(), duration, cues: cueList as number[]};
+            if (isPositiveNumber(bytes)) clips[name].bytes = Math.round(bytes);
+        }
+        languages[code] = {clips};
+    }
+    return {version: raw.version, languages};
+}
+
+/** A manifest path as a URL: absolute and site-relative paths stay as they are, others hang off the bucket. */
+export function welcomeVoiceoverUrl(path: string, baseUrl = WELCOME_VOICEOVER_BASE_URL) {
+    if (/^https?:\/\//i.test(path) || path.startsWith("/")) return path;
+    return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+/**
+ * The voice for a language. English is always `bundled` (its files and cues
+ * ship with the site). Another language is `remote` with only the clips whose
+ * cue count matches the English script; a clip with the wrong number of cues
+ * would step the panels at the wrong moments, so it is left out and plays silent.
+ */
+export function resolveWelcomeVoiceSource(
+    language: string,
+    manifest: WelcomeVoiceoverManifest | null,
+    baseUrl = WELCOME_VOICEOVER_BASE_URL
+): WelcomeVoiceSource {
+    if (language === "en") return {kind: "bundled"};
+    const entry = manifest?.languages[language];
+    if (!entry) return {kind: "silent"};
+    const clips: Record<string, WelcomeVoiceoverClip> = {};
+    for (const name of WELCOME_INTRO_CLIPS) {
+        const clip = entry.clips[name];
+        if (!clip || clip.cues.length !== welcomeExpectedCueCount(name)) continue;
+        const url = welcomeVoiceoverUrl(clip.path, baseUrl);
+        // `bytes` changes when a clip is regenerated at the same path: a new URL skips the browser's cached copy.
+        const versioned = clip.bytes ? `${url}${url.includes("?") ? "&" : "?"}v=${clip.bytes}` : url;
+        clips[name] = {url: versioned, duration: clip.duration, cues: clip.cues};
+    }
+    return Object.keys(clips).length ? {kind: "remote", clips} : {kind: "silent"};
+}
+
+/** The clip to play for a name, or null when this language has no audio for it. */
+export function welcomeVoiceClip(source: WelcomeVoiceSource, clip: string): {url: string; duration: number | null; cues: number[] | null} | null {
+    if (source.kind === "bundled") return {url: `/audio/welcome/${clip}.mp3`, duration: null, cues: null};
+    if (source.kind === "remote") {
+        const entry = source.clips[clip];
+        return entry ? {url: entry.url, duration: entry.duration, cues: entry.cues} : null;
+    }
+    return null;
+}
+
+/**
+ * The cue times a lesson steps on. While the voice plays: the manifest's cues
+ * for a translated clip, or the lineup's measured English cues. Silent (sound
+ * off, no audio for the language, or the browser refused): the fixed silent
+ * pacing, so the panels never wait on a voice that isn't there.
+ */
+export function selectWelcomeCues({
+    spoken,
+    englishCues,
+    clipCues,
+    silentCues
+}: {
+    /** Whether the voice is actually playing. */
+    spoken: boolean;
+    englishCues: number[];
+    /** The manifest's cues for the clip; null for English's bundled clip. */
+    clipCues: number[] | null;
+    silentCues: number[];
+}) {
+    if (!spoken) return silentCues;
+    if (clipCues == null) return englishCues;
+    return clipCues.length === englishCues.length ? clipCues : silentCues;
+}
+
+// MARK: - The intro's language on the web
+
+/** The app's 45 `AppLanguage` codes, in the app's order (iOS `AppLanguageCatalog`). */
+export const WELCOME_APP_LANGUAGES = [
+    "en", "id", "es", "fr", "de", "pt", "zh-hans", "zh-hant", "tl", "ar", "ru", "ja", "ko", "hi", "bn", "ur", "fa",
+    "tr", "vi", "th", "it", "nl", "pl", "uk", "ms", "sw", "he", "el", "ro", "sv", "cs", "da", "nb", "fi", "hu", "ca",
+    "hr", "sk", "ta", "te", "mr", "gu", "kn", "ml", "pa"
+];
+
+/** Native names, as the app's language list shows them. */
+export const WELCOME_LANGUAGE_NATIVE_NAMES: Record<string, string> = {
+    en: "English", id: "Bahasa Indonesia", es: "Español", fr: "Français", de: "Deutsch", pt: "Português",
+    "zh-hans": "简体中文", "zh-hant": "繁體中文", tl: "Tagalog", ar: "العربية", ru: "Русский", ja: "日本語",
+    ko: "한국어", hi: "हिन्दी", bn: "বাংলা", ur: "اردو", fa: "فارسی", tr: "Türkçe", vi: "Tiếng Việt", th: "ไทย",
+    it: "Italiano", nl: "Nederlands", pl: "Polski", uk: "Українська", ms: "Bahasa Melayu", sw: "Kiswahili",
+    he: "עברית", el: "Ελληνικά", ro: "Română", sv: "Svenska", cs: "Čeština", da: "Dansk", nb: "Norsk bokmål",
+    fi: "Suomi", hu: "Magyar", ca: "Català", hr: "Hrvatski", sk: "Slovenčina", ta: "தமிழ்", te: "తెలుగు",
+    mr: "मराठी", gu: "ગુજરાતી", kn: "ಕನ್ನಡ", ml: "മലയാളം", pa: "ਪੰਜਾਬੀ"
+};
+
+const RTL_LANGUAGES = new Set(["ar", "ur", "fa", "he"]);
+
+export function welcomeLanguageIsRTL(code: string) {
+    return RTL_LANGUAGES.has(code);
+}
+
+/** Languages written in Latin, Cyrillic or Greek, where the card's wide uppercase tracking reads well. */
+const TRACKED_LANGUAGES = new Set([
+    "en", "id", "es", "fr", "de", "pt", "tl", "ru", "tr", "vi", "it", "nl", "pl", "uk", "ms", "sw", "el", "ro",
+    "sv", "cs", "da", "nb", "fi", "hu", "ca", "hr", "sk"
+]);
+
+/** Whether letter-spacing suits the language's script; joined, stacked and CJK scripts go without. */
+export function welcomeLanguageUsesTracking(code: string) {
+    return TRACKED_LANGUAGES.has(code) || !WELCOME_APP_LANGUAGES.includes(code);
+}
+
+/** The switcher's short code: "ZH-S" / "ZH-T" for Chinese, otherwise the code in capitals. */
+export function welcomeLanguageShortCode(code: string) {
+    if (code === "zh-hans") return "ZH-S";
+    if (code === "zh-hant") return "ZH-T";
+    return code.toUpperCase();
+}
+
+/** The HTML `lang` value for an app code. */
+export function welcomeLanguageTag(code: string) {
+    if (code === "zh-hans") return "zh-Hans";
+    if (code === "zh-hant") return "zh-Hant";
+    return code;
+}
+
+/** The languages the switcher offers: every language in the text file, in the app's order. */
+export function welcomeOfferedLanguages(file: WelcomeIntroTextFile) {
+    const inFile = new Set(Object.keys(file.languages ?? {}));
+    return WELCOME_APP_LANGUAGES.filter((code) => inFile.has(code));
+}
+
+const TRADITIONAL_CHINESE_REGIONS = new Set(["tw", "hk", "mo"]);
+const LANGUAGE_ALIASES: Record<string, string> = {fil: "tl", iw: "he", in: "id", no: "nb", nn: "nb"};
+
+/** An app code for a BCP 47 tag ("pt-BR" → "pt", "zh-TW" → "zh-hant", "fil" → "tl"), or null. */
+export function matchWelcomeLanguage(tag: string, offered: string[]) {
+    const parts = tag.trim().toLowerCase().replace(/_/g, "-").split("-").filter(Boolean);
+    const primary = parts[0];
+    if (!primary) return null;
+    const traditional = parts.includes("hant") || (!parts.includes("hans") && parts.slice(1).some((part) => TRADITIONAL_CHINESE_REGIONS.has(part)));
+    const chinese = traditional ? "zh-hant" : "zh-hans";
+    const code = primary === "zh" ? chinese : LANGUAGE_ALIASES[primary] ?? primary;
+    return offered.includes(code) ? code : null;
+}
+
+/** The first of the browser's languages (an Accept-Language header, by preference) that the intro offers. */
+export function welcomeLanguageFromAcceptLanguage(header: string | null | undefined, offered: string[]) {
+    if (!header) return null;
+    const ranked = header
+        .split(",")
+        .map((entry, order) => {
+            const [tag, ...params] = entry.trim().split(";");
+            const qParam = params.map((param) => param.trim()).find((param) => param.startsWith("q="));
+            const q = qParam ? Number(qParam.slice(2)) : 1;
+            return {tag: tag.trim(), q: Number.isFinite(q) ? q : 0, order};
+        })
+        .filter((entry) => entry.tag && entry.tag !== "*" && entry.q > 0)
+        .sort((a, b) => b.q - a.q || a.order - b.order);
+    for (const entry of ranked) {
+        const code = matchWelcomeLanguage(entry.tag, offered);
+        if (code) return code;
+    }
+    return null;
+}
+
+/**
+ * The visitor's intro language choice, remembered per browser. The value is
+ * `<code>:<site locale when chosen>`: a choice only holds while the site stays
+ * on that locale, so the next real site-locale choice (here or in the header)
+ * takes over.
+ */
+export const WELCOME_LANGUAGE_COOKIE = "animaldex_welcome_lang";
+
+export function formatWelcomeLanguageCookie(code: string, locale: string) {
+    return `${code}:${locale}`;
+}
+
+export function parseWelcomeLanguageCookie(value: string | null | undefined): {code: string; locale: string} | null {
+    if (!value) return null;
+    const match = /^([a-z]{2,3}(?:-[a-z]{4})?):([a-z]{2,3})$/.exec(decodeURIComponent(value).trim());
+    return match ? {code: match[1], locale: match[2]} : null;
+}
+
+/**
+ * The intro's language for a request:
+ * 1. a remembered choice made on this site locale;
+ * 2. otherwise, on the default (unprefixed) locale, the browser's language when the intro offers it;
+ * 3. otherwise the site locale. A locale prefix in the address (/id/…) is itself a choice.
+ */
+export function resolveWelcomeIntroLanguage({
+    locale,
+    defaultLocale,
+    cookie,
+    acceptLanguage,
+    offered
+}: {
+    locale: string;
+    defaultLocale: string;
+    cookie: string | null | undefined;
+    acceptLanguage: string | null | undefined;
+    offered: string[];
+}) {
+    const remembered = parseWelcomeLanguageCookie(cookie);
+    if (remembered && remembered.locale === locale && offered.includes(remembered.code)) return remembered.code;
+    if (!remembered && locale === defaultLocale) {
+        const browser = welcomeLanguageFromAcceptLanguage(acceptLanguage, offered);
+        if (browser) return browser;
+    }
+    return locale;
+}

@@ -51,10 +51,10 @@ if (!url || !key) throw new Error("SUPABASE_URL and a read key are required.");
 const PAGE = 1000;
 
 /** `order` must be a unique column: unordered Range pages skip and repeat rows. */
-async function fetchAll(table: string, select: string, order: string) {
+async function fetchAll(table: string, select: string, order: string, filter = "") {
     const rows: Record<string, unknown>[] = [];
     for (let from = 0; ; from += PAGE) {
-        const response = await fetch(`${url}/rest/v1/${table}?select=${select}&order=${order}`, {
+        const response = await fetch(`${url}/rest/v1/${table}?select=${select}&order=${order}${filter ? `&${filter}` : ""}`, {
             headers: {
                 apikey: key as string,
                 Authorization: `Bearer ${key}`,
@@ -148,6 +148,22 @@ const trialRows = await fetchAll(
     "species_profile_id.asc,frequency.asc,title.asc"
 );
 
+/**
+ * The Trial Loops' Indonesian captions, the site's only other locale. Only `id`
+ * is kept, to keep the snapshot small; the hub shows a row on /id pages while
+ * its `source_captions` still equal the storyboard's captions.
+ */
+const captionRows = await fetchAll(
+    "trial_motion_caption_translations",
+    "species_profile_id,frequency,source_captions,captions",
+    "species_profile_id.asc,frequency.asc",
+    "lang=eq.id"
+);
+const idCaptionsByTrial = new Map(captionRows.map((row) => [
+    `${String(row.species_profile_id).toLowerCase()}:${String(row.frequency).toUpperCase()}`,
+    {sourceCaptions: row.source_captions, captions: row.captions}
+]));
+
 const trials = trialRows.flatMap((row) => {
     const species = speciesBySeoId.get(String(row.species_profile_id));
     const title = text(row.title);
@@ -169,7 +185,11 @@ const trials = trialRows.flatMap((row) => {
         estimatedMinutes: Number(row.estimated_minutes) || null,
         completionCount: Number(row.completion_count) || 0,
         // The Trial Loop, verbatim. Null until authored; the hub renders nothing for null.
-        motionStoryboard: row.motion_storyboard ?? null
+        motionStoryboard: row.motion_storyboard ?? null,
+        // Indonesian captions for the loop, checked against the storyboard at render time.
+        motionCaptionsId: row.motion_storyboard
+            ? idCaptionsByTrial.get(`${String(row.species_profile_id).toLowerCase()}:${String(row.frequency).toUpperCase()}`) ?? null
+            : null
     }];
 }).sort((left, right) => left.title.localeCompare(right.title));
 
@@ -207,3 +227,4 @@ writeFileSync(join(root, "src/data/published-animal-trials.json"), `${JSON.strin
 
 console.log(`dynamics rows ${dynamicsRows.length} -> behaviours ${behaviours.length}`);
 console.log(`trial rows ${trialRows.length} -> trials ${trials.length} -> unique ${uniqueTrials.length}`);
+console.log(`id caption rows ${captionRows.length} -> on trials ${uniqueTrials.filter((trial) => trial.motionCaptionsId).length}`);

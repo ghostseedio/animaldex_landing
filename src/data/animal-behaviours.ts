@@ -33,6 +33,12 @@ export type AnimalTrialEntry = {
      * authored; either way the card renders exactly as it did.
      */
     motionStoryboard?: unknown;
+    /**
+     * The loop's Indonesian captions (`trial_motion_caption_translations`, lang
+     * `id`), raw. Shown on /id pages only while `source_captions` equal the
+     * storyboard's captions; absent or null shows English.
+     */
+    motionCaptionsId?: {sourceCaptions?: unknown; captions?: unknown} | null;
 };
 
 /**

@@ -1,6 +1,8 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {decodeAnimalTrial, sortTrials} from "@/lib/animal-trials";
+import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
+import {attachTrialMotionCaptions} from "@/lib/trial-motion/storyboards-server";
 
 export const runtime = "nodejs";
 
@@ -16,7 +18,11 @@ export const runtime = "nodejs";
  * attach evidence, never mark one active, approved or paid.
  */
 
-async function readTrials(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, speciesProfileId: string) {
+/**
+ * `lang` is the page's caption language (`id` on /id pages, else null): the
+ * Trial Loops' pre-translated captions ride along with the rows.
+ */
+async function readTrials(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, speciesProfileId: string, lang: string | null) {
     const {data, error} = await supabase
         .from("animal_trials_for_viewer_v1")
         .select()
@@ -29,7 +35,7 @@ async function readTrials(supabase: NonNullable<ReturnType<typeof createSupabase
         .map(decodeAnimalTrial)
         .filter((trial): trial is NonNullable<typeof trial> => trial !== null);
 
-    return {error: null, trials: sortTrials(trials)};
+    return {error: null, trials: await attachTrialMotionCaptions(supabase, sortTrials(trials), lang)};
 }
 
 export async function GET(request: Request) {
@@ -41,13 +47,15 @@ export async function GET(request: Request) {
 
     const {data: {user}} = await supabase.auth.getUser();
 
-    const speciesProfileId = new URL(request.url).searchParams.get("speciesProfileId")?.trim();
+    const searchParams = new URL(request.url).searchParams;
+    const speciesProfileId = searchParams.get("speciesProfileId")?.trim();
+    const lang = trialMotionCaptionLanguage(searchParams.get("lang"));
 
     if (!speciesProfileId) {
         return NextResponse.json({error: "A species profile id is required."}, {status: 400});
     }
 
-    const {error, trials} = await readTrials(supabase, speciesProfileId);
+    const {error, trials} = await readTrials(supabase, speciesProfileId, lang);
 
     if (error) {
         return NextResponse.json({error}, {status: 400});
@@ -73,6 +81,7 @@ export async function POST(request: Request) {
     const speciesProfileId = String(body.speciesProfileId ?? "").trim();
     const frequency = String(body.frequency ?? "").trim().toUpperCase();
     const action = String(body.action ?? "start");
+    const lang = trialMotionCaptionLanguage(typeof body.lang === "string" ? body.lang : null);
 
     if (!speciesProfileId || !["LOW", "MID", "HIGH"].includes(frequency)) {
         return NextResponse.json({error: "A species profile id and frequency are required."}, {status: 400});
@@ -95,7 +104,7 @@ export async function POST(request: Request) {
     }
 
     // Re-read through the view so definition and state arrive together.
-    const {error: readError, trials} = await readTrials(supabase, speciesProfileId);
+    const {error: readError, trials} = await readTrials(supabase, speciesProfileId, lang);
 
     if (readError) {
         return NextResponse.json({error: readError}, {status: 400});

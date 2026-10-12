@@ -1,0 +1,64 @@
+{
+  "_comment": "DEV ONLY. Fixture for ?welcomeLang=xx on the sign-in page: the English clips and cues under a fake language code, standing in for the real v1/manifest.json until it exists. Durations measured from public/audio/welcome.",
+  "version": 1,
+  "voice": "dev-fixture",
+  "languages": {
+    "xx": {
+      "bytes": 0,
+      "clips": {
+        "welcome_vo_intro": {
+          "path": "/audio/welcome/welcome_vo_intro.mp3",
+          "duration": 3.53,
+          "cues": []
+        },
+        "welcome_vo_little_owl": {
+          "path": "/audio/welcome/welcome_vo_little_owl.mp3",
+          "duration": 6.95,
+          "cues": []
+        },
+        "welcome_vo_mugger_crocodile": {
+          "path": "/audio/welcome/welcome_vo_mugger_crocodile.mp3",
+          "duration": 18.7,
+          "cues": [
+            7.61,
+            11.39,
+            14.92
+          ]
+        },
+        "welcome_vo_common_octopus": {
+          "path": "/audio/welcome/welcome_vo_common_octopus.mp3",
+          "duration": 22.15,
+          "cues": [
+            12.78,
+            17.51,
+            19.57
+          ]
+        },
+        "welcome_vo_hawaiian_crow": {
+          "path": "/audio/welcome/welcome_vo_hawaiian_crow.mp3",
+          "duration": 20.79,
+          "cues": [
+            8.22,
+            15.23,
+            17.69,
+            19.4
+          ]
+        },
+        "welcome_vo_kingfisher": {
+          "path": "/audio/welcome/welcome_vo_kingfisher.mp3",
+          "duration": 17.79,
+          "cues": [
+            8.59,
+            11.27,
+            14.47
+          ]
+        },
+        "welcome_vo_lar_gibbon": {
+          "path": "/audio/welcome/welcome_vo_lar_gibbon.mp3",
+          "duration": 5.88,
+          "cues": []
+        }
+      }
+    }
+  }
+}
