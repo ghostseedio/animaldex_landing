@@ -519,6 +519,7 @@ export default function CaptureDetailClient({
                                 <AnimalPowerBand
                                     profile={resolvedPowerProfile}
                                     power={animalPower.power}
+                                    speciesProfileId={speciesProfileId}
                                     onEarnPower={speciesProfileId ? () => setShowsEarnPowerSheet(true) : null}
                                 />
                             </div>

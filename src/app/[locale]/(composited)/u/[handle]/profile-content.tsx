@@ -7,7 +7,6 @@ import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import ProfileHeadToHeadSheet from "@/app/[locale]/(composited)/u/[handle]/profile-head-to-head";
 import ProfileFollowListSheet from "@/app/[locale]/(composited)/u/[handle]/profile-follow-list";
 import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
-import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
@@ -419,7 +418,7 @@ function ProfileViewsCard({stats}: {stats: ProfileViewStats}) {
     );
 }
 
-/** iOS `ProfileHistoryGridCell`: square photo, index chip, sightings pill, video marker. */
+/** iOS `ProfileHistoryGridCell`: square photo, index chip, sightings pill, level chip, video marker. */
 function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) {
     const capture = item.representative;
     return (
@@ -449,6 +448,15 @@ function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) 
                         <path d="M9 4.5 7.6 6.5H5A2.5 2.5 0 0 0 2.5 9v8.5A2.5 2.5 0 0 0 5 20h14a2.5 2.5 0 0 0 2.5-2.5V9A2.5 2.5 0 0 0 19 6.5h-2.6L15 4.5H9Zm3 4.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" />
                     </svg>
                     {item.captureCount}
+                </span>
+            ) : null}
+            {/* Level 1 is every new capture; iOS shows no chip for it. */}
+            {item.level > 1 ? (
+                <span
+                    aria-label={`Level ${item.level}`}
+                    className="absolute bottom-[7px] left-[7px] rounded-full bg-black/55 px-[7px] py-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
+                >
+                    Lv {item.level}
                 </span>
             ) : null}
             {item.isMovingMedia ? (
@@ -517,7 +525,6 @@ export default function ProfileContent({
     const [isWildInsightScope, setIsWildInsightScope] = useState(false);
     const [showHeadToHead, setShowHeadToHead] = useState(false);
     const [followList, setFollowList] = useState<"followers" | "following" | null>(null);
-    const {unreadMessageCount} = useAppShellChrome();
     // iOS History: the owner's whole library; everyone else the public rows.
     const historyCaptures = viewer.isOwner && ownerExtras ? ownerExtras.historyCaptures : profile.recentCaptures;
     const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
@@ -655,26 +662,6 @@ export default function ProfileContent({
                 </p>
             ) : null}
 
-            {viewer.isOwner && surface === "app" ? (
-                <div className="sticky top-16 z-20 flex items-center justify-between border-b border-white/[0.06] bg-canvas-950/95 px-[18px] py-2.5 backdrop-blur-xl lg:top-0">
-                    <span className="relative">
-                        <ProfileChromeButton href={`${localePrefix}/app/messages`} ariaLabel="Messages">
-                            <ProfileMessagesIcon />
-                        </ProfileChromeButton>
-                        {unreadMessageCount > 0 ? <span className="pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-orange-400" aria-label="Unread messages" /> : null}
-                    </span>
-                    <p className={`truncate px-3 text-center font-display text-sm font-bold text-white transition ${chromeCollapsed ? "opacity-100" : "opacity-0"}`}>
-                        {profile.displayName}
-                    </p>
-                    <Link
-                        href={`${localePrefix}/app/settings`}
-                        aria-label="Settings and activity"
-                        className="grid h-8 w-8 place-items-center text-primary-200 transition hover:text-primary-100"
-                    >
-                        <ProfileSettingsIcon />
-                    </Link>
-                </div>
-            ) : null}
 
             <div
                 className={`overflow-hidden transition-[max-height,opacity,transform,margin] duration-300 ease-out ${

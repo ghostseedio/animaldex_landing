@@ -7,6 +7,7 @@ import CatalogPanel from "@/app/admin/maintenance/catalog-panel";
 import NotifyOwnerDialog, {type NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
 import IndexNewAnimal from "@/app/admin/catalog/index-new-animal";
 import type {AnimalBattleTier} from "@/lib/battle-tier";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, CardContent, CardHeader, cn, EmptyState, fieldClass, LoadingRow, PageHeader, RefreshButton, Section, Skeleton, Spinner, Stat, StatGrid, StatGridSkeleton, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 /**
  * The index as a browsable list: every catalog entry, what it resolves through,
@@ -114,10 +115,9 @@ const KIND_TONE: Record<string, string> = {
 
 function Tick({on, label}: {on: boolean; label: string}) {
     return (
-        <span title={on ? `${label} present` : `${label} missing`}
-              className={`inline-block rounded-full px-2 py-1 text-[10px] font-black uppercase ${on ? "bg-primary-500/15 text-primary-100" : "bg-red-500/15 text-red-200"}`}>
+        <Badge tone={on ? "good" : "bad"} title={on ? `${label} present` : `${label} missing`}>
             {label}
-        </span>
+        </Badge>
     );
 }
 
@@ -133,7 +133,7 @@ function LandingPageCell({page}: {page: LandingPage}) {
     if (page.state === "shared") {
         return (
             <div className="max-w-[16rem]">
-                <span className="inline-block rounded-full bg-amber-400/15 px-2 py-1 text-[10px] font-black uppercase text-amber-200">Shares a page</span>
+                <Badge tone="warn">Shares a page</Badge>
                 {page.path && (
                     <a href={page.path} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-[11px] text-ink-400 hover:underline">
                         {page.path}
@@ -146,7 +146,7 @@ function LandingPageCell({page}: {page: LandingPage}) {
 
     return (
         <div className="max-w-[16rem]">
-            <span className="inline-block rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-black uppercase text-red-200">No page</span>
+            <Badge tone="bad">No page</Badge>
             <span className="mt-1 block text-[11px] leading-4 text-ink-500">{page.reason}</span>
         </div>
     );
@@ -269,251 +269,259 @@ export default function AdminCatalogClient() {
     const pageCount = total != null ? Math.max(1, Math.ceil(total / 50)) : 1;
 
     const groupCard = (group: DuplicateGroup) => (
-        <div key={`${group.signal}:${group.key}`} className="rounded-2xl border border-line-300 bg-surface-900 p-4">
+        <Card key={`${group.signal}:${group.key}`} className="p-4">
             <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${group.verdict === "duplicate" ? "bg-red-500/15 text-red-200" : "bg-amber-400/15 text-amber-200"}`}>
+                <Badge tone={group.verdict === "duplicate" ? "bad" : "warn"}>
                     {group.label}
-                </span>
+                </Badge>
                 <span className="font-mono text-xs text-ink-400">{group.key}</span>
             </div>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 divide-y divide-line-300/60 border-y border-line-300/60">
                 {group.members.map((member) => (
-                    <li key={member.speciesProfileId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-300/60 px-3 py-2">
+                    <li key={member.speciesProfileId} className="flex flex-wrap items-center justify-between gap-3 py-2">
                         <span className="min-w-0">
-                            <span className="font-mono text-sm text-primary-100">{member.number != null ? `#${member.number}` : "—"}</span>
+                            <span className="font-mono text-sm tabular-nums text-primary-100">{member.number != null ? `#${member.number}` : "—"}</span>
                             <span className="ml-2 text-sm font-bold text-white">{member.displayName}</span>
                             <span className="ml-2 text-xs text-ink-500">{member.identityKind}</span>
                             <span className="mt-0.5 block truncate font-mono text-[11px] text-ink-500">{member.identityKey}</span>
                         </span>
-                        <span className="flex shrink-0 items-center gap-3">
-                            <span className="text-xs text-ink-400">{member.publicCaptures.toLocaleString()} public</span>
+                        <span className="flex shrink-0 items-center gap-2">
+                            <span className="text-xs tabular-nums text-ink-400">{member.publicCaptures.toLocaleString()} public</span>
                             {member.slug && (
                                 <a href={`/animals/${member.slug}`} target="_blank" rel="noreferrer"
-                                   className="text-xs font-bold text-ink-400 hover:text-white">page ↗</a>
+                                   className="px-1 text-xs font-bold text-ink-400 hover:text-white">page ↗</a>
                             )}
                             {member.number != null && ["breed", "variant", "subspecies"].includes(member.identityKind ?? "") && (
-                                <button type="button" onClick={() => void fold(member.speciesProfileId)}
+                                <Button size="sm" onClick={() => void fold(member.speciesProfileId)}
+                                        loading={folding === member.speciesProfileId}
                                         disabled={folding !== null}
                                         title="Release this number and count these captures as the parent animal"
-                                        className="rounded-lg border border-amber-400/40 px-2.5 py-1.5 text-xs font-black text-amber-200 disabled:opacity-40">
+                                        className="border-amber-400/40 text-amber-200 hover:border-amber-300">
                                     {folding === member.speciesProfileId ? "Folding…" : "Fold into parent"}
-                                </button>
+                                </Button>
                             )}
-                            <button type="button"
-                                    onClick={() => setEditing({speciesProfileId: member.speciesProfileId} as Entry)}
-                                    className="rounded-lg border border-primary-400/40 px-2.5 py-1.5 text-xs font-black text-primary-100">Edit</button>
+                            <Button size="sm"
+                                    onClick={() => setEditing({speciesProfileId: member.speciesProfileId} as Entry)}>Edit</Button>
                         </span>
                     </li>
                 ))}
             </ul>
-        </div>
+        </Card>
     );
 
     return (
-        <main className="p-4 sm:p-7">
-            <div className="mx-auto max-w-[110rem]">
-                <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
-                    <div>
-                        <Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link>
-                        <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Catalog</p>
-                        <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Index management</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">
-                            Every AnimalDex entry, what captures resolve through, and what each one is still missing.
-                        </p>
-                    </div>
-                    <div className="flex w-fit flex-wrap gap-2">
-                        <button type="button" onClick={() => setIndexingNew(true)}
-                                className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">
-                            Index a new animal
-                        </button>
-                        <Link href="/admin/indexing" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Catalog"
+                title="Index management"
+                description="Every AnimalDex entry, what captures resolve through, and what each one is still missing."
+                actions={(
+                    <>
+                        <RefreshButton loading={loading} onClick={() => void load()} />
+                        <Link href="/admin/indexing" className={buttonVariants({size: "sm"})}>
                             Cron progress
                         </Link>
-                        <Link href="/admin/maintenance" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white hover:border-primary-300">
+                        <Link href="/admin/maintenance" className={buttonVariants({size: "sm"})}>
                             Post maintenance →
                         </Link>
-                    </div>
-                </header>
-
-                {summary && (
-                    <section className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                        {[
-                            ["Indexed animals", summary.indexed],
-                            ["Unindexed profiles", summary.unindexed],
-                            ["Indexed, no subtitle", summary.missingSubtitle],
-                            ["Indexed, no lesson", summary.missingLesson]
-                        ].map(([label, value]) => (
-                            <div key={String(label)} className="rounded-2xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">{label}</p>
-                                <p className="mt-1 font-display text-2xl text-white">{Number(value).toLocaleString()}</p>
-                            </div>
-                        ))}
-                    </section>
+                        <Button variant="primary" size="sm" onClick={() => setIndexingNew(true)}>
+                            Index a new animal
+                        </Button>
+                    </>
                 )}
+            />
 
-                <section className="mt-6 rounded-2xl border border-line-300 bg-surface-900 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Duplicate check</p>
-                            <p className="mt-1 max-w-3xl text-xs leading-5 text-ink-400">
-                                Two numbers for one animal split its captures between them. This groups indexed entries
-                                that share an identity key, a slug, a name, or a scientific name — the last of which is
-                                usually a family (a breed beside its parent) rather than a mistake.
-                            </p>
-                        </div>
-                        <button type="button" onClick={() => void scan()} disabled={scanning}
-                                className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:opacity-40">
-                            {scanning ? "Scanning…" : duplicates ? "Scan again" : "Scan the index"}
-                        </button>
-                    </div>
+            {summary ? (
+                <StatGrid className="mt-6">
+                    {[
+                        ["Indexed animals", summary.indexed],
+                        ["Unindexed profiles", summary.unindexed],
+                        ["Indexed, no subtitle", summary.missingSubtitle],
+                        ["Indexed, no lesson", summary.missingLesson]
+                    ].map(([label, value]) => (
+                        <Stat key={String(label)} label={label} value={Number(value).toLocaleString()} />
+                    ))}
+                </StatGrid>
+            ) : loading ? (
+                <StatGridSkeleton className="mt-6" />
+            ) : null}
 
-                    {scanError && <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{scanError}</p>}
-
-                    {duplicates && (
-                        <div className="mt-4 space-y-4">
-                            <p className="text-sm text-ink-400">
-                                Scanned {duplicates.scanned.toLocaleString()} indexed entries ·{" "}
-                                <span className="font-bold text-white">{duplicates.duplicates.length}</span> likely duplicate
-                                {duplicates.duplicates.length === 1 ? "" : "s"} ·{" "}
-                                <span className="font-bold text-white">{duplicates.related.length}</span> related group
-                                {duplicates.related.length === 1 ? "" : "s"}
-                            </p>
-
-                            {!duplicates.duplicates.length && !duplicates.related.length && (
-                                <p className="text-sm text-ink-400">Nothing shares an identity.</p>
-                            )}
-
-                            {duplicates.duplicates.length > 0 && (
-                                <div className="grid gap-3 xl:grid-cols-2">{duplicates.duplicates.map(groupCard)}</div>
-                            )}
-
-                            {duplicates.related.length > 0 && (
-                                <details className="rounded-2xl border border-line-300/60 p-3">
-                                    <summary className="cursor-pointer text-sm font-bold text-ink-300">
-                                        Related entries ({duplicates.related.length})
-                                    </summary>
-                                    <div className="mt-3 grid gap-3 xl:grid-cols-2">{duplicates.related.map(groupCard)}</div>
-                                </details>
-                            )}
-                        </div>
+            <Card className="mt-6">
+                <CardHeader
+                    title="Duplicate check"
+                    description={(
+                        <>
+                            Two numbers for one animal split its captures between them. This groups indexed entries
+                            that share an identity key, a slug, a name, or a scientific name — the last of which is
+                            usually a family (a breed beside its parent) rather than a mistake.
+                        </>
                     )}
-                </section>
+                    action={(
+                        <Button size="sm" onClick={() => void scan()} loading={scanning}>
+                            {scanning ? "Scanning…" : duplicates ? "Scan again" : "Scan the index"}
+                        </Button>
+                    )}
+                />
 
-                <section className="mt-6 grid gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+                {(scanError || duplicates || scanning) && (
+                    <CardContent className="space-y-4">
+                        {scanError && <Alert tone="bad">{scanError}</Alert>}
+
+                        {scanning && !duplicates && <LoadingRow className="px-0 py-2">Scanning the index…</LoadingRow>}
+
+                        {duplicates && (
+                            <>
+                                <p className="text-sm text-ink-400">
+                                    Scanned <span className="tabular-nums">{duplicates.scanned.toLocaleString()}</span> indexed entries ·{" "}
+                                    <span className="font-bold tabular-nums text-white">{duplicates.duplicates.length}</span> likely duplicate
+                                    {duplicates.duplicates.length === 1 ? "" : "s"} ·{" "}
+                                    <span className="font-bold tabular-nums text-white">{duplicates.related.length}</span> related group
+                                    {duplicates.related.length === 1 ? "" : "s"}
+                                </p>
+
+                                {!duplicates.duplicates.length && !duplicates.related.length && (
+                                    <EmptyState title="Nothing shares an identity." className="py-8" />
+                                )}
+
+                                {duplicates.duplicates.length > 0 && (
+                                    <div className="grid gap-3 xl:grid-cols-2">{duplicates.duplicates.map(groupCard)}</div>
+                                )}
+
+                                {duplicates.related.length > 0 && (
+                                    <details className="border-t border-line-300 pt-3">
+                                        <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[.12em] text-ink-400 hover:text-white">
+                                            Related entries ({duplicates.related.length})
+                                        </summary>
+                                        <div className="mt-3 grid gap-3 xl:grid-cols-2">{duplicates.related.map(groupCard)}</div>
+                                    </details>
+                                )}
+                            </>
+                        )}
+                    </CardContent>
+                )}
+            </Card>
+
+            <Section title="Entries">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
                     <input value={query} onChange={(event) => {setQuery(event.target.value); setPage(0);}}
                            placeholder="Search by number, name, scientific name or identity key…"
-                           className="min-w-0 rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-300" />
+                           aria-label="Search the catalog"
+                           className={cn(fieldClass, "min-w-0")} />
                     <select value={filter} onChange={(event) => {setFilter(event.target.value); setPage(0);}}
-                            className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white">
+                            aria-label="Filter"
+                            className={cn(fieldClass, "lg:w-auto")}>
                         {FILTERS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
                     <select value={sort} onChange={(event) => {setSort(event.target.value); setPage(0);}}
-                            className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white">
+                            aria-label="Sort"
+                            className={cn(fieldClass, "lg:w-auto")}>
                         {SORTS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
-                </section>
+                </div>
 
-                {error && <p className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-                {notice && <p className="mt-4 rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
+                {error && <Alert tone="bad" className="mt-4">{error}</Alert>}
+                {notice && <Alert tone="good" className="mt-4">{notice}</Alert>}
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-ink-400">
-                        {total != null ? `${total.toLocaleString()} entries` : "…"}{loading ? " · loading" : ""}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="flex items-center gap-2 text-sm tabular-nums text-ink-400">
+                        {total != null ? `${total.toLocaleString()} entries` : <Skeleton className="h-3 w-20" />}
+                        {loading && total != null ? <Spinner size={12} /> : null}
                     </p>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0 || loading}
-                                className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">←</button>
-                        <span className="text-sm text-ink-400">Page {page + 1} of {pageCount}</span>
-                        <button onClick={() => setPage((current) => current + 1)} disabled={page + 1 >= pageCount || loading}
-                                className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">→</button>
+                        <Button size="sm" aria-label="Previous page" onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0 || loading}>←</Button>
+                        <span className="text-sm tabular-nums text-ink-400">Page {page + 1} of {pageCount}</span>
+                        <Button size="sm" aria-label="Next page" onClick={() => setPage((current) => current + 1)} disabled={page + 1 >= pageCount || loading}>→</Button>
                     </div>
                 </div>
 
-                <section className="mt-3 overflow-x-auto rounded-2xl border border-line-300 bg-surface-900">
-                    <table className="w-full min-w-[82rem] text-left text-sm">
-                        <thead>
-                            <tr className="border-b border-line-300 text-[11px] font-black uppercase tracking-[.14em] text-ink-500">
-                                <th className="p-3">#</th>
-                                <th className="p-3">Animal</th>
-                                <th className="p-3">Identity key</th>
-                                <th className="p-3">Identity level</th>
-                                <th className="p-3">Tier</th>
-                                <th className="p-3">Landing page</th>
-                                <th className="p-3 text-right">Public captures</th>
-                                <th className="p-3">Content</th>
-                                <th className="p-3" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {!entries.length && !loading && (
-                                <tr><td colSpan={9} className="p-10 text-center text-ink-400">No entries match.</td></tr>
-                            )}
-                            {entries.map((entry) => (
-                                <tr key={entry.speciesProfileId} className="border-b border-line-300/60 last:border-0 align-top">
-                                    <td className="p-3 font-mono text-primary-100">
-                                        {entry.number != null ? `#${entry.number}` : "—"}
-                                    </td>
-                                    <td className="p-3">
-                                        <span className="block font-bold text-white">{entry.displayName}</span>
-                                        <span className="block text-xs italic text-ink-400">{entry.scientificName || "No scientific name"}</span>
-                                    </td>
-                                    <td className="p-3">
-                                        <span className="block font-mono text-xs text-ink-300">{entry.identityKey}</span>
-                                        {entry.slug && entry.slug !== entry.identityKey && (
-                                            <span className="block font-mono text-[11px] text-ink-500">/{entry.slug}</span>
-                                        )}
-                                    </td>
-                                    <td className="p-3">
-                                        <span className={`inline-block rounded-full px-2 py-1 text-[10px] font-black uppercase ${KIND_TONE[entry.identityKind ?? ""] ?? "bg-white/5 text-ink-400"}`}
-                                              title={entry.identityExplanation ?? undefined}>
-                                            {entry.identityKindLabel ?? entry.identityKind ?? "no chip"}
-                                        </span>
-                                        {entry.parent && (
-                                            <span className="mt-1 block text-[11px] leading-4 text-ink-400">
-                                                a form of {entry.parent.number != null ? `#${entry.parent.number} ` : ""}{entry.parent.name}
-                                            </span>
-                                        )}
-                                        <span className="mt-1 block text-[11px] text-ink-500">
-                                            status {entry.catalogStatus ?? "unset"}
-                                            {entry.identityResolutionMode ? ` · ${entry.identityResolutionMode}` : ""}
-                                        </span>
-                                    </td>
-                                    <td className="p-3">
-                                        {entry.tier
-                                            ? <span title={`Battle power ${entry.battlePower}`}><BattleTierChip tier={entry.tier} compact /></span>
-                                            : <span className="text-xs text-ink-500">no stats</span>}
-                                    </td>
-                                    <td className="p-3"><LandingPageCell page={entry.landingPage} /></td>
-                                    <td className="p-3 text-right">
-                                        <span className="font-display text-lg text-white">{entry.publicCaptures.toLocaleString()}</span>
-                                        {entry.publicCapturesWithMedia > 0 && (
-                                            <span className="block text-[11px] text-ink-500">{entry.publicCapturesWithMedia} with photo</span>
-                                        )}
-                                    </td>
-                                    <td className="p-3">
-                                        <div className="flex flex-wrap gap-1">
-                                            <Tick on={entry.hasSubtitle} label="subtitle" />
-                                            <Tick on={entry.hasLesson} label="lesson" />
-                                            <Tick on={entry.artwork.matchedVia === "exact"} label="art" />
-                                        </div>
-                                        {entry.artwork.matchedVia !== "exact" && (
-                                            <span className="mt-1 block max-w-[15rem] text-[11px] leading-4 text-ink-500">
-                                                {entry.artwork.matchedVia === "relative"
-                                                    ? <>borrowing <span className="font-mono">{entry.artwork.file}</span>; upload <span className="font-mono">{entry.artwork.expectedPath}</span></>
-                                                    : <>upload <span className="font-mono">{entry.artwork.expectedPath}</span></>}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-3 text-right">
-                                        <button onClick={() => setEditing(entry)}
-                                                className="rounded-xl border border-primary-400/40 px-3 py-2 text-xs font-black text-primary-100">Edit</button>
-                                    </td>
+                <Card className={cn("mt-3", loading && entries.length > 0 && "opacity-70 transition-opacity")}>
+                    {loading && !entries.length ? (
+                        <TableSkeleton rows={8} columns={9} />
+                    ) : (
+                        <Table minWidth={1312} className="text-sm">
+                            <thead>
+                                <tr>
+                                    <TH>#</TH>
+                                    <TH>Animal</TH>
+                                    <TH>Identity key</TH>
+                                    <TH>Identity level</TH>
+                                    <TH>Tier</TH>
+                                    <TH>Landing page</TH>
+                                    <TH numeric>Public captures</TH>
+                                    <TH>Content</TH>
+                                    <TH />
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </section>
-            </div>
+                            </thead>
+                            <tbody>
+                                {!entries.length && !loading && (
+                                    <tr><td colSpan={9} className="p-4"><EmptyState title="No entries match." className="border-0" /></td></tr>
+                                )}
+                                {entries.map((entry) => (
+                                    <tr key={entry.speciesProfileId} className="hover:bg-white/[.02]">
+                                        <TD className="font-mono tabular-nums text-primary-100">
+                                            {entry.number != null ? `#${entry.number}` : "—"}
+                                        </TD>
+                                        <TD>
+                                            <span className="block text-sm font-bold text-white">{entry.displayName}</span>
+                                            <span className="block text-xs italic text-ink-400">{entry.scientificName || "No scientific name"}</span>
+                                        </TD>
+                                        <TD>
+                                            <span className="block font-mono text-xs text-ink-300">{entry.identityKey}</span>
+                                            {entry.slug && entry.slug !== entry.identityKey && (
+                                                <span className="block font-mono text-[11px] text-ink-500">/{entry.slug}</span>
+                                            )}
+                                        </TD>
+                                        <TD>
+                                            <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[.08em] ${KIND_TONE[entry.identityKind ?? ""] ?? "bg-white/5 text-ink-400"}`}
+                                                  title={entry.identityExplanation ?? undefined}>
+                                                {entry.identityKindLabel ?? entry.identityKind ?? "no chip"}
+                                            </span>
+                                            {entry.parent && (
+                                                <span className="mt-1 block text-[11px] leading-4 text-ink-400">
+                                                    a form of {entry.parent.number != null ? `#${entry.parent.number} ` : ""}{entry.parent.name}
+                                                </span>
+                                            )}
+                                            <span className="mt-1 block text-[11px] text-ink-500">
+                                                status {entry.catalogStatus ?? "unset"}
+                                                {entry.identityResolutionMode ? ` · ${entry.identityResolutionMode}` : ""}
+                                            </span>
+                                        </TD>
+                                        <TD>
+                                            {entry.tier
+                                                ? <span title={`Battle power ${entry.battlePower}`}><BattleTierChip tier={entry.tier} compact /></span>
+                                                : <span className="text-xs text-ink-500">no stats</span>}
+                                        </TD>
+                                        <TD><LandingPageCell page={entry.landingPage} /></TD>
+                                        <TD numeric>
+                                            <span className="font-display text-lg text-white">{entry.publicCaptures.toLocaleString()}</span>
+                                            {entry.publicCapturesWithMedia > 0 && (
+                                                <span className="block text-[11px] text-ink-500">{entry.publicCapturesWithMedia} with photo</span>
+                                            )}
+                                        </TD>
+                                        <TD>
+                                            <div className="flex flex-wrap gap-1">
+                                                <Tick on={entry.hasSubtitle} label="subtitle" />
+                                                <Tick on={entry.hasLesson} label="lesson" />
+                                                <Tick on={entry.artwork.matchedVia === "exact"} label="art" />
+                                            </div>
+                                            {entry.artwork.matchedVia !== "exact" && (
+                                                <span className="mt-1 block max-w-[15rem] text-[11px] leading-4 text-ink-500">
+                                                    {entry.artwork.matchedVia === "relative"
+                                                        ? <>borrowing <span className="font-mono">{entry.artwork.file}</span>; upload <span className="font-mono">{entry.artwork.expectedPath}</span></>
+                                                        : <>upload <span className="font-mono">{entry.artwork.expectedPath}</span></>}
+                                                </span>
+                                            )}
+                                        </TD>
+                                        <TD className="text-right">
+                                            <Button size="sm" onClick={() => setEditing(entry)}>Edit</Button>
+                                        </TD>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    )}
+                </Card>
+            </Section>
 
             {indexingNew && (
                 <IndexNewAnimal
@@ -539,6 +547,6 @@ export default function AdminCatalogClient() {
                     onClose={() => { setEditing(null); void load(); }}
                 />
             )}
-        </main>
+        </AdminPage>
     );
 }

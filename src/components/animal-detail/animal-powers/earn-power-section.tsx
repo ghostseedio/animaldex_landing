@@ -5,6 +5,7 @@ import {type AnimalPower, powerGateAnalytics} from "@/lib/animal-powers";
 import {type AnimalTrial, NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE, isComplete} from "@/lib/animal-trials";
 import AnimalTrialsSection from "@/components/animal-detail/animal-trials/animal-trials-section";
 import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import TrainingBand from "@/components/animal-detail/species-training/training-band";
 import {type SpeciesTrainingState, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
@@ -297,7 +298,9 @@ export default function EarnPowerSection({
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.08] bg-primary-400/10 px-5 py-3.5" style={{color: NEON}}>
                     <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.11em]">Power earned</span>
-                    <span className="truncate text-[10px] font-bold text-white">· {power.principleName}</span>
+                    <span className="truncate text-[10px] font-bold text-white">
+                        · <AnimalPowerIcon speciesProfileId={power.speciesProfileId} />{power.principleName}
+                    </span>
                 </div>
                 {leadingUnlockRows}
                 {/* Earned, so there is nothing left to choose. The Trials stay —

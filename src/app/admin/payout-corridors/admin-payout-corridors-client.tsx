@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {useEffect, useMemo, useState} from "react";
 import {FinanceOperatorSignInCard, useFinanceActor} from "@/app/admin/_components/finance-operator-auth";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, EmptyState, PageHeader, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 type Corridor = {
     id: string;
@@ -40,6 +41,9 @@ export function AdminPayoutCorridorsClient() {
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    // Display only: which button is working, and whether the first load is back.
+    const [pending, setPending] = useState<string | null>(null);
+    const [loaded, setLoaded] = useState(false);
 
     const sorted = useMemo(
         () =>
@@ -60,7 +64,9 @@ export function AdminPayoutCorridorsClient() {
     }
 
     useEffect(() => {
-        load().catch((e) => setError(e instanceof Error ? e.message : "Failed"));
+        load()
+            .catch((e) => setError(e instanceof Error ? e.message : "Failed"))
+            .finally(() => setLoaded(true));
     }, []);
 
     async function patch(id: string, body: Record<string, unknown>) {
@@ -110,148 +116,167 @@ export function AdminPayoutCorridorsClient() {
     }
 
     return (
-        <main className="px-6 py-8 text-ink-100">
-            <Link href="/admin/payouts" className="text-sm text-ink-400 hover:text-white">
-                ← Payouts
-            </Link>
-            <h1 className="mt-5 font-display text-3xl text-white">Payout corridors</h1>
-            <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Lifecycle: provider_supported → testing → <strong className="text-ink-200">beta</strong> → verified.
-                Promote to Beta when requirements + form + quote pass — a live smoke payout is{" "}
-                <em>not</em> required. First genuine Paid payout promotes Beta → Verified. Manual Wise only —
-                auto_payout stays off.
-            </p>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Creator economy"
+                title="Payout corridors"
+                description={
+                    <>
+                        Lifecycle: provider_supported → testing → <strong className="text-ink-200">beta</strong> → verified.
+                        Promote to Beta when requirements + form + quote pass — a live smoke payout is{" "}
+                        <em>not</em> required. First genuine Paid payout promotes Beta → Verified. Manual Wise only —
+                        auto_payout stays off.
+                    </>
+                }
+                actions={
+                    <Link href="/admin/payouts" className={buttonVariants({size: "sm", variant: "ghost"})}>
+                        ← Payouts
+                    </Link>
+                }
+            />
             {actorLoaded && !canFinance && (
-                <div className="mt-5 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                    <p className="font-bold text-white">Finance actions locked</p>
-                    <p className="mt-1 text-sm text-ink-300">
+                <div className="mt-6">
+                    <Alert tone="warn" title="Finance actions locked">
                         Corridor changes require a named finance operator. The shared admin password
                         cannot change payout corridors. Sign in below to enable changes.
-                    </p>
+                    </Alert>
                     <FinanceOperatorSignInCard onSignedIn={signedIn} />
                 </div>
             )}
             {actorLoaded && canFinance && (
-                <div className="mt-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
-                    <p className="font-bold text-white">Named finance operator: {actor?.email}</p>
-                    <p className="mt-1 text-sm text-ink-300">Corridor changes are enabled.</p>
-                </div>
+                <Alert tone="good" title={`Named finance operator: ${actor?.email}`} className="mt-6">
+                    Corridor changes are enabled.
+                </Alert>
             )}
-            {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
-            {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
+            {error && <Alert tone="bad" className="mt-4">{error}</Alert>}
+            {message && <Alert tone="good" className="mt-4">{message}</Alert>}
 
-            <div className="mt-8 overflow-x-auto rounded-2xl border border-line-300">
-                <table className="min-w-full text-left text-sm">
-                    <thead className="bg-white/5 text-xs uppercase tracking-wide text-ink-400">
-                        <tr>
-                            <th className="px-3 py-2">Country</th>
-                            <th className="px-3 py-2">Currency</th>
-                            <th className="px-3 py-2">Type</th>
-                            <th className="px-3 py-2">Status</th>
-                            <th className="px-3 py-2">Setup</th>
-                            <th className="px-3 py-2">Reqs / Quote</th>
-                            <th className="px-3 py-2">First payout</th>
-                            <th className="px-3 py-2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sorted.map((r) => (
-                            <tr key={r.id} className="border-t border-white/10 align-top">
-                                <td className="px-3 py-2 text-white">
-                                    {r.display_name}
-                                    <span className="block text-xs text-ink-500">{r.country_code}</span>
-                                </td>
-                                <td className="px-3 py-2">{r.currency_code}</td>
-                                <td className="px-3 py-2 text-ink-300">{r.recipient_type}</td>
-                                <td className="px-3 py-2">
-                                    <span
-                                        className={
-                                            r.status === "beta"
-                                                ? "text-amber-200"
-                                                : r.status === "verified" || r.status === "enabled"
-                                                  ? "text-emerald-300"
-                                                  : r.status === "paused"
-                                                    ? "text-rose-300"
-                                                    : ""
-                                        }
-                                    >
-                                        {r.status}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2">
-                                    {r.enabled_for_setup ? "on" : "off"} / {r.enabled_for_requests ? "on" : "off"}
-                                </td>
-                                <td className="px-3 py-2 text-xs text-ink-400">
-                                    reqs {r.requirements_verified_at ? "✓" : "—"}
-                                    <br />
-                                    quote {r.quote_verified_at || r.tested_at ? "✓" : "—"}
-                                </td>
-                                <td className="px-3 py-2 text-xs text-ink-400">
-                                    {r.first_successful_payout_at
-                                        ? new Date(r.first_successful_payout_at).toISOString().slice(0, 10)
-                                        : "—"}
-                                    {r.verified_at ? (
-                                        <span className="block text-emerald-400/80">
-                                            verified {new Date(r.verified_at).toISOString().slice(0, 10)}
-                                        </span>
-                                    ) : null}
-                                </td>
-                                <td className="px-3 py-2">
-                                    <p className="text-xs text-ink-500">{r.blocker_reason || "—"}</p>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        <button
-                                            type="button"
-                                            disabled={busy || !canFinance}
-                                            className="rounded border border-sky-500/40 px-2 py-1 text-xs text-sky-100"
-                                            onClick={() => void probe(r.currency_code)}
-                                        >
-                                            Probe reqs
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={busy || !canFinance}
-                                            className="rounded border border-amber-500/40 px-2 py-1 text-xs text-amber-100"
-                                            onClick={() =>
-                                                patch(r.id, {
-                                                    action: "promote_beta",
-                                                })
-                                            }
-                                        >
-                                            Promote to Beta
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={busy || !canFinance}
-                                            className="rounded border border-white/20 px-2 py-1 text-xs"
-                                            onClick={() =>
-                                                patch(r.id, {
-                                                    enabledForSetup: false,
-                                                    enabledForRequests: false,
-                                                    status: "paused",
-                                                })
-                                            }
-                                        >
-                                            Pause
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={busy || r.status !== "paused" || !canFinance}
-                                            className="rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-40"
-                                            onClick={() =>
-                                                patch(r.id, {
-                                                    action: "promote_beta",
-                                                })
-                                            }
-                                        >
-                                            Resume → Beta
-                                        </button>
-                                    </div>
-                                </td>
+            <Card className="mt-6">
+                {!loaded ? (
+                    <TableSkeleton rows={8} columns={8} />
+                ) : sorted.length === 0 ? (
+                    <EmptyState className="m-4" title="No corridors returned." />
+                ) : (
+                    <Table minWidth={1000}>
+                        <thead>
+                            <tr>
+                                <TH>Country</TH>
+                                <TH>Currency</TH>
+                                <TH>Type</TH>
+                                <TH>Status</TH>
+                                <TH>Setup</TH>
+                                <TH>Reqs / Quote</TH>
+                                <TH>First payout</TH>
+                                <TH>Actions</TH>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </main>
+                        </thead>
+                        <tbody>
+                            {sorted.map((r) => (
+                                <tr key={r.id} className="align-top">
+                                    <TD className="text-white">
+                                        {r.display_name}
+                                        <span className="block text-xs text-ink-500">{r.country_code}</span>
+                                    </TD>
+                                    <TD>{r.currency_code}</TD>
+                                    <TD className="text-ink-300">{r.recipient_type}</TD>
+                                    <TD>
+                                        <Badge
+                                            tone={
+                                                r.status === "beta"
+                                                    ? "warn"
+                                                    : r.status === "verified" || r.status === "enabled"
+                                                      ? "good"
+                                                      : r.status === "paused"
+                                                        ? "bad"
+                                                        : "neutral"
+                                            }
+                                        >
+                                            {r.status}
+                                        </Badge>
+                                    </TD>
+                                    <TD>
+                                        {r.enabled_for_setup ? "on" : "off"} / {r.enabled_for_requests ? "on" : "off"}
+                                    </TD>
+                                    <TD className="tabular-nums text-ink-400">
+                                        reqs {r.requirements_verified_at ? "✓" : "—"}
+                                        <br />
+                                        quote {r.quote_verified_at || r.tested_at ? "✓" : "—"}
+                                    </TD>
+                                    <TD className="tabular-nums text-ink-400">
+                                        {r.first_successful_payout_at
+                                            ? new Date(r.first_successful_payout_at).toISOString().slice(0, 10)
+                                            : "—"}
+                                        {r.verified_at ? (
+                                            <span className="block text-primary-200/80">
+                                                verified {new Date(r.verified_at).toISOString().slice(0, 10)}
+                                            </span>
+                                        ) : null}
+                                    </TD>
+                                    <TD>
+                                        <p className="text-xs text-ink-500">{r.blocker_reason || "—"}</p>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            <Button
+                                                size="sm"
+                                                disabled={busy || !canFinance}
+                                                loading={busy && pending === `probe:${r.id}`}
+                                                onClick={() => {
+                                                    setPending(`probe:${r.id}`);
+                                                    void probe(r.currency_code);
+                                                }}
+                                            >
+                                                Probe reqs
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                disabled={busy || !canFinance}
+                                                loading={busy && pending === `beta:${r.id}`}
+                                                onClick={() => {
+                                                    setPending(`beta:${r.id}`);
+                                                    void patch(r.id, {
+                                                        action: "promote_beta",
+                                                    });
+                                                }}
+                                            >
+                                                Promote to Beta
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="danger"
+                                                disabled={busy || !canFinance}
+                                                loading={busy && pending === `pause:${r.id}`}
+                                                onClick={() => {
+                                                    setPending(`pause:${r.id}`);
+                                                    void patch(r.id, {
+                                                        enabledForSetup: false,
+                                                        enabledForRequests: false,
+                                                        status: "paused",
+                                                    });
+                                                }}
+                                            >
+                                                Pause
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={busy || r.status !== "paused" || !canFinance}
+                                                loading={busy && pending === `resume:${r.id}`}
+                                                onClick={() => {
+                                                    setPending(`resume:${r.id}`);
+                                                    void patch(r.id, {
+                                                        action: "promote_beta",
+                                                    });
+                                                }}
+                                            >
+                                                Resume → Beta
+                                            </Button>
+                                        </div>
+                                    </TD>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                )}
+            </Card>
+        </AdminPage>
     );
 }

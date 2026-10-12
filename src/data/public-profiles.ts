@@ -6,6 +6,7 @@ import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {type AnimalBattleTier, getBattleTier} from "@/lib/battle-tier";
+import {animalLevel} from "@/lib/animal-level";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,28}[a-z0-9])?$/;
@@ -47,6 +48,7 @@ type PublicCaptureRow = {
     intelligence_boost?: number | null;
     identity_kind?: string | null;
     image_media_kind?: string | null;
+    total_progression_xp?: number | null;
 };
 
 type PublicProfileSummaryRow = {
@@ -182,6 +184,8 @@ export type PublicProfileCapture = {
     animalDexNumber: number | null;
     speciesProfileId: string | null;
     isMovingMedia: boolean;
+    /** Animal level (iOS `AnimalCapture.level`) for the grid's Lv chip; absent when unknown. */
+    level?: number;
 };
 
 export type ProfileBestForTag = {
@@ -454,7 +458,8 @@ function toPublicCapture(
         identityKind: row.identity_kind?.trim() || null,
         animalDexNumber: animalDexNumber != null && animalDexNumber >= 1 ? animalDexNumber : null,
         speciesProfileId: row.species_profile_id?.trim().toLowerCase() || null,
-        isMovingMedia: Boolean(row.image_media_kind && row.image_media_kind !== "photo")
+        isMovingMedia: Boolean(row.image_media_kind && row.image_media_kind !== "photo"),
+        level: animalLevel(Number(row.total_progression_xp ?? 0))
     };
 }
 
@@ -774,7 +779,8 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         "speed_boost",
         "intelligence_boost",
         "identity_kind",
-        "image_media_kind"
+        "image_media_kind",
+        "total_progression_xp"
     ].join(",");
 
     const topCaptureParams = new URLSearchParams({

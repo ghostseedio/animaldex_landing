@@ -1,6 +1,7 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {useEffect, useState, type ReactNode} from "react";
+import {cn, Skeleton, Spinner} from "@/components/admin/ui";
 
 /**
  * Live pipeline health, split by ownership.
@@ -56,9 +57,9 @@ type Health = {
 };
 
 const TONE = {
-    healthy: {dot: "bg-primary-300", text: "text-primary-100", label: "Analyzer healthy"},
-    degraded: {dot: "bg-amber-300", text: "text-amber-200", label: "Analyzer degraded"},
-    down: {dot: "bg-red-400", text: "text-red-200", label: "Analyzer down"}
+    healthy: {dot: "bg-primary-300", text: "text-primary-100", edge: "border-l-primary-400", label: "Analyzer healthy"},
+    degraded: {dot: "bg-amber-300", text: "text-amber-200", edge: "border-l-amber-400", label: "Analyzer degraded"},
+    down: {dot: "bg-red-400", text: "text-red-200", edge: "border-l-red-400", label: "Analyzer down"}
 };
 
 function ago(minutes: number | null) {
@@ -68,6 +69,16 @@ function ago(minutes: number | null) {
     return hours < 48 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
 }
 
+/** One labelled cell of the full report. */
+function Block({title, className, children}: {title: string; className?: string; children: ReactNode}) {
+    return (
+        <section className={cn("bg-surface-900 p-4", className)}>
+            <h3 className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{title}</h3>
+            {children}
+        </section>
+    );
+}
+
 function KindList({rows}: {rows: KindRow[]}) {
     if (!rows.length) return null;
     return (
@@ -75,7 +86,7 @@ function KindList({rows}: {rows: KindRow[]}) {
             {rows.slice(0, 5).map((row) => (
                 <li key={row.kind} className="flex items-center justify-between gap-3 text-xs">
                     <span className="truncate font-mono text-ink-300">{row.kind}</span>
-                    <span className="font-bold text-white">{row.total}</span>
+                    <span className="font-bold tabular-nums text-white">{row.total}</span>
                 </li>
             ))}
         </ul>
@@ -108,11 +119,31 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
     }, []);
 
     if (failed) {
-        return <div className="flex items-center gap-2 text-xs font-bold text-ink-500"><span className="h-2 w-2 rounded-full bg-ink-600" />Health unavailable</div>;
+        const line = <div className="flex items-center gap-2 text-xs font-bold text-ink-500"><span className="h-2 w-2 rounded-full bg-ink-600" />Health unavailable</div>;
+        return compact ? line : <div className="border border-line-300 bg-surface-900 p-4">{line}</div>;
     }
 
     if (!health) {
-        return <div className="flex items-center gap-2 text-xs font-bold text-ink-500"><span className="h-2 w-2 animate-pulse rounded-full bg-ink-600" />Checking pipeline…</div>;
+        if (compact) {
+            return <div className="flex items-center gap-2 text-xs font-bold text-ink-500"><Spinner size={12} />Checking pipeline…</div>;
+        }
+        // Shaped like the report so the overview does not jump when it lands.
+        return (
+            <div role="status" aria-label="Checking pipeline" className="border border-line-300 bg-surface-900">
+                <div className="space-y-2.5 border-b border-line-300 p-4">
+                    <Skeleton className="h-3 w-36" />
+                    <Skeleton className="h-2.5 w-3/4" />
+                </div>
+                <div className="grid gap-px bg-line-300 sm:grid-cols-2">
+                    {Array.from({length: 4}, (_, index) => (
+                        <div key={index} className="space-y-2 bg-surface-900 p-4">
+                            <Skeleton className="h-2.5 w-24" />
+                            <Skeleton className="h-2.5 w-2/3" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     const tone = TONE[health.status];
@@ -124,7 +155,7 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
             <div className={`flex items-center gap-2 text-xs font-bold ${tone.text}`}>
                 <span className={`h-2 w-2 rounded-full ${tone.dot}`} />
                 {tone.label}
-                <span className="text-ink-500">
+                <span className="tabular-nums text-ink-500">
                     · {serverFailed} server / {health.analyses.failed} total failed in {health.windowHours}h
                     {health.stuckCaptures > 0 ? ` · ${health.stuckCaptures} server stuck` : ""}
                 </span>
@@ -133,26 +164,26 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
     }
 
     return (
-        <div className="rounded-2xl border border-line-300 bg-surface-900/80 p-4">
-            <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-[.14em] ${tone.text}`}>
-                <span className={`h-2 w-2 rounded-full ${tone.dot}`} />{tone.label}
+        <div className="border border-line-300 bg-surface-900">
+            <div className={`border-b border-l-[3px] border-b-line-300 p-4 ${tone.edge}`}>
+                <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-[.12em] ${tone.text}`}>
+                    <span className={`h-2 w-2 rounded-full ${tone.dot}`} />{tone.label}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-ink-400">
+                    {health.analyses.succeeded} analyses completed in the last {health.windowHours}h.
+                    Server failure rate {serverRate}%. Last success {ago(health.minutesSinceSuccess)}.
+                    {health.stuckCaptures > 0 && ` ${health.stuckCaptures} genuine server job(s) stuck.`}
+                </p>
             </div>
-            <p className="mt-2 text-xs leading-5 text-ink-400">
-                {health.analyses.succeeded} analyses completed in the last {health.windowHours}h.
-                Server failure rate {serverRate}%. Last success {ago(health.minutesSinceSuccess)}.
-                {health.stuckCaptures > 0 && ` ${health.stuckCaptures} genuine server job(s) stuck.`}
-            </p>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Server analysis</h3>
+            <div className="grid gap-px bg-line-300 sm:grid-cols-2">
+                <Block title="Server analysis">
                     <p className="mt-1 text-xs text-ink-400">
                         queued {health.serverQueued ?? 0} · running {health.serverRunning ?? 0} · stuck {health.stuckCaptures}
                     </p>
                     <KindList rows={health.serverErrorsByKind ?? []} />
-                </section>
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Client / media</h3>
+                </Block>
+                <Block title="Client / media">
                     <p className="mt-1 text-xs text-ink-400">
                         {(health.analyses.clientMediaFailed ?? 0) > 0 && `${health.analyses.clientMediaFailed} source-media failure(s). `}
                         {(health.sourceMediaMissing ?? 0) > 0 && `${health.sourceMediaMissing} missing object(s). `}
@@ -166,9 +197,8 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
                             {health.analyses.mergedShellFailures} merged burst shell(s) not counted. Their photos live on the primary capture.
                         </p>
                     ) : null}
-                </section>
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Waiting on an owner decision</h3>
+                </Block>
+                <Block title="Waiting on an owner decision">
                     <p className="mt-1 text-xs text-ink-400">
                         {(health.burstDuplicateHolds ?? 0) === 0 && (health.analysedButNotReady ?? 0) === 0
                             ? "Nothing held."
@@ -176,25 +206,22 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
                         {(health.burstDuplicateHolds ?? 0) > 0 && `${health.burstDuplicateHolds} held as a possible burst duplicate${health.oldestBurstHoldHours != null ? ` (oldest ${ago(health.oldestBurstHoldHours * 60)})` : ""}. The apps have no release or attach action yet. `}
                         {(health.analysedButNotReady ?? 0) > 0 && `${health.analysedButNotReady} analysed but still marked uploading.`}
                     </p>
-                </section>
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Credits</h3>
+                </Block>
+                <Block title="Credits">
                     <p className="mt-1 text-xs text-ink-400">
                         {(health.creditBlockedCaptures ?? 0) === 0
                             ? "None waiting."
                             : `${health.creditBlockedCaptures} waiting on credits.`}
                     </p>
-                </section>
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Catalog</h3>
+                </Block>
+                <Block title="Catalog">
                     <p className="mt-1 text-xs text-ink-400">
                         {(health.unlinkedDomesticAnalyses ?? 0) === 0
                             ? "No unlinked pet captures."
                             : `${health.unlinkedDomesticAnalyses} pet capture(s) reached their entry without linking, so duplicate merging will skip them.`}
                     </p>
-                </section>
-                <section className="sm:col-span-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Instagram import</h3>
+                </Block>
+                <Block title="Instagram import" className="sm:col-span-2">
                     <p className="mt-1 text-xs text-ink-400">
                         Separate from analyzer health. A large archive does not degrade capture analysis.
                     </p>
@@ -216,7 +243,7 @@ export default function PipelineHealth({compact = false}: {compact?: boolean}) {
                     ) : (
                         <p className="mt-1 text-xs text-ink-500">Import health unavailable until the backpressure migration is applied.</p>
                     )}
-                </section>
+                </Block>
             </div>
         </div>
     );

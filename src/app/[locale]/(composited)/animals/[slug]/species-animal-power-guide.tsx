@@ -3,11 +3,14 @@ import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import Link from "@/app/[locale]/_components/link";
 import type {DreamReading} from "@/lib/animal-dream-reading";
 import type {AnimalMeaningSections} from "@/lib/animal-meaning-sections";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 type SpeciesAnimalPowerGuideProps = {
     animalName: string;
     artwork?: ReactNode;
     profile: EnhancedAnimalPowerProfile;
+    /** The Power's icon, fetched with the page. Null or absent draws none. */
+    iconSvg?: string | null;
     /** "What does it mean to dream about or encounter a wild <animal>?", built from this principle. */
     dream?: DreamReading | null;
     /** Symbolism, spirit animal, life areas and biomimicry — all from data. */
@@ -36,6 +39,7 @@ export default function SpeciesAnimalPowerGuide({
     animalName,
     artwork,
     profile,
+    iconSvg,
     dream,
     meaning,
     lessonHref,
@@ -52,6 +56,7 @@ export default function SpeciesAnimalPowerGuide({
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-200">{labels.eyebrow}</p>
                     <h2 className="mt-2 font-display text-4xl font-bold tracking-tight text-white md:text-5xl">
+                        <AnimalPowerIcon svg={iconSvg ?? null} />
                         {profile.principleName}
                     </h2>
                     {profile.principleExpression ? (

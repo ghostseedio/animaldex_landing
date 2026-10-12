@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import {Alert, Badge, Button, buttonVariants, Card, cn, Field, fieldClass, Skeleton} from "@/components/admin/ui";
 
 /**
  * Fill in what an AnimalDex number implies: subtitle, core lesson, stats,
@@ -221,51 +222,67 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
     }
 
     const field = (id: string, label: string, rows = 2) => (
-        <label className="block">
-            <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">{label}</span>
+        <Field label={label}>
             <textarea value={draft[id] ?? ""} rows={rows}
                       onChange={(event) => setDraft((current) => ({...current, [id]: event.target.value}))}
-                      className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-        </label>
+                      className={fieldClass} />
+        </Field>
     );
 
     return (
         <div role="dialog" aria-modal="true" aria-label="Catalog entry editor"
-             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-sm sm:p-8"
+             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-3 sm:p-8"
              onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-            <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
-                <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
+            <div className="w-full max-w-4xl overflow-hidden border border-line-300 bg-canvas-950 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-line-300 bg-surface-900 px-5 py-4">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">Index management</p>
-                        <h2 className="font-display text-2xl text-white">Catalog entries</h2>
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">Index management</p>
+                        <h2 className="mt-1 font-display text-xl text-white">Catalog entries</h2>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close catalog editor"
-                            className="grid h-10 w-10 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300">×</button>
+                    <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close catalog editor" className="shrink-0">✕</Button>
                 </div>
 
                 <div className="space-y-4 p-5">
-                    {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-                    {notice && <p className="rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {notice && <Alert tone="good">{notice}</Alert>}
 
                     <input value={query} onChange={(event) => setQuery(event.target.value)} autoFocus
                            placeholder="Search by AnimalDex number, name or identity key…"
-                           className="w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-300" />
+                           aria-label="Search the catalog"
+                           className={fieldClass} />
 
-                    {!entry && (
-                        <div className="max-h-72 overflow-y-auto rounded-xl border border-line-300">
-                            {!matches.length && <p className="p-3 text-sm text-ink-400">
+                    {!entry && busy && (
+                        <div role="status" aria-label="Loading entry" className="space-y-4">
+                            <Card className="flex flex-wrap items-center gap-3 p-4">
+                                <Skeleton className="h-5 w-14" />
+                                <Skeleton className="h-5 w-40" />
+                                <Skeleton className="h-3 w-28" />
+                            </Card>
+                            {[0, 1, 2].map((index) => (
+                                <Card key={index} className="p-4">
+                                    <Skeleton className="h-2.5 w-24" />
+                                    <Skeleton className="mt-3 h-2.5 w-3/4" />
+                                    <Skeleton className="mt-4 h-9 w-full" />
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
+                    {!entry && !busy && (
+                        <div className="max-h-72 overflow-y-auto border border-line-300 bg-canvas-900">
+                            {!matches.length && <p className="px-3 py-6 text-center text-sm text-ink-400">
                                 {query.trim().length < 2 ? "Type at least two characters." : "No entries match."}
                             </p>}
                             {matches.map((match) => (
                                 <button key={match.species_profile_id} type="button" onClick={() => void open(match.species_profile_id)}
-                                        className="flex w-full items-center justify-between gap-3 border-b border-line-300 px-3 py-2 text-left last:border-b-0 hover:bg-white/[.03]">
+                                        className="flex w-full items-center justify-between gap-3 border-b border-line-300/60 px-3 py-2 text-left last:border-b-0 hover:bg-white/[.03]">
                                     <span className="min-w-0">
                                         <span className="block truncate text-sm font-bold text-white">{match.display_name}</span>
                                         <span className="block truncate text-xs text-ink-400">
                                             {match.species_subtitle ? "subtitle ✓" : "no subtitle"} · {match.core_lesson ? "lesson ✓" : "no lesson"}
                                         </span>
                                     </span>
-                                    <span className="shrink-0 font-mono text-sm text-primary-100">
+                                    <span className="shrink-0 font-mono text-sm tabular-nums text-primary-100">
                                         {match.animaldex_number != null ? `#${match.animaldex_number}` : "unindexed"}
                                     </span>
                                 </button>
@@ -275,21 +292,21 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
 
                     {entry && (
                         <div className="space-y-4">
-                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <span className="font-mono text-lg text-primary-100">
+                            <Card className="flex flex-wrap items-center gap-2 p-4">
+                                <span className="font-mono text-lg tabular-nums text-primary-100">
                                     {entry.animaldex_number != null ? `#${entry.animaldex_number}` : "unindexed"}
                                 </span>
                                 <span className="font-display text-xl text-white">{entry.display_name}</span>
                                 <span className="text-sm italic text-ink-400">{entry.scientific_name}</span>
-                                <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${entry.artwork.present ? "bg-primary-500/15 text-primary-100" : "bg-red-500/15 text-red-200"}`}>
+                                <Badge tone={entry.artwork.present ? "good" : "bad"}>
                                     {entry.artwork.present ? "artwork ✓" : "artwork missing"}
-                                </span>
-                                <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{entry.catalog_status}</span>
-                                {!initialSpeciesProfileId && <button type="button" onClick={() => setEntry(null)} className="ml-auto text-xs font-bold text-ink-400 hover:text-white">← back to search</button>}
-                            </div>
+                                </Badge>
+                                <Badge>{entry.catalog_status}</Badge>
+                                {!initialSpeciesProfileId && <Button variant="ghost" size="sm" onClick={() => setEntry(null)} className="ml-auto">← back to search</Button>}
+                            </Card>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">AnimalDex number</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">AnimalDex number</p>
                                 <p className="mt-1 text-xs leading-5 text-ink-500">
                                     Releasing a number frees it for the next animal indexed. Captures pointing here lose
                                     their index until they are moved, so the panel asks again when any exist.
@@ -298,23 +315,21 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                     <input type="number" min={1} value={numberDraft}
                                            onChange={(event) => setNumberDraft(event.target.value)}
                                            placeholder="e.g. 1008"
-                                           className="w-32 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white" />
-                                    <button type="button" onClick={() => void save({setNumber: Number(numberDraft)})}
-                                            disabled={busy || !numberDraft.trim()}
-                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">Set number</button>
-                                    <button type="button" onClick={() => void save({setNumber: "next"})} disabled={busy}
-                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">Use next free</button>
+                                           aria-label="AnimalDex number"
+                                           className={cn(fieldClass, "w-32 tabular-nums")} />
+                                    <Button onClick={() => void save({setNumber: Number(numberDraft)})}
+                                            disabled={busy || !numberDraft.trim()}>Set number</Button>
+                                    <Button onClick={() => void save({setNumber: "next"})} disabled={busy}>Use next free</Button>
                                     {entry.animaldex_number != null && (
-                                        <button type="button" onClick={() => void releaseNumber()} disabled={busy}
-                                                className="rounded-xl border border-red-400/40 px-3 py-2 text-sm font-black text-red-200 disabled:opacity-40">
+                                        <Button variant="danger" onClick={() => void releaseNumber()} disabled={busy}>
                                             Release #{entry.animaldex_number}
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
-                            </div>
+                            </Card>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Identity level</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Identity level</p>
                                 <p className="mt-1 text-xs leading-5 text-ink-500">
                                     The chip on the capture card, and the sentence behind its ⓘ. Leave the explanation
                                     empty and the app writes its own; fill it in and it uses yours instead, which is
@@ -323,10 +338,10 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
 
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                     <label className="block">
-                                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Kind</span>
+                                        <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[.12em] text-ink-400">Kind</span>
                                         <select value={draft.identityKind ?? ""}
                                                 onChange={(event) => setDraft((current) => ({...current, identityKind: event.target.value}))}
-                                                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white">
+                                                className={fieldClass}>
                                             <option value="">No chip shown</option>
                                             {IDENTITY_KINDS.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
                                             {/* An older kind the app no longer renders still needs to round-trip. */}
@@ -341,10 +356,10 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                     </label>
 
                                     <label className="block">
-                                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Resolution</span>
+                                        <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[.12em] text-ink-400">Resolution</span>
                                         <select value={draft.identityResolutionMode ?? ""}
                                                 onChange={(event) => setDraft((current) => ({...current, identityResolutionMode: event.target.value}))}
-                                                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white">
+                                                className={fieldClass}>
                                             <option value="">Unset — inferred from the kind</option>
                                             {RESOLUTION_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
                                         </select>
@@ -359,10 +374,10 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                     {field("identityExplanation", "Chip explanation", 3)}
                                     {field("identityEvidenceGuidance", "Capture guidance", 2)}
                                 </div>
-                            </div>
+                            </Card>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Landing page</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Landing page</p>
                                 <p className="mt-1 text-xs leading-5 text-ink-500">
                                     The slug this entry publishes at. Entries whose identity key is an alias of another
                                     animal fold into that animal&apos;s page instead; giving this one its own slug splits them.
@@ -372,21 +387,21 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                     <input value={draft.landingPageSlug ?? ""}
                                            onChange={(event) => setDraft((current) => ({...current, landingPageSlug: event.target.value}))}
                                            placeholder={entry.normalized_identity_key?.replace(/_/g, "-") ?? "slug"}
-                                           className="min-w-0 flex-1 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 font-mono text-sm text-white outline-none focus:border-primary-300" />
-                                    <button type="button" onClick={() => void save({landingPageSlug: draft.landingPageSlug || null})}
-                                            disabled={busy || (draft.landingPageSlug ?? "") === (entry.landing_page_slug ?? "")}
-                                            className="rounded-xl border border-line-300 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">
+                                           aria-label="Landing page slug"
+                                           className={cn(fieldClass, "w-auto min-w-0 flex-1 font-mono")} />
+                                    <Button onClick={() => void save({landingPageSlug: draft.landingPageSlug || null})}
+                                            disabled={busy || (draft.landingPageSlug ?? "") === (entry.landing_page_slug ?? "")}>
                                         Save slug
-                                    </button>
+                                    </Button>
                                     {entry.landing_page_slug && (
                                         <a href={`/animals/${entry.landing_page_slug}`} target="_blank" rel="noreferrer"
-                                           className="rounded-xl border border-primary-400/40 px-3 py-2 text-sm font-bold text-primary-100">View page ↗</a>
+                                           className={buttonVariants({variant: "ghost"})}>View page ↗</a>
                                     )}
                                 </div>
-                            </div>
+                            </Card>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Artwork</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Artwork</p>
                                 {entry.artwork.matchedVia === "exact" && (
                                     <p className="mt-2 text-sm text-primary-100">
                                         Own illustration at <span className="font-mono text-xs">{entry.artwork.expectedPath}</span>
@@ -407,43 +422,43 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                 )}
                                 {entry.artwork.url && (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={entry.artwork.url} alt="" className="mt-3 h-24 w-24 rounded-xl bg-canvas-900 object-contain" />
+                                    <img src={entry.artwork.url} alt="" className="mt-3 h-24 w-24 border border-line-300 bg-canvas-900 object-contain" />
                                 )}
-                            </div>
+                            </Card>
 
                             <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-3 rounded-xl border border-line-300 bg-surface-900 p-4">
+                                <Card className="space-y-3 p-4">
                                     {field("subtitle", "Subtitle")}
                                     {field("subtitleStory", "Subtitle story", 3)}
-                                </div>
-                                <div className="space-y-3 rounded-xl border border-line-300 bg-surface-900 p-4">
+                                </Card>
+                                <Card className="space-y-3 p-4">
                                     {field("principleName", "Principle name", 1)}
                                     {field("coreLesson", "Core lesson", 3)}
                                     {field("shortMotto", "Short motto", 1)}
-                                </div>
+                                </Card>
                             </div>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Canonical stats</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Canonical stats</p>
                                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
                                     {STATS.map((key) => (
                                         <label key={key} className="block">
-                                            <span className="text-xs capitalize text-ink-400">{key}</span>
+                                            <span className="mb-1 block text-xs capitalize text-ink-400">{key}</span>
                                             <input type="number" min={0} max={100} value={stats[key] ?? 0}
                                                    onChange={(event) => setStats((current) => ({...current, [key]: Number(event.target.value)}))}
-                                                   className="mt-1 w-full rounded-lg border border-line-300 bg-canvas-900 px-2 py-2 text-sm text-white" />
+                                                   className={cn(fieldClass, "px-2 tabular-nums")} />
                                         </label>
                                     ))}
                                 </div>
                                 <p className="mt-2 text-xs text-ink-500">Calibrate against neighbouring numbers; size also sets size_scale_score.</p>
-                            </div>
+                            </Card>
 
-                            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Aliases</p>
+                            <Card className="p-4">
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Aliases</p>
                                 <div className="mt-2 flex flex-wrap gap-2">
                                     {!entry.aliases.length && <span className="text-sm text-ink-400">No aliases.</span>}
                                     {entry.aliases.map((row) => (
-                                        <span key={row.alias_identity_key} className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs text-ink-100">
+                                        <span key={row.alias_identity_key} className="inline-flex items-center gap-2 rounded-full border border-line-300 bg-white/5 px-3 py-1 text-xs text-ink-100">
                                             <span className="font-mono">{row.alias_identity_key}</span>
                                             <button type="button" onClick={() => void save({removeAlias: row.alias_identity_key})}
                                                     className="text-ink-400 hover:text-red-200" aria-label={`Remove ${row.alias_identity_key}`}>×</button>
@@ -453,16 +468,17 @@ export default function CatalogPanel({onClose, initialSpeciesProfileId}: PanelPr
                                 <div className="mt-3 flex gap-2">
                                     <input value={alias} onChange={(event) => setAlias(event.target.value)}
                                            placeholder="another name for this animal, e.g. nutria"
-                                           className="min-w-0 flex-1 rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-                                    <button type="button" onClick={() => void save({addAlias: alias})} disabled={!alias.trim() || busy}
-                                            className="rounded-xl border border-line-300 px-4 text-sm font-bold text-white disabled:opacity-40">Add</button>
+                                           aria-label="New alias"
+                                           className={cn(fieldClass, "w-auto min-w-0 flex-1")} />
+                                    <Button onClick={() => void save({addAlias: alias})} disabled={!alias.trim() || busy}>Add</Button>
                                 </div>
-                            </div>
+                            </Card>
 
-                            <button type="button" onClick={() => void save()} disabled={busy}
-                                    className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
-                                {busy ? "Saving…" : "Save entry"}
-                            </button>
+                            <div className="flex justify-end border-t border-line-300 pt-4">
+                                <Button variant="primary" size="lg" onClick={() => void save()} loading={busy}>
+                                    {busy ? "Saving…" : "Save entry"}
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>

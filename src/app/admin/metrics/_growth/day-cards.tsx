@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/admin/ui";
 import {
   comparableSpendTotal,
   dailyPaceTarget,
@@ -38,24 +39,21 @@ export function TodayCard({
   // Social numbers can be known without a hand entry: the auto log.
   const hasSocial = row.hasMarketingEntry || Boolean(row.autoOrganicEntries?.length);
   return (
-    <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+    <div className="border border-line-300 bg-surface-900 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-2xl text-white">
+          <h3 className="font-display text-lg text-white">
             Today · {dateLabel(row.date)}
           </h3>
-          <p className="mt-1 text-xs font-black uppercase tracking-[.14em] text-primary-200">
+          <p className="mt-1 text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
             Am I doing enough today?
           </p>
         </div>
-        <button
-          onClick={() => onEdit(row)}
-          className="rounded-lg bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"
-        >
+        <Button size="sm" variant="primary" onClick={() => onEdit(row)}>
           Update today
-        </button>
+        </Button>
       </div>
-      <div className="mt-3 grid gap-2 text-sm text-ink-200">
+      <div className="mt-3 grid gap-2 text-sm text-ink-200 tabular-nums">
         <p>
           New users {row.users} / {format(requiredUsers)} needed
         </p>
@@ -136,25 +134,22 @@ export function YesterdayCard({
         : `${formatMoney(comparableSpend, adSpendCurrency)} / ${formatMoney(dailySpend, adSpendCurrency)}`;
   const organic = deriveOrganicTotals(row.organicEntries ?? []);
   return (
-    <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
+    <div className="border border-line-300 bg-surface-900 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-2xl text-white">
+          <h3 className="font-display text-lg text-white">
             Yesterday · {dateLabel(row.date)}
           </h3>
-          <p className="mt-1 text-xs font-black uppercase tracking-[.14em] text-primary-200">
+          <p className="mt-1 text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
             Finalized daily results
           </p>
         </div>
-        <button
-          onClick={() => onEdit(row)}
-          className="rounded-lg border border-line-300 px-3 py-2 text-xs font-black text-white"
-        >
+        <Button size="sm" onClick={() => onEdit(row)}>
           Edit {shortDate(row.date.slice(0, 7), row.day)}
-        </button>
+        </Button>
       </div>
       {!row.hasMarketingEntry ? (
-        <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+        <div className="mt-3 border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
           <p className="font-black">
             Yesterday’s marketing data hasn’t been entered yet.
           </p>
@@ -170,7 +165,7 @@ export function YesterdayCard({
           ) : null}
         </div>
       ) : (
-        <div className="mt-3 grid gap-2 text-sm text-ink-200">
+        <div className="mt-3 grid gap-2 text-sm text-ink-200 tabular-nums">
           <p>Users {targetValue("", row.users, requiredUsers)}</p>
           <p>Captures {targetValue("", row.captures, requiredCaptures)}</p>
           <p>

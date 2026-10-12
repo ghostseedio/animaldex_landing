@@ -10,11 +10,11 @@ import {
 import {
   STATUS_LABEL,
 } from "../campaign-admin-shared";
+import { fieldClass } from "@/components/admin/ui";
 
-export const inputClass =
-  "w-full rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white outline-none focus:border-primary-300 disabled:opacity-60";
+export const inputClass = fieldClass;
 export const ghostButton =
-  "rounded-xl border border-line-300 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-[2px] border border-line-300 bg-surface-900 px-3 py-1.5 text-xs font-bold text-white transition hover:border-primary-300 hover:bg-white/[.03] disabled:cursor-not-allowed disabled:opacity-50";
 
 export const FIELD_HELP: Record<string, string> = {
   Title: "The public name shown to participants.",
@@ -96,7 +96,7 @@ export function InfoTip({ label, help }: { label: string; help: string }) {
       <span
         id={tooltipId}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 w-56 rounded-lg border border-line-300 bg-canvas-950 px-2.5 py-2 text-[11px] normal-case leading-4 text-ink-100 opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 w-56 border border-line-300 bg-canvas-950 px-2.5 py-2 text-[11px] normal-case leading-4 text-ink-100 opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
       >
         {help}
       </span>
@@ -165,7 +165,7 @@ export function Field({
   return (
     <div className="block space-y-1.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[.12em] text-ink-500">
+        <span className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">
           {label}{isRequired ? <span className="ml-1 text-primary-200" aria-label="required">*</span> : null}
         </span>
         {helpText ? <InfoTip label={label} help={helpText} /> : null}
@@ -206,9 +206,9 @@ export function Block({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
-      <div>
-        <h3 className="font-display text-2xl text-white">{title}</h3>
+    <section className="space-y-4 border border-line-300 bg-surface-900 p-4">
+      <div className="border-b border-line-300 pb-3">
+        <h3 className="font-display text-lg text-white">{title}</h3>
         {note ? (
           <p className="mt-1 text-xs leading-5 text-ink-400">{note}</p>
         ) : null}
@@ -220,9 +220,9 @@ export function Block({
 
 export function Stat({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-2xl border border-line-300 bg-canvas-950/70 p-4">
-      <p className="font-display text-2xl text-white">{value}</p>
-      <p className="mt-1 text-xs text-ink-500">{label}</p>
+    <div className="min-w-0 border border-line-300 bg-surface-900 p-4">
+      <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{label}</p>
+      <p className="mt-1 font-display text-3xl leading-tight tabular-nums text-white">{value}</p>
     </div>
   );
 }

@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import {useCallback, useEffect, useMemo, useState} from "react";
-import {ArrowLeft, CheckCircle, ClapperboardPlay, CloseCircle, DangerTriangle, PlugCircle, Refresh, Share} from "solar-icon-set";
+import {CheckCircle, ClapperboardPlay, CloseCircle, PlugCircle, Refresh, Share} from "solar-icon-set";
 import {X_POST_LIMIT, xLength} from "@/lib/social/captions";
 import {COPY_LIMITS, type ShareCopy, VISIBLE_CHARS} from "@/lib/social/share-copy";
 import {TIKTOK_PRIVACY_LABELS, type TikTokCreatorInfo, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 type Video = {
     mediaPath: string;
@@ -82,10 +82,10 @@ async function api<T>(input: string, init?: RequestInit): Promise<T> {
     return body as T;
 }
 
-function statusTone(post: SocialPostRow) {
-    if (post.status === "published") return "bg-primary-500/15 text-primary-100";
-    if (post.status === "failed") return "bg-red-500/15 text-red-200";
-    return "bg-amber-400/15 text-amber-100";
+function statusTone(post: SocialPostRow): "good" | "bad" | "warn" {
+    if (post.status === "published") return "good";
+    if (post.status === "failed") return "bad";
+    return "warn";
 }
 
 function isStale(post: SocialPostRow) {
@@ -99,6 +99,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
     const [sharing, setSharing] = useState<Video | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const loadPosts = useCallback(async () => {
         const body = await api<{posts: SocialPostRow[]}>("/api/admin/social/posts");
@@ -152,120 +153,136 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
     }
 
     return (
-        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
-            <div className="mx-auto w-full max-w-[100rem]">
-                <header className="flex flex-col gap-5 border-b border-line-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-ink-400 hover:text-white"><ArrowLeft size={18} />Dashboard</Link>
-                        <p className="mt-7 text-xs font-black uppercase tracking-[.2em] text-primary-200">Social publishing</p>
-                        <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Story videos</h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Videos made from blog posts here, and every finished, narrated story video the app serves. Share any of them to the official AnimalDex accounts; uploads run in the background and land in the log below.</p>
-                    </div>
-                    <button onClick={() => loadAll()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-300 px-5 py-3 text-sm font-black text-white hover:border-primary-300"><Refresh size={18} />Refresh</button>
-                </header>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Content"
+                title="Story videos"
+                description="Videos made from blog posts here, and every finished, narrated story video the app serves. Share any of them to the official AnimalDex accounts; uploads run in the background and land in the log below."
+                actions={<RefreshButton loading={refreshing || videos === null} onClick={() => { setRefreshing(true); loadAll().finally(() => setRefreshing(false)); }} />}
+            />
 
-                {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
-                {notice && <div className="mt-5 rounded-xl border border-primary-400/20 bg-primary-500/10 px-4 py-3 text-sm text-primary-100">{notice}</div>}
+            {error || notice ? (
+                <div className="mt-6 flex flex-col gap-3">
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {notice && <Alert tone="good">{notice}</Alert>}
+                </div>
+            ) : null}
 
-                <section className="mt-6">
-                    <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">Official accounts</h2>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                        {SOCIAL_PLATFORMS.map((platform) => {
-                            const connection = connections.find((candidate) => candidate.platform === platform);
-                            return (
-                                <article key={platform} className="flex flex-col gap-3 rounded-2xl border border-line-300 bg-surface-900 p-4">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <p className="font-bold text-white">{SOCIAL_PLATFORM_LABELS[platform]}</p>
-                                        {connection?.connected
-                                            ? <span className="inline-flex items-center gap-1 rounded-full bg-primary-500/15 px-2 py-0.5 text-[10px] font-black uppercase text-primary-100"><CheckCircle size={12} iconStyle="Bold" />Connected</span>
-                                            : <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-ink-400">{connection?.configured ? "Not connected" : "Not set up"}</span>}
+            <Section title="Official accounts" className="mt-6">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    {SOCIAL_PLATFORMS.map((platform) => {
+                        const connection = connections.find((candidate) => candidate.platform === platform);
+                        return (
+                            <article key={platform} className="flex flex-col gap-3 border border-line-300 bg-surface-900 p-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="font-bold text-white">{SOCIAL_PLATFORM_LABELS[platform]}</p>
+                                    {connection?.connected
+                                        ? <Badge tone="good"><CheckCircle size={12} iconStyle="Bold" />Connected</Badge>
+                                        : connection ? <Badge>{connection.configured ? "Not connected" : "Not set up"}</Badge> : <Skeleton className="h-4 w-20" />}
+                                </div>
+                                {connection?.connected ? (
+                                    <>
+                                        <p className="text-sm text-ink-300">{connection.accountName ?? "Account connected"}</p>
+                                        <div className="mt-auto flex gap-2">
+                                            <a href={`/api/admin/social/connect/${platform}`} className={cn(buttonVariants({size: "sm"}), "flex-1")}>Reconnect</a>
+                                            <Button size="sm" variant="danger" onClick={() => disconnect(platform)}>Disconnect</Button>
+                                        </div>
+                                    </>
+                                ) : connection?.configured ? (
+                                    <a href={`/api/admin/social/connect/${platform}`} className={cn(buttonVariants({variant: "primary", size: "sm"}), "mt-auto")}><PlugCircle size={15} />Connect account</a>
+                                ) : connection ? (
+                                    <p className="text-xs leading-5 text-ink-500">
+                                        Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server, with redirect URI <code className="break-all text-ink-300">{connection.redirectUri}</code> in the platform&apos;s app.
+                                    </p>
+                                ) : (
+                                    <div aria-label="Loading" className="mt-auto flex flex-col gap-2">
+                                        <Skeleton className="h-3 w-2/3" />
+                                        <Skeleton className="h-8 w-full" />
                                     </div>
-                                    {connection?.connected ? (
-                                        <>
-                                            <p className="text-sm text-ink-300">{connection.accountName ?? "Account connected"}</p>
-                                            <div className="mt-auto flex gap-2">
-                                                <a href={`/api/admin/social/connect/${platform}`} className="flex-1 rounded-lg border border-line-300 px-3 py-2 text-center text-xs font-bold text-white hover:border-primary-300">Reconnect</a>
-                                                <button onClick={() => disconnect(platform)} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Disconnect</button>
-                                            </div>
-                                        </>
-                                    ) : connection?.configured ? (
-                                        <a href={`/api/admin/social/connect/${platform}`} className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"><PlugCircle size={15} />Connect account</a>
-                                    ) : connection ? (
-                                        <p className="text-xs leading-5 text-ink-500">
-                                            Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server, with redirect URI <code className="break-all text-ink-300">{connection.redirectUri}</code> in the platform&apos;s app.
+                                )}
+                            </article>
+                        );
+                    })}
+                </div>
+            </Section>
+
+            <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} />
+
+            <Section title={<>App story videos {videos ? <span className="tabular-nums">({videos.length})</span> : ""}</>}>
+                {videos === null ? (
+                    <div role="status" aria-label="Loading videos" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                        {Array.from({length: 6}, (_, index) => (
+                            <div key={index} aria-hidden="true" className="border border-line-300 bg-surface-900">
+                                <Skeleton className="aspect-[9/16] w-full" />
+                                <div className="flex flex-col gap-2 p-3">
+                                    <Skeleton className="h-3 w-3/4" />
+                                    <Skeleton className="h-2.5 w-1/2" />
+                                    <Skeleton className="mt-1 h-8 w-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : videos.length === 0 ? (
+                    <EmptyState icon={<ClapperboardPlay size={22} />} title="No finished story videos yet" description="They appear here once the app renders them." />
+                ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                        {videos.map((video) => {
+                            const shares = postsByVideo.get(video.mediaPath) ?? [];
+                            return (
+                                <article key={video.mediaPath} className="flex flex-col overflow-hidden border border-line-300 bg-surface-900">
+                                    <video src={video.stableUrl} controls playsInline preload="none" className="aspect-[9/16] w-full bg-black object-cover" />
+                                    <div className="flex flex-1 flex-col gap-2 p-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <a href={`${siteUrl}/animals/${video.pageSlug}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-white hover:text-primary-100">{video.speciesName}</a>
+                                            <Badge tone={video.kind === "story_video" ? "good" : "neutral"} className="shrink-0">{KIND_LABELS[video.kind]}</Badge>
+                                        </div>
+                                        <p className="text-[11px] tabular-nums text-ink-500">
+                                            {[video.durationSeconds ? `${Math.round(video.durationSeconds)}s` : null, video.hasAudio ? "with audio" : "silent", video.locale?.toUpperCase(), new Date(video.createdAt).toLocaleDateString()].filter(Boolean).join(" · ")}
                                         </p>
-                                    ) : <p className="text-xs text-ink-500">Loading…</p>}
+                                        {shares.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {shares.map((post) => (
+                                                    <Badge key={post.id} title={post.error ?? undefined} tone={statusTone(post)} className="normal-case tracking-normal">{SOCIAL_PLATFORM_LABELS[post.platform]}: {isStale(post) ? "stale" : post.status}</Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <Button size="sm" variant="primary" onClick={() => setSharing(video)} className="mt-auto w-full"><Share size={15} />Share</Button>
+                                    </div>
                                 </article>
                             );
                         })}
                     </div>
-                </section>
+                )}
+            </Section>
 
-                <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} />
-
-                <section className="mt-8">
-                    <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">App story videos {videos ? `(${videos.length})` : ""}</h2>
-                    {videos === null ? <div className="grid min-h-[16rem] place-items-center text-sm text-ink-400">Loading videos…</div> : videos.length === 0 ? (
-                        <div className="mt-3 grid min-h-[16rem] place-items-center rounded-2xl border border-dashed border-line-300 text-center"><div><ClapperboardPlay size={38} className="mx-auto text-ink-500" /><p className="mt-3 font-bold text-white">No finished story videos yet</p><p className="mt-1 text-sm text-ink-500">They appear here once the app renders them.</p></div></div>
-                    ) : (
-                        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                            {videos.map((video) => {
-                                const shares = postsByVideo.get(video.mediaPath) ?? [];
-                                return (
-                                    <article key={video.mediaPath} className="flex flex-col overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
-                                        <video src={video.stableUrl} controls playsInline preload="none" className="aspect-[9/16] w-full bg-black object-cover" />
-                                        <div className="flex flex-1 flex-col gap-2 p-3">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <a href={`${siteUrl}/animals/${video.pageSlug}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-white hover:text-primary-100">{video.speciesName}</a>
-                                                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase ${video.kind === "story_video" ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-300"}`}>{KIND_LABELS[video.kind]}</span>
-                                            </div>
-                                            <p className="text-[11px] text-ink-500">
-                                                {[video.durationSeconds ? `${Math.round(video.durationSeconds)}s` : null, video.hasAudio ? "with audio" : "silent", video.locale?.toUpperCase(), new Date(video.createdAt).toLocaleDateString()].filter(Boolean).join(" · ")}
-                                            </p>
-                                            {shares.length > 0 && (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {shares.map((post) => (
-                                                        <span key={post.id} title={post.error ?? undefined} className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${statusTone(post)}`}>{SOCIAL_PLATFORM_LABELS[post.platform]}: {isStale(post) ? "stale" : post.status}</span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <button onClick={() => setSharing(video)} className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"><Share size={15} />Share</button>
-                                        </div>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    )}
-                </section>
-
-                <section className="mt-10 pb-10">
-                    <h2 className="text-xs font-black uppercase tracking-[.18em] text-ink-400">Share log</h2>
-                    {posts.length === 0 ? <p className="mt-3 text-sm text-ink-500">Nothing shared yet.</p> : (
-                        <div className="mt-3 overflow-x-auto rounded-2xl border border-line-300">
-                            <table className="w-full min-w-[44rem] text-left text-sm">
-                                <thead className="bg-surface-900 text-[10px] uppercase tracking-[.14em] text-ink-500">
-                                    <tr><th className="px-4 py-3">When</th><th className="px-4 py-3">Video</th><th className="px-4 py-3">Platform</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Result</th></tr>
-                                </thead>
-                                <tbody>
-                                    {posts.map((post) => (
-                                        <tr key={post.id} className="border-t border-line-300 align-top">
-                                            <td className="whitespace-nowrap px-4 py-3 text-ink-400">{new Date(post.created_at).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-white">{post.species_name ?? post.page_slug}<span className="block text-[11px] text-ink-500">{KIND_LABELS[post.media_kind as Video["kind"]] ?? post.media_kind}</span></td>
-                                            <td className="px-4 py-3 text-ink-200">{SOCIAL_PLATFORM_LABELS[post.platform]}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</td>
-                                            <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${statusTone(post)}`}>{isStale(post) ? "stale" : post.status}</span></td>
-                                            <td className="px-4 py-3 text-ink-300">
-                                                {post.external_url ? <a href={post.external_url} target="_blank" rel="noreferrer" className="font-bold text-primary-100 hover:text-white">Open post ↗</a>
-                                                    : post.error ? <span className="text-red-200">{post.error}</span>
-                                                        : post.external_id ? <span className="text-ink-400">ID {post.external_id}</span> : null}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </section>
-            </div>
+            <Section title="Share log">
+                {posts.length === 0 && videos === null ? (
+                    <Card><TableSkeleton rows={4} columns={5} /></Card>
+                ) : posts.length === 0 ? <EmptyState title="Nothing shared yet." description="Shares to the official accounts are logged here." /> : (
+                    <Card>
+                        <Table minWidth={704}>
+                            <thead>
+                                <tr><TH>When</TH><TH>Video</TH><TH>Platform</TH><TH>Status</TH><TH>Result</TH></tr>
+                            </thead>
+                            <tbody>
+                                {posts.map((post) => (
+                                    <tr key={post.id} className="transition hover:bg-white/[.02]">
+                                        <TD className="whitespace-nowrap tabular-nums text-ink-400">{new Date(post.created_at).toLocaleString()}</TD>
+                                        <TD className="text-white">{post.species_name ?? post.page_slug}<span className="block text-[11px] text-ink-500">{KIND_LABELS[post.media_kind as Video["kind"]] ?? post.media_kind}</span></TD>
+                                        <TD>{SOCIAL_PLATFORM_LABELS[post.platform]}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</TD>
+                                        <TD><Badge tone={statusTone(post)}>{isStale(post) ? "stale" : post.status}</Badge></TD>
+                                        <TD className="text-ink-300">
+                                            {post.external_url ? <a href={post.external_url} target="_blank" rel="noreferrer" className="font-bold text-primary-100 hover:text-white">Open post ↗</a>
+                                                : post.error ? <span className="text-red-200">{post.error}</span>
+                                                    : post.external_id ? <span className="text-ink-400">ID {post.external_id}</span> : null}
+                                        </TD>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </Card>
+                )}
+            </Section>
 
             {sharing && (
                 <ShareDialog
@@ -281,7 +298,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                     }}
                 />
             )}
-        </main>
+        </AdminPage>
     );
 }
 
@@ -307,13 +324,13 @@ function Counter({length, max, visible}: {length: number; max: number; visible?:
 function VisiblePreview({text, visible}: {text: string; visible: number}) {
     const chars = Array.from(text);
     return (
-        <p className="mt-1 rounded-lg bg-white/[0.03] px-3 py-2 text-xs leading-5 text-ink-500">
+        <p className="mt-1 border border-line-300/60 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-ink-500">
             <span className="text-white">{chars.slice(0, visible).join("")}</span>{chars.length > visible ? `${chars.slice(visible, visible + 40).join("")}…` : ""}
         </p>
     );
 }
 
-const fieldClass = "mt-1 w-full rounded-xl border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300";
+const fieldClass = "mt-1.5 w-full border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-300/20";
 
 function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: ShareDialogProps) {
     const pageUrl = `${siteUrl}${video.pagePath ?? `/animals/${video.pageSlug}`}`;
@@ -432,30 +449,30 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
 
     return (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label={`Share ${video.speciesName}`}>
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-line-300 bg-canvas-950 p-5 sm:p-6">
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto border border-line-300 bg-surface-900 p-5 shadow-2xl sm:p-6">
                 <div className="flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Share</p>
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">Share</p>
                         <h2 className="mt-1 font-display text-2xl text-white">{video.speciesName} · {KIND_LABELS[video.kind]}</h2>
                         {video.videoHook ? <p className="mt-1 text-xs text-ink-400">Opens on: “{video.videoHook}”</p> : null}
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-ink-400 hover:text-white"><CloseCircle size={26} /></button>
+                    <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close"><CloseCircle size={20} /></Button>
                 </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-[10rem_1fr]">
                     <video src={video.stableUrl} controls playsInline preload="metadata" className="aspect-[9/16] w-40 bg-black object-cover" />
                     <div className="flex flex-col gap-4">
                         {!video.hasAudio && (
-                            <p className="flex gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100"><DangerTriangle size={16} className="shrink-0" />This clip is silent. Short-video feeds favour audio.</p>
+                            <Alert tone="warn" className="text-xs">This clip is silent. Short-video feeds favour audio.</Alert>
                         )}
                         <fieldset className="flex flex-col gap-2">
-                            <legend className="mb-1 text-xs font-bold text-ink-300">Post to</legend>
+                            <legend className="mb-1.5 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Post to</legend>
                             {SOCIAL_PLATFORMS.map((platform) => {
                                 const connected = Boolean(connections.find((candidate) => candidate.platform === platform)?.connected);
                                 const already = blocked(platform);
                                 const checked = selected.includes(platform);
                                 return (
-                                    <div key={platform} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line-300 px-3 py-2">
+                                    <div key={platform} className="flex flex-wrap items-center gap-x-4 gap-y-1 border border-line-300 bg-canvas-900 px-3 py-2">
                                         <label className={`flex flex-1 items-center gap-2 text-sm ${available(platform) ? "text-white" : "text-ink-500"}`}>
                                             <input type="checkbox" disabled={!available(platform)} checked={checked} onChange={(event) => setSelected((current) => event.target.checked ? [...current, platform] : current.filter((item) => item !== platform))} />
                                             {SOCIAL_PLATFORM_LABELS[platform]}
@@ -475,19 +492,27 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap gap-1 rounded-xl border border-line-300 p-1" role="tablist">
+                    <div className="flex flex-wrap gap-0.5 border border-line-300 bg-canvas-900 p-0.5" role="tablist">
                         {SOCIAL_PLATFORMS.map((platform) => (
-                            <button key={platform} role="tab" aria-selected={tab === platform} onClick={() => setTab(platform)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === platform ? "bg-primary-400 text-canvas-950" : "text-ink-300 hover:text-white"}`}>{SOCIAL_PLATFORM_LABELS[platform]}</button>
+                            <button key={platform} role="tab" aria-selected={tab === platform} onClick={() => setTab(platform)} className={`min-h-8 px-3 text-xs font-black transition ${tab === platform ? "bg-primary-400 text-canvas-950" : "text-ink-400 hover:text-white"}`}>{SOCIAL_PLATFORM_LABELS[platform]}</button>
                         ))}
                     </div>
                     <div className="flex items-center gap-3">
                         {copySource ? <span className="text-[11px] text-ink-500">{copySource === "claude" ? "Drafted by Claude" : "Template draft"}</span> : null}
-                        <button onClick={() => draft(true)} disabled={drafting} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300 disabled:opacity-50"><Refresh size={14} />{drafting ? "Drafting…" : "Regenerate"}</button>
+                        <Button size="sm" onClick={() => draft(true)} loading={drafting}>{drafting ? null : <Refresh size={14} />}{drafting ? "Drafting…" : "Regenerate"}</Button>
                     </div>
                 </div>
-                {copyError && <p className="mt-3 text-xs text-amber-200">{copyError}</p>}
+                {copyError && <Alert tone="warn" className="mt-3 text-xs">{copyError}</Alert>}
 
-                {!copy ? <div className="grid min-h-[12rem] place-items-center text-sm text-ink-400">{drafting ? "Drafting titles and captions…" : "No draft"}</div> : (
+                {!copy ? (drafting ? (
+                    <div role="status" aria-label="Drafting titles and captions" className="mt-4 flex flex-col gap-2">
+                        <p className="flex items-center gap-2 text-xs font-bold text-ink-400"><Spinner size={12} />Drafting titles and captions…</p>
+                        <Skeleton className="h-2.5 w-24" />
+                        <Skeleton className="h-9 w-full" />
+                        <Skeleton className="mt-2 h-2.5 w-28" />
+                        <Skeleton className="h-40 w-full" />
+                    </div>
+                ) : <EmptyState className="mt-4" title="No draft" />) : (
                     <div className="mt-4">
                         {tab === "youtube" && (
                             <>
@@ -549,7 +574,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                     </div>
                 )}
 
-                {error && <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
+                {error && <Alert tone="bad" className="mt-4">{error}</Alert>}
                 {tiktokProblem && <p className="mt-4 text-xs text-amber-200">TikTok: {tiktokProblem} (TikTok tab).</p>}
                 {tiktokDirect && (
                     <p className="mt-4 text-right text-[11px] leading-5 text-ink-400">
@@ -558,9 +583,9 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                     </p>
                 )}
 
-                <div className="mt-5 flex justify-end gap-2">
-                    <button onClick={onClose} className="rounded-xl border border-line-300 px-5 py-2.5 text-sm font-bold text-white hover:border-primary-300">Cancel</button>
-                    <button onClick={submit} disabled={submitting || !copy || selected.length === 0 || tooLong || Boolean(tiktokProblem)} className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 disabled:opacity-50"><Share size={16} />{submitting ? "Queuing…" : `Share to ${selected.length} platform${selected.length === 1 ? "" : "s"}`}</button>
+                <div className="mt-5 flex justify-end gap-2 border-t border-line-300 pt-4">
+                    <Button onClick={onClose}>Cancel</Button>
+                    <Button variant="primary" onClick={submit} loading={submitting} disabled={!copy || selected.length === 0 || tooLong || Boolean(tiktokProblem)}>{submitting ? null : <Share size={16} />}{submitting ? "Queuing…" : `Share to ${selected.length} platform${selected.length === 1 ? "" : "s"}`}</Button>
                 </div>
             </div>
         </div>
@@ -589,7 +614,7 @@ function TikTokPostSettings({creator, creatorError, connected, draftMode, option
         {key: "allowStitch", label: "Stitch", disabled: Boolean(creator?.stitchDisabled)}
     ];
     return (
-        <div className="mt-5 flex flex-col gap-4 rounded-xl border border-line-300 p-4">
+        <div className="mt-5 flex flex-col gap-4 border border-line-300 bg-canvas-900 p-4">
             <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {creator?.avatarUrl ? <img src={creator.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, EmptyState, Segmented, cn, fieldClass } from "@/components/admin/ui";
 import {
   comparableSpendTotal,
   buildRecoveryPlan,
@@ -305,7 +306,7 @@ export function GrowthCommandCenter({
                   setMarketingError("");
                   setEditingDate(row);
                 }}
-                className="text-[11px] font-black text-primary-100"
+                className="text-[11px] font-black text-primary-100 hover:text-primary-200"
               >
                 Edit
               </button>
@@ -469,22 +470,30 @@ export function GrowthCommandCenter({
   }
 
   return (
-    <section className="mt-5 space-y-4">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-ink-400">
             Growth control
           </p>
-          <h2 className="mt-1 font-display text-3xl text-white">
+          <h2 className="mt-1 font-display text-2xl text-white">
             {monthLabel(month)}
           </h2>
-          <p className="text-xs text-ink-500">
-            Asia/Jakarta calendar ·{" "}
-            <span className="font-black uppercase text-primary-100">
-              {planState}
-            </span>
-          </p>
         </div>
+        <p className="flex items-center gap-2 text-xs text-ink-500">
+          Asia/Jakarta calendar
+          <Badge
+            tone={
+              planState === "current"
+                ? "good"
+                : planState === "upcoming"
+                  ? "warn"
+                  : "neutral"
+            }
+          >
+            {planState}
+          </Badge>
+        </p>
       </div>
 
       {editingNorthStar ? (
@@ -503,33 +512,33 @@ export function GrowthCommandCenter({
       )}
 
       {plan && userTarget > 0 ? (
-        <div className={`rounded-2xl border p-5 ${statusClass(userStatus)}`}>
-          <p className="text-sm font-black">
+        <div className={`border p-5 ${statusClass(userStatus)}`}>
+          <p className="text-[11px] font-black uppercase tracking-[.16em]">
             {monthLabel(month).toUpperCase()} GROWTH
           </p>
-          <h3 className="mt-2 font-display text-5xl text-white">
+          <h3 className="mt-2 font-display text-4xl leading-tight text-white tabular-nums sm:text-5xl">
             {isUpcoming
               ? format(userTarget)
               : `${format(actuals.users)} / ${format(userTarget)}`}{" "}
             new users
           </h3>
           {!isUpcoming ? (
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[.08]">
+            <div className="mt-4 h-2 overflow-hidden bg-white/[.08]">
               <div
-                className={`h-full rounded-full ${progressFillClass(userStatus)}`}
+                className={`h-full ${progressFillClass(userStatus)}`}
                 style={{ width: `${Math.min(100, complete ?? 0)}%` }}
               />
             </div>
           ) : null}
           {isUpcoming ? (
-            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            <div className="mt-4 grid gap-2 text-sm tabular-nums sm:grid-cols-2">
               <p>Target {format(userTarget)}</p>
               <p>Planned pace {planned}/day</p>
               <p>Actual users —</p>
               <p>Retention —</p>
             </div>
           ) : planState === "past" ? (
-            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            <div className="mt-4 grid gap-2 text-sm tabular-nums sm:grid-cols-2">
               <p>
                 Final result {format(actuals.users)} / {format(userTarget)}
               </p>
@@ -540,7 +549,7 @@ export function GrowthCommandCenter({
               </p>
             </div>
           ) : (
-            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid gap-2 text-sm tabular-nums sm:grid-cols-2 lg:grid-cols-4">
               <p>
                 {format(Math.max(0, userTarget - actuals.users))} users
                 remaining
@@ -552,10 +561,10 @@ export function GrowthCommandCenter({
               <p>Required from today {required}/day</p>
             </div>
           )}
-          <p className="mt-3 text-sm font-black">
+          <p className="mt-3 text-[11px] font-black uppercase tracking-[.12em]">
             {isUpcoming ? "UPCOMING" : statusLabel(userStatus)}
           </p>
-          <p className="mt-2 text-xs text-ink-200">
+          <p className="mt-2 text-xs text-ink-200 tabular-nums">
             {complete ?? 0}% complete · {elapsed}% time elapsed · original
             planned pace {planned}/day
           </p>
@@ -567,7 +576,7 @@ export function GrowthCommandCenter({
                 : "No user target"}{" "}
             ·{" "}
             <button
-              className="font-black text-primary-100"
+              className="font-black text-primary-100 underline-offset-2 hover:underline"
               onClick={() => setEditingPlan(true)}
             >
               Adjust
@@ -575,11 +584,11 @@ export function GrowthCommandCenter({
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-line-300 bg-surface-900 p-5">
-          <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
+        <div className="border border-line-300 bg-surface-900 p-5">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">
             Current month
           </p>
-          <h3 className="mt-2 font-display text-4xl text-white">
+          <h3 className="mt-2 font-display text-4xl text-white tabular-nums">
             {format(actuals.users)} new users
           </h3>
           <p className="mt-2 text-sm text-ink-400">
@@ -590,39 +599,39 @@ export function GrowthCommandCenter({
       )}
 
       {isCurrent && plan && userTarget > 0 && userStatus !== "on_target" ? (
-        <section className="rounded-2xl border border-red-400/30 bg-red-500/[.06] p-5">
-          <p className="text-xs font-black uppercase tracking-[.18em] text-red-200">
+        <section className="border border-red-400/30 bg-red-500/[.06] p-5">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-red-200">
             Get back on track
           </p>
-          <h3 className="mt-2 font-display text-3xl text-white">
+          <h3 className="mt-2 font-display text-2xl text-white tabular-nums sm:text-3xl">
             You need {format(recovery.remainingUsers)} users in{" "}
             {format(recovery.remainingDays)} days ·{" "}
             {format(recovery.requiredPerDay)}/day
           </h3>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-              <p className="text-[10px] font-black uppercase text-ink-500">
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="border border-line-300 bg-canvas-900 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 Recent pace
               </p>
-              <p className="mt-1 font-display text-2xl text-white">
+              <p className="mt-1 font-display text-2xl text-white tabular-nums">
                 {recovery.recentAveragePerDay}/day
               </p>
               <p className="text-xs text-ink-500">last 7 available days</p>
             </div>
-            <div className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-              <p className="text-[10px] font-black uppercase text-ink-500">
+            <div className="border border-line-300 bg-canvas-900 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 Expected finish
               </p>
-              <p className="mt-1 font-display text-2xl text-white">
+              <p className="mt-1 font-display text-2xl text-white tabular-nums">
                 {format(recovery.projectedMonthEnd)} / {format(userTarget)}
               </p>
               <p className="text-xs text-ink-500">if recent pace repeats</p>
             </div>
-            <div className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-              <p className="text-[10px] font-black uppercase text-ink-500">
+            <div className="border border-line-300 bg-canvas-900 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 Best observed finish
               </p>
-              <p className="mt-1 font-display text-2xl text-white">
+              <p className="mt-1 font-display text-2xl text-white tabular-nums">
                 {format(recovery.bestObservedProjectedMonthEnd)} /{" "}
                 {format(userTarget)}
               </p>
@@ -636,11 +645,11 @@ export function GrowthCommandCenter({
             </div>
           </div>
           {recovery.evidence.length ? (
-            <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
               {recovery.evidence.map((item) => (
                 <div
                   key={`${item.source}-${item.currency}`}
-                  className="rounded-lg border border-primary-400/20 bg-primary-500/[.06] p-3"
+                  className="border border-primary-400/20 bg-primary-500/[.06] p-3"
                 >
                   <p className="font-black capitalize text-white">
                     {item.source.replace(/_/g, " ")}
@@ -685,7 +694,7 @@ export function GrowthCommandCenter({
       ) : null}
 
       {isCurrent && plan ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-3 xl:grid-cols-2">
           <TodayCard
             row={todayRow}
             targets={plan.targets}
@@ -727,20 +736,20 @@ export function GrowthCommandCenter({
 
       {plan ? (
         <>
-          <div className="grid gap-4 xl:grid-cols-[.9fr_1fr_.8fr]">
-            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-              <h3 className="font-display text-2xl text-white">This week</h3>
+          <div className="grid gap-3 xl:grid-cols-[.9fr_1fr_.8fr]">
+            <div className="border border-line-300 bg-surface-900 p-4">
+              <h3 className="font-display text-lg text-white">This week</h3>
               {currentWeek ? (
                 <>
                   <p className="mt-1 text-sm text-ink-400">
                     {shortDate(month, currentWeek.startDay)}–
                     {shortDate(month, currentWeek.endDay)}
                   </p>
-                  <p className="mt-3 text-2xl font-black text-white">
+                  <p className="mt-3 font-display text-2xl text-white tabular-nums">
                     {format(currentWeekReport?.actuals.users ?? 0)} /{" "}
                     {format(currentWeek.targets.users)} users
                   </p>
-                  <p className="mt-1 text-xs text-ink-400">
+                  <p className="mt-1 text-xs text-ink-400 tabular-nums">
                     Need{" "}
                     {format(
                       requiredPerDay(
@@ -776,11 +785,11 @@ export function GrowthCommandCenter({
                 </p>
               )}
             </div>
-            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-              <h3 className="font-display text-2xl text-white">
+            <div className="border border-line-300 bg-surface-900 p-4">
+              <h3 className="font-display text-lg text-white">
                 Organic execution
               </h3>
-              <p className="mt-3 text-sm">
+              <p className="mt-3 text-sm text-ink-200 tabular-nums">
                 Shorts{" "}
                 {isUpcoming
                   ? "—"
@@ -789,7 +798,7 @@ export function GrowthCommandCenter({
                   ? ` / ${format(currentWeek.targets.shortVideos)}`
                   : ""}
               </p>
-              <p className="text-sm">
+              <p className="mt-1 text-sm text-ink-200 tabular-nums">
                 SEO pages{" "}
                 {isUpcoming
                   ? "—"
@@ -798,7 +807,7 @@ export function GrowthCommandCenter({
                   ? ` / ${format(currentWeek.targets.seoPages)}`
                   : ""}
               </p>
-              <p className="text-sm">
+              <p className="mt-1 text-sm text-ink-200 tabular-nums">
                 Social{" "}
                 {isUpcoming
                   ? "—"
@@ -818,14 +827,20 @@ export function GrowthCommandCenter({
                   : "none"}
               </p>
             </div>
-            <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-              <h3 className="font-display text-2xl text-white">
+            <div className="border border-line-300 bg-surface-900 p-4">
+              <h3 className="font-display text-lg text-white">
                 Needs attention
               </h3>
               {growth?.funnel?.needsAttention?.length ? (
                 <ul className="mt-3 space-y-2 text-sm text-ink-200">
                   {growth.funnel.needsAttention.map((item) => (
-                    <li key={item}>• {item}</li>
+                    <li key={item} className="flex gap-2">
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300"
+                        aria-hidden="true"
+                      />
+                      {item}
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -835,72 +850,75 @@ export function GrowthCommandCenter({
               )}
             </div>
           </div>
-          <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-2xl text-white">
-                This week’s jobs
-              </h3>
-              <button
-                onClick={() => setEditingPlan(true)}
-                className="text-xs font-black text-primary-100"
-              >
-                Edit
-              </button>
-            </div>
-            {currentJobItems.length ? (
-              <ul className="mt-3 grid gap-2 text-sm text-ink-200 md:grid-cols-2">
-                {currentJobItems.map((item) => (
-                  <li key={item}>☐ {item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 text-sm text-ink-400">
-                No jobs were planned for this week.
-              </p>
-            )}
-          </div>
-          <div className="rounded-xl border border-line-300 bg-surface-900 p-4">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <h3 className="font-display text-2xl text-white">
-                  {growthMeta[chartMetric].label}
-                </h3>
-                <p className="text-xs text-ink-500">
-                  Actual vs target trajectory
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-1 rounded-lg border border-line-300 bg-canvas-900 p-1">
-                {(
-                  [
-                    "users",
-                    "captures",
-                    "socialViews",
-                    "searchClicks",
-                  ] as GrowthChartMetric[]
-                ).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => setChartMetric(key)}
-                    className={`rounded-md px-2 py-1.5 text-[11px] font-black ${chartMetric === key ? "bg-primary-400 text-canvas-950" : "text-ink-400"}`}
-                  >
-                    {growthMeta[key].short}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <MiniChart
-              rows={isUpcoming ? [] : (growth?.daily ?? [])}
-              metric={chartMetric}
-              target={plan.targets[chartMetric]}
+          <Card>
+            <CardHeader
+              title="This week’s jobs"
+              action={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingPlan(true)}
+                >
+                  Edit
+                </Button>
+              }
             />
-          </div>
-          <details className="rounded-xl border border-line-300 bg-surface-900 p-4">
-            <summary className="cursor-pointer font-display text-2xl text-white">
+            <CardContent>
+              {currentJobItems.length ? (
+                <ul className="grid gap-2 text-sm text-ink-200 md:grid-cols-2">
+                  {currentJobItems.map((item) => (
+                    <li key={item}>☐ {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState
+                  className="py-8"
+                  title="No jobs were planned for this week."
+                />
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader
+              title={growthMeta[chartMetric].label}
+              description="Actual vs target trajectory"
+              action={
+                <Segmented
+                  label="Chart metric"
+                  value={chartMetric}
+                  onChange={setChartMetric}
+                  options={(
+                    [
+                      "users",
+                      "captures",
+                      "socialViews",
+                      "searchClicks",
+                    ] as GrowthChartMetric[]
+                  ).map((key) => ({ value: key, label: growthMeta[key].short }))}
+                />
+              }
+            />
+            <CardContent>
+              <MiniChart
+                rows={isUpcoming ? [] : (growth?.daily ?? [])}
+                metric={chartMetric}
+                target={plan.targets[chartMetric]}
+              />
+            </CardContent>
+          </Card>
+          <details className="group border border-line-300 bg-surface-900">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-lg text-white hover:bg-white/[.02]">
               Daily details
+              <span
+                className="text-xs text-ink-500 transition group-open:rotate-180"
+                aria-hidden="true"
+              >
+                ▾
+              </span>
             </summary>
-            <div className="mt-3 max-h-[30rem] overflow-auto rounded-lg border border-line-300">
-              <table className="min-w-[980px] w-full text-left text-xs">
-                <thead className="sticky top-0 bg-canvas-900 text-[10px] uppercase tracking-[.12em] text-ink-500">
+            <div className="max-h-[30rem] overflow-auto border-t border-line-300">
+              <table className="min-w-[980px] w-full text-left text-xs tabular-nums">
+                <thead className="sticky top-0 bg-canvas-900 text-[10px] font-black uppercase tracking-[.12em] text-ink-500">
                   <tr>
                     {[
                       "Date",
@@ -914,7 +932,7 @@ export function GrowthCommandCenter({
                       "Status",
                       "",
                     ].map((head) => (
-                      <th key={head} className="px-2.5 py-2">
+                      <th key={head} className="border-b border-line-300 px-2.5 py-2">
                         {head}
                       </th>
                     ))}
@@ -932,22 +950,19 @@ export function GrowthCommandCenter({
           />
           <div className="flex flex-wrap gap-2">
             {todayRow ? (
-              <button
+              <Button
+                variant="primary"
                 onClick={() => {
                   setMarketingError("");
                   setEditingDate(todayRow);
                 }}
-                className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
               >
                 Update today
-              </button>
+              </Button>
             ) : null}
-            <button
-              onClick={() => setEditingPlan(true)}
-              className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white"
-            >
+            <Button onClick={() => setEditingPlan(true)}>
               Edit month targets
-            </button>
+            </Button>
           </div>
         </>
       ) : null}
@@ -974,7 +989,7 @@ export function GrowthCommandCenter({
         <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/70 p-4">
           <form
             onSubmit={saveMarketing}
-            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-line-300 bg-surface-900 p-5 shadow-2xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain border border-line-300 bg-surface-900 p-5 shadow-2xl"
           >
             <h3 className="font-display text-2xl text-white">
               {editingDate.date === growth?.today
@@ -1006,7 +1021,7 @@ export function GrowthCommandCenter({
                         editingDate.marketing.socialViews) || ""
                 }
                 placeholder="combined views"
-                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>
             <p className="mt-4 text-xs text-ink-400">
@@ -1047,7 +1062,7 @@ export function GrowthCommandCenter({
                     min="0"
                     placeholder="posts"
                     defaultValue={entry.posts || ""}
-                    className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                    className={cn(fieldClass, "min-w-0 px-2")}
                   />
                   <input
                     name="organicViews"
@@ -1055,7 +1070,7 @@ export function GrowthCommandCenter({
                     min="0"
                     placeholder="views"
                     defaultValue={entry.views || ""}
-                    className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                    className={cn(fieldClass, "min-w-0 px-2")}
                   />
                 </div>
               ))}
@@ -1070,7 +1085,7 @@ export function GrowthCommandCenter({
                 type="number"
                 step="1"
                 defaultValue={editingDate.marketing.searchClicks || ""}
-                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>
             <label className="mt-3 block text-sm font-bold text-ink-300">
@@ -1080,7 +1095,7 @@ export function GrowthCommandCenter({
                 type="number"
                 step="1"
                 defaultValue={editingDate.marketing.seoPages || ""}
-                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>
             <p className="mt-4 text-xs font-black uppercase tracking-[.16em] text-primary-200">
@@ -1106,13 +1121,13 @@ export function GrowthCommandCenter({
                 {spendFormRows.map((entry, index) => (
                   <div
                     key={`${entry.platform}-${index}`}
-                    className="grid grid-cols-2 gap-2 rounded-xl border border-line-300/60 p-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_4.5rem_minmax(0,1fr)_minmax(0,.8fr)] sm:border-0 sm:p-0"
+                    className="grid grid-cols-2 gap-2 border border-line-300/60 p-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_4.5rem_minmax(0,1fr)_minmax(0,.8fr)] sm:border-0 sm:p-0"
                   >
                     <select
                       name="spendPlatform"
                       aria-label="Ad network"
                       defaultValue={entry.platform}
-                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                      className={cn(fieldClass, "min-w-0 px-2")}
                     >
                       {spendNetworks.map((network) => (
                         <option key={network} value={network}>
@@ -1124,7 +1139,7 @@ export function GrowthCommandCenter({
                       name="spendOs"
                       aria-label="App the spend was for"
                       defaultValue={entry.os ?? defaultOsForNetwork(entry.platform)}
-                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                      className={cn(fieldClass, "min-w-0 px-2")}
                     >
                       {spendOsOptions.map((os) => (
                         <option key={os} value={os}>
@@ -1136,7 +1151,7 @@ export function GrowthCommandCenter({
                       name="spendCurrency"
                       aria-label="Currency"
                       defaultValue={entry.currencyCode}
-                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                      className={cn(fieldClass, "min-w-0 px-2")}
                     >
                       <option value="IDR">IDR</option>
                       <option value="GBP">GBP</option>
@@ -1150,7 +1165,7 @@ export function GrowthCommandCenter({
                       aria-label="Spend"
                       defaultValue={entry.amount > 0 ? entry.amount : ""}
                       placeholder="spend"
-                      className="min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                      className={cn(fieldClass, "min-w-0 px-2")}
                     />
                     <input
                       name="spendInstalls"
@@ -1160,44 +1175,38 @@ export function GrowthCommandCenter({
                       aria-label="Reported installs"
                       defaultValue={entry.reportedInstalls ?? ""}
                       placeholder="installs"
-                      className="col-span-2 sm:col-span-1 min-w-0 w-full rounded-xl border border-line-300 bg-canvas-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                      className={cn(fieldClass, "col-span-2 min-w-0 px-2 sm:col-span-1")}
                     />
                   </div>
                 ))}
               </div>
             </div>
             {marketingError ? (
-              <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 p-2 text-sm text-red-200">
+              <Alert tone="bad" className="mt-3">
                 {marketingError}
-              </p>
+              </Alert>
             ) : null}
             <label className="mt-4 block text-sm font-bold text-ink-300">
               Notes
               <textarea
                 name="notes"
                 defaultValue={editingDate.marketing.notes}
-                className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>
             <div className="sticky bottom-0 -mx-5 -mb-5 mt-5 flex gap-2 border-t border-line-300 bg-surface-900 px-5 py-4">
-              <button
-                disabled={marketingSaving}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-70"
+              <Button
+                type="submit"
+                variant="primary"
+                loading={marketingSaving}
               >
-                {marketingSaving ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-canvas-950/30 border-t-canvas-950" />
-                ) : null}
                 {marketingSaving
                   ? "Saving..."
                   : `Save ${shortDate(month, editingDate.day)}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingDate(null)}
-                className="rounded-xl border border-line-300 px-4 py-2 text-sm font-black text-white"
-              >
+              </Button>
+              <Button type="button" onClick={() => setEditingDate(null)}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>

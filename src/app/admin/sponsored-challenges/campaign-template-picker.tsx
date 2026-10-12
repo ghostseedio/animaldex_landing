@@ -14,7 +14,7 @@ export function CampaignTemplatePicker({
     return (
         <section className="space-y-3">
             <div>
-                <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">Start from a template</p>
+                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Start from a template</p>
                 <p className="mt-1 text-sm text-ink-400">Presets only set supported backend fields. Venue is never invented.</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -26,10 +26,10 @@ export function CampaignTemplatePicker({
                             type="button"
                             disabled={disabled}
                             onClick={() => onSelect(template.id)}
-                            className={`rounded-2xl border p-3 text-left transition disabled:opacity-50 ${
+                            className={`border p-3 text-left transition disabled:opacity-50 ${
                                 active
                                     ? "border-primary-300 bg-primary-500/10"
-                                    : "border-line-300 bg-canvas-950/50 hover:border-primary-400/40"
+                                    : "border-line-300 bg-canvas-900 hover:border-primary-400/40"
                             }`}
                         >
                             <p className="text-sm font-black text-white">{template.label}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useState} from "react";
+import {AdminPage, Alert, Badge, Button, Card, CardContent, CardHeader, EmptyState, fieldClass, ListSkeleton, PageHeader, Section, Segmented, Spinner} from "@/components/admin/ui";
 
 type Creator = {
     connection_id: string;
@@ -47,11 +48,11 @@ type Review = {creator: Creator; samples: Sample[]; history: HistoryRow[]; auto_
 
 const STATES = ["pending_review", "verified", "rejected", "suspended"] as const;
 
-const STATE_STYLE: Record<string, string> = {
-    pending_review: "bg-amber-400/15 text-amber-200 border-amber-400/30",
-    verified: "bg-emerald-400/15 text-emerald-200 border-emerald-400/30",
-    rejected: "bg-rose-400/15 text-rose-200 border-rose-400/30",
-    suspended: "bg-orange-400/15 text-orange-200 border-orange-400/30"
+const STATE_STYLE: Record<string, "warn" | "good" | "bad"> = {
+    pending_review: "warn",
+    verified: "good",
+    rejected: "bad",
+    suspended: "warn"
 };
 
 const date = (value: string | null) => value ? new Date(value).toLocaleDateString(undefined, {
@@ -80,6 +81,8 @@ export default function AdminCreatorReviewsClient() {
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [reason, setReason] = useState("");
+    // Display only: which row or decision button is working.
+    const [pressed, setPressed] = useState<string | null>(null);
 
     const load = useCallback(async (nextState: string) => {
         setLoading(true);
@@ -145,63 +148,57 @@ export default function AdminCreatorReviewsClient() {
     }
 
     return (
-        <main className="mx-auto w-full max-w-6xl px-6 py-10">
-            <header className="mb-8">
-                <p className="text-xs uppercase tracking-[0.2em] text-ink-400">Trust &amp; safety</p>
-                <h1 className="font-display text-3xl text-ink-50">Creator import reviews</h1>
-                <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                    Instagram authentication proves someone controls the account. It does not prove they took the
-                    photographs. Judge the sample below: original wildlife photography, or reposted compilation content.
-                </p>
-            </header>
+        <AdminPage>
+            <PageHeader
+                eyebrow="Creator economy"
+                title="Creator import reviews"
+                description={
+                    <>
+                        Instagram authentication proves someone controls the account. It does not prove they took the
+                        photographs. Judge the sample below: original wildlife photography, or reposted compilation content.
+                    </>
+                }
+            />
 
-            <div className="mb-6 flex flex-wrap items-center gap-2">
-                {STATES.map((value) => (
-                    <button
-                        key={value}
-                        onClick={() => { setReview(null); setState(value); }}
-                        className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                            state === value
-                                ? "border-primary-400/40 bg-primary-400/15 text-primary-100"
-                                : "border-white/10 bg-white/5 text-ink-400 hover:text-ink-200"
-                        }`}
-                    >
-                        {value.replace("_", " ")}
-                    </button>
-                ))}
-            </div>
+            <Segmented
+                label="Verification state"
+                className="mt-6"
+                value={state}
+                onChange={(value) => { setReview(null); setState(value); }}
+                options={STATES.map((value) => ({value, label: value.replace("_", " ")}))}
+            />
 
-            {error && <p className="mb-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</p>}
-            {notice && <p className="mb-4 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">{notice}</p>}
+            {error && <Alert tone="bad" className="mt-4">{error}</Alert>}
+            {notice && <Alert tone="good" className="mt-4">{notice}</Alert>}
 
             {!review && (
-                <section className="space-y-3">
-                    {loading && <p className="text-sm text-ink-400">Loading creators…</p>}
+                <section className="mt-6 space-y-2">
+                    {loading && <ListSkeleton rows={5} />}
                     {!loading && creators.length === 0 && (
-                        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-ink-400">
-                            No creators in {state.replace("_", " ")}.
-                        </p>
+                        <EmptyState title={`No creators in ${state.replace("_", " ")}.`} />
                     )}
-                    {creators.map((creator) => (
+                    {!loading && creators.map((creator) => (
                         <button
                             key={creator.connection_id}
-                            onClick={() => openReview(creator.connection_id)}
+                            onClick={() => { setPressed(creator.connection_id); void openReview(creator.connection_id); }}
                             disabled={busy}
-                            className="block w-full rounded-xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                            aria-busy={busy && pressed === creator.connection_id || undefined}
+                            className="block w-full border border-line-300 bg-surface-900 p-4 text-left transition hover:border-primary-400/50 hover:bg-white/[.02] disabled:opacity-50"
                         >
                             <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                <div>
-                                    <span className="font-display text-lg text-ink-50">@{creator.provider_username ?? "unknown"}</span>
-                                    <span className="ml-2 text-sm text-ink-400">{creator.animaldex_display_name ?? creator.user_id}</span>
+                                <div className="flex items-baseline gap-2">
+                                    {busy && pressed === creator.connection_id ? <Spinner className="self-center text-primary-200" /> : null}
+                                    <span className="font-display text-lg text-white">@{creator.provider_username ?? "unknown"}</span>
+                                    <span className="text-sm text-ink-400">{creator.animaldex_display_name ?? creator.user_id}</span>
                                 </div>
-                                <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATE_STYLE[creator.creator_verification_state] ?? ""}`}>
+                                <Badge tone={STATE_STYLE[creator.creator_verification_state] ?? "neutral"}>
                                     {creator.creator_verification_state.replace("_", " ")}
-                                </span>
+                                </Badge>
                             </div>
                             <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-ink-400 sm:grid-cols-4">
-                                <div><dt className="inline">Media </dt><dd className="inline text-ink-200">{creator.source_media_count}</dd></div>
-                                <div><dt className="inline">Candidates </dt><dd className="inline text-ink-200">{creator.candidate_count}</dd></div>
-                                <div><dt className="inline">Imported </dt><dd className="inline text-ink-200">{creator.approved_capture_count}</dd></div>
+                                <div><dt className="inline">Media </dt><dd className="inline tabular-nums text-ink-200">{creator.source_media_count}</dd></div>
+                                <div><dt className="inline">Candidates </dt><dd className="inline tabular-nums text-ink-200">{creator.candidate_count}</dd></div>
+                                <div><dt className="inline">Imported </dt><dd className="inline tabular-nums text-ink-200">{creator.approved_capture_count}</dd></div>
                                 <div><dt className="inline">Connected </dt><dd className="inline text-ink-200">{date(creator.connected_at)}</dd></div>
                             </dl>
                         </button>
@@ -210,55 +207,56 @@ export default function AdminCreatorReviewsClient() {
             )}
 
             {review && (
-                <section className="space-y-6">
-                    <button onClick={() => setReview(null)} className="text-xs text-ink-400 hover:text-ink-200">← Back to queue</button>
+                <section className="mt-6">
+                    <Button size="sm" variant="ghost" onClick={() => setReview(null)}>← Back to queue</Button>
 
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-                        <div className="flex flex-wrap items-baseline justify-between gap-3">
-                            <h2 className="font-display text-2xl text-ink-50">@{review.creator.provider_username ?? "unknown"}</h2>
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATE_STYLE[review.creator.creator_verification_state] ?? ""}`}>
-                                {review.creator.creator_verification_state.replace("_", " ")}
-                            </span>
-                        </div>
-                        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-3">
-                            {[
-                                ["AnimalDex user", review.creator.animaldex_display_name ?? "—"],
-                                ["AnimalDex user ID", review.creator.user_id],
-                                ["Instagram account ID", review.creator.provider_account_id],
-                                ["Account type", review.creator.account_type ?? "—"],
-                                ["Connected", date(review.creator.connected_at)],
-                                ["Last scanned", date(review.creator.last_scanned_at)],
-                                ["Source media", String(review.creator.source_media_count)],
-                                ["Candidates", String(review.creator.candidate_count)],
-                                ["Already imported", String(review.creator.approved_capture_count)]
-                            ].map(([label, value]) => (
-                                <div key={label}>
-                                    <dt className="text-ink-500">{label}</dt>
-                                    <dd className="break-all font-mono text-[11px] text-ink-200">{value}</dd>
-                                </div>
-                            ))}
-                        </dl>
-                        {!review.auto_verification_enabled && (
-                            <p className="mt-4 text-[11px] text-ink-500">
-                                Automatic verification is disabled. Every decision here is manual and recorded against your operator session.
-                            </p>
-                        )}
-                    </div>
+                    <Card className="mt-4">
+                        <CardHeader
+                            title={`@${review.creator.provider_username ?? "unknown"}`}
+                            action={
+                                <Badge tone={STATE_STYLE[review.creator.creator_verification_state] ?? "neutral"}>
+                                    {review.creator.creator_verification_state.replace("_", " ")}
+                                </Badge>
+                            }
+                        />
+                        <CardContent>
+                            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-3">
+                                {[
+                                    ["AnimalDex user", review.creator.animaldex_display_name ?? "—"],
+                                    ["AnimalDex user ID", review.creator.user_id],
+                                    ["Instagram account ID", review.creator.provider_account_id],
+                                    ["Account type", review.creator.account_type ?? "—"],
+                                    ["Connected", date(review.creator.connected_at)],
+                                    ["Last scanned", date(review.creator.last_scanned_at)],
+                                    ["Source media", String(review.creator.source_media_count)],
+                                    ["Candidates", String(review.creator.candidate_count)],
+                                    ["Already imported", String(review.creator.approved_capture_count)]
+                                ].map(([label, value]) => (
+                                    <div key={label}>
+                                        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{label}</dt>
+                                        <dd className="mt-0.5 break-all font-mono text-[11px] text-ink-200">{value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                            {!review.auto_verification_enabled && (
+                                <p className="mt-4 text-[11px] text-ink-500">
+                                    Automatic verification is disabled. Every decision here is manual and recorded against your operator session.
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
 
-                    <div>
-                        <h3 className="mb-3 text-sm font-medium text-ink-200">
-                            Random sample of {review.samples.length} posts
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    <Section title={`Random sample of ${review.samples.length} posts`}>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                             {review.samples.map((sample) => (
-                                <figure key={sample.source_media_id} className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                                <figure key={sample.source_media_id} className="overflow-hidden border border-line-300 bg-surface-900">
                                     <div className="relative aspect-square bg-canvas-900">
                                         {sample.preview_reference
                                             // eslint-disable-next-line @next/next/no-img-element
                                             ? <img src={sample.preview_reference} alt="" className="h-full w-full object-cover" loading="lazy" />
                                             : <span className="flex h-full items-center justify-center text-xs text-ink-500">no preview</span>}
                                         {sample.media_type === "video" && (
-                                            <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">▶</span>
+                                            <span className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 text-[10px] text-white">▶</span>
                                         )}
                                     </div>
                                     <figcaption className="space-y-1 p-3">
@@ -284,50 +282,53 @@ export default function AdminCreatorReviewsClient() {
                                 reposts without attribution also produces a clean result, so judge the images themselves.
                             </p>
                         )}
-                    </div>
+                    </Section>
 
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-                        <label className="block text-xs text-ink-400" htmlFor="creator-reason">
-                            Reason <span className="text-ink-500">(required to reject or suspend)</span>
-                        </label>
-                        <textarea
-                            id="creator-reason"
-                            value={reason}
-                            onChange={(event) => setReason(event.target.value)}
-                            rows={2}
-                            placeholder="e.g. compilation account reposting other people's footage"
-                            className="mt-2 w-full rounded-lg border border-white/10 bg-canvas-900 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-600"
-                        />
-                        <div className="mt-4 flex flex-wrap gap-3">
-                            <button onClick={() => transition("verify")} disabled={busy}
-                                className="rounded-lg bg-emerald-500/90 px-4 py-2 text-sm font-medium text-canvas-950 hover:bg-emerald-400 disabled:opacity-50">
-                                Verify creator
-                            </button>
-                            <button onClick={() => transition("reject")} disabled={busy}
-                                className="rounded-lg bg-rose-500/90 px-4 py-2 text-sm font-medium text-canvas-950 hover:bg-rose-400 disabled:opacity-50">
-                                Reject as repost/aggregator
-                            </button>
-                            {review.creator.creator_verification_state === "verified" && (
-                                <button onClick={() => transition("suspend")} disabled={busy}
-                                    className="rounded-lg border border-orange-400/40 px-4 py-2 text-sm text-orange-200 hover:bg-orange-400/10 disabled:opacity-50">
-                                    Suspend verification
-                                </button>
-                            )}
-                        </div>
-                        <p className="mt-3 text-[11px] text-ink-500">
-                            Verifying lets this creator&apos;s imported captures count toward profile stats. Suspending revokes that
-                            for every capture already imported from this account.
-                        </p>
-                    </div>
+                    <Card className="mt-8">
+                        <CardHeader title="Decision" />
+                        <CardContent>
+                            <label className="mb-1.5 block text-[11px] font-black uppercase tracking-[.12em] text-ink-400" htmlFor="creator-reason">
+                                Reason <span className="normal-case tracking-normal text-ink-500">(required to reject or suspend)</span>
+                            </label>
+                            <textarea
+                                id="creator-reason"
+                                value={reason}
+                                onChange={(event) => setReason(event.target.value)}
+                                rows={2}
+                                placeholder="e.g. compilation account reposting other people's footage"
+                                className={fieldClass}
+                            />
+                            <div className="mt-4 flex flex-wrap gap-3">
+                                <Button variant="primary" onClick={() => { setPressed("verify"); void transition("verify"); }} disabled={busy}
+                                    loading={busy && pressed === "verify"}>
+                                    Verify creator
+                                </Button>
+                                <Button variant="danger" onClick={() => { setPressed("reject"); void transition("reject"); }} disabled={busy}
+                                    loading={busy && pressed === "reject"}>
+                                    Reject as repost/aggregator
+                                </Button>
+                                {review.creator.creator_verification_state === "verified" && (
+                                    <Button onClick={() => { setPressed("suspend"); void transition("suspend"); }} disabled={busy}
+                                        loading={busy && pressed === "suspend"}
+                                        className="border-amber-300/40 text-amber-200 hover:border-amber-300">
+                                        Suspend verification
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="mt-3 text-[11px] text-ink-500">
+                                Verifying lets this creator&apos;s imported captures count toward profile stats. Suspending revokes that
+                                for every capture already imported from this account.
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                    <div>
-                        <h3 className="mb-2 text-sm font-medium text-ink-200">Verification history</h3>
+                    <Section title="Verification history">
                         {review.history.length === 0
                             ? <p className="text-xs text-ink-500">No decisions recorded yet.</p>
                             : (
-                                <ul className="space-y-2">
+                                <ul className="divide-y divide-line-300/60 border border-line-300 bg-surface-900">
                                     {review.history.map((event) => (
-                                        <li key={event.event_id} className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-ink-300">
+                                        <li key={event.event_id} className="px-4 py-2.5 text-xs text-ink-300">
                                             <span className="text-ink-500">{new Date(event.created_at).toLocaleString()}</span>
                                             {" · "}
                                             <span className="text-ink-100">{event.from_state ?? "new"} → {event.to_state}</span>
@@ -338,9 +339,9 @@ export default function AdminCreatorReviewsClient() {
                                     ))}
                                 </ul>
                             )}
-                    </div>
+                    </Section>
                 </section>
             )}
-        </main>
+        </AdminPage>
     );
 }

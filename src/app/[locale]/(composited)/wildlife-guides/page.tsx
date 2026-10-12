@@ -1,5 +1,5 @@
 import type {Metadata} from "next";
-import {getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import Link from "@/app/[locale]/_components/link";
 import {EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
@@ -44,7 +44,41 @@ export default async function WildlifeGuidesPage({params}: WildlifeGuidesPagePro
     const categories = Array.from(new Set(listings.map((item) => item.service_category)));
     const locations = Array.from(new Map(listings.map((item) => [guideLocationSlug(item), guideAreaServedName(item)])).entries())
         .filter(([slug]) => isLocationPageIndexable(listings.filter((item) => guideLocationSlug(item) === slug)));
+
+    const pageUrl = getAbsoluteUrl(params.locale, "/wildlife-guides");
+    const description = "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.";
+    const guidesJsonLd: Record<string, unknown>[] = [
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: "Wildlife Guides",
+            description,
+            url: pageUrl,
+            inLanguage: params.locale,
+            isPartOf: {"@type": "WebSite", name: "AnimalDex", url: getAbsoluteUrl(params.locale, "/")}
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+                {"@type": "ListItem", position: 1, name: "Home", item: getAbsoluteUrl(params.locale, "/")},
+                {"@type": "ListItem", position: 2, name: "Wildlife Guides", item: pageUrl}
+            ]
+        },
+        ...(locations.length > 0 ? [{
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            itemListElement: locations.map(([slug, label], index) => ({
+                "@type": "ListItem",
+                position: index + 1,
+                name: `Wildlife Guides in ${label}`,
+                url: getAbsoluteUrl(params.locale, `/wildlife-guides/${slug}`)
+            }))
+        }] : [])
+    ];
+
     return <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(guidesJsonLd)}} />
         <GuidePageView event="guide_web_location_page_view" dimensions={{page_type: "guide_discovery", location: "all"}} />
         <section className="bg-canvas-950 px-5 pb-16 pt-32 text-white sm:px-8"><div className="mx-auto max-w-6xl">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-primary-300">Marketplace directory</p>

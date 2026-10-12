@@ -3,6 +3,7 @@ import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
 import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {isNamedFinanceAdminEmail} from "@/lib/support-admin-auth";
+import {adminLoginThrottledResponse, throttleAdminLogin} from "@/lib/admin-login-throttle";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,6 +18,11 @@ export const runtime = "nodejs";
  * of silently leaving finance locked.
  */
 export async function POST(request: Request) {
+    const throttle = throttleAdminLogin(request, "finance");
+    if (!throttle.allowed) {
+        return adminLoginThrottledResponse(throttle);
+    }
+
     const supabaseUrl = getSupabaseUrl();
     const supabaseAuthKey = getSupabaseAuthKey();
 

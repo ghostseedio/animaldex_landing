@@ -2,6 +2,7 @@
 
 import {FormEvent, useCallback, useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
+import {Alert, Button, Field, fieldClass} from "@/components/admin/ui";
 
 export type FinanceActorStatus = {
     kind: "named_email" | "shared_password" | "none";
@@ -81,14 +82,13 @@ export function FinanceOperatorSignInCard({onSignedIn}: {onSignedIn: () => void}
     return (
         <form
             onSubmit={submit}
-            className="mt-4 grid gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 sm:grid-cols-2"
+            className="mt-4 grid gap-3 border border-line-300 bg-canvas-900 p-4 sm:grid-cols-2"
         >
-            <p className="text-sm text-amber-100 sm:col-span-2">
+            <p className="text-sm leading-6 text-ink-300 sm:col-span-2">
                 Finance operations require a <strong>named operator</strong> — sign in with your
                 operator email to approve payouts. The shared admin password cannot approve payouts.
             </p>
-            <label className="text-xs text-ink-400">
-                Operator email
+            <Field label="Operator email">
                 <input
                     type="email"
                     autoComplete="email"
@@ -96,11 +96,10 @@ export function FinanceOperatorSignInCard({onSignedIn}: {onSignedIn: () => void}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="you@example.com"
-                    className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                    className={fieldClass}
                 />
-            </label>
-            <label className="text-xs text-ink-400">
-                Password
+            </Field>
+            <Field label="Password">
                 <input
                     type="password"
                     autoComplete="current-password"
@@ -108,18 +107,19 @@ export function FinanceOperatorSignInCard({onSignedIn}: {onSignedIn: () => void}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Operator password"
-                    className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                    className={fieldClass}
                 />
-            </label>
-            {error && <p className="text-sm text-rose-300 sm:col-span-2">{error}</p>}
+            </Field>
+            {error && <Alert tone="bad" className="sm:col-span-2">{error}</Alert>}
             <div className="sm:col-span-2">
-                <button
+                <Button
                     type="submit"
-                    disabled={submitting || !email || !password}
-                    className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-bold text-canvas-950 disabled:opacity-50"
+                    variant="primary"
+                    disabled={!email || !password}
+                    loading={submitting}
                 >
                     {submitting ? "Signing in…" : "Sign in as named finance operator"}
-                </button>
+                </Button>
             </div>
         </form>
     );

@@ -3,6 +3,7 @@
 /* Supabase and local asset URLs are resolved at runtime. */
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
+import { LoadingRow } from "@/components/admin/ui";
 
 export type LibraryAsset = {
   path: string;
@@ -47,7 +48,7 @@ export function CampaignAssetPicker({
   }, [assets.length, open]);
 
   return (
-    <div className="rounded-xl border border-line-300 bg-canvas-950/30 p-3">
+    <div className="border border-line-300 bg-canvas-900 p-3">
       <button
         type="button"
         disabled={disabled}
@@ -58,7 +59,7 @@ export function CampaignAssetPicker({
       </button>
       {open ? (
         <div className="mt-3">
-          {loading ? <p className="text-xs text-ink-400">Loading assets...</p> : null}
+          {loading ? <LoadingRow className="px-0 py-3 text-xs">Loading assets...</LoadingRow> : null}
           {error ? <p className="text-xs text-rose-100">{error}</p> : null}
           {!loading && !error ? (
             assets.length ? (
@@ -73,7 +74,7 @@ export function CampaignAssetPicker({
                       onSelect(asset.url);
                       setOpen(false);
                     }}
-                    className="overflow-hidden rounded-lg border border-line-300 text-left disabled:opacity-50"
+                    className="overflow-hidden border border-line-300 text-left transition hover:border-primary-300 disabled:opacity-50"
                   >
                     <img src={asset.url} alt="" className="aspect-square w-full object-cover" />
                     <span className="block truncate px-1.5 py-1 text-[9px] text-ink-300">

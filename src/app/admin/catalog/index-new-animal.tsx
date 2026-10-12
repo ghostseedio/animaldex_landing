@@ -2,6 +2,7 @@
 
 import {useState} from "react";
 import type {NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
+import {Alert, Button, cn, Field, fieldClass} from "@/components/admin/ui";
 
 /**
  * Index an animal that is not in the catalog yet.
@@ -187,87 +188,79 @@ export default function IndexNewAnimal({onClose, onIndexed, onNotify, onEditExis
     }
 
     const field = (key: keyof Draft, label: string, rows = 2) => (
-        <label className="block">
-            <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">{label}</span>
+        <Field label={label}>
             <textarea value={String(draft[key] ?? "")} rows={rows}
                       onChange={(event) => setDraft((current) => ({...current, [key]: event.target.value}))}
-                      className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-        </label>
+                      className={fieldClass} />
+        </Field>
     );
 
     return (
         <div role="dialog" aria-modal="true" aria-label="Index a new animal"
-             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-sm sm:p-8"
+             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-3 sm:p-8"
              onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-            <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
-                <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
+            <div className="w-full max-w-3xl overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-line-300 px-5 py-4">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">Catalog</p>
-                        <h2 className="font-display text-2xl text-white">Index a new animal</h2>
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">Catalog</p>
+                        <h2 className="mt-1 font-display text-xl text-white">Index a new animal</h2>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close"
-                            className="grid h-10 w-10 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300">×</button>
+                    <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">✕</Button>
                 </div>
 
-                <div className="space-y-4 p-5">
-                    {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-                    {notice && <p className="rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
+                <div className="space-y-5 p-5">
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {notice && <Alert tone="good">{notice}</Alert>}
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                            <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Animal name</span>
+                        <Field label="Animal name">
                             <input value={displayName} onChange={(event) => {setDisplayName(event.target.value); setMatches(null);}}
                                    placeholder="Asian Koel"
-                                   className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-                        </label>
-                        <label className="block">
-                            <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Scientific name</span>
+                                   className={fieldClass} />
+                        </Field>
+                        <Field label="Scientific name">
                             <input value={scientificName} onChange={(event) => {setScientificName(event.target.value); setMatches(null);}}
                                    placeholder="Eudynamys scolopaceus"
-                                   className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-                        </label>
+                                   className={fieldClass} />
+                        </Field>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => void runCheck()} disabled={!displayName.trim() || busy !== null}
-                                className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">
+                        <Button onClick={() => void runCheck()} disabled={!displayName.trim() || busy !== null} loading={busy === "check"}>
                             {busy === "check" ? "Checking…" : "1. Check the catalog"}
-                        </button>
-                        <button type="button" onClick={() => void runDraft()} disabled={!matches || blocking.length > 0 || busy !== null}
-                                className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">
+                        </Button>
+                        <Button onClick={() => void runDraft()} disabled={!matches || blocking.length > 0 || busy !== null} loading={busy === "draft"}>
                             {busy === "draft" ? "Drafting…" : "2. Draft with AI"}
-                        </button>
+                        </Button>
                     </div>
 
                     {blocking.length > 0 && (
-                        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
-                            <p className="text-sm font-bold text-red-200">This animal is already in the catalog.</p>
-                            <ul className="mt-2 space-y-2">
+                        <Alert tone="bad" title="This animal is already in the catalog.">
+                            <ul className="mt-2 divide-y divide-red-400/20">
                                 {blocking.map((match) => (
-                                    <li key={match.speciesProfileId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                    <li key={match.speciesProfileId} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                                         <span className="text-white">
-                                            <span className="font-mono text-primary-100">{match.number != null ? `#${match.number}` : "unindexed"}</span>
+                                            <span className="font-mono tabular-nums text-primary-100">{match.number != null ? `#${match.number}` : "unindexed"}</span>
                                             {" "}{match.displayName} <span className="text-ink-400">— {match.reason}</span>
                                         </span>
-                                        <button type="button" onClick={() => onEditExisting(match.speciesProfileId)}
-                                                className="rounded-lg border border-primary-400/40 px-3 py-1.5 text-xs font-black text-primary-100">
+                                        <Button size="sm" onClick={() => onEditExisting(match.speciesProfileId)}>
                                             Edit that entry
-                                        </button>
+                                        </Button>
                                     </li>
                                 ))}
                             </ul>
-                        </div>
+                        </Alert>
                     )}
 
                     {advisory.length > 0 && (
-                        <details className="rounded-xl border border-line-300 p-3">
-                            <summary className="cursor-pointer text-sm font-bold text-ink-300">
+                        <details className="border border-line-300 px-4 py-3">
+                            <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[.12em] text-ink-400 hover:text-white">
                                 Worth a look before indexing ({advisory.length})
                             </summary>
                             <ul className="mt-2 space-y-1">
                                 {advisory.map((match) => (
                                     <li key={match.speciesProfileId} className="text-xs text-ink-400">
-                                        <span className="font-mono text-primary-100">#{match.number}</span>{" "}
+                                        <span className="font-mono tabular-nums text-primary-100">#{match.number}</span>{" "}
                                         {match.displayName} <span className="text-ink-500">({match.identityKind}) — {match.reason}</span>
                                     </li>
                                 ))}
@@ -276,7 +269,7 @@ export default function IndexNewAnimal({onClose, onIndexed, onNotify, onEditExis
                     )}
 
                     {matches && blocking.length === 0 && (
-                        <div className="space-y-3 rounded-xl border border-line-300 bg-surface-900 p-4">
+                        <div className="space-y-4 border-t border-line-300 pt-5">
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div className="space-y-3">
                                     {field("subtitle", "Subtitle")}
@@ -290,24 +283,26 @@ export default function IndexNewAnimal({onClose, onIndexed, onNotify, onEditExis
                             </div>
 
                             <div>
-                                <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Canonical stats</p>
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Canonical stats</p>
                                 <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-5">
                                     {STATS.map((key) => (
                                         <label key={key} className="block">
-                                            <span className="text-xs capitalize text-ink-400">{key}</span>
+                                            <span className="mb-1 block text-xs capitalize text-ink-400">{key}</span>
                                             <input type="number" min={0} max={100} value={stats[key] ?? ""}
                                                    onChange={(event) => setStats((current) => ({...current, [key]: Number(event.target.value)}))}
-                                                   className="mt-1 w-full rounded-lg border border-line-300 bg-canvas-900 px-2 py-2 text-sm text-white" />
+                                                   className={cn(fieldClass, "px-2 tabular-nums")} />
                                         </label>
                                     ))}
                                 </div>
                             </div>
 
-                            <button type="button" onClick={() => void save()}
-                                    disabled={busy !== null || !displayName.trim() || !draft.subtitle.trim()}
-                                    className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
-                                {busy === "save" ? "Indexing…" : "3. Index it and take the next number"}
-                            </button>
+                            <div className="flex justify-end border-t border-line-300 pt-4">
+                                <Button variant="primary" size="lg" onClick={() => void save()}
+                                        disabled={busy !== null || !displayName.trim() || !draft.subtitle.trim()}
+                                        loading={busy === "save"}>
+                                    {busy === "save" ? "Indexing…" : "3. Index it and take the next number"}
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>

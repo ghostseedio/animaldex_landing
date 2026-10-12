@@ -155,10 +155,10 @@ const en: SupportContent = {
             title: "Credits and purchases",
             description: "When credits are used and how purchases are restored.",
             items: [
-                {question: "What are credits?", answer: "Credits are AnimalDex's closed virtual currency. A photo scan, re-analysis, or deeper field-guide unlock on an individual card uses 1 Credit. Other actions show their cost before confirmation. Credits cannot be withdrawn or converted into Earnings.", linkHref: "/earn-on-animaldex", linkLabel: "Credits vs Earnings"},
+                {question: "What are credits?", answer: "Credits are AnimalDex's closed virtual currency. Analysing a scan uses 2 Credits for a photo or 6 for a video. A deeper field-guide unlock on an individual card uses 1 Credit. Re-analysis is free. Other actions show their cost before confirmation. Credits cannot be withdrawn or converted into Earnings.", linkHref: "/earn-on-animaldex", linkLabel: "Credits vs Earnings"},
                 {question: "Do failed scans use a credit?", answer: "A successfully completed paid analysis uses its stated credit cost. If AnimalDex charges a scan credit and the analysis then fails, the backend returns that analysis charge to your balance."},
                 {question: "How do I restore purchases?", answer: "Sign in to the AnimalDex account you used for the purchase, open Credits & Unlocks, and choose Restore Purchases. Also make sure the device is signed in to the same App Store or Google Play account used originally."},
-                {question: "What does AnimalDex Pro include?", answer: "AnimalDex Pro includes unlimited scans and re-analysis plus expanded field-guide details on cards. Instagram Import screening and import are included with Pro. The current purchase screen lists the exact entitlement before you subscribe."},
+                {question: "What does AnimalDex Pro include?", answer: "AnimalDex Pro includes unlimited scans plus expanded field-guide details on cards. Instagram Import screening and import are included with Pro. The current purchase screen lists the exact entitlement before you subscribe."},
                 {
                     question: "How do I buy Credits or Pro on the website?",
                     searchAliases: ["paddle", "web purchase", "buy credits website", "checkout"],
@@ -189,7 +189,7 @@ const en: SupportContent = {
                 },
                 {
                     question: "What are AnimalDex Credits?",
-                    answer: "Credits are AnimalDex's closed virtual currency. They pay for scans, re-analysis, field-guide unlocks, stat training, health restores, Packs, Gifts when enabled, and PvP stakes. You can earn free Credits from a starter grant, missions, qualified referrals, and first-time wild species captures. You can also buy Credit packs. Credits cannot be withdrawn, cashed out, or converted into Earnings.",
+                    answer: "Credits are AnimalDex's closed virtual currency. They pay for scans, field-guide unlocks, stat training, health restores, Packs, Gifts when enabled, and PvP stakes. You can earn free Credits from a starter grant, missions, qualified referrals, and first-time wild species captures. You can also buy Credit packs. Credits cannot be withdrawn, cashed out, or converted into Earnings.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "See Credits vs Earnings"
                 },

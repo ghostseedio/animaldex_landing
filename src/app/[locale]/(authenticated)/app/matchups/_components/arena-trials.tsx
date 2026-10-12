@@ -23,6 +23,7 @@ import {
     trialId
 } from "@/lib/animal-trials";
 import {discoverPostPath} from "@/lib/discover-post";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * Trials in the Play hub. Ported from iOS `MatchupsHubView` after Trials became
@@ -208,7 +209,13 @@ function TrialHistoryRow({
                     <span className="mt-1 flex flex-col gap-1.5">
                         {powerName ? (
                             <span className="flex items-center gap-1.5 text-xs font-extrabold" style={{color: NEON}} aria-label={`Power, ${powerName}`}>
-                                <span aria-hidden="true">⚡</span>{powerName}
+                                <span className="min-w-0">
+                                    <AnimalPowerIcon
+                                        speciesProfileId={trial.speciesProfileId}
+                                        fallback={<span aria-hidden="true" className="mr-1.5">⚡</span>}
+                                    />
+                                    {powerName}
+                                </span>
                             </span>
                         ) : null}
                         {qualities.length ? (

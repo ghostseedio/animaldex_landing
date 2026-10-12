@@ -2,6 +2,7 @@
 
 import {FormEvent, useState} from "react";
 import {useRouter} from "next/navigation";
+import {Alert, Button, Field, fieldClass} from "@/components/admin/ui";
 
 /**
  * The password prompt shown in place of an admin page.
@@ -44,28 +45,39 @@ export default function AdminLoginForm() {
     }
 
     return (
-        <main className="grid min-h-screen place-items-center px-4">
-            <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
-                <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
-                <h1 className="mt-2 font-display text-3xl text-white">Sign in</h1>
-                <p className="mt-2 text-sm leading-6 text-ink-400">This area is for AnimalDex operators.</p>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Admin password"
-                    autoFocus
-                    className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300"
-                />
-                <button
-                    type="submit"
-                    disabled={submitting || !password}
-                    className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950 disabled:opacity-40"
-                >
-                    {submitting ? "Signing in…" : "Sign in"}
-                </button>
-                {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
-            </form>
+        <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_50%_0%,rgba(33,192,94,.10),transparent_40%)] px-4">
+            <div className="w-full max-w-sm">
+                <div className="mb-6 flex items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center bg-primary-400 text-lg font-black text-canvas-950">A</span>
+                    <span>
+                        <span className="block font-display text-lg leading-tight text-white">AnimalDex</span>
+                        <span className="block text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Operations</span>
+                    </span>
+                </div>
+                <form onSubmit={submit} className="border border-line-300 bg-surface-900 p-6 shadow-2xl">
+                    <h1 className="font-display text-2xl text-white">Sign in</h1>
+                    <p className="mt-1 text-sm leading-6 text-ink-400">This area is for AnimalDex operators.</p>
+                    <Field label="Password" className="mt-6">
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            placeholder="Admin password"
+                            autoComplete="current-password"
+                            autoFocus
+                            className={`${fieldClass} py-2.5`}
+                        />
+                    </Field>
+                    <Button type="submit" variant="primary" size="lg" loading={submitting} disabled={!password} className="mt-4 w-full">
+                        {submitting ? "Signing in…" : "Sign in"}
+                    </Button>
+                    {error ? (
+                        <Alert tone="bad" className="mt-4">
+                            {error}
+                        </Alert>
+                    ) : null}
+                </form>
+            </div>
         </main>
     );
 }

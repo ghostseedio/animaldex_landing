@@ -19,6 +19,7 @@ import {
     appendEvidence,
     useAttachedEvidence
 } from "@/components/animal-detail/animal-powers/power-evidence";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * The written route to an Animal Power, ported from iOS `ApplyItYourWayView`:
@@ -107,6 +108,8 @@ export default function ApplyItYourWay({
     const isApproved = result?.verdict === "approved";
     const isRevisable = result?.verdict === "needs_more";
     const holdsPower = power.isEarned || earnedLocally || isApproved;
+    // A fused Power (it posts elsewhere) has no species icon of its own.
+    const powerIcon = submitApplication ? null : <AnimalPowerIcon speciesProfileId={power.speciesProfileId} />;
     const journalDomain = selectedDomain ?? power.suggestedDomains[0] ?? "HUMAN_BEHAVIOR";
     const journalDomainTitle = domainDisplayTitle(journalDomain);
 
@@ -220,7 +223,10 @@ export default function ApplyItYourWay({
             <div className="min-h-0 flex-1 overflow-y-auto">
                 <section className="flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.025] px-5 pb-[22px] pt-[18px]">
                     <Eyebrow color={NEON}>{power.speciesDisplayName}</Eyebrow>
-                    <h2 className="font-display text-3xl font-black leading-tight text-white">{power.principleName}</h2>
+                    <h2 className="font-display text-3xl font-black leading-tight text-white">
+                        {powerIcon}
+                        {power.principleName}
+                    </h2>
                     {power.coreLesson ? (
                         <p className="text-sm leading-6 text-white/60">{power.coreLesson}</p>
                     ) : null}
@@ -242,7 +248,10 @@ export default function ApplyItYourWay({
                     <Band>
                         <span aria-hidden="true" className="text-3xl" style={{color: NEON}}>✓</span>
                         <Eyebrow color={NEON}>Power earned</Eyebrow>
-                        <p className="text-2xl font-bold text-white">{power.principleName}</p>
+                        <p className="text-2xl font-bold text-white">
+                            {powerIcon}
+                            {power.principleName}
+                        </p>
                         {/* The grader's own quote, handed back. Being told the
                             specific thing you did is the whole reward; "approved"
                             is not. */}

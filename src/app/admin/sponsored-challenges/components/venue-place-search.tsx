@@ -4,6 +4,7 @@ import {
   inputClass,
   InfoTip,
 } from "./campaign-form-controls";
+import { Spinner } from "@/components/admin/ui";
 
 export type VenuePlace = {
   label: string;
@@ -59,9 +60,9 @@ export function VenuePlaceSearch({
   }, [query]);
 
   return (
-    <div className="mb-4 rounded-xl border border-primary-500/30 bg-primary-500/5 p-3">
+    <div className="mb-4 border border-primary-500/30 bg-primary-500/5 p-3">
       <div className="mb-2 flex items-center gap-2">
-        <p className="text-xs font-black uppercase tracking-[.14em] text-primary-100">
+        <p className="text-[11px] font-black uppercase tracking-[.12em] text-primary-100">
           Find a venue
         </p>
         <InfoTip
@@ -76,7 +77,7 @@ export function VenuePlaceSearch({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="e.g. Ragunan Zoo, Jl. Harsono RM 1, Jakarta"
       />
-      {loading ? <p className="mt-2 text-xs text-ink-400">Searching places...</p> : null}
+      {loading ? <p className="mt-2 flex items-center gap-2 text-xs text-ink-400"><Spinner size={12} />Searching places...</p> : null}
       {!loading && searched && !places.length ? (
         <p className="mt-2 text-xs text-amber-100">
           No places found. Try a fuller address or open Advanced to enter coordinates manually.
@@ -95,7 +96,7 @@ export function VenuePlaceSearch({
                 setPlaces([]);
                 setSearched(false);
               }}
-              className="block w-full rounded-lg border border-line-300 px-3 py-2 text-left text-xs text-ink-200 hover:border-primary-300 disabled:opacity-50"
+              className="block w-full border border-line-300 px-3 py-2 text-left text-xs text-ink-200 hover:border-primary-300 disabled:opacity-50"
             >
               {place.label}
             </button>

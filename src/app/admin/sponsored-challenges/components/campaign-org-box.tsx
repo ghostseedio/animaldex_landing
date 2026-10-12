@@ -4,6 +4,7 @@ import {
   FieldGrid,
   Field,
 } from "./campaign-form-controls";
+import { Button } from "@/components/admin/ui";
 
 export function OrgBox({
   disabled,
@@ -23,11 +24,11 @@ export function OrgBox({
   onCreate: () => void;
 }) {
   return (
-    <details className="group rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+    <details className="group border border-line-300 bg-surface-900 p-4">
       <summary className="cursor-pointer list-none">
         <span className="flex items-center justify-between gap-3">
           <span>
-            <span className="block font-display text-2xl text-white">
+            <span className="block font-display text-lg text-white">
               Sponsor organization
             </span>
             <span className="mt-1 block text-xs text-ink-400">
@@ -62,14 +63,13 @@ export function OrgBox({
             />
           </Field>
         </FieldGrid>
-        <button
-          type="button"
+        <Button
           disabled={disabled || !name || !slug}
-          className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          loading={loading}
           onClick={onCreate}
         >
           {loading ? "Saving organization..." : "Save organization"}
-        </button>
+        </Button>
       </div>
     </details>
   );

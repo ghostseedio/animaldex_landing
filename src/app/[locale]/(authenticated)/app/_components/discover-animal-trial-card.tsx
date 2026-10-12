@@ -13,6 +13,7 @@ import {
     isWrittenAnimalTrialPost,
     pinnedAnimalTrialCohort
 } from "@/lib/discover-animal-trial";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * An Animal Trial on the Discover timeline. Ported from iOS
@@ -174,7 +175,12 @@ export default function AnimalTrialCard({
                     <Link href={current.href} className="block text-sm font-semibold text-white/[0.82] hover:text-primary-100">
                         {current.speciesName}
                     </Link>
-                    {current.principleName ? <p className="text-[0.68rem] text-white/70">{current.principleName}</p> : null}
+                    {current.principleName ? (
+                        <p className="text-[0.68rem] text-white/70">
+                            <AnimalPowerIcon speciesProfileId={current.speciesProfileId} />
+                            {current.principleName}
+                        </p>
+                    ) : null}
                     {pills.length ? (
                         <div className="flex flex-wrap gap-2 pt-2">
                             {pills.map((pill) => (

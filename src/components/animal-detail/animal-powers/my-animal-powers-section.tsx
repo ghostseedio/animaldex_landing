@@ -3,6 +3,7 @@
 import {useEffect, useState} from "react";
 import {type AnimalPower, earnedLabel} from "@/lib/animal-powers";
 import {domainDisplayTitle, normalizeDomain} from "@/lib/system-dynamics";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * "My Animal Powers" on the profile, ported from iOS `MyAnimalPowersSection`.
@@ -77,7 +78,10 @@ export default function MyAnimalPowersSection({
                                 <span aria-hidden="true">✓</span>
                                 {earnedLabel(power.earnedVia)}
                             </p>
-                            <p className="line-clamp-2 text-sm font-bold text-white">{power.principleName}</p>
+                            <p className="line-clamp-2 text-sm font-bold text-white">
+                                <AnimalPowerIcon speciesProfileId={power.speciesProfileId} />
+                                {power.principleName}
+                            </p>
                             <p className="truncate text-[10px] text-white/60">{power.speciesDisplayName}</p>
                             <p className="mt-auto text-[10px] font-semibold text-white/40">
                                 {domain !== "UNKNOWN"

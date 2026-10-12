@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useMemo, useState} from "react";
+import {AdminPage, Alert, Badge, Button, Card, CardHeader, EmptyState, Field, fieldClass, ListSkeleton, PageHeader, RefreshButton, Section, Stat, StatGrid, StatGridSkeleton} from "@/components/admin/ui";
 
 /**
  * Failures, grouped and traceable.
@@ -101,13 +102,13 @@ const CODE_TITLES: Record<string, string> = {
     unknown: "Unclassified failure"
 };
 
-const DISPOSITION_TONE: Record<string, string> = {
-    "Recovered": "bg-primary-500/15 text-primary-200",
-    "Acknowledged": "bg-ink-700/40 text-ink-300",
-    "Waiting on user": "bg-sky-400/15 text-sky-200",
-    "Terminal": "bg-red-500/15 text-red-200",
-    "Cancelled": "bg-ink-700/40 text-ink-400",
-    "Retry scheduled": "bg-amber-400/15 text-amber-200"
+const DISPOSITION_TONE: Record<string, "good" | "neutral" | "ios" | "bad" | "warn"> = {
+    "Recovered": "good",
+    "Acknowledged": "neutral",
+    "Waiting on user": "ios",
+    "Terminal": "bad",
+    "Cancelled": "neutral",
+    "Retry scheduled": "warn"
 };
 
 function ago(iso: string) {
@@ -184,76 +185,72 @@ export default function AdminReliabilityClient() {
         {label: "Failures today", value: overview?.failures_today ?? 0},
         {label: "Last 24h", value: overview?.failures_24h ?? 0},
         {label: "Users affected", value: overview?.users_affected_24h ?? 0},
-        {label: "Recovered automatically", value: overview?.recovered_24h ?? 0, tone: "text-primary-200"},
-        {label: "Waiting on user", value: overview?.awaiting_user ?? 0, tone: "text-sky-200"},
-        {label: "Needs attention", value: overview?.needs_attention ?? 0, tone: "text-amber-200"},
-        {label: "Terminal", value: overview?.terminal_open ?? 0, tone: "text-red-200"}
+        {label: "Recovered automatically", value: overview?.recovered_24h ?? 0, tone: "good" as const},
+        {label: "Waiting on user", value: overview?.awaiting_user ?? 0, sky: true},
+        {label: "Needs attention", value: overview?.needs_attention ?? 0, tone: "warn" as const},
+        {label: "Terminal", value: overview?.terminal_open ?? 0, tone: "bad" as const}
     ]), [overview]);
 
     return (
-        <div className="space-y-8">
-            <header>
-                <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-300">Reliability</p>
-                <h1 className="mt-2 font-display text-4xl text-white">Failures &amp; recovery</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-400">
-                    Every technical failure across capture and import, deduplicated so one broken
-                    operation retrying five times is one incident. Open a row for the diagnostics.
-                </p>
-            </header>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Operations"
+                title="Failures & recovery"
+                description="Every technical failure across capture and import, deduplicated so one broken operation retrying five times is one incident. Open a row for the diagnostics."
+                actions={<RefreshButton loading={loading} onClick={() => void load()} />}
+            />
 
-            <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line-300 bg-line-300 sm:grid-cols-4 lg:grid-cols-7">
-                {stats.map((stat) => (
-                    <div key={stat.label} className="bg-canvas-950/80 px-4 py-4">
-                        <p className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">{stat.label}</p>
-                        <p className={`mt-2 font-display text-3xl tabular-nums ${stat.tone ?? "text-white"}`}>{stat.value}</p>
-                    </div>
-                ))}
-            </section>
+            {data ? (
+                <StatGrid className="mt-6 sm:grid-cols-4 lg:grid-cols-7">
+                    {stats.map((stat) => (
+                        <Stat
+                            key={stat.label}
+                            label={stat.label}
+                            value={stat.sky ? <span className="text-sky-200">{stat.value}</span> : stat.value}
+                            tone={stat.tone}
+                        />
+                    ))}
+                </StatGrid>
+            ) : loading ? (
+                <StatGridSkeleton count={7} className="mt-6 sm:grid-cols-4 lg:grid-cols-7" />
+            ) : null}
 
-            <section className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">Status</span>
+            <div className="mt-6 flex flex-wrap items-end gap-3">
+                <Field label="Status">
                     <select value={status} onChange={(event) => setStatus(event.target.value)}
-                        className="rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white">
+                        className={fieldClass}>
                         {STATUSES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">Category</span>
+                </Field>
+                <Field label="Category">
                     <select value={category} onChange={(event) => setCategory(event.target.value)}
-                        className="rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white">
+                        className={fieldClass}>
                         {CATEGORIES.map((option) => <option key={option} value={option}>{option.replace(/_/g, " ")}</option>)}
                     </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">Window</span>
+                </Field>
+                <Field label="Window">
                     <select value={windowHours} onChange={(event) => setWindowHours(event.target.value)}
-                        className="rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white">
+                        className={fieldClass}>
                         {WINDOWS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}
                     </select>
-                </label>
-                <label className="flex min-w-[16rem] flex-1 flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">Capture, candidate or correlation id</span>
+                </Field>
+                <Field label="Capture, candidate or correlation id" className="min-w-[16rem] flex-1">
                     <input value={search} onChange={(event) => setSearch(event.target.value)}
                         placeholder="Paste any id"
-                        className="rounded-xl border border-line-300 bg-canvas-950 px-3 py-2 text-sm text-white placeholder:text-ink-600" />
-                </label>
-                <button onClick={() => void load()}
-                    className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950">
-                    Refresh
-                </button>
-            </section>
+                        className={fieldClass} />
+                </Field>
+            </div>
 
             {error && (
-                <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>
+                <Alert tone="bad" className="mt-6">{error}</Alert>
             )}
 
             {data && data.bySystem.length > 0 && (
-                <section className="rounded-2xl border border-line-300 bg-canvas-950/60 p-5">
-                    <h2 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">By system</h2>
-                    <ul className="mt-4 space-y-2">
+                <Card className="mt-6">
+                    <CardHeader title="By system" />
+                    <ul className="divide-y divide-line-300/60">
                         {data.bySystem.map((row) => (
-                            <li key={row.system} className="flex items-center justify-between gap-4 text-sm">
+                            <li key={row.system} className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm">
                                 <span className="text-ink-200">{row.system}</span>
                                 <span className="flex items-center gap-4 tabular-nums text-ink-400">
                                     <span>{row.incidents} incident{row.incidents === 1 ? "" : "s"}</span>
@@ -263,36 +260,32 @@ export default function AdminReliabilityClient() {
                             </li>
                         ))}
                     </ul>
-                </section>
+                </Card>
             )}
 
-            <section className="space-y-3">
-                <h2 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">
-                    {loading ? "Loading incidents…" : `${data?.incidents.length ?? 0} incidents`}
-                </h2>
+            <Section title={loading && !data ? "Loading incidents…" : `${data?.incidents.length ?? 0} incidents`} className="space-y-2">
+                {loading && !data && <ListSkeleton rows={6} />}
 
                 {!loading && data?.incidents.length === 0 && (
-                    <p className="rounded-2xl border border-line-300 bg-canvas-950/60 px-5 py-8 text-center text-sm text-ink-400">
-                        Nothing matching those filters. That is the good outcome.
-                    </p>
+                    <EmptyState title="Nothing matching those filters." description="That is the good outcome." />
                 )}
 
                 {data?.incidents.map((incident) => (
-                    <article key={incident.id} className="rounded-2xl border border-line-300 bg-canvas-950/60">
+                    <article key={incident.id} className="border border-line-300 bg-surface-900">
                         <button
                             onClick={() => setExpanded(expanded === incident.id ? null : incident.id)}
-                            className="flex w-full flex-col gap-3 px-5 py-4 text-left">
+                            className="flex w-full flex-col gap-3 px-4 py-4 text-left transition hover:bg-white/[.02]">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className={`rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-[.08em] ${DISPOSITION_TONE[incident.disposition] ?? "bg-ink-700/40 text-ink-300"}`}>
+                                <Badge tone={DISPOSITION_TONE[incident.disposition] ?? "neutral"}>
                                     {incident.disposition}
-                                </span>
+                                </Badge>
                                 <span className="text-sm font-bold text-white">
                                     {incident.system} · {CODE_TITLES[incident.failureCode] ?? incident.failureCode}
                                 </span>
                                 {incident.occurrences > 1 && (
-                                    <span className="rounded-md bg-ink-700/40 px-2 py-1 text-[10px] font-bold tabular-nums text-ink-300">
+                                    <Badge className="tabular-nums">
                                         ×{incident.occurrences}
-                                    </span>
+                                    </Badge>
                                 )}
                             </div>
                             <dl className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-ink-400">
@@ -306,9 +299,9 @@ export default function AdminReliabilityClient() {
                         </button>
 
                         {expanded === incident.id && (
-                            <div className="border-t border-line-300 px-5 py-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">Diagnostics</h3>
-                                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-xl bg-black/40 p-4 font-mono text-[11px] leading-5 text-ink-300">
+                            <div className="border-t border-line-300 px-4 py-4">
+                                <h3 className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Diagnostics</h3>
+                                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words border border-line-300 bg-canvas-950 p-4 font-mono text-[11px] leading-5 text-ink-300">
 {JSON.stringify({
     correlation_id: incident.correlationId,
     failure_code: incident.failureCode,
@@ -330,12 +323,12 @@ export default function AdminReliabilityClient() {
 }, null, 2)}
                                 </pre>
                                 {!incident.acknowledgedAt && !incident.recoveredAt && (
-                                    <button
+                                    <Button
                                         onClick={() => void acknowledge(incident.id)}
-                                        disabled={busyId === incident.id}
-                                        className="mt-4 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                                        loading={busyId === incident.id}
+                                        className="mt-4">
                                         {busyId === incident.id ? "Marking…" : "Mark investigated"}
-                                    </button>
+                                    </Button>
                                 )}
                                 {incident.acknowledgedNote && (
                                     <p className="mt-3 text-xs text-ink-400">{incident.acknowledgedNote}</p>
@@ -344,7 +337,7 @@ export default function AdminReliabilityClient() {
                         )}
                     </article>
                 ))}
-            </section>
-        </div>
+            </Section>
+        </AdminPage>
     );
 }

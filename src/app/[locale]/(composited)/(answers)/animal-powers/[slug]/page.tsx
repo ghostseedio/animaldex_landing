@@ -17,6 +17,9 @@ import {getPublishedEnglishLessonStaticParams} from "@/lib/published-seo-page-da
 import {getNextPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getScopedTranslator} from "@/loaders/translation";
 import {ogContentImage} from "@/lib/og/og-image";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {fetchAnimalPowerIconIndex, resolveAnimalPowerIcon} from "@/lib/animal-power-icons-server";
+import {STORY_MEDIA_REVALIDATE_SECONDS} from "@/lib/species-story-media";
 
 export const revalidate = false;
 export const dynamicParams = false;
@@ -75,6 +78,14 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
     if (!lesson) {
         notFound();
     }
+
+    // The Power's icon, matched to the name this page shows. Refreshed on the
+    // same daily window as the species pages' story media.
+    const iconIndex = await fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS});
+    const powerIconSvg = resolveAnimalPowerIcon(iconIndex, {
+        principleName: lesson.principleName,
+        speciesProfileId: speciesEntry?.speciesProfileId
+    });
 
     const relatedLessons = getLocalRelatedBehaviorLessons(params.slug, 3, lesson);
     const behaviorProfile = resolveLocalSpeciesBehaviorProfile(params.slug);
@@ -217,6 +228,7 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                                 {t("animalLessonPill")}
                             </span>
                             <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white">
+                                <AnimalPowerIcon svg={powerIconSvg} className="text-primary-300" />
                                 {lesson.principleName}
                             </span>
                             <span className="rounded-full bg-primary-400/[0.09] px-3 py-1.5 text-sm font-semibold text-primary-100">
@@ -251,7 +263,10 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                                 />
                                 <div className="theme-dark absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-5 pb-5 pt-16">
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">{t("imageLabel")}</p>
-                                    <p className="mt-1 text-lg font-semibold text-white">{t("principleChip", {principle: lesson.principleName})}</p>
+                                    <p className="mt-1 text-lg font-semibold text-white">
+                                        <AnimalPowerIcon svg={powerIconSvg} className="text-primary-300" />
+                                        {t("principleChip", {principle: lesson.principleName})}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -369,7 +384,10 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
                     {preferredPrincipleSlug ? (
                         <Link href={`/qualities/${preferredPrincipleSlug}`} className="rounded-3xl bg-primary-400/[0.07] p-5 transition-transform hover:-translate-y-1">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">{t("relatedPrinciples", {principle: lesson.principleName})}</p>
-                            <p className="mt-2 text-lg font-semibold text-white">{lesson.principleName}</p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                                <AnimalPowerIcon svg={powerIconSvg} className="text-primary-300" />
+                                {lesson.principleName}
+                            </p>
                         </Link>
                     ) : null}
                     <Link href="/animal-wisdom" className="rounded-3xl bg-white/[0.055] p-5 transition-transform hover:-translate-y-1">

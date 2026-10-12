@@ -76,7 +76,7 @@ function Field({
 }) {
   return (
     <div className="block space-y-1.5">
-      <span className="text-[11px] font-bold uppercase tracking-[.12em] text-ink-500">{label}</span>
+      <span className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">{label}</span>
       {origin === "auto" ? <span className="ml-2 rounded-full border border-primary-400/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[.12em] text-primary-100">Auto</span> : null}
       {children}
     </div>

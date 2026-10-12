@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from "react";
 import {fillTemplate, getNotificationTemplate} from "@/lib/notification-templates";
+import {Alert, Button, Field, fieldClass} from "@/components/admin/ui";
 
 /**
  * Offer the member an explanation at the moment their capture changed.
@@ -109,20 +110,19 @@ export default function NotifyOwnerDialog({request, onClose, onSent}: Props) {
 
     return (
         <div role="dialog" aria-modal="true" aria-label="Notify the capture owner"
-             className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-sm sm:p-8"
+             className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/80 p-3 sm:p-8"
              onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-            <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
-                <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
+            <div className="w-full max-w-xl overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-line-300 px-5 py-4">
                     <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">{HEADINGS[request.templateId]}</p>
-                        <h2 className="truncate font-display text-2xl text-white">Tell {audience}?</h2>
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">{HEADINGS[request.templateId]}</p>
+                        <h2 className="mt-1 truncate font-display text-xl text-white">Tell {audience}?</h2>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close without sending"
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300">×</button>
+                    <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close without sending" className="shrink-0">✕</Button>
                 </div>
 
                 <div className="space-y-4 p-5">
-                    {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+                    {error && <Alert tone="bad">{error}</Alert>}
 
                     <p className="text-xs leading-5 text-ink-400">
                         {request.note ?? (request.templateId === "merged"
@@ -132,8 +132,8 @@ export default function NotifyOwnerDialog({request, onClose, onSent}: Props) {
                     </p>
 
                     {recipients.length > 1 && (
-                        <details className="rounded-xl border border-line-300/60 p-3">
-                            <summary className="cursor-pointer text-xs font-bold text-ink-300">Who gets this ({recipients.length})</summary>
+                        <details className="border border-line-300 px-3 py-2.5">
+                            <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[.12em] text-ink-400 hover:text-white">Who gets this ({recipients.length})</summary>
                             <ul className="mt-2 space-y-1">
                                 {recipients.map((recipient) => (
                                     <li key={recipient.userId} className="text-xs text-ink-400">{recipient.label}</li>
@@ -142,27 +142,23 @@ export default function NotifyOwnerDialog({request, onClose, onSent}: Props) {
                         </details>
                     )}
 
-                    <label className="block">
-                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Title</span>
+                    <Field label="Title">
                         <input value={title} onChange={(event) => setTitle(event.target.value)}
-                               className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-                    </label>
+                               className={fieldClass} />
+                    </Field>
 
-                    <label className="block">
-                        <span className="text-xs font-black uppercase tracking-[.14em] text-ink-500">Message</span>
+                    <Field label="Message">
                         <textarea value={body} rows={4} onChange={(event) => setBody(event.target.value)}
-                                  className="mt-1 w-full rounded-xl border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300" />
-                    </label>
+                                  className={fieldClass} />
+                    </Field>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => void send()} disabled={busy || !title.trim() || !body.trim() || !recipients.length}
-                                className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
-                            {busy ? "Sending…" : `Send to ${recipients.length === 1 ? "this member" : `${recipients.length} members`}`}
-                        </button>
-                        <button type="button" onClick={onClose} disabled={busy}
-                                className="rounded-xl border border-line-300 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line-300 pt-4">
+                        <Button variant="ghost" onClick={onClose} disabled={busy}>
                             Don&apos;t send
-                        </button>
+                        </Button>
+                        <Button variant="primary" onClick={() => void send()} disabled={!title.trim() || !body.trim() || !recipients.length} loading={busy}>
+                            {busy ? "Sending…" : `Send to ${recipients.length === 1 ? "this member" : `${recipients.length} members`}`}
+                        </Button>
                     </div>
                 </div>
             </div>

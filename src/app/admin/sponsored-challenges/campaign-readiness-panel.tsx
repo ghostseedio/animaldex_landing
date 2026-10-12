@@ -55,13 +55,13 @@ export function CampaignReadinessPanel({
   const primaryBlocking = result.blocking[0];
 
   return (
-    <section className="space-y-4 rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+    <section className="space-y-4 border border-line-300 bg-surface-900 p-4">
       {!compact ? <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">
+          <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
             Campaign readiness
           </p>
-          <h3 className="mt-1 font-display text-2xl text-white">
+          <h3 className="mt-1 font-display text-2xl tabular-nums text-white">
             {result.passed} / {result.total} checks passed
           </h3>
         </div>
@@ -77,12 +77,12 @@ export function CampaignReadinessPanel({
       </div> : null}
 
       {primaryBlocking ? (
-        <p className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+        <p className="border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
           Next fix: {primaryBlocking.label}
           {primaryBlocking.detail ? ` · ${primaryBlocking.detail}` : ""}
         </p>
       ) : (
-        <p className="rounded-2xl border border-primary-400/20 bg-primary-500/10 px-3 py-2 text-sm text-primary-100">
+        <p className="border border-primary-400/20 bg-primary-500/10 px-3 py-2 text-sm text-primary-100">
           Everything required for draft save is in place.
         </p>
       )}
@@ -98,7 +98,7 @@ export function CampaignReadinessPanel({
           return (
             <article
               key={step.key}
-              className={`rounded-2xl border p-3 ${
+              className={`border p-3 ${
                 stepBlocked
                   ? "border-rose-400/30 bg-rose-500/[.04]"
                   : stepWarnings
@@ -116,7 +116,7 @@ export function CampaignReadinessPanel({
                 <StepBadge severity={stepBlocked ? "blocking" : stepWarnings ? "warning" : "ready"} />
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs text-ink-300">
-                <span className="font-black text-white">{stepPassed} / {stepChecks.length}</span>
+                <span className="font-black tabular-nums text-white">{stepPassed} / {stepChecks.length}</span>
                 <span>done</span>
               </div>
               <ul className="mt-3 space-y-2">

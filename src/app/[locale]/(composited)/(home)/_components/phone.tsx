@@ -2,7 +2,7 @@
 
 import {useEffect, useRef} from "react";
 import Image from "next/image";
-import {evaluate} from "mathjs";
+import {evaluateArithmetic} from "@/lib/arithmetic-expression";
 
 export type PhoneElement = {
     id: string,
@@ -61,6 +61,8 @@ function PhoneChassis({
                 width={width}
                 height={height}
                 unoptimized
+                priority
+                fetchPriority="high"
                 style={{position: "relative", transform: `translateZ(${half}px)`}}
             />
             {Array.from({length: 6}, (_, index) => (
@@ -136,7 +138,7 @@ export default function Phone({data, phone: {src, alt, width = 288, height = 616
         let currentFrame = 0;
         const calculate = (s: string): number => {
             const input = s.replaceAll("{p}", String(progress.current));
-            return evaluate(input);
+            return evaluateArithmetic(input);
         }
         const render = () => {
             if (root.current) {

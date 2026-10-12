@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {History, MagicStick3, Pen} from "solar-icon-set";
 import DepthPicker, {type ResearchDepth} from "@/app/admin/blog-generator/depth-picker";
+import {Badge, Button, cn, fieldClass, Skeleton} from "@/components/admin/ui";
 
 export type EditablePost = {slug: string; title: string; source: "code" | "studio" | "code+studio"; published: boolean; updatedAt: string};
 type Revision = {path: string; kind: "backup" | "proposed"; savedAt: string};
@@ -74,34 +75,40 @@ export default function BlogEditPanel({api, busy, disabled, onStart, onError, on
 
     return (
         <div className="flex flex-col gap-5">
-            <label className="flex flex-col gap-2 text-xs font-black uppercase tracking-[.16em] text-ink-400">
+            <label className="flex flex-col gap-1.5 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 Post
                 <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={posts ? `Search ${posts.length} posts by title or slug` : "Loading posts…"}
-                    className="rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm font-normal normal-case tracking-normal text-white placeholder:text-ink-500 focus:border-primary-300 focus:outline-none"
+                    className={cn(fieldClass, "font-normal normal-case tracking-normal")}
                 />
             </label>
             {selected ? (
-                <div className="flex items-start justify-between gap-3 rounded-xl border border-primary-400/40 bg-primary-500/10 p-3">
+                <div className="flex items-start justify-between gap-3 border border-primary-400/40 bg-primary-500/10 p-3">
                     <div className="min-w-0">
                         <p className="text-sm font-bold text-white">{selected.title}</p>
                         <p className="mt-0.5 truncate text-xs text-ink-400">/blog/{selected.slug} · {SOURCE_LABELS[selected.source]}{selected.published ? "" : " · draft"}</p>
                     </div>
-                    <button type="button" onClick={() => setSelected(null)} className="shrink-0 text-xs font-bold text-ink-300 underline hover:text-white">Change</button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelected(null)} className="shrink-0">Change</Button>
                 </div>
             ) : (
-                <ul className="-mt-2 max-h-64 overflow-y-auto rounded-xl border border-line-300">
+                <ul className="-mt-2 max-h-64 overflow-y-auto border border-line-300 bg-canvas-900">
                     {matches.map((post) => (
                         <li key={post.slug} className="border-b border-line-300 last:border-b-0">
                             <button type="button" onClick={() => setSelected(post)} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-white/5">
                                 <span className="min-w-0 truncate text-sm text-ink-100">{post.title}</span>
-                                <span className="shrink-0 text-[10px] font-black uppercase tracking-[.12em] text-ink-500">{SOURCE_LABELS[post.source]}{post.published ? "" : " · draft"}</span>
+                                <span className="flex shrink-0 items-center gap-1.5"><Badge>{SOURCE_LABELS[post.source]}</Badge>{post.published ? null : <Badge tone="warn">draft</Badge>}</span>
                             </button>
                         </li>
                     ))}
                     {posts && !matches.length ? <li className="px-3 py-3 text-sm text-ink-400">No posts match.</li> : null}
+                    {posts ? null : Array.from({length: 4}, (_, index) => (
+                        <li key={index} aria-hidden="true" className="flex items-center justify-between gap-3 border-b border-line-300 px-3 py-3 last:border-b-0">
+                            <Skeleton className="h-3 w-2/3" style={{opacity: 1 - index * 0.15}} />
+                            <Skeleton className="h-2.5 w-12" />
+                        </li>
+                    ))}
                 </ul>
             )}
 
@@ -110,7 +117,7 @@ export default function BlogEditPanel({api, busy, disabled, onStart, onError, on
                     ["refresh", "Full refresh", "Make it viral, fix outdated facts, add charts or a quiz. The editor scores it and rewrites if needed."],
                     ["custom", "Specific changes", "Tell Claude exactly what to change. Everything else stays as it is."]
                 ] as const).map(([id, label, hint]) => (
-                    <button key={id} type="button" role="radio" aria-checked={kind === id} onClick={() => setKind(id)} className={`rounded-xl border p-3 text-left ${kind === id ? "border-primary-300 bg-primary-500/10" : "border-line-300 hover:border-primary-300/60"}`}>
+                    <button key={id} type="button" role="radio" aria-checked={kind === id} onClick={() => setKind(id)} className={`border p-3 text-left transition ${kind === id ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-canvas-900 hover:border-primary-300/60"}`}>
                         <span className="text-sm font-black text-white">{label}</span>
                         <span className="mt-1 block text-xs leading-5 text-ink-400">{hint}</span>
                     </button>
@@ -123,7 +130,7 @@ export default function BlogEditPanel({api, busy, disabled, onStart, onError, on
                     rows={5}
                     maxLength={4000}
                     placeholder={"e.g. Rewrite the headline to be punchier, add a quiz at the end, and replace the section on diet with the 2026 study on hunting.\nOr: Fix the claim about lifespan; it's 20 years, not 15."}
-                    className="resize-y rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white placeholder:text-ink-500 focus:border-primary-300 focus:outline-none"
+                    className={cn(fieldClass, "resize-y")}
                 />
             ) : null}
 
@@ -136,25 +143,27 @@ export default function BlogEditPanel({api, busy, disabled, onStart, onError, on
                 <input type="checkbox" checked={publish} onChange={(event) => setPublish(event.target.checked)} className="mt-1 h-4 w-4 accent-[#a7f432]" />
                 <span>Apply live when every check passes<span className="block text-xs text-ink-400">Off, or if a check fails: saved as a proposal below, and the live post stays as it is.</span></span>
             </label>
-            <button
-                type="button"
-                disabled={busy || disabled || !selected || (kind === "custom" && !instructions.trim())}
+            <Button
+                variant="primary"
+                size="lg"
+                loading={busy}
+                disabled={disabled || !selected || (kind === "custom" && !instructions.trim())}
                 onClick={() => selected && onStart({slug: selected.slug, instructions: kind === "custom" ? instructions : "", research, depth, publish})}
-                className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 hover:bg-primary-300 disabled:opacity-50"
+                className="self-start"
             >
-                {kind === "refresh" ? <MagicStick3 size={18} /> : <Pen size={18} />}{kind === "refresh" ? "Refresh this post" : "Make these changes"}
-            </button>
+                {busy ? null : kind === "refresh" ? <MagicStick3 size={18} /> : <Pen size={18} />}{kind === "refresh" ? "Refresh this post" : "Make these changes"}
+            </Button>
 
             {selected && revisions.length ? (
                 <div className="border-t border-line-300 pt-4">
-                    <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.16em] text-ink-400"><History size={15} />Edit history</p>
-                    <ul className="mt-3 flex flex-col gap-2">
+                    <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[.12em] text-ink-500"><History size={15} />Edit history</p>
+                    <ul className="mt-3 divide-y divide-line-300 border border-line-300 bg-canvas-900">
                         {revisions.map((revision) => (
-                            <li key={revision.path} className="flex items-center justify-between gap-3 rounded-lg border border-line-300 px-3 py-2 text-sm">
+                            <li key={revision.path} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                                 <span className="text-ink-200">{revision.kind === "backup" ? "Version before an edit" : "Proposed edit (not live)"}<span className="block text-xs text-ink-500">{savedLabel(revision.savedAt)}</span></span>
-                                <button type="button" disabled={Boolean(applying) || busy} onClick={() => apply(revision)} className="shrink-0 rounded-lg border border-line-300 px-3 py-1.5 text-xs font-black text-white hover:border-primary-300 disabled:opacity-50">
+                                <Button size="sm" loading={applying === revision.path} disabled={Boolean(applying) || busy} onClick={() => apply(revision)} className="shrink-0">
                                     {applying === revision.path ? "Applying…" : revision.kind === "backup" ? "Restore" : "Apply"}
-                                </button>
+                                </Button>
                             </li>
                         ))}
                     </ul>

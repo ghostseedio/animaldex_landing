@@ -1,8 +1,11 @@
 "use client";
 
-import {useState} from "react";
+import {useMemo, useState} from "react";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import type {AnimalPower} from "@/lib/animal-powers";
+import {parseAnimalPowerIcon} from "@/lib/animal-power-icon";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {useAnimalPowerIcon} from "@/components/animal-detail/animal-powers/use-animal-power-icon";
 
 /**
  * The Animal Power band on Learn, ported from iOS `AnimalPowerGuideSection`.
@@ -21,6 +24,26 @@ import type {AnimalPower} from "@/lib/animal-powers";
  */
 
 const NEON = "#A7F432";
+/** The muted glyph while a Power is not yet earned (iOS textTertiary). */
+const MUTED = "#7E8781";
+/** The padlock badge, distinct from both the neon and the muted glyph (iOS stateCaution). */
+const LOCK_AMBER = "#FAB83D";
+const BADGE_FILL = "#0D2A16";
+
+/** The small amber padlock on the corner of a not-yet-earned Power's glyph. */
+function LockBadge() {
+    return (
+        <span
+            aria-hidden="true"
+            className="absolute -bottom-1 -right-1 flex h-[17px] w-[17px] items-center justify-center rounded-full"
+            style={{background: BADGE_FILL, border: `1px solid ${LOCK_AMBER}8C`}}
+        >
+            <svg viewBox="0 0 24 24" width={9} height={9} fill={LOCK_AMBER} aria-hidden="true" focusable="false">
+                <path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm3 0h4V7a2 2 0 0 0-4 0z" />
+            </svg>
+        </span>
+    );
+}
 
 type RowId = "pattern" | "proof" | "continuum" | "practise" | "notice";
 
@@ -54,6 +77,7 @@ function Row({
 export default function AnimalPowerBand({
     profile,
     power,
+    speciesProfileId,
     onEarnPower
 }: {
     profile: EnhancedAnimalPowerProfile;
@@ -62,6 +86,8 @@ export default function AnimalPowerBand({
      * none — the band then shows the Power and simply draws no state.
      */
     power: AnimalPower | null;
+    /** The species, for the Power's icon before `power` has loaded. */
+    speciesProfileId?: string | null;
     /** Absent when there is no species to earn against, so the band draws no button. */
     onEarnPower?: (() => void) | null;
 }) {
@@ -76,6 +102,11 @@ export default function AnimalPowerBand({
     const lesson = (power?.coreLesson ?? profile.coreLesson)?.trim() || null;
     const motto = (power?.shortMotto ?? profile.shortMotto)?.trim() || null;
     const enhanced = profile.availability === "enhanced";
+    // Read here rather than inside AnimalPowerIcon: the header needs to know
+    // whether a glyph exists to decide between it and the plain ✓ / 🔒.
+    const iconSvg = useAnimalPowerIcon(power?.speciesProfileId ?? speciesProfileId);
+    const hasIcon = useMemo(() => parseAnimalPowerIcon(iconSvg) !== null, [iconSvg]);
+    const isLocked = power !== null && !isEarned;
 
     return (
         <section className="flex flex-col gap-4 border-b border-white/[0.08] bg-[#0F2A17]/55 px-5 py-6 font-sans">
@@ -98,15 +129,32 @@ export default function AnimalPowerBand({
                     ) : null}
                 </div>
 
-                {/* The name is always readable, and wraps rather than truncating. */}
-                <div className="flex items-baseline gap-2.5 pt-1">
-                    {power ? (
-                        <span aria-hidden="true" className="text-sm font-bold" style={{color: isEarned ? NEON : "rgba(255,255,255,0.4)"}}>
-                            {isEarned ? "✓" : "🔒"}
+                {/* The Power's own glyph leads its name: lit once earned, muted
+                    with an amber padlock badge until then. The name is always
+                    readable, and wraps rather than truncating. A Power with no
+                    glyph yet keeps the plain ✓ / 🔒. */}
+                {hasIcon ? (
+                    <div className="flex items-start gap-3.5 pt-1">
+                        <span className="relative mt-[3px] shrink-0" style={{color: isLocked ? MUTED : NEON}}>
+                            <AnimalPowerIcon svg={iconSvg} size={30} gap={0} style={{display: "block"}} />
+                            {isLocked ? <LockBadge /> : null}
                         </span>
-                    ) : null}
-                    <p className="break-words font-display text-[28px] font-extrabold leading-tight text-white">{principleName}</p>
-                </div>
+                        <p className="min-w-0 break-words font-display text-[28px] font-extrabold leading-tight text-white">
+                            {principleName}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex items-baseline gap-2.5 pt-1">
+                        {power ? (
+                            <span aria-hidden="true" className="text-sm font-bold" style={{color: isEarned ? NEON : "rgba(255,255,255,0.4)"}}>
+                                {isEarned ? "✓" : "🔒"}
+                            </span>
+                        ) : null}
+                        <p className="break-words font-display text-[28px] font-extrabold leading-tight text-white">
+                            {principleName}
+                        </p>
+                    </div>
+                )}
 
                 {expression ? <p className="text-base font-semibold text-white/90">{expression}</p> : null}
                 {lesson ? <p className="text-sm leading-6 text-white/70">{lesson}</p> : null}

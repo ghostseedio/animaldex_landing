@@ -19,6 +19,7 @@ import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {appStoreUrl} from "@/lib/store-links";
+import {animalLevel} from "@/lib/animal-level";
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -49,7 +50,9 @@ async function getOwnerHistoryCaptures(): Promise<PublicProfileCapture[]> {
         identityKind: null,
         animalDexNumber: capture.indexNumber,
         speciesProfileId: capture.speciesProfileId?.toLowerCase() ?? null,
-        isMovingMedia: false
+        isMovingMedia: false,
+        // `owned_capture_manifest_v1.total_progression_xp` arrives as the summary's score.
+        level: animalLevel(capture.score)
     }));
 }
 

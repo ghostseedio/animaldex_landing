@@ -10,7 +10,7 @@ interface WizardStepProps {
 
 export function WizardStep({ title, description, children, isActive, isComplete }: WizardStepProps) {
   return (
-    <div className={`p-4 rounded-xl ${isActive ? 'bg-surface-900 border border-primary-400/40' : 'bg-canvas-950/30 border border-line-300'} transition-all`}>
+    <div className={`p-4 ${isActive ? 'bg-surface-900 border border-primary-400/40' : 'bg-canvas-950 border border-line-300'} transition-all`}>
       <div className="flex items-center gap-3 mb-4">
         <div className={`flex size-6 items-center justify-center rounded-full text-xs font-black ${
           isComplete ? 'bg-primary-500 text-canvas-950' : 
@@ -19,7 +19,7 @@ export function WizardStep({ title, description, children, isActive, isComplete 
         }`}>
           {isComplete ? '✓' : <span className="text-xs">1</span>}
         </div>
-        <h3 className="font-display text-lg">{title}</h3>
+        <h3 className="font-display text-lg text-white">{title}</h3>
       </div>
       {description && <p className="text-sm text-ink-400 mb-4">{description}</p>}
       {isActive && children}

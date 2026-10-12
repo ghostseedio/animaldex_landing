@@ -6,7 +6,6 @@ import {useSearchParams} from "next/navigation";
 import {FormEvent, PointerEvent, useCallback, useEffect, useRef, useState} from "react";
 import {
     AddCircle,
-    ArrowLeft,
     CheckCircle,
     Code,
     Copy,
@@ -23,6 +22,7 @@ import {
 } from "solar-icon-set";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
 import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
+import {AdminPage, Alert, Badge, Button, buttonVariants, cn, EmptyState, Field, fieldClass, PageHeader, Segmented, Skeleton, Spinner} from "@/components/admin/ui";
 
 type ImageValue = {src: string; alt: string; width: number; height: number; caption?: string; displayHeight?: number};
 type CodeBlock = {language?: string; code: string; caption?: string; render?: boolean};
@@ -177,10 +177,10 @@ function SeoGuidance({post}: {post: BlogPost}) {
     ];
     const passed = checks.filter((check) => check.pass).length;
     return (
-        <details className="rounded-xl border border-line-300 bg-surface-900" open>
+        <details className="border border-line-300 bg-surface-900" open>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
-                <span className="text-xs font-black uppercase tracking-[0.16em] text-primary-200">Google SEO guidance</span>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${passed >= 8 ? "bg-primary-500/15 text-primary-100" : "bg-amber-400/15 text-amber-200"}`}>{passed}/{checks.length} ready</span>
+                <span className="text-[11px] font-black uppercase tracking-[.12em] text-primary-200">Google SEO guidance</span>
+                <Badge tone={passed >= 8 ? "good" : "warn"} className="tabular-nums">{passed}/{checks.length} ready</Badge>
             </summary>
             <div className="grid gap-px border-t border-line-300 bg-line-300 sm:grid-cols-2">
                 {checks.map((check) => <div key={check.label} className="flex gap-3 bg-canvas-950/70 p-3">
@@ -264,62 +264,62 @@ function LiveContentEditor({
     };
 
     return (
-        <div className={`mx-auto w-full ${widthClass} overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl transition-[max-width]`}>
+        <div className={`mx-auto w-full ${widthClass} overflow-hidden border border-line-300 bg-canvas-950 shadow-2xl transition-[max-width]`}>
             <div className="flex items-center justify-between border-b border-line-300 bg-surface-900 px-4 py-3">
                 <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-primary-300" /></div>
                 <p className="max-w-[65%] truncate text-[10px] text-ink-500">animaldex.com/{contentType === "blog" ? "blog/" : ""}{post.slug || "new-page"}</p>
             </div>
             <article className="px-4 pb-16 sm:px-8">
                 <section className="pt-6">
-                    <div className="mb-3 flex items-center justify-between gap-3"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary-400/25 bg-primary-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.14em] text-primary-100"><Code size={14} />Header section</span><button type="button" onClick={() => setEditingHeader((current) => !current)} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white"><Code size={14} />{editingHeader ? "View preview" : "Edit code"}</button></div>
-                    {editingHeader ? <div className="overflow-hidden rounded-xl border border-line-300 bg-[#080d0a]"><div className="flex items-center justify-between gap-3 border-b border-line-300 px-4 py-2"><span className="text-[10px] font-black uppercase tracking-[.16em] text-ink-400">Header · HTML, CSS & JavaScript</span><button type="button" disabled={formattingTarget === "header"} onClick={async () => {setFormattingTarget("header"); try {setPost({...post, headerHtml: await formatDocumentCode(post.headerHtml ?? "")});} finally {setFormattingTarget(null);}}} className="rounded-md border border-line-300 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">{formattingTarget === "header" ? "Formatting…" : "Format code"}</button></div><textarea value={post.headerHtml ?? ""} onChange={(event) => setPost({...post, headerHtml: event.target.value})} rows={24} spellCheck={false} className="min-h-[38rem] w-full resize-y bg-transparent p-4 font-mono text-sm leading-6 text-primary-100 outline-none" /></div> : null}
-                    <div className={`${editingHeader ? "hidden" : "block"} overflow-hidden rounded-xl`}><RenderedCodeFrame title="Page header preview" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml ?? ""})} minHeight={240} /></div>
+                    <div className="mb-3 flex items-center justify-between gap-3"><span className="inline-flex items-center gap-1.5 rounded-full border border-primary-400/25 bg-primary-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.14em] text-primary-100"><Code size={14} />Header section</span><button type="button" onClick={() => setEditingHeader((current) => !current)} className="inline-flex items-center gap-1.5 border border-line-300 px-3 py-2 text-xs font-bold text-white"><Code size={14} />{editingHeader ? "View preview" : "Edit code"}</button></div>
+                    {editingHeader ? <div className="overflow-hidden border border-line-300 bg-[#080d0a]"><div className="flex items-center justify-between gap-3 border-b border-line-300 px-4 py-2"><span className="text-[10px] font-black uppercase tracking-[.16em] text-ink-400">Header · HTML, CSS & JavaScript</span><button type="button" disabled={formattingTarget === "header"} onClick={async () => {setFormattingTarget("header"); try {setPost({...post, headerHtml: await formatDocumentCode(post.headerHtml ?? "")});} finally {setFormattingTarget(null);}}} className="border border-line-300 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">{formattingTarget === "header" ? "Formatting…" : "Format code"}</button></div><textarea value={post.headerHtml ?? ""} onChange={(event) => setPost({...post, headerHtml: event.target.value})} rows={24} spellCheck={false} className="min-h-[38rem] w-full resize-y bg-transparent p-4 font-mono text-sm leading-6 text-primary-100 outline-none" /></div> : null}
+                    <div className={`${editingHeader ? "hidden" : "block"} overflow-hidden`}><RenderedCodeFrame title="Page header preview" documentHtml={getRenderedCodeDocument({language: "html+css+js", code: post.headerHtml ?? ""})} minHeight={240} /></div>
                 </section>
-                <figure ref={featuredFigureRef} className="group relative overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
+                <figure ref={featuredFigureRef} className="group relative overflow-hidden border border-line-300 bg-surface-900">
                     <NextImage src={post.featuredImage.src} alt={post.featuredImage.alt} width={post.featuredImage.width || 1600} height={post.featuredImage.height || 900} unoptimized style={imageDisplayStyle(post.featuredImage)} className={`${post.featuredImage.displayHeight ? "" : "aspect-video"} h-auto w-full object-cover`} />
-                    <button type="button" onClick={() => chooseImage(featuredSlot)} className="absolute right-3 top-3 cursor-pointer rounded-lg bg-canvas-950/85 px-3 py-2 text-xs font-black text-white opacity-100 shadow-lg backdrop-blur sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                    <button type="button" onClick={() => chooseImage(featuredSlot)} className="absolute right-3 top-3 cursor-pointer bg-canvas-950 px-3 py-2 text-xs font-black text-white opacity-100 shadow-lg sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                         <span className="inline-flex items-center gap-1.5"><Gallery size={15} />{uploadingPath === "featuredImage" ? "Uploading…" : "Replace image"}</span>
                     </button>
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2 rounded-xl border border-line-300 bg-canvas-950/85 p-2 shadow-lg backdrop-blur sm:left-auto sm:right-3">
+                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2 border border-line-300 bg-canvas-950 p-2 shadow-lg sm:left-auto sm:right-3">
                         <label className="flex items-center gap-2 text-[11px] font-black text-white">
                             Height
-                            <input type="number" min={80} max={1600} value={post.featuredImage.displayHeight ?? ""} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: parseDisplayHeight(event.target.value)}})} placeholder="Auto" className="h-8 w-20 rounded-lg border border-line-300 bg-surface-900 px-2 text-xs font-normal text-white outline-none focus:border-primary-300" />
+                            <input type="number" min={80} max={1600} value={post.featuredImage.displayHeight ?? ""} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: parseDisplayHeight(event.target.value)}})} placeholder="Auto" className="h-8 w-20 border border-line-300 bg-surface-900 px-2 text-xs font-normal text-white outline-none focus:border-primary-300" />
                         </label>
-                        {post.featuredImage.displayHeight ? <button type="button" onClick={() => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: undefined}})} className="h-8 rounded-lg border border-line-300 px-2 text-[10px] font-bold text-ink-200">Auto</button> : null}
+                        {post.featuredImage.displayHeight ? <button type="button" onClick={() => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: undefined}})} className="h-8 border border-line-300 px-2 text-[10px] font-bold text-ink-200">Auto</button> : null}
                     </div>
                     <button type="button" onPointerDown={startFeaturedHeightDrag} aria-label="Drag to resize featured image height" title="Drag to resize image height" className="absolute inset-x-6 bottom-1 z-10 h-4 cursor-ns-resize rounded-full bg-primary-300/0 transition group-hover:bg-primary-300/45 focus:bg-primary-300/60"><span className="mx-auto mt-1 block h-1 w-16 rounded-full bg-white/70" /></button>
                     {post.featuredImage.caption && <figcaption className="border-t border-line-300 px-4 py-3 text-xs text-ink-400">{post.featuredImage.caption}</figcaption>}
                 </figure>
                 <div className="mt-6 flex justify-end">
-                    <button type="button" onClick={() => insertCodeSection(0)} className="inline-flex items-center gap-2 rounded-xl border border-primary-400/35 bg-primary-500/10 px-4 py-2.5 text-sm font-bold text-primary-100 hover:bg-primary-500/15"><AddCircle size={17} />Add section</button>
+                    <button type="button" onClick={() => insertCodeSection(0)} className="inline-flex items-center gap-2 border border-primary-400/35 bg-primary-500/10 px-4 py-2.5 text-sm font-bold text-primary-100 hover:bg-primary-500/15"><AddCircle size={17} />Add section</button>
                 </div>
                 <div className="mt-12 space-y-12">
                     {post.sections.map((section, sectionIndex) => section.html !== undefined ? <section key={sectionIndex} className="group/section relative pt-8">
                         <div className="mb-3 flex items-center justify-between gap-3">
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-400/25 bg-primary-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.14em] text-primary-100"><Code size={14} />Custom section</span>
-                            <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => moveSection(sectionIndex, -1)} disabled={sectionIndex === 0} className="inline-flex items-center rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Up</button><button type="button" onClick={() => moveSection(sectionIndex, 1)} disabled={sectionIndex === post.sections.length - 1} className="inline-flex items-center rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Down</button><button type="button" onClick={() => insertCodeSection(sectionIndex + 1)} className="inline-flex items-center gap-1.5 rounded-lg border border-primary-400/25 px-3 py-2 text-xs font-bold text-primary-100"><AddCircle size={14} />Insert below</button><button type="button" onClick={() => setEditingHtmlSection(editingHtmlSection === sectionIndex ? null : sectionIndex)} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white"><Code size={14} />{editingHtmlSection === sectionIndex ? "View preview" : "Edit code"}</button><button type="button" onClick={() => setPost({...post, sections: post.sections.filter((_, index) => index !== sectionIndex)})} className="inline-flex items-center gap-1 rounded-lg border border-red-400/20 px-2.5 py-2 text-xs font-bold text-red-300"><TrashBinMinimalistic size={14} />Delete</button></div>
+                            <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => moveSection(sectionIndex, -1)} disabled={sectionIndex === 0} className="inline-flex items-center border border-line-300 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Up</button><button type="button" onClick={() => moveSection(sectionIndex, 1)} disabled={sectionIndex === post.sections.length - 1} className="inline-flex items-center border border-line-300 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Down</button><button type="button" onClick={() => insertCodeSection(sectionIndex + 1)} className="inline-flex items-center gap-1.5 border border-primary-400/25 px-3 py-2 text-xs font-bold text-primary-100"><AddCircle size={14} />Insert below</button><button type="button" onClick={() => setEditingHtmlSection(editingHtmlSection === sectionIndex ? null : sectionIndex)} className="inline-flex items-center gap-1.5 border border-line-300 px-3 py-2 text-xs font-bold text-white"><Code size={14} />{editingHtmlSection === sectionIndex ? "View preview" : "Edit code"}</button><button type="button" onClick={() => setPost({...post, sections: post.sections.filter((_, index) => index !== sectionIndex)})} className="inline-flex items-center gap-1 border border-red-400/20 px-2.5 py-2 text-xs font-bold text-red-300"><TrashBinMinimalistic size={14} />Delete</button></div>
                         </div>
-                        {editingHtmlSection === sectionIndex ? <div className="overflow-hidden rounded-xl border border-line-300 bg-[#080d0a]"><div className="flex items-center justify-between gap-3 border-b border-line-300 px-4 py-2"><span className="text-[10px] font-black uppercase tracking-[.16em] text-ink-400">Entire section · HTML, CSS & JavaScript</span><button type="button" disabled={formattingTarget === `section-${sectionIndex}`} onClick={async () => {const target = `section-${sectionIndex}`; setFormattingTarget(target); try {const formatted = await formatDocumentCode(section.html ?? ""); updateSection(sectionIndex, (item) => ({...item, html: formatted}));} finally {setFormattingTarget(null);}}} className="rounded-md border border-line-300 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">{formattingTarget === `section-${sectionIndex}` ? "Formatting…" : "Format code"}</button></div><textarea value={section.html} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, html: event.target.value}))} rows={24} spellCheck={false} className="min-h-[38rem] w-full resize-y bg-transparent p-4 font-mono text-sm leading-6 text-primary-100 outline-none" /></div> : null}
-                        <div className={`${editingHtmlSection === sectionIndex ? "hidden" : "block"} overflow-hidden rounded-xl`}><RenderedCodeFrame title={section.title || `Custom section ${sectionIndex + 1}`} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} /></div>
+                        {editingHtmlSection === sectionIndex ? <div className="overflow-hidden border border-line-300 bg-[#080d0a]"><div className="flex items-center justify-between gap-3 border-b border-line-300 px-4 py-2"><span className="text-[10px] font-black uppercase tracking-[.16em] text-ink-400">Entire section · HTML, CSS & JavaScript</span><button type="button" disabled={formattingTarget === `section-${sectionIndex}`} onClick={async () => {const target = `section-${sectionIndex}`; setFormattingTarget(target); try {const formatted = await formatDocumentCode(section.html ?? ""); updateSection(sectionIndex, (item) => ({...item, html: formatted}));} finally {setFormattingTarget(null);}}} className="border border-line-300 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">{formattingTarget === `section-${sectionIndex}` ? "Formatting…" : "Format code"}</button></div><textarea value={section.html} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, html: event.target.value}))} rows={24} spellCheck={false} className="min-h-[38rem] w-full resize-y bg-transparent p-4 font-mono text-sm leading-6 text-primary-100 outline-none" /></div> : null}
+                        <div className={`${editingHtmlSection === sectionIndex ? "hidden" : "block"} overflow-hidden`}><RenderedCodeFrame title={section.title || `Custom section ${sectionIndex + 1}`} documentHtml={getRenderedCodeDocument({language: "html+css+js", code: section.html})} minHeight={320} /></div>
                     </section> : <section key={sectionIndex} className="group/section relative space-y-5 border-t border-line-300 pt-8">
-                        <div className="absolute right-0 top-2 flex gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover/section:opacity-100"><button type="button" onClick={() => moveSection(sectionIndex, -1)} disabled={sectionIndex === 0} className="rounded-md px-2 py-1 text-[10px] font-bold text-ink-300 disabled:opacity-35">Up</button><button type="button" onClick={() => moveSection(sectionIndex, 1)} disabled={sectionIndex === post.sections.length - 1} className="rounded-md px-2 py-1 text-[10px] font-bold text-ink-300 disabled:opacity-35">Down</button><button onClick={() => setPost({...post, sections: post.sections.filter((_, index) => index !== sectionIndex)})} className="rounded-md px-2 py-1 text-[10px] font-bold text-red-300">Remove</button></div>
-                        <input aria-label="Section kicker" value={section.kicker ?? ""} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, kicker: event.target.value}))} placeholder="SECTION LABEL" className="block w-full bg-transparent text-xs font-black uppercase tracking-[.2em] text-primary-200 outline-none placeholder:text-ink-600 focus:rounded focus:ring-1 focus:ring-primary-400" />
+                        <div className="absolute right-0 top-2 flex gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover/section:opacity-100"><button type="button" onClick={() => moveSection(sectionIndex, -1)} disabled={sectionIndex === 0} className="px-2 py-1 text-[10px] font-bold text-ink-300 disabled:opacity-35">Up</button><button type="button" onClick={() => moveSection(sectionIndex, 1)} disabled={sectionIndex === post.sections.length - 1} className="px-2 py-1 text-[10px] font-bold text-ink-300 disabled:opacity-35">Down</button><button onClick={() => setPost({...post, sections: post.sections.filter((_, index) => index !== sectionIndex)})} className="px-2 py-1 text-[10px] font-bold text-red-300">Remove</button></div>
+                        <input aria-label="Section kicker" value={section.kicker ?? ""} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, kicker: event.target.value}))} placeholder="SECTION LABEL" className="block w-full bg-transparent text-xs font-black uppercase tracking-[.2em] text-primary-200 outline-none placeholder:text-ink-600 focus:ring-1 focus:ring-primary-400" />
                         <div className="flex items-start gap-2">
-                            <select aria-label="Heading level" value={section.headingLevel ?? 2} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, headingLevel: Number(event.target.value) as 2 | 3}))} className="mt-1 rounded-md border border-primary-400/25 bg-primary-500/10 px-2 py-1 text-[10px] font-black text-primary-100 outline-none focus:border-primary-300"><option value={2}>H2</option><option value={3}>H3</option></select>
-                            <input aria-label={`${section.headingLevel ?? 2 === 2 ? "H2" : "H3"} section heading`} value={section.title} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, title: event.target.value}))} placeholder="Section title" className={`block w-full bg-transparent font-display leading-tight text-white outline-none placeholder:text-ink-600 focus:rounded focus:ring-1 focus:ring-primary-400 ${(section.headingLevel ?? 2) === 3 ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"}`} />
+                            <select aria-label="Heading level" value={section.headingLevel ?? 2} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, headingLevel: Number(event.target.value) as 2 | 3}))} className="mt-1 border border-primary-400/25 bg-primary-500/10 px-2 py-1 text-[10px] font-black text-primary-100 outline-none focus:border-primary-300"><option value={2}>H2</option><option value={3}>H3</option></select>
+                            <input aria-label={`${section.headingLevel ?? 2 === 2 ? "H2" : "H3"} section heading`} value={section.title} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, title: event.target.value}))} placeholder="Section title" className={`block w-full bg-transparent font-display leading-tight text-white outline-none placeholder:text-ink-600 focus:ring-1 focus:ring-primary-400 ${(section.headingLevel ?? 2) === 3 ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"}`} />
                         </div>
-                        <div className="space-y-5">{section.paragraphs.map((paragraph, paragraphIndex) => <div key={paragraphIndex} className="group/paragraph relative rounded-lg">
+                        <div className="space-y-5">{section.paragraphs.map((paragraph, paragraphIndex) => <div key={paragraphIndex} className="group/paragraph relative">
                             <textarea aria-label={`Paragraph ${paragraphIndex + 1}`} value={paragraph} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, paragraphs: item.paragraphs.map((value, index) => index === paragraphIndex ? event.target.value : value)}))} rows={Math.max(3, Math.ceil(paragraph.length / 90))} placeholder="Start writing…" className="block w-full resize-y bg-transparent pr-24 text-base leading-8 text-ink-200 outline-none placeholder:text-ink-600 focus:ring-1 focus:ring-primary-400 sm:text-lg" />
-                            <button type="button" onClick={() => updateSection(sectionIndex, (item) => ({...item, paragraphs: item.paragraphs.filter((_, index) => index !== paragraphIndex)}))} aria-label={`Delete paragraph ${paragraphIndex + 1}`} className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-red-400/20 bg-canvas-950/90 px-2.5 py-1.5 text-[10px] font-bold text-red-300 shadow-md sm:opacity-0 sm:transition-opacity sm:group-hover/paragraph:opacity-100 sm:focus:opacity-100"><TrashBinMinimalistic size={13} />Delete</button>
+                            <button type="button" onClick={() => updateSection(sectionIndex, (item) => ({...item, paragraphs: item.paragraphs.filter((_, index) => index !== paragraphIndex)}))} aria-label={`Delete paragraph ${paragraphIndex + 1}`} className="absolute right-2 top-2 inline-flex items-center gap-1 border border-red-400/20 bg-canvas-950/90 px-2.5 py-1.5 text-[10px] font-bold text-red-300 shadow-md sm:opacity-0 sm:transition-opacity sm:group-hover/paragraph:opacity-100 sm:focus:opacity-100"><TrashBinMinimalistic size={13} />Delete</button>
                         </div>)}</div>
-                        <button onClick={() => updateSection(sectionIndex, (item) => ({...item, paragraphs: [...item.paragraphs, ""]}))} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-line-300 px-3 py-2 text-xs font-bold text-ink-400 hover:border-primary-400 hover:text-white"><AddCircle size={15} />Paragraph</button>
-                        {section.codeBlocks?.map((block, blockIndex) => <figure key={blockIndex} className="overflow-hidden rounded-xl border border-line-300 bg-[#080d0a]">
+                        <button onClick={() => updateSection(sectionIndex, (item) => ({...item, paragraphs: [...item.paragraphs, ""]}))} className="inline-flex items-center gap-1.5 border border-dashed border-line-300 px-3 py-2 text-xs font-bold text-ink-400 hover:border-primary-400 hover:text-white"><AddCircle size={15} />Paragraph</button>
+                        {section.codeBlocks?.map((block, blockIndex) => <figure key={blockIndex} className="overflow-hidden border border-line-300 bg-[#080d0a]">
                             <div className="flex items-center gap-2 border-b border-line-300 px-3 py-2">
                                 <input list="code-languages" value={block.language ?? ""} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).map((value, index) => index === blockIndex ? {...value, language: event.target.value} : value)}))} placeholder="html, css, javascript…" className="min-w-0 flex-1 bg-transparent text-[10px] font-bold uppercase tracking-[.16em] text-ink-400 outline-none" />
                                 <datalist id="code-languages"><option value="html" /><option value="html+css+js" /><option value="css" /><option value="javascript" /><option value="typescript" /><option value="jsx" /><option value="tsx" /><option value="json" /><option value="bash" /><option value="sql" /><option value="python" /><option value="markdown" /></datalist>
                                 <label className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[10px] font-bold ${canRenderCodeBlock(block.language) ? "text-ink-300" : "text-ink-600"}`}><input type="checkbox" disabled={!canRenderCodeBlock(block.language)} checked={Boolean(block.render)} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).map((value, index) => index === blockIndex ? {...value, render: event.target.checked} : value)}))} className="accent-emerald-400" />Run in sandbox</label>
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary-200"><Eye size={13} />LIVE</span>
-                                <button type="button" onClick={() => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).filter((_, index) => index !== blockIndex)}))} className="inline-flex items-center gap-1 rounded-md border border-red-400/20 bg-red-500/10 px-2.5 py-1.5 text-[10px] font-bold text-red-300 hover:bg-red-500/20"><TrashBinMinimalistic size={13} />Delete code block</button>
+                                <button type="button" onClick={() => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).filter((_, index) => index !== blockIndex)}))} className="inline-flex items-center gap-1 border border-red-400/20 bg-red-500/10 px-2.5 py-1.5 text-[10px] font-bold text-red-300 hover:bg-red-500/20"><TrashBinMinimalistic size={13} />Delete code block</button>
                             </div>
                             <div className="grid lg:grid-cols-2">
                                 <textarea value={block.code} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).map((value, index) => index === blockIndex ? {...value, code: event.target.value} : value)}))} rows={10} spellCheck={false} className="min-h-[14rem] w-full resize-y border-b border-line-300 bg-black/20 p-4 font-mono text-sm leading-6 text-primary-100 outline-none focus:bg-black/35 lg:border-b-0 lg:border-r" />
@@ -328,12 +328,12 @@ function LiveContentEditor({
                             <input value={block.caption ?? ""} onChange={(event) => updateSection(sectionIndex, (item) => ({...item, codeBlocks: (item.codeBlocks ?? []).map((value, index) => index === blockIndex ? {...value, caption: event.target.value} : value)}))} placeholder="Optional caption" className="w-full border-t border-line-300 bg-transparent px-4 py-3 text-xs text-ink-400 outline-none" />
                         </figure>)}
                         <div className="flex flex-wrap gap-2">
-                            <button onClick={() => updateSection(sectionIndex, (item) => ({...item, codeBlocks: [...(item.codeBlocks ?? []), {language: "html", code: "<div>Preview me</div>", caption: "", render: false}]}))} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:text-white"><Code size={15} />Code block</button>
+                            <button onClick={() => updateSection(sectionIndex, (item) => ({...item, codeBlocks: [...(item.codeBlocks ?? []), {language: "html", code: "<div>Preview me</div>", caption: "", render: false}]}))} className="inline-flex items-center gap-1.5 border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:text-white"><Code size={15} />Code block</button>
                         </div>
-                        {section.media?.type === "image" && section.media.image && <div className="group/image relative"><NextImage src={section.media.image.src} alt={section.media.image.alt} width={section.media.image.width || 1600} height={section.media.image.height || 900} unoptimized style={imageDisplayStyle(section.media.image)} className="h-auto w-full rounded-2xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: section.title, path: ["sections", sectionIndex, "media", "image"], image: section.media!.image!})} className="absolute right-3 top-3 rounded-lg bg-canvas-950/85 px-3 py-2 text-xs font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace image</button></div>}
-                        {section.media?.type === "gallery" && section.media.images && <div className="grid gap-3 sm:grid-cols-2">{section.media.images.map((image, imageIndex) => <div key={imageIndex} className="group/image relative"><NextImage src={image.src} alt={image.alt} width={image.width || 1600} height={image.height || 900} unoptimized style={imageDisplayStyle(image)} className="h-full w-full rounded-xl border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: `${section.title} image ${imageIndex + 1}`, path: ["sections", sectionIndex, "media", "images", imageIndex], image})} className="absolute right-2 top-2 rounded-lg bg-canvas-950/85 px-2.5 py-2 text-[10px] font-black text-white opacity-100 backdrop-blur sm:opacity-0 sm:group-hover/image:opacity-100">Replace</button></div>)}</div>}
+                        {section.media?.type === "image" && section.media.image && <div className="group/image relative"><NextImage src={section.media.image.src} alt={section.media.image.alt} width={section.media.image.width || 1600} height={section.media.image.height || 900} unoptimized style={imageDisplayStyle(section.media.image)} className="h-auto w-full border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: section.title, path: ["sections", sectionIndex, "media", "image"], image: section.media!.image!})} className="absolute right-3 top-3 bg-canvas-950 px-3 py-2 text-xs font-black text-white opacity-100 sm:opacity-0 sm:group-hover/image:opacity-100">Replace image</button></div>}
+                        {section.media?.type === "gallery" && section.media.images && <div className="grid gap-3 sm:grid-cols-2">{section.media.images.map((image, imageIndex) => <div key={imageIndex} className="group/image relative"><NextImage src={image.src} alt={image.alt} width={image.width || 1600} height={image.height || 900} unoptimized style={imageDisplayStyle(image)} className="h-full w-full border border-line-300 object-cover" /><button type="button" onClick={() => chooseImage({label: `${section.title} image ${imageIndex + 1}`, path: ["sections", sectionIndex, "media", "images", imageIndex], image})} className="absolute right-2 top-2 bg-canvas-950 px-2.5 py-2 text-[10px] font-black text-white opacity-100 sm:opacity-0 sm:group-hover/image:opacity-100">Replace</button></div>)}</div>}
                     </section>)}
-                    <button onClick={() => insertCodeSection()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary-400/40 bg-primary-500/[0.04] px-4 py-4 text-sm font-bold text-primary-100 hover:bg-primary-500/[0.08]"><Code size={18} />Add code section</button>
+                    <button onClick={() => insertCodeSection()} className="flex w-full items-center justify-center gap-2 border border-dashed border-primary-400/40 bg-primary-500/[0.04] px-4 py-4 text-sm font-bold text-primary-100 hover:bg-primary-500/[0.08]"><Code size={18} />Add code section</button>
                 </div>
             </article>
         </div>
@@ -641,86 +641,113 @@ export default function AdminContentStudio() {
 
     if (authorized === false) {
         return (
-            <main className="grid min-h-[70vh] place-items-center px-4">
-                <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-200">AnimalDex admin</p>
+            <AdminPage width="narrow" className="grid min-h-[70vh] place-items-center">
+                <form onSubmit={login} className="w-full max-w-sm border border-line-300 bg-surface-900 p-6">
+                    <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">AnimalDex admin</p>
                     <h1 className="mt-2 font-display text-3xl text-white">Content studio</h1>
-                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" />
-                    {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
-                    <button disabled={saving || !password} className="mt-4 w-full rounded-xl bg-primary-400 px-4 py-3 font-black text-canvas-950 disabled:opacity-50">{saving ? "Signing in…" : "Sign in"}</button>
+                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className={cn(fieldClass, "mt-6 py-2.5")} />
+                    {error && <Alert tone="bad" className="mt-3">{error}</Alert>}
+                    <Button type="submit" variant="primary" size="lg" loading={saving} disabled={!password} className="mt-4 w-full">{saving ? "Signing in…" : "Sign in"}</Button>
                 </form>
-            </main>
+            </AdminPage>
         );
     }
 
+    const pickerMatches = assets.filter((asset) => `${asset.filename} ${asset.path}`.toLowerCase().includes(assetQuery.toLowerCase()));
+    const listLoading = authorized === null && !error;
+
     return (
-        <main className="flex h-[100dvh] flex-col overflow-hidden bg-canvas-950 text-ink-100">
-            <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-line-300 px-3 py-3 sm:px-6">
-                <div className="flex items-center gap-3">
-                    <Link href="/admin" aria-label="Back to admin dashboard" className="text-ink-400 hover:text-white"><ArrowLeft size={21} /></Link>
-                    <div><h1 className="font-display text-xl text-white">SEO & Blog Studio</h1><p className="text-[11px] text-ink-500">Live content overrides</p></div>
-                </div>
-                <div className="flex shrink-0 gap-1.5 sm:gap-2">
-                    {post && <span className={`hidden items-center gap-1.5 px-2 text-[11px] font-bold sm:inline-flex ${autosaveStatus === "error" ? "text-red-300" : "text-ink-400"}`}>{autosaveStatus === "saving" ? "Saving…" : autosaveStatus === "error" ? "Autosave failed" : autosaveStatus === "saved" ? "Saved" : "Not saved yet"}</span>}
-                    <Link href="/admin/assets" className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-2.5 py-2 text-[11px] font-bold text-white sm:px-3 sm:text-xs"><Gallery size={15} /><span className="hidden sm:inline">Assets</span></Link>
-                    {post && <a href={contentType === "blog" ? `/blog/${post.slug}` : `/${post.slug}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-2.5 py-2 text-[11px] font-bold text-white sm:px-3 sm:text-xs"><Eye size={15} />Preview</a>}
-                    {post && <button onClick={save} disabled={saving || !post.slug} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-400 px-3 py-2 text-[11px] font-black text-canvas-950 disabled:opacity-50 sm:px-4 sm:text-xs"><Diskette size={15} />{saving ? "Publishing…" : "Publish"}</button>}
-                </div>
-            </header>
-            {(error || message) && <div className={`border-b px-4 py-2 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || message}</div>}
+        <AdminPage width="wide" className="flex h-[calc(100dvh-3.5rem)] max-w-none flex-col overflow-hidden px-0 pb-0 pt-0 sm:px-0 lg:px-0 lg:pt-0">
+            <PageHeader
+                className="shrink-0 px-4 pb-4 pt-5 sm:px-6"
+                eyebrow="Content"
+                title="SEO & Blog Studio"
+                description="Live content overrides"
+                actions={
+                    <>
+                        {post && (
+                            <span className={cn("hidden items-center gap-1.5 px-1 text-[11px] font-bold sm:inline-flex", autosaveStatus === "error" ? "text-red-300" : "text-ink-400")}>
+                                {autosaveStatus === "saving" ? <Spinner size={12} /> : autosaveStatus === "saved" ? <CheckCircle size={13} className="text-primary-300" /> : autosaveStatus === "error" ? <DangerCircle size={13} /> : null}
+                                {autosaveStatus === "saving" ? "Saving…" : autosaveStatus === "error" ? "Autosave failed" : autosaveStatus === "saved" ? "Saved" : "Not saved yet"}
+                            </span>
+                        )}
+                        <Link href="/admin/assets" className={buttonVariants({size: "sm"})}><Gallery size={15} /><span className="hidden sm:inline">Assets</span></Link>
+                        {post && <a href={contentType === "blog" ? `/blog/${post.slug}` : `/${post.slug}`} target="_blank" className={buttonVariants({size: "sm"})}><Eye size={15} />Preview</a>}
+                        {post && <Button size="sm" variant="primary" onClick={save} loading={saving} disabled={!post.slug}>{saving ? null : <Diskette size={15} />}{saving ? "Publishing…" : "Publish"}</Button>}
+                    </>
+                }
+            />
+            {(error || message) && <Alert tone={error ? "bad" : "good"} className="shrink-0 border-x-0 border-t-0 py-2">{error || message}</Alert>}
             <div className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)]">
                 <aside className={`${post ? "hidden lg:block" : "block"} min-h-0 overflow-y-auto border-r border-line-300`}>
-                    <div className="sticky top-0 bg-canvas-950 p-3">
-                        <div className="mb-3 grid grid-cols-2 rounded-xl border border-line-300 bg-surface-900 p-1">
-                            {(["blog", "page"] as ContentType[]).map((type) => (
-                                <button key={type} onClick={() => { setContentType(type); setPost(null); setSummaries([]); syncEditorUrl(type); loadList(type).catch((caught) => setError(caught.message)); }} className={`rounded-lg px-3 py-2 text-xs font-black capitalize ${contentType === type ? "bg-primary-500 text-canvas-950" : "text-ink-400"}`}>{type === "blog" ? "Blog posts" : "Pages"}</button>
-                            ))}
-                        </div>
-                        <div className="relative"><Magnifer size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${contentType === "blog" ? "articles" : "pages"}…`} className="w-full rounded-xl border border-line-300 bg-surface-900 py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-primary-300" /></div>
-                        <button onClick={() => {const nextPost = emptyPost(); setPost(nextPost); setIsPublished(false); lastSavedPost.current = JSON.stringify(nextPost); setAutosaveStatus("idle"); syncEditorUrl(contentType);}} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-primary-400/30 bg-primary-500/10 px-3 py-2.5 text-sm font-bold text-primary-100"><AddCircle size={17} />New {contentType === "blog" ? "article" : "page"}</button>
+                    <div className="sticky top-0 z-10 border-b border-line-300 bg-canvas-950 p-3">
+                        <Segmented
+                            className="mb-3 grid w-full grid-cols-2"
+                            label="Content type"
+                            value={contentType}
+                            onChange={(type) => { setContentType(type); setPost(null); setSummaries([]); syncEditorUrl(type); loadList(type).catch((caught) => setError(caught.message)); }}
+                            options={[{value: "blog", label: "Blog posts"}, {value: "page", label: "Pages"}]}
+                        />
+                        <div className="relative"><Magnifer size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${contentType === "blog" ? "articles" : "pages"}…`} className={cn(fieldClass, "pl-9")} /></div>
+                        <Button onClick={() => {const nextPost = emptyPost(); setPost(nextPost); setIsPublished(false); lastSavedPost.current = JSON.stringify(nextPost); setAutosaveStatus("idle"); syncEditorUrl(contentType);}} className="mt-2 w-full border-primary-400/30 bg-primary-500/10 text-primary-100"><AddCircle size={17} />New {contentType === "blog" ? "article" : "page"}</Button>
                     </div>
                     <div className="divide-y divide-line-300">
+                        {listLoading && Array.from({length: 7}, (_, index) => (
+                            <div key={index} aria-hidden="true" className="flex gap-3 p-3" style={{opacity: 1 - index * 0.11}}>
+                                <Skeleton className="h-14 w-20 shrink-0" />
+                                <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                                    <Skeleton className="h-3 w-full" />
+                                    <Skeleton className="h-3 w-2/3" />
+                                    <Skeleton className="h-2.5 w-1/3" />
+                                </div>
+                            </div>
+                        ))}
                         {filtered.map((item) => (
-                            <button key={item.slug} onClick={() => openPost(item.slug, contentType).catch((caught) => setError(caught.message))} className="flex w-full gap-3 p-3 text-left hover:bg-white/[0.035]">
-                                <NextImage src={item.featuredImage.src} alt="" width={80} height={56} unoptimized className="h-14 w-20 shrink-0 rounded-lg bg-surface-900 object-cover" />
+                            <button key={item.slug} onClick={() => openPost(item.slug, contentType).catch((caught) => setError(caught.message))} className={cn("flex w-full gap-3 p-3 text-left transition hover:bg-white/[0.035]", post?.slug === item.slug && "bg-primary-500/[.07] shadow-[inset_2px_0_0_theme(colors.primary.300)]")}>
+                                <NextImage src={item.featuredImage.src} alt="" width={80} height={56} unoptimized className="h-14 w-20 shrink-0 border border-line-300 bg-surface-900 object-cover" />
                                 <div className="min-w-0 flex-1">
                                     <p className="line-clamp-2 text-sm font-bold text-white">{item.title}</p>
                                     <p className="mt-1 truncate text-[11px] text-ink-500">/{item.slug}</p>
-                                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-ink-500" title={`${(item.views ?? 0).toLocaleString()} ${item.views === 1 ? "view" : "views"}`}>
+                                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] tabular-nums text-ink-500" title={`${(item.views ?? 0).toLocaleString()} ${item.views === 1 ? "view" : "views"}`}>
                                         <Eye size={12} aria-hidden="true" />
                                         <span>{formatViews(item.views ?? 0)}</span>
                                     </p>
                                 </div>
                             </button>
                         ))}
-                        {!filtered.length && <div className="p-6 text-center"><p className="text-sm font-bold text-white">No {contentType === "blog" ? "articles" : "pages"} found</p><p className="mt-2 text-xs leading-5 text-ink-500">Create a new {contentType === "blog" ? "article" : "page"} to get started.</p></div>}
+                        {!filtered.length && !listLoading && <EmptyState className="m-3 py-8" title={`No ${contentType === "blog" ? "articles" : "pages"} found`} description={`Create a new ${contentType === "blog" ? "article" : "page"} to get started.`} />}
                     </div>
                 </aside>
                 <section className={`${post ? "block" : "hidden lg:grid"} min-h-0 overflow-y-auto lg:place-items-start`}>
-                    {!post ? <div className="grid h-full place-items-center text-sm text-ink-400">Choose an article to edit.</div> : (
-                        <div className="mx-auto w-full max-w-5xl space-y-8 p-4 pb-24 sm:p-7">
-                            <button onClick={() => {setPost(null); syncEditorUrl(contentType);}} className="text-sm text-ink-400 lg:hidden">← All articles</button>
-                            <div className="sticky top-0 z-20 flex flex-col gap-3 rounded-2xl border border-line-300 bg-canvas-950/95 p-3 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                    {!post ? <EmptyState className="m-6 w-[calc(100%-3rem)] self-stretch border-0" icon={<Code size={20} />} title="Choose an article to edit." description="Pick one from the list, or start a new one." /> : (
+                        <div className="mx-auto w-full max-w-5xl space-y-6 p-4 pb-24 sm:p-7">
+                            <Button variant="ghost" size="sm" onClick={() => {setPost(null); syncEditorUrl(contentType);}} className="lg:hidden">← All articles</Button>
+                            <div className="sticky top-0 z-20 flex flex-col gap-3 border border-line-300 bg-canvas-950 p-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-xs font-bold text-primary-100">Live editor <span className="font-normal text-ink-500">· click any text to edit</span></p>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <div className="flex rounded-lg border border-line-300 p-1">{(["mobile", "tablet", "desktop"] as PreviewWidth[]).map((width) => {
-                                        const DeviceIcon = width === "mobile" ? Smartphone : width === "tablet" ? Tablet : Monitor;
-                                        return <button key={width} onClick={() => setPreviewWidth(width)} aria-label={`${width} canvas`} title={`${width} canvas`} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-bold capitalize ${previewWidth === width ? "bg-white/10 text-white" : "text-ink-500"}`}><DeviceIcon size={14} /><span className="hidden sm:inline">{width}</span></button>;
-                                    })}</div>
-                                    <button onClick={duplicatePost} className="inline-flex items-center gap-1.5 rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-300"><Copy size={15} />Duplicate</button>
+                                    <Segmented
+                                        label="Canvas width"
+                                        value={previewWidth}
+                                        onChange={setPreviewWidth}
+                                        options={(["mobile", "tablet", "desktop"] as PreviewWidth[]).map((width) => {
+                                            const DeviceIcon = width === "mobile" ? Smartphone : width === "tablet" ? Tablet : Monitor;
+                                            return {value: width, label: <span title={`${width} canvas`} className="inline-flex items-center gap-1 capitalize"><DeviceIcon size={14} /><span className="hidden sm:inline">{width}</span></span>};
+                                        })}
+                                    />
+                                    <Button size="sm" onClick={duplicatePost}><Copy size={15} />Duplicate</Button>
                                 </div>
                             </div>
-                            <details className="rounded-xl border border-line-300 bg-surface-900">
-                                <summary className="cursor-pointer px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-primary-200">Page & SEO settings</summary>
+                            <details className="border border-line-300 bg-surface-900">
+                                <summary className="cursor-pointer px-4 py-3 text-[11px] font-black uppercase tracking-[.12em] text-primary-200">Page & SEO settings</summary>
                                 <div className="grid gap-4 border-t border-line-300 p-4 sm:grid-cols-2">
-                                    <label className="text-xs font-bold text-white">SEO title<input value={post.title} onChange={(event) => setPost({...post, title: event.target.value})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white">Slug<input value={post.slug} onChange={(event) => setPost({...post, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white sm:col-span-2">Meta description<textarea value={post.description} onChange={(event) => setPost({...post, description: event.target.value})} rows={3} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white">Tags<input value={post.tags.join(", ")} onChange={(event) => setPost({...post, tags: commaList(event.target.value)})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white">Author<input value={post.author ?? ""} onChange={(event) => setPost({...post, author: event.target.value})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white">SEO keywords<input value={post.searchIntents.join(", ")} onChange={(event) => setPost({...post, searchIntents: commaList(event.target.value)})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white sm:col-span-2">Featured image alt text<input value={post.featuredImage.alt} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, alt: event.target.value}})} className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
-                                    <label className="text-xs font-bold text-white">Featured image height<input type="number" min={80} max={1600} value={post.featuredImage.displayHeight ?? ""} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: parseDisplayHeight(event.target.value)}})} placeholder="Auto" className="mt-2 w-full rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-sm font-normal outline-none focus:border-primary-300" /></label>
+                                    <Field label="SEO title"><input value={post.title} onChange={(event) => setPost({...post, title: event.target.value})} className={fieldClass} /></Field>
+                                    <Field label="Slug"><input value={post.slug} onChange={(event) => setPost({...post, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")})} className={fieldClass} /></Field>
+                                    <Field label="Meta description" className="sm:col-span-2"><textarea value={post.description} onChange={(event) => setPost({...post, description: event.target.value})} rows={3} className={fieldClass} /></Field>
+                                    <Field label="Tags"><input value={post.tags.join(", ")} onChange={(event) => setPost({...post, tags: commaList(event.target.value)})} className={fieldClass} /></Field>
+                                    <Field label="Author"><input value={post.author ?? ""} onChange={(event) => setPost({...post, author: event.target.value})} className={fieldClass} /></Field>
+                                    <Field label="SEO keywords"><input value={post.searchIntents.join(", ")} onChange={(event) => setPost({...post, searchIntents: commaList(event.target.value)})} className={fieldClass} /></Field>
+                                    <Field label="Featured image alt text" className="sm:col-span-2"><input value={post.featuredImage.alt} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, alt: event.target.value}})} className={fieldClass} /></Field>
+                                    <Field label="Featured image height"><input type="number" min={80} max={1600} value={post.featuredImage.displayHeight ?? ""} onChange={(event) => setPost({...post, featuredImage: {...post.featuredImage, displayHeight: parseDisplayHeight(event.target.value)}})} placeholder="Auto" className={fieldClass} /></Field>
                                 </div>
                             </details>
                             <SeoGuidance post={post} />
@@ -730,46 +757,53 @@ export default function AdminContentStudio() {
                 </section>
             </div>
             {pickerSlot && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={`Choose ${pickerSlot.label}`}>
-                    <div className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-line-300 bg-canvas-950 shadow-2xl sm:rounded-2xl">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={`Choose ${pickerSlot.label}`}>
+                    <div className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
                         <div className="flex items-center justify-between gap-4 border-b border-line-300 px-4 py-4 sm:px-6">
-                            <div><p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Asset library</p><h2 className="mt-1 font-display text-2xl text-white">Choose {pickerSlot.label.toLowerCase()}</h2></div>
-                            <button onClick={() => savePickerAltText(true)} className="rounded-lg border border-line-300 px-3 py-2 text-sm font-bold text-white">Close</button>
+                            <div><p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">Asset library</p><h2 className="mt-1 font-display text-2xl text-white">Choose {pickerSlot.label.toLowerCase()}</h2></div>
+                            <Button onClick={() => savePickerAltText(true)}>Close</Button>
                         </div>
-                        <div className="grid gap-3 border-b border-line-300 p-4 sm:px-6">
-                            <label className="text-xs font-bold text-white">
-                                Alt text
-                                <input value={pickerAltText} onChange={(event) => setPickerAltText(event.target.value)} placeholder="Describe the image for screen readers and search" className="mt-2 w-full rounded-xl border border-line-300 bg-surface-900 px-4 py-3 text-sm font-normal text-white outline-none focus:border-primary-300" />
-                            </label>
-                            <label className="text-xs font-bold text-white">
-                                Display height
-                                <input type="number" min={80} max={1600} value={pickerDisplayHeight} onChange={(event) => setPickerDisplayHeight(event.target.value)} placeholder="Auto" className="mt-2 w-full rounded-xl border border-line-300 bg-surface-900 px-4 py-3 text-sm font-normal text-white outline-none focus:border-primary-300" />
-                            </label>
-                            <div className="flex flex-col gap-3 sm:flex-row">
-                                <div className="relative min-w-0 flex-1"><Magnifer size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-500" /><input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search existing images…" className="w-full rounded-xl border border-line-300 bg-surface-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-primary-300" /></div>
-                                <button type="button" onClick={() => savePickerAltText(false)} className="rounded-xl border border-line-300 px-5 py-3 text-sm font-black text-white hover:border-primary-300">Save alt text</button>
-                                <label className="cursor-pointer rounded-xl bg-primary-400 px-5 py-3 text-center text-sm font-black text-canvas-950">
-                                    <span className="inline-flex items-center gap-2"><Upload size={17} />{uploadingPath ? "Uploading…" : "Upload new image"}</span>
+                        <div className="grid gap-3 border-b border-line-300 p-4 sm:grid-cols-[minmax(0,1fr)_12rem] sm:px-6">
+                            <Field label="Alt text">
+                                <input value={pickerAltText} onChange={(event) => setPickerAltText(event.target.value)} placeholder="Describe the image for screen readers and search" className={fieldClass} />
+                            </Field>
+                            <Field label="Display height">
+                                <input type="number" min={80} max={1600} value={pickerDisplayHeight} onChange={(event) => setPickerDisplayHeight(event.target.value)} placeholder="Auto" className={fieldClass} />
+                            </Field>
+                            <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row">
+                                <div className="relative min-w-0 flex-1"><Magnifer size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" /><input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search existing images…" className={cn(fieldClass, "pl-9")} /></div>
+                                <Button type="button" onClick={() => savePickerAltText(false)}>Save alt text</Button>
+                                <label className={cn(buttonVariants({variant: "primary"}), "cursor-pointer", uploadingPath && "pointer-events-none opacity-70")} aria-busy={Boolean(uploadingPath) || undefined}>
+                                    {uploadingPath ? <Spinner /> : <Upload size={17} />}{uploadingPath ? "Uploading…" : "Upload new image"}
                                     <input type="file" accept="image/*" disabled={Boolean(uploadingPath)} className="hidden" onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], pickerSlot)} />
                                 </label>
                             </div>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-                            {assetsLoading ? <p className="py-16 text-center text-sm text-ink-400">Loading image library…</p> : (
+                            {assetsLoading ? (
+                                <div role="status" aria-label="Loading image library" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                    {Array.from({length: 8}, (_, index) => (
+                                        <div key={index} aria-hidden="true" className="border border-line-300 bg-canvas-900">
+                                            <Skeleton className="aspect-[4/3] w-full" />
+                                            <div className="px-3 py-2.5"><Skeleton className="h-3 w-3/4" /></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                                    {assets.filter((asset) => `${asset.filename} ${asset.path}`.toLowerCase().includes(assetQuery.toLowerCase())).map((asset) => (
-                                        <button key={asset.path} onClick={() => selectExistingAsset(asset)} className="group overflow-hidden rounded-xl border border-line-300 bg-surface-900 text-left hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-300">
-                                            <div className="relative aspect-[4/3] overflow-hidden bg-black/20"><NextImage src={asset.url} alt="" fill unoptimized sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform group-hover:scale-105" /></div>
-                                            <p className="truncate px-3 py-2 text-xs font-bold text-ink-200">{asset.filename}</p>
+                                    {pickerMatches.map((asset) => (
+                                        <button key={asset.path} onClick={() => selectExistingAsset(asset)} className="group overflow-hidden border border-line-300 bg-canvas-900 text-left transition hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-300">
+                                            <div className="relative aspect-[4/3] overflow-hidden bg-canvas-950"><NextImage src={asset.url} alt="" fill unoptimized sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform group-hover:scale-105" /></div>
+                                            <p className="truncate border-t border-line-300 px-3 py-2 text-xs font-bold text-ink-200">{asset.filename}</p>
                                         </button>
                                     ))}
                                 </div>
                             )}
-                            {!assetsLoading && !assets.filter((asset) => `${asset.filename} ${asset.path}`.toLowerCase().includes(assetQuery.toLowerCase())).length && <p className="py-16 text-center text-sm text-ink-400">No matching images. Upload a new one to add it to the library.</p>}
+                            {!assetsLoading && !pickerMatches.length && <EmptyState icon={<Gallery size={20} />} title="No matching images." description="Upload a new one to add it to the library." />}
                         </div>
                     </div>
                 </div>
             )}
-        </main>
+        </AdminPage>
     );
 }

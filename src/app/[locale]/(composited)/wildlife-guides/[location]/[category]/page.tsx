@@ -5,6 +5,7 @@ import GuideCard from "@/components/guides/guide-card";
 import {GuidePageView} from "@/components/guides/guide-analytics";
 import {getPublicGuideListings} from "@/data/guide-marketplace";
 import {GUIDE_CATEGORIES, categoryLabel, guideAreaServedName, isLocationPageIndexable, locationInventory, type GuideCategory} from "@/lib/guide-marketplace-core";
+import {getAbsoluteUrl} from "@/lib/site";
 
 export const revalidate = 86400;
 type Props = {params: {locale: string; location: string; category: string}};
@@ -21,5 +22,26 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 export default async function GuideLocationCategoryPage({params}: Props) {
     const listings = await resolve(params); if (!listings) notFound();
     const area = guideAreaServedName(listings[0]); const category = categoryLabel(params.category as GuideCategory);
-    return <><GuidePageView event="guide_web_location_page_view" dimensions={{page_type: "location_category", location: params.location, service_category: params.category}}/><section className="bg-canvas-950 px-5 pb-16 pt-32 text-white sm:px-8"><div className="mx-auto max-w-6xl"><Link href={`/wildlife-guides/${params.location}`} className="text-sm text-primary-300">Wildlife Guides in {area}</Link><h1 className="mt-5 font-display text-5xl sm:text-7xl">{category} Guides in {area}</h1><p className="mt-6 max-w-3xl text-xl leading-8 text-white/65">Published {category.toLowerCase()} experiences with clear public areas, duration, capacity, pricing and AnimalDex wildlife credentials.</p></div></section><section className="bg-canvas-900 px-5 py-16 text-white sm:px-8"><div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">{listings.map((listing) => <GuideCard key={listing.id} listing={listing} locale={params.locale}/>)}</div></section></>;
+    const pageUrl = getAbsoluteUrl(params.locale, `/wildlife-guides/${params.location}/${params.category}`);
+    const categoryJsonLd = [
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: `${category} Guides in ${area}`,
+            description: `Published ${category.toLowerCase()} experiences in ${area} hosted by approved AnimalDex Guide sellers.`,
+            url: pageUrl,
+            inLanguage: params.locale
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+                {"@type": "ListItem", position: 1, name: "Home", item: getAbsoluteUrl(params.locale, "/")},
+                {"@type": "ListItem", position: 2, name: "Wildlife Guides", item: getAbsoluteUrl(params.locale, "/wildlife-guides")},
+                {"@type": "ListItem", position: 3, name: area, item: getAbsoluteUrl(params.locale, `/wildlife-guides/${params.location}`)},
+                {"@type": "ListItem", position: 4, name: category, item: pageUrl}
+            ]
+        }
+    ];
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(categoryJsonLd)}} /><GuidePageView event="guide_web_location_page_view" dimensions={{page_type: "location_category", location: params.location, service_category: params.category}}/><section className="bg-canvas-950 px-5 pb-16 pt-32 text-white sm:px-8"><div className="mx-auto max-w-6xl"><Link href={`/wildlife-guides/${params.location}`} className="text-sm text-primary-300">Wildlife Guides in {area}</Link><h1 className="mt-5 font-display text-5xl sm:text-7xl">{category} Guides in {area}</h1><p className="mt-6 max-w-3xl text-xl leading-8 text-white/65">Published {category.toLowerCase()} experiences with clear public areas, duration, capacity, pricing and AnimalDex wildlife credentials.</p></div></section><section className="bg-canvas-900 px-5 py-16 text-white sm:px-8"><div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">{listings.map((listing) => <GuideCard key={listing.id} listing={listing} locale={params.locale}/>)}</div></section></>;
 }

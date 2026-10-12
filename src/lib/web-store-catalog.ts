@@ -40,7 +40,6 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
 export const WEB_STORE_PRO_BENEFITS = [
     "Instagram Import included with Pro",
     "Unlimited photo and video scans",
-    "Re-analysis included",
     "Field-guide unlocks included"
 ] as const;
 

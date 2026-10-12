@@ -89,24 +89,35 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    // Authorisation before any body parsing or database work: nothing on this
+    // route runs for an anonymous caller, and the finance boundary answers
+    // with its own status rather than falling through to the generic 400.
+    const operator = await resolveAdminActor(request.cookies);
+    if (!operator.authorized) {
+        return NextResponse.json({error: "Unauthorized"}, {status: 401});
+    }
+
     try {
         const body = await request.json().catch(() => ({}));
         const action = String(body.action ?? "");
         const payoutId = String(body.payoutId ?? "");
-        const diagnostics = await getPayoutDiagnostics();
 
         if (action === "release_posted_creator_rewards") {
-            const actor = await resolveAdminActor(request.cookies);
-            if (!actor.authorized) {
-                return NextResponse.json({error: "Unauthorized"}, {status: 401});
-            }
             const result = await rpc("admin_release_posted_creator_rewards_to_available", {
                 p_period_id: body.periodId || null,
-                p_created_by: actor.userId || null
+                p_created_by: operator.userId || null
             });
             return NextResponse.json({ok: true, result});
         }
 
+        if (!operator.canActAsFinanceActor) {
+            return NextResponse.json(
+                {error: "named_operator_required_for_finance"},
+                {status: 403}
+            );
+        }
+
+        const diagnostics = await getPayoutDiagnostics();
         const actor = await requireNamedFinanceAdminActor(request.cookies);
 
         if (!payoutId && action !== "") {

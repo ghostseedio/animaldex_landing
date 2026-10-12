@@ -41,12 +41,13 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
             <div className="mx-auto flex h-16 w-full max-w-[86rem] items-stretch justify-between gap-3">
                 <div className="flex min-w-0 shrink-0 items-center gap-3">
                     <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={t("logo")}>
-                        <img
+                        <Image
                             src="/images/logo.webp"
                             alt=""
                             aria-hidden="true"
                             width={44}
                             height={44}
+                            priority
                             className="h-9 w-9"
                         />
                         <Image

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Alert, Button, cn, fieldClass } from "@/components/admin/ui";
 import {
   generatedAdSpendTarget,
   splitMonthlyTargetsByCalendarWeeks,
@@ -126,9 +127,9 @@ export function PlanForm({
   return (
     <form
       onSubmit={submit}
-      className="rounded-xl border border-line-300 bg-canvas-900 p-4"
+      className="border border-line-300 bg-canvas-900 p-4"
     >
-      <h3 className="font-display text-2xl text-white">
+      <h3 className="font-display text-lg text-white">
         Growth targets — {monthLabel(month)}
       </h3>
       <p className="mt-1 text-sm text-ink-400">
@@ -166,7 +167,7 @@ export function PlanForm({
                     name="adSpendCurrency"
                     value={adSpendCurrency}
                     onChange={(event) => setAdSpendCurrency(event.target.value)}
-                    className="rounded-lg border border-line-300 bg-surface-900 px-2 py-2 text-white outline-none focus:border-primary-300"
+                    className={cn(fieldClass, "bg-surface-900 px-2 font-normal")}
                   >
                     <option value="IDR">IDR</option>
                     <option value="GBP">GBP</option>
@@ -187,7 +188,7 @@ export function PlanForm({
                             adSpendCurrency,
                           )
                     }
-                    className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+                    className={cn(fieldClass, "bg-surface-900 font-normal")}
                   />
                 </div>
                 <span className="mt-1 flex items-center gap-2 text-xs font-normal text-ink-400">
@@ -220,7 +221,7 @@ export function PlanForm({
                     : defaults[key]
                 }
                 readOnly={generatedUserField && !overrideUsers}
-                className="mt-1 w-full rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-white outline-none focus:border-primary-300 read-only:opacity-70"
+                className={cn(fieldClass, "mt-1 bg-surface-900 font-normal read-only:opacity-70")}
               />
               {generatedUserField ? (
                 <span className="mt-1 block text-[11px] text-ink-500">
@@ -233,7 +234,7 @@ export function PlanForm({
           );
         })}
       </div>
-      <div className="mt-4 rounded-lg border border-line-300 bg-surface-900 p-3">
+      <div className="mt-4 border border-line-300 bg-surface-900 p-3">
         <p className="text-sm font-black text-white">Weekly targets</p>
         <p className="mt-1 text-xs text-ink-400">
           Automatically split from the monthly targets. Input targets stay
@@ -249,25 +250,22 @@ export function PlanForm({
           name="jobs"
           rows={5}
           defaultValue={editingJobItems.join("\n")}
-          className="mt-1 w-full rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-white outline-none focus:border-primary-300"
+          className={cn(fieldClass, "mt-1 bg-surface-900 font-normal")}
         />
       </label>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+      {error ? (
+        <Alert tone="bad" className="mt-3">
+          {error}
+        </Alert>
+      ) : null}
       <div className="mt-5 flex gap-2">
-        <button
-          disabled={saving}
-          className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
-        >
+        <Button type="submit" variant="primary" loading={saving}>
           {saving ? "Saving..." : `Save ${monthLabel(month)} targets`}
-        </button>
+        </Button>
         {onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white"
-          >
+          <Button type="button" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         ) : null}
       </div>
     </form>

@@ -307,6 +307,47 @@ module.exports = withNextIntl({
             }
         ];
     },
+    async headers() {
+        // Baseline security headers for every response. CSP is intentionally
+        // left out here: a wrong policy breaks GA, Supabase and Next's inline
+        // runtime, so it should be rolled out separately in report-only first.
+        const securityHeaders = [
+            {key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload"},
+            {key: "X-Content-Type-Options", value: "nosniff"},
+            {key: "Referrer-Policy", value: "strict-origin-when-cross-origin"},
+            {key: "X-Frame-Options", value: "SAMEORIGIN"},
+            // The web app uses the camera and microphone for in-browser capture
+            // and geolocation for nearby wildlife, so these stay allowed for
+            // same-origin; only the Topics API is switched off.
+            {key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), browsing-topics=()"}
+        ];
+
+        return [
+            {
+                source: "/:path*",
+                headers: securityHeaders
+            },
+            // The operations panel is never a search result or a shared cache
+            // entry, whatever a page's own metadata says.
+            ...["/admin", "/admin/:path*", "/api/admin/:path*"].map((source) => ({
+                source,
+                headers: [
+                    {key: "X-Robots-Tag", value: "noindex, nofollow"},
+                    {key: "Cache-Control", value: "private, no-store"}
+                ]
+            })),
+            {
+                // Static art under /public/images is not content-hashed, so keep
+                // a one-week browser TTL with a long stale-while-revalidate
+                // window rather than `immutable`. Lighthouse flags the current
+                // 4h TTL as too short for these assets.
+                source: "/images/:path*",
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000"}
+                ]
+            }
+        ];
+    },
     async rewrites() {
         return [
             {
@@ -331,6 +372,9 @@ module.exports = withNextIntl({
         return config;
     },
     images: {
+        // AVIF first (smaller than WebP for photographic content); WebP is the
+        // fallback for browsers without AVIF support.
+        formats: ['image/avif', 'image/webp'],
         deviceSizes: [640, 828, 1080, 1200, 1920],
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
         remotePatterns: [

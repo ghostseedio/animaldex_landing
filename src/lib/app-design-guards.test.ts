@@ -13,7 +13,7 @@ function sourceFiles(match: (path: string) => boolean) {
 const ROUNDED = /(?<![\w-])(?:[a-z0-9]+:)*rounded(?:-(?:t|b|l|r|tl|tr|bl|br|s|e))?(?:-(?:sm|md|lg|xl|2xl|3xl|\[[^\]]+\]))?(?![\w[-])/g;
 
 test("the web app has no rounded containers, as in the iOS app", () => {
-    // Square edges throughout /app and the iOS-port components it mounts.
+    // Square edges throughout /app, the iOS-port components it mounts, and /admin.
     // rounded-full stays for avatars, dots, badges and capsule buttons;
     // rounded-[2px] is the site's square button.
     const files = sourceFiles((path) =>
@@ -23,6 +23,8 @@ test("the web app has no rounded containers, as in the iOS app", () => {
         || path.startsWith("src/components/share/")
         || path.startsWith("src/components/guides/")
         || path.includes("(composited)/u/[handle]/")
+        || path.startsWith("src/app/admin/")
+        || path.startsWith("src/components/admin/")
     );
     const offenders: string[] = [];
     for (const path of files) {

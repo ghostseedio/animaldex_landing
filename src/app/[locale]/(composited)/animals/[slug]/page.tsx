@@ -73,8 +73,10 @@ import {getLegendaryCatalogSeedByBeastSlug} from "@/data/legendary-earth-beasts-
 import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast-capture";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getPublishedEnglishAnimalStaticParams} from "@/lib/published-seo-page-data";
-import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
-import {getSpeciesStoryMedia} from "@/lib/species-story-media";
+import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
+import {STORY_MEDIA_REVALIDATE_SECONDS, getSpeciesStoryMedia} from "@/lib/species-story-media";
+import {buildSpeciesVideoSchemas, collectSpeciesVideoUrls} from "@/lib/species-video-schema";
+import {fetchAnimalPowerIconIndex, resolveAnimalPowerIcon} from "@/lib/animal-power-icons-server";
 import {getStaticSpeciesGroupMembers} from "@/lib/static-species-profiles";
 import {isBreedSpeciesEntry, speciesDisplayCategory} from "@/lib/species-breed";
 
@@ -377,7 +379,14 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
     }) && !(entry.databaseSource && !entry.databaseSource.seoIndexable)
         && !shouldNoindexLifeStageAliasSlug(slug, entry.slug);
 
-    return indexable ? metadata : {...metadata, robots: {index: false, follow: true}};
+    // Surface the story videos to social scrapers (og:video). The underlying
+    // fetch is deduped with the page body's own getSpeciesStoryMedia call.
+    const videoUrls = indexable ? collectSpeciesVideoUrls(await getSpeciesStoryMedia(entry.slug, locale)) : [];
+    const withVideo = videoUrls.length > 0
+        ? {...metadata, openGraph: {...metadata.openGraph, videos: videoUrls.map((url) => ({url}))}}
+        : metadata;
+
+    return indexable ? withVideo : {...metadata, robots: {index: false, follow: true}};
 }
 
 export default async function SpeciesPage({params}: SpeciesPageProps) {
@@ -394,8 +403,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         redirect(getLocalePath(locale, `/animals/${entry.slug}`));
     }
 
-    // Daily ISR: this fetch's revalidate lowers the route's `revalidate = false`.
-    const storyMedia = await getSpeciesStoryMedia(entry.slug, locale);
+    // Daily ISR: these fetches' revalidate lowers the route's `revalidate = false`.
+    // The Power icons share the story media's window, so they add no extra rebuilds.
+    const [storyMedia, powerIconIndex] = await Promise.all([
+        getSpeciesStoryMedia(entry.slug, locale),
+        fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS})
+    ]);
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
     const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
     const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
@@ -405,6 +418,12 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     // Local profile, else the catalog lesson snapshot: DB-only species get
     // their principle (and the dream reading built from it) too.
     const principleProfile = resolveSpeciesBehaviorProfileForPage(entry.slug);
+    // Matched to the Power name this page shows (the snapshot can lag a rename),
+    // then to the species.
+    const powerIconSvg = resolveAnimalPowerIcon(powerIconIndex, {
+        principleName: principleProfile?.principle,
+        speciesProfileId: entry.speciesProfileId
+    });
     const systemsEntry = getSystemsIntelligenceBySpeciesSlug(entry.slug);
     const meaningSections = principleProfile ? buildAnimalMeaningSections({
         name: entry.name,
@@ -647,6 +666,16 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             ]
         } : {})
     };
+    // One VideoObject per story video (narrated story, hook loop, Trial scenes),
+    // each with a unique `#anchor` @id so Google can index them individually.
+    const videoSchemas = buildSpeciesVideoSchemas(storyMedia, {
+        pageUrl,
+        speciesName: entry.name,
+        speciesSummary: entry.analysis.summary,
+        fallbackThumbnailUrl: getAbsoluteUrl(locale, getSpeciesImageRoute(entry.slug)),
+        fallbackUploadDate: entry.publishedAt,
+        publisherLogoUrl: getAbsoluteAssetUrl("/images/logo.webp")
+    });
 
     // First clause only: catalog habitats run "Fresh water: ponds, swamps…".
     const habitatLead = entry.analysis.habitat.split(/[,:;.]/)[0]?.trim() || entry.analysis.habitat;
@@ -909,7 +938,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     thingSchema,
                     articleSchema,
                     faqSchema,
-                    animalBreadcrumbSchema
+                    animalBreadcrumbSchema,
+                    ...videoSchemas
                 ])}}
             />
 
@@ -998,6 +1028,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
             <SpeciesAtAGlanceCard
                 animalName={entry.name}
+                powerIconSvg={powerIconSvg}
                 glance={buildSpeciesAtAGlance({
                     category: displayCategory,
                     habitat: habitatLead,
@@ -1054,6 +1085,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 <SpeciesAnimalPowerGuide
                     animalName={entry.name}
                     profile={powerProfile}
+                    iconSvg={powerIconSvg}
                     dream={dreamReading}
                     meaning={meaningSections}
                     lessonHref={isPublishedLessonSlug(entry.slug) ? `/animal-powers/${entry.slug}` : null}
@@ -1115,7 +1147,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                         coreLesson: principleProfile.coreLesson,
                                         biologicalBasis: principleProfile.biologicalBasis,
                                         applicationExample: principleProfile.applicationExample,
-                                        bestUseCases: principleProfile.bestFor
+                                        bestUseCases: principleProfile.bestFor,
+                                        iconSvg: powerIconSvg
                                     } : null}
                                 />
                             </div>

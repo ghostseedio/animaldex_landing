@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {ArrowLeft, CheckCircle, CloseCircle, DangerTriangle, MagicStick3, Paperclip, Pen, Refresh} from "solar-icon-set";
+import {CheckCircle, CloseCircle, DangerTriangle, MagicStick3, Paperclip, Pen, Refresh} from "solar-icon-set";
 import {ACCEPTED_MATERIAL_EXTENSIONS, MATERIAL_LIMITS, materialBatchProblem} from "@/lib/blog-generator/material-types";
 import BlogEditPanel from "@/app/admin/blog-generator/blog-edit-panel";
 import DepthPicker, {type ResearchDepth} from "@/app/admin/blog-generator/depth-picker";
+import {AdminPage, Alert, Badge, Button, Card, CardContent, CardHeader, cn, EmptyState, fieldClass, PageHeader, Skeleton, Spinner} from "@/components/admin/ui";
 
 type Mode = "news" | "catalog" | "custom";
 
@@ -264,51 +265,60 @@ export default function AdminBlogGenerator() {
         }
     }
 
+    const generateStep = generateJob?.log.at(-1);
+
     return (
-        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
-            <div className="mx-auto w-full max-w-[84rem]">
-                <header className="border-b border-line-300 pb-6">
-                    <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-ink-400 hover:text-white"><ArrowLeft size={18} />Dashboard</Link>
-                    <p className="mt-7 text-xs font-black uppercase tracking-[.2em] text-primary-200">Content</p>
-                    <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Blog generator</h1>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-300">
-                        Claude researches a topic on the web, writes a full article with photos, charts and interactive quizzes, links it into our species and comparison pages, and publishes it to the blog, or edits a post that’s already live. Every source link and internal link is checked first; if a check fails, nothing goes live. A new article takes about 12–16 minutes; an edit, 5–15.
-                    </p>
-                </header>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Content"
+                title="Blog generator"
+                description="Claude researches a topic on the web, writes a full article with photos, charts and interactive quizzes, links it into our species and comparison pages, and publishes it to the blog, or edits a post that’s already live. Every source link and internal link is checked first; if a check fails, nothing goes live. A new article takes about 12–16 minutes; an edit, 5–15."
+                meta={configured === null ? <span className="inline-flex items-center gap-2"><Spinner size={12} />Checking the server</span> : null}
+                actions={
+                    <div role="tablist" aria-label="Task" className="inline-flex border border-line-300 bg-canvas-900 p-0.5">
+                        {([["new", "New article"], ["edit", "Edit a post"]] as const).map(([id, label]) => (
+                            <button key={id} role="tab" aria-selected={task === id} onClick={() => setTask(id)} className={cn("min-h-8 px-4 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300", task === id ? "bg-primary-400 text-canvas-950" : "text-ink-400 hover:text-white")}>{label}</button>
+                        ))}
+                    </div>
+                }
+            />
 
-                {configured === false ? (
-                    <p className="mt-6 flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><DangerTriangle size={18} />CLAUDE_API_KEY is not set on this server, so generation is unavailable.</p>
-                ) : null}
-                {error ? <p className="mt-6 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
-                {notice ? <p className="mt-6 rounded-xl border border-primary-400/40 bg-primary-500/10 px-4 py-3 text-sm text-primary-100">{notice}</p> : null}
-
-                <div role="tablist" aria-label="Task" className="mt-8 inline-flex gap-1 rounded-xl border border-line-300 p-1">
-                    {([["new", "New article"], ["edit", "Edit a post"]] as const).map(([id, label]) => (
-                        <button key={id} role="tab" aria-selected={task === id} onClick={() => setTask(id)} className={`rounded-lg px-4 py-2 text-sm font-black ${task === id ? "bg-primary-500/20 text-white" : "text-ink-400 hover:text-white"}`}>{label}</button>
-                    ))}
+            {configured === false || error || notice ? (
+                <div className="mt-6 flex flex-col gap-3">
+                    {configured === false ? (
+                        <Alert tone="warn" title="Generation is unavailable">CLAUDE_API_KEY is not set on this server, so generation is unavailable.</Alert>
+                    ) : null}
+                    {error ? <Alert tone="bad">{error}</Alert> : null}
+                    {notice ? <Alert tone="good">{notice}</Alert> : null}
                 </div>
+            ) : null}
 
-                <section className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-                    <div className="flex flex-col gap-5 rounded-2xl border border-line-300 bg-surface-900/60 p-5 sm:p-6">
+            <section className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+                <Card>
+                    <CardHeader
+                        title={task === "edit" ? "Edit a post" : "New article"}
+                        description={task === "edit" ? "Refresh a live post or make specific changes. The current version is always backed up first." : "Pick where the story comes from, then find topics or let Claude pick one and write it."}
+                    />
+                    <CardContent className="flex flex-col gap-5">
                         {task === "edit" ? (
                             <BlogEditPanel api={api} busy={busy} disabled={configured === false} onStart={startEdit} onError={setError} onNotice={setNotice} refreshKey={historyKey} />
                         ) : (
                         <>
-                        <div role="tablist" aria-label="Article source" className="grid grid-cols-3 gap-1 rounded-xl border border-line-300 p-1">
+                        <div role="tablist" aria-label="Article source" className="grid grid-cols-3 gap-0.5 border border-line-300 bg-canvas-900 p-0.5">
                             {MODES.map((entry) => (
                                 <button
                                     key={entry.id}
                                     role="tab"
                                     aria-selected={mode === entry.id}
                                     onClick={() => setMode(entry.id)}
-                                    className={`rounded-lg px-2 py-2.5 text-xs font-black sm:text-sm ${mode === entry.id ? "bg-primary-500/20 text-white" : "text-ink-400 hover:text-white"}`}
+                                    className={cn("min-h-9 px-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300", mode === entry.id ? "bg-primary-400 text-canvas-950" : "text-ink-400 hover:text-white")}
                                 >
                                     {entry.label}
                                 </button>
                             ))}
                         </div>
-                        <p className="text-sm leading-6 text-ink-300">{active.hint}</p>
-                        <label className="flex flex-col gap-2 text-xs font-black uppercase tracking-[.16em] text-ink-400">
+                        <p className="-mt-2 text-sm leading-6 text-ink-300">{active.hint}</p>
+                        <label className="flex flex-col gap-1.5 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                             {mode === "custom" ? (hasMaterials ? "Topic (optional with material)" : "Topic") : "Focus"}
                             <textarea
                                 value={focus}
@@ -316,21 +326,21 @@ export default function AdminBlogGenerator() {
                                 rows={mode === "custom" ? 4 : 2}
                                 maxLength={600}
                                 placeholder={active.placeholder}
-                                className="resize-y rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm font-normal normal-case tracking-normal text-white placeholder:text-ink-500 focus:border-primary-300 focus:outline-none"
+                                className={cn(fieldClass, "resize-y font-normal normal-case tracking-normal")}
                             />
                         </label>
                         {mode === "custom" ? (
                             <div className="flex flex-col gap-3">
-                                <p className="text-xs font-black uppercase tracking-[.16em] text-ink-400">Reference material <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span></p>
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Reference material <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span></p>
                                 <p className="-mt-1 text-xs leading-5 text-ink-400">Claude reads this as a primary source, then checks and adds to it from the web. Leave the topic empty to let it find the best story in the material.</p>
                                 <textarea
                                     value={pasted}
                                     onChange={(event) => setPasted(event.target.value)}
                                     rows={7}
                                     placeholder="Paste notes, a press release, a transcript, a study abstract…"
-                                    className="resize-y rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white placeholder:text-ink-500 focus:border-primary-300 focus:outline-none"
+                                    className={cn(fieldClass, "resize-y")}
                                 />
-                                {pasted ? <p className={`-mt-1 text-right text-[11px] ${pasted.length > MATERIAL_LIMITS.textChars ? "text-red-200" : "text-ink-500"}`}>{pasted.length.toLocaleString()} / {MATERIAL_LIMITS.textChars.toLocaleString()} characters</p> : null}
+                                {pasted ? <p className={`-mt-1 text-right text-[11px] tabular-nums ${pasted.length > MATERIAL_LIMITS.textChars ? "text-red-200" : "text-ink-500"}`}>{pasted.length.toLocaleString()} / {MATERIAL_LIMITS.textChars.toLocaleString()} characters</p> : null}
                                 <label
                                     onDragOver={(event) => {
                                         event.preventDefault();
@@ -342,7 +352,7 @@ export default function AdminBlogGenerator() {
                                         setDragging(false);
                                         addFiles(event.dataTransfer.files);
                                     }}
-                                    className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-sm transition-colors ${dragging ? "border-primary-300 bg-primary-500/10 text-white" : "border-line-300 text-ink-300 hover:border-primary-300"}`}
+                                    className={`flex cursor-pointer flex-col items-center gap-1 border border-dashed px-4 py-5 text-center text-sm transition-colors ${dragging ? "border-primary-300 bg-primary-500/10 text-white" : "border-line-300 bg-canvas-900 text-ink-300 hover:border-primary-300"}`}
                                 >
                                     <Paperclip size={20} />
                                     <span className="font-bold">Drop files or click to attach</span>
@@ -359,11 +369,11 @@ export default function AdminBlogGenerator() {
                                     />
                                 </label>
                                 {files.length ? (
-                                    <ul className="flex flex-col gap-1.5">
+                                    <ul className="divide-y divide-line-300 border border-line-300 bg-canvas-900">
                                         {files.map((file) => (
-                                            <li key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 rounded-lg border border-line-300 bg-canvas-900/60 px-3 py-2 text-sm">
+                                            <li key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                                                 <span className="min-w-0 truncate text-ink-100">{file.name}</span>
-                                                <span className="flex shrink-0 items-center gap-2 text-xs text-ink-400">
+                                                <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums text-ink-400">
                                                     {formatBytes(file.size)}
                                                     <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(files.filter((other) => other !== file))} className="text-ink-400 hover:text-white"><CloseCircle size={16} /></button>
                                                 </span>
@@ -378,33 +388,47 @@ export default function AdminBlogGenerator() {
                             <input type="checkbox" checked={publish} onChange={(event) => setPublish(event.target.checked)} className="mt-1 h-4 w-4 accent-[#a7f432]" />
                             <span>Publish live when every check passes<span className="block text-xs text-ink-400">Unchecked, the article is saved as a draft you can open in Content studio.</span></span>
                         </label>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-2 border-t border-line-300 pt-4">
                             {mode !== "custom" ? (
-                                <button onClick={findTopics} disabled={busy || configured === false} className="inline-flex items-center gap-2 rounded-xl border border-line-300 px-5 py-3 text-sm font-black text-white hover:border-primary-300 disabled:opacity-50">
-                                    <Refresh size={18} />Find topics
-                                </button>
+                                <Button size="lg" onClick={findTopics} loading={topicsJob?.status === "running"} disabled={busy || configured === false}>
+                                    {topicsJob?.status === "running" ? null : <Refresh size={18} />}Find topics
+                                </Button>
                             ) : null}
-                            <button onClick={() => generate()} disabled={busy || configured === false} className="inline-flex items-center gap-2 rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 hover:bg-primary-300 disabled:opacity-50">
-                                <MagicStick3 size={18} />{uploading || (mode === "custom" ? "Write article" : "Auto-pick and write")}
-                            </button>
+                            <Button variant="primary" size="lg" onClick={() => generate()} loading={Boolean(uploading)} disabled={busy || configured === false}>
+                                {uploading ? null : <MagicStick3 size={18} />}{uploading || (mode === "custom" ? "Write article" : "Auto-pick and write")}
+                            </Button>
                         </div>
 
                         {topicsJob ? (
                             <div className="border-t border-line-300 pt-5">
                                 {topicsJob.status === "running" ? (
-                                    <p className="animate-pulse text-sm text-ink-300">{topicsJob.log.at(-1) ?? "Starting"} · {elapsed(topicsJob)}</p>
+                                    <div className="flex flex-col gap-3">
+                                        <p role="status" className="flex items-center gap-2.5 text-sm font-bold text-ink-200">
+                                            <Spinner className="text-primary-300" />
+                                            <span className="min-w-0 flex-1 truncate">{topicsJob.log.at(-1) ?? "Starting"}</span>
+                                            <span className="shrink-0 text-xs font-normal tabular-nums text-ink-500">{elapsed(topicsJob)}</span>
+                                        </p>
+                                        {Array.from({length: 3}, (_, index) => (
+                                            <div key={index} aria-hidden="true" className="border border-line-300 bg-canvas-900 p-4" style={{opacity: 1 - index * 0.2}}>
+                                                <Skeleton className="h-2.5 w-28" />
+                                                <Skeleton className="mt-3 h-4 w-3/4" />
+                                                <Skeleton className="mt-2.5 h-3 w-full" />
+                                                <Skeleton className="mt-1.5 h-3 w-2/3" />
+                                            </div>
+                                        ))}
+                                    </div>
                                 ) : topicsJob.status === "failed" ? (
-                                    <p className="text-sm text-red-200">Topic search failed: {topicsJob.error}</p>
+                                    <Alert tone="bad">Topic search failed: {topicsJob.error}</Alert>
                                 ) : (
                                     <ul className="flex flex-col gap-3">
                                         {(topicsJob.topics ?? []).map((idea) => (
-                                            <li key={idea.title} className="rounded-xl border border-line-300 bg-canvas-900/60 p-4">
-                                                <p className="flex flex-wrap items-center gap-x-2 text-[11px] font-black uppercase tracking-[.16em] text-primary-200">
-                                                    {idea.viralScore ? <span className="rounded bg-primary-500/20 px-1.5 py-0.5 text-white">{idea.viralScore}/10</span> : null}
+                                            <li key={idea.title} className="border border-line-300 bg-canvas-900 p-4">
+                                                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
+                                                    {idea.viralScore ? <Badge tone="good" className="tabular-nums">{idea.viralScore}/10</Badge> : null}
                                                     {idea.viralLever ? <span>{idea.viralLever}</span> : null}
-                                                    <span className="text-ink-400">{idea.format} · {idea.primaryKeyword}</span>
+                                                    <span className="text-ink-500">{idea.format} · {idea.primaryKeyword}</span>
                                                 </p>
-                                                <h3 className="mt-1.5 font-display text-lg text-white">{idea.title}</h3>
+                                                <h3 className="mt-2 font-display text-lg text-white">{idea.title}</h3>
                                                 <p className="mt-1.5 text-sm leading-6 text-ink-300">{idea.angle}</p>
                                                 <p className="mt-1.5 text-sm text-ink-200"><span className="font-bold text-white">Hook:</span> {idea.hook}</p>
                                                 {idea.shareLine ? <p className="mt-1.5 border-l-2 border-primary-400/60 pl-3 text-sm italic text-ink-100">“{idea.shareLine}”</p> : null}
@@ -414,9 +438,9 @@ export default function AdminBlogGenerator() {
                                                         {idea.sources.slice(0, 3).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-ink-400 underline hover:text-white">{source.label}</a>)}
                                                     </p>
                                                 ) : null}
-                                                <button onClick={() => generate(idea)} disabled={busy} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary-500/20 px-4 py-2 text-xs font-black text-white hover:bg-primary-500/30 disabled:opacity-50">
+                                                <Button size="sm" onClick={() => generate(idea)} disabled={busy} className="mt-3">
                                                     <Pen size={15} />Write this
-                                                </button>
+                                                </Button>
                                             </li>
                                         ))}
                                     </ul>
@@ -425,30 +449,52 @@ export default function AdminBlogGenerator() {
                         ) : null}
                                             </>
                         )}
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    <div className="flex min-h-[20rem] flex-col rounded-2xl border border-line-300 bg-surface-900/60 p-5 sm:p-6">
+                <Card className="flex min-h-[20rem] flex-col">
+                    <CardHeader
+                        title="Progress"
+                        action={
+                            generateJob ? (
+                                <span className="flex items-center gap-2">
+                                    <Badge tone={generateJob.status === "running" ? "neutral" : generateJob.status === "done" ? "good" : "bad"}>
+                                        {generateJob.status === "running" ? (generateJob.kind === "edit" ? "Editing" : "Generating") : generateJob.status === "done" ? "Finished" : "Failed"}
+                                    </Badge>
+                                    <span className="text-xs font-bold tabular-nums text-ink-400">{elapsed(generateJob)}</span>
+                                </span>
+                            ) : null
+                        }
+                    />
+                    <CardContent className="flex flex-1 flex-col gap-4">
                         {!generateJob ? (
-                            <div className="m-auto max-w-sm text-center text-sm leading-6 text-ink-400">
-                                Start a new article or an edit. You can watch progress here, and leave the page while it runs.
-                            </div>
+                            <EmptyState
+                                className="m-auto w-full border-0"
+                                icon={<MagicStick3 size={20} />}
+                                title="Nothing running"
+                                description="Start a new article or an edit. You can watch progress here, and leave the page while it runs."
+                            />
                         ) : (
                             <>
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs font-black uppercase tracking-[.16em] text-ink-400">
-                                        {generateJob.status === "running" ? (generateJob.kind === "edit" ? "Editing" : "Generating") : generateJob.status === "done" ? "Finished" : "Failed"} · {elapsed(generateJob)}
-                                    </p>
-                                    {generateJob.status === "running" ? <span className="h-2 w-2 animate-pulse rounded-full bg-primary-300" /> : null}
-                                </div>
+                                {generateJob.status === "running" ? (
+                                    <div role="status" className="flex items-start gap-3 border border-primary-400/25 bg-primary-500/[.06] px-4 py-3.5">
+                                        <Spinner size={18} className="mt-0.5 text-primary-300" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-black text-white">{generateJob.kind === "edit" ? "Editing the post" : "Writing the article"}</p>
+                                            <p className="mt-0.5 truncate text-xs leading-5 text-ink-300">{generateStep ?? "Starting"}</p>
+                                        </div>
+                                        <span className="shrink-0 text-xs font-bold tabular-nums text-ink-400">{elapsed(generateJob)}</span>
+                                    </div>
+                                ) : null}
 
                                 {result ? (
-                                    <div className={`mt-4 rounded-xl border p-4 ${result.published ? "border-primary-400/50 bg-primary-500/10" : "border-amber-400/40 bg-amber-400/10"}`}>
-                                        <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.16em] text-white">
+                                    <div className={`border p-4 ${result.published ? "border-primary-400/50 bg-primary-500/10" : "border-amber-400/40 bg-amber-400/10"}`}>
+                                        <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[.12em] text-white">
                                             {result.published ? <CheckCircle size={16} /> : <DangerTriangle size={16} />}
                                             {result.published ? "Live" : "Saved as draft"}
                                         </p>
                                         <h2 className="mt-2 font-display text-xl text-white">{result.title}</h2>
-                                        <p className="mt-1 text-sm text-ink-300">{result.editorScore !== null && result.editorScore !== undefined ? `Editor ${result.editorScore}/10 · ` : ""}{result.cost ? `$${result.cost.totalUsd.toFixed(2)} · ` : ""}{result.wordCount.toLocaleString()} words · {result.images} photo(s) · {result.embeds.length ? result.embeds.join(", ") : "no embeds"}</p>
+                                        <p className="mt-1 text-sm tabular-nums text-ink-300">{result.editorScore !== null && result.editorScore !== undefined ? `Editor ${result.editorScore}/10 · ` : ""}{result.cost ? `$${result.cost.totalUsd.toFixed(2)} · ` : ""}{result.wordCount.toLocaleString()} words · {result.images} photo(s) · {result.embeds.length ? result.embeds.join(", ") : "no embeds"}</p>
                                         <div className="mt-3 flex flex-wrap gap-3 text-sm font-bold">
                                             {result.published ? <a href={result.path} target="_blank" rel="noreferrer" className="text-primary-200 underline">Open {result.path}</a> : null}
                                             <Link href="/admin/seo" className="text-ink-300 underline hover:text-white">Content studio</Link>
@@ -465,22 +511,22 @@ export default function AdminBlogGenerator() {
                                     </div>
                                 ) : null}
                                 {editResult ? (
-                                    <div className={`mt-4 rounded-xl border p-4 ${editResult.applied ? "border-primary-400/50 bg-primary-500/10" : "border-amber-400/40 bg-amber-400/10"}`}>
-                                        <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.16em] text-white">
+                                    <div className={`border p-4 ${editResult.applied ? "border-primary-400/50 bg-primary-500/10" : "border-amber-400/40 bg-amber-400/10"}`}>
+                                        <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[.12em] text-white">
                                             {editResult.applied ? <CheckCircle size={16} /> : <DangerTriangle size={16} />}
                                             {editResult.applied ? "Edit is live" : "Saved as a proposal (live post unchanged)"}
                                         </p>
                                         <h2 className="mt-2 font-display text-xl text-white">{editResult.title}</h2>
-                                        <p className="mt-1 text-sm text-ink-300">{editResult.editorScore !== null ? `Editor ${editResult.editorScore}/10 · ` : ""}{editResult.cost ? `$${editResult.cost.totalUsd.toFixed(2)} · ` : ""}{editResult.wordCount.toLocaleString()} words · {editResult.newImages} new photo(s)</p>
+                                        <p className="mt-1 text-sm tabular-nums text-ink-300">{editResult.editorScore !== null ? `Editor ${editResult.editorScore}/10 · ` : ""}{editResult.cost ? `$${editResult.cost.totalUsd.toFixed(2)} · ` : ""}{editResult.wordCount.toLocaleString()} words · {editResult.newImages} new photo(s)</p>
                                         {editResult.changeSummary.length ? (
                                             <ul className="mt-3 list-disc pl-5 text-sm text-ink-200">{editResult.changeSummary.map((line) => <li key={line}>{line}</li>)}</ul>
                                         ) : null}
                                         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
                                             <a href={editResult.path} target="_blank" rel="noreferrer" className="text-primary-200 underline">Open {editResult.path}</a>
                                             {editResult.revisionPath ? (
-                                                <button type="button" disabled={undoing} onClick={() => applyEditRevision(editResult.revisionPath!, editResult.applied ? "Undo this edit" : "Apply this edit")} className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-black text-white hover:border-primary-300 disabled:opacity-50">
+                                                <Button size="sm" loading={undoing} onClick={() => applyEditRevision(editResult.revisionPath!, editResult.applied ? "Undo this edit" : "Apply this edit")}>
                                                     {undoing ? "Working…" : editResult.applied ? "Undo this edit" : "Apply this edit anyway"}
-                                                </button>
+                                                </Button>
                                             ) : null}
                                         </div>
                                         {editResult.problems.length ? <ul className="mt-3 list-disc pl-5 text-sm text-amber-100">{editResult.problems.map((problem) => <li key={problem}>{problem}</li>)}</ul> : null}
@@ -492,16 +538,17 @@ export default function AdminBlogGenerator() {
                                         ) : null}
                                     </div>
                                 ) : null}
-                                {generateJob.status === "failed" ? <p className="mt-4 text-sm text-red-200">{generateJob.error}</p> : null}
+                                {generateJob.status === "failed" ? <Alert tone="bad" title={generateJob.kind === "edit" ? "The edit failed" : "Generation failed"}>{generateJob.error}</Alert> : null}
 
-                                <ol ref={logRef} className="mt-4 max-h-[28rem] flex-1 overflow-y-auto rounded-xl bg-canvas-950/70 p-4 font-mono text-[12px] leading-5 text-ink-300">
-                                    {generateJob.log.map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
+                                <p className="-mb-2 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Log</p>
+                                <ol ref={logRef} className="max-h-[28rem] flex-1 overflow-y-auto border border-line-300 bg-canvas-950 p-4 font-mono text-[12px] leading-5 text-ink-300">
+                                    {generateJob.log.map((line, index) => <li key={`${index}-${line}`} className={index === generateJob.log.length - 1 && generateJob.status === "running" ? "text-white" : undefined}>{line}</li>)}
                                 </ol>
                             </>
                         )}
-                    </div>
-                </section>
-            </div>
-        </main>
+                    </CardContent>
+                </Card>
+            </section>
+        </AdminPage>
     );
 }

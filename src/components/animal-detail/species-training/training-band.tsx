@@ -13,6 +13,7 @@ import {
 } from "@/lib/species-training";
 import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
 import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 const NEON = "#A7F432";
 const NEON_TEXT = "rgb(var(--c-primary-text-400))";
@@ -98,7 +99,10 @@ export default function TrainingBand({
         return (
             <>
                 <LoopStepCard accent={NEON} tone="done" label={TRAINING_COPY.title} state="✓ Complete">
-                    <h3 className="font-display text-2xl font-black leading-tight text-white">{power?.principleName ?? TRAINING_COPY.title}</h3>
+                    <h3 className="font-display text-2xl font-black leading-tight text-white">
+                        {power ? <AnimalPowerIcon speciesProfileId={power.speciesProfileId} /> : null}
+                        {power?.principleName ?? TRAINING_COPY.title}
+                    </h3>
                     <p className="flex items-center gap-2 text-sm font-semibold" style={{color: NEON_TEXT}}>
                         <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
                         {TRAINING_COPY.complete}
@@ -139,7 +143,10 @@ export default function TrainingBand({
         <>
             {showsPower && power ? (
                 <div className="flex flex-col gap-1.5 border-l-2 pl-3" style={{borderColor: `${NEON}8C`}}>
-                    <p className="text-sm font-bold text-white">{power.principleName}</p>
+                    <p className="text-sm font-bold text-white">
+                        <AnimalPowerIcon speciesProfileId={power.speciesProfileId} />
+                        {power.principleName}
+                    </p>
                     {lesson.map((text) => (
                         <p key={text} className="text-sm leading-6 text-white/60">{text}</p>
                     ))}
@@ -196,7 +203,10 @@ export default function TrainingBand({
                     label={TRAINING_COPY.title}
                     state={reward}
                 >
-                    <h3 className="font-display text-2xl font-black leading-tight text-white">{power?.principleName ?? TRAINING_COPY.title}</h3>
+                    <h3 className="font-display text-2xl font-black leading-tight text-white">
+                        {power ? <AnimalPowerIcon speciesProfileId={power.speciesProfileId} /> : null}
+                        {power?.principleName ?? TRAINING_COPY.title}
+                    </h3>
                     {intro}
                     {details}
                 </LoopStepCard>

@@ -15,7 +15,8 @@ function read(relativePath: string) {
 test("admin indexing cleanup is gated and reads the cron residue", () => {
     const page = read("app/admin/indexing/page.tsx");
     const api = read("app/api/admin/indexing-cleanup/route.ts");
-    const dashboard = read("app/admin/page.tsx");
+    // Reachable from the admin sidebar, which replaced the dashboard card grid.
+    const dashboard = read("app/admin/_components/admin-nav.ts");
 
     assert.match(page, /withAdminGate/);
     assert.match(api, /isSupportAdminRequestAuthorized/);

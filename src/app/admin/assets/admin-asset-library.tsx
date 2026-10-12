@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import {ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState} from "react";
-import {ArrowLeft, CheckCircle, Copy, Gallery, Magnifer, TrashBinMinimalistic, Upload} from "solar-icon-set";
+import {CheckCircle, Copy, Gallery, Magnifer, TrashBinMinimalistic, Upload} from "solar-icon-set";
+import {AdminPage, Alert, Badge, Button, buttonVariants, cn, EmptyState, fieldClass, PageHeader, Skeleton, Spinner} from "@/components/admin/ui";
 
 type Asset = {
     path: string;
@@ -185,62 +185,72 @@ export default function AdminAssetLibrary() {
     }
 
     return (
-        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-6 text-ink-100 sm:px-7 lg:px-10">
-            <div className="mx-auto w-full max-w-[100rem]">
-                <header className="flex flex-col gap-5 border-b border-line-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-ink-400 hover:text-white"><ArrowLeft size={18} />Dashboard</Link>
-                        <p className="mt-7 text-xs font-black uppercase tracking-[.2em] text-primary-200">Media workspace</p>
-                        <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Asset library</h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Upload images once, reuse them across pages, or copy their public URLs into rendered HTML and code blocks.</p>
-                    </div>
-                    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950">
-                        <Upload size={18} />{uploading ? `Uploading ${uploadProgress}` : "Upload images"}
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Content"
+                title="Asset library"
+                description="Upload images once, reuse them across pages, or copy their public URLs into rendered HTML and code blocks."
+                actions={
+                    <label className={cn(buttonVariants({variant: "primary", size: "lg"}), "cursor-pointer", uploading && "pointer-events-none opacity-70")} aria-busy={uploading || undefined}>
+                        {uploading ? <Spinner /> : <Upload size={18} />}{uploading ? `Uploading ${uploadProgress}` : "Upload images"}
                         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif,.avif" multiple disabled={uploading} onChange={upload} className="hidden" />
                     </label>
-                </header>
+                }
+            />
 
-                {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
+            {error && <Alert tone="bad" className="mt-6">{error}</Alert>}
 
-                <section className="mt-6" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-                    <label className={`mb-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-10 text-center transition ${isDragging ? "border-primary-300 bg-primary-500/15" : "border-line-300 bg-surface-900/55 hover:border-primary-400/60"}`}>
-                        <Upload size={30} className={isDragging ? "text-primary-100" : "text-ink-400"} />
-                        <span className="mt-3 text-sm font-black text-white">{uploading ? `Uploading ${uploadProgress}` : "Drop multiple images here"}</span>
-                        <span className="mt-1 text-xs text-ink-500">or click to select images. JPG, PNG, WebP, GIF, SVG, or AVIF up to 15 MB. JPG, PNG and WebP are compressed to WebP automatically.</span>
-                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif,.avif" multiple disabled={uploading} onChange={upload} className="hidden" />
-                    </label>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="relative w-full max-w-xl"><Magnifer size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filenames or paths…" className="w-full rounded-xl border border-line-300 bg-surface-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-primary-300" /></div>
-                        <p className="text-xs font-bold text-ink-500">{assets.length} of {total} assets loaded</p>
+            <section className="mt-6" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+                <label className={`mb-6 flex cursor-pointer flex-col items-center justify-center border border-dashed px-4 py-8 text-center transition ${isDragging ? "border-primary-300 bg-primary-500/15" : "border-line-300 bg-surface-900 hover:border-primary-400/60"}`}>
+                    {uploading ? <Spinner size={26} className="text-primary-300" /> : <Upload size={26} className={isDragging ? "text-primary-100" : "text-ink-400"} />}
+                    <span className="mt-3 text-sm font-black text-white">{uploading ? `Uploading ${uploadProgress}` : "Drop multiple images here"}</span>
+                    <span className="mt-1 max-w-xl text-xs leading-5 text-ink-500">or click to select images. JPG, PNG, WebP, GIF, SVG, or AVIF up to 15 MB. JPG, PNG and WebP are compressed to WebP automatically.</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif,.avif" multiple disabled={uploading} onChange={upload} className="hidden" />
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative w-full max-w-xl"><Magnifer size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filenames or paths…" className={cn(fieldClass, "pl-9")} /></div>
+                    <p className="flex items-center gap-2 text-xs font-bold tabular-nums text-ink-500">{loading && assets.length ? <Spinner size={12} /> : null}{assets.length} of {total} assets loaded</p>
+                </div>
+
+                {loading && !assets.length ? (
+                    <div role="status" aria-label="Loading asset library" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        {Array.from({length: 10}, (_, index) => (
+                            <div key={index} aria-hidden="true" className="border border-line-300 bg-surface-900">
+                                <Skeleton className="aspect-[4/3] w-full" />
+                                <div className="p-3">
+                                    <Skeleton className="h-3 w-3/4" />
+                                    <Skeleton className="mt-2 h-2.5 w-1/3" />
+                                    <Skeleton className="mt-3 h-8 w-full" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
-
-                    {loading && !assets.length ? <div className="grid min-h-[22rem] place-items-center text-sm text-ink-400">Loading asset library…</div> : assets.length ? (
-                        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                            {assets.map((asset) => (
-                                <article key={asset.path} className="group overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
-                                    <a href={asset.url} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden bg-black/20">
-                                        <Image src={asset.url} alt="" fill unoptimized sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" />
-                                        <span className="absolute right-2 top-2 rounded-md bg-canvas-950/80 px-2 py-1 text-[9px] font-bold text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">Open full size ↗</span>
-                                    </a>
-                                    <div className="p-3">
-                                        <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate text-xs font-bold text-white" title={asset.filename}>{asset.filename}</p><span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ${asset.source === "Uploads" ? "bg-primary-500/15 text-primary-100" : "bg-sky-400/15 text-sky-200"}`}>{asset.source || "Asset"}</span></div>
-                                        <div className="mt-1 flex justify-between gap-2 text-[10px] text-ink-500"><span>{formatBytes(asset.metadata?.size)}</span><span>{asset.createdAt ? new Date(asset.createdAt).toLocaleDateString() : ""}</span></div>
-                                        <button onClick={() => copyUrl(asset)} className={`mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black transition ${copied === asset.path ? "bg-primary-500/15 text-primary-100" : "border border-line-300 text-white hover:border-primary-300"}`}>
-                                            {copied === asset.path ? <CheckCircle size={15} iconStyle="Bold" /> : <Copy size={15} />}
-                                            {copied === asset.path ? "URL copied" : "Copy public URL"}
-                                        </button>
-                                        {asset.source === "Uploads" ? <div className="mt-2 grid grid-cols-2 gap-2">
-                                            <label className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-line-300 px-2 py-2 text-[10px] font-bold text-white hover:border-primary-300"><Upload size={13} />{mutatingPath === asset.path ? "Working…" : "Replace"}<input type="file" accept="image/*" disabled={Boolean(mutatingPath)} onChange={(event) => replaceAsset(asset, event)} className="hidden" /></label>
-                                            <button onClick={() => deleteAsset(asset)} disabled={Boolean(mutatingPath)} className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-400/20 px-2 py-2 text-[10px] font-bold text-red-300 hover:bg-red-500/10 disabled:opacity-50"><TrashBinMinimalistic size={13} />Delete</button>
-                                        </div> : <p className="mt-2 text-center text-[9px] leading-4 text-ink-600">Version-controlled website asset</p>}
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    ) : <div className="mt-5 grid min-h-[22rem] place-items-center rounded-2xl border border-dashed border-line-300 text-center"><div><Gallery size={38} className="mx-auto text-ink-500" /><p className="mt-3 font-bold text-white">No matching assets</p><p className="mt-1 text-sm text-ink-500">Upload an image or change your search.</p></div></div>}
-                    <div ref={loadMoreRef} className="grid h-20 place-items-center text-xs text-ink-500">{loading && assets.length ? "Loading more assets…" : hasMore ? "Scroll to load more" : assets.length ? "All assets loaded" : ""}</div>
-                </section>
-            </div>
-        </main>
+                ) : assets.length ? (
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        {assets.map((asset) => (
+                            <article key={asset.path} className={cn("group overflow-hidden border border-line-300 bg-surface-900 transition hover:border-primary-400/50", mutatingPath === asset.path && "opacity-60")}>
+                                <a href={asset.url} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden border-b border-line-300 bg-canvas-950">
+                                    <Image src={asset.url} alt="" fill unoptimized sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                                    <span className="absolute right-2 top-2 bg-canvas-950/90 px-2 py-1 text-[9px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">Open full size ↗</span>
+                                </a>
+                                <div className="p-3">
+                                    <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate text-xs font-bold text-white" title={asset.filename}>{asset.filename}</p><Badge tone={asset.source === "Uploads" ? "good" : "ios"} className="shrink-0">{asset.source || "Asset"}</Badge></div>
+                                    <div className="mt-1 flex justify-between gap-2 text-[10px] tabular-nums text-ink-500"><span>{formatBytes(asset.metadata?.size)}</span><span>{asset.createdAt ? new Date(asset.createdAt).toLocaleDateString() : ""}</span></div>
+                                    <Button size="sm" variant={copied === asset.path ? "ghost" : "outline"} onClick={() => copyUrl(asset)} className={cn("mt-3 w-full", copied === asset.path && "bg-primary-500/15 text-primary-100")}>
+                                        {copied === asset.path ? <CheckCircle size={15} iconStyle="Bold" /> : <Copy size={15} />}
+                                        {copied === asset.path ? "URL copied" : "Copy public URL"}
+                                    </Button>
+                                    {asset.source === "Uploads" ? <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <label className={cn(buttonVariants({size: "sm"}), "cursor-pointer gap-1 px-2 text-[11px]", mutatingPath && "pointer-events-none opacity-50")}>{mutatingPath === asset.path ? <Spinner size={12} /> : <Upload size={13} />}{mutatingPath === asset.path ? "Working…" : "Replace"}<input type="file" accept="image/*" disabled={Boolean(mutatingPath)} onChange={(event) => replaceAsset(asset, event)} className="hidden" /></label>
+                                        <Button size="sm" variant="danger" onClick={() => deleteAsset(asset)} disabled={Boolean(mutatingPath)} className="gap-1 px-2 text-[11px]"><TrashBinMinimalistic size={13} />Delete</Button>
+                                    </div> : <p className="mt-2 text-center text-[10px] leading-4 text-ink-600">Version-controlled website asset</p>}
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                ) : <EmptyState className="mt-4 min-h-[22rem]" icon={<Gallery size={22} />} title="No matching assets" description="Upload an image or change your search." />}
+                <div ref={loadMoreRef} className="flex h-20 items-center justify-center gap-2 text-xs text-ink-500">{loading && assets.length ? <><Spinner size={12} />Loading more assets…</> : hasMore ? "Scroll to load more" : assets.length ? "All assets loaded" : ""}</div>
+            </section>
+        </AdminPage>
     );
 }

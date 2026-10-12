@@ -17,6 +17,11 @@ import {
   perMinuteRate,
 } from "./format";
 
+// Shared with the metrics dashboard's bar charts: one axis and grid palette.
+const chartAxis = "#84958b";
+const chartGrid = "rgba(255,255,255,.07)";
+const chartBaseline = "rgba(255,255,255,.18)";
+
 export function ProgressRing({
   percent,
   lowerIsBetter = false,
@@ -169,23 +174,23 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
       : 0;
 
   return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">
+    <section className="min-w-0 border border-line-300 bg-surface-900">
+      <div className="flex flex-col justify-between gap-3 border-b border-line-300 px-4 py-3 md:flex-row md:items-start">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">
             Growth velocity
           </p>
-          <h3 className="mt-1 font-display text-2xl text-white">
+          <h3 className="mt-1 font-display text-lg text-white">
             User acquisition vs captures per minute
           </h3>
-          <p className="mt-1 text-xs text-ink-400">
+          <p className="mt-0.5 max-w-3xl text-xs leading-5 text-ink-400">
             Seven-day rolling averages normalized to per-minute rates from
             stored signup and qualifying capture timestamps.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-right text-xs">
+        <div className="grid shrink-0 grid-cols-3 gap-4 text-right text-xs tabular-nums">
           <div>
-            <p className="font-black text-sky-300">
+            <p className="font-display text-lg text-sky-300">
               {numberWithUpToThreeDecimals(
                 perMinuteRate(recentUsers / recentDays),
               )}
@@ -193,7 +198,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
             <p className="text-ink-500">users/min</p>
           </div>
           <div>
-            <p className="font-black text-primary-200">
+            <p className="font-display text-lg text-primary-200">
               {numberWithUpToThreeDecimals(
                 perMinuteRate(recentCaptures / recentDays),
               )}
@@ -201,7 +206,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
             <p className="text-ink-500">captures/min</p>
           </div>
           <div>
-            <p className="font-black text-white">
+            <p className="font-display text-lg text-white">
               {recentUsers > 0
                 ? numberWithUpToThreeDecimals(recentCaptures / recentUsers)
                 : "—"}
@@ -210,11 +215,11 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
           </div>
         </div>
       </div>
-      <div className="mt-3 overflow-x-auto">
+      <div className="overflow-x-auto p-4">
         <div className="relative min-w-[680px] w-full">
           <svg
             viewBox={`0 0 ${width} ${height}`}
-            className="w-full"
+            className="w-full tabular-nums"
             role="img"
             aria-label="Seven-day rolling averages for per-minute user acquisitions and captures"
             onMouseLeave={() => setHoveredIndex(null)}
@@ -228,11 +233,12 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
                   x2={width - right}
                   y1={gridY}
                   y2={gridY}
-                  stroke="rgba(255,255,255,.08)"
+                  stroke={ratio === 1 ? chartBaseline : chartGrid}
+                  shapeRendering="crispEdges"
                 />
               );
             })}
-            <text x={left} y="16" fill="#74d8ff" fontSize="12">
+            <text x={left} y="16" fill="#74d8ff" fontSize="12" fontWeight="700">
               users/min · left scale 0–
               {numberWithUpToThreeDecimals(userMax)}
             </text>
@@ -242,6 +248,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
               textAnchor="end"
               fill="#59f176"
               fontSize="12"
+              fontWeight="700"
             >
               captures/min · right scale 0–
               {numberWithUpToThreeDecimals(captureMax)}
@@ -260,7 +267,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
               points={points(users, userMax)}
               fill="none"
               stroke="#74d8ff"
-              strokeWidth="4"
+              strokeWidth="2.5"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
@@ -268,7 +275,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
               points={points(captures, captureMax)}
               fill="none"
               stroke="#59f176"
-              strokeWidth="4"
+              strokeWidth="2.5"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
@@ -285,7 +292,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
                 <circle
                   cx={x(index)}
                   cy={y(users[index], userMax)}
-                  r={hoveredIndex === index ? 8 : 4}
+                  r={hoveredIndex === index ? 6 : 3}
                   fill={hoveredIndex === index ? "#b7ecff" : "#74d8ff"}
                   stroke={hoveredIndex === index ? "#ffffff" : "#041017"}
                   strokeWidth={hoveredIndex === index ? 2.5 : 1.5}
@@ -293,7 +300,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
                 <circle
                   cx={x(index)}
                   cy={y(captures[index], captureMax)}
-                  r={hoveredIndex === index ? 8 : 4}
+                  r={hoveredIndex === index ? 6 : 3}
                   fill={hoveredIndex === index ? "#b8ffd0" : "#59f176"}
                   stroke={hoveredIndex === index ? "#ffffff" : "#041017"}
                   strokeWidth={hoveredIndex === index ? 2.5 : 1.5}
@@ -303,8 +310,8 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
                     x={x(index)}
                     y={height - 12}
                     textAnchor="middle"
-                    fill="#84958b"
-                    fontSize="10"
+                    fill={chartAxis}
+                    fontSize="11"
                   >
                     {dateLabel(row.date)}
                   </text>
@@ -314,7 +321,7 @@ export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
           </svg>
           {hoveredPoint && hoveredPoint.row ? (
             <div
-              className="pointer-events-none absolute z-10 rounded-xl border border-line-300 bg-canvas-950/95 px-3 py-2 text-[11px] shadow-2xl backdrop-blur"
+              className="pointer-events-none absolute z-10 border border-line-300 bg-canvas-950 px-3 py-2 text-[11px] tabular-nums shadow-2xl"
               style={{
                 left: hoveredLeft,
                 top: hoveredTop,
@@ -406,33 +413,46 @@ export function MiniChart({
         role="img"
         aria-label="Target versus actual"
       >
+        {[30, 77.5, 125, 172.5].map((gridY) => (
+          <line
+            key={gridY}
+            x1="0"
+            x2="900"
+            y1={gridY}
+            y2={gridY}
+            stroke={chartGrid}
+            shapeRendering="crispEdges"
+          />
+        ))}
         <line
           x1="0"
           x2="900"
           y1="220"
           y2="220"
-          stroke="rgba(255,255,255,.12)"
+          stroke={chartBaseline}
+          shapeRendering="crispEdges"
         />
         {target > 0 ? (
           <polyline
             points={points(targetLine)}
             fill="none"
-            stroke="#84958b"
-            strokeWidth="4"
-            strokeDasharray="8 8"
+            stroke={chartAxis}
+            strokeWidth="2.5"
+            strokeDasharray="8 6"
           />
         ) : null}
         <polyline
           points={points(actualLine)}
           fill="none"
           stroke="#59f176"
-          strokeWidth="5"
+          strokeWidth="3"
+          strokeLinejoin="round"
         />
-        <text x="10" y="20" fill="#59f176" fontSize="12">
+        <text x="10" y="20" fill="#59f176" fontSize="12" fontWeight="700">
           actual
         </text>
         {target > 0 ? (
-          <text x="70" y="20" fill="#84958b" fontSize="12">
+          <text x="70" y="20" fill={chartAxis} fontSize="12" fontWeight="700">
             target
           </text>
         ) : null}

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";
-import {AltArrowRight, Refresh} from "solar-icon-set";
+import {AltArrowRight, CheckCircle} from "solar-icon-set";
 import PipelineHealth from "@/app/admin/_components/pipeline-health";
+import {AdminPage, buttonVariants, cn, PageHeader, RefreshButton, Section, Skeleton, Stat, StatGrid} from "@/components/admin/ui";
 
 /**
  * What is happening right now, not a second copy of the menu.
@@ -30,38 +31,19 @@ function num(value: number | undefined): string {
     return value == null ? "—" : new Intl.NumberFormat("en-GB").format(value);
 }
 
-function Delta({change}: {change: number | null | undefined}) {
+function delta(change: number | null | undefined): {text: string; tone: "good" | "bad"} | null {
     if (change == null || !Number.isFinite(change)) return null;
     const up = change >= 0;
-    return (
-        <span className={`text-xs font-bold ${up ? "text-primary-200" : "text-red-300"}`}>
-            {up ? "▲" : "▼"} {Math.abs(Math.round(change))}%
-        </span>
-    );
+    return {text: `${up ? "▲" : "▼"} ${Math.abs(Math.round(change))}% vs last period`, tone: up ? "good" : "bad"};
 }
 
-function Stat({label, value, change, href}: {label: string; value: string; change?: number | null; href?: string}) {
-    const body = (
-        <>
-            <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">{label}</p>
-            <p className="mt-1 flex items-baseline gap-2">
-                <span className="font-display text-3xl text-white sm:text-4xl">{value}</span>
-                <Delta change={change} />
-            </p>
-        </>
-    );
-    const className = "rounded-2xl border border-line-300 bg-surface-900 px-4 py-4 transition hover:border-primary-400/50";
-    return href ? (
-        <Link href={href} className={`${className} block`}>
-            {body}
-        </Link>
-    ) : (
-        <div className={className}>{body}</div>
-    );
+function KpiStat({label, value, change, href, loading}: {label: string; value: string; change?: number | null; href: string; loading: boolean}) {
+    const d = delta(change);
+    return <Stat label={label} value={value} delta={d?.text} deltaTone={d?.tone} href={href} loading={loading} />;
 }
 
 /** One line per thing a person has to decide about. Silent when all is well. */
-function Attention({jobs, integrity}: {jobs: Jobs | null; integrity: Integrity | null}) {
+function Attention({jobs, integrity, loading}: {jobs: Jobs | null; integrity: Integrity | null; loading: boolean}) {
     const rows: {label: string; detail: string; href: string; tone: "bad" | "warn"}[] = [];
 
     if (jobs?.summary?.failing) {
@@ -96,32 +78,41 @@ function Attention({jobs, integrity}: {jobs: Jobs | null; integrity: Integrity |
         });
     }
 
+    if (rows.length === 0 && loading) {
+        return (
+            <div className="flex items-center gap-3 border border-line-300 bg-surface-900 px-4 py-3.5" aria-hidden="true">
+                <Skeleton className="h-2 w-2" />
+                <Skeleton className="h-3 w-56" />
+            </div>
+        );
+    }
+
     if (rows.length === 0) {
         return (
-            <p className="rounded-2xl border border-primary-400/20 bg-primary-500/[.06] px-4 py-3 text-sm font-bold text-primary-100">
+            <p className="flex items-center gap-2.5 border border-primary-400/20 bg-primary-500/[.06] px-4 py-3.5 text-sm font-bold text-primary-100">
+                <CheckCircle size={16} className="shrink-0 text-primary-300" />
                 Nothing needs a person right now.
             </p>
         );
     }
 
     return (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-line-300 border border-line-300 bg-surface-900">
             {rows.map((row) => (
                 <li key={row.label}>
                     <Link
                         href={row.href}
-                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
-                            row.tone === "bad"
-                                ? "border-red-400/30 bg-red-500/10 hover:border-red-400/60"
-                                : "border-amber-400/30 bg-amber-500/10 hover:border-amber-400/60"
-                        }`}
+                        className={cn(
+                            "group flex items-center gap-3 border-l-[3px] px-4 py-3 transition hover:bg-white/[.03]",
+                            row.tone === "bad" ? "border-l-red-400" : "border-l-amber-400",
+                        )}
                     >
                         <span className={`h-2 w-2 shrink-0 rounded-full ${row.tone === "bad" ? "bg-red-400" : "bg-amber-400"}`} aria-hidden="true" />
                         <span className="min-w-0 flex-1">
                             <span className={`block text-sm font-bold ${row.tone === "bad" ? "text-red-200" : "text-amber-200"}`}>{row.label}</span>
                             <span className="block text-xs text-ink-400">{row.detail}</span>
                         </span>
-                        <AltArrowRight size={14} className="shrink-0 text-ink-500" />
+                        <AltArrowRight size={14} className="shrink-0 text-ink-500 transition group-hover:translate-x-0.5 group-hover:text-white" />
                     </Link>
                 </li>
             ))}
@@ -158,61 +149,63 @@ export default function AdminOverviewClient() {
     const kpis = metrics?.kpis;
 
     return (
-        <main className="bg-[radial-gradient(circle_at_20%_0%,rgba(33,192,94,.12),transparent_28%)] px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
-            <header className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">Overview</p>
-                    <h1 className="mt-1 font-display text-4xl leading-[1.02] text-white sm:text-5xl">Run AnimalDex.</h1>
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-300">Everything needing a person, the numbers behind it, and what the capture pipeline is doing.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => void load()}
-                        className="inline-flex items-center gap-2 rounded-xl border border-line-300 px-3 py-2 text-xs font-bold text-white transition hover:border-primary-300"
-                    >
-                        <Refresh size={14} />
-                        {loading ? "Refreshing…" : "Refresh"}
-                    </button>
-                    <Link href="/admin/metrics" className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Open metrics</Link>
-                </div>
-            </header>
+        <AdminPage>
+            <PageHeader
+                eyebrow="Overview"
+                title="Run AnimalDex"
+                description="Everything needing a person, the numbers behind it, and what the capture pipeline is doing."
+                actions={
+                    <>
+                        <RefreshButton loading={loading} onClick={() => void load()} />
+                        <Link href="/admin/metrics" className={buttonVariants({variant: "primary", size: "sm"})}>
+                            Open metrics
+                        </Link>
+                    </>
+                }
+            />
 
-            <section className="mt-8" aria-label="Needs attention">
-                <h2 className="mb-3 text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Needs attention</h2>
-                <Attention jobs={jobs} integrity={integrity} />
-            </section>
+            <Section title="Needs attention" className="mt-6">
+                <Attention jobs={jobs} integrity={integrity} loading={loading} />
+            </Section>
 
-            <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Headline numbers">
-                <Stat label="Accounts" value={num(totals?.users)} change={kpis?.users.change} href="/admin/users" />
-                <Stat label="Captures" value={num(totals?.captures)} change={kpis?.captures.change} href="/admin/catalog" />
-                <Stat label="Active Pro" value={num(totals?.activePro)} change={kpis?.subscriptions.change} href="/admin/metrics" />
-                <Stat label="Purchases" value={num(totals?.productionPurchases)} change={kpis?.credits.change} href="/admin/metrics" />
-            </section>
+            <Section title="Headline numbers">
+                <StatGrid>
+                    <KpiStat label="Accounts" value={num(totals?.users)} change={kpis?.users.change} href="/admin/users" loading={loading && !metrics} />
+                    <KpiStat label="Captures" value={num(totals?.captures)} change={kpis?.captures.change} href="/admin/catalog" loading={loading && !metrics} />
+                    <KpiStat label="Active Pro" value={num(totals?.activePro)} change={kpis?.subscriptions.change} href="/admin/metrics" loading={loading && !metrics} />
+                    <KpiStat label="Purchases" value={num(totals?.productionPurchases)} change={kpis?.credits.change} href="/admin/metrics" loading={loading && !metrics} />
+                </StatGrid>
+            </Section>
 
-            <section className="mt-8 grid gap-4 xl:grid-cols-[2fr_1fr]" aria-label="Capture pipeline">
-                <div>
-                    <h2 className="mb-3 text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Capture pipeline</h2>
+            <div className="grid gap-x-4 xl:grid-cols-[2fr_1fr]">
+                <Section title="Capture pipeline">
                     <PipelineHealth />
-                </div>
-                <div>
-                    <h2 className="mb-3 text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Scheduled jobs</h2>
-                    <Link
-                        href="/admin/jobs"
-                        className="block rounded-2xl border border-line-300 bg-surface-900 p-4 transition hover:border-primary-400/50"
-                    >
-                        <p className="font-display text-3xl text-white">
-                            {jobs?.summary ? `${jobs.summary.total - jobs.summary.failing - jobs.summary.late}/${jobs.summary.total}` : "—"}
-                        </p>
+                </Section>
+                <Section title="Scheduled jobs">
+                    <Link href="/admin/jobs" className="group block border border-line-300 bg-surface-900 p-4 transition hover:border-primary-400/50">
+                        {jobs?.summary ? (
+                            <p className="font-display text-3xl tabular-nums text-white">
+                                {jobs.summary.total - jobs.summary.failing - jobs.summary.late}
+                                <span className="text-ink-500">/{jobs.summary.total}</span>
+                            </p>
+                        ) : loading ? (
+                            <Skeleton className="mt-1 h-8 w-20" />
+                        ) : (
+                            <p className="font-display text-3xl text-white">—</p>
+                        )}
                         <p className="mt-1 text-sm text-ink-300">running on schedule</p>
                         {jobs?.summary && (jobs.summary.paused > 0 || jobs.summary.neverRun > 0) ? (
                             <p className="mt-3 text-xs text-ink-500">
                                 {jobs.summary.paused} paused · {jobs.summary.neverRun} never run
                             </p>
                         ) : null}
+                        <p className="mt-4 flex items-center gap-1 text-xs font-bold text-primary-200">
+                            Open scheduler
+                            <AltArrowRight size={12} className="transition group-hover:translate-x-0.5" />
+                        </p>
                     </Link>
-                </div>
-            </section>
-        </main>
+                </Section>
+            </div>
+        </AdminPage>
     );
 }

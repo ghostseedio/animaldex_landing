@@ -1,5 +1,6 @@
 import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
-import {animalFrequenciesPagination, animalTrialsPagination, type HubPagination} from "@/data/hub-pagination";
+import {animalFrequenciesPagination, animalHybridsPagination, animalTrialsPagination, tierListPagination, type HubPagination} from "@/data/hub-pagination";
+import {getAnimalHybridCards} from "@/data/animal-hybrid-cards";
 import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
 import {MetadataRoute} from "next";
 import {localeConfig} from "@/i18n";
@@ -140,6 +141,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/comparisons")},
             {url: getAbsoluteUrl(locale, "/animal-wisdom")},
             {url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)},
+            ...hubPageEntries(locale, tierListPagination, rankingPages.length),
             // Translated hub pages (pt/es/fr) — not site locales, so they sit in
             // the default-locale branch at their literal paths.
             ...getTranslatedTierListHubPaths().map((path) => ({url: getAbsoluteUrl(locale, path)})),
@@ -153,6 +155,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...hubPageEntries(locale, animalTrialsPagination, animalTrials.length),
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
+            ...hubPageEntries(locale, animalHybridsPagination, getAnimalHybridCards().length),
             {url: getAbsoluteUrl(locale, "/legal/privacy")},
             {url: getAbsoluteUrl(locale, "/legal/terms")},
             {url: getAbsoluteUrl(locale, "/legal/refunds")}

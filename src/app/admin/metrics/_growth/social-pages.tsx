@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Alert, Button, EmptyState, cn, fieldClass } from "@/components/admin/ui";
 import {
   type GrowthData,
 } from "./types";
@@ -278,27 +279,28 @@ export function SocialPagesPanel({
   }
 
   return (
-    <section className="rounded-xl border border-line-300 bg-surface-900 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-display text-2xl text-white">Social pages</h3>
-          <p className="text-xs text-ink-500">
+    <section className="min-w-0 border border-line-300 bg-surface-900">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line-300 px-4 py-3">
+        <div className="min-w-0 max-w-3xl">
+          <h3 className="font-display text-lg text-white">Social pages</h3>
+          <p className="mt-0.5 text-xs leading-5 text-ink-400">
             Store your pages, descriptions, and daily posting targets here. The
             daily generation count follows the current short-video target.
           </p>
-          <p className="mt-1 text-xs font-bold text-primary-100">
+          <p className="mt-1 text-xs font-bold text-primary-100 tabular-nums">
             Today&apos;s idea count: {ideaCount}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={() => setEditingPages((current) => !current)}
-            className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white"
           >
             {editingPages ? "Lock pages" : "Edit pages"}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={() =>
               setDrafts((current) => [
                 ...current,
@@ -311,318 +313,324 @@ export function SocialPagesPanel({
                 },
               ])
             }
-            className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white"
           >
             Add page
-          </button>
-          <button
-            onClick={savePages}
-            disabled={saving}
-            className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
-          >
-            {saving ? "Saving..." : "Save pages"}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={generateIdeas}
-            disabled={generating}
-            className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white"
+            loading={generating}
           >
             {generating ? "Generating..." : "Generate ideas"}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={backfillProjections}
-            disabled={backfilling || !suggestions.length}
-            className="rounded-lg border border-line-300 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            loading={backfilling}
+            disabled={!suggestions.length}
           >
             {backfilling ? "Backfilling..." : "Backfill projections"}
-          </button>
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={savePages}
+            loading={saving}
+          >
+            {saving ? "Saving..." : "Save pages"}
+          </Button>
         </div>
       </div>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-      <div className="mt-4 space-y-3">
-        {drafts.map((page, index) => (
-          <div
-            key={`social-page-${index}`}
-            className="grid gap-2 rounded-lg border border-line-300 bg-canvas-900 p-3 md:grid-cols-[9rem_1fr_5rem_1fr]"
-          >
-            <input
-              value={page.platform}
-              readOnly={!editingPages}
-              onChange={(event) => {
-                const next = [...drafts];
-                next[index] = {...page, platform: event.target.value};
-                setDrafts(next);
-              }}
-              placeholder="platforms"
-              className="rounded-lg border border-line-300 bg-surface-900 px-2 py-2 text-white outline-none read-only:opacity-60"
-            />
-            <input
-              value={page.pageName}
-              readOnly={!editingPages}
-              onChange={(event) => {
-                const next = [...drafts];
-                next[index] = {...page, pageName: event.target.value};
-                setDrafts(next);
-              }}
-              placeholder="page name"
-              className="rounded-lg border border-line-300 bg-surface-900 px-2 py-2 text-white outline-none read-only:opacity-60"
-            />
-            <label className="flex items-center gap-2 text-xs font-bold text-ink-300">
+      <div className="p-4">
+        {error ? (
+          <Alert tone="bad" className="mb-4">
+            {error}
+          </Alert>
+        ) : null}
+        <div className="space-y-3">
+          {drafts.map((page, index) => (
+            <div
+              key={`social-page-${index}`}
+              className="grid gap-2 border border-line-300 bg-canvas-900 p-3 md:grid-cols-[9rem_1fr_5rem_1fr]"
+            >
               <input
-                type="checkbox"
-                checked={page.active}
-                disabled={!editingPages}
+                value={page.platform}
+                readOnly={!editingPages}
                 onChange={(event) => {
                   const next = [...drafts];
-                  next[index] = {...page, active: event.target.checked};
+                  next[index] = {...page, platform: event.target.value};
                   setDrafts(next);
                 }}
+                placeholder="platforms"
+                className={cn(fieldClass, "bg-surface-900 px-2 read-only:opacity-60")}
               />
-              Active
-            </label>
-            <button
-              type="button"
-              onClick={() =>
-                setDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index))
-              }
-              disabled={drafts.length <= 1}
-              className="text-left text-xs font-black text-red-300 disabled:opacity-40"
-            >
-              Remove
-            </button>
-            <textarea
-              value={page.description}
-              readOnly={!editingPages}
-              onChange={(event) => {
-                const next = [...drafts];
-                next[index] = {...page, description: event.target.value};
-                setDrafts(next);
-              }}
-              placeholder="description and audience"
-              className="min-h-20 rounded-lg border border-line-300 bg-surface-900 px-2 py-2 text-white outline-none md:col-span-4 read-only:opacity-60"
-            />
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-ink-500">
-        Prior generated titles loaded for duplicate rejection: {history.length}
-      </p>
-      <div className="mt-4 space-y-2">
-        <h4 className="text-sm font-black uppercase tracking-[.12em] text-primary-100">
-          Suggestions
-        </h4>
-        {suggestions.length ? (
-          suggestions.map((idea) => (
-            <div
-              key={idea.id}
-              className="grid gap-2 rounded-lg border border-line-300 bg-canvas-900 p-3 md:grid-cols-[1fr_auto]"
-            >
-              <div>
-                <p className="font-bold text-white">{idea.page_name} · {idea.title}</p>
-                <p className="text-xs text-ink-400">{idea.platform} · {idea.idea_date} · {idea.length_seconds}s</p>
-                <p className="mt-1 text-xs text-ink-300">{idea.hook}</p>
-                <p className="mt-1 text-xs text-ink-500">{idea.tips}</p>
-                <p className="mt-2 text-xs font-black text-primary-100">
-                  Projected 24h views: ~{format(idea.projected_views_24h)} · {idea.projection_confidence} confidence
-                </p>
-                {idea.projection_reason ? (
-                  <p className="mt-1 text-[11px] text-ink-500">
-                    {idea.projection_reason}
-                  </p>
-                ) : null}
-              </div>
+              <input
+                value={page.pageName}
+                readOnly={!editingPages}
+                onChange={(event) => {
+                  const next = [...drafts];
+                  next[index] = {...page, pageName: event.target.value};
+                  setDrafts(next);
+                }}
+                placeholder="page name"
+                className={cn(fieldClass, "bg-surface-900 px-2 read-only:opacity-60")}
+              />
+              <label className="flex items-center gap-2 text-xs font-bold text-ink-300">
+                <input
+                  type="checkbox"
+                  checked={page.active}
+                  disabled={!editingPages}
+                  onChange={(event) => {
+                    const next = [...drafts];
+                    next[index] = {...page, active: event.target.checked};
+                    setDrafts(next);
+                  }}
+                />
+                Active
+              </label>
               <button
                 type="button"
-                onClick={() => markComplete(idea)}
-                className="h-fit rounded-lg border border-line-300 px-3 py-2 text-xs font-black text-white"
+                onClick={() =>
+                  setDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index))
+                }
+                disabled={drafts.length <= 1}
+                className="text-left text-xs font-black text-red-300 hover:text-red-200 disabled:opacity-40"
               >
-                Mark complete
+                Remove
               </button>
+              <textarea
+                value={page.description}
+                readOnly={!editingPages}
+                onChange={(event) => {
+                  const next = [...drafts];
+                  next[index] = {...page, description: event.target.value};
+                  setDrafts(next);
+                }}
+                placeholder="description and audience"
+                className={cn(fieldClass, "min-h-20 bg-surface-900 px-2 md:col-span-4 read-only:opacity-60")}
+              />
             </div>
-          ))
-        ) : (
-          <p className="text-sm text-ink-400">No pending suggestions yet.</p>
-        )}
-      </div>
-      <div className="mt-6 space-y-3 rounded-lg border border-line-300 bg-canvas-900 p-3">
-        <h4 className="text-sm font-black uppercase tracking-[.12em] text-primary-100">
-          Add your own post
-        </h4>
-        <div className="grid gap-2 md:grid-cols-2">
-          <input
-            value={manualIdeaDraft.platform}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                platform: event.target.value,
-              }))
-            }
-            placeholder="platform"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none"
-          />
-          <input
-            value={manualIdeaDraft.pageName}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                pageName: event.target.value,
-              }))
-            }
-            placeholder="page / account"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none"
-          />
-          <input
-            value={manualIdeaDraft.title}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
-            placeholder="title"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none md:col-span-2"
-          />
-          <input
-            value={manualIdeaDraft.hook}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                hook: event.target.value,
-              }))
-            }
-            placeholder="hook"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none md:col-span-2"
-          />
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={manualIdeaDraft.lengthSeconds}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                lengthSeconds: event.target.value,
-              }))
-            }
-            placeholder="duration seconds"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none"
-          />
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={manualIdeaDraft.projectedViews24h}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                projectedViews24h: event.target.value,
-              }))
-            }
-            placeholder="projected 24h views"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none"
-          />
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={manualIdeaDraft.actualViews24h}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                actualViews24h: event.target.value,
-              }))
-            }
-            placeholder="actual 24h views"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none"
-          />
-          <input
-            value={manualIdeaDraft.tips}
-            onChange={(event) =>
-              setManualIdeaDraft((current) => ({
-                ...current,
-                tips: event.target.value,
-              }))
-            }
-            placeholder="tips"
-            className="rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none md:col-span-2"
-          />
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={saveManualIdea}
-          disabled={saving}
-          className="rounded-lg bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
-        >
-          Save manual post
-        </button>
-      </div>
-      <div className="mt-6 space-y-2">
-        <h4 className="text-sm font-black uppercase tracking-[.12em] text-primary-100">
-          Published feedback
-        </h4>
-        <p className="text-xs text-ink-500">
-          Enter combined views 24 hours after publishing. Future ideas and
-          projections use this measured history for the same page and platform.
+        <p className="mt-3 text-xs text-ink-500">
+          Prior generated titles loaded for duplicate rejection: {history.length}
         </p>
-        {completedIdeas.length ? (
-          completedIdeas.map((idea) => {
-            const actualValue =
-              viewDrafts[idea.id] ??
-              (idea.actual_views_24h == null
-                ? ""
-                : String(idea.actual_views_24h));
-            const projectionRatio =
-              idea.actual_views_24h != null && idea.projected_views_24h > 0
-                ? idea.actual_views_24h / idea.projected_views_24h
-                : null;
-            return (
+        <div className="mt-6 space-y-2">
+          <h4 className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">
+            Suggestions
+          </h4>
+          {suggestions.length ? (
+            suggestions.map((idea) => (
               <div
                 key={idea.id}
-                className="rounded-lg border border-line-300 bg-canvas-900 p-3"
+                className="grid gap-2 border border-line-300 bg-canvas-900 p-3 md:grid-cols-[1fr_auto]"
               >
-                <p className="font-bold text-white">
-                  {idea.page_name} · {idea.title}
-                </p>
-                <p className="mt-1 text-xs text-ink-400">
-                  Projected ~{format(idea.projected_views_24h)} views in 24h
-                  {projectionRatio == null
-                    ? ""
-                    : ` · actual was ${projectionRatio.toFixed(1)}× projection`}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={actualValue}
-                    onChange={(event) =>
-                      setViewDrafts((current) => ({
-                        ...current,
-                        [idea.id]: event.target.value,
-                      }))
-                    }
-                    placeholder="actual views after 24h"
-                    className="min-w-56 flex-1 rounded-lg border border-line-300 bg-surface-900 px-3 py-2 text-sm text-white outline-none focus:border-primary-300"
-                  />
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => recordViews(idea)}
-                    className="rounded-lg border border-line-300 px-3 py-2 text-xs font-black text-white disabled:opacity-60"
-                  >
-                    {idea.actual_views_24h == null
-                      ? "Save 24h views"
-                      : "Update 24h views"}
-                  </button>
+                <div>
+                  <p className="font-bold text-white">{idea.page_name} · {idea.title}</p>
+                  <p className="text-xs text-ink-400">{idea.platform} · {idea.idea_date} · {idea.length_seconds}s</p>
+                  <p className="mt-1 text-xs text-ink-300">{idea.hook}</p>
+                  <p className="mt-1 text-xs text-ink-500">{idea.tips}</p>
+                  <p className="mt-2 text-xs font-black text-primary-100">
+                    Projected 24h views: ~{format(idea.projected_views_24h)} · {idea.projection_confidence} confidence
+                  </p>
+                  {idea.projection_reason ? (
+                    <p className="mt-1 text-[11px] text-ink-500">
+                      {idea.projection_reason}
+                    </p>
+                  ) : null}
                 </div>
+                <Button
+                  size="sm"
+                  onClick={() => markComplete(idea)}
+                  className="h-fit"
+                >
+                  Mark complete
+                </Button>
               </div>
-            );
-          })
-        ) : (
-          <p className="text-sm text-ink-400">
-            Mark a suggestion complete to start measuring it.
+            ))
+          ) : (
+            <EmptyState className="py-8" title="No pending suggestions yet." />
+          )}
+        </div>
+        <div className="mt-6 space-y-3 border border-line-300 bg-canvas-900 p-3">
+          <h4 className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">
+            Add your own post
+          </h4>
+          <div className="grid gap-2 md:grid-cols-2">
+            <input
+              value={manualIdeaDraft.platform}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  platform: event.target.value,
+                }))
+              }
+              placeholder="platform"
+              className={cn(fieldClass, "bg-surface-900")}
+            />
+            <input
+              value={manualIdeaDraft.pageName}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  pageName: event.target.value,
+                }))
+              }
+              placeholder="page / account"
+              className={cn(fieldClass, "bg-surface-900")}
+            />
+            <input
+              value={manualIdeaDraft.title}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
+              placeholder="title"
+              className={cn(fieldClass, "bg-surface-900 md:col-span-2")}
+            />
+            <input
+              value={manualIdeaDraft.hook}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  hook: event.target.value,
+                }))
+              }
+              placeholder="hook"
+              className={cn(fieldClass, "bg-surface-900 md:col-span-2")}
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={manualIdeaDraft.lengthSeconds}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  lengthSeconds: event.target.value,
+                }))
+              }
+              placeholder="duration seconds"
+              className={cn(fieldClass, "bg-surface-900")}
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={manualIdeaDraft.projectedViews24h}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  projectedViews24h: event.target.value,
+                }))
+              }
+              placeholder="projected 24h views"
+              className={cn(fieldClass, "bg-surface-900")}
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={manualIdeaDraft.actualViews24h}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  actualViews24h: event.target.value,
+                }))
+              }
+              placeholder="actual 24h views"
+              className={cn(fieldClass, "bg-surface-900")}
+            />
+            <input
+              value={manualIdeaDraft.tips}
+              onChange={(event) =>
+                setManualIdeaDraft((current) => ({
+                  ...current,
+                  tips: event.target.value,
+                }))
+              }
+              placeholder="tips"
+              className={cn(fieldClass, "bg-surface-900 md:col-span-2")}
+            />
+          </div>
+          <Button
+            variant="primary"
+            onClick={saveManualIdea}
+            disabled={saving}
+          >
+            Save manual post
+          </Button>
+        </div>
+        <div className="mt-6 space-y-2">
+          <h4 className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">
+            Published feedback
+          </h4>
+          <p className="text-xs text-ink-500">
+            Enter combined views 24 hours after publishing. Future ideas and
+            projections use this measured history for the same page and platform.
           </p>
-        )}
+          {completedIdeas.length ? (
+            completedIdeas.map((idea) => {
+              const actualValue =
+                viewDrafts[idea.id] ??
+                (idea.actual_views_24h == null
+                  ? ""
+                  : String(idea.actual_views_24h));
+              const projectionRatio =
+                idea.actual_views_24h != null && idea.projected_views_24h > 0
+                  ? idea.actual_views_24h / idea.projected_views_24h
+                  : null;
+              return (
+                <div
+                  key={idea.id}
+                  className="border border-line-300 bg-canvas-900 p-3"
+                >
+                  <p className="font-bold text-white">
+                    {idea.page_name} · {idea.title}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-400">
+                    Projected ~{format(idea.projected_views_24h)} views in 24h
+                    {projectionRatio == null
+                      ? ""
+                      : ` · actual was ${projectionRatio.toFixed(1)}× projection`}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={actualValue}
+                      onChange={(event) =>
+                        setViewDrafts((current) => ({
+                          ...current,
+                          [idea.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="actual views after 24h"
+                      className={cn(fieldClass, "w-auto min-w-56 flex-1 bg-surface-900")}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => recordViews(idea)}
+                    >
+                      {idea.actual_views_24h == null
+                        ? "Save 24h views"
+                        : "Update 24h views"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <EmptyState
+              className="py-8"
+              title="Mark a suggestion complete to start measuring it."
+            />
+          )}
+        </div>
       </div>
     </section>
   );

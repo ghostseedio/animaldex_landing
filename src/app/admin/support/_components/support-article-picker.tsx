@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import {Button, Skeleton, Spinner} from "@/components/admin/ui";
 import {buildSupportArticleMessage} from "@/lib/support-article-messages";
 
 type ArticleHit = {
@@ -47,25 +48,37 @@ export default function SupportArticlePicker({
 
     return (
         <div className="relative">
-            <button
-                type="button"
+            <Button
+                size="sm"
                 onClick={() => setOpen((value) => !value)}
-                className="rounded-lg border border-line-300 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-primary-100 hover:border-primary-300"
+                aria-expanded={open}
+                className="text-primary-100"
             >
                 + Attach help article
-            </button>
+            </Button>
             {open ? (
-                <div className="absolute bottom-full left-0 z-20 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line-300 bg-surface-900 shadow-2xl">
-                    <div className="border-b border-line-300 px-3 py-2">
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
+                    <div className="flex items-center gap-2 border-b border-line-300 px-3 py-2">
                         <input
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder="Search help articles…"
                             className="w-full bg-transparent text-sm text-white outline-none placeholder:text-ink-500"
                         />
+                        {loading ? <Spinner size={12} className="text-ink-400" /> : null}
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                        {loading ? <p className="px-3 py-4 text-xs text-ink-500">Searching…</p> : null}
+                        {loading && results.length === 0 ? (
+                            <div role="status" aria-label="Searching" className="divide-y divide-line-300/70">
+                                {[0, 1, 2].map((row) => (
+                                    <div key={row} className="space-y-2 px-3 py-3">
+                                        <Skeleton className="h-2 w-20" />
+                                        <Skeleton className="h-3 w-2/3" />
+                                        <Skeleton className="h-2.5 w-full" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
                         {!loading && results.length === 0 ? <p className="px-3 py-4 text-xs text-ink-500">No published articles found.</p> : null}
                         {results.map((hit) => (
                             <button

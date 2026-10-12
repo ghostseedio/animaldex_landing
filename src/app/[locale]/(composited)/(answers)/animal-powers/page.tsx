@@ -10,6 +10,8 @@ import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {getScopedTranslator} from "@/loaders/translation";
 import {withOgCard} from "@/lib/og/og-image";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {type AnimalPowerIconIndex, fetchAnimalPowerIconIndex, resolveAnimalPowerIcon} from "@/lib/animal-power-icons-server";
 
 type LessonTag = "popular" | "leadership" | "wisdom" | "teamwork" | "adaptation" | "survival" | "focus" | "intelligence" | "engineering" | "cooperation" | "patience";
 
@@ -109,6 +111,14 @@ function getImageAlt(lesson: SpeciesBehaviorLesson) {
     return species ? getSpeciesImageAltText(species, "thumbnail") : `${lesson.displayName} animal power on AnimalDex`;
 }
 
+/** The lesson's Power icon: by the name this page shows, then by its species. */
+function lessonIconSvg(icons: AnimalPowerIconIndex, lesson: SpeciesBehaviorLesson) {
+    return resolveAnimalPowerIcon(icons, {
+        principleName: lesson.principleName,
+        speciesProfileId: getSpeciesBySlug(lesson.slug)?.speciesProfileId
+    });
+}
+
 function pickBySlugs(lessons: SpeciesBehaviorLesson[], slugs: string[]) {
     return slugs.map((slug) => lessons.find((lesson) => lesson.slug === slug)).filter((lesson): lesson is SpeciesBehaviorLesson => Boolean(lesson));
 }
@@ -129,7 +139,7 @@ function pickCollectionLessons(
     return selected;
 }
 
-function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorLesson; wide?: boolean; readLabel: string}) {
+function LessonCard({lesson, wide = false, readLabel, icons}: {lesson: SpeciesBehaviorLesson; wide?: boolean; readLabel: string; icons: AnimalPowerIconIndex}) {
     return (
         <article className={`group overflow-hidden  border border-white/10 bg-white/[0.035] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${wide ? "md:col-span-2" : ""}`}>
             <Link href={`/animal-powers/${lesson.slug}`} className="theme-dark relative block overflow-hidden">
@@ -144,7 +154,10 @@ function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorL
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/5 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-                    <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-primary-100">{lesson.principleName}</p>
+                    <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-primary-100">
+                        <AnimalPowerIcon svg={lessonIconSvg(icons, lesson)} size="1.6em" gap="0.45em" />
+                        {lesson.principleName}
+                    </p>
                     <h3 className={`mt-2 font-display font-bold leading-none text-white ${wide ? "text-4xl" : "text-3xl"}`}>{lesson.displayName}</h3>
                 </div>
             </Link>
@@ -161,7 +174,7 @@ function LessonCard({lesson, wide = false, readLabel}: {lesson: SpeciesBehaviorL
     );
 }
 
-function CollectionSection({collection, readLabel}: {collection: LessonCollection; readLabel: string}) {
+function CollectionSection({collection, readLabel, icons}: {collection: LessonCollection; readLabel: string; icons: AnimalPowerIconIndex}) {
     if (!collection.lessons.length) return null;
     return (
         <section>
@@ -170,7 +183,7 @@ function CollectionSection({collection, readLabel}: {collection: LessonCollectio
                 <p className="mt-2 text-sm leading-6 text-ink-300 md:text-base">{collection.description}</p>
             </div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {collection.lessons.map((lesson, index) => <LessonCard key={lesson.slug} lesson={lesson} wide={index === 0} readLabel={readLabel} />)}
+                {collection.lessons.map((lesson, index) => <LessonCard key={lesson.slug} lesson={lesson} wide={index === 0} readLabel={readLabel} icons={icons} />)}
             </div>
         </section>
     );
@@ -209,6 +222,7 @@ export async function generateMetadata({params}: AnimalLessonsPageProps): Promis
 export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps) {
     const t = await getScopedTranslator(params.locale, "animalLessons");
     const lessons = await getBehaviorLessonIndex();
+    const icons = await fetchAnimalPowerIconIndex({revalidate});
     const query = "";
     const activeTag: LessonTag = "popular";
     const requestedPage = 1;
@@ -290,7 +304,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                     <div className="absolute inset-x-0 bottom-0 max-w-3xl p-6 md:p-10">
                         <span className="rounded-full bg-primary-400 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-black">{t("featuredEyebrow")}</span>
                         <h2 className="mt-4 font-display text-4xl font-bold text-white md:text-6xl">{featured.displayName}</h2>
-                        <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-100">{t("learnLabel")} {featured.principleName}</p>
+                        <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-primary-100">{t("learnLabel")} <AnimalPowerIcon svg={lessonIconSvg(icons, featured)} size="1.6em" gap="0.45em" />{featured.principleName}</p>
                         <p className="mt-3 line-clamp-2 max-w-2xl text-base leading-7 text-ink-100 md:text-lg">{featured.applicationExample || featured.coreLesson}</p>
                         <Link href={`/animal-powers/${featured.slug}`} className="mt-6 inline-flex rounded-full bg-white light:bg-primary-400 px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">{t("openLesson")} →</Link>
                     </div>
@@ -320,7 +334,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                             <h2 className="mt-1 font-display text-3xl font-bold text-white">{t("resultsFound", {count: filteredLessons.length})}</h2>
                             {paginatedLessons.length ? (
                                 <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                                    {paginatedLessons.map((lesson, index) => <LessonCard key={lesson.slug} lesson={lesson} wide={index % 9 === 0} readLabel={t("openLesson")} />)}
+                                    {paginatedLessons.map((lesson, index) => <LessonCard key={lesson.slug} lesson={lesson} wide={index % 9 === 0} readLabel={t("openLesson")} icons={icons} />)}
                                 </div>
                             ) : (
                                 <div className="mt-6  border border-white/10 bg-white/[0.035] px-6 py-12 text-center">
@@ -339,7 +353,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                                 </nav>
                             ) : null}
                         </section>
-                    ) : collections.map((collection) => <CollectionSection key={collection.key} collection={collection} readLabel={t("openLesson")} />)}
+                    ) : collections.map((collection) => <CollectionSection key={collection.key} collection={collection} readLabel={t("openLesson")} icons={icons} />)}
                 </div>
 
                 <aside className="hidden xl:block">
@@ -357,7 +371,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
                             <div className="mt-3 space-y-3">{popularLessons.slice(3, 6).map((lesson) => <Link key={lesson.slug} href={`/animal-powers/${lesson.slug}`} className="block text-sm font-semibold text-ink-200 hover:text-primary-100">{lesson.displayName}</Link>)}</div>
                         </div>
                         {featuredPrinciple ? <div className="  border border-primary-400/20 bg-primary-400/[0.06] p-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-200">{t("sidebar.featuredPrinciple")}</p><p className="mt-2 font-display text-xl font-bold text-white">{featuredPrinciple[0]}</p><p className="mt-1 text-sm text-ink-300">{t("sidebar.lessonCount", {count: featuredPrinciple[1]})}</p></div> : null}
-                        {surpriseLesson ? <div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.randomAnimal")}</h2><p className="mt-3 font-display text-xl font-bold text-white">{surpriseLesson.displayName}</p><p className="mt-1 text-sm text-ink-300">{surpriseLesson.principleName}</p><Link href={`/animal-powers/${surpriseLesson.slug}`} className="mt-4 inline-flex rounded-full bg-primary-400 px-4 py-2 text-sm font-bold text-black">{t("sidebar.surpriseMe")} →</Link></div> : null}
+                        {surpriseLesson ? <div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("sidebar.randomAnimal")}</h2><p className="mt-3 font-display text-xl font-bold text-white">{surpriseLesson.displayName}</p><p className="mt-1 text-sm text-ink-300"><AnimalPowerIcon svg={lessonIconSvg(icons, surpriseLesson)} className="text-primary-300" />{surpriseLesson.principleName}</p><Link href={`/animal-powers/${surpriseLesson.slug}`} className="mt-4 inline-flex rounded-full bg-primary-400 px-4 py-2 text-sm font-bold text-black">{t("sidebar.surpriseMe")} →</Link></div> : null}
                     </div>
                 </aside>
             </div>

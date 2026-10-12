@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import {FormEvent, useEffect, useMemo, useState} from "react";
+import {
+    Alert, AdminPage, Button, buttonVariants, Card, CardContent, CardHeader, cn, fieldClass, PageHeader, RefreshButton,
+    Segmented, Skeleton, Stat, StatGrid, StatGridSkeleton, TableSkeleton
+} from "@/components/admin/ui";
 import {fillTemplate, notificationTemplates as templates} from "@/lib/notification-templates";
 
 type Recipient = {id: string; devices: number; username: string | null; displayName: string | null};
@@ -181,88 +185,113 @@ export default function AdminNotificationsClient() {
 
     if (authorized === false) {
         return <main className="grid min-h-[70vh] place-items-center px-4">
-            <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
-                <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
-                <h1 className="mt-2 font-display text-3xl text-white">Notifications</h1>
+            <form onSubmit={login} className="w-full max-w-sm border border-line-300 bg-surface-900 p-6">
+                <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">AnimalDex admin</p>
+                <h1 className="mt-1 font-display text-2xl text-white sm:text-3xl">Notifications</h1>
                 <input type="password" value={password} onChange={(event) => setPassword(event.target.value)}
                        placeholder="Admin password"
-                       className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" />
-                <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>
-                {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+                       className={cn(fieldClass, "mt-6 py-2.5")} />
+                <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-3 w-full">Sign in</Button>
+                {error && <Alert tone="bad" className="mt-3">{error}</Alert>}
             </form>
         </main>;
     }
 
-    return <main className="bg-[radial-gradient(circle_at_top_left,rgba(87,184,255,.09),transparent_28%)] p-4 sm:p-7">
-        <div className="mx-auto max-w-[100rem]">
-            <header className="flex flex-col justify-between gap-4 border-b border-line-300 pb-6 sm:flex-row sm:items-end">
-                <div>
-                    <Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link>
-                    <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Messaging</p>
-                    <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Notifications</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">
-                        Message one person or everyone. Every recipient gets the message in their in-app
-                        notifications list; accounts with a registered device also get a push banner on top.
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <Link href="/admin/segments" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white">Notify a segment</Link>
-                    <button onClick={() => void load()} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950">Refresh</button>
-                </div>
-            </header>
+    const labelClass = "text-[11px] font-black uppercase tracking-[.12em] text-ink-500";
 
-            {error && <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-            {notice && <div className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">{notice}</div>}
-            {loading && !data && <p className="mt-6 text-sm text-ink-400">Loading…</p>}
+    return <AdminPage width="wide">
+        <PageHeader
+            eyebrow="Operations"
+            title="Notifications"
+            description="Message one person or everyone. Every recipient gets the message in their in-app notifications list; accounts with a registered device also get a push banner on top."
+            actions={<>
+                <Link href="/admin/segments" className={buttonVariants({size: "sm"})}>Notify a segment</Link>
+                <RefreshButton loading={loading} onClick={() => void load()} />
+            </>}
+        />
 
-            {data && <>
-                <section className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-5">
-                    {[
-                        ["Reachable devices", data.summary.totalDevices.toLocaleString()],
-                        ["Reachable users", data.summary.reachableUsers.toLocaleString()],
-                        ["Total accounts", data.summary.totalProfiles.toLocaleString()],
-                        ["Production", data.summary.productionDevices.toLocaleString()],
-                        ["Sandbox", data.summary.sandboxDevices.toLocaleString()]
-                    ].map(([label, value]) => <div key={label} className="rounded-2xl border border-line-300 bg-surface-900 p-4">
-                        <p className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">{label}</p>
-                        <p className="mt-1 font-display text-2xl text-white">{value}</p>
-                    </div>)}
-                </section>
-                <p className="mt-2 text-xs text-ink-400">
-                    Everyone you send to gets the message in their in-app notifications list.
-                    A push banner on top of that needs a registered device, which {data.summary.totalProfiles - data.summary.reachableUsers} account(s) do not have.
-                </p>
+        {error && <Alert tone="bad" className="mt-6">{error}</Alert>}
+        {notice && <Alert tone="good" className="mt-6">{notice}</Alert>}
 
-                <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-                    <section className="rounded-2xl border border-line-300 bg-surface-900 p-5">
-                        <div className="flex gap-2">
-                            {(["user", "broadcast"] as const).map((value) => <button key={value}
-                                onClick={() => { setMode(value); setConfirmText(""); }}
-                                className={`rounded-xl px-4 py-2 text-sm font-bold ${mode === value ? "bg-primary-500 text-canvas-950" : "border border-line-300 text-white"}`}>
-                                {value === "user" ? "One person" : "Everyone"}
-                            </button>)}
+        {loading && !data && <div aria-busy="true">
+            <StatGridSkeleton count={5} className="mt-6 xl:grid-cols-5" />
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <Card className="p-4">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="mt-6 h-2.5 w-20" />
+                    <Skeleton className="mt-2.5 h-10 w-full" />
+                    <TableSkeleton rows={4} columns={2} className="mt-3 border border-line-300" />
+                    <Skeleton className="mt-6 h-2.5 w-20" />
+                    <Skeleton className="mt-2.5 h-10 w-full" />
+                    <Skeleton className="mt-4 h-20 w-full" />
+                    <Skeleton className="mt-6 h-11 w-full" />
+                </Card>
+                <div className="space-y-4">
+                    <Card className="p-4">
+                        <Skeleton className="h-2.5 w-16" />
+                        <Skeleton className="mt-3 h-20 w-full" />
+                    </Card>
+                    <Card className="p-4">
+                        <Skeleton className="h-2.5 w-24" />
+                        <div className="mt-4 space-y-4">
+                            {[0, 1, 2].map((row) => <div key={row} className="space-y-2">
+                                <Skeleton className="h-3 w-2/3" />
+                                <Skeleton className="h-2.5 w-full" />
+                            </div>)}
                         </div>
+                    </Card>
+                </div>
+            </div>
+        </div>}
 
-                        {mode === "user" && <div className="mt-4">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Recipient</label>
+        {data && <>
+            <StatGrid className="mt-6 xl:grid-cols-5">
+                <Stat label="Reachable devices" value={data.summary.totalDevices.toLocaleString()} />
+                <Stat label="Reachable users" value={data.summary.reachableUsers.toLocaleString()} />
+                <Stat label="Total accounts" value={data.summary.totalProfiles.toLocaleString()} />
+                <Stat label="Production" value={data.summary.productionDevices.toLocaleString()} />
+                <Stat label="Sandbox" value={data.summary.sandboxDevices.toLocaleString()} />
+            </StatGrid>
+            <p className="mt-2 text-xs leading-5 text-ink-500">
+                Everyone you send to gets the message in their in-app notifications list.
+                A push banner on top of that needs a registered device, which <span className="tabular-nums">{data.summary.totalProfiles - data.summary.reachableUsers}</span> account(s) do not have.
+            </p>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <Card>
+                    <CardHeader
+                        title="Compose"
+                        action={<Segmented
+                            label="Audience"
+                            value={mode}
+                            onChange={(value) => { setMode(value); setConfirmText(""); }}
+                            options={[{value: "user", label: "One person"}, {value: "broadcast", label: "Everyone"}]}
+                        />}
+                    />
+                    <CardContent>
+                        {mode === "user" && <div>
+                            <label className={labelClass}>Recipient</label>
                             <div className="mt-2 flex gap-2">
                                 <input value={query} onChange={(event) => setQuery(event.target.value)}
                                        onKeyDown={(event) => { if (event.key === "Enter") void load(); }}
                                        placeholder="Search name, username or user id"
-                                       className="w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
-                                <button onClick={() => void load()} className="rounded-xl border border-line-300 px-4 text-sm font-bold text-white">Search</button>
+                                       className={fieldClass} />
+                                <Button onClick={() => void load()} loading={loading} className="shrink-0">Search</Button>
                             </div>
-                            <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-line-300">
+                            <div className={cn("mt-3 max-h-56 overflow-y-auto border border-line-300 bg-canvas-900 transition-opacity", loading && "opacity-60")}>
                                 {data.users.length === 0 && <p className="p-3 text-sm text-ink-400">No accounts match.</p>}
                                 {data.users.map((user) => <button key={user.id} onClick={() => setRecipient(user)}
-                                    className={`flex w-full items-center justify-between gap-3 border-b border-line-300 px-3 py-2 text-left last:border-b-0 ${recipient?.id === user.id ? "bg-primary-500/15" : ""}`}>
+                                    className={cn(
+                                        "flex w-full items-center justify-between gap-3 border-b border-line-300/60 border-l-[3px] px-3 py-2 text-left transition last:border-b-0 hover:bg-white/[.03]",
+                                        recipient?.id === user.id ? "border-l-primary-400 bg-primary-500/10" : "border-l-transparent"
+                                    )}>
                                     <span className="min-w-0">
                                         <span className="block truncate text-sm font-bold text-white">{user.displayName || user.username || "Unnamed"}</span>
                                         <span className="block truncate text-xs text-ink-400">{user.username ? `@${user.username} · ` : ""}{user.id}</span>
                                     </span>
                                     {/* No device is not a blocker, so it reads as what it is
                                         rather than as a zero to be fixed. */}
-                                    <span className="shrink-0 text-xs text-ink-400">
+                                    <span className="shrink-0 text-xs tabular-nums text-ink-400">
                                         {user.devices === 0 ? "in-app only" : `${user.devices} device${user.devices === 1 ? "" : "s"}`}
                                     </span>
                                 </button>)}
@@ -273,21 +302,21 @@ export default function AdminNotificationsClient() {
                                 </p>}
                         </div>}
 
-                        <div className="mt-5">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Template</label>
+                        <div className={mode === "user" ? "mt-5" : undefined}>
+                            <label className={labelClass}>Template</label>
                             <div className="mt-2 flex flex-wrap gap-2">
-                                {templates.map((template) => <button key={template.id} onClick={() => applyTemplate(template.id)}
-                                    className={`rounded-xl px-3 py-2 text-xs font-bold ${templateID === template.id ? "bg-primary-500 text-canvas-950" : "border border-line-300 text-white"}`}>
+                                {templates.map((template) => <Button key={template.id} size="sm" onClick={() => applyTemplate(template.id)}
+                                    variant={templateID === template.id ? "primary" : "outline"}>
                                     {template.label}
-                                </button>)}
+                                </Button>)}
                             </div>
                         </div>
 
                         {(title + body).includes("{animal}") && <div className="mt-4">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Animal name</label>
+                            <label className={labelClass}>Animal name</label>
                             <input value={animal} onChange={(event) => setAnimal(event.target.value)}
                                    placeholder="Rainbow Crab"
-                                   className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
+                                   className={cn(fieldClass, "mt-2")} />
                         </div>}
 
                         {/*
@@ -297,29 +326,29 @@ export default function AdminNotificationsClient() {
                           * something that is not theirs and open nothing.
                           */}
                         {mode === "user" && <div className="mt-4">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">
-                                Linked capture <span className="text-ink-500">· optional</span>
+                            <label className={labelClass}>
+                                Linked capture <span className="text-ink-600">· optional</span>
                             </label>
                             <input value={captureId} onChange={(event) => setCaptureId(event.target.value)}
                                    placeholder="Capture UUID — tapping the notification opens this capture"
-                                   className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 font-mono text-sm text-white outline-none focus:border-primary-300" />
+                                   className={cn(fieldClass, "mt-2 font-mono")} />
                             {captureId.trim() && !captureIdValid && <p className="mt-1.5 text-xs text-amber-300">
                                 That is not a UUID. Copy the capture id from the support panel.
                             </p>}
                         </div>}
 
                         <div className="mt-4">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Title</label>
+                            <label className={labelClass}>Title</label>
                             <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120}
-                                   className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
+                                   className={cn(fieldClass, "mt-2")} />
                         </div>
                         <div className="mt-4">
-                            <label className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Message</label>
+                            <label className={labelClass}>Message</label>
                             <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={3} maxLength={400}
-                                      className="mt-2 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
+                                      className={cn(fieldClass, "mt-2")} />
                         </div>
 
-                        {mode === "broadcast" && <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4">
+                        {mode === "broadcast" && <div className="mt-5 border border-amber-300/30 bg-amber-400/[.08] p-4">
                             {/* The device figure is the one the server guards against
                                 expectedRecipients, so it is the only number quoted here.
                                 The in-app audience is every account and is not guarded. */}
@@ -329,50 +358,50 @@ export default function AdminNotificationsClient() {
                             </p>
                             <input value={confirmText} onChange={(event) => setConfirmText(event.target.value)}
                                    placeholder='Type SEND TO ALL to confirm'
-                                   className="mt-3 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-2.5 text-white outline-none focus:border-primary-300" />
+                                   className={cn(fieldClass, "mt-3")} />
                         </div>}
 
-                        <button onClick={() => void send()} disabled={!canSend}
-                                className="mt-5 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950 disabled:opacity-40">
+                        <Button variant="primary" size="lg" onClick={() => void send()} disabled={!canSend} loading={sending}
+                                className="mt-5 w-full">
                             {sending
                                 ? "Sending…"
                                 : `Send to ${targetPeople} ${targetPeople === 1 ? "person" : "people"}`
                                     + ` · ${targetDevices} push${targetDevices === 1 ? "" : "es"}`}
-                        </button>
-                    </section>
+                        </Button>
+                    </CardContent>
+                </Card>
 
-                    <aside className="space-y-5">
-                        <section className="rounded-2xl border border-line-300 bg-surface-900 p-5">
-                            <p className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Preview</p>
-                            <div className="mt-3 rounded-2xl bg-canvas-900 p-4">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-400">AnimalDex</p>
-                                <p className="mt-1 text-sm font-black text-white">{preview.title || "Title"}</p>
-                                <p className="mt-1 text-sm leading-5 text-ink-100">{preview.body || "Message"}</p>
-                            </div>
-                            <p className="mt-3 text-xs text-ink-400">
-                                Shows as a banner even with the app open. Tapping opens AnimalDex without navigating anywhere.
-                            </p>
-                        </section>
+                <aside className="space-y-4">
+                    <Card className="p-4">
+                        <p className={labelClass}>Preview</p>
+                        <div className="mt-3 border border-line-300 bg-canvas-900 p-4">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-400">AnimalDex</p>
+                            <p className="mt-1 text-sm font-black text-white">{preview.title || "Title"}</p>
+                            <p className="mt-1 text-sm leading-5 text-ink-100">{preview.body || "Message"}</p>
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-ink-400">
+                            Shows as a banner even with the app open. Tapping opens AnimalDex without navigating anywhere.
+                        </p>
+                    </Card>
 
-                        <section className="rounded-2xl border border-line-300 bg-surface-900 p-5">
-                            <p className="text-xs font-bold uppercase tracking-[.14em] text-ink-400">Recent sends</p>
-                            {data.history.length === 0 && <p className="mt-3 text-sm text-ink-400">Nothing sent yet.</p>}
-                            <ul className="mt-3 space-y-3">
-                                {data.history.map((row) => <li key={row.id} className="border-b border-line-300 pb-3 last:border-b-0 last:pb-0">
-                                    <p className="text-sm font-bold text-white">{row.title}</p>
-                                    <p className="text-xs text-ink-400">
-                                        {row.mode === "broadcast" ? "Everyone" : row.mode === "segment" ? "Segment" : "One person"} · {row.devices_delivered}/{row.devices_targeted} pushed · {new Date(row.created_at).toLocaleString()}
-                                    </p>
-                                </li>)}
-                            </ul>
-                            {data.history.length > 0 && <p className="mt-3 text-xs text-ink-500">
-                                The log records push counts only, so a send with no devices reads as 0 here
-                                even though it reached every recipient&apos;s notifications list.
-                            </p>}
-                        </section>
-                    </aside>
-                </div>
-            </>}
-        </div>
-    </main>;
+                    <Card className="p-4">
+                        <p className={labelClass}>Recent sends</p>
+                        {data.history.length === 0 && <p className="mt-3 text-sm text-ink-400">Nothing sent yet.</p>}
+                        <ul className="mt-3 space-y-3">
+                            {data.history.map((row) => <li key={row.id} className="border-b border-line-300/60 pb-3 last:border-b-0 last:pb-0">
+                                <p className="text-sm font-bold text-white">{row.title}</p>
+                                <p className="mt-0.5 text-xs tabular-nums text-ink-400">
+                                    {row.mode === "broadcast" ? "Everyone" : row.mode === "segment" ? "Segment" : "One person"} · {row.devices_delivered}/{row.devices_targeted} pushed · {new Date(row.created_at).toLocaleString()}
+                                </p>
+                            </li>)}
+                        </ul>
+                        {data.history.length > 0 && <p className="mt-3 text-xs leading-5 text-ink-500">
+                            The log records push counts only, so a send with no devices reads as 0 here
+                            even though it reached every recipient&apos;s notifications list.
+                        </p>}
+                    </Card>
+                </aside>
+            </div>
+        </>}
+    </AdminPage>;
 }

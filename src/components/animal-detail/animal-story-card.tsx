@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import AiVoiceHint from "@/components/narration/ai-voice-hint";
 import {useCloudNarration} from "@/components/narration/use-cloud-narration";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 export type AnimalStoryPrinciple = {
     name: string;
@@ -12,6 +13,10 @@ export type AnimalStoryPrinciple = {
     biologicalBasis?: string | null;
     applicationExample?: string | null;
     bestUseCases?: string[];
+    /** The Power's icon, when the page fetched it on the server (null: none). */
+    iconSvg?: string | null;
+    /** Otherwise the species, so the icon is read on the client. */
+    speciesProfileId?: string | null;
 };
 
 type AnimalStoryCardProps = {
@@ -154,7 +159,10 @@ export default function AnimalStoryCard({contentKey, story, principle, settingTa
                 <Icon name="bolt" className="h-2.5 w-2.5" />
                 <span>Animal Power</span>
             </div>
-            <p className={`text-[17px] font-bold leading-[1.3] text-white ${wide ? "lg:text-2xl" : ""}`}>{principleName}</p>
+            <p className={`text-[17px] font-bold leading-[1.3] text-white ${wide ? "lg:text-2xl" : ""}`}>
+                <AnimalPowerIcon svg={principle?.iconSvg} speciesProfileId={principle?.speciesProfileId} />
+                {principleName}
+            </p>
             {powerLine ? <p className={`text-[15px] font-bold leading-6 text-primary-400 ${wide ? "lg:text-lg lg:leading-7" : ""}`}>{powerLine}</p> : null}
         </div>
     ) : null;

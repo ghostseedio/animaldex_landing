@@ -19,7 +19,7 @@ export function ReviewList({
   return (
     <dl className="grid gap-3 text-sm text-ink-200 md:grid-cols-2">
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Sponsor
         </dt>
         <dd>
@@ -30,7 +30,7 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Timing
         </dt>
         <dd>
@@ -42,7 +42,7 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Objective
         </dt>
         <dd>
@@ -51,7 +51,7 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Constraints
         </dt>
         <dd>
@@ -67,7 +67,7 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Venue
         </dt>
         <dd>
@@ -77,7 +77,7 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Discovery
         </dt>
         <dd>
@@ -89,13 +89,13 @@ export function ReviewList({
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Rules
         </dt>
         <dd>v{campaign.rulesVersion}</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-[.12em] text-ink-500">
+        <dt className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
           Reward
         </dt>
         <dd>{campaign.reward?.title || "Missing achievement"}</dd>

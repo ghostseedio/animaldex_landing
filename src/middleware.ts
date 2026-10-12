@@ -17,8 +17,32 @@ import {
     resolveClosedSeoNamespacePath
 } from "@/lib/closed-seo-namespaces";
 import {matchCollapsedIdDetailPath} from "@/lib/english-detail-routes";
+import {evaluateAdminApiRequest, isAdminApiPath} from "@/lib/admin-request-policy";
+import {getSiteUrl} from "@/lib/site";
 
 const intlMiddleware = createIntlMiddleware(localeConfig);
+
+/**
+ * `/api/admin/*` skips locale and session work entirely. A state-changing
+ * request that a browser attributes to another site is refused here, before
+ * any handler; everything else continues to the handler's own cookie check,
+ * marked uncacheable and off-limits to crawlers.
+ */
+function guardAdminApi(request: NextRequest) {
+    const verdict = evaluateAdminApiRequest({
+        method: request.method,
+        origin: request.headers.get("origin"),
+        secFetchSite: request.headers.get("sec-fetch-site"),
+        allowedHosts: [request.headers.get("x-forwarded-host"), request.headers.get("host"), getSiteUrl()]
+    });
+
+    const response = verdict.allowed
+        ? NextResponse.next()
+        : NextResponse.json({ok: false, error: "Cross-site request refused"}, {status: 403});
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+}
 
 function redirectToAccount(request: NextRequest, locale: string, sessionResponse?: NextResponse) {
     const signInUrl = request.nextUrl.clone();
@@ -103,6 +127,10 @@ function matchAccountWithoutNext(request: NextRequest) {
  * - Authorization for APIs and RSC still uses server `auth.getUser()`.
  */
 export async function middleware(request: NextRequest) {
+    if (isAdminApiPath(request.nextUrl.pathname)) {
+        return guardAdminApi(request);
+    }
+
     const timer = createDevRequestTimer("middleware", {path: request.nextUrl.pathname});
     try {
         const misroutedAuthCallback = matchMisroutedAuthCallback(request);
@@ -169,5 +197,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/((?!api|admin|_next|.*\\..*|legal|auth).*)"]
+    matcher: ["/((?!api|admin|_next|.*\\..*|legal|auth).*)", "/api/admin/:path*"]
 };

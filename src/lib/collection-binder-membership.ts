@@ -16,7 +16,9 @@ export type BinderSetId =
   | "snakes"
   | "predators"
   | "zoo"
-  | "giant_bugs";
+  | "giant_bugs"
+  | "turtles"
+  | "sea_life";
 
 export type BinderMembershipCatalogEntry = {
   speciesProfileId: string;
@@ -51,6 +53,8 @@ export const LAUNCH_BINDER_SET_IDS: readonly BinderSetId[] = [
   "frogs",
   "snakes",
   "giant_bugs",
+  "turtles",
+  "sea_life",
 ] as const;
 
 type AnimalTypeTag =

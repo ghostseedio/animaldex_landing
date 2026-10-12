@@ -4,6 +4,25 @@ import Link from "next/link";
 import {useEffect, useState} from "react";
 import {FinanceOperatorSignInCard, useFinanceActor} from "@/app/admin/_components/finance-operator-auth";
 import {
+    AdminPage,
+    Alert,
+    Badge,
+    Button,
+    buttonVariants,
+    Card,
+    CardHeader,
+    EmptyState,
+    Field,
+    fieldClass,
+    ListSkeleton,
+    PageHeader,
+    Section,
+    Table,
+    TableSkeleton,
+    TD,
+    TH
+} from "@/components/admin/ui";
+import {
     canConfirmPaid,
     canPrepareStep,
     canRecordManualTransfer,
@@ -159,6 +178,9 @@ export function AdminPayoutsClient() {
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    // Which button started the in-flight action, so only it shows a spinner.
+    const [busyAction, setBusyAction] = useState<string | null>(null);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [recordFor, setRecordFor] = useState<string | null>(null);
     const [recordForm, setRecordForm] = useState<RecordForm>({
         providerTransferRef: "",
@@ -182,7 +204,9 @@ export function AdminPayoutsClient() {
     }
 
     useEffect(() => {
-        load().catch((e) => setError(e instanceof Error ? e.message : "Failed"));
+        load()
+            .catch((e) => setError(e instanceof Error ? e.message : "Failed"))
+            .finally(() => setInitialLoading(false));
     }, []);
 
     function openRecord(p: PayoutRow) {
@@ -226,6 +250,7 @@ export function AdminPayoutsClient() {
         );
         if (!confirmed) return;
         setBusy(true);
+        setBusyAction(`${action}:${payoutId}`);
         setMessage(null);
         setError(null);
         try {
@@ -243,6 +268,7 @@ export function AdminPayoutsClient() {
             setError(e instanceof Error ? e.message : "Action failed");
         } finally {
             setBusy(false);
+            setBusyAction(null);
         }
     }
 
@@ -266,6 +292,7 @@ export function AdminPayoutsClient() {
         );
         if (!confirmed) return;
         setBusy(true);
+        setBusyAction("release_posted_creator_rewards");
         setMessage(null);
         setError(null);
         try {
@@ -284,6 +311,7 @@ export function AdminPayoutsClient() {
             setError(e instanceof Error ? e.message : "Release failed");
         } finally {
             setBusy(false);
+            setBusyAction(null);
         }
     }
 
@@ -303,162 +331,166 @@ export function AdminPayoutsClient() {
     const rows = readiness?.rows || [];
     const hasPendingRewards = rows.some((r) => Number(r.pending_amount_minor || 0) > 0);
 
+    const isBusy = (action: string, payoutId: string) => busyAction === `${action}:${payoutId}`;
+    const manualFieldClass = `${fieldClass} mt-1 py-1.5`;
+
     return (
-        <main className="px-6 py-8 text-ink-100">
-            <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
-                ← Admin
-            </Link>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-3xl text-white">Payouts</h1>
-                <span
-                    className={`rounded-md px-2.5 py-1 text-xs font-black tracking-wide text-white ${
-                        diagnostics?.isProduction ? "bg-rose-700" : "bg-emerald-700"
-                    }`}
-                >
-                    {diagnostics?.isProduction ? "PRODUCTION — REAL MONEY" : "WISE SANDBOX"}
-                </span>
-                <Link
-                    href="/admin/payout-corridors"
-                    className="rounded-md border border-white/20 px-2.5 py-1 text-xs font-semibold text-ink-200 hover:bg-white/5"
-                >
-                    Corridors
-                </Link>
-            </div>
-            <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Ghostseed Ltd pays creators from Available Earnings via Wise. Model:{" "}
-                <strong className="text-ink-200">request → Held → Approve → manual Wise → record → Paid</strong>.
-                Target SLA: {readiness?.payout_sla_days ?? 14} days. Auto-payout stays off.
-            </p>
-
-            {actorLoaded && canFinance && (
-                <div className="mt-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
-                    <p className="font-bold text-white">
-                        Named finance operator: {actor?.email}
-                    </p>
-                    <p className="mt-1 text-sm text-ink-300">
-                        Finance actions are enabled for this session.
-                    </p>
-                </div>
-            )}
-
-            {actorLoaded && !canFinance && (
-                <div className="mt-5 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                    <p className="font-bold text-white">Finance actions locked</p>
-                    <p className="mt-1 text-sm text-ink-300">
-                        Your current session is a shared-password admin session, which cannot approve
-                        payouts. Sign in as a named finance operator below to enable payout approvals.
-                    </p>
-                    <FinanceOperatorSignInCard onSignedIn={signedIn} />
-                </div>
-            )}
-
-            {diagnostics && (
-                <div className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                    <p className="font-bold text-white">{diagnostics.banner}</p>
-                    <p className="mt-1 text-sm text-ink-300">
-                        AnimalDex={diagnostics.animaldexEnvironment} · payouts_enabled=
-                        {String(diagnostics.payoutsEnabled)} · auto_payout=
-                        {String(diagnostics.autoPayoutEnabled)} · credentials=
-                        {String(diagnostics.wiseCredentialsConfigured)} · profile=
-                        {String(diagnostics.wiseProfileBound)} · balance=
-                        {String(Boolean(diagnostics.wiseBalanceBound))} · webhook=
-                        {String(diagnostics.webhookPublicKeyConfigured)}
-                    </p>
-                </div>
-            )}
-
-            <section className="mt-8 rounded-2xl border border-line-300 px-4 py-4">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">
-                    How to pay a creator
-                </h2>
-                <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-ink-300">
-                    {(readiness?.how_to_pay?.length ? readiness.how_to_pay : DEFAULT_HOW_TO_PAY).map(
-                        (step) => (
-                            <li key={step}>{step}</li>
-                        )
-                    )}
-                </ol>
-                <p className="mt-3 text-xs text-ink-500">
-                    Creator Rewards on{" "}
-                    <Link href="/admin/creator-rewards" className="text-white underline-offset-2 hover:underline">
-                        /admin/creator-rewards
+        <AdminPage className="text-ink-100">
+            <PageHeader
+                eyebrow="Creator economy"
+                title={
+                    <span className="flex flex-wrap items-center gap-3">
+                        Payouts
+                        {diagnostics ? (
+                            <Badge tone={diagnostics.isProduction ? "bad" : "good"}>
+                                {diagnostics.isProduction ? "PRODUCTION — REAL MONEY" : "WISE SANDBOX"}
+                            </Badge>
+                        ) : null}
+                    </span>
+                }
+                description={
+                    <>
+                        Ghostseed Ltd pays creators from Available Earnings via Wise. Model:{" "}
+                        <strong className="text-ink-200">request → Held → Approve → manual Wise → record → Paid</strong>.
+                        Target SLA: {readiness?.payout_sla_days ?? 14} days. Auto-payout stays off.
+                    </>
+                }
+                actions={
+                    <Link href="/admin/payout-corridors" className={buttonVariants({size: "sm"})}>
+                        Corridors
                     </Link>
-                    . Enable countries on{" "}
-                    <Link href="/admin/payout-corridors" className="text-white underline-offset-2 hover:underline">
-                        /admin/payout-corridors
-                    </Link>{" "}
-                    after Wise verification (no app release).
-                </p>
-                <button
-                    type="button"
-                    disabled={busy || !hasPendingRewards}
-                    onClick={() => void releasePostedCreatorRewards()}
-                    className="mt-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-100 disabled:opacity-50"
-                >
-                    {hasPendingRewards ? "Release posted rewards to Available" : "Posted rewards already Available"}
-                </button>
-                {!hasPendingRewards && rows.some((r) => Number(r.available_amount_minor || 0) > 0) && (
-                    <p className="mt-2 text-xs text-emerald-300">
-                        No pending rewards remain. Creators with complete bank setup can now request payout.
-                    </p>
+                }
+            />
+
+            <div className="mt-6 space-y-3">
+                {actorLoaded && canFinance && (
+                    <Alert tone="good" title={`Named finance operator: ${actor?.email}`}>
+                        Finance actions are enabled for this session.
+                    </Alert>
                 )}
-            </section>
 
-            {diagnostics?.autoPayoutEnabled && (
-                <p className="mt-4 rounded-xl border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-                    Warning: <code>auto_payout_enabled=true</code>. Product policy is manual finance only.
-                </p>
-            )}
+                {actorLoaded && !canFinance && (
+                    <div>
+                        <Alert tone="warn" title="Finance actions locked">
+                            Your current session is a shared-password admin session, which cannot approve
+                            payouts. Sign in as a named finance operator below to enable payout approvals.
+                        </Alert>
+                        <FinanceOperatorSignInCard onSignedIn={signedIn} />
+                    </div>
+                )}
 
-            {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
-            {message && <p className="mt-4 break-all text-sm text-emerald-300">{message}</p>}
+                {diagnostics && (
+                    <Alert tone="warn" title={diagnostics.banner}>
+                        <span className="font-mono text-xs">
+                            AnimalDex={diagnostics.animaldexEnvironment} · payouts_enabled=
+                            {String(diagnostics.payoutsEnabled)} · auto_payout=
+                            {String(diagnostics.autoPayoutEnabled)} · credentials=
+                            {String(diagnostics.wiseCredentialsConfigured)} · profile=
+                            {String(diagnostics.wiseProfileBound)} · balance=
+                            {String(Boolean(diagnostics.wiseBalanceBound))} · webhook=
+                            {String(diagnostics.webhookPublicKeyConfigured)}
+                        </span>
+                    </Alert>
+                )}
 
-            <section className="mt-8">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">
-                    Who needs paying / setup
-                </h2>
-                <div className="mt-3 overflow-x-auto rounded-2xl border border-line-300">
-                    {rows.length === 0 ? (
-                        <p className="px-4 py-6 text-sm text-ink-500">
-                            No Earnings balances yet. Post Creator Rewards to Earnings first.
-                        </p>
+                {diagnostics?.autoPayoutEnabled && (
+                    <Alert tone="bad">
+                        Warning: <code>auto_payout_enabled=true</code>. Product policy is manual finance only.
+                    </Alert>
+                )}
+
+                {error && <Alert tone="bad">{error}</Alert>}
+                {message && (
+                    <Alert tone="good">
+                        <span className="break-all">{message}</span>
+                    </Alert>
+                )}
+            </div>
+
+            <Section title="How to pay a creator" className="mt-6">
+                <Card className="p-4">
+                    <ol className="list-decimal space-y-2 pl-5 text-sm text-ink-300">
+                        {(readiness?.how_to_pay?.length ? readiness.how_to_pay : DEFAULT_HOW_TO_PAY).map(
+                            (step) => (
+                                <li key={step}>{step}</li>
+                            )
+                        )}
+                    </ol>
+                    <p className="mt-3 text-xs text-ink-500">
+                        Creator Rewards on{" "}
+                        <Link href="/admin/creator-rewards" className="text-white underline-offset-2 hover:underline">
+                            /admin/creator-rewards
+                        </Link>
+                        . Enable countries on{" "}
+                        <Link href="/admin/payout-corridors" className="text-white underline-offset-2 hover:underline">
+                            /admin/payout-corridors
+                        </Link>{" "}
+                        after Wise verification (no app release).
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line-300 pt-4">
+                        <Button
+                            size="sm"
+                            variant={hasPendingRewards ? "primary" : "outline"}
+                            disabled={busy || !hasPendingRewards}
+                            loading={busyAction === "release_posted_creator_rewards"}
+                            onClick={() => void releasePostedCreatorRewards()}
+                        >
+                            {hasPendingRewards ? "Release posted rewards to Available" : "Posted rewards already Available"}
+                        </Button>
+                        {!hasPendingRewards && rows.some((r) => Number(r.available_amount_minor || 0) > 0) && (
+                            <p className="text-xs text-emerald-300">
+                                No pending rewards remain. Creators with complete bank setup can now request payout.
+                            </p>
+                        )}
+                    </div>
+                </Card>
+            </Section>
+
+            <Section title="Who needs paying / setup">
+                <Card>
+                    {initialLoading && rows.length === 0 ? (
+                        <TableSkeleton rows={4} columns={5} />
+                    ) : rows.length === 0 ? (
+                        <EmptyState
+                            className="m-4"
+                            title="No Earnings balances yet"
+                            description="Post Creator Rewards to Earnings first."
+                        />
                     ) : (
-                        <table className="min-w-full text-left text-sm">
-                            <thead className="bg-white/5 text-xs uppercase tracking-wide text-ink-400">
+                        <Table minWidth={760}>
+                            <thead>
                                 <tr>
-                                    <th className="px-3 py-2">Creator</th>
-                                    <th className="px-3 py-2">Available</th>
-                                    <th className="px-3 py-2">Bank setup</th>
-                                    <th className="px-3 py-2">Pay by</th>
-                                    <th className="px-3 py-2">Next step</th>
+                                    <TH>Creator</TH>
+                                    <TH>Available</TH>
+                                    <TH>Bank setup</TH>
+                                    <TH>Pay by</TH>
+                                    <TH>Next step</TH>
                                 </tr>
                             </thead>
                             <tbody>
                                 {rows.map((r) => (
-                                    <tr key={`${r.user_id}-${r.currency_code}`} className="border-t border-white/10">
-                                        <td className="px-3 py-2 text-white">
+                                    <tr key={`${r.user_id}-${r.currency_code}`}>
+                                        <TD className="text-white">
                                             {r.display_name || r.username || r.user_id.slice(0, 8)}
                                             <span className="block text-xs text-ink-500">
                                                 {r.beta_member ? "beta" : "not beta"} · {r.currency_code}
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-2 tabular-nums">
+                                        </TD>
+                                        <TD className="tabular-nums">
                                             {money(r.available_amount_minor, r.currency_code)}
                                             <span className="block text-xs text-ink-500">
                                                 pending {money(r.pending_amount_minor, r.currency_code)} ·{" "}
                                                 held {money(r.held_amount_minor, r.currency_code)}
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-2">
+                                        </TD>
+                                        <TD>
                                             {r.setup_complete ? (
-                                                <span className="text-emerald-300">
-                                                    {r.masked_destination || "Ready"}
-                                                </span>
+                                                <Badge tone="good">{r.masked_destination || "Ready"}</Badge>
                                             ) : (
-                                                <span className="text-amber-200">Needs bank details</span>
+                                                <Badge tone="warn">Needs bank details</Badge>
                                             )}
-                                        </td>
-                                        <td className="px-3 py-2 tabular-nums text-ink-300">
+                                        </TD>
+                                        <TD className="tabular-nums text-ink-300">
                                             {r.target_pay_by
                                                 ? `${r.target_pay_by}${
                                                       typeof r.days_until_due === "number"
@@ -466,18 +498,19 @@ export function AdminPayoutsClient() {
                                                           : ""
                                                   }`
                                                 : "—"}
-                                        </td>
-                                        <td className="px-3 py-2 text-ink-300">{r.next_admin_step}</td>
+                                        </TD>
+                                        <TD className="text-ink-300">{r.next_admin_step}</TD>
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </Table>
                     )}
-                </div>
-            </section>
+                </Card>
+            </Section>
 
-            <section className="mt-8 space-y-3">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Payout requests</h2>
+            <Section title="Payout requests">
+                <div className="space-y-3">
+                {initialLoading && payouts.length === 0 && <ListSkeleton rows={3} />}
                 {payouts.map((p) => {
                     const facts = {
                         status: p.status,
@@ -494,19 +527,26 @@ export function AdminPayoutsClient() {
                     const isPaid = p.status === "paid" || Boolean(p.paidAt);
 
                     return (
-                        <article key={p.payoutId} className="rounded-2xl border border-line-300 px-4 py-3">
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                <h3 className="font-semibold text-white">
-                                    {isPaid ? "✓ Paid" : `${money(p.amountMinor, p.currencyCode)} · ${p.status}`}
+                        <Card key={p.payoutId} className="p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h3 className="flex flex-wrap items-center gap-2 font-semibold tabular-nums text-white">
+                                    {isPaid ? (
+                                        <Badge tone="good">✓ Paid</Badge>
+                                    ) : (
+                                        <>
+                                            {money(p.amountMinor, p.currencyCode)}
+                                            <Badge tone="neutral">{p.status}</Badge>
+                                        </>
+                                    )}
                                 </h3>
-                                <span className="text-xs uppercase text-ink-400">
+                                <span className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                                     {p.provider}/{p.environment}
                                     {p.reviewTier ? ` · ${p.reviewTier}` : ""}
                                 </span>
                             </div>
                             {isPaid && (
-                                <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-50">
-                                    <p className="font-bold">
+                                <div className="mt-3 border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-50">
+                                    <p className="font-bold tabular-nums">
                                         {money(p.amountMinor, p.currencyCode)}
                                         {p.providerFinalTargetAmountMinor != null
                                             ? ` → ${money(p.providerFinalTargetAmountMinor, p.providerFinalTargetCurrency || p.targetCurrency || p.currencyCode)}`
@@ -531,24 +571,24 @@ export function AdminPayoutsClient() {
                             {p.targetCurrency &&
                                 p.targetCurrency !== p.currencyCode &&
                                 !p.paidAt && (
-                                <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                                <Alert tone="warn" className="mt-3 text-xs font-semibold">
                                     BETA / FIRST-PAYOUT REVIEW — destination {p.targetCurrency}. Confirm recipient,
                                     estimate, held reconciliation, then send manually in Wise. Do not auto-fund.
-                                </p>
+                                </Alert>
                             )}
                             {!p.paidAt && p.targetCurrency && p.targetCurrency === p.currencyCode && (
-                                <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/90">
+                                <Alert tone="warn" className="mt-3 text-xs">
                                     Manual finance review required. Confirm masked destination and Available→Held
                                     before sending.
-                                </p>
+                                </Alert>
                             )}
-                            <p className="mt-1 text-xs text-ink-500">
+                            <p className="mt-2 font-mono text-[11px] text-ink-500">
                                 {p.payoutId} · user {p.userId.slice(0, 8)}… · transfer{" "}
                                 {p.providerTransferRef || "—"}
                                 {p.hasHold ? ` · payout hold ${isPaid ? "recorded/released" : "recorded"}` : ""}
                             </p>
                             {(p.targetCurrency || p.estimateTargetAmountMinor != null) && (
-                                <p className="mt-1 text-xs text-ink-400">
+                                <p className="mt-1 text-xs tabular-nums text-ink-400">
                                     Dest {p.targetCurrency || "—"}
                                     {p.estimateTargetAmountMinor != null
                                         ? ` · est ${money(p.estimateTargetAmountMinor, p.targetCurrency || p.currencyCode)}`
@@ -559,17 +599,17 @@ export function AdminPayoutsClient() {
                                 </p>
                             )}
                             {preparingIncomplete && (
-                                <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                                <Alert tone="warn" className="mt-3 text-xs font-semibold">
                                     Wise quote created, but transfer preparation is incomplete. Resume
                                     preparation to create the Wise transfer — or confirm the creator has
                                     re-submitted their payout destination if the recipient address was
                                     incomplete.
-                                </p>
+                                </Alert>
                             )}
                             {p.destination && (
-                                <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">
-                                    <p className="font-semibold text-white">Resolved payout destination</p>
-                                    <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                                <div className="mt-3 border border-line-300 bg-canvas-900 px-3 py-3 text-xs text-ink-300">
+                                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Resolved payout destination</p>
+                                    <div className="mt-2 grid gap-1 sm:grid-cols-2">
                                         <p>
                                             Recipient:{" "}
                                             <span className="text-ink-100">
@@ -638,85 +678,88 @@ export function AdminPayoutsClient() {
                                 </div>
                             )}
                             {p.providerTransferRef && !p.paidAt && (
-                                <p className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100">
+                                <Alert tone="good" className="mt-3 text-xs">
                                     Ready to send in Wise. Transfer {p.providerTransferRef}; status{" "}
                                     {p.providerStatus || "unknown"}. Do not mark Paid until Wise reports
                                     outgoing_payment_sent.
-                                </p>
+                                </Alert>
                             )}
 
-                            <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="mt-4 flex flex-wrap gap-2 border-t border-line-300 pt-3">
                                 {isPaid ? (
                                     <>
-                                        <button
-                                            type="button"
+                                        <Button
+                                            size="sm"
                                             disabled={!transferPrepared}
                                             onClick={() => openWiseTransfer(p)}
-                                            className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-100 disabled:opacity-50"
                                         >
                                             Open in Wise
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
                                             disabled={busy || !transferPrepared || !canFinance}
+                                            loading={isBusy("refresh_status", p.payoutId)}
                                             onClick={() => run("refresh_status", p.payoutId)}
-                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
                                         >
                                             Refresh provider status
-                                        </button>
+                                        </Button>
                                     </>
                                 ) : (
                                     <>
-                                <button
-                                    type="button"
+                                <Button
+                                    size="sm"
+                                    variant="primary"
                                     disabled={busy || !canPrepare || !canFinance}
+                                    loading={isBusy("approve_prepare", p.payoutId)}
                                     onClick={() => run("approve_prepare", p.payoutId)}
-                                    className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
                                 >
                                     {step1Label}
-                                </button>
-                                <button
-                                    type="button"
+                                </Button>
+                                <Button
+                                    size="sm"
                                     disabled={!transferPrepared}
                                     onClick={() => openWiseTransfer(p)}
-                                    className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-100 disabled:opacity-50"
                                 >
                                     2. Open Wise to send
-                                </button>
-                                <button
-                                    type="button"
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
                                     disabled={busy || !transferPrepared || !canFinance}
+                                    loading={isBusy("refresh_status", p.payoutId)}
                                     onClick={() => run("refresh_status", p.payoutId)}
-                                    className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
                                 >
                                     Refresh Wise status
-                                </button>
-                                <button
-                                    type="button"
+                                </Button>
+                                <Button
+                                    size="sm"
                                     disabled={busy || !canConfirm || !canFinance}
+                                    loading={isBusy("confirm_paid", p.payoutId)}
                                     onClick={() => run("confirm_paid", p.payoutId)}
-                                    className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-100 disabled:opacity-50"
                                 >
                                     3. Confirm Paid from Wise
-                                </button>
-                                <button
-                                    type="button"
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-amber-100"
                                     disabled={busy || !canRecord || !canFinance}
                                     onClick={() => openRecord(p)}
-                                    className="rounded-md border border-amber-500/30 px-2.5 py-1 text-xs font-semibold text-amber-100 disabled:opacity-50"
                                 >
                                     Manual fallback
-                                </button>
+                                </Button>
                                 {!autoExecuteBlocked && (
                                     <>
-                                        <button
-                                            type="button"
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
                                             disabled={busy || !canFinance}
+                                            loading={isBusy("approve_execute", p.payoutId)}
                                             onClick={() => run("approve_execute", p.payoutId)}
-                                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
                                         >
                                             Sandbox auto-execute
-                                        </button>
+                                        </Button>
                                     </>
                                 )}
                                     </>
@@ -724,15 +767,14 @@ export function AdminPayoutsClient() {
                             </div>
 
                             {!isPaid && recordFor === p.payoutId && (
-                                <div className="mt-4 grid gap-2 rounded-xl border border-white/10 bg-white/5 p-3 sm:grid-cols-2">
+                                <div className="mt-4 grid gap-3 border border-line-300 bg-canvas-900 p-4 sm:grid-cols-2">
                                     <p className="text-xs text-amber-100 sm:col-span-2">
                                         Manual fallback only. Normal flow should use the prepared Wise transfer and
                                         provider status/webhook reconciliation.
                                     </p>
-                                    <label className="text-xs text-ink-400 sm:col-span-2">
-                                        Wise transfer id
+                                    <Field label="Wise transfer id" className="sm:col-span-2">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={manualFieldClass}
                                             value={recordForm.providerTransferRef}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -741,11 +783,10 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Source currency
+                                    </Field>
+                                    <Field label="Source currency">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={manualFieldClass}
                                             value={recordForm.quoteSourceCurrency}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -754,11 +795,10 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Target currency
+                                    </Field>
+                                    <Field label="Target currency">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={manualFieldClass}
                                             value={recordForm.quoteTargetCurrency}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -767,11 +807,10 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Source amount
+                                    </Field>
+                                    <Field label="Source amount">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={`${manualFieldClass} tabular-nums`}
                                             value={recordForm.quoteSourceAmount}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -780,11 +819,10 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Target amount
+                                    </Field>
+                                    <Field label="Target amount">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={`${manualFieldClass} tabular-nums`}
                                             value={recordForm.quoteTargetAmount}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -793,11 +831,10 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Fee (company-absorbed)
+                                    </Field>
+                                    <Field label="Fee (company-absorbed)">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={`${manualFieldClass} tabular-nums`}
                                             value={recordForm.quoteFeeAmount}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({
@@ -806,51 +843,53 @@ export function AdminPayoutsClient() {
                                                 }))
                                             }
                                         />
-                                    </label>
-                                    <label className="text-xs text-ink-400">
-                                        Rate
+                                    </Field>
+                                    <Field label="Rate">
                                         <input
-                                            className="mt-1 w-full rounded border border-white/15 bg-black px-2 py-1.5 text-sm text-white"
+                                            className={`${manualFieldClass} tabular-nums`}
                                             value={recordForm.quoteRate}
                                             onChange={(e) =>
                                                 setRecordForm((f) => ({...f, quoteRate: e.target.value}))
                                             }
                                         />
-                                    </label>
-                                    <div className="flex gap-2 sm:col-span-2">
-                                        <button
-                                            type="button"
+                                    </Field>
+                                    <div className="flex flex-wrap gap-2 sm:col-span-2">
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
                                             disabled={busy || !canFinance}
+                                            loading={isBusy("record_wise_transfer", p.payoutId)}
                                             onClick={() => void submitRecord()}
-                                            className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
                                         >
                                             Save Wise record
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="danger"
                                             disabled={busy || !canFinance}
+                                            loading={isBusy("confirm_paid_manual_override", p.payoutId)}
                                             onClick={() => run("confirm_paid_manual_override", p.payoutId)}
-                                            className="rounded-md border border-rose-500/40 px-3 py-1.5 text-xs font-bold text-rose-100 disabled:opacity-50"
                                         >
                                             Confirm Paid manual override
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
                                             onClick={() => setRecordFor(null)}
-                                            className="rounded-md border border-white/20 px-3 py-1.5 text-xs"
                                         >
                                             Cancel
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             )}
-                        </article>
+                        </Card>
                     );
                 })}
-                {payouts.length === 0 && (
-                    <p className="text-sm text-ink-500">No payout requests yet.</p>
+                {!initialLoading && payouts.length === 0 && (
+                    <EmptyState title="No payout requests yet." />
                 )}
-            </section>
-        </main>
+                </div>
+            </Section>
+        </AdminPage>
     );
 }

@@ -25,6 +25,7 @@ import {
     showAllLine,
     visibleEntries
 } from "@/lib/play-journey";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * The Play tab's Powers page — iOS `PlayJourneyViews`: an overview of the
@@ -145,8 +146,17 @@ function JourneyRow({entry}: {entry: PlayJourneyEntry}) {
                 <span className="truncate text-[15px] font-extrabold text-white">{entry.animalName}</span>
                 {powerName ? (
                     <span className="flex min-w-0 items-center gap-[5px] text-xs font-semibold" style={{color: earnedStep ? NEON : "rgba(255,255,255,0.6)"}}>
-                        {isFused ? <FusedChip /> : <span aria-hidden="true" className="text-[10px]">{earnedStep ? "✔︎" : "⚡"}</span>}
-                        <span className="truncate">{powerName}</span>
+                        {isFused ? <FusedChip /> : earnedStep ? <span aria-hidden="true" className="text-[10px]">✔︎</span> : null}
+                        <span className="truncate">
+                            {/* The Power's icon leads its name; ⚡ where none is drawn yet. */}
+                            {isFused ? null : (
+                                <AnimalPowerIcon
+                                    speciesProfileId={entry.speciesProfileId}
+                                    fallback={earnedStep ? null : <span aria-hidden="true" className="mr-[5px] text-[10px]">⚡</span>}
+                                />
+                            )}
+                            {powerName}
+                        </span>
                     </span>
                 ) : null}
                 {status ? <span className="truncate text-[11px] font-bold" style={{color: statusColor}}>{status.text}</span> : null}
@@ -294,8 +304,17 @@ export function PowerHistoryList({items, loaded}: {items: PlayPowerHistoryItem[]
                         <AnimalIcon src={item.imageSrc} size={40} />
                         <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
                             <span className="flex min-w-0 items-center gap-[5px]">
-                                {item.isFused ? <FusedChip /> : <span aria-hidden="true" className="text-[10px]" style={{color: NEON}}>⚡</span>}
-                                <span className="truncate text-sm font-extrabold text-white">{item.powerName}</span>
+                                {item.isFused ? <FusedChip /> : null}
+                                <span className="truncate text-sm font-extrabold text-white">
+                                    {item.isFused ? null : (
+                                        <AnimalPowerIcon
+                                            speciesProfileId={item.speciesProfileId}
+                                            style={{color: NEON}}
+                                            fallback={<span aria-hidden="true" className="mr-[5px] text-[10px]" style={{color: NEON}}>⚡</span>}
+                                        />
+                                    )}
+                                    {item.powerName}
+                                </span>
                             </span>
                             <span className="truncate text-[11px] text-white/60">{powerHistoryDetailLine(item)}</span>
                         </span>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
 import SupportArticlePicker from "@/app/admin/support/_components/support-article-picker";
+import {Alert, AdminPage, Badge, Button, cn, EmptyState, fieldClass, PageHeader, RefreshButton, Segmented, Skeleton, Spinner} from "@/components/admin/ui";
 
 type SupportAttachment = {
     id: string;
@@ -267,6 +268,68 @@ function MessageBody({body}: {body: string}) {
                     <p className="whitespace-pre-wrap">{linkify(signature)}</p>
                 </div>
             ) : null}
+        </div>
+    );
+}
+
+function CategoryBadge({category, className}: {category: SupportThreadSummary["category"]; className?: string}) {
+    return (
+        <Badge tone={category === "important" ? "warn" : category === "spam" ? "bad" : "good"} className={className}>
+            {category}
+        </Badge>
+    );
+}
+
+/** First-load placeholder for the conversation list, shaped like its rows. */
+function ThreadListSkeleton() {
+    return (
+        <div role="status" aria-label="Loading inbox" className="divide-y divide-line-300/60">
+            {Array.from({length: 7}, (_, row) => (
+                <div key={row} className="flex gap-3 px-4 py-4" style={{opacity: 1 - row * 0.11}}>
+                    <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex justify-between gap-3">
+                            <Skeleton className="h-3 w-1/2" />
+                            <Skeleton className="h-2.5 w-10" />
+                        </div>
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2.5 w-1/3" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** Placeholder for the reading pane while a conversation is on its way. */
+function ThreadDetailSkeleton() {
+    return (
+        <div role="status" aria-label="Loading conversation" className="flex min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center gap-3 border-b border-line-300 bg-surface-900 px-4 py-4 sm:px-6">
+                <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/4" />
+                </div>
+            </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-hidden px-3 py-5 sm:px-6 lg:px-8">
+                {[0, 1].map((index) => (
+                    <div key={index} className={cn("w-full max-w-4xl border border-line-300 bg-surface-900 p-4 sm:p-5", index === 1 && "ml-auto opacity-70")}>
+                        <div className="flex items-center gap-3 border-b border-line-300/70 pb-4">
+                            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-3 w-40" />
+                                <Skeleton className="h-2.5 w-56" />
+                            </div>
+                        </div>
+                        <div className="mt-5 space-y-2.5">
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-11/12" />
+                            <Skeleton className="h-3 w-3/5" />
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -600,378 +663,361 @@ export default function SupportInboxClient() {
     if (authorized === false) {
         return (
             <main className="grid min-h-[70vh] place-items-center px-4 text-ink-100">
-                <form onSubmit={submitLogin} className="flex w-full max-w-sm flex-col gap-5 rounded-2xl border border-line-300 bg-surface-900 p-6 shadow-2xl">
+                <form onSubmit={submitLogin} className="flex w-full max-w-sm flex-col gap-5 border border-line-300 bg-surface-900 p-6 shadow-2xl">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-200">AnimalDex operations</p>
-                        <h1 className="mt-2 font-display text-3xl text-white">Support Admin</h1>
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">AnimalDex operations</p>
+                        <h1 className="mt-1 font-display text-2xl text-white sm:text-3xl">Support Admin</h1>
                     </div>
-                    <label className="flex flex-col gap-2 text-sm font-medium text-white">
-                        Password
-                        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border border-line-300 bg-canvas-900 px-3 py-3 text-base text-white outline-none focus:border-primary-200" autoComplete="current-password" />
+                    <label className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-black uppercase tracking-[.12em] text-ink-400">Password</span>
+                        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={cn(fieldClass, "py-2.5 text-base")} autoComplete="current-password" />
                     </label>
-                    {error && <p className="text-sm text-red-300">{error}</p>}
-                    <button type="submit" disabled={submitting || !password} className="rounded-lg bg-primary-400 px-4 py-3 text-sm font-bold text-canvas-950 hover:bg-primary-200 disabled:opacity-50">
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    <Button type="submit" variant="primary" size="lg" loading={submitting} disabled={!password}>
                         {submitting ? "Signing in…" : "Sign in"}
-                    </button>
+                    </Button>
                 </form>
             </main>
         );
     }
 
+    const firstLoad = loading && (channel === "in-app" ? !inAppThreads.length : !threads.length);
+
     return (
-        <main className="h-[100dvh] w-full overflow-hidden bg-canvas-950 text-ink-100">
-            <div className="flex h-full w-full flex-col">
-                <header className="shrink-0 border-b border-line-300 bg-canvas-950/95 px-4 py-3 backdrop-blur sm:px-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                            <Link href="/admin" aria-label="Back to admin dashboard" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-lg text-ink-300 transition hover:border-primary-300 hover:text-white">←</Link>
-                            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-500/15 text-primary-100">✦</span>
-                            <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <h1 className="truncate font-display text-xl text-white sm:text-3xl">Support Inbox</h1>
-                                    {unreadCount > 0 && <span className="rounded-full bg-primary-400 px-2 py-0.5 text-[11px] font-black text-canvas-950">{unreadCount}</span>}
-                                </div>
-                                <p className="text-xs text-ink-400">{channel === "in-app" ? "In-app Messages with AnimalDex" : "Customer email conversations"}</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
-                            {channel === "email" ? (
-                            <button type="button" onClick={syncFromResend} disabled={syncing} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 disabled:opacity-50 sm:text-sm">
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Operations"
+                title={
+                    <span className="inline-flex items-center gap-3">
+                        Support Inbox
+                        {unreadCount > 0 && <span className="rounded-full bg-primary-400 px-2 py-0.5 font-sans text-[11px] font-black tabular-nums text-canvas-950">{unreadCount}</span>}
+                    </span>
+                }
+                description={channel === "in-app" ? "In-app Messages with AnimalDex" : "Customer email conversations"}
+                actions={
+                    <>
+                        {channel === "email" ? (
+                            <Button size="sm" onClick={syncFromResend} loading={syncing}>
                                 {syncing ? "Syncing…" : "Sync"}
-                            </button>
-                            ) : null}
-                            <button type="button" onClick={() => loadInbox(selectedThreadId)} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-white hover:border-primary-200 sm:text-sm">Refresh</button>
-                            <button type="button" onClick={logout} className="rounded-lg border border-line-300 px-3 py-2 text-xs font-bold text-ink-300 hover:border-primary-200 hover:text-white sm:text-sm">Sign out</button>
+                            </Button>
+                        ) : null}
+                        <RefreshButton loading={loading} onClick={() => loadInbox(selectedThreadId)} />
+                        <Button size="sm" variant="ghost" onClick={logout}>Sign out</Button>
+                    </>
+                }
+            />
+
+            {error && <Alert tone="bad" className="mt-6">{error}</Alert>}
+
+            <div className="mt-6 grid h-[calc(100dvh-15rem)] min-h-[34rem] grid-cols-1 overflow-hidden border border-line-300 bg-surface-900 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+                <aside className={`${mobileThreadOpen ? "hidden lg:block" : "block"} min-h-0 overflow-y-auto border-line-300 lg:border-r`}>
+                    <div className="sticky top-0 z-10 space-y-3 border-b border-line-300 bg-surface-900 px-3 py-3">
+                        <div className="flex items-center justify-between gap-2 px-1">
+                            <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Conversations</p>
+                            {loading && !firstLoad ? <Spinner size={12} className="text-ink-400" /> : null}
                         </div>
+                        <Segmented
+                            label="Support channel"
+                            value={channel}
+                            onChange={setChannel}
+                            options={[{value: "email", label: "Email"}, {value: "in-app", label: "In-app"}]}
+                        />
+                        {channel === "email" ? (
+                            <Segmented
+                                label="Filter support conversations"
+                                value={inboxFilter}
+                                onChange={setInboxFilter}
+                                className="flex w-full"
+                                options={(["inbox", "important", "unread", "spam", "all"] as InboxFilter[]).map((filter) => ({
+                                    value: filter,
+                                    label: <span className="capitalize">{filter}</span>,
+                                    count: filterCounts[filter]
+                                }))}
+                            />
+                        ) : null}
                     </div>
-                </header>
-
-                {error && <div className="shrink-0 border-b border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200 sm:px-6">{error}</div>}
-
-                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(300px,24vw)_minmax(0,1fr)]">
-                    <aside className={`${mobileThreadOpen ? "hidden lg:block" : "block"} min-h-0 overflow-y-auto border-line-300 lg:border-r`}>
-                        <div className="sticky top-0 z-10 border-b border-line-300 bg-canvas-950/95 px-3 py-3 backdrop-blur">
-                            <p className="px-1 text-xs font-bold uppercase tracking-[0.16em] text-ink-400">Conversations</p>
-                            <div className="mt-3 flex gap-1" role="tablist" aria-label="Support channel">
-                                {(["email", "in-app"] as SupportChannel[]).map((item) => (
-                                    <button
-                                        key={item}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={channel === item}
-                                        onClick={() => setChannel(item)}
-                                        className={`rounded-full border px-3 py-1.5 text-[11px] font-bold capitalize ${channel === item ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:text-white"}`}
-                                    >
-                                        {item === "in-app" ? "In-app" : "Email"}
-                                    </button>
-                                ))}
-                            </div>
-                            {channel === "email" ? (
-                            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filter support conversations">
-                                {(["inbox", "important", "unread", "spam", "all"] as InboxFilter[]).map((filter) => {
-                                    const active = inboxFilter === filter;
+                    {channel === "in-app" ? (
+                        <>
+                            {loading && !inAppThreads.length ? <ThreadListSkeleton /> : null}
+                            {!loading && !inAppThreads.length ? <EmptyState title="No in-app messages yet." className="m-4" /> : null}
+                            <div className="divide-y divide-line-300/60">
+                                {inAppThreads.map((thread) => {
+                                    const selected = thread.id === selectedThreadId;
+                                    const unread = thread.unreadCount > 0;
                                     return (
                                         <button
-                                            key={filter}
+                                            key={thread.id}
                                             type="button"
-                                            role="tab"
-                                            aria-selected={active}
-                                            onClick={() => setInboxFilter(filter)}
-                                            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold capitalize transition ${active ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400 hover:border-line-200 hover:text-white"}`}
+                                            onClick={() => {
+                                                setSelectedThreadId(thread.id);
+                                                setMobileThreadOpen(true);
+                                                loadThreadDetail(thread.id);
+                                            }}
+                                            className={`flex w-full gap-3 border-l-[3px] px-4 py-4 text-left transition ${selected ? "border-l-primary-400 bg-primary-500/[0.07]" : "border-l-transparent hover:bg-white/[.03]"}`}
                                         >
-                                            {filter}
-                                            <span className={`grid min-w-[1.25rem] place-items-center rounded-full px-1 py-0.5 text-[9px] ${active ? "bg-primary-300 text-canvas-950" : "bg-white/[0.07] text-ink-300"}`}>
-                                                {filterCounts[filter]}
-                                            </span>
+                                            <div className="relative">
+                                                <Avatar name={thread.displayName} src={thread.avatarUrl} />
+                                                {unread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-surface-900" />}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className={`truncate text-sm ${unread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{thread.displayName}</p>
+                                                    <time className="shrink-0 text-[11px] tabular-nums text-ink-500" title={absoluteDate(thread.lastCreatedAt)}>{relativeDate(thread.lastCreatedAt)}</time>
+                                                </div>
+                                                <p className={`mt-1 truncate text-sm ${unread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.lastBody}</p>
+                                                <p className="mt-2 truncate text-xs text-ink-500">{thread.username ? `@${thread.username}` : thread.id}</p>
+                                            </div>
                                         </button>
                                     );
                                 })}
                             </div>
-                            ) : null}
+                        </>
+                    ) : (
+                        <>
+                            {loading && !threads.length ? <ThreadListSkeleton /> : null}
+                            {!loading && !threads.length ? <EmptyState title="No support emails yet." className="m-4" /> : null}
+                            {!loading && threads.length > 0 && !filteredThreads.length ? <EmptyState title={`No ${inboxFilter} conversations.`} className="m-4" /> : null}
+                            <div className="divide-y divide-line-300/60">
+                                {filteredThreads.map((thread) => {
+                                    const selected = thread.id === selectedThreadId;
+                                    const customerLabel = getCustomerLabel(thread);
+                                    return (
+                                        <button
+                                            key={thread.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedThreadId(thread.id);
+                                                setMobileThreadOpen(true);
+                                                loadThreadDetail(thread.id);
+                                            }}
+                                            className={`flex w-full gap-3 border-l-[3px] px-4 py-4 text-left transition ${selected ? "border-l-primary-400 bg-primary-500/[0.07]" : "border-l-transparent hover:bg-white/[.03]"}`}
+                                        >
+                                            <div className="relative">
+                                                <Avatar name={customerLabel} src={thread.customerAvatarUrl} />
+                                                {thread.isUnread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-surface-900" />}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className={`truncate text-sm ${thread.isUnread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{customerLabel}</p>
+                                                    <time className="shrink-0 text-[11px] tabular-nums text-ink-500" title={absoluteDate(thread.updatedAt)}>{relativeDate(thread.updatedAt)}</time>
+                                                </div>
+                                                <p className={`mt-1 truncate text-sm ${thread.isUnread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.subject || "(no subject)"}</p>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <span className="truncate text-xs text-ink-500">{thread.customerEmail}</span>
+                                                    <CategoryBadge category={thread.category} className="ml-auto shrink-0" />
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                    {hasMoreThreads && (
+                        <div className="p-4">
+                            <Button onClick={loadMoreThreads} loading={loadingMore} className="w-full">
+                                {loadingMore ? "Loading…" : "Load older threads"}
+                            </Button>
                         </div>
-                        {channel === "in-app" ? (
-                            <>
-                                {loading && !inAppThreads.length ? <div className="p-5 text-sm text-ink-300">Loading inbox…</div> : null}
-                                {!loading && !inAppThreads.length ? <div className="p-5 text-sm text-ink-300">No in-app messages yet.</div> : null}
-                                <div className="divide-y divide-line-300">
-                                    {inAppThreads.map((thread) => {
-                                        const selected = thread.id === selectedThreadId;
-                                        const unread = thread.unreadCount > 0;
-                                        return (
-                                            <button
-                                                key={thread.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedThreadId(thread.id);
-                                                    setMobileThreadOpen(true);
-                                                    loadThreadDetail(thread.id);
-                                                }}
-                                                className={`flex w-full gap-3 px-4 py-4 text-left transition ${selected ? "bg-primary-500/[0.07]" : "hover:bg-surface-900/60"}`}
-                                            >
-                                                <div className="relative">
-                                                    <Avatar name={thread.displayName} src={thread.avatarUrl} />
-                                                    {unread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-canvas-950" />}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <p className={`truncate text-sm ${unread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{thread.displayName}</p>
-                                                        <time className="shrink-0 text-[11px] text-ink-500" title={absoluteDate(thread.lastCreatedAt)}>{relativeDate(thread.lastCreatedAt)}</time>
-                                                    </div>
-                                                    <p className={`mt-1 truncate text-sm ${unread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.lastBody}</p>
-                                                    <p className="mt-2 truncate text-xs text-ink-500">{thread.username ? `@${thread.username}` : thread.id}</p>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
+                    )}
+                </aside>
+
+                <section className={`${mobileThreadOpen ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col overflow-hidden bg-canvas-950`}>
+                    {channel === "in-app" ? (
+                        !selectedInAppThread ? (
+                            loading || loadingThread ? <ThreadDetailSkeleton /> : (
+                                <div className="grid flex-1 place-items-center p-6">
+                                    <EmptyState title="Select an in-app conversation." className="w-full max-w-md border-none" />
                                 </div>
-                            </>
+                            )
                         ) : (
                         <>
-                        {loading && !threads.length ? <div className="p-5 text-sm text-ink-300">Loading inbox…</div> : null}
-                        {!loading && !threads.length ? <div className="p-5 text-sm text-ink-300">No support emails yet.</div> : null}
-                        {!loading && threads.length > 0 && !filteredThreads.length ? <div className="p-5 text-sm text-ink-300">No {inboxFilter} conversations.</div> : null}
-                        <div className="divide-y divide-line-300">
-                            {filteredThreads.map((thread) => {
-                                const selected = thread.id === selectedThreadId;
-                                const customerLabel = getCustomerLabel(thread);
-                                return (
-                                    <button
-                                        key={thread.id}
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedThreadId(thread.id);
-                                            setMobileThreadOpen(true);
-                                            loadThreadDetail(thread.id);
-                                        }}
-                                        className={`flex w-full gap-3 px-4 py-4 text-left transition ${selected ? "bg-primary-500/[0.07]" : "hover:bg-surface-900/60"}`}
-                                    >
-                                        <div className="relative">
-                                            <Avatar name={customerLabel} src={thread.customerAvatarUrl} />
-                                            {thread.isUnread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-300 ring-2 ring-canvas-950" />}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <p className={`truncate text-sm ${thread.isUnread ? "font-black text-white" : "font-semibold text-ink-200"}`}>{customerLabel}</p>
-                                                <time className="shrink-0 text-[11px] text-ink-500" title={absoluteDate(thread.updatedAt)}>{relativeDate(thread.updatedAt)}</time>
-                                            </div>
-                                            <p className={`mt-1 truncate text-sm ${thread.isUnread ? "font-bold text-ink-100" : "text-ink-300"}`}>{thread.subject || "(no subject)"}</p>
-                                            <div className="mt-2 flex items-center gap-2">
-                                                <span className="truncate text-xs text-ink-500">{thread.customerEmail}</span>
-                                                <span className={`ml-auto shrink-0 rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-wider ${
-                                                    thread.category === "important"
-                                                        ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
-                                                        : thread.category === "spam"
-                                                            ? "border-red-300/40 bg-red-400/10 text-red-200"
-                                                            : "border-primary-300/40 bg-primary-500/10 text-primary-100"
-                                                }`}>{thread.category}</span>
-                                            </div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        </>
-                        )}
-                        {hasMoreThreads && (
-                            <div className="p-4">
-                                <button type="button" onClick={loadMoreThreads} disabled={loadingMore} className="w-full rounded-lg border border-line-300 px-4 py-2 text-sm font-bold text-white hover:border-primary-200 disabled:opacity-50">
-                                    {loadingMore ? "Loading…" : "Load older threads"}
-                                </button>
+                            <div className="shrink-0 border-b border-line-300 bg-surface-900 px-4 py-4 sm:px-6">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <Button size="sm" onClick={() => setMobileThreadOpen(false)} className="h-9 w-9 shrink-0 px-0 lg:hidden" aria-label="Back to inbox">←</Button>
+                                    <Avatar name={selectedInAppThread.displayName} src={selectedInAppThread.avatarUrl} size="lg" />
+                                    <div className="min-w-0 flex-1">
+                                        <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedInAppThread.displayName}</h2>
+                                        <p className="mt-1 truncate text-sm text-ink-300">
+                                            {selectedInAppThread.username ? `@${selectedInAppThread.username}` : "In-app collector"}
+                                            {" · "}
+                                            <Link href={`/admin/users?userId=${encodeURIComponent(selectedInAppThread.id)}`} className="text-primary-200 hover:text-primary-100">Open user</Link>
+                                        </p>
+                                    </div>
+                                    <Badge tone="good" className="hidden shrink-0 sm:inline-flex">In-app</Badge>
+                                    {loadingThread && <Spinner className="text-ink-400" />}
+                                </div>
                             </div>
-                        )}
-                    </aside>
 
-                    <section className={`${mobileThreadOpen ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col overflow-hidden`}>
-                        {channel === "in-app" ? (
-                            !selectedInAppThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select an in-app conversation.</div> : (
-                            <>
-                                <div className="shrink-0 border-b border-line-300 bg-surface-900/45 px-4 py-4 sm:px-6">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <button type="button" onClick={() => setMobileThreadOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line-300 text-white lg:hidden" aria-label="Back to inbox">←</button>
-                                        <Avatar name={selectedInAppThread.displayName} src={selectedInAppThread.avatarUrl} size="lg" />
-                                        <div className="min-w-0 flex-1">
-                                            <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedInAppThread.displayName}</h2>
-                                            <p className="mt-1 truncate text-sm text-ink-300">
-                                                {selectedInAppThread.username ? `@${selectedInAppThread.username}` : "In-app collector"}
-                                                {" · "}
-                                                <Link href={`/admin/users?userId=${encodeURIComponent(selectedInAppThread.id)}`} className="hover:text-primary-100">Open user</Link>
-                                            </p>
-                                        </div>
-                                        <span className="hidden shrink-0 rounded-full border border-primary-300/40 bg-primary-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary-100 sm:inline-flex">In-app</span>
-                                        {loadingThread && <span className="text-xs text-ink-400">Loading…</span>}
-                                    </div>
-                                </div>
-
-                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(33,192,94,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
-                                    {selectedInAppThread.messages.map((message) => {
-                                        const inbound = message.direction === "inbound";
-                                        return (
-                                            <article key={message.id} className={`min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/20 bg-primary-500/[0.055]"}`}>
-                                                <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
-                                                    <Avatar name={inbound ? selectedInAppThread.displayName : "AnimalDex"} src={inbound ? selectedInAppThread.avatarUrl : "/images/logo.webp"} size="sm" />
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                                                            <p className="truncate text-sm font-bold text-white">{inbound ? selectedInAppThread.displayName : "AnimalDex"}</p>
-                                                            <time className="text-xs text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
-                                                        </div>
+                            <div ref={messageListRef} className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-5 transition-opacity sm:px-6 lg:px-8", loadingThread && "opacity-60")}>
+                                {selectedInAppThread.messages.map((message) => {
+                                    const inbound = message.direction === "inbound";
+                                    return (
+                                        <article key={message.id} className={`min-w-0 overflow-hidden border p-4 sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/25 border-l-[3px] border-l-primary-400 bg-primary-500/[0.055]"}`}>
+                                            <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
+                                                <Avatar name={inbound ? selectedInAppThread.displayName : "AnimalDex"} src={inbound ? selectedInAppThread.avatarUrl : "/images/logo.webp"} size="sm" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                        <p className="truncate text-sm font-bold text-white">{inbound ? selectedInAppThread.displayName : "AnimalDex"}</p>
+                                                        <time className="text-xs tabular-nums text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
                                                     </div>
                                                 </div>
-                                                <div className="mt-5"><MessageBody body={message.body} /></div>
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-
-                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
-                                    <div className="overflow-hidden rounded-xl border border-line-300 bg-canvas-900 focus-within:border-primary-300">
-                                        <textarea
-                                            value={reply}
-                                            onChange={(event) => setReply(event.target.value.slice(0, 1000))}
-                                            rows={4}
-                                            maxLength={1000}
-                                            placeholder={`Reply to ${selectedInAppThread.displayName}…`}
-                                            className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
-                                        />
-                                        <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
-                                            <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
-                                            <p className="text-[11px] text-ink-500">{reply.trim().length}/1000 · Replies appear as AnimalDex in the app</p>
-                                            <button type="submit" disabled={!canSend} className="ml-auto rounded-lg bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-500">
-                                                {submitting ? "Sending…" : "Send reply"}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </>
-                            )
-                        ) : !selectedThread ? <div className="grid flex-1 place-items-center text-sm text-ink-400">Select a support thread.</div> : (
-                            <>
-                                <div className="shrink-0 border-b border-line-300 bg-surface-900/45 px-4 py-4 sm:px-6">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <button type="button" onClick={() => setMobileThreadOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line-300 text-white lg:hidden" aria-label="Back to inbox">←</button>
-                                        <Avatar name={getCustomerLabel(selectedThread)} src={selectedThread.customerAvatarUrl} size="lg" />
-                                        <div className="min-w-0 flex-1">
-                                            <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedThread.subject || "(no subject)"}</h2>
-                                            <p className="mt-1 truncate text-sm text-ink-300">
-                                                {selectedThread.customerName ? `${selectedThread.customerName} · ` : ""}<a href={`mailto:${selectedThread.customerEmail}`} className="hover:text-primary-100">{selectedThread.customerEmail}</a>
-                                            </p>
-                                        </div>
-                                        <span className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider sm:inline-flex ${
-                                            selectedThread.category === "important"
-                                                ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
-                                                : selectedThread.category === "spam"
-                                                    ? "border-red-300/40 bg-red-400/10 text-red-200"
-                                                    : "border-primary-300/40 bg-primary-500/10 text-primary-100"
-                                        }`}>{selectedThread.category}</span>
-                                        {loadingThread && <span className="text-xs text-ink-400">Loading…</span>}
-                                    </div>
-                                </div>
-
-                                <div ref={messageListRef} className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(33,192,94,0.035),transparent_30%)] px-3 py-5 sm:px-6 lg:px-8">
-                                    {selectedThread.messages.map((message) => {
-                                        const inbound = message.direction === "inbound";
-                                        const imageAttachments = message.attachments.filter((attachment) => attachment.contentType.startsWith("image/"));
-                                        const fileAttachments = message.attachments.filter((attachment) => !attachment.contentType.startsWith("image/"));
-
-                                        return (
-                                            <article key={message.id} className={`min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/20 bg-primary-500/[0.055]"}`}>
-                                                <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
-                                                    <Avatar name={inbound ? message.fromEmail : "AnimalDex Support"} src={inbound ? selectedThread.customerAvatarUrl : "/images/logo.webp"} size="sm" />
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                                                            <p className="truncate text-sm font-bold text-white">{inbound ? (selectedThread.customerName || message.fromEmail) : "AnimalDex Support"}</p>
-                                                            <time className="text-xs text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
-                                                        </div>
-                                                        <p className="mt-1 truncate text-xs text-ink-400">
-                                                            {message.subject || selectedThread.subject || "(no subject)"}
-                                                        </p>
-                                                        <p className="mt-1 truncate text-[11px] text-ink-500">
-                                                            {message.fromEmail} → {message.toEmail}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-5"><MessageBody body={message.body} /></div>
-
-                                                {imageAttachments.length > 0 && (
-                                                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                                                        {imageAttachments.map((attachment) => (
-                                                            <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-canvas-900">
-                                                                <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-canvas-900">
-                                                                    <Image src={attachment.url} alt={attachment.filename} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" />
-                                                                </span>
-                                                                <span className="block truncate border-t border-line-300 px-3 py-2 text-xs text-ink-300">{attachment.filename}</span>
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {message.remoteImages.length > 0 && (
-                                                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                                                        {message.remoteImages.map((image, index) => (
-                                                            <a key={`${image.url}-${index}`} href={image.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-line-300 bg-white">
-                                                                <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-white">
-                                                                    <Image src={image.url} alt={image.alt} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" referrerPolicy="no-referrer" />
-                                                                </span>
-                                                                <span className="block truncate border-t border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-300">{image.alt}</span>
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {fileAttachments.length > 0 && (
-                                                    <div className="mt-5 flex flex-wrap gap-2">
-                                                        {fileAttachments.map((attachment) => (
-                                                            <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="flex max-w-full items-center gap-2 rounded-lg border border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-200 hover:border-primary-300 hover:text-primary-100">
-                                                                <span aria-hidden="true">📎</span><span className="truncate">{attachment.filename}</span>{attachment.size ? <span className="shrink-0 text-ink-500">{formatBytes(attachment.size)}</span> : null}
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-
-                                <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
-                                    <div className="overflow-hidden rounded-xl border border-line-300 bg-canvas-900 focus-within:border-primary-300">
-                                        <textarea
-                                            id="admin-support-reply"
-                                            value={reply}
-                                            onChange={(event) => setReply(event.target.value)}
-                                            rows={4}
-                                            placeholder={`Reply to ${selectedThread.customerName || selectedThread.customerEmail}…`}
-                                            className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
-                                        />
-                                        {attachments.length > 0 && (
-                                            <div className="grid gap-2 border-t border-line-300/70 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                                                {attachments.map((attachment) => (
-                                                    <div key={attachment.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-line-300 bg-surface-900 p-2">
-                                                        {attachment.previewUrl ? <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded"><Image src={attachment.previewUrl} alt="" fill unoptimized sizes="40px" className="object-cover" /></span> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/5">📎</span>}
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-xs font-semibold text-white">{attachment.filename}</p>
-                                                            <p className="text-[10px] text-ink-500">{attachment.contentId ? "Inline image" : formatBytes(attachment.size)}</p>
-                                                        </div>
-                                                        <button type="button" onClick={() => removeAttachment(attachment.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded text-ink-400 hover:bg-white/5 hover:text-white" aria-label={`Remove ${attachment.filename}`}>×</button>
-                                                    </div>
-                                                ))}
                                             </div>
-                                        )}
-                                        <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
-                                            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, false); event.target.value = ""; }} />
-                                            <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, true); event.target.value = ""; }} />
-                                            <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
-                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">📎 Attach files</button>
-                                            <button type="button" onClick={() => imageInputRef.current?.click()} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-300 hover:bg-white/5 hover:text-white">▧ Insert images</button>
-                                            <p className="hidden text-[11px] text-ink-500 xl:block">Links become clickable · AnimalDex signature added automatically</p>
-                                            <button type="submit" disabled={!canSend} className="ml-auto rounded-lg bg-primary-400 px-5 py-2.5 text-sm font-black text-canvas-950 hover:bg-primary-200 disabled:cursor-not-allowed disabled:bg-line-300 disabled:text-ink-500">
-                                                {submitting ? "Sending…" : "Send reply"}
-                                            </button>
-                                        </div>
+                                            <div className="mt-5"><MessageBody body={message.body} /></div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+
+                            <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
+                                <div className="border border-line-300 bg-canvas-900 transition focus-within:border-primary-300">
+                                    <textarea
+                                        value={reply}
+                                        onChange={(event) => setReply(event.target.value.slice(0, 1000))}
+                                        rows={4}
+                                        maxLength={1000}
+                                        placeholder={`Reply to ${selectedInAppThread.displayName}…`}
+                                        className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
+                                    />
+                                    <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
+                                        <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
+                                        <p className="text-[11px] tabular-nums text-ink-500">{reply.trim().length}/1000 · Replies appear as AnimalDex in the app</p>
+                                        <Button type="submit" variant="primary" disabled={!canSend} loading={submitting} className="ml-auto px-5">
+                                            {submitting ? "Sending…" : "Send reply"}
+                                        </Button>
                                     </div>
-                                </form>
-                            </>
-                        )}
-                    </section>
-                </div>
+                                </div>
+                            </form>
+                        </>
+                        )
+                    ) : !selectedThread ? (
+                        loading || loadingThread ? <ThreadDetailSkeleton /> : (
+                            <div className="grid flex-1 place-items-center p-6">
+                                <EmptyState title="Select a support thread." className="w-full max-w-md border-none" />
+                            </div>
+                        )
+                    ) : (
+                        <>
+                            <div className="shrink-0 border-b border-line-300 bg-surface-900 px-4 py-4 sm:px-6">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <Button size="sm" onClick={() => setMobileThreadOpen(false)} className="h-9 w-9 shrink-0 px-0 lg:hidden" aria-label="Back to inbox">←</Button>
+                                    <Avatar name={getCustomerLabel(selectedThread)} src={selectedThread.customerAvatarUrl} size="lg" />
+                                    <div className="min-w-0 flex-1">
+                                        <h2 className="truncate font-display text-xl text-white sm:text-2xl">{selectedThread.subject || "(no subject)"}</h2>
+                                        <p className="mt-1 truncate text-sm text-ink-300">
+                                            {selectedThread.customerName ? `${selectedThread.customerName} · ` : ""}<a href={`mailto:${selectedThread.customerEmail}`} className="hover:text-primary-100">{selectedThread.customerEmail}</a>
+                                        </p>
+                                    </div>
+                                    <CategoryBadge category={selectedThread.category} className="hidden shrink-0 sm:inline-flex" />
+                                    {loadingThread && <Spinner className="text-ink-400" />}
+                                </div>
+                            </div>
+
+                            <div ref={messageListRef} className={cn("min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-5 transition-opacity sm:px-6 lg:px-8", loadingThread && "opacity-60")}>
+                                {selectedThread.messages.map((message) => {
+                                    const inbound = message.direction === "inbound";
+                                    const imageAttachments = message.attachments.filter((attachment) => attachment.contentType.startsWith("image/"));
+                                    const fileAttachments = message.attachments.filter((attachment) => !attachment.contentType.startsWith("image/"));
+
+                                    return (
+                                        <article key={message.id} className={`min-w-0 overflow-hidden border p-4 sm:p-5 ${inbound ? "mr-auto w-full max-w-4xl border-line-300 bg-surface-900" : "ml-auto w-full max-w-4xl border-primary-500/25 border-l-[3px] border-l-primary-400 bg-primary-500/[0.055]"}`}>
+                                            <div className="flex min-w-0 items-start gap-3 border-b border-line-300/70 pb-4">
+                                                <Avatar name={inbound ? message.fromEmail : "AnimalDex Support"} src={inbound ? selectedThread.customerAvatarUrl : "/images/logo.webp"} size="sm" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                        <p className="truncate text-sm font-bold text-white">{inbound ? (selectedThread.customerName || message.fromEmail) : "AnimalDex Support"}</p>
+                                                        <time className="text-xs tabular-nums text-ink-500" title={absoluteDate(message.createdAt)}>{relativeDate(message.createdAt)}</time>
+                                                    </div>
+                                                    <p className="mt-1 truncate text-xs text-ink-400">
+                                                        {message.subject || selectedThread.subject || "(no subject)"}
+                                                    </p>
+                                                    <p className="mt-1 truncate text-[11px] text-ink-500">
+                                                        {message.fromEmail} → {message.toEmail}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-5"><MessageBody body={message.body} /></div>
+
+                                            {imageAttachments.length > 0 && (
+                                                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                                    {imageAttachments.map((attachment) => (
+                                                        <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden border border-line-300 bg-canvas-900 transition hover:border-primary-300">
+                                                            <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-canvas-900">
+                                                                <Image src={attachment.url} alt={attachment.filename} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" />
+                                                            </span>
+                                                            <span className="block truncate border-t border-line-300 px-3 py-2 text-xs text-ink-300">{attachment.filename}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {message.remoteImages.length > 0 && (
+                                                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                                    {message.remoteImages.map((image, index) => (
+                                                        <a key={`${image.url}-${index}`} href={image.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden border border-line-300 bg-white transition hover:border-primary-300">
+                                                            <span className="relative block max-h-[32rem] min-h-[12rem] w-full bg-white">
+                                                                <Image src={image.url} alt={image.alt} fill unoptimized sizes="(min-width: 640px) 50vw, 100vw" className="object-contain transition group-hover:scale-[1.01]" referrerPolicy="no-referrer" />
+                                                            </span>
+                                                            <span className="block truncate border-t border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-300">{image.alt}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {fileAttachments.length > 0 && (
+                                                <div className="mt-5 flex flex-wrap gap-2">
+                                                    {fileAttachments.map((attachment) => (
+                                                        <a key={attachment.id} href={attachment.url} target="_blank" rel="noopener noreferrer" className="flex max-w-full items-center gap-2 border border-line-300 bg-canvas-900 px-3 py-2 text-xs text-ink-200 transition hover:border-primary-300 hover:text-primary-100">
+                                                            <span aria-hidden="true">📎</span><span className="truncate">{attachment.filename}</span>{attachment.size ? <span className="shrink-0 tabular-nums text-ink-500">{formatBytes(attachment.size)}</span> : null}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </article>
+                                    );
+                                })}
+                            </div>
+
+                            <form onSubmit={submitReply} className="shrink-0 border-t border-line-300 bg-surface-900 px-3 py-3 sm:px-6 sm:py-4">
+                                <div className="border border-line-300 bg-canvas-900 transition focus-within:border-primary-300">
+                                    <textarea
+                                        id="admin-support-reply"
+                                        value={reply}
+                                        onChange={(event) => setReply(event.target.value)}
+                                        rows={4}
+                                        placeholder={`Reply to ${selectedThread.customerName || selectedThread.customerEmail}…`}
+                                        className="block max-h-56 min-h-[96px] w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-500"
+                                    />
+                                    {attachments.length > 0 && (
+                                        <div className="grid gap-2 border-t border-line-300/70 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                                            {attachments.map((attachment) => (
+                                                <div key={attachment.id} className="flex min-w-0 items-center gap-2 border border-line-300 bg-surface-900 p-2">
+                                                    {attachment.previewUrl ? <span className="relative h-10 w-10 shrink-0 overflow-hidden"><Image src={attachment.previewUrl} alt="" fill unoptimized sizes="40px" className="object-cover" /></span> : <span className="grid h-10 w-10 shrink-0 place-items-center bg-white/5">📎</span>}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-xs font-semibold text-white">{attachment.filename}</p>
+                                                        <p className="text-[10px] tabular-nums text-ink-500">{attachment.contentId ? "Inline image" : formatBytes(attachment.size)}</p>
+                                                    </div>
+                                                    <Button variant="ghost" size="sm" onClick={() => removeAttachment(attachment.id)} className="h-7 min-h-7 w-7 shrink-0 px-0 text-ink-400" aria-label={`Remove ${attachment.filename}`}>×</Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-wrap items-center gap-2 border-t border-line-300/70 px-3 py-2">
+                                        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, false); event.target.value = ""; }} />
+                                        <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files, true); event.target.value = ""; }} />
+                                        <SupportArticlePicker onAttach={(token) => setReply((current) => (current.trim() ? `${token}\n\n${current}` : token))} />
+                                        <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>📎 Attach files</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => imageInputRef.current?.click()}>▧ Insert images</Button>
+                                        <p className="hidden text-[11px] text-ink-500 xl:block">Links become clickable · AnimalDex signature added automatically</p>
+                                        <Button type="submit" variant="primary" disabled={!canSend} loading={submitting} className="ml-auto px-5">
+                                            {submitting ? "Sending…" : "Send reply"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </form>
+                        </>
+                    )}
+                </section>
             </div>
-        </main>
+        </AdminPage>
     );
 }

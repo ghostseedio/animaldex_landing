@@ -36,10 +36,10 @@ export function CampaignPreview({ campaign }: { campaign: PreviewCampaign }) {
   const title = campaign.title.trim() || "Untitled Challenge";
 
   return (
-    <aside className="rounded-3xl border border-line-300 bg-canvas-950/70 p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto">
+    <aside className="border border-line-300 bg-canvas-900 p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">
+          <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
             Live consumer preview
           </p>
           <p className="mt-1 text-xs text-ink-500">
@@ -63,7 +63,7 @@ export function CampaignPreview({ campaign }: { campaign: PreviewCampaign }) {
           </button>
         ))}
       </div>
-      <div className="mt-4 overflow-hidden rounded-[1.75rem] border border-line-300 bg-surface-900 p-4">
+      <div className="mt-4 overflow-hidden border border-line-300 bg-surface-900 p-4">
         {tab === "card" ? (
           <CardPreview
             title={title}
@@ -144,10 +144,10 @@ function CardPreview({
         <img
           src={campaign.thumbnailUrl}
           alt={campaign.thumbnailAltText ?? ""}
-          className="aspect-video w-full rounded-2xl object-cover"
+          className="aspect-video w-full object-cover"
         />
       ) : (
-        <div className="grid aspect-video w-full place-items-center rounded-2xl border border-dashed border-line-300 bg-surface-900 text-center">
+        <div className="grid aspect-video w-full place-items-center border border-dashed border-line-300 bg-surface-900 text-center">
           <div>
             <p className="text-sm font-bold text-ink-300">Challenge artwork</p>
             <p className="mt-1 text-xs text-ink-500">No artwork uploaded yet</p>
@@ -191,7 +191,7 @@ function CardPreview({
           </p>
         ) : null}
       </div>
-      <p className="rounded-xl bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
+      <p className="rounded-[2px] bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
         View Challenge
       </p>
     </article>
@@ -227,10 +227,10 @@ function DetailPreview({
         <img
           src={campaign.thumbnailUrl}
           alt={campaign.thumbnailAltText ?? ""}
-          className="aspect-video w-full rounded-2xl object-cover"
+          className="aspect-video w-full object-cover"
         />
       ) : (
-        <div className="grid aspect-video w-full place-items-center rounded-2xl border border-dashed border-line-300 bg-surface-900 text-center">
+        <div className="grid aspect-video w-full place-items-center border border-dashed border-line-300 bg-surface-900 text-center">
           <div>
             <p className="text-sm font-bold text-ink-300">Challenge artwork</p>
             <p className="mt-1 text-xs text-ink-500">No artwork uploaded yet</p>
@@ -276,7 +276,7 @@ function DetailPreview({
         <p className="mt-1 text-sm text-ink-100">{reward}</p>
       </div>
       <p className="text-sm font-bold text-primary-100">Official Rules</p>
-      <p className="rounded-xl bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
+      <p className="rounded-[2px] bg-primary-400 px-3 py-2 text-center text-sm font-black text-canvas-950">
         Join Challenge
       </p>
     </article>
@@ -304,7 +304,7 @@ function JoinedPreview({
       <p className="text-sm text-ink-300">
         {current} existing qualifying captures counted
       </p>
-      <p className="rounded-xl border border-line-300 px-3 py-2 text-center text-sm font-bold text-white">
+      <p className="rounded-[2px] border border-line-300 px-3 py-2 text-center text-sm font-bold text-white">
         Continue collecting
       </p>
     </article>

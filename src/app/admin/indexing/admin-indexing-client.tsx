@@ -5,6 +5,7 @@ import Link from "next/link";
 import {Fragment, useCallback, useEffect, useMemo, useState} from "react";
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {formatIndexingCleanupMarkdown, formatRunMarkdown} from "@/lib/admin-indexing-cleanup-markdown";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, CardContent, CardHeader, cn, EmptyState, fieldClass, PageHeader, RefreshButton, Section, Segmented, Skeleton, Stat, StatGrid, StatGridSkeleton, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 /**
  * Hourly unindexed-captures cron: countdown, remaining pool, individuals,
@@ -362,57 +363,73 @@ export default function AdminIndexingClient() {
     }, [data?.captures, filter, nameFilter, query]);
 
     return (
-        <div className="space-y-4">
-            <header className="flex flex-col justify-between gap-3 border-b border-line-300 pb-3 lg:flex-row lg:items-center">
-                <div className="min-w-0">
-                    <Link href="/admin" className="text-xs text-ink-400 hover:text-white">← Admin</Link>
-                    <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h1 className="font-display text-2xl text-white">Unindexed captures</h1>
-                        <p className="text-xs text-ink-500">Hourly cron · 2 per pass · 3 tries each</p>
-                    </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                    <CopyMarkdownButton text={reportMarkdown} label="Copy markdown" disabled={!data} />
-                    <Link href="/admin/catalog" className="rounded-lg border border-primary-400/40 px-3 py-1.5 text-xs font-black text-primary-100">
-                        Profiles
-                    </Link>
-                    <Link href="/admin/maintenance" className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300">
-                        Re-run
-                    </Link>
-                    <button onClick={() => void runNow()} disabled={dispatching} className="rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-black text-amber-100 disabled:opacity-50">
-                        {dispatching ? "Queuing…" : "Run now"}
-                    </button>
-                    <button onClick={() => void load()} disabled={loading} className="rounded-lg bg-primary-400 px-3 py-1.5 text-xs font-black text-canvas-950 disabled:opacity-50">
-                        {loading ? "Refreshing…" : "Refresh"}
-                    </button>
-                </div>
-            </header>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Catalog"
+                title="Unindexed captures"
+                description="Hourly cron · 2 per pass · 3 tries each"
+                meta={data ? <>Updated {ago(data.generatedAt)}</> : null}
+                actions={(
+                    <>
+                        <RefreshButton loading={loading} onClick={() => void load()} />
+                        <CopyMarkdownButton text={reportMarkdown} label="Copy markdown" disabled={!data} />
+                        <Link href="/admin/catalog" className={buttonVariants({size: "sm"})}>
+                            Profiles
+                        </Link>
+                        <Link href="/admin/maintenance" className={buttonVariants({size: "sm"})}>
+                            Re-run
+                        </Link>
+                        <Button variant="primary" size="sm" onClick={() => void runNow()} loading={dispatching}>
+                            {dispatching ? "Queuing…" : "Run now"}
+                        </Button>
+                    </>
+                )}
+            />
 
-            {notice && (
-                <p className="rounded-lg border border-primary-400/30 bg-primary-500/10 px-3 py-2 text-xs text-primary-100">{notice}</p>
+            {(notice || error) && (
+                <div className="mt-6 space-y-2">
+                    {notice && <Alert tone="good">{notice}</Alert>}
+                    {error && <Alert tone="bad">{error}</Alert>}
+                </div>
             )}
-            {error && (
-                <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">{error}</p>
+
+            {!data && loading && (
+                <div className="mt-6 space-y-6">
+                    <div className="grid gap-3 lg:grid-cols-2">
+                        {[0, 1].map((index) => (
+                            <Card key={index} className="p-4">
+                                <Skeleton className="h-2.5 w-20" />
+                                <Skeleton className="mt-3 h-8 w-40" />
+                                <Skeleton className="mt-3 h-2.5 w-2/3" />
+                            </Card>
+                        ))}
+                    </div>
+                    <StatGridSkeleton count={6} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6" />
+                    <Card>
+                        <TableSkeleton rows={8} columns={7} />
+                    </Card>
+                </div>
             )}
 
             {data && (
                 <>
-                    <section className="grid gap-3 lg:grid-cols-2">
-                        <div className="rounded-2xl border border-primary-400/30 bg-primary-500/[.06] px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[.14em] text-primary-200">Next job</p>
+                    <section className="mt-6 grid gap-3 lg:grid-cols-2">
+                        <Card className="border-primary-400/30 bg-primary-500/[.05] p-4">
+                            <p className="text-[11px] font-black uppercase tracking-[.12em] text-primary-200">Next job</p>
                             <p className="mt-1 font-display text-3xl tabular-nums text-white">
                                 {countdown?.due ? "Due now" : countdown ? `${countdown.hours}h ${pad(countdown.minutes)}m ${pad(countdown.seconds)}s` : "—"}
                             </p>
-                            <p className="mt-1 text-xs text-ink-400">
+                            <p className="mt-1 text-xs tabular-nums text-ink-400">
                                 {formatWhen(schedule?.nextRunAt ?? null)} · up to {schedule?.dailyBudget}
                                 {queue?.eligibleCaptures
                                     ? ` · ${queue.eligibleCaptures.toLocaleString()} queued ≈ ${schedule?.estimatedDaysRemaining}d`
                                     : " · queue empty"}
                             </p>
-                        </div>
-                        <div className={`rounded-2xl border px-4 py-3 ${liveRun ? "border-amber-400/40 bg-amber-500/[.08]" : "border-line-300 bg-surface-900"}`}>
+                        </Card>
+                        <Card className={cn("p-4", liveRun && "border-amber-400/40 bg-amber-500/[.07]")}>
                             <div className="flex items-center justify-between gap-2">
-                                <p className={`text-[10px] font-black uppercase tracking-[.14em] ${liveRun ? "text-amber-200" : "text-ink-500"}`}>
+                                <p className={cn("flex items-center gap-2 text-[11px] font-black uppercase tracking-[.12em]", liveRun ? "text-amber-200" : "text-ink-500")}>
+                                    {liveRun && <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-300 motion-reduce:animate-none" />}
                                     {liveRun ? "Live run" : "Latest run"}
                                 </p>
                                 {focusRun && (
@@ -424,25 +441,25 @@ export default function AdminIndexingClient() {
                             </div>
                             {liveRun ? (
                                 <>
-                                    <p className="mt-1 font-display text-xl text-white">
+                                    <p className="mt-1 font-display text-xl tabular-nums text-white">
                                         {Math.min(liveRun.results.filter((result) => result.action !== "running").length + (liveRun.current ? 1 : 0), liveRun.candidates)} / {liveRun.candidates}
                                         {liveRun.current ? ` · ${liveRun.current.animal_name || "capture"}` : ""}
                                     </p>
-                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                                    <div className="mt-2 h-1.5 overflow-hidden bg-white/10">
                                         <div
-                                            className="h-full rounded-full bg-amber-300 transition-all"
+                                            className="h-full bg-amber-300 transition-all"
                                             style={{width: `${liveRun.candidates ? Math.min(100, (liveRun.results.filter((result) => result.action !== "running").length / liveRun.candidates) * 100) : 0}%`}}
                                         />
                                     </div>
-                                    <p className="mt-2 font-mono text-[11px] text-ink-400">
+                                    <p className="mt-2 font-mono text-[11px] tabular-nums text-ink-400">
                                         {liveRun.indexed} indexed · {liveRun.merged} merged · {liveRun.notIndexed} failed
                                         {liveFailure ? ` · ${formatReason(liveFailure[0])}` : ""}
                                     </p>
                                 </>
                             ) : latest ? (
                                 <>
-                                    <p className="mt-1 font-display text-xl text-white">{formatWhen(latest.startedAt)}</p>
-                                    <p className="mt-1 font-mono text-[11px] text-ink-400">
+                                    <p className="mt-1 font-display text-xl tabular-nums text-white">{formatWhen(latest.startedAt)}</p>
+                                    <p className="mt-1 font-mono text-[11px] tabular-nums text-ink-400">
                                         {ago(latest.startedAt)} · {durationLabel(latest.durationSeconds)} · {latest.indexed}/{latest.merged} indexed/merged · {latest.notIndexed} failed
                                     </p>
                                     {latestFailure && (
@@ -453,85 +470,87 @@ export default function AdminIndexingClient() {
                             ) : (
                                 <p className="mt-2 text-xs text-ink-400">No run has been logged yet.</p>
                             )}
-                        </div>
+                        </Card>
                     </section>
 
-                    <section className="grid grid-cols-3 gap-2 xl:grid-cols-6">
-                        {[
-                            ["Fixed", fixed.length, "text-primary-100"],
-                            ["Queue", queue?.eligibleCaptures ?? 0, "text-white"],
-                            ["Never tried", queue?.untouched ?? 0, "text-ink-100"],
-                            ["Waiting", queue?.waiting ?? 0, "text-amber-200"],
-                            ["Skipped", queue?.permanentlySkipped ?? 0, "text-red-200"],
-                            ["Days left", schedule?.estimatedDaysRemaining ?? 0, "text-primary-100"]
-                        ].map(([label, value, tone]) => (
-                            <div key={String(label)} className="rounded-xl border border-line-300 bg-surface-900 px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">{label}</p>
-                                <p className={`mt-0.5 font-display text-2xl tabular-nums ${tone}`}>{Number(value).toLocaleString()}</p>
-                            </div>
+                    <StatGrid className="mt-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+                        {([
+                            ["Fixed", fixed.length, "good"],
+                            ["Queue", queue?.eligibleCaptures ?? 0, undefined],
+                            ["Never tried", queue?.untouched ?? 0, undefined],
+                            ["Waiting", queue?.waiting ?? 0, "warn"],
+                            ["Skipped", queue?.permanentlySkipped ?? 0, "bad"],
+                            ["Days left", schedule?.estimatedDaysRemaining ?? 0, "good"]
+                        ] as Array<[string, number, "good" | "warn" | "bad" | undefined]>).map(([label, value, tone]) => (
+                            <Stat key={label} label={label} value={Number(value).toLocaleString()} tone={tone} />
                         ))}
-                    </section>
+                    </StatGrid>
 
-                    <section className="grid gap-3 lg:grid-cols-3">
-                        <BreakdownCard
-                            title="Retry state"
-                            rows={data.breakdown.byRetryState}
-                            onSelect={(key) => {
-                                if (key === "untouched" || key === "waiting" || key === "skipped") {
-                                    setFilter(key);
-                                    setNameFilter(null);
-                                }
-                            }}
-                        />
-                        <BreakdownCard
-                            title="Identity"
-                            rows={data.breakdown.byKind.map((row) => ({
-                                ...row,
-                                label: identityKindShortLabel(row.key) ?? row.key.replace(/_/g, " ")
-                            }))}
-                        />
-                        <BreakdownCard
-                            title="Labels"
-                            rows={data.breakdown.byName}
-                            onSelect={(key) => {
-                                setNameFilter(key);
-                                setFilter("eligible");
-                            }}
-                            selected={nameFilter}
-                            onClear={nameFilter ? () => setNameFilter(null) : undefined}
-                            max={breakdownMax}
-                        />
-                    </section>
+                    <Section title="Breakdown" className="mt-6">
+                        <div className="grid gap-3 lg:grid-cols-3">
+                            <BreakdownCard
+                                title="Retry state"
+                                rows={data.breakdown.byRetryState}
+                                onSelect={(key) => {
+                                    if (key === "untouched" || key === "waiting" || key === "skipped") {
+                                        setFilter(key);
+                                        setNameFilter(null);
+                                    }
+                                }}
+                            />
+                            <BreakdownCard
+                                title="Identity"
+                                rows={data.breakdown.byKind.map((row) => ({
+                                    ...row,
+                                    label: identityKindShortLabel(row.key) ?? row.key.replace(/_/g, " ")
+                                }))}
+                            />
+                            <BreakdownCard
+                                title="Labels"
+                                rows={data.breakdown.byName}
+                                onSelect={(key) => {
+                                    setNameFilter(key);
+                                    setFilter("eligible");
+                                }}
+                                selected={nameFilter}
+                                onClear={nameFilter ? () => setNameFilter(null) : undefined}
+                                max={breakdownMax}
+                            />
+                        </div>
+                    </Section>
 
                     {focusRun?.results.length ? (
-                        <section className="rounded-xl border border-line-300 bg-surface-900 px-3 py-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">
-                                    {liveRun ? "This run" : "Latest attempts"}
-                                    <span className="ml-2 font-mono font-bold normal-case tracking-normal text-ink-400">
+                        <Card className="mt-6">
+                            <CardHeader
+                                title={liveRun ? "This run" : "Latest attempts"}
+                                description={(
+                                    <span className="font-mono tabular-nums">
                                         {focusRun.results.filter((result) => result.action !== "running").length}
                                         {(liveFailure ?? latestFailure) ? ` · ${formatReason((liveFailure ?? latestFailure)?.[0])}` : ""}
                                     </span>
-                                </p>
-                                <CopyMarkdownButton
-                                    text={formatRunMarkdown(focusRun, liveRun ? "Live run" : "Latest run")}
-                                    label="Copy failures"
-                                />
-                            </div>
-                            <AttemptList
-                                compact
-                                results={focusRun.results}
-                                onPreview={(imageUrl, name) => setPreview({imageUrl, name})}
+                                )}
+                                action={(
+                                    <CopyMarkdownButton
+                                        text={formatRunMarkdown(focusRun, liveRun ? "Live run" : "Latest run")}
+                                        label="Copy failures"
+                                    />
+                                )}
                             />
-                        </section>
+                            <CardContent className="pt-1">
+                                <AttemptList
+                                    compact
+                                    results={focusRun.results}
+                                    onPreview={(imageUrl, name) => setPreview({imageUrl, name})}
+                                />
+                            </CardContent>
+                        </Card>
                     ) : null}
 
                     {fixed.length > 0 && (
-                        <section>
-                            <p className="text-[10px] font-black uppercase tracking-[.14em] text-primary-200">Fixed · {fixed.length}</p>
-                            <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        <Section title={`Fixed · ${fixed.length}`} className="mt-6">
+                            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                                 {fixed.map((row) => (
-                                    <li key={row.captureId} className="flex items-center gap-2 rounded-xl border border-primary-400/25 bg-primary-500/[.06] px-2 py-1.5">
+                                    <li key={row.captureId} className="flex items-center gap-2.5 border border-primary-400/25 bg-primary-500/[.05] px-2.5 py-2">
                                         <CaptureThumb
                                             imageUrl={row.imageUrl}
                                             name={row.animalName}
@@ -547,52 +566,55 @@ export default function AdminIndexingClient() {
                                     </li>
                                 ))}
                             </ul>
-                        </section>
+                        </Section>
                     )}
 
-                    <section className="space-y-2">
-                        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">Still unindexed</h2>
-                                <span className="font-mono text-[11px] text-ink-500">
+                    <Section
+                        className="mt-6"
+                        title={(
+                            <>
+                                Still unindexed
+                                <span className="ml-2 font-mono font-bold normal-case tracking-normal tabular-nums text-ink-500">
                                     {visibleCaptures.length.toLocaleString()}
                                     {queue?.poolCapped ? " · cap 800" : ""}
                                 </span>
-                                {FILTERS.map((option) => (
-                                    <button
-                                        key={option.id}
-                                        type="button"
-                                        onClick={() => setFilter(option.id)}
-                                        className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${filter === option.id ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400"}`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
+                            </>
+                        )}
+                    >
+                        <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Segmented
+                                    label="Retry state"
+                                    value={filter}
+                                    onChange={setFilter}
+                                    options={FILTERS.map((option) => ({value: option.id, label: option.label}))}
+                                />
                                 {nameFilter && (
-                                    <button type="button" onClick={() => setNameFilter(null)} className="text-[10px] font-bold text-primary-100">
+                                    <Button variant="ghost" size="sm" onClick={() => setNameFilter(null)} className="text-primary-100">
                                         Clear {nameFilter}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                             <input
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
                                 placeholder="Search…"
-                                className="h-8 w-full rounded-lg border border-line-300 bg-canvas-900 px-2.5 text-xs text-white outline-none focus:border-primary-300 sm:max-w-xs"
+                                aria-label="Search unindexed captures"
+                                className={cn(fieldClass, "h-9 py-0 text-xs sm:max-w-xs")}
                             />
                         </div>
-                        <div className="overflow-hidden rounded-xl border border-line-300">
+                        <Card>
                             <div className="max-h-[28rem] overflow-auto">
-                                <table className="min-w-full text-left text-xs">
-                                    <thead className="sticky top-0 bg-canvas-950 text-[10px] font-black uppercase tracking-[.12em] text-ink-500">
+                                <table className="min-w-full border-collapse text-left text-xs">
+                                    <thead className="sticky top-0 z-[1] bg-surface-900">
                                         <tr>
-                                            <th className="px-2 py-2">Photo</th>
-                                            <th className="px-2 py-2">Animal</th>
-                                            <th className="px-2 py-2">Level</th>
-                                            <th className="px-2 py-2">State</th>
-                                            <th className="px-2 py-2">Reason</th>
-                                            <th className="px-2 py-2">Tries</th>
-                                            <th className="px-2 py-2">ID</th>
+                                            <TH>Photo</TH>
+                                            <TH>Animal</TH>
+                                            <TH>Level</TH>
+                                            <TH>State</TH>
+                                            <TH>Reason</TH>
+                                            <TH>Tries</TH>
+                                            <TH>ID</TH>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -601,51 +623,51 @@ export default function AdminIndexingClient() {
                                             return (
                                                 <Fragment key={row.captureId}>
                                                     <tr
-                                                        className="cursor-pointer border-t border-line-300/70 hover:bg-white/[.03]"
+                                                        className={cn("cursor-pointer hover:bg-white/[.03]", open && "bg-white/[.02]")}
                                                         onClick={() => setExpandedCapture(open ? null : row.captureId)}
                                                     >
-                                                        <td className="px-2 py-1.5" onClick={(event) => event.stopPropagation()}>
+                                                        <TD className="py-1.5" onClick={(event) => event.stopPropagation()}>
                                                             <CaptureThumb
                                                                 imageUrl={row.imageUrl}
                                                                 name={row.animalName}
                                                                 onOpen={() => setPreview({imageUrl: row.imageUrl, name: row.animalName})}
                                                             />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
+                                                        </TD>
+                                                        <TD className="py-1.5">
                                                             <p className="font-bold text-white">{row.animalName}</p>
                                                             <p className="font-mono text-[10px] text-ink-500">{row.scientificName || row.identityKey || "—"}</p>
-                                                        </td>
-                                                        <td className="px-2 py-1.5 text-ink-300">
+                                                        </TD>
+                                                        <TD className="py-1.5 text-ink-300">
                                                             {identityKindShortLabel(row.identityKind) ?? (row.identityKind ? row.identityKind.replace(/_/g, " ") : "—")}
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase ${STATE_TONE[row.retryState]}`}>
+                                                        </TD>
+                                                        <TD className="py-1.5">
+                                                            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[.08em] ${STATE_TONE[row.retryState]}`}>
                                                                 {STATE_LABEL[row.retryState]}
                                                             </span>
-                                                        </td>
-                                                        <td className="max-w-[16rem] px-2 py-1.5 text-[11px] leading-4 text-ink-300">
+                                                        </TD>
+                                                        <TD className="max-w-[16rem] py-1.5 text-[11px] leading-4 text-ink-300">
                                                             {formatReason(row.lastError ?? null) ?? (row.attempts === 0 ? "Not tried" : "—")}
-                                                        </td>
-                                                        <td className="px-2 py-1.5 font-mono text-[11px] text-ink-400">
+                                                        </TD>
+                                                        <TD className="whitespace-nowrap py-1.5 font-mono text-[11px] tabular-nums text-ink-400">
                                                             {row.attempts}/3{row.lastAttemptedAt ? ` · ${ago(row.lastAttemptedAt)}` : ""}
-                                                        </td>
-                                                        <td className="px-2 py-1.5" onClick={(event) => event.stopPropagation()}>
+                                                        </TD>
+                                                        <TD className="py-1.5" onClick={(event) => event.stopPropagation()}>
                                                             <a href={`/p/${row.captureId}`} target="_blank" rel="noreferrer" className="font-mono text-[11px] text-primary-100 hover:underline">
                                                                 {shortId(row.captureId)}
                                                             </a>
-                                                        </td>
+                                                        </TD>
                                                     </tr>
                                                     {open && (
-                                                        <tr className="border-t border-line-300/40 bg-canvas-950/70">
-                                                            <td colSpan={7} className="px-3 py-2">
+                                                        <tr className="bg-canvas-950/70">
+                                                            <td colSpan={7} className="border-b border-line-300/60 px-4 py-3">
                                                                 {(row.attemptHistory ?? []).length === 0 ? (
                                                                     <p className="text-xs text-ink-400">No cleanup attempts logged yet.</p>
                                                                 ) : (
                                                                     <ol className="space-y-1">
                                                                         {(row.attemptHistory ?? []).map((attempt, index) => (
                                                                             <li key={`${row.captureId}-${attempt.at}-${index}`} className="flex flex-wrap items-center gap-2 text-xs">
-                                                                                <span className="font-mono text-[10px] text-ink-500">{index + 1}</span>
-                                                                                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase ${ACTION_TONE[attempt.action] ?? ACTION_TONE.unknown}`}>
+                                                                                <span className="font-mono text-[10px] tabular-nums text-ink-500">{index + 1}</span>
+                                                                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[.08em] ${ACTION_TONE[attempt.action] ?? ACTION_TONE.unknown}`}>
                                                                                     {actionLabel(attempt.action)}
                                                                                 </span>
                                                                                 <span className="text-ink-300">{formatReason(attempt.error, attempt.status) ?? "No error recorded"}</span>
@@ -662,69 +684,76 @@ export default function AdminIndexingClient() {
                                         })}
                                         {visibleCaptures.length === 0 && (
                                             <tr>
-                                                <td colSpan={7} className="px-3 py-8 text-center text-xs text-ink-400">
-                                                    Nothing matches that filter.
+                                                <td colSpan={7} className="p-4">
+                                                    <EmptyState title="Nothing matches that filter." className="border-0 py-8" />
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    </section>
+                        </Card>
+                    </Section>
 
-                    <section className="space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">
-                            {loading ? "Loading runs…" : `${data.runs.length} runs`}
-                            <span className="ml-2 font-mono font-bold normal-case tracking-normal">
-                                {data.totals.indexed} indexed · {data.totals.merged} merged · {data.totals.skippedForever} skipped
-                            </span>
-                        </p>
-                        {data.runs.length === 0 && !loading && (
-                            <p className="rounded-xl border border-line-300 px-3 py-4 text-center text-xs text-ink-400">
-                                The cron has not written a run yet.
-                            </p>
+                    <Section
+                        className="mt-6"
+                        title={(
+                            <>
+                                {loading ? "Loading runs…" : `${data.runs.length} runs`}
+                                <span className="ml-2 font-mono font-bold normal-case tracking-normal tabular-nums text-ink-500">
+                                    {data.totals.indexed} indexed · {data.totals.merged} merged · {data.totals.skippedForever} skipped
+                                </span>
+                            </>
                         )}
-                        {data.runs.map((run) => {
-                            const key = run.id ?? run.startedAt ?? "run";
-                            const open = expanded === key;
-                            return (
-                                <article key={key} className="rounded-xl border border-line-300 bg-canvas-950/60">
-                                    <div className="flex items-stretch">
-                                        <button
-                                            type="button"
-                                            onClick={() => setExpanded(open ? null : key)}
-                                            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left"
-                                        >
-                                            <span className="text-xs font-bold text-white">{formatWhen(run.startedAt)}</span>
-                                            <span className="text-[10px] text-ink-500">{ago(run.startedAt)}</span>
-                                            {run.running && <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-black uppercase text-amber-100">Live</span>}
-                                            {run.error && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-black uppercase text-red-200">Error</span>}
-                                            <span className="font-mono text-[10px] text-ink-400">
-                                                {run.candidates} cand · {run.indexed} idx · {run.merged} mrg · {run.notIndexed} fail · {durationLabel(run.durationSeconds)}
-                                            </span>
-                                        </button>
-                                        <div className="flex items-center pr-2" onClick={(event) => event.stopPropagation()}>
-                                            <CopyMarkdownButton text={formatRunMarkdown(run)} label="Copy" />
-                                        </div>
-                                    </div>
-                                    {open && (
-                                        <div className="border-t border-line-300 px-3 py-2">
-                                            {run.results.length === 0 ? (
-                                                <p className="text-xs text-ink-400">This run logged no per-capture results.</p>
-                                            ) : (
-                                                <AttemptList
-                                                    compact
-                                                    results={run.results}
-                                                    onPreview={(imageUrl, name) => setPreview({imageUrl, name})}
-                                                />
+                    >
+                        {data.runs.length === 0 && !loading && (
+                            <EmptyState title="The cron has not written a run yet." className="py-8" />
+                        )}
+                        {data.runs.length > 0 && (
+                            <Card className="divide-y divide-line-300/60">
+                                {data.runs.map((run) => {
+                                    const key = run.id ?? run.startedAt ?? "run";
+                                    const open = expanded === key;
+                                    return (
+                                        <article key={key}>
+                                            <div className="flex items-stretch hover:bg-white/[.02]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpanded(open ? null : key)}
+                                                    aria-expanded={open}
+                                                    className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left"
+                                                >
+                                                    <span className="text-xs font-bold tabular-nums text-white">{formatWhen(run.startedAt)}</span>
+                                                    <span className="text-[10px] text-ink-500">{ago(run.startedAt)}</span>
+                                                    {run.running && <Badge tone="warn">Live</Badge>}
+                                                    {run.error && <Badge tone="bad">Error</Badge>}
+                                                    <span className="font-mono text-[10px] tabular-nums text-ink-400">
+                                                        {run.candidates} cand · {run.indexed} idx · {run.merged} mrg · {run.notIndexed} fail · {durationLabel(run.durationSeconds)}
+                                                    </span>
+                                                </button>
+                                                <div className="flex items-center pr-3" onClick={(event) => event.stopPropagation()}>
+                                                    <CopyMarkdownButton text={formatRunMarkdown(run)} label="Copy" />
+                                                </div>
+                                            </div>
+                                            {open && (
+                                                <div className="border-t border-line-300/60 bg-canvas-950/50 px-4 py-2">
+                                                    {run.results.length === 0 ? (
+                                                        <p className="text-xs text-ink-400">This run logged no per-capture results.</p>
+                                                    ) : (
+                                                        <AttemptList
+                                                            compact
+                                                            results={run.results}
+                                                            onPreview={(imageUrl, name) => setPreview({imageUrl, name})}
+                                                        />
+                                                    )}
+                                                </div>
                                             )}
-                                        </div>
-                                    )}
-                                </article>
-                            );
-                        })}
-                    </section>
+                                        </article>
+                                    );
+                                })}
+                            </Card>
+                        )}
+                    </Section>
 
                     {preview && (
                         <button
@@ -736,13 +765,13 @@ export default function AdminIndexingClient() {
                             <img
                                 src={preview.imageUrl}
                                 alt={preview.name}
-                                className="max-h-[calc(100dvh-4rem)] max-w-full rounded-2xl object-contain"
+                                className="max-h-[calc(100dvh-4rem)] max-w-full object-contain"
                             />
                         </button>
                     )}
                 </>
             )}
-        </div>
+        </AdminPage>
     );
 }
 
@@ -777,14 +806,14 @@ function CopyMarkdownButton({
     }, [text]);
 
     return (
-        <button
-            type="button"
+        <Button
+            size="sm"
             onClick={() => void copy()}
             disabled={disabled || !text}
-            className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300 disabled:opacity-50"
+            className={copied ? "border-primary-400/50 text-primary-100" : undefined}
         >
             {copied ? "Copied" : label}
-        </button>
+        </Button>
     );
 }
 
@@ -821,7 +850,7 @@ function AttemptList({
                                 {reason && <span className="ml-1.5 text-red-200">{reason}</span>}
                             </span>
                         </span>
-                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase ${ACTION_TONE[result.action] ?? ACTION_TONE.unknown}`}>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[.08em] ${ACTION_TONE[result.action] ?? ACTION_TONE.unknown}`}>
                             {actionLabel(result.action)}
                         </span>
                     </li>
@@ -844,7 +873,7 @@ function CaptureThumb({
         <button
             type="button"
             onClick={onOpen}
-            className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-line-300 bg-canvas-900"
+            className="relative h-8 w-8 shrink-0 overflow-hidden border border-line-300 bg-canvas-900 hover:border-primary-300"
             aria-label={`View ${name} capture`}
         >
             <Image src={imageUrl} alt={`${name} capture`} fill unoptimized sizes="32px" className="object-cover" />
@@ -869,30 +898,30 @@ function BreakdownCard({
 }) {
     const widthMax = max ?? Math.max(1, ...rows.map((row) => row.count));
     return (
-        <section className="rounded-xl border border-line-300 bg-surface-900 px-3 py-3">
+        <Card className="p-4">
             <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-black uppercase tracking-[.14em] text-ink-500">{title}</p>
+                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{title}</p>
                 {onClear && (
                     <button type="button" onClick={onClear} className="text-[10px] font-bold text-primary-100">
                         Clear {selected}
                     </button>
                 )}
             </div>
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-3 space-y-1.5">
                 {rows.map((row) => {
                     const inner = (
                         <>
                             <span className="w-28 truncate text-xs text-white">{row.label}</span>
-                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
-                                <span className="block h-full rounded-full bg-primary-400/80" style={{width: `${row.count === 0 ? 0 : Math.max(6, (row.count / widthMax) * 100)}%`}} />
+                            <span className="h-1.5 flex-1 overflow-hidden bg-white/5">
+                                <span className="block h-full bg-primary-400/80" style={{width: `${row.count === 0 ? 0 : Math.max(6, (row.count / widthMax) * 100)}%`}} />
                             </span>
-                            <span className="w-7 text-right font-mono text-[10px] text-ink-400">{row.count}</span>
+                            <span className="w-7 text-right font-mono text-[10px] tabular-nums text-ink-400">{row.count}</span>
                         </>
                     );
                     return (
                         <li key={row.key}>
                             {onSelect ? (
-                                <button type="button" onClick={() => onSelect(row.key)} className={`flex w-full items-center gap-2 text-left ${selected === row.key ? "text-primary-100" : ""}`}>
+                                <button type="button" onClick={() => onSelect(row.key)} className={`flex w-full items-center gap-2 text-left hover:text-primary-100 ${selected === row.key ? "text-primary-100" : ""}`}>
                                     {inner}
                                 </button>
                             ) : (
@@ -903,6 +932,6 @@ function BreakdownCard({
                 })}
                 {rows.length === 0 && <li className="text-xs text-ink-400">Nothing here.</li>}
             </ul>
-        </section>
+        </Card>
     );
 }

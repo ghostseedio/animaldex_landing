@@ -20,14 +20,36 @@ function getSupportAdminSessionSecret() {
         || "";
 }
 
-function signSessionPayload(payload: string) {
+/**
+ * Longest password the login endpoint will compare. The real one is far
+ * shorter; this only stops a caller from making the server hash megabytes.
+ */
+export const supportAdminPasswordMaxLength = 512;
+
+/** Session token format version; bumping it signs every operator out. */
+const sessionVersion = "v2";
+
+/**
+ * The HMAC key is derived from the session secret *and* the current password,
+ * so rotating the password revokes every outstanding session, and the raw
+ * secret (which may be the service-role key when nothing else is configured)
+ * is never used as a MAC key directly.
+ */
+function getSessionSigningKey() {
     const secret = getSupportAdminSessionSecret();
 
     if (!secret) {
         throw new Error("SUPPORT_ADMIN_SESSION_SECRET is not configured");
     }
 
-    return createHmac("sha256", secret).update(payload).digest("base64url");
+    return createHmac("sha256", secret)
+        .update(`animaldex-support-admin-session:${sessionVersion}:`)
+        .update(getSupportAdminPassword())
+        .digest();
+}
+
+function signSessionPayload(payload: string) {
+    return createHmac("sha256", getSessionSigningKey()).update(payload).digest("base64url");
 }
 
 function safeEqual(left: string, right: string) {
@@ -44,7 +66,7 @@ export function isSupportAdminAuthConfigured() {
 export function verifySupportAdminPassword(password: string) {
     const configuredPassword = getSupportAdminPassword();
 
-    if (!configuredPassword) {
+    if (!configuredPassword || password.length > supportAdminPasswordMaxLength) {
         return false;
     }
 
@@ -54,7 +76,7 @@ export function verifySupportAdminPassword(password: string) {
 export function createSupportAdminSession() {
     const expiresAt = Date.now() + sessionMaxAgeSeconds * 1000;
     const nonce = randomBytes(16).toString("base64url");
-    const payload = `${expiresAt}.${nonce}`;
+    const payload = `${sessionVersion}.${expiresAt}.${nonce}`;
     const signature = signSessionPayload(payload);
 
     return `${payload}.${signature}`;
@@ -67,19 +89,19 @@ export function verifySupportAdminSession(session: string | undefined) {
 
     const parts = session.split(".");
 
-    if (parts.length !== 3) {
+    if (parts.length !== 4) {
         return false;
     }
 
-    const [expiresAtValue, nonce, signature] = parts;
+    const [version, expiresAtValue, nonce, signature] = parts;
     const expiresAt = Number(expiresAtValue);
 
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || !nonce || !signature) {
+    if (version !== sessionVersion || !Number.isFinite(expiresAt) || expiresAt <= Date.now() || !nonce || !signature) {
         return false;
     }
 
     try {
-        return safeEqual(signature, signSessionPayload(`${expiresAtValue}.${nonce}`));
+        return safeEqual(signature, signSessionPayload(`${version}.${expiresAtValue}.${nonce}`));
     } catch {
         return false;
     }

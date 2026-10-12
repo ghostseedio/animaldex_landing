@@ -196,6 +196,32 @@ const LAUNCH_BINDERS: BinderDefinition[] = [
         accentHex: "FFB020",
         secondaryHex: "180E06",
         coverArtworkKey: "goliath-beetle"
+    },
+    {
+        id: "turtles",
+        title: "Turtles & Crocodilians",
+        shortTitle: "Turtles",
+        spineLabel: "SHELLS & SCALES",
+        blurb: "Shells and scales — turtles, tortoises, terrapins, crocodiles, alligators, and caimans.",
+        shelfGroup: "wildlife",
+        sortOrder: 160,
+        primaryHex: "6B5A2E",
+        accentHex: "D9B26A",
+        secondaryHex: "1E180A",
+        coverArtworkKey: "green-sea-turtle"
+    },
+    {
+        id: "sea_life",
+        title: "Sea Life",
+        shortTitle: "Sea Life",
+        spineLabel: "SEA LIFE",
+        blurb: "Crabs, octopus, jellyfish, starfish, shells, and the rest of the water's invertebrates.",
+        shelfGroup: "wildlife",
+        sortOrder: 170,
+        primaryHex: "0E6E6A",
+        accentHex: "2DD4BF",
+        secondaryHex: "04201F",
+        coverArtworkKey: "giant-pacific-octopus"
     }
 ];
 
@@ -233,15 +259,25 @@ async function fetchMembershipStubs(setIds: string[]) {
     const supabase = createSupabaseServerClient();
     if (!supabase || setIds.length === 0) return [] as MembershipStub[];
 
-    const {data, error} = await supabase
-        .from("animal_collection_set_memberships")
-        .select("set_id,set_position,species_profile_id")
-        .in("set_id", setIds)
-        .order("set_id", {ascending: true})
-        .order("set_position", {ascending: true});
+    // PostgREST caps a response at 1,000 rows and the shelf holds more, so page.
+    // A failed page returns [] so the caller falls back to client rules instead of
+    // painting a half-filled shelf.
+    const pageSize = 1000;
+    const stubs: MembershipStub[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+        const {data, error} = await supabase
+            .from("animal_collection_set_memberships")
+            .select("set_id,set_position,species_profile_id")
+            .in("set_id", setIds)
+            .order("set_id", {ascending: true})
+            .order("set_position", {ascending: true})
+            .range(offset, offset + pageSize - 1);
 
-    if (error || !data) return [];
-    return data as MembershipStub[];
+        if (error || !data) return [];
+        stubs.push(...(data as MembershipStub[]));
+        if (data.length < pageSize) break;
+    }
+    return stubs;
 }
 
 function toMembershipCatalogEntry(entry: SpeciesEntry): BinderMembershipCatalogEntry | null {

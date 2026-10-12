@@ -15,6 +15,7 @@ import {
     trainingRewardLine,
     trainingSubmission
 } from "@/lib/species-training";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
  * The Training quiz, full screen like the Trial and Apply It Your Way sheets.
@@ -127,7 +128,11 @@ export default function TrainingQuiz({
         <div role="dialog" aria-modal="true" aria-label={TRAINING_COPY.title} className="fixed inset-0 z-[59] flex flex-col bg-black">
             <header className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-3">
                 <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-[10px] font-black uppercase tracking-[0.13em]" style={{color: NEON}}>{title}</span>
+                    <span className="truncate text-[10px] font-black uppercase tracking-[0.13em]" style={{color: NEON}}>
+                        {/* A fused Power's Training (it submits elsewhere) has no species icon. */}
+                        {powerName?.trim() && !submitAnswers ? <AnimalPowerIcon speciesProfileId={training.speciesProfileId} /> : null}
+                        {title}
+                    </span>
                     {showsProgress ? (
                         <span className="text-[10px] font-bold text-white/55">
                             {trainingQuestionProgress(quiz.position + 1, questions.length)}

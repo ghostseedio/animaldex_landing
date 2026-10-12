@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";
+import {AdminPage, Alert, Button, buttonVariants, EmptyState, PageHeader, RefreshButton, Segmented, Skeleton} from "@/components/admin/ui";
 
 /**
  * Same-animal review queue. A scheduled scan pairs one owner's captures taken
@@ -58,21 +59,23 @@ async function postJson(url: string, body: unknown) {
 
 function CapturePanel({label, capture, highlight}: {label: string; capture: ReviewCapture; highlight: "keep" | "move" | null}) {
     return (
-        <div className={`min-w-0 border p-2 ${highlight === "move" ? "border-amber-400/60" : highlight === "keep" ? "border-primary-400/60" : "border-line-300"}`}>
+        <div className={`min-w-0 border bg-canvas-950 p-2 ${highlight === "move" ? "border-amber-400/60" : highlight === "keep" ? "border-primary-400/60" : "border-line-300"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capture.imageSrc} alt="" className="aspect-square w-full bg-black object-contain" loading="lazy" />
-            <p className="mt-2 text-[11px] font-black uppercase tracking-[0.1em] text-ink-400">
+            <p className="mt-2 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 {label} {highlight === "keep" ? "· keep" : highlight === "move" ? "· move" : ""}
             </p>
             <p className="text-sm font-bold text-white">{dex(capture.animalDexNumber)} {capture.name ?? "Unknown"}</p>
             <p className="text-xs italic text-ink-400">{capture.scientificName ?? ""}</p>
-            <p className="text-xs text-ink-500">confidence {capture.confidence ?? "n/a"} · <span className="font-mono">{capture.id.slice(0, 8)}</span></p>
+            <p className="text-xs tabular-nums text-ink-500">confidence {capture.confidence ?? "n/a"} · <span className="font-mono">{capture.id.slice(0, 8)}</span></p>
         </div>
     );
 }
 
 function ReviewCard({review, onDone}: {review: Review; onDone: () => void}) {
     const [busy, setBusy] = useState(false);
+    // Which button started the work, so only that one spins.
+    const [pressed, setPressed] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const target = review.suggestedSpecies;
     const moveIds = review.suggestedCaptureId
@@ -120,7 +123,7 @@ function ReviewCard({review, onDone}: {review: Review; onDone: () => void}) {
     }
 
     return (
-        <article className="border border-line-300 bg-white/[0.02] p-3">
+        <article className="border border-line-300 bg-surface-900 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-xs text-ink-400">
                     <span className="font-bold text-white">{review.owner ?? "unknown owner"}</span> · {review.secondsApart}s apart
@@ -128,12 +131,12 @@ function ReviewCard({review, onDone}: {review: Review; onDone: () => void}) {
                 </p>
                 {review.model ? <p className="text-[11px] text-ink-500">{review.model}</p> : null}
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
                 <CapturePanel label="A" capture={review.captureA} highlight={highlight(review.captureA.id)} />
                 <CapturePanel label="B" capture={review.captureB} highlight={highlight(review.captureB.id)} />
             </div>
             {review.verdict ? (
-                <div className="mt-2 border-l-2 border-primary-400/50 pl-3">
+                <div className="mt-3 border-l-2 border-primary-400/50 pl-3">
                     <p className="text-sm font-bold text-white">
                         {review.verdict.same_animal === "yes" ? "Same animal" : review.verdict.same_animal === "no" ? "Different animals" : "Unclear"}
                         {" · "}{Math.round(review.verdict.confidence * 100)}% · {review.verdict.correct_common_name}
@@ -142,28 +145,28 @@ function ReviewCard({review, onDone}: {review: Review; onDone: () => void}) {
                     <p className="mt-1 text-xs leading-5 text-ink-300">{review.verdict.reasoning}</p>
                 </div>
             ) : null}
-            {review.lastError ? <p className="mt-2 text-xs text-red-300">{review.lastError}</p> : null}
+            {review.lastError ? <Alert tone="bad" className="mt-3 text-xs">{review.lastError}</Alert> : null}
             {review.status === "same_animal" && !target ? (
-                <p className="mt-2 text-xs text-amber-200">The named species is not in the catalog. Fix it by hand in Maintenance.</p>
+                <Alert tone="warn" className="mt-3 text-xs">The named species is not in the catalog. Fix it by hand in Maintenance.</Alert>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-1.5">
                 {target && moveIds.length && review.status !== "applied" ? (
                     <>
-                        <button disabled={busy} onClick={() => void apply(true)} className="rounded-lg bg-primary-400 px-3 py-1.5 text-xs font-black text-canvas-950 disabled:opacity-50">
+                        <Button size="sm" variant="primary" disabled={busy} loading={busy && pressed === "merge"} onClick={() => { setPressed("merge"); void apply(true); }}>
                             Move to {dex(target.animalDexNumber)} {target.displayName} and merge
-                        </button>
-                        <button disabled={busy} onClick={() => void apply(false)} className="rounded-lg border border-primary-400/40 px-3 py-1.5 text-xs font-black text-primary-100 disabled:opacity-50">
+                        </Button>
+                        <Button size="sm" disabled={busy} loading={busy && pressed === "move"} onClick={() => { setPressed("move"); void apply(false); }}>
                             Move only
-                        </button>
+                        </Button>
                     </>
                 ) : null}
                 {review.status === "dismissed" || review.status === "different_animals" ? (
-                    <button disabled={busy} onClick={() => void mark("reopen")} className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Reopen as same animal</button>
+                    <Button size="sm" variant="ghost" disabled={busy} loading={busy && pressed === "reopen"} onClick={() => { setPressed("reopen"); void mark("reopen"); }}>Reopen as same animal</Button>
                 ) : review.status !== "applied" ? (
-                    <button disabled={busy} onClick={() => void mark("dismiss")} className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Dismiss</button>
+                    <Button size="sm" variant="ghost" disabled={busy} loading={busy && pressed === "dismiss"} onClick={() => { setPressed("dismiss"); void mark("dismiss"); }}>Dismiss</Button>
                 ) : null}
             </div>
-            {message ? <p className="mt-2 text-xs text-red-300">{message}</p> : null}
+            {message ? <Alert tone="bad" className="mt-3 text-xs">{message}</Alert> : null}
         </article>
     );
 }
@@ -173,6 +176,8 @@ export default function AdminIdentityReviewClient() {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [counts, setCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(false);
+    // Separates "first fetch not back yet" from "the queue is empty".
+    const [loaded, setLoaded] = useState(false);
     const [scanning, setScanning] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
 
@@ -188,6 +193,7 @@ export default function AdminIdentityReviewClient() {
             setNotice(error instanceof Error ? error.message : "Could not load the queue");
         } finally {
             setLoading(false);
+            setLoaded(true);
         }
     }, [status]);
 
@@ -210,39 +216,54 @@ export default function AdminIdentityReviewClient() {
     }
 
     return (
-        <div className="space-y-4">
-            <header className="flex flex-col justify-between gap-3 border-b border-line-300 pb-3 lg:flex-row lg:items-center">
-                <div className="min-w-0">
-                    <Link href="/admin" className="text-xs text-ink-400 hover:text-white">← Admin</Link>
-                    <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h1 className="font-display text-2xl text-white">Identity review</h1>
-                        <p className="text-xs text-ink-500">Same animal, two AnimalDex numbers · scheduled scan · applied by hand</p>
-                    </div>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Catalog"
+                title="Identity review"
+                description="Same animal, two AnimalDex numbers · scheduled scan · applied by hand"
+                actions={
+                    <>
+                        <Link href="/admin/maintenance" className={buttonVariants({size: "sm", variant: "ghost"})}>Maintenance</Link>
+                        <Button size="sm" onClick={() => void scan()} loading={scanning}>
+                            {scanning ? "Scanning…" : "Scan now"}
+                        </Button>
+                        <RefreshButton loading={loading} onClick={() => void load()} />
+                    </>
+                }
+            />
+            <Segmented
+                label="Review status"
+                className="mt-6"
+                value={status}
+                onChange={setStatus}
+                options={TABS.map(([value, label]) => ({value, label, count: counts[value] ?? 0}))}
+            />
+            {notice ? <Alert tone="info" className="mt-4">{notice}</Alert> : null}
+            {reviews.length === 0 && loaded && !loading ? <EmptyState className="mt-6" title="Nothing here." /> : null}
+            {reviews.length === 0 && (!loaded || loading) ? (
+                <div role="status" aria-label="Loading" className="mt-6 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                    {Array.from({length: 3}, (_, index) => (
+                        <div key={index} className="border border-line-300 bg-surface-900 p-4">
+                            <Skeleton className="h-3 w-2/3" />
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                <Skeleton className="aspect-square w-full" />
+                                <Skeleton className="aspect-square w-full" />
+                            </div>
+                            <Skeleton className="mt-3 h-3 w-1/2" />
+                            <Skeleton className="mt-2 h-2.5 w-full" />
+                            <div className="mt-3 flex gap-1.5">
+                                <Skeleton className="h-8 w-40" />
+                                <Skeleton className="h-8 w-20" />
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                    <Link href="/admin/maintenance" className="rounded-lg border border-line-300 px-3 py-1.5 text-xs font-bold text-white hover:border-primary-300">Maintenance</Link>
-                    <button onClick={() => void scan()} disabled={scanning} className="rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-black text-amber-100 disabled:opacity-50">
-                        {scanning ? "Scanning…" : "Scan now"}
-                    </button>
-                    <button onClick={() => void load()} disabled={loading} className="rounded-lg bg-primary-400 px-3 py-1.5 text-xs font-black text-canvas-950 disabled:opacity-50">Refresh</button>
+            ) : null}
+            {reviews.length > 0 ? (
+                <div className="mt-6 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                    {reviews.map((review) => <ReviewCard key={review.id} review={review} onDone={() => void load()} />)}
                 </div>
-            </header>
-            <nav className="flex flex-wrap gap-1.5">
-                {TABS.map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => setStatus(value)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold ${status === value ? "bg-white text-canvas-950" : "border border-line-300 text-white"}`}
-                    >
-                        {label} <span className="opacity-60">{counts[value] ?? 0}</span>
-                    </button>
-                ))}
-            </nav>
-            {notice ? <p className="text-xs text-ink-300">{notice}</p> : null}
-            {reviews.length === 0 && !loading ? <p className="text-sm text-ink-400">Nothing here.</p> : null}
-            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-                {reviews.map((review) => <ReviewCard key={review.id} review={review} onDone={() => void load()} />)}
-            </div>
-        </div>
+            ) : null}
+        </AdminPage>
     );
 }

@@ -2,7 +2,6 @@
 
 /* Dynamic Supabase and local asset URLs are selected at runtime. */
 /* eslint-disable @next/next/no-img-element */
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CampaignPreview,
@@ -109,6 +108,16 @@ import {
 import {
   ReviewList,
 } from "./components/campaign-review-list";
+import {
+  AdminPage,
+  Alert,
+  Badge,
+  Button,
+  EmptyState,
+  ListSkeleton,
+  PageHeader,
+  Spinner,
+} from "@/components/admin/ui";
 
 export default function AdminSponsoredChallengesClient() {
   const [campaigns, setCampaigns] = useState<AdminCampaignListItem[]>([]);
@@ -817,44 +826,32 @@ export default function AdminSponsoredChallengesClient() {
   const editable = canMutate(campaign);
 
   return (
+    <AdminPage width="wide">
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
-            ← Admin
-          </Link>
-          <p className="mt-5 text-[10px] font-black uppercase tracking-[.18em] text-primary-200">
-            Internal operations
-          </p>
-          <h1 className="mt-2 font-display text-4xl text-white">
-            Sponsored Challenges
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-300">
+      <PageHeader
+        eyebrow="Events"
+        title="Sponsored Challenges"
+        description={
+          <>
             AnimalDex operator console for time-limited Challenges. Privileged
             mutations run server-side. This is not the public PvP /challenges
             route and not a /business portal.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={startCreate}
-          disabled={loadingList || busy}
-          className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
-        >
-          {loadingList ? "Loading..." : "New campaign"}
-        </button>
-      </div>
+          </>
+        }
+        actions={
+          <Button
+            variant="primary"
+            onClick={startCreate}
+            disabled={loadingList || busy}
+            loading={loadingList}
+          >
+            {loadingList ? "Loading..." : "New campaign"}
+          </Button>
+        }
+      />
 
-      {error ? (
-        <p className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="rounded-2xl border border-primary-400/30 bg-primary-500/10 px-4 py-3 text-sm text-primary-100">
-          {notice}
-        </p>
-      ) : null}
+      {error ? <Alert tone="bad">{error}</Alert> : null}
+      {notice ? <Alert tone="good">{notice}</Alert> : null}
 
       <div className="flex flex-wrap gap-2">
         <FilterChip
@@ -874,7 +871,7 @@ export default function AdminSponsoredChallengesClient() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {loadingList ? (
-          <p className="text-sm text-ink-500">Loading campaigns...</p>
+          <ListSkeleton rows={3} className="md:col-span-2 xl:col-span-3" />
         ) : null}
         {!loadingList ? filtered.map((item) => (
           <button
@@ -884,10 +881,10 @@ export default function AdminSponsoredChallengesClient() {
             onClick={() =>
               loadDetail(item.id).catch((err: Error) => setError(err.message))
             }
-            className={`rounded-3xl border p-5 text-left transition disabled:cursor-wait disabled:opacity-60 ${selectedId === item.id ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900 hover:border-primary-400/40"}`}
+            className={`border p-4 text-left transition disabled:cursor-wait disabled:opacity-60 ${selectedId === item.id ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900 hover:border-primary-400/40"}`}
           >
             <div className="flex items-start justify-between gap-3">
-              <p className="font-display text-xl text-white">{item.title}</p>
+              <p className="font-display text-lg text-white">{item.title}</p>
               <StatusBadge status={item.status} />
             </div>
             <p className="mt-2 text-xs font-bold text-ink-400">
@@ -903,7 +900,7 @@ export default function AdminSponsoredChallengesClient() {
                 item.timezoneIdentifier,
               )}
             </p>
-            <p className="mt-2 text-sm text-ink-300">
+            <p className="mt-2 text-sm tabular-nums text-ink-300">
               {objectiveLabel(item.objectiveType)} · target {item.targetCount}
             </p>
             <p className="mt-2 text-xs text-ink-500">
@@ -911,7 +908,8 @@ export default function AdminSponsoredChallengesClient() {
               {item.rewardTitle ? ` · ${item.rewardTitle}` : " · No reward"}
               {` · rules v${item.rulesVersion}`}
             </p>
-            <p className="mt-2 text-[11px] text-ink-500">
+            <p className="mt-3 flex items-center gap-1.5 border-t border-line-300 pt-2 text-[11px] text-ink-500">
+              {loadingDetailId === item.id ? <Spinner size={11} /> : null}
               {loadingDetailId === item.id
                 ? "Loading campaign..."
                 : `Updated ${new Date(item.updatedAt).toLocaleString()}`}
@@ -919,18 +917,21 @@ export default function AdminSponsoredChallengesClient() {
           </button>
         )) : null}
         {!loadingList && filtered.length === 0 ? (
-          <p className="text-sm text-ink-500">No campaigns in this status.</p>
+          <EmptyState
+            className="md:col-span-2 xl:col-span-3"
+            title="No campaigns in this status."
+          />
         ) : null}
       </section>
 
       {selectedId ? (
-        <section className="space-y-6 rounded-3xl border border-line-300 bg-surface-900/80 p-5 sm:p-7">
+        <section className="space-y-6 border border-line-300 bg-canvas-900 p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                 {campaign ? "Campaign editor" : "New campaign"}
               </p>
-              <h2 className="mt-1 font-display text-3xl text-white">
+              <h2 className="mt-1 font-display text-2xl text-white">
                 {draft.title || "Untitled Challenge"}
               </h2>
             </div>
@@ -943,21 +944,21 @@ export default function AdminSponsoredChallengesClient() {
             column.
           </p>
 
-          <details className="group rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+          <details className="group border border-line-300 bg-surface-900 p-4">
             <summary className="cursor-pointer list-none">
               <span className="flex flex-wrap items-center justify-between gap-3">
                 <span>
-                  <span className="block text-[10px] font-black uppercase tracking-[.18em] text-ink-500">
+                  <span className="block text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                     Campaign readiness
                   </span>
-                  <span className="mt-1 block font-display text-2xl text-white">
+                  <span className="mt-1 block font-display text-2xl tabular-nums text-white">
                     {readiness.passed} / {readiness.total} checks passed
                   </span>
                 </span>
                 <span className="flex items-center gap-3">
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] ${readiness.ready ? "border-primary-300 text-primary-100" : "border-rose-400/40 text-rose-100"}`}>
+                  <Badge tone={readiness.ready ? "good" : "bad"}>
                     {readiness.ready ? "Ready" : "Needs fixes"}
-                  </span>
+                  </Badge>
                   <span className="text-lg text-ink-500 transition group-open:rotate-45">+</span>
                 </span>
               </span>
@@ -1012,20 +1013,19 @@ export default function AdminSponsoredChallengesClient() {
           {campaign && canArchiveCampaign(campaign.status) ? (
             <Block title="Archive kill switch" note={ARCHIVE_COPY}>
               {!confirmArchive ? (
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
                   disabled={busy}
-                  className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-50"
                   onClick={() => setConfirmArchive(true)}
                 >
                   Archive campaign
-                </button>
+                </Button>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <Button
                     disabled={busy}
-                    className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-black text-white"
+                    loading={busy}
+                    className="border-transparent bg-rose-500 text-white hover:bg-rose-400"
                     onClick={() =>
                       act(
                         { action: "archive", campaignId: campaign.id },
@@ -1034,21 +1034,19 @@ export default function AdminSponsoredChallengesClient() {
                     }
                   >
                     {busy ? "Archiving..." : "Confirm archive"}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     disabled={busy}
-                    className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
                     onClick={() => setConfirmArchive(false)}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </Block>
           ) : null}
 
-          <div className="space-y-4 rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+          <div className="space-y-4 border border-line-300 bg-surface-900 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
                 {steps.map((step, index) => (
@@ -1057,7 +1055,7 @@ export default function AdminSponsoredChallengesClient() {
                     type="button"
                     disabled={busy}
                     onClick={() => setCurrentStep(index)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[.12em] transition disabled:cursor-wait disabled:opacity-50 ${
+                    className={`border px-3 py-1.5 text-xs font-black uppercase tracking-[.12em] transition disabled:cursor-wait disabled:opacity-50 ${
                       currentStep === index
                         ? "border-primary-300 bg-primary-500/15 text-primary-100"
                         : currentStep > index
@@ -1070,34 +1068,36 @@ export default function AdminSponsoredChallengesClient() {
                 ))}
               </div>
               <div className="flex items-center gap-2 text-[11px] text-ink-500">
-                <span>
+                <span className="flex items-center gap-1.5">
+                  {draftStatus === "saving" ? <Spinner size={11} /> : null}
                   {draftStatus === "saving"
                     ? "Saving draft..."
                     : draftStatus === "saved"
                       ? "Draft saved"
                       : "Draft changes autosave locally"}
                 </span>
-                <button
-                  type="button"
-                  className={ghostButton}
+                <Button
+                  size="sm"
                   onClick={() => void saveCurrentStep()}
                   disabled={busy}
+                  loading={busy}
                 >
                   {busy ? "Saving..." : "Save draft"}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl bg-primary-400 px-3 py-2 text-xs font-black text-canvas-950"
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
                   onClick={() => void saveStepAndAdvance()}
                   disabled={busy || currentStep >= steps.length - 1}
+                  loading={busy}
                 >
                   {busy ? "Saving..." : "Save and next"}
-                </button>
+                </Button>
               </div>
             </div>
             {editable ? (
-              <details className="group rounded-xl border border-line-300 bg-canvas-950/30 p-3">
-                <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-[.14em] text-primary-200">
+              <details className="group border border-line-300 bg-canvas-900 p-3">
+                <summary className="cursor-pointer list-none text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
                   <span className="flex items-center justify-between gap-3">
                     Start from a template
                     <span className="text-ink-500 transition group-open:rotate-180">+</span>
@@ -1121,10 +1121,10 @@ export default function AdminSponsoredChallengesClient() {
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_26rem] lg:items-start">
             <div className="space-y-6">
-              <div className="rounded-2xl border border-line-300 bg-surface-900/50 p-4 sm:p-5">
+              <div className="border border-line-300 bg-surface-900 p-4 sm:p-5">
                 <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">
+                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
                       Step {currentStep + 1} of {steps.length}
                     </p>
                     <h3 className="mt-1 font-display text-2xl text-white">
@@ -1382,7 +1382,7 @@ export default function AdminSponsoredChallengesClient() {
                     />
                   </Field>
                 </FieldGrid>
-                <details className="mt-3 rounded-xl border border-line-300/70 px-3 py-2">
+                <details className="mt-3 border border-line-300/70 px-3 py-2">
                   <summary className="cursor-pointer text-xs font-bold text-ink-300">
                     Advanced: review coordinates
                   </summary>
@@ -1459,7 +1459,7 @@ export default function AdminSponsoredChallengesClient() {
                 title="Discovery targeting"
                 note={DISCOVERY_GEOGRAPHY_COPY}
               >
-                <p className="text-xs font-black uppercase tracking-[.14em] text-amber-200">
+                <p className="text-[11px] font-black uppercase tracking-[.12em] text-amber-200">
                   Not participant eligibility
                 </p>
                 {readiness.fieldWarnings.geo ? (
@@ -1575,7 +1575,7 @@ export default function AdminSponsoredChallengesClient() {
                   </Field>
                 </FieldGrid>
                 {blocked ? (
-                  <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                  <p className="mt-3 border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
                     {NON_VENUE_COUNTRY_COPY}
                   </p>
                 ) : null}
@@ -1634,10 +1634,10 @@ export default function AdminSponsoredChallengesClient() {
                   Persisted Apple disclaimer: {APPLE_DISCLAIMER}
                 </p>
                 {campaign && canReviseRules(campaign.status) && !editable ? (
-                  <button
-                    type="button"
+                  <Button
                     disabled={busy}
-                    className="mt-3 rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white"
+                    className="mt-3"
+                    loading={busy}
                     onClick={() =>
                       act(
                         {
@@ -1651,15 +1651,15 @@ export default function AdminSponsoredChallengesClient() {
                     }
                   >
                     {busy ? "Revising rules..." : "Revise rules (new version)"}
-                  </button>
+                  </Button>
                 ) : null}
               </Block>
 
-              <details className="group rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+              <details className="group border border-line-300 bg-surface-900 p-4">
                 <summary className="cursor-pointer list-none">
                   <span className="flex items-center justify-between gap-3">
                     <span>
-                      <span className="block font-display text-2xl text-white">
+                      <span className="block font-display text-lg text-white">
                         Rules history
                       </span>
                       <span className="mt-1 block text-xs leading-5 text-ink-400">
@@ -1671,8 +1671,8 @@ export default function AdminSponsoredChallengesClient() {
                 </summary>
                 <div className="mt-3 space-y-3">
                 {currentVersion ? (
-                  <article className="rounded-2xl border border-primary-400/40 bg-primary-500/10 p-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-primary-200">
+                  <article className="border border-primary-400/40 bg-primary-500/10 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-primary-200">
                       Current · v{currentVersion.rulesVersion}
                     </p>
                     <p className="mt-1 text-xs text-ink-400">
@@ -1696,9 +1696,9 @@ export default function AdminSponsoredChallengesClient() {
                 {previousVersions.map((version) => (
                   <article
                     key={version.rulesVersion}
-                    className="rounded-2xl border border-line-300 bg-canvas-950/60 p-4"
+                    className="border border-line-300 bg-canvas-900 p-4"
                   >
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-ink-500">
+                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">
                       Accepted history · v{version.rulesVersion}
                     </p>
                     <p className="mt-1 text-xs text-ink-500">
@@ -1722,11 +1722,11 @@ export default function AdminSponsoredChallengesClient() {
 
               {currentStep === 4 ? (
                 <>
-              <details className="group rounded-2xl border border-line-300 bg-canvas-950/40 p-4">
+              <details className="group border border-line-300 bg-surface-900 p-4">
                 <summary className="cursor-pointer list-none">
                   <span className="flex items-center justify-between gap-3">
                     <span>
-                      <span className="block font-display text-2xl text-white">
+                      <span className="block font-display text-lg text-white">
                         Challenge artwork
                       </span>
                       <span className="mt-1 block text-xs text-ink-400">
@@ -1746,7 +1746,7 @@ export default function AdminSponsoredChallengesClient() {
                   <img
                     src={campaign.thumbnail.publicUrl}
                     alt={campaign.thumbnail.altText}
-                    className="mt-3 aspect-video w-full rounded-2xl object-cover"
+                    className="mt-3 aspect-video w-full object-cover"
                   />
                 ) : null}
                 <Field label="Image alt text" required={Boolean(campaign?.thumbnail)}>
@@ -1770,7 +1770,7 @@ export default function AdminSponsoredChallengesClient() {
                       className="text-sm text-ink-300"
                     />
                     {uploadingArtwork ? (
-                      <p className="text-xs text-primary-100">Uploading artwork...</p>
+                      <p className="flex items-center gap-2 text-xs text-primary-100"><Spinner size={12} />Uploading artwork...</p>
                     ) : null}
                     <CampaignAssetPicker
                       disabled={busy || !thumbnailAlt.trim()}
@@ -1895,8 +1895,8 @@ export default function AdminSponsoredChallengesClient() {
                       : "Create the campaign first, then save this step."}
                 </p>
                 {cashEnabled ? (
-                  <div className="mt-5 rounded-2xl border border-primary-400/25 bg-primary-500/[.06] p-4">
-                    <p className="text-xs font-black uppercase tracking-[.14em] text-primary-100">
+                  <div className="mt-5 border border-primary-400/25 bg-primary-500/[.06] p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-primary-100">
                       Sponsor-funded cash Earnings
                     </p>
                     <p className="mt-1 text-xs text-ink-300">
@@ -2016,7 +2016,7 @@ export default function AdminSponsoredChallengesClient() {
                     ) : null}
                     {campaign?.cashReward &&
                     campaign.cashReward.fundingStatus !== "confirmed" ? (
-                      <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                      <p className="mt-3 border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
                         <strong>One final action:</strong> confirm that the sponsor has funded the full campaign total shown above. Enter the transfer, invoice, or receipt reference below, then select <strong>Confirm full funding</strong>.
                       </p>
                     ) : null}
@@ -2040,10 +2040,11 @@ export default function AdminSponsoredChallengesClient() {
                             }
                           />
                         </Field>
-                        <button
-                          type="button"
+                        <Button
                           disabled={busy || !fundingReference.trim()}
-                          className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                          variant="primary"
+                          className="mt-3"
+                          loading={busy}
                           onClick={() =>
                             act(
                               {
@@ -2057,7 +2058,7 @@ export default function AdminSponsoredChallengesClient() {
                           }
                         >
                           {busy ? "Confirming funding..." : "Confirm full funding"}
-                        </button>
+                        </Button>
                       </div>
                     ) : null}
                   </div>
@@ -2075,10 +2076,10 @@ export default function AdminSponsoredChallengesClient() {
                   <ReviewList campaign={campaign} blocked={blocked} />
                   <div className="mt-4 flex flex-wrap gap-2">
                     {buttons.submit && canSubmitCampaign(campaign.status) ? (
-                      <button
-                        type="button"
+                      <Button
                         disabled={busy || Boolean(blocked)}
-                        className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-50"
+                        variant="primary"
+                        loading={busy}
                         onClick={() =>
                           act(
                             { action: "submit", campaignId: campaign.id },
@@ -2087,13 +2088,13 @@ export default function AdminSponsoredChallengesClient() {
                         }
                       >
                         {busy ? "Submitting..." : "Submit"}
-                      </button>
+                      </Button>
                     ) : null}
                     {buttons.approve ? (
-                      <button
-                        type="button"
+                      <Button
                         disabled={busy}
-                        className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950"
+                        variant="primary"
+                        loading={busy}
                         onClick={() =>
                           act(
                             {
@@ -2106,13 +2107,12 @@ export default function AdminSponsoredChallengesClient() {
                         }
                       >
                         {busy ? "Approving..." : "Approve"}
-                      </button>
+                      </Button>
                     ) : null}
                     {buttons.reject ? (
-                      <button
-                        type="button"
+                      <Button
                         disabled={busy}
-                        className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white"
+                        loading={busy}
                         onClick={() =>
                           act(
                             {
@@ -2125,7 +2125,7 @@ export default function AdminSponsoredChallengesClient() {
                         }
                       >
                         {busy ? "Rejecting..." : "Reject"}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                   {canReviewCampaign(campaign.status) ? (
@@ -2146,6 +2146,7 @@ export default function AdminSponsoredChallengesClient() {
         </section>
       ) : null}
     </div>
+    </AdminPage>
   );
 }
 

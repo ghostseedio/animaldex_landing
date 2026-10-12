@@ -52,7 +52,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
                             {/* The header's mark, so the two signatures match. The
                                 SVG in _assets is 600KB and arrives late through the
                                 image optimizer. */}
-                            <img src="/images/logo.webp" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0" />
+                            <Image src="/images/logo.webp" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0" />
                             <Image
                                 src="/images/animaldex-logo-text.webp"
                                 alt={t("title")}

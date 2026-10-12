@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import {Alert, Button, cn, fieldClass, LoadingRow} from "@/components/admin/ui";
 
 /**
  * Move a capture onto a chosen AnimalDex number.
@@ -121,15 +122,15 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
 
     return (
         <div role="dialog" aria-modal="true" aria-label={`Set index for ${captureIds.length > 1 ? `${captureIds.length} captures` : animalName || captureIds[0]}`}
-             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-sm sm:p-8"
+             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-3 sm:p-8"
              onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-            <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
-                <div className="flex items-center justify-between gap-4 border-b border-line-300 px-5 py-4">
+            <div className="w-full max-w-2xl overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-line-300 px-5 py-4">
                     <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-[.16em] text-primary-200">
+                        <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">
                             {mergeAfter ? "Set index, then merge" : "Set AnimalDex index"}
                         </p>
-                        <h2 className="truncate font-display text-2xl text-white">
+                        <h2 className="mt-1 truncate font-display text-xl text-white">
                             {captureIds.length > 1 ? `${captureIds.length} captures` : animalName || "Unidentified capture"}
                         </h2>
                         <p className="truncate font-mono text-[11px] text-ink-500">
@@ -140,33 +141,37 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
                                 : `${captureIds[0]}${currentNumber != null ? ` · currently #${currentNumber}` : " · currently unindexed"}`}
                         </p>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close index picker"
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300">×</button>
+                    <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close index picker" className="shrink-0">✕</Button>
                 </div>
 
                 <div className="space-y-4 p-5">
-                    {warning && <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm leading-5 text-amber-200">{warning}</p>}
-                    {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
-                    {notice && <p className="rounded-xl border border-primary-400/20 bg-primary-500/10 p-3 text-sm text-primary-100">{notice}</p>}
+                    {warning && <Alert tone="warn">{warning}</Alert>}
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {notice && <Alert tone="good">{notice}</Alert>}
 
                     <input value={query} onChange={(event) => setQuery(event.target.value)} autoFocus
                            placeholder="Search the catalog by number, name or identity key…"
-                           className="w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-300" />
+                           aria-label="Search the catalog"
+                           className={fieldClass} />
 
-                    <div className="max-h-72 overflow-y-auto rounded-xl border border-line-300">
-                        {searching && <p className="p-3 text-sm text-ink-400">Searching…</p>}
-                        {!searching && !matches.length && <p className="p-3 text-sm text-ink-400">
+                    <div className="max-h-72 overflow-y-auto border border-line-300 bg-canvas-900">
+                        {searching && <LoadingRow className="px-3 py-3">Searching…</LoadingRow>}
+                        {!searching && !matches.length && <p className="px-3 py-6 text-center text-sm text-ink-400">
                             {query.trim().length < 2 ? "Type at least two characters." : "No catalog entries match."}
                         </p>}
                         {matches.map((match) => (
                             <button key={match.species_profile_id} type="button" onClick={() => setChosen(match)}
-                                    className={`flex w-full items-center justify-between gap-3 border-b border-line-300 px-3 py-2 text-left last:border-b-0 ${chosen?.species_profile_id === match.species_profile_id ? "bg-primary-500/15" : ""}`}>
+                                    aria-pressed={chosen?.species_profile_id === match.species_profile_id}
+                                    className={cn(
+                                        "flex w-full items-center justify-between gap-3 border-b border-l-2 border-b-line-300/60 border-l-transparent px-3 py-2 text-left transition last:border-b-0 hover:bg-white/[.03]",
+                                        chosen?.species_profile_id === match.species_profile_id && "border-l-primary-300 bg-primary-500/15 hover:bg-primary-500/15"
+                                    )}>
                                 <span className="min-w-0">
                                     <span className="block truncate text-sm font-bold text-white">{match.display_name || match.normalized_identity_key}</span>
                                     <span className="block truncate text-xs italic text-ink-400">{match.scientific_name || "No scientific name"}</span>
                                 </span>
                                 <span className="shrink-0 text-right">
-                                    <span className="block font-mono text-sm text-primary-100">
+                                    <span className="block font-mono text-sm tabular-nums text-primary-100">
                                         {match.animaldex_number != null ? `#${match.animaldex_number}` : "unindexed"}
                                     </span>
                                     <span className="block text-[10px] uppercase text-ink-500">{match.identity_kind || "species"}</span>
@@ -176,22 +181,21 @@ export default function CaptureIndexPanel({captureIds, animalName, currentNumber
                     </div>
 
                     {chosen && chosen.animaldex_number == null && (
-                        <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-xs leading-5 text-amber-200">
+                        <Alert tone="warn">
                             That entry holds no AnimalDex number, so the capture will point at an unindexed profile and
                             will not show a number in the app.
-                        </p>
+                        </Alert>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button type="button" onClick={() => void apply()} disabled={!chosen || applying}
-                                className="rounded-xl bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950 disabled:opacity-40">
+                    <div className="flex flex-wrap items-center gap-3 border-t border-line-300 pt-4">
+                        <Button variant="primary" size="lg" onClick={() => void apply()} disabled={!chosen} loading={applying}>
                             {applying
                                 ? "Moving…"
                                 : chosen
                                     ? `${mergeAfter ? "Move and merge" : "Move"} ${captureIds.length > 1 ? `${captureIds.length} captures` : "capture"} to ${chosen.animaldex_number != null ? `#${chosen.animaldex_number}` : chosen.display_name}`
                                     : "Pick an entry"}
-                        </button>
-                        <p className="text-xs text-ink-500">
+                        </Button>
+                        <p className="min-w-0 flex-1 text-xs leading-5 text-ink-500">
                             {mergeAfter
                                 ? "Rewrites each capture's identity, recomputes stats, then folds them into the oldest capture. The merge cannot be undone from here."
                                 : "Rewrites this capture's identity and recomputes its game stats and the owner's totals."}

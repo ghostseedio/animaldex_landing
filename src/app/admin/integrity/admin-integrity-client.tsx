@@ -1,8 +1,8 @@
 "use client";
 
 import {useCallback, useEffect, useState} from "react";
-import {Refresh} from "solar-icon-set";
 import type {IntegrityRow} from "@/app/api/admin/integrity/route";
+import {AdminPage, Alert, Badge, ListSkeleton, PageHeader, RefreshButton, Stat, StatGrid, StatGridSkeleton} from "@/components/admin/ui";
 
 /**
  * Accounts whose captures claim an origin the server could not have observed.
@@ -26,12 +26,9 @@ type Payload = {
 function Signal({on, label, detail}: {on: boolean; label: string; detail: string}) {
     if (!on) return null;
     return (
-        <span
-            title={detail}
-            className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-300"
-        >
+        <Badge title={detail} tone="warn" className="normal-case tracking-normal">
             {label}
-        </span>
+        </Badge>
     );
 }
 
@@ -69,71 +66,57 @@ export default function AdminIntegrityClient() {
     const summary = data?.summary;
 
     return (
-        <main className="px-4 py-6 sm:px-7 lg:px-10">
-            <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line-300 pb-4">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-primary-200">Operations</p>
-                    <h1 className="mt-1 font-display text-3xl text-white sm:text-4xl">Capture integrity</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-300">
-                        Accounts whose captures claim a time, place or image the server could not have observed. These are signals, not proof — read the
-                        detail before acting on an account.
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => void load()}
-                    className="inline-flex items-center gap-2 rounded-xl border border-line-300 px-3 py-2 text-xs font-bold text-white transition hover:border-primary-300"
-                >
-                    <Refresh size={14} />
-                    {loading ? "Checking…" : "Re-check"}
-                </button>
-            </header>
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Operations"
+                title="Capture integrity"
+                description="Accounts whose captures claim a time, place or image the server could not have observed. These are signals, not proof — read the detail before acting on an account."
+                meta={
+                    data?.generatedAt ? (
+                        <>
+                            Checked {new Date(data.generatedAt).toISOString().replace("T", " ").slice(0, 19)} UTC · last {data.lookbackDays} days
+                        </>
+                    ) : null
+                }
+                actions={<RefreshButton loading={loading} onClick={() => void load()} label="Re-check" />}
+            />
 
             {error ? (
-                <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
-                    <p className="font-bold">The report could not be run.</p>
-                    <p className="mt-1 leading-6 text-red-200/80">{error}</p>
-                </div>
+                <Alert tone="bad" title="The report could not be run." className="mt-6">
+                    {error}
+                </Alert>
             ) : null}
 
             {summary ? (
-                <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Summary">
-                    <div className="rounded-2xl border border-line-300 bg-surface-900 px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Flagged accounts</p>
-                        <p className="mt-1 font-display text-3xl text-white">{summary.accounts}</p>
-                    </div>
-                    <div className="rounded-2xl border border-line-300 bg-surface-900 px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Two or more signals</p>
-                        <p className={`mt-1 font-display text-3xl ${summary.strong > 0 ? "text-red-300" : "text-white"}`}>{summary.strong}</p>
-                    </div>
-                    <div className="rounded-2xl border border-line-300 bg-surface-900 px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Backdating</p>
-                        <p className={`mt-1 font-display text-3xl ${summary.backdating > 0 ? "text-red-300" : "text-white"}`}>{summary.backdating}</p>
-                    </div>
-                    <div className="rounded-2xl border border-line-300 bg-surface-900 px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-ink-500">Captures involved</p>
-                        <p className="mt-1 font-display text-3xl text-white">{summary.capturesImplicated}</p>
-                    </div>
-                </section>
+                <StatGrid className="mt-6" aria-label="Summary">
+                    <Stat label="Flagged accounts" value={summary.accounts} />
+                    <Stat label="Two or more signals" value={summary.strong} tone={summary.strong > 0 ? "bad" : undefined} />
+                    <Stat label="Backdating" value={summary.backdating} tone={summary.backdating > 0 ? "bad" : undefined} />
+                    <Stat label="Captures involved" value={summary.capturesImplicated} />
+                </StatGrid>
+            ) : loading && !error ? (
+                <StatGridSkeleton className="mt-6" />
             ) : null}
 
             {summary && summary.accounts === 0 && !error ? (
-                <p className="mt-5 rounded-2xl border border-primary-400/20 bg-primary-500/[.06] px-4 py-3 text-sm font-bold text-primary-100">
+                <Alert tone="good" className="mt-6">
                     No account trips any provenance signal in the last {data?.lookbackDays} days.
-                </p>
+                </Alert>
             ) : null}
 
-            <ul className="mt-5 space-y-2">
+            {!data && loading && !error ? <ListSkeleton rows={6} className="mt-6" /> : null}
+
+            <ul className="mt-6 space-y-2">
                 {(data?.accounts ?? []).map((row) => (
-                    <li key={row.user_id} className="rounded-2xl border border-line-300 bg-surface-900 px-4 py-3">
+                    <li key={row.user_id} className="border border-line-300 bg-surface-900 p-4">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${row.signals >= 2 ? "bg-red-500/15 text-red-300" : "bg-amber-500/10 text-amber-300"}`}>
+                            <Badge tone={row.signals >= 2 ? "bad" : "warn"} className="shrink-0 tabular-nums">
                                 {row.signals} signal{row.signals === 1 ? "" : "s"}
-                            </span>
+                            </Badge>
                             <span className="min-w-0 flex-1 truncate font-mono text-xs text-white">
                                 {row.username || row.display_name || row.user_id}
                             </span>
-                            <span className="shrink-0 text-xs text-ink-400">
+                            <span className="shrink-0 text-xs tabular-nums text-ink-400">
                                 {row.captures_total} capture{row.captures_total === 1 ? "" : "s"} · joined {new Date(row.joined_at).toISOString().slice(0, 10)}
                             </span>
                         </div>
@@ -167,12 +150,6 @@ export default function AdminIntegrityClient() {
                     </li>
                 ))}
             </ul>
-
-            {data?.generatedAt ? (
-                <p className="mt-4 text-xs text-ink-500">
-                    Checked {new Date(data.generatedAt).toISOString().replace("T", " ").slice(0, 19)} UTC · last {data.lookbackDays} days
-                </p>
-            ) : null}
-        </main>
+        </AdminPage>
     );
 }

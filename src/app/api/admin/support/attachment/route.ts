@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getReceivedAttachmentDownloadUrl} from "@/lib/support";
+import {attachmentResponseHeaders} from "@/lib/support-attachment-headers";
 
 export async function GET(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) {
@@ -27,11 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     return new Response(response.body, {
-        headers: {
-            "Content-Type": response.headers.get("content-type") || "application/octet-stream",
-            "Content-Disposition": response.headers.get("content-disposition") || "inline",
-            "Cache-Control": "private, max-age=300"
-        }
+        headers: attachmentResponseHeaders(response.headers.get("content-type"), response.headers.get("content-disposition"))
     });
 }
 

@@ -11,6 +11,7 @@ export type ProfileGridCapture = {
     imageSrc: string;
     animalDexNumber: number | null;
     isMovingMedia: boolean;
+    level?: number;
 };
 
 export type ProfileGridItem<T extends ProfileGridCapture = ProfileGridCapture> = {
@@ -18,6 +19,8 @@ export type ProfileGridItem<T extends ProfileGridCapture = ProfileGridCapture> =
     representative: T;
     animalDexNumber: number | null;
     captureCount: number;
+    /** Level of the capture the cell opens (iOS `ProfileCaptureGridItem.level`). */
+    level: number;
     isMovingMedia: boolean;
 };
 
@@ -45,6 +48,7 @@ export function buildProfileGridItems<T extends ProfileGridCapture>(captures: T[
             representative,
             animalDexNumber: representative.animalDexNumber,
             captureCount: group.length,
+            level: representative.level ?? 1,
             isMovingMedia: representative.isMovingMedia
         };
     });

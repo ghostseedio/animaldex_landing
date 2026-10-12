@@ -1,8 +1,11 @@
 import type {SpeciesAtAGlance} from "@/lib/species-field-guide";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 type SpeciesAtAGlanceProps = {
     animalName: string;
     glance: SpeciesAtAGlance;
+    /** The Power's icon, when it has one. */
+    powerIconSvg?: string | null;
     labels: {
         title: string;
         knownFor: string;
@@ -10,7 +13,7 @@ type SpeciesAtAGlanceProps = {
     };
 };
 
-export default function SpeciesAtAGlanceCard({animalName, glance, labels}: SpeciesAtAGlanceProps) {
+export default function SpeciesAtAGlanceCard({animalName, glance, powerIconSvg = null, labels}: SpeciesAtAGlanceProps) {
     if (glance.facts.length === 0 && glance.knownFor.length === 0 && !glance.principleName) {
         return null;
     }
@@ -37,6 +40,7 @@ export default function SpeciesAtAGlanceCard({animalName, glance, labels}: Speci
             {glance.principleName ? (
                 <p className="mt-3 text-sm leading-6 text-primary-100">
                     <span className="font-semibold text-white">{labels.power}: </span>
+                    <AnimalPowerIcon svg={powerIconSvg} className="text-primary-300" />
                     {glance.principleName}
                 </p>
             ) : null}

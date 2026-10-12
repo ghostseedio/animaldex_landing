@@ -3,7 +3,31 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createContext, FormEvent, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, InfoTip, Segmented, Stat, TD, TH, Table } from "@/components/admin/ui";
+import {
+  AdminPage,
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  EmptyState,
+  InfoTip,
+  PageHeader,
+  RefreshButton,
+  Section,
+  Segmented,
+  Skeleton,
+  Stat,
+  StatGrid,
+  StatGridSkeleton,
+  TD,
+  TH,
+  Table,
+  TableSkeleton,
+  cn,
+  fieldClass,
+} from "@/components/admin/ui";
 import {
   daysInMonth,
   formatMoney,
@@ -209,6 +233,12 @@ function MoneyTotal({ values, date }: { values: Record<string, number> | null | 
 // Charts
 // ---------------------------------------------------------------------------
 
+// One axis/grid palette for every chart on the page.
+const chartAxis = "#84958b";
+const chartGrid = "rgba(255,255,255,.07)";
+const chartBaseline = "rgba(255,255,255,.18)";
+const chartFont = 11;
+
 /** A chart ceiling of four equal, whole-number steps (e.g. 40 → ticks 0/10/20/30/40). */
 function niceMax(value: number) {
   const rough = Math.max(1, value) / 4;
@@ -231,13 +261,13 @@ function PlatformDailyChart({ rows, filter }: { rows: PlatformDailyRow[]; filter
   const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px]" role="img" aria-label="New users per day by platform">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px] tabular-nums" role="img" aria-label="New users per day by platform">
         {ticks.map((tick) => {
           const y = top + plot - (tick / max) * plot;
           return (
             <g key={tick}>
-              <line x1={left} x2={width} y1={y} y2={y} stroke="rgba(255,255,255,.07)" />
-              <text x={left - 6} y={y + 3} textAnchor="end" fontSize="10" fill="#84958b">
+              <line x1={left} x2={width} y1={y} y2={y} stroke={tick === 0 ? chartBaseline : chartGrid} shapeRendering="crispEdges" />
+              <text x={left - 6} y={y + 4} textAnchor="end" fontSize={chartFont} fill={chartAxis}>
                 {Math.round(tick)}
               </text>
             </g>
@@ -251,13 +281,13 @@ function PlatformDailyChart({ rows, filter }: { rows: PlatformDailyRow[]; filter
                 const h = (row[platform] / max) * plot;
                 y -= h;
                 return h > 0 ? (
-                  <rect key={platform} x={left + index * slot + slot * 0.18} y={y} width={Math.max(3, slot * 0.64)} height={h} fill={platformColors[platform]}>
+                  <rect key={platform} x={left + index * slot + slot * 0.18} y={y} width={Math.max(3, slot * 0.64)} height={h} fill={platformColors[platform]} shapeRendering="crispEdges">
                     <title>{`${row.date} · ${growthPlatformLabels[platform]} ${row[platform]}`}</title>
                   </rect>
                 ) : null;
               })}
               {rows.length <= 16 || index % 2 === 0 ? (
-                <text x={left + index * slot + slot / 2} y={height - 8} textAnchor="middle" fontSize="10" fill="#84958b">
+                <text x={left + index * slot + slot / 2} y={height - 6} textAnchor="middle" fontSize={chartFont} fill={chartAxis}>
                   {Number(row.date.slice(8))}
                 </text>
               ) : null}
@@ -272,21 +302,44 @@ function PlatformDailyChart({ rows, filter }: { rows: PlatformDailyRow[]; filter
 function PostTypeChart({ rows }: { rows: PostSeriesRow[] }) {
   const keys = Object.keys(postTypeMeta) as PostType[];
   const max = niceMax(Math.max(1, ...rows.map((row) => keys.reduce((sum, key) => sum + row[key], 0))));
-  const slot = 900 / Math.max(rows.length, 1);
+  // Same frame as the new-users chart: a left value axis and four gridlines.
+  const width = 900;
+  const height = 230;
+  const left = 34;
+  const top = 8;
+  const bottom = 24;
+  const plot = height - bottom - top;
+  const slot = (width - left) / Math.max(rows.length, 1);
+  const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
   return (
     <div className="overflow-x-auto">
-      <svg viewBox="0 0 900 230" className="w-full min-w-[560px]" role="img" aria-label="Discover posts per day by type">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px] tabular-nums" role="img" aria-label="Discover posts per day by type">
+        {ticks.map((tick) => {
+          const y = top + plot - (tick / max) * plot;
+          return (
+            <g key={tick}>
+              <line x1={left} x2={width} y1={y} y2={y} stroke={tick === 0 ? chartBaseline : chartGrid} shapeRendering="crispEdges" />
+              <text x={left - 6} y={y + 4} textAnchor="end" fontSize={chartFont} fill={chartAxis}>
+                {Math.round(tick)}
+              </text>
+            </g>
+          );
+        })}
         {rows.map((row, index) => {
-          let y = 200;
+          let y = top + plot;
           return (
             <g key={row.date}>
               {keys.map((key) => {
-                const h = (row[key] / max) * 190;
+                const h = (row[key] / max) * plot;
                 y -= h;
-                return <rect key={key} x={index * slot + slot * 0.16} y={y} width={Math.max(4, slot * 0.68)} height={h} fill={postTypeMeta[key].color} />;
+                return (
+                  <rect key={key} x={left + index * slot + slot * 0.16} y={y} width={Math.max(4, slot * 0.68)} height={h} fill={postTypeMeta[key].color} shapeRendering="crispEdges">
+                    <title>{`${row.date} · ${postTypeMeta[key].label} ${row[key]}`}</title>
+                  </rect>
+                );
               })}
               {rows.length <= 16 || index % 2 === 0 ? (
-                <text x={index * slot + slot / 2} y="222" textAnchor="middle" fontSize="10" fill="#84958b">
+                <text x={left + index * slot + slot / 2} y={height - 6} textAnchor="middle" fontSize={chartFont} fill={chartAxis}>
                   {new Date(row.date).getUTCDate()}
                 </text>
               ) : null}
@@ -303,7 +356,7 @@ function Legend({ items }: { items: Array<{ label: string; color: string; value?
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-400">
       {items.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: item.color }} aria-hidden="true" />
+          <span className="h-2.5 w-2.5" style={{ background: item.color }} aria-hidden="true" />
           {item.label}
           {item.value != null ? <span className="font-bold text-white tabular-nums">{item.value}</span> : null}
         </span>
@@ -318,15 +371,12 @@ function Legend({ items }: { items: Array<{ label: string; color: string; value?
 
 function AttributionPending() {
   return (
-    <Card className="border-amber-300/30 bg-amber-400/[.05]">
-      <CardContent className="text-sm text-amber-100">
-        <p className="font-black text-white">Platform and channel data is not switched on yet</p>
-        <p className="mt-1 text-xs leading-5 text-amber-100/80">
-          Apply <code className="break-all rounded bg-black/30 px-1">supabase/migrations/20260915120000_growth_platform_attribution.sql</code>. Existing
-          accounts are then split by device evidence straight away, and new signups are tagged once the iOS and Android updates ship.
-        </p>
-      </CardContent>
-    </Card>
+    <Alert tone="warn" title="Platform and channel data is not switched on yet">
+      <span className="text-xs leading-5">
+        Apply <code className="break-all bg-black/30 px-1">supabase/migrations/20260915120000_growth_platform_attribution.sql</code>. Existing
+        accounts are then split by device evidence straight away, and new signups are tagged once the iOS and Android updates ship.
+      </span>
+    </Alert>
   );
 }
 
@@ -341,9 +391,9 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
             <CardContent>
               <div className="flex items-center justify-between gap-2">
                 <PlatformBadge platform={item.platform} />
-                <span className="text-xs text-ink-400">{format(item.signups)} new users</span>
+                <span className="text-xs text-ink-400 tabular-nums">{format(item.signups)} new users</span>
               </div>
-              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/[.07]" aria-hidden="true">
+              <div className="mt-3 h-2.5 overflow-hidden bg-white/[.07]" aria-hidden="true">
                 <div className="flex h-full">
                   <div style={{ width: `${100 - (item.organicShare ?? 100)}%`, background: "#f6bd55" }} />
                   <div style={{ width: `${item.organicShare ?? 0}%`, background: platformColors[item.platform] }} />
@@ -365,11 +415,11 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
                 </div>
                 <div>
                   <dt className="text-ink-500">Spend</dt>
-                  <dd className="text-ink-200"><MoneyTotal values={item.spendByCurrency} /></dd>
+                  <dd className="text-ink-200 tabular-nums"><MoneyTotal values={item.spendByCurrency} /></dd>
                 </div>
                 <div>
                   <dt className="text-ink-500">Cost per paid signup</dt>
-                  <dd className="text-ink-200"><MoneyTotal values={item.costPerPaidSignupByCurrency} /></dd>
+                  <dd className="text-ink-200 tabular-nums"><MoneyTotal values={item.costPerPaidSignupByCurrency} /></dd>
                 </div>
               </dl>
               {item.reportedInstalls === 0 && Object.keys(item.spendByCurrency).length ? (
@@ -390,7 +440,7 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
 
 function ChannelTable({ channels, filter, limit }: { channels: ChannelRow[]; filter: PlatformFilter; limit?: number }) {
   const rows = channels.filter((row) => filter === "all" || row.platform === filter).slice(0, limit ?? Infinity);
-  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No users for this filter yet.</p>;
+  if (!rows.length) return <EmptyState className="m-4 py-8" title="No users for this filter yet." />;
   return (
     <Table minWidth={760}>
       <thead>
@@ -448,7 +498,7 @@ function PaidLogTable({ rows }: { rows: PaidLogRow[] }) {
   const totalSpend = converted.reduce((sum, row) => sum + (row.spend ?? 0), 0);
   const totalInstalls = converted.reduce((sum, row) => sum + row.installs, 0);
   const installSpend = converted.reduce((sum, row) => sum + (row.installSpend ?? 0), 0);
-  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No spend or installs logged this month.</p>;
+  if (!rows.length) return <EmptyState className="m-4 py-8" title="No spend or installs logged this month." />;
   return (
     <Table minWidth={640}>
       <thead>
@@ -503,7 +553,7 @@ function HistoricalTable({ rows }: { rows: HistoricalChannelRow[] }) {
   const withInstalls = paidConverted.filter((item) => (item.row.installs ?? 0) > 0);
   const totalInstalls = withInstalls.reduce((sum, item) => sum + (item.row.installs ?? 0), 0);
   const installSpend = withInstalls.reduce((sum, item) => sum + (item.spend ?? 0), 0);
-  if (!rows.length) return <p className="px-4 pb-4 text-sm text-ink-400">No imported channel reports yet.</p>;
+  if (!rows.length) return <EmptyState className="m-4 py-8" title="No imported channel reports yet." />;
   return (
     <Table minWidth={860}>
       <thead>
@@ -618,8 +668,8 @@ function CollectorDepth({ data }: { data: NonNullable<GrowthData["collectorAnaly
             <p className="text-xs font-black text-white">
               {row.label} {row.label === "1" ? "capture" : "captures"}
             </p>
-            <div className="h-4 overflow-hidden rounded bg-white/[.06]">
-              <div className="h-full rounded bg-primary-400/80" style={{ width: `${(row.users / max) * 100}%` }} />
+            <div className="h-4 overflow-hidden bg-white/[.06]">
+              <div className="h-full bg-primary-400/80" style={{ width: `${(row.users / max) * 100}%` }} />
             </div>
             <p className="text-right text-xs text-ink-300 tabular-nums">
               {format(row.users)} · {row.percent}%
@@ -657,7 +707,7 @@ function CaptureRetention({ data }: { data: NonNullable<GrowthData["collectorAna
                 {row.days.map((value, day) => (
                   <TD key={day} numeric className="p-1">
                     <span
-                      className={`block rounded px-2 py-1.5 ${value == null ? "text-ink-600" : "text-white"}`}
+                      className={`block px-2 py-1.5 ${value == null ? "text-ink-600" : "text-white"}`}
                       style={value == null ? undefined : { backgroundColor: `rgba(89,241,118,${Math.max(0.08, (value / 100) * 0.75)})` }}
                     >
                       {value == null ? "—" : `${value}%`}
@@ -669,7 +719,9 @@ function CaptureRetention({ data }: { data: NonNullable<GrowthData["collectorAna
           </tbody>
         </Table>
       ) : (
-        <CardContent className="text-sm text-ink-400">Not enough activated collectors yet.</CardContent>
+        <CardContent>
+          <EmptyState className="py-8" title="Not enough activated collectors yet." />
+        </CardContent>
       )}
     </Card>
   );
@@ -698,27 +750,27 @@ function SocialAccounts({
         description={`Views and posts from the daily log this month: posts shared from Story videos and views from connected accounts are recorded automatically. Account totals synced ${lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("en") : "never"}.`}
         action={
           configured.length ? (
-            <Button size="sm" onClick={onSync} disabled={syncing}>
+            <Button size="sm" onClick={onSync} loading={syncing}>
               {syncing ? "Syncing…" : "Sync accounts"}
             </Button>
           ) : null
         }
       />
       <CardContent className="space-y-4">
-        <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
+        <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-7">
           {organicViews.map((item) => (
-            <div key={item.platform} className="rounded-lg border border-line-300 bg-canvas-900 p-3">
-              <p className="text-[11px] text-ink-500">{item.platform}</p>
+            <div key={item.platform} className="border border-line-300 bg-canvas-900 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{item.platform}</p>
               <p className="font-display text-xl text-white tabular-nums">{format(item.views)}</p>
               <p className="text-[11px] text-ink-500">{format(item.posts)} posts</p>
             </div>
           ))}
         </div>
         {configured.length ? (
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {configured.map((item) => (
-              <div key={item.platform} className="rounded-lg border border-line-300 p-3">
-                <p className="text-[11px] text-ink-500">{item.platform} followers</p>
+              <div key={item.platform} className="border border-line-300 bg-canvas-900 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{item.platform} followers</p>
                 <p className="font-display text-xl text-white tabular-nums">{format(item.followers)}</p>
                 {item.followerChange != null ? (
                   <p className={`text-[11px] tabular-nums ${item.followerChange >= 0 ? "text-primary-200" : "text-red-300"}`}>
@@ -733,14 +785,72 @@ function SocialAccounts({
           <p className="text-xs text-ink-500">No social API keys or Story videos logins, so follower counts aren&apos;t synced.</p>
         )}
         {issues.length ? (
-          <ul className="space-y-1 text-[11px] text-amber-200/80">
-            {issues.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
+          <Alert tone="warn">
+            <ul className="space-y-1 text-xs">
+              {issues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          </Alert>
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** Bars at fixed, varied heights so the placeholder reads as a chart. */
+const skeletonBars = [38, 52, 44, 61, 35, 70, 58, 47, 66, 74, 55, 63, 49, 81, 68, 57, 72, 60, 77, 65];
+
+function ChartSkeleton({ height = "h-48" }: { height?: string }) {
+  return (
+    <div className={cn("relative flex items-end gap-1.5 border-b border-white/[.12] pl-8", height)} aria-hidden="true">
+      <div className="absolute inset-x-0 top-0 border-t border-white/[.05]" />
+      <div className="absolute inset-x-0 top-1/2 border-t border-white/[.05]" />
+      {skeletonBars.map((bar, index) => (
+        <Skeleton key={index} className="flex-1" style={{ height: `${bar}%` }} />
+      ))}
+    </div>
+  );
+}
+
+/** First load only: the overview's shape, so the page doesn't jump when data lands. */
+function DashboardSkeleton() {
+  return (
+    <div role="status" aria-label="Loading growth data" className="mt-6 space-y-6">
+      <StatGridSkeleton />
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <Card>
+          <div className="border-b border-line-300 px-4 py-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-2 h-2.5 w-72 max-w-full" />
+          </div>
+          <CardContent className="space-y-3">
+            <ChartSkeleton />
+            <div className="flex gap-4">
+              {[0, 1, 2, 3].map((item) => (
+                <Skeleton key={item} className="h-2.5 w-16" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <div className="border-b border-line-300 px-4 py-3">
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <CardContent className="space-y-3">
+            {[0, 1, 2, 3].map((item) => (
+              <Skeleton key={item} className="h-3" style={{ width: `${90 - item * 12}%` }} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <div className="border-b border-line-300 px-4 py-3">
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <TableSkeleton rows={5} columns={6} />
+      </Card>
+    </div>
   );
 }
 
@@ -949,9 +1059,9 @@ export default function AdminMetricsDashboard() {
 
   if (authorized === false) {
     return (
-      <main className="grid min-h-[70vh] place-items-center px-4">
-        <form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6">
-          <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p>
+      <AdminPage width="narrow" className="grid min-h-[70vh] place-items-center">
+        <form onSubmit={login} className="w-full max-w-sm border border-line-300 bg-surface-900 p-6">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">AnimalDex admin</p>
           <h1 className="mt-2 font-display text-3xl text-white">Metrics</h1>
           <label htmlFor="admin-metrics-password" className="sr-only">
             Admin password
@@ -962,12 +1072,18 @@ export default function AdminMetricsDashboard() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Admin password"
-            className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300"
+            className={cn(fieldClass, "mt-6")}
           />
-          <button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>
-          {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+          <Button type="submit" variant="primary" size="lg" className="mt-3 w-full">
+            Sign in
+          </Button>
+          {error && (
+            <Alert tone="bad" className="mt-3">
+              {error}
+            </Alert>
+          )}
         </form>
-      </main>
+      </AdminPage>
     );
   }
 
@@ -1012,24 +1128,27 @@ export default function AdminMetricsDashboard() {
 
   return (
     <FxContext.Provider value={{ display: displayCurrency, rates: fx, referenceDate }}>
-      <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-line-300 pb-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[.18em] text-primary-200">Growth</p>
-              <h1 className="font-display text-3xl text-white sm:text-4xl">{monthName}</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, -1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, -1))}`}>
-                ←
-              </Button>
-              <Badge tone={monthState === "current" ? "good" : monthState === "upcoming" ? "warn" : "neutral"}>{monthState}</Badge>
-              <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, 1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, 1))}`}>
-                →
-              </Button>
-              {loading && data ? <span className="text-xs text-ink-400" role="status">Loading…</span> : null}
-            </div>
-          </div>
+      <AdminPage width="wide" className="min-w-0">
+        <PageHeader
+          eyebrow="Growth"
+          title={monthName}
+          description="Signups, channels, collector depth and revenue for the month, on the Asia/Jakarta calendar."
+          actions={
+            <>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, -1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, -1))}`}>
+                  ←
+                </Button>
+                <Badge tone={monthState === "current" ? "good" : monthState === "upcoming" ? "warn" : "neutral"}>{monthState}</Badge>
+                <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, 1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, 1))}`}>
+                  →
+                </Button>
+              </div>
+              <RefreshButton loading={loading} onClick={() => void load(growthMonth)} />
+            </>
+          }
+        />
+        <div className="mt-4 flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Segmented label="Metrics section" value={tab} options={tabs} onChange={(value) => navigate({ tab: value })} />
             {tab !== "plan" && tab !== "revenue" ? (
@@ -1056,22 +1175,41 @@ export default function AdminMetricsDashboard() {
               />
             ) : null}
           </div>
-          {fxError && tab !== "plan" && tab !== "product" ? <p className="text-xs text-amber-200">{fxError}</p> : null}
-        </header>
+          {fxError && tab !== "plan" && tab !== "product" ? (
+            <Alert tone="warn" className="py-2 text-xs">
+              {fxError}
+            </Alert>
+          ) : null}
+        </div>
 
-        {error ? <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
-        {loading && !data ? <div className="py-20 text-center text-ink-400">Loading growth data…</div> : null}
+        {error ? (
+          <Alert tone="bad" className="mt-4">
+            {error}
+          </Alert>
+        ) : null}
+        {loading && !data ? <DashboardSkeleton /> : null}
 
-        <div className={`mt-5 space-y-4 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
+        <div aria-busy={(loading && Boolean(data)) || undefined} className={cn("mt-6 space-y-6 transition-opacity", loading && data && "opacity-60")}>
           {data && tab === "overview" ? (
             upcoming ? (
               <Card>
-                <CardContent className="text-sm text-ink-400">{monthName} hasn&apos;t started. Targets for it are on the Plan &amp; log tab.</CardContent>
+                <CardContent>
+                  <EmptyState
+                    className="py-8"
+                    title={<>{monthName} hasn&apos;t started.</>}
+                    description="Targets for it are on the Plan & log tab."
+                    action={
+                      <Button size="sm" variant="primary" onClick={() => navigate({ tab: "plan" })}>
+                        Open Plan &amp; log
+                      </Button>
+                    }
+                  />
+                </CardContent>
               </Card>
             ) : (
               <>
                 {attribution && !attribution.available ? <AttributionPending /> : null}
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <StatGrid>
                   <Stat
                     label="New users"
                     value={format(filteredStats ? filteredStats.users : monthUsers)}
@@ -1099,9 +1237,9 @@ export default function AdminMetricsDashboard() {
                     value={format(purchaseCount)}
                     hint={`≈ ${fxText(purchaseUsd, "USD")} at list price · excludes test purchases`}
                   />
-                </div>
+                </StatGrid>
 
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
                   <Card>
                     <CardHeader
                       title="New users per day"
@@ -1144,17 +1282,19 @@ export default function AdminMetricsDashboard() {
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-sm text-ink-400">Nothing flagged for {monthName}.</p>
+                        <p className="flex items-center gap-2 text-sm text-ink-400">
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-300" aria-hidden="true" />
+                          Nothing flagged for {monthName}.
+                        </p>
                       )}
                     </CardContent>
                   </Card>
                 </div>
 
                 {growth?.paid?.split.length ? (
-                  <section className="space-y-2">
-                    <h2 className="font-display text-lg text-white">Paid vs organic</h2>
+                  <Section title="Paid vs organic" className="mt-0">
                     <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
-                  </section>
+                  </Section>
                 ) : null}
 
                 {attributionMonth ? (
@@ -1179,13 +1319,13 @@ export default function AdminMetricsDashboard() {
             <>
               {attribution && !attribution.available ? <AttributionPending /> : null}
               {!upcoming && growth?.paid?.split.length ? (
-                <section className="space-y-2">
-                  <div>
-                    <h2 className="font-display text-lg text-white">Paid vs organic by platform</h2>
-                    <p className="text-xs text-ink-400">Signups on each platform against installs the ad platforms reported in the daily log.</p>
-                  </div>
+                <Section
+                  title="Paid vs organic by platform"
+                  description="Signups on each platform against installs the ad platforms reported in the daily log."
+                  className="mt-0"
+                >
                   <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
-                </section>
+                </Section>
               ) : null}
 
               {attributionMonth ? (
@@ -1226,10 +1366,10 @@ export default function AdminMetricsDashboard() {
               {attribution?.available ? (
                 <Card>
                   <CardHeader title="Platform signal, all accounts" description="How each account's platform is known. App reports replace inferences as people update." />
-                  <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {(Object.keys(platformEvidenceLabels) as PlatformEvidence[]).map((evidence) => (
-                      <div key={evidence} className="rounded-lg border border-line-300 p-3">
-                        <p className="text-[11px] text-ink-500">{platformEvidenceLabels[evidence]}</p>
+                      <div key={evidence} className="border border-line-300 bg-canvas-900 p-3">
+                        <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{platformEvidenceLabels[evidence]}</p>
                         <p className="font-display text-xl text-white tabular-nums">{format(attribution.allTime.evidenceCounts[evidence] ?? 0)}</p>
                       </div>
                     ))}
@@ -1242,7 +1382,9 @@ export default function AdminMetricsDashboard() {
           {data && tab === "product" ? (
             upcoming ? (
               <Card>
-                <CardContent className="text-sm text-ink-400">{monthName} hasn&apos;t started.</CardContent>
+                <CardContent>
+                  <EmptyState className="py-8" title={<>{monthName} hasn&apos;t started.</>} />
+                </CardContent>
               </Card>
             ) : (
               <>
@@ -1286,19 +1428,19 @@ export default function AdminMetricsDashboard() {
                 ) : null}
                 {collector ? (
                   <>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <StatGrid>
                       <Stat label="Activated" value={pct(collector.activation.rate)} hint={`${format(collector.activation.users)} of ${format(collector.activation.eligible)} users captured within 24h`} />
                       <Stat label="Repeat collectors" value={pct(collector.repeat.rate)} hint={`${format(collector.repeat.users)} of ${format(collector.repeat.activated)} activated captured again`} />
                       <Stat label="D1 capture retention" value={pct(collector.d1.rate)} hint={`${format(collector.d1.users)} of ${format(collector.d1.eligible)} captured again 24–48h later`} />
                       <Stat label="D7 capture retention" value={pct(collector.d7.rate)} hint={`${format(collector.d7.users)} of ${format(collector.d7.eligible)} captured again on days 6–8`} />
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    </StatGrid>
+                    <StatGrid>
                       <Stat label="Qualifying captures" value={format(collector.summary.captures)} />
                       <Stat label="Unique collectors" value={format(collector.summary.collectors)} />
                       <Stat label="Captures per collector" value={collector.summary.capturesPerCollector?.toFixed(1) ?? "—"} />
                       <Stat label="Median captures" value={collector.summary.medianCaptures?.toFixed(1).replace(".0", "") ?? "—"} />
-                    </div>
-                    <div className="grid gap-4 xl:grid-cols-2">
+                    </StatGrid>
+                    <div className="grid gap-3 xl:grid-cols-2">
                       <CollectorDepth data={collector} />
                       <CaptureRetention data={collector} />
                     </div>
@@ -1323,7 +1465,7 @@ export default function AdminMetricsDashboard() {
 
           {data && tab === "revenue" ? (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <StatGrid>
                 <Stat label="Purchases" value={format(purchaseCount)} hint="All stores, excluding test purchases" />
                 <Stat label="Estimated revenue" value={fxText(purchaseUsd, "USD")} info={growth?.revenue?.note} />
                 <Stat label="First-time purchasers" value={format(growth?.funnel?.firstTimePurchasers ?? null)} hint={`First production purchase happened in ${monthName}`} />
@@ -1332,7 +1474,7 @@ export default function AdminMetricsDashboard() {
                   value={pct(growth?.funnel?.payerConversionRate)}
                   hint={`${format(growth?.funnel?.cohortFirstTimePurchasers ?? null)} of ${format(monthUsers)} ${monthName} signups have paid`}
                 />
-              </div>
+              </StatGrid>
               {growth?.revenue ? (
                 <Card>
                   <CardHeader
@@ -1353,7 +1495,7 @@ export default function AdminMetricsDashboard() {
 
           {data && tab === "plan" ? <GrowthCommandCenter growth={growth} month={growthMonth} reload={() => loadGrowth(growthMonth)} /> : null}
         </div>
-      </main>
+      </AdminPage>
     </FxContext.Provider>
   );
 }

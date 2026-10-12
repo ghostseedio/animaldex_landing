@@ -2,6 +2,24 @@
 
 import Link from "next/link";
 import {useEffect, useState, type FormEvent} from "react";
+import {
+    AdminPage,
+    Alert,
+    Badge,
+    Button,
+    Card,
+    EmptyState,
+    Field,
+    fieldClass,
+    ListSkeleton,
+    LoadingRow,
+    PageHeader,
+    Section,
+    Skeleton,
+    Table,
+    TD,
+    TH
+} from "@/components/admin/ui";
 
 type Environment = {
     environmentLabel: string;
@@ -87,6 +105,9 @@ export function AdminCreatorRewardsClient() {
     const [draft, setDraft] = useState(emptyDraft);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    // Which action is in flight, so only the clicked button shows a spinner.
+    const [busyAction, setBusyAction] = useState<string | null>(null);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [message, setMessage] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [creators, setCreators] = useState<CreatorRow[]>([]);
@@ -133,7 +154,9 @@ export function AdminCreatorRewardsClient() {
     }
 
     useEffect(() => {
-        load().catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+        load()
+            .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+            .finally(() => setInitialLoading(false));
     }, []);
 
     async function togglePeriod(periodId: string) {
@@ -157,6 +180,7 @@ export function AdminCreatorRewardsClient() {
         );
         if (!confirmed) return;
         setBusy(true);
+        setBusyAction(`${action}:${periodId ?? ""}`);
         setMessage(null);
         setError(null);
         try {
@@ -174,6 +198,7 @@ export function AdminCreatorRewardsClient() {
             setError(e instanceof Error ? e.message : "Action failed");
         } finally {
             setBusy(false);
+            setBusyAction(null);
         }
     }
 
@@ -207,206 +232,211 @@ export function AdminCreatorRewardsClient() {
         });
     }
 
+    const draftFieldClass = `${fieldClass} mt-1`;
+
     return (
-        <main className="px-6 py-8 text-ink-100">
-            <Link href="/admin" className="text-sm text-ink-400 hover:text-white">
-                ← Admin
-            </Link>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-3xl text-white">Creator Rewards</h1>
-                <span
-                    className={`rounded-md px-2.5 py-1 text-xs font-black tracking-wide ${
-                        env?.isProduction ? "bg-rose-600 text-white" : "bg-emerald-600 text-white"
-                    }`}
-                >
-                    {envBadge}
-                </span>
-            </div>
-            <p className="mt-2 max-w-3xl text-sm text-ink-400">
-                Company-funded reward periods → allocations → Earnings ledger. Bank payouts are a separate finance
-                step on{" "}
-                <Link href="/admin/payouts" className="text-white underline-offset-2 hover:underline">
-                    /admin/payouts
-                </Link>
-                . Credits cannot be withdrawn.
-            </p>
+        <AdminPage className="text-ink-100">
+            <PageHeader
+                eyebrow="Creator economy"
+                title={
+                    <span className="flex flex-wrap items-center gap-3">
+                        Creator Rewards
+                        {config ? <Badge tone={env?.isProduction ? "bad" : "good"}>{envBadge}</Badge> : null}
+                    </span>
+                }
+                description={
+                    <>
+                        Company-funded reward periods → allocations → Earnings ledger. Bank payouts are a separate finance
+                        step on{" "}
+                        <Link href="/admin/payouts" className="text-white underline-offset-2 hover:underline">
+                            /admin/payouts
+                        </Link>
+                        . Credits cannot be withdrawn.
+                    </>
+                }
+            />
+
+            {initialLoading && !config ? (
+                <div className="mt-6 border border-line-300 bg-surface-900 px-4 py-4">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="mt-3 h-2.5 w-2/3" />
+                </div>
+            ) : null}
 
             {config && (
-                <div
-                    className={`mt-6 rounded-2xl border px-4 py-3 ${
-                        config.enabled ? "border-amber-400/40 bg-amber-500/10" : "border-rose-400/40 bg-rose-500/10"
-                    }`}
-                >
-                    <p className="font-bold text-white">
-                        {config.enabled
+                <Alert
+                    tone={config.enabled ? "warn" : "bad"}
+                    className="mt-6"
+                    title={
+                        config.enabled
                             ? `Creator Rewards enabled — ${envBadge}`
-                            : "Creator Rewards disabled — drafts allowed; open/freeze/calculate blocked"}
-                    </p>
-                    <p className="mt-1 text-sm text-ink-300">
+                            : "Creator Rewards disabled — drafts allowed; open/freeze/calculate blocked"
+                    }
+                >
+                    <span className="font-mono text-xs">
                         auto_post_earnings={String(config.autoPostEarnings)} · project {projectRef} · beta allowlist=
                         {String(env?.betaAllowlistRequired ?? false)}
-                    </p>
+                    </span>
                     {config.autoPostEarnings && (
-                        <p className="mt-2 text-sm text-amber-200">
+                        <p className="mt-2 text-amber-200">
                             Warning: auto_post means Finalize can create Pending Earnings without a separate Post
                             click.
                         </p>
                     )}
+                </Alert>
+            )}
+
+            <div className="mt-6 grid gap-3 lg:grid-cols-2">
+                <Section title="How this works" className="mt-0">
+                    <Card className="p-4">
+                        <ol className="space-y-3">
+                            {(playbook.length
+                                ? playbook
+                                : [
+                                      {
+                                          title: "Create → open → freeze → calculate → finalize → post",
+                                          body: "Then pay Available Earnings manually via Wise on /admin/payouts.",
+                                      },
+                                  ]
+                            ).map((step) => (
+                                <li key={step.title} className="text-sm">
+                                    <p className="font-semibold text-white">{step.title}</p>
+                                    <p className="text-ink-400">{step.body}</p>
+                                </li>
+                            ))}
+                        </ol>
+                    </Card>
+                </Section>
+
+                {formula && (
+                    <Section title="Formula" className="mt-0">
+                        <Card className="p-4">
+                            <p className="font-mono text-sm font-semibold text-white">{formula.calculationVersion}</p>
+                            {formula.weights && (
+                                <ul className="mt-3 grid gap-1 text-sm text-ink-300 sm:grid-cols-2">
+                                    {Object.entries(formula.weights).map(([k, v]) => (
+                                        <li key={k} className="tabular-nums">
+                                            {k.replaceAll("_", " ")}: {v}
+                                            {typeof v === "number" && v <= 100 ? "%" : ""}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {typeof formula.socialCapBps === "number" && (
+                                <p className="mt-3 text-sm tabular-nums text-ink-300">
+                                    Community support hard cap: {(formula.socialCapBps / 100).toFixed(0)}% of total
+                                </p>
+                            )}
+                            {typeof formula.minAllocationAmountMinor === "number" && (
+                                <p className="text-sm tabular-nums text-ink-300">
+                                    Minimum allocation: ${(formula.minAllocationAmountMinor / 100).toFixed(2)}
+                                </p>
+                            )}
+                        </Card>
+                    </Section>
+                )}
+            </div>
+
+            <Section
+                title="Create draft period"
+                description="Drafts are planning only. Staging/test slug names are refused on PRODUCTION."
+            >
+                <Card className="p-4">
+                    <form className="grid gap-3 md:grid-cols-2" onSubmit={createDraft}>
+                        <Field label="Title">
+                            <input
+                                className={draftFieldClass}
+                                value={draft.title}
+                                onChange={(e) => setDraft({...draft, title: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Slug">
+                            <input
+                                className={draftFieldClass}
+                                value={draft.slug}
+                                onChange={(e) => setDraft({...draft, slug: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Starts at">
+                            <input
+                                type="datetime-local"
+                                className={draftFieldClass}
+                                value={draft.startsAt}
+                                onChange={(e) => setDraft({...draft, startsAt: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Ends at">
+                            <input
+                                type="datetime-local"
+                                className={draftFieldClass}
+                                value={draft.endsAt}
+                                onChange={(e) => setDraft({...draft, endsAt: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Currency">
+                            <input
+                                className={draftFieldClass}
+                                value={draft.currency}
+                                onChange={(e) => setDraft({...draft, currency: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Pool amount">
+                            <input
+                                className={`${draftFieldClass} tabular-nums`}
+                                value={draft.poolAmount}
+                                onChange={(e) => setDraft({...draft, poolAmount: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Allocation minimum">
+                            <input
+                                className={`${draftFieldClass} tabular-nums`}
+                                value={draft.allocationMinimum}
+                                onChange={(e) => setDraft({...draft, allocationMinimum: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <Field label="Social cap %">
+                            <input
+                                className={`${draftFieldClass} tabular-nums`}
+                                value={draft.socialCapPercent}
+                                onChange={(e) => setDraft({...draft, socialCapPercent: e.target.value})}
+                                required
+                            />
+                        </Field>
+                        <div className="flex justify-end border-t border-line-300 pt-3 md:col-span-2">
+                            <Button type="submit" variant="primary" disabled={busy} loading={busyAction === "create:"}>
+                                Create draft
+                            </Button>
+                        </div>
+                    </form>
+                </Card>
+            </Section>
+
+            {(error || message) && (
+                <div className="mt-6 space-y-3">
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {message && <Alert tone="good">{message}</Alert>}
                 </div>
             )}
 
-            <section className="mt-8 rounded-2xl border border-line-300 px-4 py-4">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">How this works</h2>
-                <ol className="mt-3 space-y-3">
-                    {(playbook.length
-                        ? playbook
-                        : [
-                              {
-                                  title: "Create → open → freeze → calculate → finalize → post",
-                                  body: "Then pay Available Earnings manually via Wise on /admin/payouts.",
-                              },
-                          ]
-                    ).map((step) => (
-                        <li key={step.title} className="text-sm">
-                            <p className="font-semibold text-white">{step.title}</p>
-                            <p className="text-ink-400">{step.body}</p>
-                        </li>
-                    ))}
-                </ol>
-            </section>
-
-            {formula && (
-                <section className="mt-6 rounded-2xl border border-line-300 bg-white/[0.02] px-4 py-4">
-                    <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Formula</h2>
-                    <p className="mt-2 font-semibold text-white">{formula.calculationVersion}</p>
-                    {formula.weights && (
-                        <ul className="mt-2 grid gap-1 text-sm text-ink-300 sm:grid-cols-2">
-                            {Object.entries(formula.weights).map(([k, v]) => (
-                                <li key={k}>
-                                    {k.replaceAll("_", " ")}: {v}
-                                    {typeof v === "number" && v <= 100 ? "%" : ""}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    {typeof formula.socialCapBps === "number" && (
-                        <p className="mt-2 text-sm text-ink-300">
-                            Community support hard cap: {(formula.socialCapBps / 100).toFixed(0)}% of total
-                        </p>
-                    )}
-                    {typeof formula.minAllocationAmountMinor === "number" && (
-                        <p className="text-sm text-ink-300">
-                            Minimum allocation: ${(formula.minAllocationAmountMinor / 100).toFixed(2)}
-                        </p>
-                    )}
-                </section>
-            )}
-
-            <section className="mt-8 rounded-2xl border border-line-300 px-4 py-4">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Create draft period</h2>
-                <p className="mt-1 text-xs text-ink-500">
-                    Drafts are planning only. Staging/test slug names are refused on PRODUCTION.
-                </p>
-                <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={createDraft}>
-                    <label className="text-sm">
-                        Title
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.title}
-                            onChange={(e) => setDraft({...draft, title: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Slug
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.slug}
-                            onChange={(e) => setDraft({...draft, slug: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Starts at
-                        <input
-                            type="datetime-local"
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.startsAt}
-                            onChange={(e) => setDraft({...draft, startsAt: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Ends at
-                        <input
-                            type="datetime-local"
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.endsAt}
-                            onChange={(e) => setDraft({...draft, endsAt: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Currency
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.currency}
-                            onChange={(e) => setDraft({...draft, currency: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Pool amount
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.poolAmount}
-                            onChange={(e) => setDraft({...draft, poolAmount: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Allocation minimum
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.allocationMinimum}
-                            onChange={(e) => setDraft({...draft, allocationMinimum: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <label className="text-sm">
-                        Social cap %
-                        <input
-                            className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            value={draft.socialCapPercent}
-                            onChange={(e) => setDraft({...draft, socialCapPercent: e.target.value})}
-                            required
-                        />
-                    </label>
-                    <button
-                        type="submit"
-                        disabled={busy}
-                        className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-50 md:col-span-2"
-                    >
-                        Create draft
-                    </button>
-                </form>
-            </section>
-
-            {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
-            {message && <p className="mt-4 text-sm text-emerald-300">{message}</p>}
-
-            <section className="mt-8">
-                <h2 className="text-sm font-black uppercase tracking-wide text-ink-400">Periods</h2>
-                <div className="mt-3 space-y-4">
+            <Section title="Periods">
+                <div className="space-y-3">
+                    {initialLoading && periods.length === 0 && <ListSkeleton rows={3} />}
                     {periods.map((p) => (
-                        <article key={p.periodId} className="rounded-2xl border border-line-300 px-4 py-4">
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <Card key={p.periodId} className="p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h3 className="font-semibold text-white">{p.displayName || p.slug}</h3>
-                                <span className="rounded bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wide text-ink-200">
+                                <Badge tone={p.status === "posted" ? "good" : p.status === "cancelled" ? "bad" : "neutral"}>
                                     {p.status}
-                                </span>
+                                </Badge>
                             </div>
-                            <p className="mt-1 text-sm text-ink-400">
+                            <p className="mt-1 text-sm tabular-nums text-ink-400">
                                 {p.slug} · pool {money(p.poolAmountMinor, p.currencyCode)} · allocated{" "}
                                 {money(p.allocatedAmountMinor, p.currencyCode)} · remainder{" "}
                                 {money(p.unallocatedRemainderMinor, p.currencyCode)} · {p.eligibleCreatorCount}{" "}
@@ -417,8 +447,8 @@ export function AdminCreatorRewardsClient() {
                                 After Finalize → Post, money appears on /admin/payouts once Available.
                             </p>
                             {p.nextStep && (
-                                <div className="mt-3 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2">
-                                    <p className="text-xs font-black uppercase tracking-wide text-sky-200">
+                                <div className="mt-3 border border-sky-400/30 bg-sky-500/[.07] px-3 py-2">
+                                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-sky-200">
                                         Next step
                                     </p>
                                     <p className="mt-1 text-sm text-white">{p.nextStep}</p>
@@ -432,70 +462,75 @@ export function AdminCreatorRewardsClient() {
                                     )}
                                 </div>
                             )}
-                            <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="mt-4 flex flex-wrap gap-2 border-t border-line-300 pt-3">
                                 {["open", "freeze", "calculate", "finalize", "post", "cancel"].map((action) => (
-                                    <button
+                                    <Button
                                         key={action}
-                                        type="button"
+                                        size="sm"
+                                        variant={action === "cancel" ? "danger" : "outline"}
+                                        className="capitalize"
                                         disabled={busy}
+                                        loading={busyAction === `${action}:${p.periodId}`}
                                         title={ACTION_HELP[action]}
                                         onClick={() => run(action, p.periodId)}
-                                        className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold text-ink-100 disabled:opacity-50"
                                     >
                                         {action}
-                                    </button>
+                                    </Button>
                                 ))}
-                                <button
-                                    type="button"
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-emerald-200"
                                     disabled={busy || detailLoading}
+                                    loading={detailLoading && expandedId === p.periodId}
                                     onClick={() => togglePeriod(p.periodId)}
-                                    className="rounded-md border border-emerald-400/40 px-2.5 py-1 text-xs font-semibold text-emerald-200"
                                 >
                                     {expandedId === p.periodId
                                         ? "Hide individuals"
                                         : `Show individuals (${p.eligibleCreatorCount})`}
-                                </button>
+                                </Button>
                             </div>
 
                             {expandedId === p.periodId && (
-                                <div className="mt-4 overflow-x-auto rounded-xl border border-white/10">
+                                <div className="mt-4 border border-line-300 bg-canvas-900">
                                     {detailLoading ? (
-                                        <p className="px-3 py-4 text-sm text-ink-400">
-                                            Loading {p.eligibleCreatorCount} creators…
-                                        </p>
+                                        <LoadingRow>Loading {p.eligibleCreatorCount} creators…</LoadingRow>
                                     ) : detailError ? (
-                                        <p className="px-3 py-4 text-sm text-rose-300">
+                                        <Alert tone="bad" className="m-3">
                                             Couldn’t load individuals: {detailError}. Allocated totals above are still
                                             authoritative — refresh after the detail RPC fix if this persists.
-                                        </p>
+                                        </Alert>
                                     ) : creators.length === 0 ? (
-                                        <p className="px-3 py-4 text-sm text-ink-400">
-                                            {p.allocatedAmountMinor > 0
-                                                ? `Expected ~${p.eligibleCreatorCount} creators for ${money(p.allocatedAmountMinor, p.currencyCode)} but the detail query returned none.`
-                                                : "No creator rows yet. Freeze + Calculate first."}
-                                        </p>
+                                        <EmptyState
+                                            className="m-3"
+                                            title={
+                                                p.allocatedAmountMinor > 0
+                                                    ? `Expected ~${p.eligibleCreatorCount} creators for ${money(p.allocatedAmountMinor, p.currencyCode)} but the detail query returned none.`
+                                                    : "No creator rows yet. Freeze + Calculate first."
+                                            }
+                                        />
                                     ) : (
                                         <>
-                                            <p className="border-b border-white/10 px-3 py-2 text-xs text-ink-400">
+                                            <p className="border-b border-line-300 px-3 py-2 text-xs tabular-nums text-ink-400">
                                                 Showing {creators.length}
                                                 {detailCreatorCount != null ? ` / ${detailCreatorCount}` : ""}{" "}
                                                 creators · sorted by allocation · who the{" "}
                                                 {money(p.allocatedAmountMinor, p.currencyCode)} is assigned to
                                             </p>
-                                            <table className="min-w-full text-left text-sm">
-                                                <thead className="bg-white/5 text-xs uppercase tracking-wide text-ink-400">
+                                            <Table>
+                                                <thead>
                                                     <tr>
-                                                        <th className="px-3 py-2">Creator</th>
-                                                        <th className="px-3 py-2">Allocation</th>
-                                                        <th className="px-3 py-2">Status</th>
-                                                        <th className="px-3 py-2">Earnings</th>
-                                                        <th className="px-3 py-2">Points</th>
+                                                        <TH>Creator</TH>
+                                                        <TH numeric>Allocation</TH>
+                                                        <TH>Status</TH>
+                                                        <TH>Earnings</TH>
+                                                        <TH numeric>Points</TH>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {creators.map((c) => (
-                                                        <tr key={c.user_id} className="border-t border-white/10">
-                                                            <td className="px-3 py-2 text-white">
+                                                        <tr key={c.user_id}>
+                                                            <TD className="text-white">
                                                                 {c.display_name ||
                                                                     c.username ||
                                                                     c.user_id.slice(0, 8)}
@@ -504,39 +539,39 @@ export function AdminCreatorRewardsClient() {
                                                                         @{c.username}
                                                                     </span>
                                                                 ) : null}
-                                                            </td>
-                                                            <td className="px-3 py-2 tabular-nums text-ink-100">
+                                                            </TD>
+                                                            <TD numeric className="text-ink-100">
                                                                 {money(
                                                                     Number(c.allocation_amount_minor || 0),
                                                                     p.currencyCode
                                                                 )}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-ink-300">
+                                                            </TD>
+                                                            <TD className="text-ink-300">
                                                                 {c.allocation_status}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-ink-300">
+                                                            </TD>
+                                                            <TD className="text-ink-300">
                                                                 {c.posting_status}
-                                                            </td>
-                                                            <td className="px-3 py-2 tabular-nums text-ink-400">
+                                                            </TD>
+                                                            <TD numeric className="text-ink-400">
                                                                 {Number(c.contribution_points || 0).toFixed(2)}
-                                                            </td>
+                                                            </TD>
                                                         </tr>
                                                     ))}
                                                 </tbody>
-                                            </table>
+                                            </Table>
                                         </>
                                     )}
-                                    <p className="border-t border-white/10 px-3 py-2 text-xs text-ink-500">
+                                    <p className="border-t border-line-300 px-3 py-2 text-xs text-ink-500">
                                         After Posted: pay Available balances on /admin/payouts. Target SLA 14 days
                                         after Available. Payouts are never automatic.
                                     </p>
                                 </div>
                             )}
-                        </article>
+                        </Card>
                     ))}
-                    {periods.length === 0 && <p className="text-sm text-ink-500">No periods yet.</p>}
+                    {!initialLoading && periods.length === 0 && <EmptyState title="No periods yet." />}
                 </div>
-            </section>
-        </main>
+            </Section>
+        </AdminPage>
     );
 }

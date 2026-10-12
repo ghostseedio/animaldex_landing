@@ -6,6 +6,7 @@ import {FormEvent, useCallback, useEffect, useMemo, useState} from "react";
 import CaptureGradePanel from "@/app/admin/maintenance/capture-grade-panel";
 import NotifyOwnerDialog, {type NotifyRequest} from "@/app/admin/maintenance/notify-owner-dialog";
 import CaptureIndexPanel from "@/app/admin/maintenance/capture-index-panel";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, fieldClass, ListSkeleton, PageHeader, RefreshButton, Spinner} from "@/components/admin/ui";
 
 type Post = {
     id: string;
@@ -401,76 +402,92 @@ export default function AdminMaintenanceClient() {
     const hiddenCount = posts.length - filtered.length;
 
     if (authorized === false) {
-        return <main className="grid min-h-[70vh] place-items-center px-4"><form onSubmit={login} className="w-full max-w-sm rounded-2xl border border-line-300 bg-surface-900 p-6"><p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex admin</p><h1 className="mt-2 font-display text-3xl text-white">Maintenance</h1><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" className="mt-6 w-full rounded-xl border border-line-300 bg-canvas-900 px-4 py-3 text-white outline-none focus:border-primary-300" /><button className="mt-3 w-full rounded-xl bg-primary-400 py-3 font-black text-canvas-950">Sign in</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</form></main>;
+        return (
+            <AdminPage width="narrow" className="grid min-h-[70vh] place-items-center">
+                <form onSubmit={login} className="w-full max-w-sm border border-line-300 bg-surface-900 p-6">
+                    <p className="text-[11px] font-black uppercase tracking-[.16em] text-primary-200">AnimalDex admin</p>
+                    <h1 className="mt-1 font-display text-2xl text-white">Maintenance</h1>
+                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" aria-label="Admin password" className={cn(fieldClass, "mt-6")} />
+                    <Button type="submit" variant="primary" size="lg" className="mt-3 w-full">Sign in</Button>
+                    {error && <Alert tone="bad" className="mt-3">{error}</Alert>}
+                </form>
+            </AdminPage>
+        );
     }
 
     const toast = error ? {kind: "error" as const, text: error} : notice ? {kind: "notice" as const, text: notice} : null;
 
     return (
-        <main className="p-4 sm:p-7">
+        <AdminPage width="wide">
             {/* Actions here are bulk and destructive, and their result used to sit
                 in a strip above the fold where an operator working through rows
                 never saw it. This follows the viewport instead. */}
             {toast && (
                 <div role={toast.kind === "error" ? "alert" : "status"} aria-live={toast.kind === "error" ? "assertive" : "polite"}
                      className="fixed inset-x-3 bottom-4 z-[60] mx-auto max-w-2xl sm:inset-x-auto sm:right-6 sm:left-auto">
-                    <div className={`flex items-start gap-3 rounded-2xl border p-4 shadow-2xl backdrop-blur ${toast.kind === "error" ? "border-red-400/40 bg-red-950/95 text-red-100" : "border-primary-400/40 bg-emerald-950/95 text-primary-100"}`}>
-                        <span aria-hidden="true" className="text-lg leading-none">{toast.kind === "error" ? "⚠" : "✓"}</span>
+                    <div className={`flex items-start gap-3 border p-4 shadow-2xl ${toast.kind === "error" ? "border-red-400/40 bg-red-950 text-red-100" : "border-primary-400/40 bg-emerald-950 text-primary-100"}`}>
+                        <span aria-hidden="true" className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${toast.kind === "error" ? "bg-red-400" : "bg-primary-300"}`} />
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-black uppercase tracking-[.14em] opacity-70">
+                            <p className="text-[11px] font-black uppercase tracking-[.12em] opacity-70">
                                 {toast.kind === "error" ? "Action failed" : "Done"}
                             </p>
                             <p className="mt-1 text-sm leading-6">{toast.text}</p>
                         </div>
-                        <button type="button" onClick={() => { setError(null); setNotice(null); }}
+                        <Button variant="ghost" size="sm" onClick={() => { setError(null); setNotice(null); }}
                                 aria-label="Dismiss message"
-                                className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-xs font-bold">Close</button>
+                                className="shrink-0 text-current">Close</Button>
                     </div>
                 </div>
             )}
-            <div className="mx-auto max-w-[100rem]">
-                <header className="flex flex-col justify-between gap-5 border-b border-line-300 pb-6 lg:flex-row lg:items-end">
-                    <div><Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link><p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Capture operations</p><h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Post maintenance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-400">Review recent user posts and re-run the production admin analysis without charging the user.</p></div>
-                    <div className="flex flex-wrap gap-2">
-                        <button onClick={() => void findBrokenCaptures()} disabled={checkingBroken} className="w-fit rounded-xl border border-amber-400/40 px-4 py-2.5 text-sm font-black text-amber-200 disabled:opacity-40">{checkingBroken ? "Checking…" : "Find stuck captures"}</button>
-                        <Link href="/admin/indexing" className="w-fit rounded-xl border border-lime-400/40 px-4 py-2.5 text-sm font-black text-lime-100">Unindexed cron</Link>
-                        <Link href="/admin/catalog" className="w-fit rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100">Manage index entries</Link>
-                        <button onClick={() => void loadPosts(status)} disabled={loading} className="w-fit rounded-xl border border-line-300 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? "Loading…" : "Reload posts"}</button>
-                    </div>
-                </header>
+            <PageHeader
+                eyebrow="Operations"
+                title="Post maintenance"
+                description="Review recent user posts and re-run the production admin analysis without charging the user."
+                actions={(
+                    <>
+                        <RefreshButton loading={loading} onClick={() => void loadPosts(status)} label="Reload posts" />
+                        <Button size="sm" onClick={() => void findBrokenCaptures()} loading={checkingBroken} className="border-amber-400/40 text-amber-200 hover:border-amber-300">{checkingBroken ? "Checking…" : "Find stuck captures"}</Button>
+                        <Link href="/admin/indexing" className={buttonVariants({size: "sm"})}>Unindexed cron</Link>
+                        <Link href="/admin/catalog" className={buttonVariants({size: "sm"})}>Manage index entries</Link>
+                    </>
+                )}
+            />
 
-                {/* Sticky: the actions act on a selection made further down the
-                    list, and scrolling back up to reach them lost your place. */}
-                <div className="sticky top-0 z-40 -mx-4 mt-6 border-b border-line-300 bg-canvas-950/95 px-4 py-2 backdrop-blur sm:-mx-7 sm:px-7">
+            {/* Sticky: the actions act on a selection made further down the
+                list, and scrolling back up to reach them lost your place. */}
+            <div className="sticky top-14 z-20 -mx-4 mt-6 border-b border-line-300 bg-canvas-950 px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
                 <section className="flex flex-wrap items-center gap-2">
-                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search animal, owner, or capture ID…" className="h-9 min-w-[12rem] flex-1 rounded-lg border border-line-300 bg-canvas-900 px-3 text-sm text-white outline-none focus:border-primary-300" />
-                    <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} className="h-9 rounded-lg border border-line-300 bg-canvas-900 px-2 text-sm text-white"><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
-                    <select value={mode} onChange={(event) => setMode(event.target.value)} className="h-9 rounded-lg border border-line-300 bg-canvas-900 px-2 text-sm text-white"><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
+                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search animal, owner, or capture ID…" aria-label="Search posts" className={cn(fieldClass, "h-9 w-auto min-w-[12rem] flex-1 py-0")} />
+                    <select value={status} onChange={(event) => {setStatus(event.target.value); void loadPosts(event.target.value);}} aria-label="Status" className={cn(fieldClass, "h-9 w-auto px-2 py-0")}><option value="all">All statuses</option><option value="ready">Ready</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="processing">Processing</option></select>
+                    <select value={mode} onChange={(event) => setMode(event.target.value)} aria-label="Media" className={cn(fieldClass, "h-9 w-auto px-2 py-0")}><option value="all">All media</option><option value="photo">Photos</option><option value="video">Videos</option></select>
                 </section>
 
                 {broken && broken.length > 0 && (
-                    <section className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
-                        <p className="font-bold text-amber-100">{broken.length} capture(s) can never finish</p>
-                        <p className="mt-1 text-sm leading-6 text-amber-200/90">
+                    <Alert
+                        tone="warn"
+                        className="mt-3"
+                        title={`${broken.length} capture(s) can never finish`}
+                    >
+                        <p>
                             Their photos are not in storage, so the analysis has nothing to download and the owners are
                             watching a spinner that cannot resolve. Closing them marks the capture failed and records why.
                         </p>
-                        <ul className="mt-3 space-y-1 text-xs text-amber-100/80">
+                        <ul className="mt-2 space-y-1 text-xs">
                             {broken.slice(0, 8).map((row) => (
                                 <li key={row.id}><span className="font-mono">{row.id.slice(0, 8)}</span> · {row.status} · {exactDate(row.createdAt)} · {row.reason}</li>
                             ))}
                             {broken.length > 8 && <li>…and {broken.length - 8} more</li>}
                         </ul>
                         <div className="mt-3 flex gap-2">
-                            <button onClick={() => void closeBrokenCaptures()} disabled={checkingBroken} className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Close {broken.length} as failed</button>
-                            <button onClick={() => setBroken(null)} className="rounded-xl border border-line-300 px-4 py-2 text-sm font-bold text-white">Dismiss</button>
+                            <Button size="sm" onClick={() => void closeBrokenCaptures()} loading={checkingBroken} className="border-0 bg-amber-400 text-canvas-950 hover:bg-amber-300">Close {broken.length} as failed</Button>
+                            <Button size="sm" variant="ghost" onClick={() => setBroken(null)}>Dismiss</Button>
                         </div>
-                    </section>
+                    </Alert>
                 )}
 
-                {(error || notice) && <div className={`mt-4 rounded-xl border p-3 text-sm ${error ? "border-red-400/20 bg-red-500/10 text-red-200" : "border-primary-400/20 bg-primary-500/10 text-primary-100"}`}>{error || notice}</div>}
+                {(error || notice) && <Alert tone={error ? "bad" : "good"} className="mt-3">{error || notice}</Alert>}
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                     {[
                         {id: "merged", label: "Hide merged", on: hideMerged, toggle: () => setHideMerged((value) => !value)},
                         {id: "credits", label: "Hide credit failures", on: hideCreditFailures, toggle: () => setHideCreditFailures((value) => !value)},
@@ -482,51 +499,58 @@ export default function AdminMaintenanceClient() {
                             {option.on ? "✓ " : ""}{option.label}
                         </button>
                     ))}
-                    {hiddenCount > 0 && <span className="text-xs text-ink-500">{hiddenCount} hidden</span>}
+                    {hiddenCount > 0 && <span className="text-xs tabular-nums text-ink-500">{hiddenCount} hidden</span>}
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm text-ink-400">
-                        {filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex flex-col text-sm tabular-nums text-ink-400">
+                        <span className="flex items-center gap-2">
+                            {filtered.length} recent post{filtered.length === 1 ? "" : "s"} · {selected.size} selected
+                            {loading && posts.length > 0 ? <Spinner size={12} /> : null}
+                        </span>
                         {mergeBlockedReason && selected.size > 0 && <span className="block text-xs text-amber-200">{mergeBlockedReason}</span>}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setIndexingPosts(selectedPosts)} disabled={!selectedPosts.length} title="Move every selected capture onto one catalog entry" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">Set index for {selectedPosts.length || ""} selected</button>
+                        <Button size="sm" onClick={() => setIndexingPosts(selectedPosts)} disabled={!selectedPosts.length} title="Move every selected capture onto one catalog entry">Set index for {selectedPosts.length || ""} selected</Button>
                         {needsIndexBeforeMerge && (
-                            <button onClick={() => { setMergeAfterIndex(true); setIndexingPosts(selectedPosts); }} disabled={merging || selectedPosts.length < 2 || selectedOwners.size > 1} title="Pick the entry these all belong to, then fold them into one card" className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">Set index &amp; merge {selectedPosts.length || ""}</button>
+                            <Button size="sm" onClick={() => { setMergeAfterIndex(true); setIndexingPosts(selectedPosts); }} disabled={merging || selectedPosts.length < 2 || selectedOwners.size > 1} title="Pick the entry these all belong to, then fold them into one card">Set index &amp; merge {selectedPosts.length || ""}</Button>
                         )}
-                        <button onClick={() => void mergeSelected()} disabled={Boolean(mergeBlockedReason) || merging} title={mergeBlockedReason ?? "Fold the newer captures into the oldest one"} className="rounded-xl border border-violet-400/40 px-4 py-2.5 text-sm font-black text-violet-200 disabled:border-line-300 disabled:text-ink-500">{merging ? "Merging…" : `Merge ${selectedPosts.length > 1 ? selectedPosts.length : ""} selected`}</button>
-                        <button onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} className="rounded-xl bg-primary-400 px-4 py-2.5 text-sm font-black text-canvas-950 disabled:cursor-not-allowed disabled:opacity-40">Refresh selected ({Math.min(selected.size, 10)})</button>
+                        <Button size="sm" onClick={() => void mergeSelected()} disabled={Boolean(mergeBlockedReason)} loading={merging} title={mergeBlockedReason ?? "Fold the newer captures into the oldest one"} className="border-violet-400/40 text-violet-200 hover:border-violet-300">{merging ? "Merging…" : `Merge ${selectedPosts.length > 1 ? selectedPosts.length : ""} selected`}</Button>
+                        <Button size="sm" variant="primary" onClick={() => void refreshSelected()} disabled={!selected.size || running.size > 0} loading={running.size > 0 && selected.size > 0}>Refresh selected ({Math.min(selected.size, 10)})</Button>
                     </div>
                 </div>
+            </div>
 
-                </div>
-
-                <section className="mt-4 overflow-hidden rounded-2xl border border-line-300 bg-surface-900">
-                    {loading && !posts.length ? <div className="py-24 text-center text-ink-400">Loading user posts…</div> : !filtered.length ? <div className="py-24 text-center text-ink-400">No posts match these filters.</div> : filtered.map((post) => {
+            {loading && !posts.length ? (
+                <ListSkeleton rows={6} className="mt-4" />
+            ) : !filtered.length ? (
+                <EmptyState title="No posts match these filters." className="mt-4" />
+            ) : (
+                <Card className="mt-4 divide-y divide-line-300">
+                    {filtered.map((post) => {
                         const isRunning = running.has(post.id);
                         const canRefresh = post.captureMode === "photo";
-                        return <article key={post.id} className="grid grid-cols-[auto_72px_minmax(0,1fr)] items-center gap-3 border-b border-line-300 p-3 last:border-0 sm:grid-cols-[auto_88px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4">
+                        return <article key={post.id} className="grid grid-cols-[auto_72px_minmax(0,1fr)] items-center gap-3 p-3 transition hover:bg-white/[.015] sm:grid-cols-[auto_88px_minmax(0,1fr)_auto] sm:gap-4 sm:p-4">
                             <input type="checkbox" aria-label={`Select ${post.animalName || post.id}`} checked={selected.has(post.id)} disabled={!canRefresh} onChange={(event) => setSelected((current) => {const next = new Set(current); event.target.checked ? next.add(post.id) : next.delete(post.id); return next;})} className="h-4 w-4 accent-primary-500" />
-                            <button type="button" onClick={() => setViewingPost(post)} className="group relative h-16 w-16 overflow-hidden rounded-xl border border-line-300 bg-canvas-900 text-left transition hover:border-primary-300 sm:h-20 sm:w-20" aria-label={`View full-size ${post.animalName || "capture"} photo`}>
+                            <button type="button" onClick={() => setViewingPost(post)} className="group relative h-16 w-16 overflow-hidden border border-line-300 bg-canvas-900 text-left transition hover:border-primary-300 sm:h-20 sm:w-20" aria-label={`View full-size ${post.animalName || "capture"} photo`}>
                                 <Image src={post.imageUrl} alt={post.animalName ? `${post.animalName} user capture` : "User capture"} fill unoptimized sizes="80px" className="object-cover transition group-hover:scale-105" />
                                 <span className="absolute inset-x-0 bottom-0 bg-black/70 py-1 text-center text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">Expand</span>
                             </button>
                             <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${post.status === "ready" ? "bg-primary-500/15 text-primary-100" : post.status === "failed" ? "bg-red-500/15 text-red-200" : "bg-amber-500/15 text-amber-200"}`}>{post.status}</span><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase text-ink-400">{post.captureMode}</span>{post.mergedIntoCaptureId && <span className="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black uppercase text-violet-200">merged</span>}</div>
+                                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-white">{post.animalName || post.title || "Unidentified capture"}</h2><Badge tone={post.status === "ready" ? "good" : post.status === "failed" ? "bad" : "warn"}>{post.status}</Badge><Badge>{post.captureMode}</Badge>{post.mergedIntoCaptureId && <Badge tone="web">merged</Badge>}</div>
                                 <p className="mt-1 truncate text-sm text-ink-400">{post.scientificName || "No scientific name"} · {post.user.displayName || post.user.username || "Unknown user"}{post.user.username ? ` (@${post.user.username})` : ""}</p>
-                                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold">
-                                    <span title={post.animalDexNumber != null && post.indexVia ? `Resolved through ${post.indexVia}` : undefined} className={`rounded-full px-2 py-1 ${post.animalDexNumber != null ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-500"}`}>{post.animalDexNumber != null ? `#${post.animalDexNumber}${post.indexVia ? "*" : ""}` : "unindexed"}</span>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                                    <span title={post.animalDexNumber != null && post.indexVia ? `Resolved through ${post.indexVia}` : undefined} className={`rounded-full px-2 py-0.5 tabular-nums ${post.animalDexNumber != null ? "bg-primary-500/15 text-primary-100" : "bg-white/5 text-ink-500"}`}>{post.animalDexNumber != null ? `#${post.animalDexNumber}${post.indexVia ? "*" : ""}` : "unindexed"}</span>
                                     {!post.indexLinked && (post.identityResolutionMode === "refinable"
-                                        ? <span title="Stopped at a parent identity and is waiting on a breed before it links to the catalog" className="rounded-full bg-white/5 px-2 py-1 text-ink-400">refinable</span>
-                                        : <span title="The analysis holds no species profile, so this capture is missing from the owner's collection index" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">not linked</span>)}
-                                    <span className={`rounded-full px-2 py-1 ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
-                                    {isScreenCapture(post) && <span title="The model judged this a photo of a screen or a print rather than a live animal, so it is excluded from collections and stats" className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">screen capture</span>}
-                                    {isDeadUpload(post) && <span title="The photo never reached storage, so there is nothing to analyse and a retry cannot help. No credit was charged." className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">no photo</span>}
+                                        ? <span title="Stopped at a parent identity and is waiting on a breed before it links to the catalog" className="rounded-full bg-white/5 px-2 py-0.5 text-ink-400">refinable</span>
+                                        : <span title="The analysis holds no species profile, so this capture is missing from the owner's collection index" className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">not linked</span>)}
+                                    <span className={`rounded-full px-2 py-0.5 tabular-nums ${post.captureGrade == null ? "bg-white/5 text-ink-500" : post.captureGrade >= 8 ? "bg-primary-500/15 text-primary-100" : post.captureGrade >= 5 ? "bg-amber-500/15 text-amber-200" : "bg-red-500/15 text-red-200"}`}>{post.captureGrade == null ? "no grade" : `grade ${post.captureGrade}`}</span>
+                                    {isScreenCapture(post) && <span title="The model judged this a photo of a screen or a print rather than a live animal, so it is excluded from collections and stats" className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-200">screen capture</span>}
+                                    {isDeadUpload(post) && <span title="The photo never reached storage, so there is nothing to analyse and a retry cannot help. No credit was charged." className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-200">no photo</span>}
                                     {post.captureMode === "video" && (post.video
-                                        ? <span className="rounded-full bg-white/5 px-2 py-1 text-ink-300">{post.video.durationMs ? `${Math.round(post.video.durationMs / 1000)}s clip` : "clip"}</span>
-                                        : <span title="Filed as a video but only the still frame reached storage, so there is nothing to play" className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">frame only</span>)}
-                                    {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-1 font-mono text-ink-400">{post.identityKey}</span>}
+                                        ? <span className="rounded-full bg-white/5 px-2 py-0.5 text-ink-300">{post.video.durationMs ? `${Math.round(post.video.durationMs / 1000)}s clip` : "clip"}</span>
+                                        : <span title="Filed as a video but only the still frame reached storage, so there is nothing to play" className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">frame only</span>)}
+                                    {post.identityKey && <span className="truncate rounded-full bg-white/5 px-2 py-0.5 font-mono text-ink-400">{post.identityKey}</span>}
                                 </div>
                                 <p className="mt-2 truncate font-mono text-[11px] text-ink-500">{post.id}</p>
                                 <p className="mt-1 text-xs text-ink-500" title={`Posted ${exactDate(post.createdAt)}`}>Posted {exactDate(post.createdAt)} ({relativeDate(post.createdAt)}) · Analysis {relativeDate(post.analysisCompletedAt)}{post.modelVersion ? ` · ${post.modelVersion}` : ""}</p>
@@ -536,26 +560,25 @@ export default function AdminMaintenanceClient() {
                                 {post.analysisError && <p className="mt-2 line-clamp-2 text-xs text-red-300">{post.analysisError}</p>}
                             </div>
                             <div className="col-span-3 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
-                            <button onClick={() => setIndexingPosts([post])} title="Move this capture onto a chosen AnimalDex number" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">Set index</button>
-                            <button onClick={() => setGradingPost(post)} title="Adjust the analysis this capture is graded from" className="rounded-xl border border-line-300 px-4 py-2.5 text-sm font-black text-white hover:border-primary-300">{gradeById[post.id] != null ? `Grade ${gradeById[post.id]}` : "Fix grade"}</button>
-                            <button onClick={() => void refreshPost(post)} disabled={!canRefresh || isRunning || running.size > 0} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="rounded-xl border border-primary-400/40 px-4 py-2.5 text-sm font-black text-primary-100 disabled:border-line-300 disabled:text-ink-500">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</button>
+                            <Button size="sm" onClick={() => setIndexingPosts([post])} title="Move this capture onto a chosen AnimalDex number">Set index</Button>
+                            <Button size="sm" onClick={() => setGradingPost(post)} title="Adjust the analysis this capture is graded from">{gradeById[post.id] != null ? `Grade ${gradeById[post.id]}` : "Fix grade"}</Button>
+                            <Button size="sm" onClick={() => void refreshPost(post)} disabled={!canRefresh || running.size > 0} loading={isRunning} title={!canRefresh ? "Video refresh requires frame extraction in the iOS admin script" : "Re-run analysis"} className="border-primary-400/40 text-primary-100">{isRunning ? "Refreshing…" : canRefresh ? "Refresh analysis" : "Script required"}</Button>
                             </div>
                         </article>;
                     })}
-                </section>
-                <div className="mt-4 flex items-center justify-center">
-                    {hasMore ? (
-                        <button onClick={() => void loadPosts(status, {append: true, offset: posts.length})} disabled={loadingMore}
-                                className="rounded-xl border border-line-300 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
-                            {loadingMore ? "Loading…" : "Load older captures"}
-                        </button>
-                    ) : (
-                        <p className="text-xs text-ink-500">{posts.length} loaded — that is every capture in this status.</p>
-                    )}
-                </div>
-
-                <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
+                </Card>
+            )}
+            <div className="mt-4 flex items-center justify-center">
+                {hasMore ? (
+                    <Button onClick={() => void loadPosts(status, {append: true, offset: posts.length})} loading={loadingMore}>
+                        {loadingMore ? "Loading…" : "Load older captures"}
+                    </Button>
+                ) : (
+                    <p className="text-xs tabular-nums text-ink-500">{posts.length} loaded — that is every capture in this status.</p>
+                )}
             </div>
+
+            <p className="mt-4 text-xs leading-5 text-ink-500">Bulk refresh runs sequentially and is capped at 10 posts per batch to protect model rate limits. Video captures remain available in this view but require the frame-extracting admin script.</p>
             {indexingPosts && (
                 <CaptureIndexPanel
                     captureIds={indexingPosts.map((post) => post.id)}
@@ -623,11 +646,11 @@ export default function AdminMaintenanceClient() {
                 />
             )}
             {viewingPost && (
-                <div role="dialog" aria-modal="true" aria-label={`${viewingPost.animalName || "Capture"} full-size image`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-8" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewingPost(null); }}>
-                    <div className="flex max-h-full w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-line-300 bg-canvas-950 shadow-2xl">
+                <div role="dialog" aria-modal="true" aria-label={`${viewingPost.animalName || "Capture"} full-size image`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-8" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewingPost(null); }}>
+                    <div className="flex max-h-full w-full max-w-7xl flex-col overflow-hidden border border-line-300 bg-surface-900 shadow-2xl">
                         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line-300 px-4 py-3 sm:px-5">
                             <div className="min-w-0"><h2 className="truncate font-display text-xl text-white">{viewingPost.animalName || viewingPost.title || "User capture"}</h2><p className="truncate text-xs text-ink-400">{viewingPost.scientificName || viewingPost.user.displayName || viewingPost.id}</p></div>
-                            <button type="button" onClick={() => setViewingPost(null)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line-300 text-xl text-white hover:border-primary-300" aria-label="Close full-size image">×</button>
+                            <Button variant="ghost" size="sm" onClick={() => setViewingPost(null)} className="shrink-0" aria-label="Close full-size image">✕</Button>
                         </div>
                         <div className="min-h-0 flex-1 overflow-auto bg-black">
                             {viewingPost.video ? (
@@ -648,6 +671,6 @@ export default function AdminMaintenanceClient() {
                     </div>
                 </div>
             )}
-        </main>
+        </AdminPage>
     );
 }

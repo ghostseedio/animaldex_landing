@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
 import {
     adminLocationStatusLabel,
@@ -10,6 +9,7 @@ import {
     type GuideListingReview,
     type GuideSellerApplication
 } from "@/lib/guide-marketplace-admin";
+import {AdminPage, Alert, Badge, Button, Card, cn, EmptyState as UiEmptyState, ListSkeleton, PageHeader, RefreshButton, Segmented, Skeleton, Spinner} from "@/components/admin/ui";
 
 type Tab = "applications" | "listings" | "bookings";
 
@@ -64,16 +64,18 @@ function dateLabel(value: string | null) {
     });
 }
 
-function statusClass(status: string) {
-    if (status === "pending" || status === "pending_review") return "border-amber-400/30 bg-amber-400/15 text-amber-200";
+function StatusBadge({status, className}: {status: string; className?: string}) {
+    if (status === "pending" || status === "pending_review") return <Badge tone="warn" className={className}>{status.replace("_", " ")}</Badge>;
     if (status === "approved" || status === "published" || status === "accepted" || status === "completed") {
-        return "border-emerald-400/30 bg-emerald-400/15 text-emerald-200";
+        return <Badge tone="android" className={className}>{status.replace("_", " ")}</Badge>;
     }
     if (status === "rejected" || status === "declined" || status === "cancelled") {
-        return "border-rose-400/30 bg-rose-400/15 text-rose-200";
+        return <Badge tone="bad" className={className}>{status.replace("_", " ")}</Badge>;
     }
-    if (status === "suspended" || status === "paused") return "border-orange-400/30 bg-orange-400/15 text-orange-200";
-    return "border-line-300 bg-white/[.04] text-ink-300";
+    if (status === "suspended" || status === "paused") {
+        return <Badge className={cn("border-orange-400/30 bg-orange-400/10 text-orange-200", className)}>{status.replace("_", " ")}</Badge>;
+    }
+    return <Badge className={className}>{status.replace("_", " ")}</Badge>;
 }
 
 export default function AdminGuidesClient() {
@@ -144,152 +146,167 @@ export default function AdminGuidesClient() {
     const counts = payload?.counts;
 
     return (
-        <main className="px-4 py-8 text-ink-100 sm:px-6 lg:px-8">
-            <div className="mx-auto w-full max-w-6xl">
-                <Link href="/admin" className="text-sm text-ink-400 hover:text-white">← Admin</Link>
-                <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-primary-200">Guide marketplace</p>
-                <h1 className="mt-2 font-display text-4xl text-white sm:text-5xl">Wildlife Guides</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-400">
+        <AdminPage width="wide">
+            <PageHeader
+                eyebrow="Content"
+                title="Wildlife Guides"
+                description={<>
                     Review seller applications and listings waiting to go public. Booking requests stay with the
                     Guide — this queue is visibility for support, not a substitute for the seller accepting in the app.
-                </p>
+                </>}
+                actions={<RefreshButton loading={loading} onClick={() => void load()} />}
+            />
 
-                <div className="mt-6 flex flex-wrap gap-2">
-                    {([
-                        ["applications", "Applications", counts?.pendingApplications ?? 0],
-                        ["listings", "Listings", counts?.pendingListings ?? 0],
-                        ["bookings", "Bookings", counts?.pendingBookings ?? 0]
-                    ] as const).map(([id, label, count]) => (
+            <Segmented
+                className="mt-6"
+                label="Queue"
+                value={tab}
+                onChange={setTab}
+                options={[
+                    {value: "applications", label: "Applications", count: counts ? counts.pendingApplications : null},
+                    {value: "listings", label: "Listings", count: counts ? counts.pendingListings : null},
+                    {value: "bookings", label: "Bookings", count: counts ? counts.pendingBookings : null}
+                ]}
+            />
+
+            {error || notice ? (
+                <div className="mt-4 flex flex-col gap-3">
+                    {error && <Alert tone="bad">{error}</Alert>}
+                    {notice && <Alert tone="good">{notice}</Alert>}
+                </div>
+            ) : null}
+
+            {loading && !payload && (
+                tab === "bookings" ? (
+                    <ListSkeleton rows={4} className="mt-6" />
+                ) : (
+                    <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                        <ListSkeleton rows={5} />
+                        <Card className="p-6" aria-hidden="true">
+                            <Skeleton className="h-7 w-1/2" />
+                            <Skeleton className="mt-2 h-3 w-24" />
+                            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                                {Array.from({length: 6}, (_, index) => <Skeleton key={index} className="h-14" />)}
+                            </div>
+                        </Card>
+                    </section>
+                )
+            )}
+
+            {payload && tab === "applications" && (
+                <QueueLayout
+                    filters={APPLICATION_FILTERS}
+                    filter={applicationFilter}
+                    onFilter={setApplicationFilter}
+                    empty="No Guide seller applications in this filter."
+                    items={applications.map((row) => (
                         <button
-                            key={id}
+                            key={row.userId}
                             type="button"
-                            onClick={() => setTab(id)}
-                            className={`rounded-full border px-4 py-2 text-sm font-bold ${tab === id ? "border-primary-300 bg-primary-500/15 text-primary-100" : "border-line-300 text-ink-400"}`}
+                            onClick={() => setSelectedUserId(row.userId)}
+                            className={`w-full border px-4 py-3 text-left transition ${selectedApplication?.userId === row.userId ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900 hover:border-primary-400/50"}`}
                         >
-                            {label} · {count}
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="truncate font-bold text-white">{personLabel(row.displayName, row.username, row.userId)}</p>
+                                    <p className="mt-1 text-xs tabular-nums text-ink-500">{row.eligibility.qualifyingWildCaptureCount}/{row.eligibility.requiredWildCaptureCount} wild captures · {row.eligibility.qualifyingWildSpeciesCount}/{row.eligibility.requiredWildSpeciesCount} species</p>
+                                </div>
+                                <StatusBadge status={row.sellerStatus} className="shrink-0" />
+                            </div>
                         </button>
                     ))}
-                </div>
+                >
+                    {selectedApplication ? (
+                        <ApplicationDetail
+                            row={selectedApplication}
+                            busy={busy}
+                            onApprove={() => run(
+                                {action: "approve_seller", userId: selectedApplication.userId},
+                                `Approve ${personLabel(selectedApplication.displayName, selectedApplication.username, selectedApplication.userId)} as a Wildlife Guide seller?`
+                            )}
+                            onReject={() => run(
+                                {action: "reject_seller", userId: selectedApplication.userId},
+                                `Reject this Guide seller application?`
+                            )}
+                            onSuspend={() => run(
+                                {action: "suspend_seller", userId: selectedApplication.userId},
+                                `Suspend this Guide seller? Published listings will stop taking bookings.`
+                            )}
+                        />
+                    ) : null}
+                </QueueLayout>
+            )}
 
-                {error && <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</p>}
-                {notice && <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">{notice}</p>}
-                {loading && <p className="mt-6 text-sm text-ink-400">Loading queue…</p>}
-
-                {!loading && tab === "applications" && (
-                    <QueueLayout
-                        filters={APPLICATION_FILTERS}
-                        filter={applicationFilter}
-                        onFilter={setApplicationFilter}
-                        empty="No Guide seller applications in this filter."
-                        items={applications.map((row) => (
-                            <button
-                                key={row.userId}
-                                type="button"
-                                onClick={() => setSelectedUserId(row.userId)}
-                                className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedApplication?.userId === row.userId ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900"}`}
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="font-bold text-white">{personLabel(row.displayName, row.username, row.userId)}</p>
-                                        <p className="mt-1 text-xs text-ink-500">{row.eligibility.qualifyingWildCaptureCount}/{row.eligibility.requiredWildCaptureCount} wild captures · {row.eligibility.qualifyingWildSpeciesCount}/{row.eligibility.requiredWildSpeciesCount} species</p>
-                                    </div>
-                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusClass(row.sellerStatus)}`}>{row.sellerStatus}</span>
+            {payload && tab === "listings" && (
+                <QueueLayout
+                    filters={LISTING_FILTERS}
+                    filter={listingFilter}
+                    onFilter={setListingFilter}
+                    empty="No Guide listings in this filter."
+                    items={listings.map((row) => (
+                        <button
+                            key={row.id}
+                            type="button"
+                            onClick={() => setSelectedListingId(row.id)}
+                            className={`w-full border px-4 py-3 text-left transition ${selectedListing?.id === row.id ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900 hover:border-primary-400/50"}`}
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="font-bold text-white">{row.title}</p>
+                                    <p className="mt-1 text-xs text-ink-500">{row.publicAreaLabel} · {row.serviceCategoryLabel}</p>
                                 </div>
-                            </button>
-                        ))}
-                    >
-                        {selectedApplication ? (
-                            <ApplicationDetail
-                                row={selectedApplication}
-                                busy={busy}
-                                onApprove={() => run(
-                                    {action: "approve_seller", userId: selectedApplication.userId},
-                                    `Approve ${personLabel(selectedApplication.displayName, selectedApplication.username, selectedApplication.userId)} as a Wildlife Guide seller?`
-                                )}
-                                onReject={() => run(
-                                    {action: "reject_seller", userId: selectedApplication.userId},
-                                    `Reject this Guide seller application?`
-                                )}
-                                onSuspend={() => run(
-                                    {action: "suspend_seller", userId: selectedApplication.userId},
-                                    `Suspend this Guide seller? Published listings will stop taking bookings.`
-                                )}
-                            />
-                        ) : null}
-                    </QueueLayout>
-                )}
-
-                {!loading && tab === "listings" && (
-                    <QueueLayout
-                        filters={LISTING_FILTERS}
-                        filter={listingFilter}
-                        onFilter={setListingFilter}
-                        empty="No Guide listings in this filter."
-                        items={listings.map((row) => (
-                            <button
-                                key={row.id}
-                                type="button"
-                                onClick={() => setSelectedListingId(row.id)}
-                                className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedListing?.id === row.id ? "border-primary-300 bg-primary-500/10" : "border-line-300 bg-surface-900"}`}
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="font-bold text-white">{row.title}</p>
-                                        <p className="mt-1 text-xs text-ink-500">{row.publicAreaLabel} · {row.serviceCategoryLabel}</p>
-                                    </div>
-                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusClass(row.status)}`}>{row.status.replace("_", " ")}</span>
-                                </div>
-                            </button>
-                        ))}
-                    >
-                        {selectedListing ? (
-                            <ListingDetail
-                                row={selectedListing}
-                                busy={busy}
-                                onPublish={() => run(
-                                    {action: "publish_listing", listingId: selectedListing.id},
-                                    `Publish “${selectedListing.title}”? It will appear on public Wildlife Guides.`
-                                )}
-                                onRequestCorrection={() => run(
-                                    {action: "reject_listing", listingId: selectedListing.id},
-                                    `Request correction for “${selectedListing.title}”? This rejects the pending listing so the seller can edit the title or public area and resubmit. Do not rewrite seller content here.`
-                                )}
-                            />
-                        ) : null}
-                    </QueueLayout>
-                )}
-
-                {!loading && tab === "bookings" && (
-                    <section className="mt-6">
-                        <FilterRow filters={BOOKING_FILTERS} value={bookingFilter} onChange={setBookingFilter} />
-                        {bookings.length === 0 ? (
-                            <EmptyState text="No booking requests in this filter." />
-                        ) : (
-                            <div className="mt-4 grid gap-3">
-                                {bookings.map((row) => (
-                                    <article key={row.id} className="rounded-2xl border border-line-300 bg-surface-900 p-5">
-                                        <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div>
-                                                <p className="font-display text-xl text-white">{row.listingTitle || "Guide experience"}</p>
-                                                <p className="mt-1 text-sm text-ink-400">
-                                                    {personLabel(row.requesterDisplayName, row.requesterUsername, row.requesterUserId)}
-                                                    {" → "}
-                                                    {personLabel(row.sellerDisplayName, row.sellerUsername, row.sellerUserId)}
-                                                </p>
-                                            </div>
-                                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusClass(row.status)}`}>{row.status}</span>
-                                        </div>
-                                        <p className="mt-3 text-sm text-ink-300">{row.requestedDate} · {row.guestCount} guest{row.guestCount === 1 ? "" : "s"}</p>
-                                        {row.message && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-200">{row.message}</p>}
-                                        <p className="mt-3 text-xs text-ink-500">Requested {dateLabel(row.createdAt)}. Accept/decline happens in the seller’s app, not here.</p>
-                                    </article>
-                                ))}
+                                <StatusBadge status={row.status} className="shrink-0" />
                             </div>
-                        )}
-                    </section>
-                )}
-            </div>
-        </main>
+                        </button>
+                    ))}
+                >
+                    {selectedListing ? (
+                        <ListingDetail
+                            row={selectedListing}
+                            busy={busy}
+                            onPublish={() => run(
+                                {action: "publish_listing", listingId: selectedListing.id},
+                                `Publish “${selectedListing.title}”? It will appear on public Wildlife Guides.`
+                            )}
+                            onRequestCorrection={() => run(
+                                {action: "reject_listing", listingId: selectedListing.id},
+                                `Request correction for “${selectedListing.title}”? This rejects the pending listing so the seller can edit the title or public area and resubmit. Do not rewrite seller content here.`
+                            )}
+                        />
+                    ) : null}
+                </QueueLayout>
+            )}
+
+            {payload && tab === "bookings" && (
+                <section className="mt-6">
+                    <FilterRow filters={BOOKING_FILTERS} value={bookingFilter} onChange={setBookingFilter} />
+                    {bookings.length === 0 ? (
+                        <EmptyState text="No booking requests in this filter." />
+                    ) : (
+                        <div className="mt-4 grid gap-3">
+                            {bookings.map((row) => (
+                                <Card key={row.id} className="p-4">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="font-display text-lg text-white">{row.listingTitle || "Guide experience"}</p>
+                                            <p className="mt-1 text-sm text-ink-400">
+                                                {personLabel(row.requesterDisplayName, row.requesterUsername, row.requesterUserId)}
+                                                {" → "}
+                                                {personLabel(row.sellerDisplayName, row.sellerUsername, row.sellerUserId)}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status={row.status} />
+                                    </div>
+                                    <p className="mt-3 text-sm tabular-nums text-ink-300">{row.requestedDate} · {row.guestCount} guest{row.guestCount === 1 ? "" : "s"}</p>
+                                    {row.message && <p className="mt-3 whitespace-pre-wrap border-l-2 border-line-300 pl-3 text-sm leading-6 text-ink-200">{row.message}</p>}
+                                    <p className="mt-3 text-xs text-ink-500">Requested {dateLabel(row.createdAt)}. Accept/decline happens in the seller’s app, not here.</p>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
+        </AdminPage>
     );
 }
 
@@ -303,13 +320,14 @@ function FilterRow({
     onChange: (value: string) => void;
 }) {
     return (
-        <div className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Filter" className="inline-flex max-w-full flex-wrap border border-line-300 bg-canvas-900 p-0.5">
             {filters.map((item) => (
                 <button
                     key={item.id}
                     type="button"
                     onClick={() => onChange(item.id)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-bold ${value === item.id ? "border-white/20 bg-white/[.08] text-white" : "border-line-300 text-ink-500"}`}
+                    aria-pressed={value === item.id}
+                    className={`min-h-7 px-2.5 text-xs font-black transition ${value === item.id ? "bg-white/[.1] text-white" : "text-ink-500 hover:text-white"}`}
                 >
                     {item.label}
                 </button>
@@ -334,10 +352,10 @@ function QueueLayout({
     children: ReactNode;
 }) {
     return (
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+        <section className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
             <div>
                 <FilterRow filters={filters} value={filter} onChange={onFilter} />
-                <div className="mt-4 grid gap-2">
+                <div className="mt-3 grid gap-2">
                     {items.length === 0 ? <EmptyState text={empty} /> : items}
                 </div>
             </div>
@@ -347,7 +365,7 @@ function QueueLayout({
 }
 
 function EmptyState({text}: {text: string}) {
-    return <p className="rounded-2xl border border-dashed border-line-300 px-4 py-8 text-sm text-ink-500">{text}</p>;
+    return <UiEmptyState className="mt-4 py-8" title={text} />;
 }
 
 function ApplicationDetail({
@@ -365,13 +383,13 @@ function ApplicationDetail({
 }) {
     const eligibility = row.eligibility;
     return (
-        <article className="rounded-3xl border border-line-300 bg-surface-900 p-6">
+        <article className="border border-line-300 bg-surface-900 p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 className="font-display text-3xl text-white">{personLabel(row.displayName, row.username, row.userId)}</h2>
+                    <h2 className="font-display text-2xl text-white">{personLabel(row.displayName, row.username, row.userId)}</h2>
                     {row.username && <p className="mt-1 text-sm text-ink-400">@{row.username.replace(/^@/, "")}</p>}
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusClass(row.sellerStatus)}`}>{row.sellerStatus}</span>
+                <StatusBadge status={row.sellerStatus} />
             </div>
             <dl className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Stat label="Wild captures" value={`${eligibility.qualifyingWildCaptureCount} / ${eligibility.requiredWildCaptureCount}`} />
@@ -384,28 +402,33 @@ function ApplicationDetail({
             {eligibility.reasonCodes.length > 0 && (
                 <ul className="mt-4 flex flex-wrap gap-2">
                     {eligibility.reasonCodes.map((code) => (
-                        <li key={code} className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-ink-400">{reasonLabel(code)}</li>
+                        <li key={code}><Badge className="normal-case tracking-normal font-bold">{reasonLabel(code)}</Badge></li>
                     ))}
                 </ul>
             )}
             {row.approveBlockedReason && row.sellerStatus === "pending" && (
-                <p className="mt-4 text-sm text-amber-200">{row.approveBlockedReason}</p>
+                <Alert tone="warn" className="mt-4">{row.approveBlockedReason}</Alert>
             )}
             <p className="mt-4 text-xs text-ink-500">Applied {dateLabel(row.createdAt)} · Updated {dateLabel(row.updatedAt)}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line-300 pt-4">
                 {row.sellerStatus === "pending" && (
                     <>
-                        <button type="button" disabled={busy || !row.canApprove} onClick={onApprove} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
-                        <button type="button" disabled={busy} onClick={onReject} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Reject</button>
+                        <Button variant="primary" disabled={busy || !row.canApprove} onClick={onApprove}>Approve</Button>
+                        <Button variant="danger" disabled={busy} onClick={onReject}>Reject</Button>
+                        <BusyNote busy={busy} />
                         <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
                     </>
                 )}
                 {row.sellerStatus === "approved" && (
-                    <button type="button" disabled={busy} onClick={onSuspend} className="rounded-xl border border-orange-400/40 px-4 py-2 text-sm font-bold text-orange-100 disabled:opacity-40">Suspend</button>
+                    <>
+                        <Button disabled={busy} onClick={onSuspend} className="border-orange-400/40 text-orange-100 hover:border-orange-300">Suspend</Button>
+                        <BusyNote busy={busy} />
+                    </>
                 )}
                 {(row.sellerStatus === "rejected" || row.sellerStatus === "suspended") && (
                     <>
-                        <button type="button" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Approve</button>
+                        <Button variant="primary" disabled={busy || !sellerApproveGateClient(row)} onClick={onApprove}>Approve</Button>
+                        <BusyNote busy={busy} />
                         <p className="basis-full text-xs text-ink-500">Approving notifies them in the app and by push.</p>
                     </>
                 )}
@@ -435,13 +458,13 @@ function ListingDetail({
     onRequestCorrection: () => void;
 }) {
     return (
-        <article className="rounded-3xl border border-line-300 bg-surface-900 p-6">
+        <article className="border border-line-300 bg-surface-900 p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p className="text-xs font-black uppercase tracking-[.18em] text-ink-500">{row.serviceCategoryLabel}</p>
-                    <h2 className="mt-1 font-display text-3xl text-white">{row.title}</h2>
+                    <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">{row.serviceCategoryLabel}</p>
+                    <h2 className="mt-1 font-display text-2xl text-white">{row.title}</h2>
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusClass(row.status)}`}>{row.status.replace("_", " ")}</span>
+                <StatusBadge status={row.status} />
             </div>
             <dl className="mt-5 grid gap-3 sm:grid-cols-2">
                 <Stat label="Title" value={row.title} />
@@ -450,7 +473,7 @@ function ListingDetail({
                 <Stat label="Location status" value={adminLocationStatusLabel(row.locationMismatch)} />
             </dl>
             {row.locationMismatch ? (
-                <div className="mt-4 space-y-3 text-sm text-amber-200">
+                <div className="mt-4 space-y-3 border border-amber-300/30 bg-amber-400/[.08] px-4 py-3 text-sm leading-6 text-amber-100">
                     <p>{row.locationMismatchMessage}</p>
                     <p>Do not rewrite the title or public area here. There is no automatic fix.</p>
                     {row.status === "published" ? (
@@ -472,18 +495,19 @@ function ListingDetail({
                 <Stat label="Submitted" value={dateLabel(row.submittedAt)} />
             </dl>
             {row.publishBlockedReason && row.status === "pending_review" && (
-                <p className="mt-4 text-sm text-amber-200">{row.publishBlockedReason}</p>
+                <Alert tone="warn" className="mt-4">{row.publishBlockedReason}</Alert>
             )}
             {row.status === "pending_review" && (
-                <div className="mt-6 flex flex-wrap gap-2">
-                    <button type="button" disabled={busy || !row.canPublish} onClick={onPublish} className="rounded-xl bg-primary-400 px-4 py-2 text-sm font-black text-canvas-950 disabled:opacity-40">Publish</button>
-                    <button type="button" disabled={busy} onClick={onRequestCorrection} className="rounded-xl border border-rose-400/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-40">Request correction</button>
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line-300 pt-4">
+                    <Button variant="primary" disabled={busy || !row.canPublish} onClick={onPublish}>Publish</Button>
+                    <Button variant="danger" disabled={busy} onClick={onRequestCorrection}>Request correction</Button>
+                    <BusyNote busy={busy} />
                 </div>
             )}
             {row.status === "published" && row.locationMismatch ? (
-                <div className="mt-6 flex flex-wrap gap-2">
-                    <p className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-ink-200">Keep published</p>
-                    <p className="rounded-xl border border-white/10 px-4 py-2 text-sm text-ink-400">Pause: seller only</p>
+                <div className="mt-6 flex flex-wrap gap-2 border-t border-line-300 pt-4">
+                    <p className="border border-line-300 px-4 py-2 text-sm font-bold text-ink-200">Keep published</p>
+                    <p className="border border-line-300 px-4 py-2 text-sm text-ink-400">Pause: seller only</p>
                 </div>
             ) : null}
         </article>
@@ -506,9 +530,15 @@ function countryName(code: string) {
 
 function Stat({label, value}: {label: string; value: string}) {
     return (
-        <div className="rounded-2xl border border-white/5 bg-canvas-950/60 px-4 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[.16em] text-ink-500">{label}</p>
+        <div className="border border-line-300/60 bg-canvas-900 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[.12em] text-ink-500">{label}</p>
             <p className="mt-1 text-sm font-bold text-white">{value}</p>
         </div>
     );
+}
+
+/** The review buttons share one pending flag, so the spinner sits beside them. */
+function BusyNote({busy}: {busy: boolean}) {
+    if (!busy) return null;
+    return <span role="status" className="inline-flex items-center gap-2 text-xs font-bold text-ink-400"><Spinner size={12} />Saving…</span>;
 }
