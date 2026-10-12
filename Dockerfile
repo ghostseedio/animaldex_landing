@@ -86,15 +86,15 @@ RUN npm run build \
 FROM node:${NODE_VERSION}-bookworm-slim AS runner
 WORKDIR /app
 
-# HOSTNAME=localhost: Next standalone workers + outer server share this name.
-# Node 22 on Linux resolves localhost to IPv6 (::1) first for listen(), while the
-# parent http-proxy connects to 127.0.0.1 → ECONNREFUSED on the worker port.
-# Force IPv4 so listen + connect agree (do not use HOSTNAME=127.0.0.1: Next then
-# 308s non-matching Host headers to http://localhost:3000/).
+# HOSTNAME=0.0.0.0: Next 13.5's standalone server is a single process that listens
+# on HOSTNAME, so it must bind every interface for Docker's port mapping to reach
+# it. (HOSTNAME=localhost was the Next 13.4 workaround for its worker proxy; on
+# 13.5 it binds 127.0.0.1 inside the container and every request is reset.)
+# Verified with the CI smoke paths, including the 308 Location headers.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=localhost \
+    HOSTNAME=0.0.0.0 \
     NODE_OPTIONS=--dns-result-order=ipv4first
 
 # ffmpeg: /admin/story-videos re-encodes low-frame-rate story videos to 30 fps
