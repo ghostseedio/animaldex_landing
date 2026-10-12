@@ -14,6 +14,8 @@ import {
     pinnedAnimalTrialCohort
 } from "@/lib/discover-animal-trial";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import TrialMotion from "@/components/trial-motion/trial-motion";
+import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
  * An Animal Trial on the Discover timeline. Ported from iOS
@@ -143,6 +145,11 @@ export default function AnimalTrialCard({
     const pills = animalTrialPills(current);
     const isWritten = isWrittenAnimalTrialPost(current);
     const isOwn = viewerUserId != null && viewerUserId === current.collector.userId;
+    // The evidence is the post, so the Trial Loop only fills a post that has no
+    // picture: an answer submitted as text. A written "Your Way" account is prose
+    // and keeps the whole card.
+    const showsLoopInPlaceOfEvidence = !current.evidenceSrc && !isWritten;
+    const motionStoryboard = useTrialMotionStoryboard(current.speciesProfileId, current.frequency, showsLoopInPlaceOfEvidence);
 
     return (
         <div
@@ -152,6 +159,11 @@ export default function AnimalTrialCard({
             aria-label={animalTrialAccessibilityLabel(current)}
         >
             <AnimalTrialEvidence key={current.id} item={current} />
+            {showsLoopInPlaceOfEvidence && motionStoryboard ? (
+                <div className="absolute inset-x-0 top-14 px-4">
+                    <TrialMotion storyboard={motionStoryboard} variant="compact" />
+                </div>
+            ) : null}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0)_38%,rgba(0,0,0,0.72)_100%)]" />
 
             <div className="absolute inset-0 flex flex-col px-4 pb-4 pt-3">

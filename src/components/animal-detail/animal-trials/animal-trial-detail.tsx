@@ -40,6 +40,7 @@ import {AskTrialBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-an
 import {AnimalTrialEvidence} from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
 import {discoverPostPath} from "@/lib/discover-post";
 import Link from "@/app/[locale]/_components/link";
+import TrialMotion from "@/components/trial-motion/trial-motion";
 
 /**
  * One Trial, full screen. Ported from iOS `AnimalTrialDetailView`.
@@ -711,6 +712,9 @@ export default function AnimalTrialDetail({
                                     </button>
                                 ) : null}
                             </div>
+                            {/* The Trial Loop: what the instructions ask, drawn, with
+                                the steps under it. Absent until the Trial has one. */}
+                            <TrialMotion storyboard={current.motionStoryboard} className="mb-1.5 mt-1" />
                             <p className="text-base font-bold leading-6 text-white">{current.instructions}</p>
                             {showsRule ? <p className="text-sm leading-6 text-white/70">{current.animalRule}</p> : null}
                             {safetyNote(current) ? (

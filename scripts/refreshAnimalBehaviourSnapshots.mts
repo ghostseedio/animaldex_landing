@@ -144,7 +144,7 @@ const behaviours = dynamicsRows.flatMap((row) => {
 const trialRows = await fetchAll(
     "animal_trials_for_viewer_v1",
     "species_profile_id,species_display_name,title,objective,instructions,animal_rule,user_benefit,principle_name,"
-    + "principle_link,mechanism_connection,frequency,difficulty,estimated_minutes,completion_count",
+    + "principle_link,mechanism_connection,frequency,difficulty,estimated_minutes,completion_count,motion_storyboard",
     "species_profile_id.asc,frequency.asc,title.asc"
 );
 
@@ -167,7 +167,9 @@ const trials = trialRows.flatMap((row) => {
         frequency: text(row.frequency) ?? "MID",
         difficulty: Number(row.difficulty) || 1,
         estimatedMinutes: Number(row.estimated_minutes) || null,
-        completionCount: Number(row.completion_count) || 0
+        completionCount: Number(row.completion_count) || 0,
+        // The Trial Loop, verbatim. Null until authored; the hub renders nothing for null.
+        motionStoryboard: row.motion_storyboard ?? null
     }];
 }).sort((left, right) => left.title.localeCompare(right.title));
 

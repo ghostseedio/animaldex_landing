@@ -19,6 +19,7 @@ import {
 } from "@/lib/animal-trials";
 import {TRAINING_COPY} from "@/lib/species-training";
 import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
+import TrialMotion from "@/components/trial-motion/trial-motion";
 
 /**
  * The Animal Trials entry point on a species. One card per frequency the animal
@@ -242,6 +243,16 @@ export function TrialCard({
     const body = (
         <>
             <h4 className={`font-display text-2xl font-black leading-tight ${quiet ? "text-white/60" : "text-white"}`}>{trial.title}</h4>
+
+            {/* Compact Trial Loop: the stage alone. The steps are in the sheet,
+                and in the stage's label. Dimmed with the card while Training is owed. */}
+            {trial.motionStoryboard && !complete ? (
+                <TrialMotion
+                    storyboard={trial.motionStoryboard}
+                    variant="compact"
+                    className={quiet ? "opacity-50" : ""}
+                />
+            ) : null}
 
             {preview ? (
                 <p className={`line-clamp-2 text-sm leading-6 ${quiet ? "text-white/40" : "text-white/60"}`}>{preview}</p>

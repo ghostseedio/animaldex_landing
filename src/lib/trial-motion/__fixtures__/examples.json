@@ -1,0 +1,507 @@
+[
+ {
+  "key": "cheetah-LOW",
+  "species": "Cheetah",
+  "title": "Flat Squat Against Loaded Spring",
+  "storyboard": {
+   "v": 1,
+   "loop": 9.2,
+   "actors": {
+    "you": {
+     "kind": "figure",
+     "x": 52
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Hold a flat squat for five seconds",
+     "events": [
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "squat",
+       "at": 0.3
+      },
+      {
+       "type": "hold",
+       "actor": "you",
+       "seconds": 5,
+       "at": 0.6,
+       "until": 2.4
+      },
+      {
+       "type": "jump",
+       "actor": "you",
+       "dx": 100,
+       "at": 2.5
+      },
+      {
+       "type": "mark",
+       "actor": "you",
+       "id": "A",
+       "at": 3.15
+      }
+     ]
+    },
+    {
+     "at": 3.7,
+     "caption": "Drop and spring straight back out",
+     "events": [
+      {
+       "type": "reset",
+       "actor": "you",
+       "at": 3.7
+      },
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "dip",
+       "at": 4.35,
+       "dur": 0.18
+      },
+      {
+       "type": "jump",
+       "actor": "you",
+       "dx": 182,
+       "at": 4.53
+      },
+      {
+       "type": "mark",
+       "actor": "you",
+       "id": "B",
+       "at": 5.2
+      }
+     ]
+    },
+    {
+     "at": 5.8,
+     "caption": "Compare the two sets of marks",
+     "events": [
+      {
+       "type": "compare",
+       "marks": [
+        "A",
+        "B"
+       ],
+       "at": 5.9
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "key": "koala-MID",
+  "species": "Koala",
+  "title": "The Two-Tree Rule",
+  "storyboard": {
+   "v": 1,
+   "loop": 8.6,
+   "actors": {
+    "pile": {
+     "kind": "pile",
+     "count": 12,
+     "glyphs": [
+      "tab",
+      "mail",
+      "page"
+     ]
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Count the real pile out loud",
+     "events": [
+      {
+       "type": "stack",
+       "actor": "pile",
+       "at": 0.2,
+       "until": 1.4
+      },
+      {
+       "type": "count",
+       "from": 0,
+       "to": 12,
+       "at": 0.2,
+       "until": 1.4
+      }
+     ]
+    },
+    {
+     "at": 2.0,
+     "caption": "Close everything except two, one at a time",
+     "events": [
+      {
+       "type": "discard",
+       "actor": "pile",
+       "keep": [
+        4,
+        9
+       ],
+       "at": 2.1,
+       "until": 5.4
+      },
+      {
+       "type": "count",
+       "from": 12,
+       "to": 2,
+       "at": 2.1,
+       "until": 5.6
+      }
+     ]
+    },
+    {
+     "at": 5.7,
+     "caption": "Finish with the two survivors",
+     "events": [
+      {
+       "type": "keep",
+       "actor": "pile",
+       "at": 5.8
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "key": "honeybee-MID",
+  "species": "Western Honey Bee",
+  "title": "The Dance That Sends Others",
+  "storyboard": {
+   "v": 1,
+   "loop": 8.4,
+   "actors": {
+    "you": {
+     "kind": "figure",
+     "x": 92
+    },
+    "group": {
+     "kind": "item",
+     "glyph": "users",
+     "x": 280,
+     "y": 92,
+     "size": "l"
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Pick one find that is genuinely useful",
+     "events": [
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "think",
+       "at": 0.3
+      },
+      {
+       "type": "bubble",
+       "actor": "you",
+       "glyph": "pin",
+       "style": "thought",
+       "at": 0.6,
+       "until": 2.6
+      }
+     ]
+    },
+    {
+     "at": 2.9,
+     "caption": "Say it as exact directions",
+     "events": [
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "point",
+       "at": 3.0
+      },
+      {
+       "type": "bubble",
+       "actor": "you",
+       "glyph": "map",
+       "style": "speech",
+       "at": 3.2,
+       "until": 5.0
+      }
+     ]
+    },
+    {
+     "at": 5.2,
+     "caption": "Send it to the group chat",
+     "events": [
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "use_phone",
+       "at": 5.2
+      },
+      {
+       "type": "give",
+       "from": "you",
+       "to": "group",
+       "glyph": "message",
+       "at": 5.5
+      },
+      {
+       "type": "check",
+       "actor": "group",
+       "at": 6.4
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "key": "grizzly-LOW",
+  "species": "Grizzly Bear",
+  "title": "Run the Route in Order",
+  "storyboard": {
+   "v": 1,
+   "loop": 8.0,
+   "actors": {
+    "route": {
+     "kind": "list",
+     "glyphs": [
+      "pencil",
+      "mail",
+      "cup",
+      "book",
+      "shirt"
+     ],
+     "hidden": true
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Write the fixed order first",
+     "events": [
+      {
+       "type": "show",
+       "actor": "route",
+       "at": 0.3
+      }
+     ]
+    },
+    {
+     "at": 1.3,
+     "caption": "Work through it without deciding again",
+     "events": [
+      {
+       "type": "step",
+       "actor": "route",
+       "index": 0,
+       "at": 1.4
+      },
+      {
+       "type": "step",
+       "actor": "route",
+       "index": 1,
+       "at": 2.5
+      },
+      {
+       "type": "step",
+       "actor": "route",
+       "index": 2,
+       "at": 3.6
+      },
+      {
+       "type": "step",
+       "actor": "route",
+       "index": 3,
+       "at": 4.7
+      },
+      {
+       "type": "step",
+       "actor": "route",
+       "index": 4,
+       "at": 5.8
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "key": "sparrow-HIGH",
+  "species": "House Sparrow",
+  "title": "Live Off the Spill",
+  "storyboard": {
+   "v": 1,
+   "loop": 9.6,
+   "actors": {
+    "you": {
+     "kind": "figure",
+     "x": 70
+    },
+    "spill": {
+     "kind": "item",
+     "glyph": "box",
+     "x": 250,
+     "y": 124,
+     "size": "s",
+     "tile": false
+    },
+    "made": {
+     "kind": "item",
+     "glyph": "box",
+     "x": 150,
+     "y": 70,
+     "size": "l",
+     "hidden": true
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Find a surplus that is already going to waste",
+     "events": [
+      {
+       "type": "look",
+       "actor": "you",
+       "target": "spill",
+       "at": 0.3,
+       "until": 1.6
+      },
+      {
+       "type": "pulse",
+       "actor": "spill",
+       "at": 0.3,
+       "until": 1.6
+      }
+     ]
+    },
+    {
+     "at": 1.8,
+     "caption": "Take it without taking from anyone",
+     "events": [
+      {
+       "type": "move",
+       "actor": "you",
+       "to": 222,
+       "dur": 1.4,
+       "gait": "walk",
+       "at": 1.8
+      },
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "bend",
+       "at": 3.5
+      },
+      {
+       "type": "hide",
+       "actor": "spill",
+       "at": 3.8
+      },
+      {
+       "type": "pose",
+       "actor": "you",
+       "pose": "carry",
+       "at": 4.0
+      },
+      {
+       "type": "holding",
+       "actor": "you",
+       "glyph": "box",
+       "at": 4.0,
+       "until": 5.4
+      }
+     ]
+    },
+    {
+     "at": 5.5,
+     "caption": "Build something useful entirely from it",
+     "events": [
+      {
+       "type": "show",
+       "actor": "made",
+       "at": 5.6
+      },
+      {
+       "type": "transform",
+       "actor": "made",
+       "glyph": "home",
+       "at": 6.4
+      },
+      {
+       "type": "check",
+       "actor": "made",
+       "at": 7.0
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "key": "observation-sample",
+  "species": "Example",
+  "title": "Count what passes",
+  "storyboard": {
+   "v": 1,
+   "loop": 8.0,
+   "actors": {
+    "you": {
+     "kind": "figure",
+     "x": 70,
+     "pose": "sit"
+    },
+    "bird": {
+     "kind": "item",
+     "glyph": "bird",
+     "x": 260,
+     "y": 60,
+     "size": "m",
+     "tile": false
+    }
+   },
+   "beats": [
+    {
+     "at": 0,
+     "caption": "Sit still and watch one spot",
+     "events": [
+      {
+       "type": "look",
+       "actor": "you",
+       "target": "bird",
+       "at": 0.6,
+       "until": 6.4
+      }
+     ]
+    },
+    {
+     "at": 2.0,
+     "caption": "Tally every visitor you see",
+     "events": [
+      {
+       "type": "slide",
+       "actor": "bird",
+       "x": 200,
+       "y": 80,
+       "at": 2.0,
+       "dur": 1.2
+      },
+      {
+       "type": "tally",
+       "n": 6,
+       "at": 2.2,
+       "until": 6.0
+      },
+      {
+       "type": "slide",
+       "actor": "bird",
+       "x": 290,
+       "y": 50,
+       "at": 4.0,
+       "dur": 1.4
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

@@ -27,6 +27,12 @@ export type AnimalTrialEntry = {
     difficulty: number;
     estimatedMinutes: number | null;
     completionCount: number;
+    /**
+     * The Trial Loop storyboard (`motion_storyboard`), raw from the snapshot.
+     * Absent in snapshots taken before the column existed and null until
+     * authored; either way the card renders exactly as it did.
+     */
+    motionStoryboard?: unknown;
 };
 
 /**

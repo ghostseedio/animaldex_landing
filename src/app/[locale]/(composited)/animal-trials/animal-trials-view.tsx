@@ -8,6 +8,8 @@ import HubPaginationNav from "@/app/[locale]/(composited)/_components/hub-pagina
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
+import TrialMotion from "@/components/trial-motion/trial-motion";
+import {trialMotionPosterMarkup} from "@/lib/trial-motion/poster-server";
 
 export const animalTrialsPageCount = pagination.pageCount(animalTrials.length);
 
@@ -241,8 +243,9 @@ export default function AnimalTrialsView({locale, page}: {locale: string; page: 
     );
 }
 
-function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: string}) {
+export function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: string}) {
     const frequency = frequencyOf(trial.frequency);
+    const posterMarkup = trial.motionStoryboard ? trialMotionPosterMarkup(trial.motionStoryboard) : null;
 
     return (
         <article className="flex flex-col gap-4 bg-canvas-950 p-6">
@@ -277,6 +280,11 @@ function TrialCard({trial, locale}: {trial: AnimalTrialEntry; locale: string}) {
             {/* What the Trial asks, then what it does for you. The animal's
                 mechanism and rule stay on the species page. */}
             <div className="border-l-2 border-primary-500/40 pl-4">
+                {/* The Trial Loop, its finished frame server-rendered so nothing
+                    shifts; at most two of the page's loops animate at once. */}
+                {posterMarkup ? (
+                    <TrialMotion storyboard={trial.motionStoryboard} posterMarkup={posterMarkup} className="mb-4" />
+                ) : null}
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-300">The Trial</p>
                 <p className="mt-1.5 text-sm leading-6 text-ink-100">{trial.instructions ?? trial.objective}</p>
             </div>

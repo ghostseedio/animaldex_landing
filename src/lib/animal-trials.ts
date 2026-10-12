@@ -9,6 +9,7 @@
  */
 
 import {TRAINING_COPY} from "@/lib/species-training";
+import {parseTrialStoryboard, type TrialStoryboard} from "@/lib/trial-motion/storyboard";
 
 export type AnimalTrialFrequency = "LOW" | "MID" | "HIGH";
 
@@ -76,6 +77,12 @@ export type AnimalTrial = {
      * shows what a finished Trial contributed.
      */
     bestUseCases: string[];
+    /**
+     * The Trial Loop (`motion_storyboard`, the view's last column): a short
+     * drawing of what to do. Null until authored, and for anything the renderer
+     * could not draw; a null storyboard shows the Trial exactly as before.
+     */
+    motionStoryboard: TrialStoryboard | null;
 };
 
 /**
@@ -563,7 +570,8 @@ export function decodeAnimalTrial(row: any): AnimalTrial | null {
         completedAt: row?.completed_at ?? null,
         sharePublicly: row?.share_publicly === true,
         otherCompletionCount: num(row?.other_completion_count),
-        bestUseCases: list(row?.best_use_cases)
+        bestUseCases: list(row?.best_use_cases),
+        motionStoryboard: parseTrialStoryboard(row?.motion_storyboard)
     };
 }
 

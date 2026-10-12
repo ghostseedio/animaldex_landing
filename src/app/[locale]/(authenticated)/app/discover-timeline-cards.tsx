@@ -8,6 +8,8 @@ import DiscoverCaptureActions from "@/app/[locale]/(authenticated)/app/_componen
 import ShareDiscoverPostButton from "@/app/[locale]/p/[postId]/share-discover-post-button";
 import AnimalTrialCard, { AnimalTrialEvidence } from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
 import { animalTrialFrequencyLabel } from "@/lib/discover-animal-trial";
+import TrialMotion from "@/components/trial-motion/trial-motion";
+import { useTrialMotionStoryboard } from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
   OVERALL_DRAW_LINE,
   VOTE_RULE_LINE,
@@ -1894,7 +1896,7 @@ function BoostRows({label, boosts}: {label: string; boosts: Record<string, numbe
   );
 }
 
-function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; locale: string; onClose: () => void}) {
+export function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; locale: string; onClose: () => void}) {
   const date = formatAppShortDate(item.date, locale);
 
   return (
@@ -1946,6 +1948,7 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
             <div className="aspect-[4/5] max-h-80 w-full overflow-hidden"><AnimalTrialEvidence item={item} /></div>
             <h3 className="text-xl font-bold text-white">{item.isFailed ? "Animal Trial · Evidence not accepted" : "Animal Trial"}</h3>
             <p className="whitespace-pre-line text-sm leading-6 text-white/65">{item.title}</p>
+            <PostTrialMotion speciesProfileId={item.speciesProfileId} frequency={item.frequency} />
             <div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3">
               <DetailRow label="Collector" value={item.collector.name}/>
               <DetailRow label="Animal" value={item.speciesName}/>
@@ -1960,6 +1963,18 @@ function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; l
           <div className="space-y-4"><h3 className="text-xl font-bold text-white">Trade</h3><DetailRow label="Offered" value={`${item.offerer.animalName} · ${item.offerer.name}`}/><DetailRow label="Received" value={`${item.receiver.animalName} · ${item.receiver.name}`}/><DetailRow label="Post ID" value={item.id.replace(/^trade-/, "")}/></div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** What the Trial asked, as its Loop, in a Trial post's information sheet. Nothing until the Trial has one. */
+function PostTrialMotion({ speciesProfileId, frequency }: { speciesProfileId: string; frequency: string }) {
+  const storyboard = useTrialMotionStoryboard(speciesProfileId, frequency);
+  if (!storyboard) return null;
+  return (
+    <div>
+      <p className="mb-2 text-[11px] font-semibold text-white/40">What the Trial asks</p>
+      <TrialMotion storyboard={storyboard} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {type AnimalTrial, decodeAnimalTrial, isComplete, isFailed, sortTrials} from "@/lib/animal-trials";
 import {animalTrialDiscoverPostId} from "@/lib/animal-trial-post-id";
+import {attachTrialMotionStoryboards} from "@/lib/trial-motion/storyboards-server";
 
 export const runtime = "nodejs";
 
@@ -21,11 +22,13 @@ function decodeRows(data: unknown) {
 async function readOpenTrials(supabase: Supabase) {
     const {data, error} = await supabase.from("arena_caught_trials_v1").select();
     if (error) return [];
-    return decodeRows(data).sort((left, right) => {
+    const sorted = decodeRows(data).sort((left, right) => {
         const byName = left.speciesDisplayName.localeCompare(right.speciesDisplayName, undefined, {sensitivity: "base"});
         if (byName !== 0) return byName;
         return sortTrials([left, right])[0] === left ? -1 : 1;
     });
+    // `arena_caught_trials_v1` has no `motion_storyboard`; the Trial Loops come from their own view.
+    return attachTrialMotionStoryboards(supabase, sorted);
 }
 
 /**
