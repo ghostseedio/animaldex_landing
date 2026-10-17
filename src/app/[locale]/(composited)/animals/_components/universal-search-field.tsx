@@ -115,53 +115,70 @@ export default function UniversalSearchField({
         [catalogEntries, query]
     );
 
+    // A late answer still counts while the user has only typed further: its rows stay
+    // while they contain what is typed, so the list keeps up with typing instead of
+    // waiting for the answer to the latest keystroke. One for a shorter prefix never
+    // replaces one for a longer prefix, and an empty one changes nothing.
+    const latestQueryRef = useRef(query);
+    const remoteQueryRef = useRef("");
+    useEffect(() => {
+        latestQueryRef.current = query;
+    }, [query]);
+
     useEffect(() => {
         const trimmed = query.trim();
         if (trimmed.length < 2) {
             setRemote([]);
+            remoteQueryRef.current = "";
             return;
         }
 
-        const controller = new AbortController();
         const timer = window.setTimeout(async () => {
             try {
                 const response = await fetch(
-                    `/api/animals/search/suggest?q=${encodeURIComponent(trimmed)}&locale=${encodeURIComponent(locale)}`,
-                    {signal: controller.signal}
+                    `/api/animals/search/suggest?q=${encodeURIComponent(trimmed)}&locale=${encodeURIComponent(locale)}`
                 );
                 if (!response.ok) return;
                 const payload = (await response.json()) as {
                     suggestions?: Array<{query: string; subtitle: string}>;
                 };
+                const rows = payload.suggestions ?? [];
+                const current = normalizeSuggestionQuery(latestQueryRef.current);
+                const snapshot = normalizeSuggestionQuery(trimmed);
+                const applied = normalizeSuggestionQuery(remoteQueryRef.current);
+                if (!rows.length || !current.startsWith(snapshot)) return;
+                if (applied.length > snapshot.length && current.startsWith(applied)) return;
+                remoteQueryRef.current = trimmed;
                 setRemote(
-                    (payload.suggestions ?? []).map((item, index) => ({
+                    rows.map((item, index) => ({
                         id: `remote:${index}:${item.query}`,
                         title: item.query,
                         subtitle: item.subtitle || "Suggested"
                     }))
                 );
             } catch {
-                // Aborted or offline: local suggestions still stand.
+                // Offline: local suggestions still stand.
             }
         }, SUGGEST_DEBOUNCE_MS);
 
-        return () => {
-            controller.abort();
-            window.clearTimeout(timer);
-        };
+        return () => window.clearTimeout(timer);
     }, [locale, query]);
 
     const suggestions = useMemo(() => {
+        const current = normalizeSuggestionQuery(query);
+        const matchingRemote = remote.filter((item) =>
+            normalizeSuggestionQuery(item.title).includes(current)
+        );
         const merged: LocalSuggestion[] = [];
         const seen = new Set<string>();
-        for (const item of [...localSuggestions, ...remote]) {
+        for (const item of [...localSuggestions, ...matchingRemote]) {
             const key = normalizeSuggestionQuery(item.title);
             if (!key || seen.has(key)) continue;
             seen.add(key);
             merged.push(item);
         }
         return merged.slice(0, 18);
-    }, [localSuggestions, remote]);
+    }, [localSuggestions, query, remote]);
 
     const rememberQuery = useCallback((value: string) => {
         const trimmed = value.trim();
