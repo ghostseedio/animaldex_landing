@@ -26,6 +26,20 @@ trap 'rm -f "$ENV_FILE"; docker rm -f animaldex-next >/dev/null 2>&1 || true' EX
 
 PROXY=(-H 'Host: animaldex.app' -H 'X-Forwarded-Host: animaldex.app' -H 'X-Forwarded-Proto: https')
 
+# A pull needs several GB. If the disk is tight, drop stale image tags first
+# (the daily animaldex-cleanup timer does the same); abort if it is still tight
+# rather than fill the disk, which has taken the site down before.
+free_gb=$(df --output=avail -BG / | tail -1 | tr -dc 0-9)
+if [ "${free_gb:-0}" -lt 8 ] && [ -x /usr/local/bin/animaldex-cleanup.sh ]; then
+    echo "== only ${free_gb} GB free, running animaldex-cleanup first"
+    /usr/local/bin/animaldex-cleanup.sh || true
+    free_gb=$(df --output=avail -BG / | tail -1 | tr -dc 0-9)
+fi
+if [ "${free_gb:-0}" -lt 6 ]; then
+    echo "only ${free_gb} GB free on /, not pulling a new image; free space first" >&2
+    exit 1
+fi
+
 OLD_IMAGE="$(docker inspect "$CONTAINER" --format '{{.Config.Image}}')"
 RESTART="$(docker inspect "$CONTAINER" --format '{{.HostConfig.RestartPolicy.Name}}')"
 RESTART="${RESTART:-unless-stopped}"
@@ -102,4 +116,16 @@ curl -sS -o /dev/null -w 'prod /blog/capture-animals-app -> HTTP %{http_code}\n'
 echo
 echo "Done. Rollback if needed:"
 echo "  curl -fsSL https://raw.githubusercontent.com/ghostseedio/animaldex_landing/main/scripts/deploy-selfhost.sh | bash -s -- ${OLD_IMAGE##*:sha-}"
-echo "Reclaim old layers once happy: docker image prune -f"
+
+# Keep only the new image and the one it replaced; every older tag goes now,
+# so the disk never again fills with a month of deploys.
+echo "== removing image tags older than ${OLD_IMAGE##*:sha-}"
+removed=0
+while IFS= read -r tag; do
+    [ -z "$tag" ] && continue
+    [ "$tag" = "$NEW_IMAGE" ] && continue
+    [ "$tag" = "$OLD_IMAGE" ] && continue
+    if docker image rm "$tag" >/dev/null 2>&1; then removed=$((removed + 1)); fi
+done < <(docker image ls ghcr.io/ghostseedio/animaldex_landing --format '{{.Repository}}:{{.Tag}}')
+docker image prune -f >/dev/null 2>&1 || true
+echo "removed ${removed} old tag(s); disk now $(df --output=pcent / | tail -1 | tr -d ' ') used"
