@@ -102,7 +102,7 @@ export default async function Home({params}: HomePageProps) {
         "home.data",
         () => Promise.all([
             getHomeDownloadStatCounts(),
-            getRecentPublicCaptures(features.length)
+            getRecentPublicCaptures(features.length, {imageVariant: "card-thumbnail"})
         ]),
         {featureCount: features.length}
     );
@@ -484,6 +484,7 @@ export default async function Home({params}: HomePageProps) {
                                             src={localisePath(img.src, locale)}
                                             width={img.width}
                                             height={img.height}
+                                            unoptimized={img.src.endsWith(".svg")}
                                             alt={t("features." + id)}
                                             className="max-h-full object-contain"
                                         />
@@ -550,6 +551,7 @@ export default async function Home({params}: HomePageProps) {
                                             width={img.width}
                                             height={img.height}
                                             quality={100}
+                                            unoptimized={img.src.endsWith(".svg")}
                                             className="relative z-10 h-auto w-full rounded-3xl border border-white/[0.07] shadow-[0_32px_100px_rgba(0,0,0,0.55),0_0_0_1px_rgba(167,244,50,0.04),inset_0_1px_0_rgba(255,255,255,0.05)]"
                                         />
                                     </div>
@@ -804,7 +806,6 @@ export default async function Home({params}: HomePageProps) {
                                         src={item.image}
                                         alt={t(`explore.cards.${item.id}.alt`)}
                                         fill
-                                        unoptimized={item.image.startsWith("http")}
                                         sizes={isFeatured ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"}
                                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                                     />

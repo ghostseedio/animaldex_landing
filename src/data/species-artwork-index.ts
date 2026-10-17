@@ -1,59 +1,25 @@
 import "server-only";
 
 import {getSpeciesArtworkRoute, getSpeciesArtworkThumbnailUrl, getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {
+    ArtworkIndex,
+    EMPTY_ARTWORK_INDEX,
+    buildArtworkIndex,
+    resolveArtworkFileInIndex
+} from "@/data/species-artwork-resolution";
+import artworkSnapshot from "@/data/species-artwork-snapshot.json";
+import {isSeoSsgRemoteForbidden} from "@/lib/seo-ssg-remote-guard";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {SPECIES_NO_IMAGE_SRC} from "@/lib/species-image-public";
 
 const SPECIES_ARTWORK_BUCKET = "animals";
 const INDEX_TTL_MS = 30 * 60 * 1000;
 const LIST_PAGE_SIZE = 1000;
 const LIST_MAX_PAGES = 20;
 
-type ArtworkIndex = {
-    /** Artwork file name keyed by its slug (file name without the extension). */
-    bySlug: Map<string, string>;
-    /** Candidate file names keyed by each hyphen-delimited token they contain. */
-    byToken: Map<string, string[]>;
-    byCompact: Map<string, string>;
-};
-
 let indexPromise: Promise<ArtworkIndex> | null = null;
 let indexExpiresAt = 0;
 const resolved = new Map<string, string | null>();
-
-const EMPTY_INDEX: ArtworkIndex = {bySlug: new Map(), byToken: new Map(), byCompact: new Map()};
-
-/** Letters only: "secretary-bird" and "secretarybird", "harriss-hawk" and "harris-s-hawk" meet. */
-function compactKey(value: string) {
-    return value.toLowerCase().replace(/[^a-z]/g, "");
-}
-
-/**
- * Catalog slugs whose artwork file uses another spelling or name: possessives
- * the catalog drops ("Pallas's cat" → pallass-cat), single-word file names and
- * common synonyms. Value is the file name without ".webp".
- */
-const ARTWORK_ALIASES: Record<string, string> = {
-    "pallas-cat": "pallass-cat",
-    "xantus-murrelet": "xantuss-murrelet",
-    "kirk-dik-dik": "kirks-dik-dik",
-    "reeves-muntjac": "reevess-muntjac",
-    "common-tailorbird": "tailorbird",
-    "drill-monkey": "drill",
-    "striped-polecat": "zorilla",
-    "domestic-pig": "pig"
-};
-
-function tokenize(value: string) {
-    return value.split("-").filter(Boolean);
-}
-
-/**
- * Matchup composites (`lion-vs-gorilla.webp`) live in the same bucket as the
- * per-species icons. They must never stand in for a single animal's artwork.
- */
-function isSpeciesArtwork(fileName: string) {
-    return fileName.endsWith(".webp") && !tokenize(fileName).includes("vs");
-}
 
 async function listBucketFiles(): Promise<string[]> {
     const supabaseUrl = getSupabaseUrl();
@@ -90,63 +56,28 @@ async function listBucketFiles(): Promise<string[]> {
     return names;
 }
 
-async function buildIndex(): Promise<ArtworkIndex> {
-    const files = await listBucketFiles();
-    if (files.length === 0) return EMPTY_INDEX;
-
-    const index: ArtworkIndex = {bySlug: new Map(), byToken: new Map(), byCompact: new Map()};
-
-    for (const file of files) {
-        if (!isSpeciesArtwork(file)) continue;
-
-        const slug = file.slice(0, -".webp".length);
-        index.bySlug.set(slug, file);
-        if (!index.byCompact.has(compactKey(slug))) index.byCompact.set(compactKey(slug), file);
-
-        for (const token of Array.from(new Set(tokenize(slug)))) {
-            const bucket = index.byToken.get(token);
-            if (bucket) bucket.push(file);
-            else index.byToken.set(token, [file]);
-        }
-    }
-
-    return index;
-}
-
 async function getIndex(): Promise<ArtworkIndex> {
     if (!indexPromise || indexExpiresAt <= Date.now()) {
         indexExpiresAt = Date.now() + INDEX_TTL_MS;
         resolved.clear();
-        indexPromise = buildIndex().catch(() => EMPTY_INDEX);
+        indexPromise = listBucketFiles().then(buildArtworkIndex).catch(() => EMPTY_ARTWORK_INDEX);
     }
 
     return indexPromise;
 }
 
-/** Index of the first contiguous run of `needle` inside `haystack`, or -1. */
-function tokenRunIndex(haystack: string[], needle: string[]) {
-    for (let start = 0; start + needle.length <= haystack.length; start += 1) {
-        if (needle.every((token, offset) => haystack[start + offset] === token)) return start;
-    }
-
-    return -1;
-}
+let snapshotIndex: ArtworkIndex | null = null;
 
 /**
- * A relative name ranks higher the more it reads as "a kind of <slug>".
- * `bengal-tiger` is a tiger; `tiger-swallowtail` is a butterfly that merely
- * borrows the word, so trailing matches beat leading ones. Returns 0 for names
- * that do not contain the slug's words at all.
+ * The bucket listing committed by scripts/refreshSpeciesArtworkSnapshot.mts.
+ * It is what SEO static generation resolves against: the production build
+ * forbids remote reads (ADEX_SEO_SSG_NO_REMOTE), and a `next.revalidate` fetch
+ * inside a `revalidate = false` page would silently turn it into ISR.
  */
-function scoreCandidate(candidateSlug: string, slugTokens: string[]) {
-    const candidateTokens = tokenize(candidateSlug);
-    const runIndex = tokenRunIndex(candidateTokens, slugTokens);
-    if (runIndex < 0) return 0;
+function getSnapshotIndex(): ArtworkIndex {
+    snapshotIndex ??= buildArtworkIndex(artworkSnapshot.files);
 
-    const endsWithSlug = runIndex + slugTokens.length === candidateTokens.length;
-    const extraTokens = candidateTokens.length - slugTokens.length;
-
-    return (endsWithSlug ? 1000 : 500) - extraTokens;
+    return snapshotIndex;
 }
 
 /**
@@ -163,35 +94,7 @@ export async function resolveSpeciesArtworkFile(slug: string): Promise<string | 
     const cached = resolved.get(normalized);
     if (cached !== undefined) return cached;
 
-    const index = await getIndex();
-    const alias = ARTWORK_ALIASES[normalized];
-    const exact = index.bySlug.get(normalized)
-        ?? (alias ? index.bySlug.get(alias) : undefined)
-        ?? index.byCompact.get(compactKey(normalized));
-
-    if (exact) {
-        resolved.set(normalized, exact);
-        return exact;
-    }
-
-    const slugTokens = tokenize(normalized);
-    // Any name containing the whole slug must contain its rarest word, so the
-    // shortest token bucket is a complete candidate set.
-    const candidates = slugTokens
-        .map((token) => index.byToken.get(token) ?? [])
-        .reduce<string[] | null>((smallest, bucket) => (!smallest || bucket.length < smallest.length ? bucket : smallest), null);
-
-    let best: string | null = null;
-    let bestScore = 0;
-
-    for (const file of candidates ?? []) {
-        const score = scoreCandidate(file.slice(0, -".webp".length), slugTokens);
-        // Alphabetical tiebreak keeps the pick stable across rebuilds.
-        if (score > bestScore || (score === bestScore && score > 0 && best !== null && file < best)) {
-            best = file;
-            bestScore = score;
-        }
-    }
+    const best = resolveArtworkFileInIndex(await getIndex(), normalized);
 
     resolved.set(normalized, best);
     return best;
@@ -255,4 +158,54 @@ export async function getResolvedSpeciesArtworkUrl(slug: string) {
 /** Thumbnail URL that points at a file the bucket actually holds. */
 export async function getResolvedSpeciesArtworkThumbnailUrl(slug: string, size = 240) {
     return getSpeciesArtworkThumbnailUrl(slug, await resolveSpeciesArtworkFile(slug), size);
+}
+
+/** Largest thumbnail the storage image renderer is asked for; mirrors the artwork route. */
+const MAX_THUMBNAIL_SIZE = 1024;
+
+function buildDirectArtworkUrl(slug: string, artworkFile: string, size?: number) {
+    return Number.isFinite(size) && (size as number) > 0
+        ? getSpeciesArtworkThumbnailUrl(slug, artworkFile, Math.min(MAX_THUMBNAIL_SIZE, Math.round(size as number)))
+        : getSpeciesArtworkUrl(slug, artworkFile);
+}
+
+/**
+ * Final image URLs for many slugs, resolved as the `/api/species-artwork` route
+ * would redirect them, so server-rendered markup can skip the 307 hop. Keys are
+ * the slugs exactly as passed; the value is the storage file (or its thumbnail
+ * rendition when `size` is given), or the placeholder when the live bucket has
+ * nothing for the slug.
+ *
+ * A slug is left out of the map when it cannot be resolved here, and callers
+ * fall back to the route, which resolves again at request time:
+ * - the live listing is unavailable (no Supabase credentials, listing failure);
+ * - during SEO static generation (`isSeoSsgRemoteForbidden`), where no remote
+ *   read may run, the committed snapshot is used instead and a slug it does not
+ *   cover (artwork uploaded after the last refresh) keeps the route rather than
+ *   baking a placeholder into a page that never revalidates.
+ */
+export async function getSpeciesArtworkDirectUrls(slugs: Iterable<string>, size?: number): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(Array.from(slugs).filter((slug) => typeof slug === "string" && slug.trim())));
+    const urls = new Map<string, string>();
+    if (unique.length === 0) return urls;
+
+    const fromSnapshot = isSeoSsgRemoteForbidden();
+    const index = fromSnapshot ? getSnapshotIndex() : await getIndex();
+    if (index.bySlug.size === 0) return urls;
+
+    for (const slug of unique) {
+        const file = resolveArtworkFileInIndex(index, slug);
+
+        if (file) urls.set(slug, buildDirectArtworkUrl(slug, file, size));
+        else if (!fromSnapshot) urls.set(slug, SPECIES_NO_IMAGE_SRC);
+    }
+
+    return urls;
+}
+
+/** Single-slug form of {@link getSpeciesArtworkDirectUrls}; the route when unresolved. */
+export async function getSpeciesArtworkDirectUrl(slug: string, size?: number): Promise<string> {
+    const urls = await getSpeciesArtworkDirectUrls([slug], size);
+
+    return urls.get(slug) ?? getSpeciesArtworkRoute(slug, size);
 }

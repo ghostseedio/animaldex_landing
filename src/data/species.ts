@@ -77,20 +77,41 @@ export type SpeciesEntry = {
     };
 };
 
-export type SpeciesDirectoryLetter = "all" | string;
-export type SpeciesRarityStatusKey = "very-rare" | "rare" | "uncommon" | "relatively-common";
-export type SpeciesDirectorySort =
-    | "number"
-    | "name"
-    | "rarity"
-    | "dominance"
-    | "speed"
-    | "size"
-    | "intelligence";
+// Directory filter/sort vocabulary lives in a data-free module so the /animals
+// client component can import it without pulling the catalog into its chunk.
+import {
+    getDefaultSpeciesDirectorySortOrder,
+    getSpeciesRarityStatusKey,
+    isSpeciesDirectorySort,
+    isSpeciesDirectorySortOrder,
+    isSpeciesDirectoryTierFilter,
+    SPECIES_DIRECTORY_PAGE_SIZE,
+    type SpeciesDirectoryLetter,
+    type SpeciesDirectorySort,
+    type SpeciesDirectorySortOrder,
+    type SpeciesDirectoryTierFilter,
+    type SpeciesRarityStatusKey
+} from "./species-directory-options";
 
-export type SpeciesDirectorySortOrder = "asc" | "desc";
-
-export type SpeciesDirectoryTierFilter = "all" | "S" | "A" | "B" | "C" | "D" | "E";
+export {
+    getDefaultSpeciesDirectorySortOrder,
+    getSpeciesRarityStatusKey,
+    isSpeciesDirectoryPageSize,
+    isSpeciesDirectorySort,
+    isSpeciesDirectorySortOrder,
+    isSpeciesDirectoryTierFilter,
+    SPECIES_DIRECTORY_PAGE_SIZE,
+    SPECIES_DIRECTORY_PAGE_SIZES,
+    SPECIES_DIRECTORY_SORT_OPTIONS
+} from "./species-directory-options";
+export type {
+    SpeciesDirectoryLetter,
+    SpeciesDirectoryPageSize,
+    SpeciesDirectorySort,
+    SpeciesDirectorySortOrder,
+    SpeciesDirectoryTierFilter,
+    SpeciesRarityStatusKey
+} from "./species-directory-options";
 
 export type SpeciesDirectoryPage = {
     entries: SpeciesEntry[];
@@ -106,50 +127,6 @@ export type SpeciesDirectoryPage = {
     order: SpeciesDirectorySortOrder;
     tier: SpeciesDirectoryTierFilter;
 };
-
-/** Options offered by the directory's per-page control; the first is the default. */
-export const SPECIES_DIRECTORY_PAGE_SIZES = [50, 100, 500, 1000] as const;
-export type SpeciesDirectoryPageSize = (typeof SPECIES_DIRECTORY_PAGE_SIZES)[number];
-export const SPECIES_DIRECTORY_PAGE_SIZE: SpeciesDirectoryPageSize = SPECIES_DIRECTORY_PAGE_SIZES[0];
-
-export function isSpeciesDirectoryPageSize(value: number): value is SpeciesDirectoryPageSize {
-    return (SPECIES_DIRECTORY_PAGE_SIZES as readonly number[]).includes(value);
-}
-export const SPECIES_DIRECTORY_SORT_OPTIONS: Array<{
-    id: SpeciesDirectorySort;
-    titleKey: string;
-    detailKey: string;
-}> = [
-    {id: "number", titleKey: "sortNumberTitle", detailKey: "sortNumberDetail"},
-    {id: "rarity", titleKey: "sortRarityTitle", detailKey: "sortRarityDetail"},
-    {id: "dominance", titleKey: "sortDominanceTitle", detailKey: "sortDominanceDetail"},
-    {id: "speed", titleKey: "sortSpeedTitle", detailKey: "sortSpeedDetail"},
-    {id: "size", titleKey: "sortSizeTitle", detailKey: "sortSizeDetail"},
-    {id: "intelligence", titleKey: "sortIntelligenceTitle", detailKey: "sortIntelligenceDetail"},
-    {id: "name", titleKey: "sortNameTitle", detailKey: "sortNameDetail"}
-];
-
-export function isSpeciesDirectorySort(value: string): value is SpeciesDirectorySort {
-    return SPECIES_DIRECTORY_SORT_OPTIONS.some((option) => option.id === value);
-}
-
-export function getDefaultSpeciesDirectorySortOrder(sort: SpeciesDirectorySort): SpeciesDirectorySortOrder {
-    switch (sort) {
-        case "number":
-        case "name":
-            return "asc";
-        default:
-            return "desc";
-    }
-}
-
-export function isSpeciesDirectorySortOrder(value: string): value is SpeciesDirectorySortOrder {
-    return value === "asc" || value === "desc";
-}
-
-export function isSpeciesDirectoryTierFilter(value: string): value is SpeciesDirectoryTierFilter {
-    return ["all", "S", "A", "B", "C", "D", "E"].includes(value);
-}
 
 type SpeciesEntryInput = Omit<SpeciesEntry, "heroTitle" | "publishedAt" | "updatedAt" | "featuredImage" | "searchIntents" | "relatedSpecies" | "premiumDetails"> & {
     heroTitle?: string;
@@ -4375,11 +4352,4 @@ export function rarityLabel(score: number) {
         default:
             return "Relatively common";
     }
-}
-
-export function getSpeciesRarityStatusKey(score: number): SpeciesRarityStatusKey {
-    if (score >= 85) return "very-rare";
-    if (score >= 70) return "rare";
-    if (score >= 50) return "uncommon";
-    return "relatively-common";
 }

@@ -7,7 +7,8 @@ import {buildContentMetadata} from "@/lib/content-metadata";
 import {getScopedTranslator} from "@/loaders/translation";
 import LocationPlacesPage, {LocationPlacesKind, LocationPlacesLabels} from "./location-places-page";
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
-import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
+import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesTier} from "@/lib/species-tier";
 
@@ -63,13 +64,16 @@ export async function renderLocationPlacesPage({params}: LocationPlacesRouteProp
             await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug)
         ))
     )).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    // One index load for the whole roster: icons point straight at storage
+    // instead of bouncing through /api/species-artwork.
+    const artworkUrls = await getSpeciesArtworkDirectUrls(placeSpecies.map((entry) => entry.slug));
     const species = placeSpecies
         .map((entry) => ({
             slug: entry.slug,
             name: entry.name,
             scientificName: entry.analysis.scientificName,
             tier: getSpeciesTier(entry),
-            artworkSrc: buildSpeciesArtworkSrc(entry.slug, null)
+            artworkSrc: artworkUrls.get(entry.slug) ?? getSpeciesArtworkRoute(entry.slug)
         }));
     const t = await getScopedTranslator(params.locale, "locationPlaces");
     const isZooPage = kind === "zoos";

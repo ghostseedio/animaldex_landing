@@ -13,7 +13,10 @@ export default function HomeFeatureCaptureCard({capture, locale}: {capture: Disc
                 <img
                     src={capture.imageSrc}
                     alt={capture.animalName}
+                    width={640}
+                    height={480}
                     loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black/75" />

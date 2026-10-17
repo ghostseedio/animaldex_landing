@@ -4,6 +4,11 @@ import {getSpeciesImageRoute} from "@/data/species-images";
 type SpeciesImageProps = {
     slug: string;
     alt: string;
+    /**
+     * Final image URL resolved by the server (getSpeciesArtworkDirectUrls), so the
+     * browser skips the /api/species-artwork redirect hop. Falls back to the route.
+     */
+    src?: string;
     priority?: boolean;
     className?: string;
     sizes?: string;
@@ -18,6 +23,7 @@ type SpeciesImageProps = {
 export default function SpeciesImage({
     slug,
     alt,
+    src,
     priority = false,
     className = "",
     sizes = "(min-width: 1280px) 960px, (min-width: 768px) 80vw, 100vw",
@@ -28,7 +34,7 @@ export default function SpeciesImage({
     return (
         <div className={`relative overflow-hidden ${surfaceClassName} ${className}`}>
             <Image
-                src={getSpeciesImageRoute(slug)}
+                src={src ?? getSpeciesImageRoute(slug)}
                 alt={alt}
                 fill
                 unoptimized

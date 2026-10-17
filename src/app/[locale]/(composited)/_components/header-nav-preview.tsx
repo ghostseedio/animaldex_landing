@@ -232,7 +232,7 @@ const scenes: Record<NavPreviewId, () => ReactNode> = {
     brand: () => (
         <div className="absolute inset-0 grid place-items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="" loading="lazy" className="h-24 w-24" />
+            <img src="/icon-192.webp" alt="" loading="lazy" className="h-24 w-24" />
         </div>
     )
 };

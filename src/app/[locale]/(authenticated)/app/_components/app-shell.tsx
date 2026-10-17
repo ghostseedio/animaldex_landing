@@ -193,7 +193,7 @@ export default function AppShell({
         <div className={`theme-dark bg-black text-white ${isDiscoverRoute ? "flex h-[100dvh] flex-col overflow-hidden lg:block lg:h-auto lg:min-h-screen lg:overflow-visible" : "min-h-screen"}`}>
             <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-white/[0.08] bg-[#0b0b0b]/95 p-5 backdrop-blur-xl lg:flex">
                 <Link href="/app" className="flex items-center gap-3 px-2 py-2 transition hover:bg-white/[0.04]">
-                    <img src="/images/logo.webp" alt="" className="h-11 w-11 ring-1 ring-white/10" />
+                    <img src="/icon-192.webp" alt="" className="h-11 w-11 ring-1 ring-white/10" />
                     <div>
                         <p className="font-display text-xl font-bold">AnimalDex</p>
                         <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-primary-200">Web app</p>
@@ -242,7 +242,7 @@ export default function AppShell({
             <header className={`sticky top-0 z-30 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl lg:hidden ${isDiscoverRoute ? "hidden" : ""}`}>
                 <div className="flex h-16 items-center justify-between px-4">
                     <Link href="/app" aria-label="AnimalDex" className="flex items-center">
-                        <img src="/images/logo.webp" alt="" className="h-9 w-9 ring-1 ring-white/10" />
+                        <img src="/icon-192.webp" alt="" className="h-9 w-9 ring-1 ring-white/10" />
                     </Link>
                     <div className="flex items-center gap-2">
                         {resolvedAuthenticated ? <CreditBalanceChip /> : null}

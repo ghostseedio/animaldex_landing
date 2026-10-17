@@ -46,6 +46,7 @@ export default function LocationAnimalsList({
                         >
                             <SpeciesImage
                                 slug={item.speciesSlug}
+                                src={item.artworkSrc}
                                 alt={item.imageAlt}
                                 className="aspect-[4/3] transition duration-300 group-hover:scale-[1.02] motion-reduce:transform-none"
                                 sizes="(min-width: 1280px) 28vw, (min-width: 768px) 44vw, 100vw"

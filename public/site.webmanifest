@@ -18,8 +18,8 @@
       "type": "image/png"
     },
     {
-      "src": "/images/logo.webp",
-      "sizes": "400x400",
+      "src": "/icon-192.webp",
+      "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any maskable"
     },

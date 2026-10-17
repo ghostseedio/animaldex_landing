@@ -15,12 +15,16 @@ import {
 } from "@/data/species";
 import {getAppCaptures} from "@/data/authenticated-app";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
 import {buildCollectionDiscoveryIndex, isCatalogEntryDiscovered, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep, serverTimingHeader} from "@/lib/dev-request-timing";
 
 export const runtime = "nodejs";
 export const revalidate = 86400;
+
+/** Thumbnail size the species grid requests for its tiles. */
+const DIRECTORY_ARTWORK_THUMBNAIL_SIZE = 240;
 
 function getSingleParam(value: string | null) {
     return value?.trim() || "";
@@ -70,10 +74,21 @@ export async function GET(request: Request) {
         pageSize: perPage,
         entries: catalogEntries
     }));
-    const [captures, directoryImageState] = await Promise.all([
+    const [captures, directoryImageState, artworkUrls] = await Promise.all([
         timeDevStep(timer, "captures", () => (signedIn ? getAppCaptures() : Promise.resolve([]))),
-        timeDevStep(timer, "image-state", () => buildSpeciesDirectoryImageState(directoryPage.entries))
+        timeDevStep(timer, "image-state", () => buildSpeciesDirectoryImageState(directoryPage.entries)),
+        // Final storage URL per tile (same size the grid renders), so the client
+        // can skip the /api/species-artwork 307 hop. Best effort: a tile without
+        // one keeps using the route.
+        timeDevStep(timer, "artwork", () => getSpeciesArtworkDirectUrls(
+            directoryPage.entries.map((entry) => entry.slug),
+            DIRECTORY_ARTWORK_THUMBNAIL_SIZE
+        ).catch(() => new Map<string, string>()))
     ]);
+    const entries = directoryPage.entries.map((entry) => {
+        const artworkUrl = artworkUrls.get(entry.slug);
+        return artworkUrl ? {...entry, artworkUrl} : entry;
+    });
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [
         entry.slug,
@@ -98,7 +113,7 @@ export async function GET(request: Request) {
     finishDevRequestTimer(timer, {entries: directoryPage.entries.length});
 
     return NextResponse.json({
-        entries: directoryPage.entries,
+        entries,
         capturedSpecies,
         speciesImages,
         publicCaptureSpecies,

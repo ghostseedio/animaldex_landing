@@ -4,16 +4,28 @@ import {Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactN
 import {usePathname, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
-import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {getSpeciesImageAltText} from "@/lib/species-image-public";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {speciesDirectorySearchMatch} from "@/lib/species-life-stage-policy";
-import {getSpeciesRarityStatusKey, SPECIES_DIRECTORY_SORT_OPTIONS, SPECIES_DIRECTORY_PAGE_SIZE, SPECIES_DIRECTORY_PAGE_SIZES, isSpeciesDirectoryPageSize, getDefaultSpeciesDirectorySortOrder, SpeciesEntry, SpeciesDirectorySort, SpeciesDirectorySortOrder, SpeciesDirectoryTierFilter, SpeciesDirectoryPageSize, SpeciesRarityStatusKey} from "@/data/species";
+// Type-only: erased at build time, so the catalog never reaches this chunk.
+import type {SpeciesEntry} from "@/data/species";
+import {
+    getSpeciesRarityStatusKey,
+    SPECIES_DIRECTORY_SORT_OPTIONS,
+    SPECIES_DIRECTORY_PAGE_SIZE,
+    SPECIES_DIRECTORY_PAGE_SIZES,
+    isSpeciesDirectoryPageSize,
+    getDefaultSpeciesDirectorySortOrder,
+    type SpeciesDirectorySort,
+    type SpeciesDirectorySortOrder,
+    type SpeciesDirectoryTierFilter,
+    type SpeciesDirectoryPageSize,
+    type SpeciesRarityStatusKey
+} from "@/data/species-directory-options";
 import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import BattleTierChip from "./battle-tier-chip";
 import SpeciesRegionMap from "./species-region-map";
-import {getNativeRangeRegionLabel, NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
-import {getLocationPage} from "@/data/locations";
+import {getNativeRangeRegionLabel, type NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
 
 type SpeciesDirectoryCopy = {
     readSpecies: string;
@@ -47,9 +59,12 @@ type SpeciesDirectoryCopy = {
     rarityStatuses: Record<SpeciesRarityStatusKey, string>;
 };
 
+/** The directory API may attach a resolved artwork URL per entry; the static page does not. */
+type DirectoryEntry = SpeciesEntry & {artworkUrl?: string};
+
 type SpeciesDirectoryProps = {
     locale: string;
-    speciesEntries: SpeciesEntry[];
+    speciesEntries: DirectoryEntry[];
     capturedSpecies: Record<string, boolean>;
     speciesImages: Record<string, string>;
     publicCaptureSpecies: Record<string, boolean>;
@@ -64,11 +79,15 @@ type SpeciesDirectoryProps = {
     currentSort: SpeciesDirectorySort;
     currentOrder: SpeciesDirectorySortOrder;
     currentTier: SpeciesDirectoryTierFilter;
+    /** Slugs that always render as Tier S; the server knows the legendary roster. */
+    legendarySlugs: string[];
+    /** Location slug -> display name for the active-location chip, computed on the server. */
+    locationNames: Record<string, string>;
     copy: SpeciesDirectoryCopy;
 };
 
 type DirectoryPageResponse = {
-    entries: SpeciesEntry[];
+    entries: DirectoryEntry[];
     capturedSpecies: Record<string, boolean>;
     speciesImages: Record<string, string>;
     publicCaptureSpecies: Record<string, boolean>;
@@ -348,8 +367,8 @@ function resolveThumbnailStatKey(
     return status !== "all" ? "rarity" : null;
 }
 
-function getBattleTierFromEntry(entry: SpeciesEntry): AnimalBattleTier | null {
-    if (getLegendaryEarthBeast(entry.slug)) {
+function getBattleTierFromEntry(entry: SpeciesEntry, isLegendary: boolean): AnimalBattleTier | null {
+    if (isLegendary) {
         return "S";
     }
 
@@ -450,9 +469,10 @@ function CatalogGlyphThumbnail({
     hasPublicCapture,
     priority,
     statKey,
-    showBattleTier
+    showBattleTier,
+    isLegendary
 }: {
-    entry: SpeciesEntry;
+    entry: DirectoryEntry;
     animalDexNumber: number | null;
     captured: boolean;
     imageSrc: string;
@@ -460,12 +480,13 @@ function CatalogGlyphThumbnail({
     priority: boolean;
     statKey: SortStatKey | null;
     showBattleTier: boolean;
+    isLegendary: boolean;
 }) {
     const imageAlt = getSpeciesImageAltText(entry, "thumbnail");
     const statValue = statKey ? getCanonicalSortStatValue(entry, statKey) : null;
-    const battleTier = showBattleTier ? getBattleTierFromEntry(entry) : null;
+    const battleTier = showBattleTier ? getBattleTierFromEntry(entry, isLegendary) : null;
     const targetImageSrc = !captured && !hasPublicCapture
-        ? getSpeciesArtworkRoute(entry.slug, 240)
+        ? entry.artworkUrl ?? getSpeciesArtworkRoute(entry.slug, 240)
         : `${imageSrc}${imageSrc.includes("?") ? "&" : "?"}thumbnail=1`;
     // The page is server-rendered from the static catalog, then the directory fetch
     // replaces every tile's URL with a database-backed one. Pointing the live <img>
@@ -585,9 +606,12 @@ export default function SpeciesDirectory({
     currentSort,
     currentOrder,
     currentTier,
+    legendarySlugs,
+    locationNames,
     copy
 }: SpeciesDirectoryProps) {
     const pathname = usePathname();
+    const legendarySlugSet = useMemo(() => new Set(legendarySlugs), [legendarySlugs]);
     // Null until the browser reports the query string. Reading useSearchParams here
     // would opt this whole subtree out of server rendering, so it lives in a child
     // behind its own boundary and the grid renders from props on the server.
@@ -919,7 +943,7 @@ export default function SpeciesDirectory({
     }
 
     if (activeLocation !== "all") {
-        const locationTitle = getLocationPage(activeLocation)?.name ?? activeLocation;
+        const locationTitle = locationNames[activeLocation] ?? activeLocation;
         activeFilterChips.push({
             key: "location",
             label: locationTitle,
@@ -1228,6 +1252,7 @@ export default function SpeciesDirectory({
                                 priority={index < ABOVE_FOLD_TILES}
                                 statKey={thumbnailStatKey}
                                 showBattleTier={activeTier !== "all"}
+                                isLegendary={legendarySlugSet.has(entry.slug)}
                             />
                         </Link>
                     ))}

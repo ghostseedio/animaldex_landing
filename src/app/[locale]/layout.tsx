@@ -16,7 +16,9 @@ import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surfac
 import {getScopedTranslator} from "@/loaders/translation";
 import ThemeScript from "@/components/theme/theme-script";
 
-const brandIconUrl = "/images/logo.webp";
+// 192 px rendition of /images/logo.webp (400 px, 132 KB), which every page
+// used to download at high priority as a rel=icon.
+const brandIconUrl = "/icon-192.webp";
 const socialImageUrl = "/images/og.png";
 
 type RootLayoutProps = {
@@ -159,6 +161,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
                 {
                     rel: "icon",
                     url: brandIconUrl,
+                    sizes: "192x192",
                     type: "image/webp"
                 }
             ]

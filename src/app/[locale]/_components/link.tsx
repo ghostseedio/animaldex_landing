@@ -1,12 +1,22 @@
 "use client";
 
 import NextLink from "next/link";
-import {usePathname} from "next/navigation";
-import React, {ComponentProps, MouseEvent, ReactNode} from "react";
+import {usePathname, useRouter} from "next/navigation";
+import {PrefetchKind} from "next/dist/client/components/router-reducer/router-reducer-types";
+import React, {
+    ComponentProps,
+    FocusEvent,
+    MouseEvent,
+    PointerEvent,
+    ReactNode,
+    TouchEvent,
+    useRef
+} from "react";
 import {localeConfig} from "@/i18n";
 import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 
 const navigationStartEvent = "animaldex:navigation-start";
+const navigationCancelEvent = "animaldex:navigation-cancel";
 
 export type LinkProps = {
     underline?: boolean;
@@ -15,6 +25,15 @@ export type LinkProps = {
     className?: string;
     locale?: string;
 } & Omit<ComponentProps<typeof NextLink>, "href" | "locale">
+
+type NavigationIntentEvent = {
+    defaultPrevented: boolean;
+    metaKey: boolean;
+    ctrlKey: boolean;
+    shiftKey: boolean;
+    altKey: boolean;
+    button?: number;
+};
 
 function isInternalPath(href: string) {
     return href.startsWith("/") && !href.startsWith("//");
@@ -81,18 +100,38 @@ function getLocaleFromPathname(pathname: string | null) {
         : localeConfig.defaultLocale;
 }
 
+function opensInSameTab(target?: string) {
+    return !target || target === "_self";
+}
+
+/**
+ * A primary-button, unmodified activation of a same-tab link: the only kind
+ * of event that leads to a client-side navigation.
+ */
+function isPlainActivation(event: NavigationIntentEvent, target?: string) {
+    return !event.defaultPrevented &&
+        opensInSameTab(target) &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey &&
+        (event.button === undefined || event.button === 0);
+}
+
+function isCurrentLocation(href: string) {
+    const nextUrl = new URL(href, window.location.href);
+
+    return nextUrl.pathname === window.location.pathname &&
+        nextUrl.search === window.location.search;
+}
+
 function shouldStartNavigationFeedback(
-    event: MouseEvent<HTMLAnchorElement>,
+    event: NavigationIntentEvent,
     href: string,
     target?: string
 ) {
     if (
-        event.defaultPrevented ||
-        target === "_blank" ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey ||
+        !isPlainActivation(event, target) ||
         !isInternalPath(href) ||
         isHashOnlyPath(href)
     ) {
@@ -103,14 +142,27 @@ function shouldStartNavigationFeedback(
         return false;
     }
 
-    const nextUrl = new URL(href, window.location.href);
+    return !isCurrentLocation(href);
+}
 
-    return nextUrl.pathname !== window.location.pathname ||
-        nextUrl.search !== window.location.search;
+function shouldPrefetchOnIntent(href: string, target?: string) {
+    if (!opensInSameTab(target) || !isInternalPath(href) || isHashOnlyPath(href)) {
+        return false;
+    }
+
+    if (typeof window === "undefined") {
+        return false;
+    }
+
+    return !isCurrentLocation(href);
 }
 
 function startNavigationFeedback() {
     window.dispatchEvent(new Event(navigationStartEvent));
+}
+
+function cancelNavigationFeedback() {
+    window.dispatchEvent(new Event(navigationCancelEvent));
 }
 
 export default function Link(
@@ -122,29 +174,112 @@ export default function Link(
         locale,
         prefetch,
         onClick,
+        onMouseEnter,
+        onTouchStart,
+        onPointerDown,
+        onPointerCancel,
+        onFocus,
+        replace,
+        scroll,
         target,
         ...props
     }: LinkProps
 ) {
     const pathname = usePathname();
+    const router = useRouter();
     const currentLocale = getLocaleFromPathname(pathname);
     const targetLocale = locale || currentLocale;
     const localizedHref = localizeHref(href, targetLocale);
+    const feedbackStartedByPointerRef = useRef(false);
+
+    // Next 13.5 <Link> without an explicit `prefetch` downloads the full RSC
+    // payload of every in-viewport link. The site-wide default is therefore
+    // `false`, and this wrapper prefetches on intent (hover, focus, touch,
+    // pointer down) instead. Callers that pass `prefetch` keep Next's own
+    // behaviour; /p/ detail links stay un-prefetched (request amplification).
+    const usesDefaultPrefetchPolicy = prefetch === undefined;
+    const prefetchesOnIntent = usesDefaultPrefetchPolicy && !isDynamicPublicSeoDetailHref(localizedHref);
+    // With prefetch={false} Next 13.5 forces an "optimistic" navigation on
+    // click, which bypasses the prefetch cache and refetches. Navigating
+    // through the router directly keeps the intent prefetch useful.
+    const navigatesThroughRouter = prefetchesOnIntent && (isInternalPath(localizedHref) || isHashOnlyPath(localizedHref));
+
+    function prefetchOnIntent() {
+        if (!prefetchesOnIntent || !shouldPrefetchOnIntent(localizedHref, target)) {
+            return;
+        }
+
+        router.prefetch(localizedHref, {kind: PrefetchKind.AUTO});
+    }
 
     function handleClick(event: MouseEvent<HTMLAnchorElement>) {
         onClick?.(event);
 
+        feedbackStartedByPointerRef.current = false;
+
         if (shouldStartNavigationFeedback(event, localizedHref, target)) {
             startNavigationFeedback();
+        }
+
+        if (!navigatesThroughRouter || !isPlainActivation(event, target)) {
+            return;
+        }
+
+        event.preventDefault();
+        router[replace ? "replace" : "push"](localizedHref, {scroll: scroll ?? true});
+    }
+
+    function handleMouseEnter(event: MouseEvent<HTMLAnchorElement>) {
+        onMouseEnter?.(event);
+        prefetchOnIntent();
+    }
+
+    function handleFocus(event: FocusEvent<HTMLAnchorElement>) {
+        onFocus?.(event);
+        prefetchOnIntent();
+    }
+
+    function handleTouchStart(event: TouchEvent<HTMLAnchorElement>) {
+        onTouchStart?.(event);
+        prefetchOnIntent();
+    }
+
+    function handlePointerDown(event: PointerEvent<HTMLAnchorElement>) {
+        onPointerDown?.(event);
+
+        if (event.pointerType === "touch" || event.pointerType === "mouse") {
+            prefetchOnIntent();
+        }
+
+        if (shouldStartNavigationFeedback(event, localizedHref, target)) {
+            feedbackStartedByPointerRef.current = true;
+            startNavigationFeedback();
+        }
+    }
+
+    function handlePointerCancel(event: PointerEvent<HTMLAnchorElement>) {
+        onPointerCancel?.(event);
+
+        // A touch that turned into a scroll never clicks; take the bar down.
+        if (feedbackStartedByPointerRef.current) {
+            feedbackStartedByPointerRef.current = false;
+            cancelNavigationFeedback();
         }
     }
 
     return (
         <NextLink
             href={localizedHref}
-            prefetch={prefetch ?? (isDynamicPublicSeoDetailHref(localizedHref) ? false : prefetch)}
+            prefetch={prefetch ?? false}
+            replace={replace}
+            scroll={scroll}
             target={target}
             onClick={handleClick}
+            onMouseEnter={handleMouseEnter}
+            onFocus={handleFocus}
+            onTouchStart={handleTouchStart}
+            onPointerDown={handlePointerDown}
+            onPointerCancel={handlePointerCancel}
             className={(underline ? (className || "") + " group" : className)}
             {...props}
         >

@@ -30,7 +30,8 @@ import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/loca
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
-import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -189,6 +190,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
         linkLabel: t("capturesViewPost")
     }));
     const habitatMapSpecies = new Map<string, HabitatMapSpecies>();
+    const habitatMapEntries: Array<{speciesSlug: string; entry: NonNullable<Awaited<ReturnType<typeof getResolvedSpeciesBySlug>>>}> = [];
 
     if (habitatMap) {
         const animalsBySlug = new Map(animals.map((animal) => [animal.species.slug, animal.species]));
@@ -196,15 +198,24 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
         for (const speciesSlug of getLocationMapSpeciesSlugs(habitatMap)) {
             const entry = animalsBySlug.get(speciesSlug) ?? await getResolvedSpeciesBySlug(speciesSlug) ?? getSpeciesBySlug(speciesSlug);
 
-            if (entry) {
-                habitatMapSpecies.set(speciesSlug, {
-                    slug: entry.slug,
-                    name: entry.name,
-                    tier: getSpeciesTier(entry),
-                    artworkSrc: buildSpeciesArtworkSrc(entry.slug, null)
-                });
-            }
+            if (entry) habitatMapEntries.push({speciesSlug, entry});
         }
+    }
+
+    // Final storage URLs resolved once per page, so each icon is one request
+    // instead of a redirect through /api/species-artwork and then the file.
+    const artworkUrls = await getSpeciesArtworkDirectUrls([
+        ...animals.map((animal) => animal.species.slug),
+        ...habitatMapEntries.map(({entry}) => entry.slug)
+    ]);
+
+    for (const {speciesSlug, entry} of habitatMapEntries) {
+        habitatMapSpecies.set(speciesSlug, {
+            slug: entry.slug,
+            name: entry.name,
+            tier: getSpeciesTier(entry),
+            artworkSrc: artworkUrls.get(entry.slug) ?? getSpeciesArtworkRoute(entry.slug)
+        });
     }
     const relatedChallenges = (location.challengeSlugs || [])
         .map((challengeSlug) => getChallenge(challengeSlug))
@@ -534,7 +545,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     whyItFits: animal.whyItFits,
                     rarityHint: animal.rarityHint,
                     tier: getSpeciesTier(animal.species),
-                    artworkSrc: buildSpeciesArtworkSrc(animal.species.slug, null)
+                    artworkSrc: artworkUrls.get(animal.species.slug) ?? getSpeciesArtworkRoute(animal.species.slug)
                 }))}
             />
 

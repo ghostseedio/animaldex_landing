@@ -174,7 +174,7 @@ export default function HeaderMenu({
                             onClick={closeMenu}
                         >
                             <img
-                                src="/images/logo.webp"
+                                src="/icon-192.webp"
                                 alt=""
                                 aria-hidden="true"
                                 width={40}

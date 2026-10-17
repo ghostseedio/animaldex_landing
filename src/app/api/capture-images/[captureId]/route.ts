@@ -3,9 +3,10 @@ import {SPECIES_NO_IMAGE_SRC} from "@/data/species-images";
 import {createSignedStorageUrl, resolveCaptureImageReference} from "@/lib/capture-storage-image";
 import {isServableCaptureMediaReference} from "@/lib/capture-storage-reference";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
+import {getSiteUrl} from "@/lib/site";
 
 function buildFallbackUrl(request: NextRequest) {
-    return new URL(SPECIES_NO_IMAGE_SRC, request.url);
+    return new URL(SPECIES_NO_IMAGE_SRC, getSiteUrl());
 }
 
 function redirectWithBrowserCache(url: URL | string) {

@@ -4,6 +4,68 @@ import Image from "next/image";
 import {type ReactNode, useEffect, useRef, useState} from "react";
 import type {SpeciesStoryMedia, StoryMediaItem} from "@/lib/species-story-media";
 
+/** Hero clips are 15rem wide, 20rem from `sm` (page.tsx); the Trial strip 10rem, 12rem from `sm`. */
+const HERO_POSTER_SIZES = "(min-width: 640px) 20rem, 15rem";
+const STRIP_POSTER_SIZES = "(min-width: 640px) 12rem, 10rem";
+
+type StoryFrameProps = {
+    /** The poster still; drawn as a real image so the frame paints from the server HTML. */
+    poster?: string;
+    /** Above the fold: preload the poster and fetch it at high priority. */
+    priority: boolean;
+    /** Only feeds the preload link's `imagesizes` (the image is `unoptimized`, so no srcset). */
+    sizes: string;
+    /** Shown under the clip until it has a frame, when there is no poster. */
+    placeholder?: ReactNode;
+    /** The clip has a frame to paint, so the placeholder leaves the DOM (it would otherwise keep a hidden heading and link). */
+    clipReady: boolean;
+    children: ReactNode;
+};
+
+/**
+ * Tracks whether a clip has its first frame. `loadeddata` can fire before
+ * hydration on a server-rendered `<video src>`, so the mount check reads
+ * `readyState` too (HAVE_CURRENT_DATA = 2).
+ */
+function useClipReady(ref: {current: HTMLVideoElement | null}): [boolean, () => void] {
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        if (!ready && ref.current && ref.current.readyState >= 2) setReady(true);
+    }, [ready, ref]);
+    return [ready, () => setReady(true)];
+}
+
+/**
+ * The 9:16 frame a clip sits in. A `<video>`'s own poster is only requested
+ * once the element is laid out, at low priority, and the clip's `src` is
+ * attached after hydration, so on its own the hero paints nothing for seconds.
+ * The poster is therefore also server-rendered beneath the clip (same URL, one
+ * fetch), and the clip paints over it once it has a frame.
+ */
+function StoryFrame({poster, priority, sizes, placeholder, clipReady, children}: StoryFrameProps) {
+    const [posterFailed, setPosterFailed] = useState(false);
+    const showPoster = Boolean(poster) && !posterFailed;
+    return (
+        <div className="relative aspect-[9/16] w-full overflow-hidden bg-black">
+            {showPoster ? (
+                <Image
+                    src={poster as string}
+                    alt=""
+                    fill
+                    unoptimized
+                    priority={priority}
+                    sizes={sizes}
+                    onError={() => setPosterFailed(true)}
+                    className="object-cover"
+                />
+            ) : placeholder && !clipReady ? (
+                <div className="absolute inset-0 overflow-hidden [&>*]:h-full [&>*]:w-full">{placeholder}</div>
+            ) : null}
+            {children}
+        </div>
+    );
+}
+
 type StoryVideoProps = {
     item: StoryMediaItem;
     poster?: string;
@@ -26,6 +88,7 @@ export function StoryVideo({item, poster, label, eager = false, className = "", 
     // server-rendered autoplay video is blocked, so the src is attached after mount.
     const [visible, setVisible] = useState(false);
     const [failed, setFailed] = useState(false);
+    const [clipReady, markClipReady] = useClipReady(ref);
 
     useEffect(() => {
         if (visible || !ref.current) return;
@@ -46,19 +109,23 @@ export function StoryVideo({item, poster, label, eager = false, className = "", 
     if (failed) return <>{fallback}</>;
 
     return (
-        <video
-            ref={ref}
-            src={visible ? item.stable_url : undefined}
-            poster={poster}
-            aria-label={label}
-            muted
-            autoPlay
-            playsInline
-            loop
-            preload="metadata"
-            onError={() => setFailed(true)}
-            className={`aspect-[9/16] w-full bg-black object-cover ${className}`}
-        />
+        <StoryFrame poster={poster} priority={eager} sizes={eager ? HERO_POSTER_SIZES : STRIP_POSTER_SIZES} placeholder={fallback} clipReady={clipReady}>
+            <video
+                ref={ref}
+                src={visible ? item.stable_url : undefined}
+                poster={poster}
+                aria-label={label}
+                muted
+                autoPlay
+                playsInline
+                loop
+                preload="metadata"
+                onLoadedData={markClipReady}
+                onPlaying={markClipReady}
+                onError={() => setFailed(true)}
+                className={`absolute inset-0 h-full w-full object-cover ${className}`}
+            />
+        </StoryFrame>
     );
 }
 
@@ -71,19 +138,26 @@ type StoryPlayerProps = {
 
 /** The narrated story video: it has audio, so it never autoplays; the viewer presses play. */
 export function StoryPlayer({item, poster, label, fallback = null}: StoryPlayerProps) {
+    const ref = useRef<HTMLVideoElement>(null);
     const [failed, setFailed] = useState(false);
+    const [clipReady, markClipReady] = useClipReady(ref);
     if (failed) return <>{fallback}</>;
     return (
-        <video
-            src={item.stable_url}
-            poster={poster}
-            aria-label={label}
-            controls
-            playsInline
-            preload="metadata"
-            onError={() => setFailed(true)}
-            className="aspect-[9/16] w-full bg-black object-cover"
-        />
+        <StoryFrame poster={poster} priority sizes={HERO_POSTER_SIZES} placeholder={fallback} clipReady={clipReady}>
+            <video
+                ref={ref}
+                src={item.stable_url}
+                poster={poster}
+                aria-label={label}
+                controls
+                playsInline
+                preload="metadata"
+                onLoadedData={markClipReady}
+                onPlaying={markClipReady}
+                onError={() => setFailed(true)}
+                className="absolute inset-0 h-full w-full object-cover"
+            />
+        </StoryFrame>
     );
 }
 

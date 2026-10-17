@@ -129,3 +129,38 @@ while IFS= read -r tag; do
 done < <(docker image ls ghcr.io/ghostseedio/animaldex_landing --format '{{.Repository}}:{{.Tag}}')
 docker image prune -f >/dev/null 2>&1 || true
 echo "removed ${removed} old tag(s); disk now $(df --output=pcent / | tail -1 | tr -d ' ') used"
+
+# A fresh container starts with an empty ISR cache (the home page pre-renders
+# no locale, the hubs revalidate daily), so the first visitor to each hub pays
+# a 3-10 s cold render. Warm the new container before they do. This has to run
+# against the swapped-in container: the side container's filesystem, cache
+# included, went with `docker rm -f animaldex-next`. Best effort throughout; a
+# warm-up error never fails the deploy.
+echo "== warming the ISR cache on 127.0.0.1:3001"
+warm_start=$(date +%s)
+warm_count=0
+warm_done=" "
+warm_url() {
+    case "$warm_done" in *" $1 "*) return 0 ;; esac
+    curl -s -o /dev/null --max-time "$2" "${PROXY[@]}" "http://127.0.0.1:3001$1" || true
+    warm_done="${warm_done}$1 "
+    warm_count=$((warm_count + 1))
+}
+for path in / /id /es/tier-list /fr/tier-list /pt/tier-list /animals /blog \
+    /tier-list /locations /animal-hybrids /comparisons /animal-powers \
+    /qualities /animal-frequencies /animal-trials /pokemon-animals \
+    /wildlife-guides /animals/lion /animals/bengal-tiger \
+    /animals/red-fox /animals/bald-eagle /animals/great-white-shark \
+    /animals/cheetah; do
+    warm_url "$path" 30
+done
+# The sitemap is a daily-ISR route itself, so this fetch warms it as well.
+# Its <loc>s carry the public host; keep the path and hit it on the prod port.
+sitemap_paths="$(curl -s --max-time 30 "${PROXY[@]}" "http://127.0.0.1:3001/sitemap.xml" \
+    | grep -oE '<loc>[^<]+</loc>' \
+    | sed -E 's#^<loc>https?://[^/]+##; s#</loc>$##' \
+    | grep -E '^/' | head -40 || true)"
+while IFS= read -r path; do
+    [ -n "$path" ] && warm_url "$path" 20
+done <<< "$sitemap_paths"
+echo "warmed ${warm_count} URL(s) in $(( $(date +%s) - warm_start )) s"

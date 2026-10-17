@@ -60,7 +60,10 @@ function PhoneChassis({
                 alt={alt}
                 width={width}
                 height={height}
-                unoptimized
+                // The chassis is the home page's mobile LCP. It used to be a 205 KB
+                // SVG wrapping a base64 JPEG served as-is; now a WebP raster that
+                // next/image resizes per device (~30-50 KB), hence no `unoptimized`.
+                sizes={`${width}px`}
                 priority
                 fetchPriority="high"
                 style={{position: "relative", transform: `translateZ(${half}px)`}}

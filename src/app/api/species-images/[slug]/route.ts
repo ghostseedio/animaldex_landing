@@ -5,6 +5,7 @@ import {
 } from "@/data/species-images";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIGNED_URL_LIFETIME_SECONDS, createSignedStorageUrl} from "@/lib/capture-storage-image";
+import {getSiteUrl} from "@/lib/site";
 
 /**
  * A cached redirect must expire well before the signed URL it points at, or the
@@ -27,12 +28,15 @@ function redirectPublic(url: URL | string, cacheControl = STATIC_IMAGE_CACHE) {
 export async function GET(request: NextRequest, {params}: {params: {slug: string}}) {
     const captureId = request.nextUrl.searchParams.get("captureId")?.trim();
     if (!captureId) {
-        return redirectPublic(new URL(getSpeciesArtworkRoute(params.slug), request.url));
+        // Fallback redirects are built on the public site origin: behind the proxy
+        // request.url carries the container's internal origin (http://0.0.0.0:3000),
+        // which browsers can't reach — the placeholder used to 404 in production.
+        return redirectPublic(new URL(getSpeciesArtworkRoute(params.slug), getSiteUrl()));
     }
 
     const reference = await getPublicCaptureImageReference(captureId, null, false);
     if (!reference?.imageBucket || !reference.imagePath) {
-        return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, request.url));
+        return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, getSiteUrl()));
     }
 
     try {
@@ -44,12 +48,12 @@ export async function GET(request: NextRequest, {params}: {params: {slug: string
             isThumbnail ? {width: 320, height: 320, quality: 76, resize: "cover"} : undefined
         );
         if (!signedUrl) {
-            return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, request.url));
+            return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, getSiteUrl()));
         }
 
         return redirectPublic(signedUrl, SIGNED_IMAGE_CACHE);
     } catch {
-        return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, request.url));
+        return redirectPublic(new URL(SPECIES_NO_IMAGE_SRC, getSiteUrl()));
     }
 }
 

@@ -12,6 +12,7 @@ import {getBehavioralPrincipleProfile} from "@/data/species-behavioral-principle
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {coverFirstMediaOrder, timelineMediaOrder} from "@/lib/capture-media-order";
+import {toCaptureCardThumbnailRoute} from "@/lib/capture-card-thumbnail";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
 import {computeCaptureGradeBreakdown, shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
@@ -2190,12 +2191,32 @@ async function loadRecentPublicCaptures(limit: number): Promise<DiscoverCaptureI
     );
 }
 
-export async function getRecentPublicCaptures(limit = 4): Promise<DiscoverCaptureItem[]> {
-    return withServerMemoryCache(
+/**
+ * Which image URL a recent-capture card carries.
+ *
+ * "route" is the default: `/api/capture-images/<id>?bucket=…&path=…`, a
+ * redirect to the full-size signed original, resolved per request. The /app
+ * discover feed and every other caller get this.
+ *
+ * "card-thumbnail" is for the home page: the same route one segment deeper
+ * (`/api/capture-images/<id>/card`), which redirects to a 640×480 render of the
+ * photo instead of the original. It is a URL rewrite and nothing more — the
+ * signing happens in that route, per request, so the ISR page render stays
+ * fetch-free and cacheable. See capture-card-thumbnail.ts.
+ */
+export type RecentPublicCaptureImageVariant = "route" | "card-thumbnail";
+
+export async function getRecentPublicCaptures(
+    limit = 4,
+    options: {imageVariant?: RecentPublicCaptureImageVariant} = {}
+): Promise<DiscoverCaptureItem[]> {
+    const captures = await withServerMemoryCache(
         `recent-public-captures:${limit}`,
         devCacheTtlMs(5 * 60 * 1000),
         () => loadRecentPublicCaptures(limit)
     );
+    if ((options.imageVariant ?? "route") !== "card-thumbnail") return captures;
+    return captures.map((capture) => ({...capture, imageSrc: toCaptureCardThumbnailRoute(capture.imageSrc)}));
 }
 
 const sitemapFeedSelect = "capture_id,feed_activity_at,capture_created_at,media_assets";

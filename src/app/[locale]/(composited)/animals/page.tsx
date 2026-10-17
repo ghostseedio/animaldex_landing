@@ -3,7 +3,8 @@ import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {Suspense} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
-import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
+import {getLegendaryEarthBeast, legendaryEarthBeastEntries} from "@/data/legendary-earth-beasts";
+import {locationPages} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
@@ -17,6 +18,10 @@ import UniversalSearchField from "@/app/[locale]/(composited)/animals/_component
 import {getScopedTranslator} from "@/loaders/translation";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
+
+/** Thumbnail size the species grid renders; mirrors the directory API. */
+const DIRECTORY_ARTWORK_THUMBNAIL_SIZE = 240;
 import {withOgCard} from "@/lib/og/og-image";
 
 const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
@@ -329,8 +334,23 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
     // The database catalog and per-user capture state are deliberately kept off this
     // page so it stays statically generated; SpeciesDirectory fetches them on mount.
     const capturedSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
-    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, getSpeciesImageRoute(entry.slug)]));
+    // Final storage URLs for the first grid and the featured tiles, so the browser
+    // skips one /api/species-artwork redirect per image (this page is static, so
+    // the build resolves against the committed artwork snapshot). Anything the
+    // snapshot cannot resolve keeps the route.
+    const artworkUrls = await getSpeciesArtworkDirectUrls(
+        [...directoryPage.entries.map((entry) => entry.slug), ...featuredAnimals.map((animal) => animal.slug)],
+        DIRECTORY_ARTWORK_THUMBNAIL_SIZE
+    ).catch(() => new Map<string, string>());
+    const speciesImages = Object.fromEntries(directoryPage.entries.map((entry) => [
+        entry.slug,
+        artworkUrls.get(entry.slug) ?? getSpeciesImageRoute(entry.slug)
+    ]));
     const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
+    // The directory is a client component; hand it the few strings it needs from the
+    // legendary roster and the location pages rather than letting it import either.
+    const legendarySlugs = legendaryEarthBeastEntries.map((beast) => beast.slug);
+    const locationNames = Object.fromEntries(locationPages.map((page) => [page.slug, page.name]));
 
     const schema = {
         "@context": "https://schema.org",
@@ -447,7 +467,10 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                 <Suspense fallback={<SpeciesDirectorySkeleton />}>
                 <SpeciesDirectory
                     locale={locale}
-                    speciesEntries={directoryPage.entries}
+                    speciesEntries={directoryPage.entries.map((entry) => {
+                        const artworkUrl = artworkUrls.get(entry.slug);
+                        return artworkUrl ? {...entry, artworkUrl} : entry;
+                    })}
                     capturedSpecies={capturedSpecies}
                     speciesImages={speciesImages}
                     publicCaptureSpecies={publicCaptureSpecies}
@@ -462,6 +485,8 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                     currentSort={directoryPage.sort}
                     currentOrder={directoryPage.order}
                     currentTier={directoryPage.tier}
+                    legendarySlugs={legendarySlugs}
+                    locationNames={locationNames}
                     copy={{
                         readSpecies: t("readSpecies"),
                         filtersButton: t("filtersButton"),
@@ -529,6 +554,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                             />
                             <SpeciesImage
                                 slug={animal.slug}
+                                src={artworkUrls.get(animal.slug)}
                                 alt={`${animal.name}: ${animal.lesson}`}
                                 fit="contain"
                                 sizes="(min-width: 1024px) 22vw, 46vw"

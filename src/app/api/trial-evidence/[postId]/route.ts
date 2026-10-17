@@ -2,6 +2,7 @@ import {NextRequest, NextResponse} from "next/server";
 import {SPECIES_NO_IMAGE_SRC} from "@/data/species-images";
 import {getDiscoverAnimalTrialEvidenceReference} from "@/data/discover-timeline";
 import {createSignedStorageUrl} from "@/lib/capture-storage-image";
+import {getSiteUrl} from "@/lib/site";
 
 /**
  * The still behind an Animal Trial Discover post.
@@ -20,7 +21,7 @@ function redirectWithBrowserCache(url: URL | string) {
 }
 
 export async function GET(request: NextRequest, {params}: {params: {postId: string}}) {
-    const fallback = new URL(SPECIES_NO_IMAGE_SRC, request.url);
+    const fallback = new URL(SPECIES_NO_IMAGE_SRC, getSiteUrl());
     try {
         const reference = await getDiscoverAnimalTrialEvidenceReference(params.postId ?? "");
         if (!reference) return redirectWithBrowserCache(fallback);

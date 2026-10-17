@@ -372,9 +372,18 @@ module.exports = withNextIntl({
         return config;
     },
     images: {
-        // AVIF first (smaller than WebP for photographic content); WebP is the
-        // fallback for browsers without AVIF support.
-        formats: ['image/avif', 'image/webp'],
+        // WebP only. AVIF is ~20% smaller for photographic content, but the
+        // first encode of each variant measured 4-5x slower than WebP
+        // (0.62 s vs 0.13 s for one 828 px variant on an M-series Mac, i.e.
+        // multiple seconds on the 2 vCPU e2-small origin): a blog hero LCP
+        // image took 7 s to load in production. WebP keeps the optimizer
+        // cheap enough for a cold cache on this VM.
+        formats: ['image/webp'],
+        // Supabase storage answers with max-age=3600 (or no-cache), so without
+        // a floor the optimizer re-fetched and re-encoded every variant at
+        // least hourly. Image content is content-addressed or rarely changes,
+        // so cache optimized variants for 30 days.
+        minimumCacheTTL: 2592000,
         deviceSizes: [640, 828, 1080, 1200, 1920],
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
         remotePatterns: [
