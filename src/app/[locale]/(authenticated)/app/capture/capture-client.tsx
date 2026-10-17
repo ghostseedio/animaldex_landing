@@ -4,6 +4,7 @@ import {useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {storeCaptureReveal} from "@/lib/capture-reveal";
+import {CAPTURE_RULES_TEXT, captureRulesLanguage, isRightToLeftLanguage} from "@/lib/capture-rules-text";
 
 type Phase = "permission" | "rules" | "live" | "review" | "uploading" | "analyzing" | "credits" | "complete" | "error";
 type Coordinates = {latitude: number; longitude: number; at: number};
@@ -12,15 +13,10 @@ type Wallet = {balance: number | null; isPro: boolean};
 /** What identifying one photo costs; the server charges it (analyze-capture). */
 const PHOTO_CREDIT_COST = 2;
 
-// The rules every capture is held to, worded as in the apps. Bump the
-// version with the apps' CaptureRules.version.
+// The rules every capture is held to, worded and translated as in the apps
+// (lib/capture-rules-text, generated from the iOS catalog). Bump the version
+// with the apps' CaptureRules.version.
 const CAPTURE_RULES_VERSION = 1;
-const CAPTURE_RULES = [
-    {icon: "camera", title: "Your own photos only", detail: "Upload photos you took yourself. No screenshots, downloads, reposts or other people's photos."},
-    {icon: "spark", title: "Real, living animals", detail: "No photos of screens, TVs, prints, posters, toys, statues or artwork, and no AI-generated or edited images."},
-    {icon: "location", title: "Honest location", detail: "Camera-roll uploads need the place the photo was taken. Don't enter somewhere you weren't."}
-] as const;
-const CAPTURE_RULES_ENFORCEMENT = "Every upload is checked. Breaking these rules earns a strike, and three strikes suspend your account.";
 
 const LIVE_HINT = "Center one live animal in the frame. Avoid screens, posters, artwork, and heavy blur.";
 /** A fix older than this is refreshed before it is attached to a capture. */
@@ -55,6 +51,18 @@ export default function CaptureClient() {
     const [shooting, setShooting] = useState(false);
     const [flash, setFlash] = useState(false);
     const [wallet, setWallet] = useState<Wallet | null>(null);
+    const [rulesLanguage, setRulesLanguage] = useState("en");
+    const rulesText = CAPTURE_RULES_TEXT[rulesLanguage] ?? CAPTURE_RULES_TEXT.en;
+    const captureRules = [
+        {icon: "camera", title: rulesText.ownTitle, detail: rulesText.ownDetail},
+        {icon: "spark", title: rulesText.realTitle, detail: rulesText.realDetail},
+        {icon: "location", title: rulesText.locationTitle, detail: rulesText.locationDetail}
+    ] as const;
+
+    // The rules people agree to read in their own language, as in the apps.
+    useEffect(() => {
+        setRulesLanguage(captureRulesLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]));
+    }, []);
 
     function stopCamera() {
         streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -122,11 +130,11 @@ export default function CaptureClient() {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({version: CAPTURE_RULES_VERSION})
             });
-            if (!response.ok) throw new Error("Couldn't save your answer. Check your connection and try again.");
+            if (!response.ok) throw new Error(rulesText.saveFailed);
             setRulesVersion(CAPTURE_RULES_VERSION);
             void startCamera();
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Couldn't save your answer. Check your connection and try again.");
+            setMessage(error instanceof Error ? error.message : rulesText.saveFailed);
         } finally {
             setSavingRules(false);
         }
@@ -286,16 +294,16 @@ export default function CaptureClient() {
             <div className="pointer-events-none absolute inset-5 border border-white/20"><span className="absolute left-0 top-0 h-12 w-12 -translate-x-px -translate-y-px border-l-2 border-t-2 border-primary-400"/><span className="absolute bottom-0 right-0 h-12 w-12 translate-x-px translate-y-px border-b-2 border-r-2 border-primary-400"/></div>
             {flash ? <div className="pointer-events-none absolute inset-0 bg-white/60"/> : null}
             {phase === "permission" || (phase === "error" && !capture) ? <div className="relative flex min-h-[34rem] flex-col items-center justify-center p-8 text-center"><span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-400/10 text-primary-200"><AppIcon name="camera" className="h-9 w-9"/></span><h2 className="mt-6 font-display text-3xl font-bold">Sighting scanner</h2><p className="mt-3 max-w-md text-sm leading-6 text-white/45">Live capture only. Camera and location permission are required; photo-library selection is not available.</p><button onClick={enableScanner} disabled={rulesVersion === undefined} className="mt-6 bg-white px-6 py-3.5 text-sm font-black text-black disabled:opacity-50">Enable live scanner</button></div> : null}
-            {phase === "rules" ? <div className="relative flex min-h-[34rem] flex-col justify-center p-6 sm:p-10">
+            {phase === "rules" ? <div lang={rulesLanguage} dir={isRightToLeftLanguage(rulesLanguage) ? "rtl" : "ltr"} className="relative flex min-h-[34rem] flex-col justify-center p-6 sm:p-10">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-400/10 text-primary-200"><AppIcon name="check"/></span>
-                <h2 className="mt-4 font-display text-3xl font-bold">Capture rules</h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">AnimalDex is for real animals you found yourself. Agree to these before your first capture.</p>
+                <h2 className="mt-4 font-display text-3xl font-bold">{rulesText.title}</h2>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">{rulesText.intro}</p>
                 <ul className="mt-5 space-y-4 border border-white/10 bg-[#151515] p-5">
-                    {CAPTURE_RULES.map((rule) => <li key={rule.title} className="flex gap-3"><span className="mt-0.5 text-primary-200"><AppIcon name={rule.icon} className="h-5 w-5"/></span><span><span className="block text-sm font-bold text-white">{rule.title}</span><span className="block text-sm leading-6 text-white/50">{rule.detail}</span></span></li>)}
+                    {captureRules.map((rule) => <li key={rule.icon} className="flex gap-3"><span className="mt-0.5 text-primary-200"><AppIcon name={rule.icon} className="h-5 w-5"/></span><span><span className="block text-sm font-bold text-white">{rule.title}</span><span className="block text-sm leading-6 text-white/50">{rule.detail}</span></span></li>)}
                 </ul>
-                <p className="mt-4 flex gap-2 text-sm leading-6 text-white/70"><span className="text-orange-300">!</span>{CAPTURE_RULES_ENFORCEMENT}</p>
-                <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm leading-6 text-white/80"><input type="checkbox" checked={rulesConfirmed} onChange={(event) => setRulesConfirmed(event.target.checked)} className="mt-1 h-4 w-4 accent-[#a7f432]"/>I understand that breaking these rules can get my account banned.</label>
-                <div className="mt-5 flex gap-3"><button onClick={agreeToRules} disabled={!rulesConfirmed || savingRules} className="flex-1 bg-primary-400 px-5 py-3.5 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/40">{savingRules ? "Saving…" : "I Agree"}</button><button onClick={() => setPhase("permission")} className="border border-white/10 px-5 py-3.5 text-sm font-black text-white/60">Not now</button></div>
+                <p className="mt-4 flex gap-2 text-sm leading-6 text-white/70"><span className="text-orange-300">!</span>{rulesText.enforcement}</p>
+                <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm leading-6 text-white/80"><input type="checkbox" checked={rulesConfirmed} onChange={(event) => setRulesConfirmed(event.target.checked)} className="mt-1 h-4 w-4 accent-[#a7f432]"/>{rulesText.confirm}</label>
+                <div className="mt-5 flex gap-3"><button onClick={agreeToRules} disabled={!rulesConfirmed || savingRules} className="flex-1 bg-primary-400 px-5 py-3.5 text-sm font-black text-black disabled:bg-white/10 disabled:text-white/40">{savingRules ? "…" : rulesText.agree}</button><button onClick={() => setPhase("permission")} className="border border-white/10 px-5 py-3.5 text-sm font-black text-white/60">{rulesText.notNow}</button></div>
             </div> : null}
             {showingCamera ? <div className="absolute inset-x-0 bottom-7 flex justify-center"><button onClick={takePhoto} disabled={shooting} aria-label="Take live photo" className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/25 shadow-2xl transition active:scale-95 disabled:opacity-60"><span className="h-14 w-14 rounded-full bg-primary-400"/></button></div> : null}
             {busy ? <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 p-8 text-center backdrop-blur-sm"><span className="h-14 w-14 animate-spin rounded-full border-2 border-white/15 border-t-primary-400"/><p className="mt-6 font-display text-2xl font-bold">{phase === "uploading" ? "Securing live capture" : "Analyzing animal"}</p><p className="mt-2 max-w-md text-sm text-white/50">{message}</p></div> : null}
