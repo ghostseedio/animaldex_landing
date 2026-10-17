@@ -5,8 +5,12 @@ import {useRouter} from "next/navigation";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {storeCaptureReveal} from "@/lib/capture-reveal";
 
-type Phase = "permission" | "rules" | "live" | "review" | "uploading" | "analyzing" | "complete" | "error";
+type Phase = "permission" | "rules" | "live" | "review" | "uploading" | "analyzing" | "credits" | "complete" | "error";
 type Coordinates = {latitude: number; longitude: number; at: number};
+type Wallet = {balance: number | null; isPro: boolean};
+
+/** What identifying one photo costs; the server charges it (analyze-capture). */
+const PHOTO_CREDIT_COST = 2;
 
 // The rules every capture is held to, worded as in the apps. Bump the
 // version with the apps' CaptureRules.version.
@@ -50,6 +54,7 @@ export default function CaptureClient() {
     const [savingRules, setSavingRules] = useState(false);
     const [shooting, setShooting] = useState(false);
     const [flash, setFlash] = useState(false);
+    const [wallet, setWallet] = useState<Wallet | null>(null);
 
     function stopCamera() {
         streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -67,6 +72,20 @@ export default function CaptureClient() {
             .then((response) => response.ok ? response.json() : null)
             .then((body) => {if (!cancelled) setRulesVersion(typeof body?.version === "number" ? body.version : null);})
             .catch(() => {if (!cancelled) setRulesVersion(null);});
+        return () => {cancelled = true;};
+    }, []);
+
+    // The wallet, so the review can say before Identify whether this photo is
+    // covered. Unknown (offline, an error) shows the plain cost.
+    useEffect(() => {
+        let cancelled = false;
+        fetch("/api/app/billing/status", {cache: "no-store"})
+            .then((response) => response.ok ? response.json() : null)
+            .then((body) => {
+                if (cancelled || !body) return;
+                setWallet({balance: typeof body.balance === "number" ? body.balance : null, isPro: body.is_pro === true});
+            })
+            .catch(() => {});
         return () => {cancelled = true;};
     }, []);
 
@@ -236,6 +255,14 @@ export default function CaptureClient() {
         try {
             const response = await fetch("/api/app/captures", {method: "POST", body: form});
             const body = await response.json();
+            if (response.status === 402) {
+                // Saved and waiting for credits; it is identified on its own
+                // once the wallet covers it.
+                if (typeof body.balance === "number") setWallet((current) => ({balance: body.balance, isPro: current?.isPro ?? false}));
+                setPhase("credits");
+                setMessage(body.message || "This capture is saved. Add credits to continue analysing it.");
+                return;
+            }
             if (!response.ok) throw new Error(body.error || "Live capture upload failed.");
             setPhase("analyzing");
             setMessage("Checking live-capture authenticity, identity, habitat, and rarity…");
@@ -248,6 +275,7 @@ export default function CaptureClient() {
 
     const busy = phase === "uploading" || phase === "analyzing";
     const showingCamera = phase === "live";
+    const shortOfCredits = wallet !== null && !wallet.isPro && wallet.balance !== null && wallet.balance < PHOTO_CREDIT_COST;
 
     return <div className="mx-auto max-w-4xl">
         <div className="relative min-h-[34rem] overflow-hidden border border-white/10 bg-[#090909]">
@@ -272,6 +300,8 @@ export default function CaptureClient() {
             {showingCamera ? <div className="absolute inset-x-0 bottom-7 flex justify-center"><button onClick={takePhoto} disabled={shooting} aria-label="Take live photo" className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/25 shadow-2xl transition active:scale-95 disabled:opacity-60"><span className="h-14 w-14 rounded-full bg-primary-400"/></button></div> : null}
             {busy ? <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 p-8 text-center backdrop-blur-sm"><span className="h-14 w-14 animate-spin rounded-full border-2 border-white/15 border-t-primary-400"/><p className="mt-6 font-display text-2xl font-bold">{phase === "uploading" ? "Securing live capture" : "Analyzing animal"}</p><p className="mt-2 max-w-md text-sm text-white/50">{message}</p></div> : null}
         </div>
-        <div className="mt-5 border border-white/10 bg-[#151515] p-5"><div className="flex items-start gap-3"><span className={phase === "error" ? "text-red-300" : "text-primary-200"}><AppIcon name={phase === "complete" ? "check" : phase === "error" ? "close" : "spark"}/></span><p className="text-sm leading-6 text-white/55">{message}</p></div>{phase === "review" ? <div className="mt-5 flex gap-3"><button onClick={retake} className="border border-white/10 px-5 py-3.5 text-sm font-black text-white/60">Retake</button><button onClick={analyze} className="flex flex-1 items-center justify-center gap-2 bg-primary-400 px-5 py-3.5 text-sm font-black text-black"><AppIcon name="spark"/>Identify photo</button></div> : null}{showingCamera || phase === "review" ? <p className="mt-4 flex items-center gap-2 text-xs text-white/30"><AppIcon name="location" className="h-4 w-4"/>{hasLocation ? "Live location attached for habitat validation" : "Getting your location…"}</p> : null}</div>
+        <div className="mt-5 border border-white/10 bg-[#151515] p-5"><div className="flex items-start gap-3"><span className={phase === "error" ? "text-red-300" : "text-primary-200"}><AppIcon name={phase === "complete" ? "check" : phase === "error" ? "close" : "spark"}/></span><p className="text-sm leading-6 text-white/55">{message}</p></div>{phase === "review" ? <div className="mt-5 flex gap-3"><button onClick={retake} className="border border-white/10 px-5 py-3.5 text-sm font-black text-white/60">Retake</button><button onClick={analyze} className="flex flex-1 items-center justify-center gap-2 bg-primary-400 px-5 py-3.5 text-sm font-black text-black"><AppIcon name="spark"/>Identify photo</button></div> : null}{phase === "review" && wallet && !wallet.isPro ? (shortOfCredits
+                ? <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-orange-300">Needs {PHOTO_CREDIT_COST} credits — you have {wallet.balance}.<a href="/app/credits" className="font-black text-primary-200 underline underline-offset-2">Get Credits</a></p>
+                : <p className="mt-3 text-xs text-white/35">Uses {PHOTO_CREDIT_COST} credits</p>) : null}{phase === "credits" ? <div className="mt-5"><p className="font-display text-xl font-bold text-white">Not enough credits</p><div className="mt-4 flex gap-3"><a href="/app/credits" className="flex flex-1 items-center justify-center bg-primary-400 px-5 py-3.5 text-sm font-black text-black">Get Credits</a><button onClick={retake} className="border border-white/10 px-5 py-3.5 text-sm font-black text-white/60">Take another</button></div></div> : null}{showingCamera || phase === "review" ? <p className="mt-4 flex items-center gap-2 text-xs text-white/30"><AppIcon name="location" className="h-4 w-4"/>{hasLocation ? "Live location attached for habitat validation" : "Getting your location…"}</p> : null}</div>
     </div>;
 }

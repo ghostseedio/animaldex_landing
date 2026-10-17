@@ -1,7 +1,7 @@
 import {randomUUID} from "crypto";
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {invokeAuthenticatedSupabaseFunction} from "@/lib/supabase/app-functions";
+import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
 import {verifyWebCaptureSession} from "@/lib/supabase/web-capture-session";
 
 export const runtime = "nodejs";
@@ -72,7 +72,20 @@ export async function POST(request: Request) {
         if (!finalizeRow?.ok) {
             throw new Error(String(finalizeRow?.error ?? "source_media_unavailable"));
         }
-        await invokeAuthenticatedSupabaseFunction("analyze-capture", {capture_id: serverCaptureId, identity_correction_requested: false});
+        const analysis = await invokeAuthenticatedSupabaseFunctionResponse("analyze-capture", {capture_id: serverCaptureId, identity_correction_requested: false});
+        if (analysis.status === 402) {
+            // Not a failure: the capture is saved and waits for credits, and
+            // resumes by itself once the wallet covers it.
+            return NextResponse.json({
+                error: "insufficient_credits",
+                captureId: serverCaptureId,
+                title: analysis.payload?.title ?? "Not enough credits",
+                message: analysis.payload?.message ?? "This capture is saved. Add credits to continue analysing it.",
+                balance: typeof analysis.payload?.balance === "number" ? analysis.payload.balance : null,
+                creditCost: typeof analysis.payload?.credit_cost === "number" ? analysis.payload.credit_cost : null
+            }, {status: 402});
+        }
+        if (!analysis.ok) throw new Error(analysis.payload?.message || analysis.payload?.error || "The request failed.");
         return NextResponse.json({captureId: serverCaptureId}, {status: 202});
     } catch (error) {
         // 'failed' is a pipeline-owned state and is deliberately not written
