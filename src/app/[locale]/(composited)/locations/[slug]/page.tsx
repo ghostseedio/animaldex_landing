@@ -22,13 +22,17 @@ import {getLocationCoordinate, getPlaceCoordinate} from "@/data/location-coordin
 import {getResolvedSpeciesBySlug} from "@/data/database-species-pages";
 import {getSpeciesTier} from "@/lib/species-tier";
 import LocationHabitatMap, {type HabitatMapSpecies} from "@/app/[locale]/(composited)/locations/_components/location-habitat-map";
-import LocationWildlifeMap, {type WildlifeMapPlace} from "@/app/[locale]/(composited)/locations/_components/location-wildlife-map";
+import LocationWildlifeMap, {type WildlifeMapCapture, type WildlifeMapPlace} from "@/app/[locale]/(composited)/locations/_components/location-wildlife-map";
+import LocationCaptureProofSection from "@/app/[locale]/(composited)/locations/_components/location-capture-proof";
+import {getLocationCaptureProof, type LocationCaptureSetting} from "@/data/location-captures";
+import {discoverPostPath} from "@/lib/discover-post";
 import {getPlaceGuideLocationName, isPlaceCollectionIndexable} from "@/data/location-places";
 import {getRankingPage, getRankingTierListTitle} from "@/data/rankings";
 import {getSpeciesBySlug, getSpeciesRarityStatusKey} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
+import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -64,6 +68,7 @@ function assertLocationAnimalsHaveSpeciesPages() {
             .filter((animal) => (
                 !getSpeciesBySlug(animal.speciesSlug)
                 && !DATABASE_BACKED_LOCATION_SPECIES.has(animal.speciesSlug)
+                && !isPublishedAnimalSlug(animal.speciesSlug)
             ))
             .map((animal) => `${page.slug}:${animal.speciesSlug}`)
     );
@@ -166,6 +171,23 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             animals: place.animalsToSpot.slice(0, 6)
         }];
     });
+    // Public captures inside the area, snapshotted at build time (no DB read in SSG).
+    const captureProof = getLocationCaptureProof(location.slug);
+    const captureSettingLabels: Record<LocationCaptureSetting, string> = {
+        wild: t("capturesSettingWild"),
+        zoo: t("capturesSettingZoo"),
+        farm: t("capturesSettingFarm"),
+        unknown: t("capturesSettingUnknown")
+    };
+    const mapCaptures: WildlifeMapCapture[] = (captureProof?.featured ?? []).map((capture) => ({
+        lat: capture.lat,
+        lng: capture.lng,
+        animalName: capture.animalName,
+        settingLabel: captureSettingLabels[capture.setting],
+        dateLabel: new Intl.DateTimeFormat(locale, {month: "short", year: "numeric"}).format(new Date(capture.capturedAt)),
+        href: discoverPostPath(`capture-${capture.captureId}`),
+        linkLabel: t("capturesViewPost")
+    }));
     const habitatMapSpecies = new Map<string, HabitatMapSpecies>();
 
     if (habitatMap) {
@@ -258,7 +280,18 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
         question: t("findGuideFaqQuestion", {location: location.name}),
         answer: t("findGuideFaqAnswer", {location: location.name})
     };
-    const faqItems = location.faq && location.faq.length > 0 ? [...location.faq, findGuideFaq] : [];
+    const captureFaq = captureProof ? {
+        question: t("capturesFaqQuestion", {location: location.name}),
+        answer: t("capturesFaqAnswer", {
+            location: location.name,
+            captures: captureProof.captureCount.toLocaleString(locale),
+            species: captureProof.speciesCount.toLocaleString(locale),
+            examples: captureProof.species.slice(0, 4).map((species) => species.name.toLowerCase()).join(", ")
+        })
+    } : null;
+    const faqItems = location.faq && location.faq.length > 0
+        ? [...location.faq, ...(captureFaq ? [captureFaq] : []), findGuideFaq]
+        : [];
     const faqSchema = faqItems.length > 0 ? {
         "@context": "https://schema.org",
         "@type": "FAQPage",
@@ -271,6 +304,12 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             }
         }))
     } : null;
+    // A province links up to its country, a park to its island: the ancestor
+    // chain sits in the breadcrumb and its schema.
+    const ancestors: Array<{slug: string; name: string}> = [];
+    for (let parent = location.parentSlug ? getLocationPage(location.parentSlug) : undefined, depth = 0; parent && depth < 4; parent = parent.parentSlug ? getLocationPage(parent.parentSlug) : undefined, depth++) {
+        ancestors.unshift({slug: parent.slug, name: parent.name});
+    }
     const breadcrumbSchema = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -287,9 +326,15 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 name: t("title"),
                 item: getAbsoluteUrl(locale, "/locations")
             },
+            ...ancestors.map((ancestor, index) => ({
+                "@type": "ListItem",
+                position: 3 + index,
+                name: ancestor.name,
+                item: getAbsoluteUrl(locale, `/locations/${ancestor.slug}`)
+            })),
             {
                 "@type": "ListItem",
-                position: 3,
+                position: 3 + ancestors.length,
                 name: location.title,
                 item: pageUrl
             }
@@ -317,6 +362,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
             <LocationBreadcrumbs
                 items={[
                     {href: "/locations", label: t("title")},
+                    ...ancestors.map((ancestor) => ({href: `/locations/${ancestor.slug}`, label: ancestor.name})),
                     {label: t(`types.${location.regionType}`)},
                     {label: location.name}
                 ]}
@@ -443,9 +489,36 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                         zoom={locationCoordinate.zoom}
                         locationName={location.name}
                         places={mapPlaces}
+                        captures={mapCaptures}
                     />
-                    <p className="text-xs text-ink-500">{t("mapFootnote")}</p>
+                    <p className="text-xs text-ink-500">{mapCaptures.length ? `${t("mapFootnote")} ${t("capturesMapLegend")}` : t("mapFootnote")}</p>
                 </section>
+            ) : null}
+
+            {captureProof ? (
+                <LocationCaptureProofSection
+                    locale={locale}
+                    locationName={location.name}
+                    proof={captureProof}
+                    labels={{
+                        eyebrow: t("capturesEyebrow"),
+                        title: t("capturesTitle", {location: location.name}),
+                        description: t("capturesDescription"),
+                        statCaptures: t("capturesStatCaptures"),
+                        statSpecies: t("capturesStatSpecies"),
+                        statCollectors: t("capturesStatCollectors"),
+                        statWild: t("capturesStatWild"),
+                        speciesTitle: t("capturesSpeciesTitle"),
+                        speciesDescription: t("capturesSpeciesDescription"),
+                        speciesCount: (count) => count === 1 ? t("capturesSpeciesCountOne") : t("capturesSpeciesCount", {count: count.toLocaleString(locale)}),
+                        featuredTitle: t("capturesFeaturedTitle"),
+                        settings: captureSettingLabels,
+                        by: (name) => t("capturesBy", {name}),
+                        viewPost: t("capturesViewPost"),
+                        imageAlt: (animal, area) => t("capturesImageAlt", {animal, area}),
+                        footnote: t("capturesFootnote")
+                    }}
+                />
             ) : null}
 
             <LocationAnimalsList

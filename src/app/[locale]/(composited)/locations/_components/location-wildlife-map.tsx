@@ -15,13 +15,28 @@ export type WildlifeMapPlace = {
     href?: string;
 };
 
+export type WildlifeMapCapture = {
+    /** Rounded to about a kilometre before it reaches the page. */
+    lat: number;
+    lng: number;
+    animalName: string;
+    settingLabel: string;
+    dateLabel: string;
+    href: string;
+    linkLabel: string;
+};
+
 type LocationWildlifeMapProps = {
     center: {lat: number; lng: number};
     zoom: number;
     locationName: string;
     places: WildlifeMapPlace[];
+    /** Public AnimalDex captures drawn as smaller pins under the places. */
+    captures?: WildlifeMapCapture[];
     className?: string;
 };
+
+const CAPTURE_COLOR = "#f472b6";
 
 const KIND_COLOR: Record<string, string> = {
     zoo: "#38bdf8",
@@ -49,6 +64,7 @@ export default function LocationWildlifeMap({
     zoom,
     locationName,
     places,
+    captures = [],
     className = "h-[24rem] w-full md:h-[30rem]"
 }: LocationWildlifeMapProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -97,10 +113,27 @@ export default function LocationWildlifeMap({
                 return leaflet.marker([place.lat, place.lng], {icon}).addTo(map).bindPopup(popup);
             });
 
-            layersRef.current = markers;
+            const captureMarkers = captures.map((capture) => {
+                const icon = leaflet.divIcon({
+                    className: "",
+                    html: `<span style="display:block;width:11px;height:11px;border-radius:9999px;background:${CAPTURE_COLOR};box-shadow:0 0 0 2px rgba(4,20,10,.75),0 0 8px ${CAPTURE_COLOR}88"></span>`,
+                    iconSize: [11, 11],
+                    iconAnchor: [5, 5]
+                });
+                const popup = `
+                    <div style="min-width:160px">
+                        <strong style="display:block;font-size:13px;margin-bottom:2px">${escapeHtml(capture.animalName)}</strong>
+                        <span style="display:block;font-size:11px;opacity:.75;line-height:1.5">${escapeHtml(capture.settingLabel)} · ${escapeHtml(capture.dateLabel)}</span>
+                        <a href="${capture.href}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700">${escapeHtml(capture.linkLabel)} →</a>
+                    </div>`;
+                return leaflet.marker([capture.lat, capture.lng], {icon, zIndexOffset: -100}).addTo(map).bindPopup(popup);
+            });
 
-            if (markers.length > 1) {
-                map.fitBounds(leaflet.featureGroup(markers).getBounds(), {padding: [44, 44], maxZoom: 12});
+            layersRef.current = [...captureMarkers, ...markers];
+
+            const framed = markers.length ? markers : captureMarkers;
+            if (framed.length > 1) {
+                map.fitBounds(leaflet.featureGroup(framed).getBounds(), {padding: [44, 44], maxZoom: 12});
             } else if (markers.length === 1) {
                 map.setView([places[0].lat, places[0].lng], Math.max(zoom, 10));
             } else {
@@ -111,7 +144,7 @@ export default function LocationWildlifeMap({
         return () => {
             cancelled = true;
         };
-    }, [center, locationName, places, zoom]);
+    }, [captures, center, locationName, places, zoom]);
 
     useEffect(() => () => {
         mapRef.current?.remove();

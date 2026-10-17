@@ -103,7 +103,7 @@ export default async function LocationsIndexPage({params}: {params: {locale: str
         title: page.title,
         description: page.description,
         image: page.featuredImage,
-        region: locationRegions[page.slug] ?? "asia",
+        region: page.hubRegion ?? locationRegions[page.slug] ?? "asia",
         types: inferLocationTypes(page),
         animalNames: page.animalsToSpot
             .slice(0, 3)
@@ -123,7 +123,7 @@ export default async function LocationsIndexPage({params}: {params: {locale: str
         }
     }));
     const placeGuideLinks: LocationPlaceGuideLink[] = locationPages.flatMap((page) => {
-        const region = locationRegions[page.slug] ?? "asia";
+        const region = page.hubRegion ?? locationRegions[page.slug] ?? "asia";
         const locationName = getPlaceGuideLocationName(page.slug, page.name);
 
         return ([

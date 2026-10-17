@@ -6,6 +6,8 @@
  * pins land where the place actually is.
  */
 
+import {getLocationPage} from "@/data/locations";
+
 export type LocationCoordinate = {
     lat: number;
     lng: number;
@@ -103,7 +105,14 @@ export const locationPlaceCoordinates: Record<string, Record<string, {lat: numbe
 };
 
 export function getLocationCoordinate(slug: string): LocationCoordinate | null {
-    return locationCoordinates[slug] ?? null;
+    const geocoded = locationCoordinates[slug];
+    if (geocoded) return geocoded;
+    // Pages in src/data/locations/* carry their own centre.
+    const page = getLocationPage(slug);
+    if (page?.coordinate) {
+        return {...page.coordinate, resolved: page.name};
+    }
+    return null;
 }
 
 export function getPlaceCoordinate(locationSlug: string, placeName: string) {

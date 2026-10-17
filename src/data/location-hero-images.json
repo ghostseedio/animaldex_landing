@@ -1,0 +1,1262 @@
+{
+  "generatedAt": "2026-10-17",
+  "note": "Hero photos for src/data/locations/* pages, fetched from Wikimedia Commons by scripts/fetchLocationHeroImages.mjs. Keyed by location slug.",
+  "images": {
+    "alabama": {
+      "src": "/images/blog/locations-alabama/hero.webp",
+      "alt": "An American alligator in the blackwater of the Mobile-Tensaw Delta, Alabama",
+      "width": 1400,
+      "height": 933,
+      "caption": "An American alligator in the blackwater of the Mobile-Tensaw Delta, Alabama. Photo: Carol M. Highsmith, Public domain, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Alligator_Alley_has_20_acres_of_natural_cypress_swamp_land,_where_alligators_roam_freely_in_a_protected_environment,_Summerdale,_Alabama_LCCN2010637999.tif"
+    },
+    "alberta": {
+      "src": "/images/blog/locations-alberta/hero.webp",
+      "alt": "A bighorn sheep ram standing on a rocky roadside in Jasper National Park, Alberta",
+      "width": 1400,
+      "height": 788,
+      "caption": "A bighorn sheep ram standing on a rocky roadside in Jasper National Park, Alberta. Photo: Christoph Strässler from Oberdorf BL, Schweiz, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bighorn_Sheep,_Jasper_National_Park,_Canada_(54881194681).jpg"
+    },
+    "algeria": {
+      "src": "/images/blog/locations-algeria/hero2.webp",
+      "alt": "A Barbary macaque sitting among cedar trees in Chréa National Park, Algeria",
+      "width": 1400,
+      "height": 839,
+      "caption": "A Barbary macaque sitting among cedar trees in Chréa National Park, Algeria. Photo: Hamza-sia, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Macaca_sylvanus_in_B%C3%A9ja%C3%AFa_(Algeria).jpg"
+    },
+    "amalfi-coast": {
+      "src": "/images/blog/locations-amalfi-coast/hero2.webp",
+      "alt": "The Faraglioni sea stacks off Capri, near the Amalfi coast",
+      "width": 1400,
+      "height": 970,
+      "caption": "The Faraglioni sea stacks off Capri, near the Amalfi coast. Photo: sneakerdog, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Faraglioni,_Capri,_Italy.jpg"
+    },
+    "amazon-rainforest": {
+      "src": "/images/blog/locations-amazon-rainforest/hero.webp",
+      "alt": "A scarlet macaw flying over the Amazon rainforest",
+      "width": 1400,
+      "height": 933,
+      "caption": "A scarlet macaw flying over the Amazon rainforest. Photo: Jar0d, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ara_macao_-Diergaarde_Blijdorp_-flying-8a.jpg"
+    },
+    "argentina": {
+      "src": "/images/blog/locations-argentina/hero.webp",
+      "alt": "A southern right whale breaching in the Golfo Nuevo off Península Valdés, Argentina",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A southern right whale breaching in the Golfo Nuevo off Península Valdés, Argentina. Photo: Ksnordstrand, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Southern_Right_Whale.JPG"
+    },
+    "austria": {
+      "src": "/images/blog/locations-austria/hero.webp",
+      "alt": "An Alpine marmot on a stone wall beside the Grossglockner High Alpine Road, Austria",
+      "width": 1400,
+      "height": 1051,
+      "caption": "An Alpine marmot on a stone wall beside the Grossglockner High Alpine Road, Austria. Photo: Zairon, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Gro%C3%9Fglockner-Hochalpenstra%C3%9Fe_Murmeltier_3.JPG"
+    },
+    "auvergne-rhone-alpes": {
+      "src": "/images/blog/locations-auvergne-rhone-alpes/hero.webp",
+      "alt": "An Alpine marmot sitting on a boulder in a Vanoise meadow, Savoie",
+      "width": 1400,
+      "height": 933,
+      "caption": "An Alpine marmot sitting on a boulder in a Vanoise meadow, Savoie. Photo: Björn S..., CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Alpine_Marmot_-_Marmota_marmota_(20926292639).jpg"
+    },
+    "bandung": {
+      "src": "/images/blog/locations-bandung/hero.webp",
+      "alt": "A long-tailed macaque in the Taman Hutan Raya Djuanda forest park above Bandung",
+      "width": 1400,
+      "height": 933,
+      "caption": "A long-tailed macaque in the Taman Hutan Raya Djuanda forest park above Bandung. Photo: Imociro, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Jembatan_gantung_di_Taman_Hutan_Raya_Ir._H._Djuanda.jpg"
+    },
+    "bangka-belitung": {
+      "src": "/images/blog/locations-bangka-belitung/hero.webp",
+      "alt": "Granite boulders on Tanjung Tinggi beach, Belitung island, Bangka Belitung",
+      "width": 1400,
+      "height": 933,
+      "caption": "Granite boulders on Tanjung Tinggi beach, Belitung island, Bangka Belitung. Photo: Stella Nostra G. A, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bertengger_Manis_di_Pantai_Penyabong,_Belitung.jpg"
+    },
+    "bangkok": {
+      "src": "/images/blog/locations-bangkok/hero.webp",
+      "alt": "An Asian water monitor, a regular sight beside the lake in Lumphini Park, Bangkok",
+      "width": 1400,
+      "height": 933,
+      "caption": "An Asian water monitor, a regular sight beside the lake in Lumphini Park, Bangkok. Photo: Mira Meijer Burgers' Zoo, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Asian_water_monitor_(Varanus_salvator).jpg"
+    },
+    "banos-ecuador": {
+      "src": "/images/blog/locations-banos-ecuador/hero.webp",
+      "alt": "A male Andean cock-of-the-rock displaying in the cloud forest of the eastern Ecuadorian Andes",
+      "width": 1400,
+      "height": 930,
+      "caption": "A male Andean cock-of-the-rock displaying in the cloud forest of the eastern Ecuadorian Andes. Photo: Don Henise, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Andean_Cock-of-the-rock_2015-06-08_(3)_(25452409397).jpg"
+    },
+    "banten": {
+      "src": "/images/blog/locations-banten/hero.webp",
+      "alt": "Beach and forest edge on Peucang island, Ujung Kulon National Park, Banten",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Beach and forest edge on Peucang island, Ujung Kulon National Park, Banten. Photo: Ewal Jr, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Pulau_peucang_taman_nasional_ujung_kulon.jpg"
+    },
+    "belarus": {
+      "src": "/images/blog/locations-belarus/hero.webp",
+      "alt": "A European bison herd in the primeval forest of Belovezhskaya Pushcha, Belarus",
+      "width": 933,
+      "height": 1400,
+      "caption": "A European bison herd in the primeval forest of Belovezhskaya Pushcha, Belarus. Photo: Eternal Beginner, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:European_bison_in_the_National_Park_%E2%80%9EBelovezhskaya_Pushcha%E2%80%9C_aviary_-_Sep_2023.jpg"
+    },
+    "belgium": {
+      "src": "/images/blog/locations-belgium/hero.webp",
+      "alt": "A giant panda eating bamboo at Pairi Daiza zoo in Brugelette, Belgium",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A giant panda eating bamboo at Pairi Daiza zoo in Brugelette, Belgium. Photo: Tbc, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Giant_Panda_in_Pairi_Daiza,_Belgium.JPG"
+    },
+    "bogor": {
+      "src": "/images/blog/locations-bogor/hero.webp",
+      "alt": "Large flying foxes roosting in the trees of Bogor Botanical Gardens",
+      "width": 1400,
+      "height": 611,
+      "caption": "Large flying foxes roosting in the trees of Bogor Botanical Gardens. Photo: Ilham Mufti Laksono, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kebun_Raya_Bogo_001.jpg"
+    },
+    "botswana": {
+      "src": "/images/blog/locations-botswana/hero.webp",
+      "alt": "Elephants drinking at the Chobe river in northern Botswana",
+      "width": 1400,
+      "height": 933,
+      "caption": "Elephants drinking at the Chobe river in northern Botswana. Photo: AoneMokwena, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Elephants_on_the_Chobe_River.jpg"
+    },
+    "british-columbia": {
+      "src": "/images/blog/locations-british-columbia/hero.webp",
+      "alt": "Orcas off the British Columbia coast",
+      "width": 1400,
+      "height": 933,
+      "caption": "Orcas off the British Columbia coast. Photo: Buiobuione, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Orca_Orcinus_orca_sulla_costa_di_Telegraph_Cove_Vancouver_Island_02.jpg"
+    },
+    "brittany": {
+      "src": "/images/blog/locations-brittany/hero.webp",
+      "alt": "Northern gannets packed onto Île Rouzic in the Sept-Îles reserve off Brittany",
+      "width": 1400,
+      "height": 933,
+      "caption": "Northern gannets packed onto Île Rouzic in the Sept-Îles reserve off Brittany. Photo: JackyM59, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Fous_de_bassan_sur_l%27%C3%AEle_Rouzic_en_Bretagne_2.jpg"
+    },
+    "bromo-tengger-semeru": {
+      "src": "/images/blog/locations-bromo-tengger-semeru/hero.webp",
+      "alt": "Ranu Kumbolo lake and grassland on the Semeru trail in Bromo Tengger Semeru National Park",
+      "width": 1400,
+      "height": 461,
+      "caption": "Ranu Kumbolo lake and grassland on the Semeru trail in Bromo Tengger Semeru National Park. Photo: Kartimay, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ranu_Kumbolo_Panorama.jpg"
+    },
+    "bulgaria": {
+      "src": "/images/blog/locations-bulgaria/hero2.webp",
+      "alt": "Pelicans on the reed-fringed water of Srebarna nature reserve, Bulgaria",
+      "width": 1400,
+      "height": 283,
+      "caption": "Pelicans on the reed-fringed water of Srebarna nature reserve, Bulgaria. Photo: Vislupus, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Srebarna_002.jpg"
+    },
+    "bunaken": {
+      "src": "/images/blog/locations-bunaken/hero.webp",
+      "alt": "A green sea turtle resting on the coral wall at Bunaken National Park",
+      "width": 1400,
+      "height": 932,
+      "caption": "A green sea turtle resting on the coral wall at Bunaken National Park. Photo: Niek van Son, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sunset_at_Bunaken_Island,_Sulawesi,_2016.jpg"
+    },
+    "california": {
+      "src": "/images/blog/locations-california/hero.webp",
+      "alt": "A southern sea otter floating in kelp in Monterey Bay, California",
+      "width": 1400,
+      "height": 909,
+      "caption": "A southern sea otter floating in kelp in Monterey Bay, California. Photo: Rhododendrites, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sea_otters_at_Point_Pinos_(12322).jpg"
+    },
+    "cambodia": {
+      "src": "/images/blog/locations-cambodia/hero.webp",
+      "alt": "A giant ibis, Cambodia's national bird, standing in dry forest",
+      "width": 1400,
+      "height": 933,
+      "caption": "A giant ibis, Cambodia's national bird, standing in dry forest. Photo: Kyogawiki, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Giant_ibis_in_habitat_28Mar2024_for_Wikimedia_02.tif"
+    },
+    "cape-town": {
+      "src": "/images/blog/locations-cape-town/hero.webp",
+      "alt": "African penguins on the granite boulders of Boulders Beach near Simon's Town, Cape Town",
+      "width": 1400,
+      "height": 532,
+      "caption": "African penguins on the granite boulders of Boulders Beach near Simon's Town, Cape Town. Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ping%C3%BCinos_de_El_Cabo_(Spheniscus_demersus),_Playa_de_Boulders,_Simon%27s_Town,_Sud%C3%A1frica,_2018-07-23,_DD_PAN_40-42.jpg"
+    },
+    "cartagena": {
+      "src": "/images/blog/locations-cartagena/hero.webp",
+      "alt": "A three-toed sloth hanging above a beach trail in Tayrona National Park on Colombia's Caribbean coast",
+      "width": 1400,
+      "height": 933,
+      "caption": "A three-toed sloth hanging above a beach trail in Tayrona National Park on Colombia's Caribbean coast. Photo: SergiXCX, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Spider_in_the_Tayrona_National_park_(Ara%C3%B1a_en_el_Parque_Nacional_Natural_Tayrona).jpg"
+    },
+    "central-java": {
+      "src": "/images/blog/locations-central-java/hero.webp",
+      "alt": "Shallow reef and white sand at Karimunjawa National Park, Central Java",
+      "width": 1400,
+      "height": 933,
+      "caption": "Shallow reef and white sand at Karimunjawa National Park, Central Java. Photo: gbohne, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Karimunjawa_-_An_island_in_the_middle_of_the_sea.jpg"
+    },
+    "chiang-mai": {
+      "src": "/images/blog/locations-chiang-mai/hero.webp",
+      "alt": "Rescued Asian elephants walking in the Mae Taeng valley near Chiang Mai",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Rescued Asian elephants walking in the Mae Taeng valley near Chiang Mai. Photo: Chirstelle EL JAMALI, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Elephant_d%27Asie_(Elephant_nature_park,_Tha%C3%AFlande).jpg"
+    },
+    "chile": {
+      "src": "/images/blog/locations-chile/hero.webp",
+      "alt": "A wild puma walking across the steppe below the Torres del Paine massif in Chile",
+      "width": 1400,
+      "height": 934,
+      "caption": "A wild puma walking across the steppe below the Torres del Paine massif in Chile. Photo: Ferna.mf, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Parque_Nacional_Torres_del_Paine_-_XII_Region_de_Magallanes_y_La_Antartica_Chilena_-_Puma_Concolor_Atardecer.jpg"
+    },
+    "colorado": {
+      "src": "/images/blog/locations-colorado/hero.webp",
+      "alt": "A bull elk with full antlers standing in a meadow in Rocky Mountain National Park, Colorado",
+      "width": 1400,
+      "height": 933,
+      "caption": "A bull elk with full antlers standing in a meadow in Rocky Mountain National Park, Colorado. Photo: mark byzewski, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:2024-06-19_Rocky_Mountain_National_Park_-_009.jpg"
+    },
+    "connecticut": {
+      "src": "/images/blog/locations-connecticut/hero.webp",
+      "alt": "An osprey at its nest on the Connecticut shore",
+      "width": 1400,
+      "height": 933,
+      "caption": "An osprey at its nest on the Connecticut shore. Photo: Paul Danese, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:20250719_osprey_hammonasset_beach_state_park_PD200180.jpg"
+    },
+    "croatia": {
+      "src": "/images/blog/locations-croatia/hero.webp",
+      "alt": "A griffon vulture gliding along the sea cliffs of Cres island, Croatia",
+      "width": 872,
+      "height": 1184,
+      "caption": "A griffon vulture gliding along the sea cliffs of Cres island, Croatia. Photo: MickMorton, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bjeloglavi_sup_Gyps_fulvus.jpg"
+    },
+    "czech-republic": {
+      "src": "/images/blog/locations-czech-republic/hero.webp",
+      "alt": "Forest in the Šumava National Park, Czech Republic",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Forest in the Šumava National Park, Czech Republic. Photo: Stepanka Pauzova, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:%C5%A0umava_v_nesn%C3%A1zi.jpg"
+    },
+    "da-lat": {
+      "src": "/images/blog/locations-da-lat/hero.webp",
+      "alt": "Pine and evergreen forest in Bidoup Nui Ba National Park on the Da Lat plateau",
+      "width": 1400,
+      "height": 1049,
+      "caption": "Pine and evergreen forest in Bidoup Nui Ba National Park on the Da Lat plateau. Photo: Dotrihieu, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Coelogyne_mooreana_in_Bidoup_Nui_Ba_National_Park_2025.jpg"
+    },
+    "dar-es-salaam": {
+      "src": "/images/blog/locations-dar-es-salaam/hero.webp",
+      "alt": "The beach and baobabs of Bongoyo island in the Dar es Salaam Marine Reserve, Tanzania",
+      "width": 1400,
+      "height": 1050,
+      "caption": "The beach and baobabs of Bongoyo island in the Dar es Salaam Marine Reserve, Tanzania. Photo: Robert E Mawere, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bongoyo_3.jpg"
+    },
+    "denmark": {
+      "src": "/images/blog/locations-denmark/hero.webp",
+      "alt": "A red deer stag among autumn oaks in Jægersborg Dyrehave north of Copenhagen, Denmark",
+      "width": 1400,
+      "height": 933,
+      "caption": "A red deer stag among autumn oaks in Jægersborg Dyrehave north of Copenhagen, Denmark. Photo: Kent Madsen, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Dyrehaven,_Esbjerg,_007.jpg"
+    },
+    "east-java": {
+      "src": "/images/blog/locations-east-java/hero.webp",
+      "alt": "Wild banteng grazing the Bekol savanna in Baluran National Park, East Java",
+      "width": 1400,
+      "height": 933,
+      "caption": "Wild banteng grazing the Bekol savanna in Baluran National Park, East Java. Photo: Ardhanragil, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:SAVANA_BEKOL_BALURAN.jpg"
+    },
+    "east-nusa-tenggara": {
+      "src": "/images/blog/locations-east-nusa-tenggara/hero.webp",
+      "alt": "A Komodo dragon on the beach at Loh Liang, Komodo island, East Nusa Tenggara",
+      "width": 1400,
+      "height": 749,
+      "caption": "A Komodo dragon on the beach at Loh Liang, Komodo island, East Nusa Tenggara. Photo: Photograph by Mike Peel (www.mikepeel.net)., CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:At_Chester_Zoo_2023_019_-_Komodo_Dragon_(cropped).jpg"
+    },
+    "egypt": {
+      "src": "/images/blog/locations-egypt/hero.webp",
+      "alt": "A dugong grazing seagrass in the shallow bay at Abu Dabbab near Marsa Alam, Egypt",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A dugong grazing seagrass in the shallow bay at Abu Dabbab near Marsa Alam, Egypt. Photo: Kora27, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Dugong._Seekuh._%D0%94%D1%8E%D0%B3%D0%BE%D0%BD%D1%8C..Rotes_Meer.._DSCF1083WI.jpg"
+    },
+    "el-salvador": {
+      "src": "/images/blog/locations-el-salvador/hero.webp",
+      "alt": "A turquoise-browed motmot, the torogoz, perched on a branch in El Salvador",
+      "width": 1400,
+      "height": 933,
+      "caption": "A turquoise-browed motmot, the torogoz, perched on a branch in El Salvador. Photo: Bernard Gagnon, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Turquoise-browed_motmot_in_Costa_Rica_02.jpg"
+    },
+    "england": {
+      "src": "/images/blog/locations-england/hero.webp",
+      "alt": "A red deer stag among bracken in Richmond Park, London",
+      "width": 1050,
+      "height": 1400,
+      "caption": "A red deer stag among bracken in Richmond Park, London. Photo: Julian Herzog (Website), CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Red_Deer_Cervus_Elaphus_Richmond_Park_2025_01.jpg"
+    },
+    "estonia": {
+      "src": "/images/blog/locations-estonia/hero.webp",
+      "alt": "The coast of Hiiumaa island, Estonia",
+      "width": 1400,
+      "height": 1051,
+      "caption": "The coast of Hiiumaa island, Estonia. Photo: Fry72, Karel Frydrýšek, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kaleste_rand,_Kaleste,_ostrov_Hiiumaa,_Estonia.jpg"
+    },
+    "ethiopia": {
+      "src": "/images/blog/locations-ethiopia/hero.webp",
+      "alt": "A troop of geladas grazing on the escarpment of the Simien Mountains, Ethiopia",
+      "width": 1400,
+      "height": 930,
+      "caption": "A troop of geladas grazing on the escarpment of the Simien Mountains, Ethiopia. Photo: Rod Waddington from Kergunyah, Australia, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Gelada_Baboons,_Ethiopia_(10412652043).jpg"
+    },
+    "finland": {
+      "src": "/images/blog/locations-finland/hero.webp",
+      "alt": "A brown bear walking across a boggy clearing in the Kuhmo forests of eastern Finland",
+      "width": 1400,
+      "height": 1051,
+      "caption": "A brown bear walking across a boggy clearing in the Kuhmo forests of eastern Finland. Photo: Frank Vassen from Brussels, Belgium, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Brown_bear_(Ursus_arctic),_Viiksimo,_Kainuu_region,_Finland_(50865628406).jpg"
+    },
+    "flores": {
+      "src": "/images/blog/locations-flores/hero.webp",
+      "alt": "The coloured crater lakes of Kelimutu volcano at dawn, Flores, East Nusa Tenggara",
+      "width": 1400,
+      "height": 930,
+      "caption": "The coloured crater lakes of Kelimutu volcano at dawn, Flores, East Nusa Tenggara. Photo: Bagus Pinandoyo Basuki, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Beautiful_Kelimutu_at_Sunrise.jpg"
+    },
+    "florida": {
+      "src": "/images/blog/locations-florida/hero.webp",
+      "alt": "An American alligator basking beside the water in Everglades National Park, Florida",
+      "width": 1400,
+      "height": 933,
+      "caption": "An American alligator basking beside the water in Everglades National Park, Florida. Photo: evergladesnps, Public domain, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:American_Alligator_at_Anhinga_Trail_(32267175797).jpg"
+    },
+    "france": {
+      "src": "/images/blog/locations-france/hero.webp",
+      "alt": "An Alpine ibex in the Vanoise National Park, France",
+      "width": 1400,
+      "height": 933,
+      "caption": "An Alpine ibex in the Vanoise National Park, France. Photo: Ibex73, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ibex_near_the_Ice_Rink_Lake,_Vanoise_National_Park,_2025_(2).jpg"
+    },
+    "french-guiana": {
+      "src": "/images/blog/locations-french-guiana/hero.webp",
+      "alt": "A leatherback turtle on the nesting beach at Awala-Yalimapo, French Guiana, at dawn",
+      "width": 1400,
+      "height": 910,
+      "caption": "A leatherback turtle on the nesting beach at Awala-Yalimapo, French Guiana, at dawn. Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Leatherback_Sea_Turtle_(Dermochelys_coriacea)_(10628948135).jpg"
+    },
+    "french-riviera": {
+      "src": "/images/blog/locations-french-riviera/hero.webp",
+      "alt": "Greater flamingos feeding in a Camargue lagoon in Provence, southern France",
+      "width": 1400,
+      "height": 933,
+      "caption": "Greater flamingos feeding in a Camargue lagoon in Provence, southern France. Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Greater_Flamingo_(Phoenicopterus_roseus)_-_Flickr_-_berniedup_(2).jpg"
+    },
+    "galapagos": {
+      "src": "/images/blog/locations-galapagos/hero.webp",
+      "alt": "Marine iguanas piled on black lava on the Galápagos shoreline",
+      "width": 1400,
+      "height": 928,
+      "caption": "Marine iguanas piled on black lava on the Galápagos shoreline. Photo: Andrew Turner, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Lava_Lizard_captaining_the_Marine_Iguana.jpg"
+    },
+    "georgia-usa": {
+      "src": "/images/blog/locations-georgia-usa/hero.webp",
+      "alt": "An American alligator floating in the dark water of the Okefenokee Swamp, Georgia",
+      "width": 1400,
+      "height": 961,
+      "caption": "An American alligator floating in the dark water of the Okefenokee Swamp, Georgia. Photo: gailhampshire from Cradley, Malvern, U.K, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:American_Alligator_(Alligator_mississippiensis)_(38578892461).jpg"
+    },
+    "gili-islands": {
+      "src": "/images/blog/locations-gili-islands/hero.webp",
+      "alt": "A green sea turtle swimming over the reef off Gili Meno in the Gili Islands",
+      "width": 1400,
+      "height": 933,
+      "caption": "A green sea turtle swimming over the reef off Gili Meno in the Gili Islands. Photo: Tilonaut, CC BY 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Curious_Turtle_A_Curtle_(225008535).jpeg"
+    },
+    "grand-est": {
+      "src": "/images/blog/locations-grand-est/hero.webp",
+      "alt": "A white stork standing on its nest above an Alsace village roof",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A white stork standing on its nest above an Alsace village roof. Photo: fotogoocom, CC BY 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:ALSACE_-_CIGOGNE_-_panoramio.jpg"
+    },
+    "greece": {
+      "src": "/images/blog/locations-greece/hero.webp",
+      "alt": "A loggerhead sea turtle surfacing in the clear water of Laganas Bay, Zakynthos, Greece",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A loggerhead sea turtle surfacing in the clear water of Laganas Bay, Zakynthos, Greece. Photo: Martin Vandas CZ, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Zacynthos_turtle_Caretta_Caretta_Greece.jpg"
+    },
+    "gunung-leuser": {
+      "src": "/images/blog/locations-gunung-leuser/hero.webp",
+      "alt": "A wild Sumatran orangutan in the canopy of Gunung Leuser National Park",
+      "width": 1400,
+      "height": 934,
+      "caption": "A wild Sumatran orangutan in the canopy of Gunung Leuser National Park. Photo: Ganjarmustika1904, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Hutan_Gunung_Leuser_Aceh.jpg"
+    },
+    "guyana": {
+      "src": "/images/blog/locations-guyana/hero2.webp",
+      "alt": "A giant otter surfacing in the Rupununi river in Guyana",
+      "width": 1400,
+      "height": 933,
+      "caption": "A giant otter surfacing in the Rupununi river in Guyana. Photo: Dan Sloan, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kaieteur_Falls,_Guyana_(23035888153).jpg"
+    },
+    "hanoi": {
+      "src": "/images/blog/locations-hanoi/hero.webp",
+      "alt": "Turtle Tower on its island in Hoan Kiem Lake, Hanoi",
+      "width": 1400,
+      "height": 925,
+      "caption": "Turtle Tower on its island in Hoan Kiem Lake, Hanoi. Photo: Richard Mortel from Riyadh, Saudi Arabia, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Thap_Rua_(Tottoise)_Tower,_Hoan_Kiem_Lake,_Hanoi_(2)_(38465802112).jpg"
+    },
+    "hawaii": {
+      "src": "/images/blog/locations-hawaii/hero.webp",
+      "alt": "A green sea turtle basking on the sand at Laniakea Beach, Oʻahu, Hawaii",
+      "width": 1400,
+      "height": 906,
+      "caption": "A green sea turtle basking on the sand at Laniakea Beach, Oʻahu, Hawaii. Photo: Ossewa, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Laniakea_Beach_04.jpg"
+    },
+    "hong-kong": {
+      "src": "/images/blog/locations-hong-kong/hero.webp",
+      "alt": "Wintering waterbirds over the Mai Po marshes and Deep Bay mudflats, Hong Kong",
+      "width": 1400,
+      "height": 483,
+      "caption": "Wintering waterbirds over the Mai Po marshes and Deep Bay mudflats, Hong Kong. Photo: Wpcpey, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Mai_Po_Nature_Reserve_Gei_wai_pano_201611.jpg"
+    },
+    "hungary": {
+      "src": "/images/blog/locations-hungary/hero.webp",
+      "alt": "Common cranes at Hortobágy, Hungary",
+      "width": 1400,
+      "height": 1120,
+      "caption": "Common cranes at Hortobágy, Hungary. Photo: Frank Paul Silye, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Cranes_on_Hortob%C3%A1gy.jpg"
+    },
+    "illinois": {
+      "src": "/images/blog/locations-illinois/hero.webp",
+      "alt": "A coyote standing on open ground with the Chicago skyline behind, Illinois",
+      "width": 1400,
+      "height": 933,
+      "caption": "A coyote standing on open ground with the Chicago skyline behind, Illinois. Photo: John Picken, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Coyote_in_Lincoln_Park.jpg"
+    },
+    "iowa": {
+      "src": "/images/blog/locations-iowa/hero.webp",
+      "alt": "American bison grazing restored tallgrass prairie at Neal Smith National Wildlife Refuge, Iowa",
+      "width": 1400,
+      "height": 990,
+      "caption": "American bison grazing restored tallgrass prairie at Neal Smith National Wildlife Refuge, Iowa. Photo: U.S. Fish and Wildlife Service - Midwest Region, Public domain, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sparky_-_the_electric_bison!_(26526998484).jpg"
+    },
+    "ireland": {
+      "src": "/images/blog/locations-ireland/hero.webp",
+      "alt": "An Atlantic puffin standing on the grassy slopes of Skellig Michael, County Kerry",
+      "width": 1400,
+      "height": 930,
+      "caption": "An Atlantic puffin standing on the grassy slopes of Skellig Michael, County Kerry. Photo: Markymarks86, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Skellig_Rock.jpg"
+    },
+    "italy": {
+      "src": "/images/blog/locations-italy/hero.webp",
+      "alt": "An Alpine ibex on a rocky slope in the Gran Paradiso National Park, Italy",
+      "width": 1400,
+      "height": 938,
+      "caption": "An Alpine ibex on a rocky slope in the Gran Paradiso National Park, Italy. Photo: Luca Casale, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Stambecchi_nel_Parco_Nazionale_del_Gran_Paradiso.jpg"
+    },
+    "jalisco": {
+      "src": "/images/blog/locations-jalisco/hero.webp",
+      "alt": "A humpback whale breaching in Banderas Bay off Puerto Vallarta, Jalisco",
+      "width": 1400,
+      "height": 592,
+      "caption": "A humpback whale breaching in Banderas Bay off Puerto Vallarta, Jalisco. Photo: TerryDOtt, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Puerto_Vallarta_-_humpback_whale.jpg"
+    },
+    "java": {
+      "src": "/images/blog/locations-java/hero.webp",
+      "alt": "The Bekol savanna in Baluran National Park, East Java",
+      "width": 1400,
+      "height": 933,
+      "caption": "The Bekol savanna in Baluran National Park, East Java. Photo: Ardhanragil, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:SAVANA_BEKOL_BALURAN.jpg"
+    },
+    "jordan": {
+      "src": "/images/blog/locations-jordan/hero.webp",
+      "alt": "The desert of Wadi Rum, Jordan",
+      "width": 1400,
+      "height": 1050,
+      "caption": "The desert of Wadi Rum, Jordan. Photo: BarabaszO, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Wadi_Rum_Desert_02.jpg"
+    },
+    "kalimantan": {
+      "src": "/images/blog/locations-kalimantan/hero.webp",
+      "alt": "A Bornean orangutan on a feeding platform at Camp Leakey, Tanjung Puting National Park, Central Kalimantan",
+      "width": 1400,
+      "height": 933,
+      "caption": "A Bornean orangutan on a feeding platform at Camp Leakey, Tanjung Puting National Park, Central Kalimantan. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bornean_orangutan_(Pongo_pygmaeus),_Tanjung_Putting_National_Park_13.jpg"
+    },
+    "kelantan": {
+      "src": "/images/blog/locations-kelantan/hero.webp",
+      "alt": "Jelawang waterfall pouring down the forested face of Gunung Stong, Kelantan",
+      "width": 1400,
+      "height": 754,
+      "caption": "Jelawang waterfall pouring down the forested face of Gunung Stong, Kelantan. Photo: Iyliatalib, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Gunung_stong,_kelantan.jpg"
+    },
+    "kruger-national-park": {
+      "src": "/images/blog/locations-kruger-national-park/hero.webp",
+      "alt": "A leopard resting in a tree in Kruger National Park, South Africa",
+      "width": 1400,
+      "height": 933,
+      "caption": "A leopard resting in a tree in Kruger National Park, South Africa. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Leopard_(Panthera_pardus_pardus)_Kruger.jpg"
+    },
+    "kuala-lumpur": {
+      "src": "/images/blog/locations-kuala-lumpur/hero.webp",
+      "alt": "A long-tailed macaque in Kuala Lumpur",
+      "width": 1400,
+      "height": 928,
+      "caption": "A long-tailed macaque in Kuala Lumpur. Photo: Gary Houston, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Macaca-fascicularis-20070216-019.jpg"
+    },
+    "labuan-bajo": {
+      "src": "/images/blog/locations-labuan-bajo/hero.webp",
+      "alt": "A Komodo dragon walking across the dry grass at Loh Buaya on Rinca island, near Labuan Bajo",
+      "width": 1400,
+      "height": 1031,
+      "caption": "A Komodo dragon walking across the dry grass at Loh Buaya on Rinca island, near Labuan Bajo. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Komodo_dragon_(Varanus_komodoensis)_2.jpg"
+    },
+    "lampung": {
+      "src": "/images/blog/locations-lampung/hero.webp",
+      "alt": "Sumatran elephants at Way Kambas National Park, Lampung",
+      "width": 1400,
+      "height": 933,
+      "caption": "Sumatran elephants at Way Kambas National Park, Lampung. Photo: Mustiadewi, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:TN_Way_Kambas.jpg"
+    },
+    "laos": {
+      "src": "/images/blog/locations-laos/hero.webp",
+      "alt": "An Asian elephant bathing at the Elephant Conservation Center in Sayaboury, Laos",
+      "width": 1200,
+      "height": 800,
+      "caption": "An Asian elephant bathing at the Elephant Conservation Center in Sayaboury, Laos. Photo: Fabien BASTIDE, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Baby_elephants_at_the_Elephant_Conservation_Center_(Laos).jpg"
+    },
+    "liguria": {
+      "src": "/images/blog/locations-liguria/hero2.webp",
+      "alt": "A fin whale surfacing in the Pelagos sanctuary off the Ligurian coast",
+      "width": 1400,
+      "height": 788,
+      "caption": "A fin whale surfacing in the Pelagos sanctuary off the Ligurian coast. Photo: Mandoyodino, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Stenella_Striata.jpg"
+    },
+    "lima": {
+      "src": "/images/blog/locations-lima/hero.webp",
+      "alt": "An Inca tern with its white moustache perched on the rocks of the Lima coast",
+      "width": 1400,
+      "height": 933,
+      "caption": "An Inca tern with its white moustache perched on the rocks of the Lima coast. Photo: Anya Chernik, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:The_Inca_tern_(Larosterna_inca)_bird.jpg"
+    },
+    "lisbon": {
+      "src": "/images/blog/locations-lisbon/hero.webp",
+      "alt": "The Lisbon Oceanarium at Parque das Nações",
+      "width": 1400,
+      "height": 840,
+      "caption": "The Lisbon Oceanarium at Parque das Nações. Photo: Jorge Franganillo, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ocean%C3%A1rio_de_Lisboa_(53870803219).jpg"
+    },
+    "lithuania": {
+      "src": "/images/blog/locations-lithuania/hero.webp",
+      "alt": "White storks on a nest above a wooden village house in Lithuania",
+      "width": 1400,
+      "height": 1051,
+      "caption": "White storks on a nest above a wooden village house in Lithuania. Photo: Marmuras, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:White_stork_(4).jpg"
+    },
+    "lombok": {
+      "src": "/images/blog/locations-lombok/hero.webp",
+      "alt": "A long-tailed macaque on the roadside of the Pusuk pass forest below Mount Rinjani, Lombok",
+      "width": 1400,
+      "height": 933,
+      "caption": "A long-tailed macaque on the roadside of the Pusuk pass forest below Mount Rinjani, Lombok. Photo: Ar09, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bunga_adel_always_gunung_rinjani_3720_MDPL.jpg"
+    },
+    "luzon": {
+      "src": "/images/blog/locations-luzon/hero.webp",
+      "alt": "A Philippine eagle-owl, a Luzon endemic",
+      "width": 1400,
+      "height": 933,
+      "caption": "A Philippine eagle-owl, a Luzon endemic. Photo: Rvdfoll, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Philippine_Eagle-Owl.jpg"
+    },
+    "malang-and-batu": {
+      "src": "/images/blog/locations-malang-and-batu/hero.webp",
+      "alt": "Coban Rondo waterfall in the Pujon highlands between Malang and Batu, East Java",
+      "width": 933,
+      "height": 1400,
+      "caption": "Coban Rondo waterfall in the Pujon highlands between Malang and Batu, East Java. Photo: Thank You (25 Millions ) views from Fresno, USA, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Coban_Rondo_~_The_Widow%27s_Falls_(33368671440).jpg"
+    },
+    "malaysia": {
+      "src": "/images/blog/locations-malaysia/hero.webp",
+      "alt": "A Malayan tapir at a forest salt lick in Taman Negara, Malaysia",
+      "width": 1400,
+      "height": 924,
+      "caption": "A Malayan tapir at a forest salt lick in Taman Negara, Malaysia. Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Malayan_Tapir_(Tapirus_indicus)_(8729168612).jpg"
+    },
+    "maluku": {
+      "src": "/images/blog/locations-maluku/hero.webp",
+      "alt": "A male Wallace's standardwing bird-of-paradise displaying on Halmahera, North Maluku",
+      "width": 1400,
+      "height": 933,
+      "caption": "A male Wallace's standardwing bird-of-paradise displaying on Halmahera, North Maluku. Photo: JJ Harrison, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Standardwing_Bird-of-Paradise_0A2A0515.jpg"
+    },
+    "masai-mara": {
+      "src": "/images/blog/locations-masai-mara/hero.webp",
+      "alt": "Wildebeest crossing the Mara river in the Masai Mara, Kenya",
+      "width": 1400,
+      "height": 852,
+      "caption": "Wildebeest crossing the Mara river in the Masai Mara, Kenya. Photo: Danijel Mihajlovic, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Wildebeest_Jumping_Into_the_Mara_River.jpg"
+    },
+    "mauritius": {
+      "src": "/images/blog/locations-mauritius/hero.webp",
+      "alt": "A pink pigeon perched in the forest on Île aux Aigrettes, Mauritius",
+      "width": 1400,
+      "height": 1097,
+      "caption": "A pink pigeon perched in the forest on Île aux Aigrettes, Mauritius. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Pink_pigeon_(Nesoenas_mayeri)_1.jpg"
+    },
+    "metro-manila": {
+      "src": "/images/blog/locations-metro-manila/hero.webp",
+      "alt": "Egrets and shorebirds on the mudflats of the Las Piñas-Parañaque Wetland Park, Manila Bay",
+      "width": 1400,
+      "height": 933,
+      "caption": "Egrets and shorebirds on the mudflats of the Las Piñas-Parañaque Wetland Park, Manila Bay. Photo: EMMAN A. FORONDA, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Las_Pi%C3%B1as%E2%80%93Para%C3%B1aque_Critical_Habitat_and_Ecotourism_Area.jpg"
+    },
+    "michigan": {
+      "src": "/images/blog/locations-michigan/hero.webp",
+      "alt": "A moose wading in a lake at Isle Royale National Park, Michigan",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A moose wading in a lake at Isle Royale National Park, Michigan. Photo: Ken Lund from Reno, Nevada, USA, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Moose,_Madison_River,_Yellowstone_National_Park,_Wyoming_(50429758591).jpg"
+    },
+    "minas-gerais": {
+      "src": "/images/blog/locations-minas-gerais/hero.webp",
+      "alt": "A maned wolf on the steps of the Caraça sanctuary in Minas Gerais at night",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A maned wolf on the steps of the Caraça sanctuary in Minas Gerais at night. Photo: Lucia Coelho, Public domain, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Lobo-guara.JPG"
+    },
+    "mindanao": {
+      "src": "/images/blog/locations-mindanao/hero.webp",
+      "alt": "A Philippine eagle at the Philippine Eagle Center near Davao, Mindanao",
+      "width": 1400,
+      "height": 700,
+      "caption": "A Philippine eagle at the Philippine Eagle Center near Davao, Mindanao. Photo: RoyKabanlit, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Philippine_Eagle_at_the_Philippine_Eagle_Center_001.jpg"
+    },
+    "morocco": {
+      "src": "/images/blog/locations-morocco/hero.webp",
+      "alt": "A Barbary macaque in the cedar forest near Azrou in the Middle Atlas, Morocco",
+      "width": 1400,
+      "height": 933,
+      "caption": "A Barbary macaque in the cedar forest near Azrou in the Middle Atlas, Morocco. Photo: Kamil Laghjichi, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Monkey_in_Azrou.jpg"
+    },
+    "namibia": {
+      "src": "/images/blog/locations-namibia/hero.webp",
+      "alt": "A gemsbok walking across the red dunes of Sossusvlei in the Namib desert",
+      "width": 1400,
+      "height": 933,
+      "caption": "A gemsbok walking across the red dunes of Sossusvlei in the Namib desert. Photo: Hans Stieglitz, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Namibia-1112.jpg"
+    },
+    "nepal": {
+      "src": "/images/blog/locations-nepal/hero.webp",
+      "alt": "A greater one-horned rhinoceros in the grassland of Chitwan National Park, Nepal",
+      "width": 933,
+      "height": 1400,
+      "caption": "A greater one-horned rhinoceros in the grassland of Chitwan National Park, Nepal. Photo: Lurey Rohit, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:One-horned_Rhinoceros_at_Chitwan_National_Park.jpg"
+    },
+    "netherlands": {
+      "src": "/images/blog/locations-netherlands/hero.webp",
+      "alt": "Konik horses on the Oostvaardersplassen, Netherlands",
+      "width": 1400,
+      "height": 933,
+      "caption": "Konik horses on the Oostvaardersplassen, Netherlands. Photo: Jac. Janssen from Baarlo lb, NL, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:20170824_030_Lelystad_Oostvaardersplassen_(36631554462).jpg"
+    },
+    "new-york": {
+      "src": "/images/blog/locations-new-york/hero.webp",
+      "alt": "A red-tailed hawk perched on a branch in Central Park, New York City",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A red-tailed hawk perched on a branch in Central Park, New York City. Photo: Rhododendrites, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Red-tailed_hawk_(44371).jpg"
+    },
+    "new-zealand": {
+      "src": "/images/blog/locations-new-zealand/hero.webp",
+      "alt": "A kea, the alpine parrot, on rocks at Arthur's Pass in New Zealand's Southern Alps",
+      "width": 1400,
+      "height": 933,
+      "caption": "A kea, the alpine parrot, on rocks at Arthur's Pass in New Zealand's Southern Alps. Photo: Pablo Heimplatz pabloheimplatz, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Wild_Kea_at_the_peak_of_the_Arthur%27s_Pass_(Unsplash).jpg"
+    },
+    "normandy": {
+      "src": "/images/blog/locations-normandy/hero2.webp",
+      "alt": "Harbour seals hauled out on a sandbank in the Bay of Mont-Saint-Michel, Normandy",
+      "width": 1400,
+      "height": 893,
+      "caption": "Harbour seals hauled out on a sandbank in the Bay of Mont-Saint-Michel, Normandy. Photo: Pmau, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Phoques_veaux_marins,_baie_d%27Authie_-_img_45727.jpg"
+    },
+    "north-carolina": {
+      "src": "/images/blog/locations-north-carolina/hero.webp",
+      "alt": "A black bear in North Carolina",
+      "width": 1400,
+      "height": 933,
+      "caption": "A black bear in North Carolina. Photo: USFWS Midwest Region from Midwest Region, United States, Public domain, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Black_bear_(53284322622).jpg"
+    },
+    "north-dakota": {
+      "src": "/images/blog/locations-north-dakota/hero.webp",
+      "alt": "American bison grazing in the badlands of Theodore Roosevelt National Park, North Dakota",
+      "width": 1400,
+      "height": 933,
+      "caption": "American bison grazing in the badlands of Theodore Roosevelt National Park, North Dakota. Photo: AndrewKPepper, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Theodore_Roosevelt_01.jpg"
+    },
+    "north-sulawesi": {
+      "src": "/images/blog/locations-north-sulawesi/hero.webp",
+      "alt": "A Celebes crested macaque in Tangkoko Nature Reserve, North Sulawesi",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A Celebes crested macaque in Tangkoko Nature Reserve, North Sulawesi. Photo: T. R. Shankar Raman, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sulawesi_trsr_DSCN0329_v1.JPG"
+    },
+    "north-sumatra": {
+      "src": "/images/blog/locations-north-sumatra/hero.webp",
+      "alt": "A wild Sumatran orangutan in the forest at Bukit Lawang, North Sumatra",
+      "width": 1120,
+      "height": 1400,
+      "caption": "A wild Sumatran orangutan in the forest at Bukit Lawang, North Sumatra. Photo: Hagai Aginta Ginting, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kecupan_untuk_Ratna_si_Induk_Orangutan.jpg"
+    },
+    "nova-scotia": {
+      "src": "/images/blog/locations-nova-scotia/hero.webp",
+      "alt": "Shubenacadie Wildlife Park, Nova Scotia",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Shubenacadie Wildlife Park, Nova Scotia. Photo: Fralambert, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sable_Island_horses_at_Shubenacadie_Wildlife_Park_02.jpg"
+    },
+    "nuevo-leon": {
+      "src": "/images/blog/locations-nuevo-leon/hero.webp",
+      "alt": "The Sierra Madre peaks of Cumbres de Monterrey National Park above Monterrey, Nuevo León",
+      "width": 1400,
+      "height": 934,
+      "caption": "The Sierra Madre peaks of Cumbres de Monterrey National Park above Monterrey, Nuevo León. Photo: Chorizoconhuevo, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Rana_leopardo_en_el_cauce_del_R%C3%ADo_Santa_Catarina_en_el_Parque_Nacional_Cumbres_de_Monterrey.png"
+    },
+    "nusa-penida": {
+      "src": "/images/blog/locations-nusa-penida/hero.webp",
+      "alt": "A reef manta ray at Manta Point, Nusa Penida",
+      "width": 1400,
+      "height": 1120,
+      "caption": "A reef manta ray at Manta Point, Nusa Penida. Photo: Jun V Lao, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Selfie_with_Giant_Manta,_Bali.jpg"
+    },
+    "occitanie": {
+      "src": "/images/blog/locations-occitanie/hero.webp",
+      "alt": "A bearded vulture soaring over the cliffs of the Pyrenees in Occitanie",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A bearded vulture soaring over the cliffs of the Pyrenees in Occitanie. Photo: Victor Campo, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Gypa%C3%A8te_Barbu.jpg"
+    },
+    "oman": {
+      "src": "/images/blog/locations-oman/hero.webp",
+      "alt": "A green sea turtle on the nesting beach at Ras Al Jinz, Oman",
+      "width": 1400,
+      "height": 933,
+      "caption": "A green sea turtle on the nesting beach at Ras Al Jinz, Oman. Photo: Andries Oudshoorn, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ras_al-Jinz.jpg"
+    },
+    "ontario": {
+      "src": "/images/blog/locations-ontario/hero.webp",
+      "alt": "A moose feeding in a roadside bog in Algonquin Provincial Park, Ontario",
+      "width": 1400,
+      "height": 788,
+      "caption": "A moose feeding in a roadside bog in Algonquin Provincial Park, Ontario. Photo: Ryan Hodnett, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Moose_(Alces_alces),_Female,_Male,_and_Juvenile_-_Algonquin_Provincial_Park,_Ontario.jpg"
+    },
+    "palawan": {
+      "src": "/images/blog/locations-palawan/hero.webp",
+      "alt": "A water monitor on Sabang beach at the Puerto Princesa underground river, Palawan",
+      "width": 1400,
+      "height": 933,
+      "caption": "A water monitor on Sabang beach at the Puerto Princesa underground river, Palawan. Photo: lumoplank, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Puerto_Princesa_Subterranean_River_-_PuertoPrincesaSR1757.jpg"
+    },
+    "pantanal": {
+      "src": "/images/blog/locations-pantanal/hero.webp",
+      "alt": "A jaguar resting on a riverbank in the Pantanal near Porto Jofre",
+      "width": 1400,
+      "height": 933,
+      "caption": "A jaguar resting on a riverbank in the Pantanal near Porto Jofre. Photo: Bernard DUPONT from FRANCE, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Jaguar_(Panthera_onca)_on_the_riverbank_..._-_Flickr_-_berniedup.jpg"
+    },
+    "papua": {
+      "src": "/images/blog/locations-papua/hero.webp",
+      "alt": "A male lesser bird-of-paradise displaying its yellow plumes in the forest of Indonesian Papua",
+      "width": 1400,
+      "height": 933,
+      "caption": "A male lesser bird-of-paradise displaying its yellow plumes in the forest of Indonesian Papua. Photo: JJ Harrison, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Lesser_Bird-of-Paradise_female_0A2A6167.jpg"
+    },
+    "patagonia": {
+      "src": "/images/blog/locations-patagonia/hero.webp",
+      "alt": "Guanacos on the Patagonian steppe with the Torres del Paine peaks behind them",
+      "width": 1400,
+      "height": 933,
+      "caption": "Guanacos on the Patagonian steppe with the Torres del Paine peaks behind them. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Guanaco_(Lama_guanicoe)_head_Leona_Amarga.jpg"
+    },
+    "penang": {
+      "src": "/images/blog/locations-penang/hero.webp",
+      "alt": "A dusky leaf monkey in the canopy on Penang Hill, Penang",
+      "width": 1400,
+      "height": 934,
+      "caption": "A dusky leaf monkey in the canopy on Penang Hill, Penang. Photo: Ronykr, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Dusky_Leaf_Langur_at_Penang_Hill_Biosphere_Reserve.jpg"
+    },
+    "philippines": {
+      "src": "/images/blog/locations-philippines/hero.webp",
+      "alt": "A Philippine eagle, the national bird of the Philippines",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A Philippine eagle, the national bird of the Philippines. Photo: Ramon FVelasquez, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Philippine_Eagle_-_Pithecophaga_jefferyi_-_Ninoy_Aquino_Parks_%26_Wildlife_Center_01.jpg"
+    },
+    "poland": {
+      "src": "/images/blog/locations-poland/hero.webp",
+      "alt": "A European bison standing in a snowy meadow at the edge of the Białowieża Forest, Poland",
+      "width": 1400,
+      "height": 933,
+      "caption": "A European bison standing in a snowy meadow at the edge of the Białowieża Forest, Poland. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:European_bison_(Bison_bonasus)_male_Bia%C5%82owieza.jpg"
+    },
+    "porto": {
+      "src": "/images/blog/locations-porto/hero.webp",
+      "alt": "Semi-wild garrano ponies grazing among granite boulders in Peneda-Gerês National Park",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Semi-wild garrano ponies grazing among granite boulders in Peneda-Gerês National Park. Photo: Pvfsm1, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Garrano_na_Serra_Amarela.JPG"
+    },
+    "portugal": {
+      "src": "/images/blog/locations-portugal/hero.webp",
+      "alt": "An Iberian lynx walking through Mediterranean scrub in southern Portugal",
+      "width": 1400,
+      "height": 1400,
+      "caption": "An Iberian lynx walking through Mediterranean scrub in southern Portugal. Photo: Diego Delso, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Lince_ib%C3%A9rico_(Lynx_pardinus),_Almuradiel,_Ciudad_Real,_Espa%C3%B1a,_2021-12-19,_DD_07.jpg"
+    },
+    "quebec": {
+      "src": "/images/blog/locations-quebec/hero.webp",
+      "alt": "A beluga whale surfacing in the St. Lawrence estuary near Tadoussac, Quebec",
+      "width": 1400,
+      "height": 933,
+      "caption": "A beluga whale surfacing in the St. Lawrence estuary near Tadoussac, Quebec. Photo: Luca Galuzzi (Lucag), CC BY-SA 2.5, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Beluga_Whale_Tadoussac_Quebec_Canada_Luca_Galuzzi_2005.jpg"
+    },
+    "raja-ampat": {
+      "src": "/images/blog/locations-raja-ampat/hero.webp",
+      "alt": "A reef manta ray gliding over the cleaning station at Manta Sandy, Raja Ampat",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A reef manta ray gliding over the cleaning station at Manta Sandy, Raja Ampat. Photo: Manuae, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Manta_birostris_Raja_Ampat.JPG"
+    },
+    "reunion": {
+      "src": "/images/blog/locations-reunion/hero.webp",
+      "alt": "A humpback whale breaching off the west coast of Réunion island",
+      "width": 1400,
+      "height": 933,
+      "caption": "A humpback whale breaching off the west coast of Réunion island. Photo: Parchaco, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Tail_of_a_humpback_whale_in_R%C3%A9union.jpg"
+    },
+    "riau-islands": {
+      "src": "/images/blog/locations-riau-islands/hero.webp",
+      "alt": "A boat in the Sebung river mangroves on Bintan island, Riau Islands",
+      "width": 1400,
+      "height": 933,
+      "caption": "A boat in the Sebung river mangroves on Bintan island, Riau Islands. Photo: Noriskandar88, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Generasi_Pecinta_Alam_Bintan.jpg"
+    },
+    "rio-de-janeiro": {
+      "src": "/images/blog/locations-rio-de-janeiro/hero.webp",
+      "alt": "A common marmoset clinging to a branch in the Tijuca Forest above Rio de Janeiro",
+      "width": 1400,
+      "height": 933,
+      "caption": "A common marmoset clinging to a branch in the Tijuca Forest above Rio de Janeiro. Photo: Wilfredor, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Callithrix_jacchus,_P%C3%A3o_de_A%C3%A7%C3%BAcar,_Rio_de_Janeiro,_Brazil.jpg"
+    },
+    "rio-grande-do-sul": {
+      "src": "/images/blog/locations-rio-grande-do-sul/hero.webp",
+      "alt": "A capybara grazing on the edge of the Taim marshes in Rio Grande do Sul",
+      "width": 1400,
+      "height": 933,
+      "caption": "A capybara grazing on the edge of the Taim marshes in Rio Grande do Sul. Photo: Paulo Hopper, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Capivara_no_Taim.jpg"
+    },
+    "romania": {
+      "src": "/images/blog/locations-romania/hero.webp",
+      "alt": "Great white pelicans in the Danube Delta, Romania",
+      "width": 1400,
+      "height": 933,
+      "caption": "Great white pelicans in the Danube Delta, Romania. Photo: Adi Daniel Antone from Craiova, Romania, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Pelecanus_onocrotalus_Danube_Delta_Romania_(38882846932).jpg"
+    },
+    "rwanda": {
+      "src": "/images/blog/locations-rwanda/hero.webp",
+      "alt": "A mountain gorilla family in Volcanoes National Park, Rwanda",
+      "width": 1400,
+      "height": 933,
+      "caption": "A mountain gorilla family in Volcanoes National Park, Rwanda. Photo: Emmanuelkwizera, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Mountain_gorilla_from_Susa_Group_in_Karisimbi_thicket_of_Volcanoes_National_Park_in_Rwanda._Emmanuel_Kwizera.jpg"
+    },
+    "sabah": {
+      "src": "/images/blog/locations-sabah/hero.webp",
+      "alt": "A proboscis monkey in riverside trees along the Kinabatangan River, Sabah",
+      "width": 1400,
+      "height": 934,
+      "caption": "A proboscis monkey in riverside trees along the Kinabatangan River, Sabah. Photo: Artchenphoto, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kinabatangan_River_2.jpg"
+    },
+    "sao-paulo": {
+      "src": "/images/blog/locations-sao-paulo/hero2.webp",
+      "alt": "Capybaras grazing on the bank of the Pinheiros river in São Paulo",
+      "width": 1400,
+      "height": 934,
+      "caption": "Capybaras grazing on the bank of the Pinheiros river in São Paulo. Photo: Clodomiro Esteves Junior, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Capivara(Hydrochoerus_hydrochaeris).jpg"
+    },
+    "saudi-arabia": {
+      "src": "/images/blog/locations-saudi-arabia/hero.webp",
+      "alt": "An Arabian oryx standing on the sand in front of sandstone cliffs at AlUla, Saudi Arabia",
+      "width": 1400,
+      "height": 934,
+      "caption": "An Arabian oryx standing on the sand in front of sandstone cliffs at AlUla, Saudi Arabia. Photo: Josephyousry, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Arabian_Oryx_at_DDCR.jpg"
+    },
+    "scotland": {
+      "src": "/images/blog/locations-scotland/hero.webp",
+      "alt": "A red deer stag on open moorland in the Scottish Highlands",
+      "width": 1400,
+      "height": 788,
+      "caption": "A red deer stag on open moorland in the Scottish Highlands. Photo: Andrewmckie, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Stag_in_Glen_Etive.jpg"
+    },
+    "serengeti": {
+      "src": "/images/blog/locations-serengeti/hero.webp",
+      "alt": "Wildebeest herds on the Serengeti plains during the great migration, Tanzania",
+      "width": 1400,
+      "height": 933,
+      "caption": "Wildebeest herds on the Serengeti plains during the great migration, Tanzania. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Western_white-bearded_wildebeest_(Connochaetes_taurinus_mearnsi)_Mara_River_crossing_2a_Zebras.jpg"
+    },
+    "sicily": {
+      "src": "/images/blog/locations-sicily/hero.webp",
+      "alt": "Greater flamingos wading in the Vendicari lagoon near Noto, Sicily",
+      "width": 1400,
+      "height": 645,
+      "caption": "Greater flamingos wading in the Vendicari lagoon near Noto, Sicily. Photo: Lisabauable, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Flamingos_in_vendicari.jpg"
+    },
+    "slovakia": {
+      "src": "/images/blog/locations-slovakia/hero.webp",
+      "alt": "A Tatra chamois standing on a rocky ridge in the High Tatras, Slovakia",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A Tatra chamois standing on a rocky ridge in the High Tatras, Slovakia. Photo: Jakub Fryš, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Tatra_Chamois.jpg"
+    },
+    "south-korea": {
+      "src": "/images/blog/locations-south-korea/hero.webp",
+      "alt": "The Suncheon Bay reed wetland, South Korea",
+      "width": 1400,
+      "height": 443,
+      "caption": "The Suncheon Bay reed wetland, South Korea. Photo: Jjw, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:20181231_Suncheon_Bay_003.jpg"
+    },
+    "south-sumatra": {
+      "src": "/images/blog/locations-south-sumatra/hero.webp",
+      "alt": "The Musi river at Palembang, South Sumatra, with the Ampera bridge behind",
+      "width": 1400,
+      "height": 933,
+      "caption": "The Musi river at Palembang, South Sumatra, with the Ampera bridge behind. Photo: Herusutimbul, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:LRT_Palembang_Melintas_di_Samping_Jembatan_Ampera_Palembang.jpg"
+    },
+    "sulawesi": {
+      "src": "/images/blog/locations-sulawesi/hero.webp",
+      "alt": "A Celebes crested macaque sitting on the forest floor at Tangkoko, North Sulawesi",
+      "width": 1400,
+      "height": 933,
+      "caption": "A Celebes crested macaque sitting on the forest floor at Tangkoko, North Sulawesi. Photo: Viglianti, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Macaque_noir_%C3%A0_crete_de_Sulawesi.JPG"
+    },
+    "sumatra": {
+      "src": "/images/blog/locations-sumatra/hero.webp",
+      "alt": "A Sumatran orangutan hanging in the forest canopy at Bukit Lawang, Gunung Leuser National Park",
+      "width": 1120,
+      "height": 1400,
+      "caption": "A Sumatran orangutan hanging in the forest canopy at Bukit Lawang, Gunung Leuser National Park. Photo: Hagai Aginta Ginting, CC BY 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Kecupan_untuk_Ratna_si_Induk_Orangutan.jpg"
+    },
+    "sumba": {
+      "src": "/images/blog/locations-sumba/hero.webp",
+      "alt": "A beach on Sumba, East Nusa Tenggara",
+      "width": 1400,
+      "height": 683,
+      "caption": "A beach on Sumba, East Nusa Tenggara. Photo: Bimantara.prawoto, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Beach_of_Sumba.jpg"
+    },
+    "surabaya": {
+      "src": "/images/blog/locations-surabaya/hero.webp",
+      "alt": "Mangrove channel at the Wonorejo ecotourism forest on Surabaya's east coast",
+      "width": 1400,
+      "height": 788,
+      "caption": "Mangrove channel at the Wonorejo ecotourism forest on Surabaya's east coast. Photo: Lasthib, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ekowisata_Mangrove_Wonorejo.jpg"
+    },
+    "sweden": {
+      "src": "/images/blog/locations-sweden/hero.webp",
+      "alt": "A bull moose standing in a boggy forest clearing in Sweden",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A bull moose standing in a boggy forest clearing in Sweden. Photo: Dickelbers, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Moose_(Sweden).JPG"
+    },
+    "switzerland": {
+      "src": "/images/blog/locations-switzerland/hero2.webp",
+      "alt": "An Alpine ibex on a rocky ledge in the Swiss National Park, Engadin",
+      "width": 1400,
+      "height": 1050,
+      "caption": "An Alpine ibex on a rocky ledge in the Swiss National Park, Engadin. Photo: Capricorn4049, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ibex_on_Piz_Nair.jpg"
+    },
+    "tangkoko": {
+      "src": "/images/blog/locations-tangkoko/hero.webp",
+      "alt": "A spectral tarsier clinging to a branch at dusk in Tangkoko Nature Reserve",
+      "width": 1400,
+      "height": 937,
+      "caption": "A spectral tarsier clinging to a branch at dusk in Tangkoko Nature Reserve. Photo: Sakurai Midori, CC BY-SA 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Tarsius_tarsier_Tangkoko_National_Park.JPG"
+    },
+    "tanjung-puting": {
+      "src": "/images/blog/locations-tanjung-puting/hero.webp",
+      "alt": "A Bornean orangutan at Camp Leakey in Tanjung Puting National Park",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A Bornean orangutan at Camp Leakey in Tanjung Puting National Park. Photo: Rezky Putri Harisanti, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:PONGO_PYGMAEUS_TANJUNG_PUTING_NATIONAL_PARK.jpg"
+    },
+    "terengganu": {
+      "src": "/images/blog/locations-terengganu/hero.webp",
+      "alt": "A green sea turtle over the reef off Redang island, Terengganu",
+      "width": 1400,
+      "height": 259,
+      "caption": "A green sea turtle over the reef off Redang island, Terengganu. Photo: Lybil BER, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Redang_Island_Beach.jpg"
+    },
+    "texas": {
+      "src": "/images/blog/locations-texas/hero.webp",
+      "alt": "A whooping crane wading through salt marsh at Aransas National Wildlife Refuge, Texas",
+      "width": 1400,
+      "height": 932,
+      "caption": "A whooping crane wading through salt marsh at Aransas National Wildlife Refuge, Texas. Photo: Klaus Nigge of U.S. Fish and Wildlife Service Headquarters, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Grus_americana_-Aransas_National_Wildlife_Refuge,_Texas,_USA_-three-8.jpg"
+    },
+    "thousand-islands": {
+      "src": "/images/blog/locations-thousand-islands/hero.webp",
+      "alt": "Hawksbill turtle hatchlings at the Pulau Pramuka hatchery in Kepulauan Seribu, Jakarta",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Hawksbill turtle hatchlings at the Pulau Pramuka hatchery in Kepulauan Seribu, Jakarta. Photo: Mohamadsusanto, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Abandoned_Boat_Pulau_Pramuka.jpg"
+    },
+    "togean-islands": {
+      "src": "/images/blog/locations-togean-islands/hero.webp",
+      "alt": "Forested islets and turquoise water in the Togean Islands, Tomini Gulf, Central Sulawesi",
+      "width": 1400,
+      "height": 1050,
+      "caption": "Forested islets and turquoise water in the Togean Islands, Tomini Gulf, Central Sulawesi. Photo: Benoît Vicart, CC0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Stilt_house_bajau_Togian.jpg"
+    },
+    "trinidad-and-tobago": {
+      "src": "/images/blog/locations-trinidad-and-tobago/hero.webp",
+      "alt": "Scarlet ibis roosting in the Caroni Swamp, Trinidad",
+      "width": 1400,
+      "height": 933,
+      "caption": "Scarlet ibis roosting in the Caroni Swamp, Trinidad. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Scarlet_ibis_(Eudocimus_ruber)_roosting.jpg"
+    },
+    "turkey": {
+      "src": "/images/blog/locations-turkey/hero.webp",
+      "alt": "A loggerhead turtle at Iztuzu beach, Dalyan, Turkey",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A loggerhead turtle at Iztuzu beach, Dalyan, Turkey. Photo: Abdullah kıyga, CC BY 3.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:The_homeland_of_Caretta_caretta._Patara_beach,_Dalyan,_Antalya_%C2%A9Abdullah_Kiyga_-_panoramio.jpg"
+    },
+    "uganda": {
+      "src": "/images/blog/locations-uganda/hero.webp",
+      "alt": "A mountain gorilla in the forest of Bwindi Impenetrable National Park, Uganda",
+      "width": 1400,
+      "height": 933,
+      "caption": "A mountain gorilla in the forest of Bwindi Impenetrable National Park, Uganda. Photo: Giles Laurent, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:064_Mountain_gorilla_climbing_a_tree_at_Bwindi_Impenetrable_Forest_National_Park_Photo_by_Giles_Laurent.jpg"
+    },
+    "ukraine": {
+      "src": "/images/blog/locations-ukraine/hero.webp",
+      "alt": "Przewalski's horses on the Askania-Nova steppe, Ukraine",
+      "width": 1400,
+      "height": 933,
+      "caption": "Przewalski's horses on the Askania-Nova steppe, Ukraine. Photo: Nataliya Shestakova, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Askania_steppe_Przewalski%27s_Horse_01_(YDS_1676).jpg"
+    },
+    "united-arab-emirates": {
+      "src": "/images/blog/locations-united-arab-emirates/hero.webp",
+      "alt": "Greater flamingos feeding in the Ras Al Khor lagoon with the Dubai skyline behind",
+      "width": 1400,
+      "height": 933,
+      "caption": "Greater flamingos feeding in the Ras Al Khor lagoon with the Dubai skyline behind. Photo: Sonia Dapic, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Ras_Al_Khor_Flamingo_Hide_Viewing_Area_from_afar.jpg"
+    },
+    "uruguay": {
+      "src": "/images/blog/locations-uruguay/hero.webp",
+      "alt": "South American sea lions at Cabo Polonio, Uruguay",
+      "width": 1400,
+      "height": 933,
+      "caption": "South American sea lions at Cabo Polonio, Uruguay. Photo: Carolinasosa17, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Lobos_Marinos_de_Cabo_Polonio.png"
+    },
+    "vietnam": {
+      "src": "/images/blog/locations-vietnam/hero.webp",
+      "alt": "A red-shanked douc langur in the forest of the Son Tra peninsula, Vietnam",
+      "width": 1400,
+      "height": 933,
+      "caption": "A red-shanked douc langur in the forest of the Son Tra peninsula, Vietnam. Photo: Charles J. Sharp, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Rhesus_macaque_(Macaca_mulatta)_Red-shanked_douc_langur_(Pygathrix_nemaeus)_hybrid_Son_Tra.jpg"
+    },
+    "visayas": {
+      "src": "/images/blog/locations-visayas/hero.webp",
+      "alt": "A Philippine tarsier clinging to a sapling in the Bohol forest",
+      "width": 1400,
+      "height": 933,
+      "caption": "A Philippine tarsier clinging to a sapling in the Bohol forest. Photo: Mhlayson, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Bohol%27s_Tarsier.jpg"
+    },
+    "wales": {
+      "src": "/images/blog/locations-wales/hero.webp",
+      "alt": "An Atlantic puffin on the cliff-top path at the Wick, Skomer Island, Pembrokeshire",
+      "width": 1400,
+      "height": 933,
+      "caption": "An Atlantic puffin on the cliff-top path at the Wick, Skomer Island, Pembrokeshire. Photo: RewildingGirl5, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Puffin_on_Skomer_Island.jpg"
+    },
+    "way-kambas": {
+      "src": "/images/blog/locations-way-kambas/hero.webp",
+      "alt": "A Sumatran rhinoceros at the Sumatran Rhino Sanctuary in Way Kambas National Park",
+      "width": 936,
+      "height": 673,
+      "caption": "A Sumatran rhinoceros at the Sumatran Rhino Sanctuary in Way Kambas National Park. Photo: Willem v Strien, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Sumatran_Rhinoceros_Way_Kambas_2008.jpg"
+    },
+    "yogyakarta": {
+      "src": "/images/blog/locations-yogyakarta/hero.webp",
+      "alt": "Light shaft falling into Jomblang cave in the Gunung Kidul karst, Yogyakarta",
+      "width": 933,
+      "height": 1400,
+      "caption": "Light shaft falling into Jomblang cave in the Gunung Kidul karst, Yogyakarta. Photo: Thomas Fuhrmann, CC BY-SA 4.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Goa_Jomblang_entry_-_Indonesia_03.jpg"
+    },
+    "yucatan-peninsula": {
+      "src": "/images/blog/locations-yucatan-peninsula/hero.webp",
+      "alt": "A whale shark feeding at the surface off Isla Holbox, Yucatán Peninsula",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A whale shark feeding at the surface off Isla Holbox, Yucatán Peninsula. Photo: dronepicr, CC BY 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Whale_shark_Holbox_island_Mexico_Walhai_(20184988951).jpg"
+    },
+    "zanzibar": {
+      "src": "/images/blog/locations-zanzibar/hero.webp",
+      "alt": "A Zanzibar red colobus monkey in the trees of Jozani forest, Zanzibar",
+      "width": 1400,
+      "height": 1050,
+      "caption": "A Zanzibar red colobus monkey in the trees of Jozani forest, Zanzibar. Photo: Olivier Lejade from France, CC BY-SA 2.0, via Wikimedia Commons.",
+      "commons": "https://commons.wikimedia.org/wiki/File:Red_Colobus_3.jpg"
+    }
+  }
+}

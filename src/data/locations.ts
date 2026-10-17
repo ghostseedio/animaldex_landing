@@ -1,49 +1,25 @@
-import {CanonicalContentMetadata} from "@/data/content-schema";
-import {getLocationPlaceCollections, WildlifePlace} from "@/data/location-places";
+import heroImages from "@/data/location-hero-images.json";
+import {getLocationPlaceCollections} from "@/data/location-places";
+import type {LocationAnimalSpot, LocationPage, LocationPageInput} from "@/data/location-types";
+import {indonesiaIslandLocationPages} from "@/data/locations/indonesia-islands";
+import {indonesiaPlaceLocationPages} from "@/data/locations/indonesia-places";
+import {asiaPacificLocationPages} from "@/data/locations/asia-pacific";
+import {europeWestLocationPages} from "@/data/locations/europe-west";
+import {europeEastNorthLocationPages} from "@/data/locations/europe-east-north";
+import {northAmericaLocationPages} from "@/data/locations/north-america";
+import {latinAmericaLocationPages} from "@/data/locations/latin-america";
+import {africaMiddleEastLocationPages} from "@/data/locations/africa-middle-east";
 
-export type LocationRegionType =
-    | "country"
-    | "city"
-    | "island"
-    | "park"
-    | "zoo"
-    | "region"
-    | "safari";
-
-export type LocationAnimalSpot = {
-    speciesSlug: string;
-    whyItFits: string;
-    rarityHint?: string;
-};
-
-export type LocationFAQ = {
-    question: string;
-    answer: string;
-};
-
-export type LocationPage = CanonicalContentMetadata & {
-    slug: string;
-    name: string;
-    regionType: LocationRegionType;
-    searchIntents: string[];
-    quickAnswer: string;
-    introduction: string[];
-    whyItMatters: string[];
-    animalsToSpot: LocationAnimalSpot[];
-    bestFor: string[];
-    spottingTips: string[];
-    challengeSlugs?: string[];
-    rankingSlugs?: string[];
-    relatedLocationSlugs?: string[];
-    blogSlugs?: string[];
-    faq?: LocationFAQ[];
-    zoosAndParks?: WildlifePlace[];
-    wildlifeReserves?: WildlifePlace[];
-};
-
-type LocationPageInput = Omit<LocationPage, "publishedAt" | "updatedAt" | "featuredImage"> & {
-    featuredImage?: LocationPage["featuredImage"];
-};
+export type {
+    LocationAnimalSpot,
+    LocationCaptureArea,
+    LocationFAQ,
+    LocationGeoBox,
+    LocationHubRegion,
+    LocationPage,
+    LocationPageInput,
+    LocationRegionType
+} from "@/data/location-types";
 
 const LOCATION_MIN_ANIMAL_SPOTS = 10;
 
@@ -706,13 +682,16 @@ function ensureMinimumLocationAnimalSpots(page: LocationPageInput) {
     return [...page.animalsToSpot, ...buildAutoLocationAnimalSpots(page.name, extraSpeciesSlugs)];
 }
 
+type HeroImage = LocationPage["featuredImage"];
+const locationHeroImages = (heroImages as unknown as {images: Record<string, HeroImage>}).images;
+
 function createLocationPage(page: LocationPageInput): LocationPage {
     return {
         ...page,
         animalsToSpot: ensureMinimumLocationAnimalSpots(page),
-        publishedAt: "2026-04-12",
-        updatedAt: "2026-04-12",
-        featuredImage: page.featuredImage ?? {
+        publishedAt: page.publishedAt ?? "2026-04-12",
+        updatedAt: page.updatedAt ?? page.publishedAt ?? "2026-04-12",
+        featuredImage: page.featuredImage ?? locationHeroImages[page.slug] ?? {
             src: "/images/placeholders/more-discovery.svg",
             alt: `${page.title} location guide on AnimalDex`,
             width: 1200,
@@ -3299,8 +3278,23 @@ function assertLocationAnimalSpotCoverage(entries: LocationPage[], minimum = LOC
     return entries;
 }
 
+/**
+ * The 2026 expansion: one file per world region, written as plain inputs so the
+ * same helper fills defaults for every page. Order here is hub order.
+ */
+const expansionLocationPagesData: LocationPage[] = [
+    ...indonesiaIslandLocationPages,
+    ...indonesiaPlaceLocationPages,
+    ...asiaPacificLocationPages,
+    ...europeWestLocationPages,
+    ...europeEastNorthLocationPages,
+    ...northAmericaLocationPages,
+    ...latinAmericaLocationPages,
+    ...africaMiddleEastLocationPages
+].map((page) => createLocationPage({publishedAt: "2026-10-17", ...page}));
+
 export const locationPages = assertUniqueLocationSlugs(assertLocationAnimalSpotCoverage(
-    locationPagesData.map((page) => ({...page, ...getLocationPlaceCollections(page.slug)}))
+    [...locationPagesData, ...expansionLocationPagesData].map((page) => ({...page, ...getLocationPlaceCollections(page.slug)}))
 ));
 
 export function getLocationPage(slug: string) {
