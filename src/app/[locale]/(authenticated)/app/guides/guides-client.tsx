@@ -12,7 +12,7 @@ import {
     AppSectionTitle,
     AppSurface
 } from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {GUIDE_CATEGORIES, guidePath} from "@/lib/guide-marketplace-core";
+import {formatGuidePrice, GUIDE_CATEGORIES, guidePath} from "@/lib/guide-marketplace-core";
 import {
     guideSellerPhase,
     progressRatio,
@@ -24,11 +24,26 @@ import {reasonLabel} from "@/lib/guide-marketplace-admin";
 
 type HubTab = "setup" | "listings" | "requests";
 
+type WebCheckout = {
+    id: string;
+    listingTitle: string | null;
+    status: string;
+    requestedDate: string;
+    guestCount: number;
+    guestEmail: string;
+    message: string | null;
+    listedCurrency: string;
+    listedTotalMinor: number;
+    chargeCurrency: string;
+    chargeAmountMinor: number;
+};
+
 type GuidesPayload = {
     ok?: boolean;
     eligibility: GuideEligibility;
     listings: OwnedGuideListing[];
     bookings: SellerGuideBooking[];
+    webCheckouts?: WebCheckout[];
     error?: string;
 };
 
@@ -71,6 +86,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
     const [eligibility, setEligibility] = useState<GuideEligibility | null>(null);
     const [listings, setListings] = useState<OwnedGuideListing[]>([]);
     const [bookings, setBookings] = useState<SellerGuideBooking[]>([]);
+    const [webCheckouts, setWebCheckouts] = useState<WebCheckout[]>([]);
     const [ageAttested, setAgeAttested] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
 
@@ -79,6 +95,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
     const published = useMemo(() => listings.filter((listing) => listing.status === "published"), [listings]);
     const drafts = useMemo(() => listings.filter((listing) => listing.status !== "published"), [listings]);
     const pendingBookings = useMemo(() => bookings.filter((booking) => effectiveStatus(booking) === "pending"), [bookings]);
+    const pendingCheckouts = useMemo(() => webCheckouts.filter((checkout) => checkout.status === "paid"), [webCheckouts]);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -88,6 +105,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
             setEligibility(payload.eligibility);
             setListings(payload.listings);
             setBookings(payload.bookings);
+            setWebCheckouts(payload.webCheckouts ?? []);
         } catch (loadError) {
             setError(loadError instanceof Error ? loadError.message : "Could not load Wildlife Guides.");
         } finally {
@@ -133,6 +151,19 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
         }
     }
 
+    async function resolveCheckout(checkoutId: string, resolveAction: "accepted" | "declined") {
+        setBusy(true);
+        setError(null);
+        try {
+            await guidesRequest({method: "POST", body: {action: "resolve-web-checkout", checkoutId, resolveAction}});
+            await load();
+        } catch (actionError) {
+            setError(actionError instanceof Error ? actionError.message : "Checkout update failed.");
+        } finally {
+            setBusy(false);
+        }
+    }
+
     async function resolveBooking(requestId: string, resolveAction: "accepted" | "declined" | "completed") {
         setBusy(true);
         setError(null);
@@ -151,7 +182,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
             <AppPageHeader
                 eyebrow="Wildlife Guides"
                 title="Guide setup"
-                description="Apply to become a Wildlife Guide, publish local experiences, and manage booking requests — the same flow as AnimalDex on iOS."
+                description="Apply to become a Wildlife Guide, publish local experiences, and confirm guests who have paid the listed fee."
                 action={canManageListings ? <AppPrimaryLink href="/app/guides/listings/new">Create guide</AppPrimaryLink> : null}
             />
 
@@ -159,7 +190,7 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
                 {([
                     ["setup", "Setup"],
                     ["listings", "Listings"],
-                    ["requests", `Requests${pendingBookings.length ? ` (${pendingBookings.length})` : ""}`]
+                    ["requests", `Requests${pendingBookings.length + pendingCheckouts.length ? ` (${pendingBookings.length + pendingCheckouts.length})` : ""}`]
                 ] as const).map(([id, label]) => (
                     <button
                         key={id}
@@ -301,9 +332,32 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
             ) : null}
 
             {!loading && tab === "requests" ? (
-                bookings.length ? (
-                    <div className="space-y-3">
-                        {bookings.map((booking) => (
+                webCheckouts.length || bookings.length ? (
+                <div className="space-y-3">
+                    {webCheckouts.map((checkout) => (
+                        <AppSurface key={checkout.id} className="space-y-3">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary-200">{statusLabel(checkout.status)} · paid on AnimalDex</p>
+                                <h3 className="mt-1 font-display text-lg font-bold text-white">{checkout.listingTitle ?? "Guide listing"}</h3>
+                                <p className="mt-1 text-sm text-white/45">
+                                    {checkout.requestedDate} · {checkout.guestCount} guest{checkout.guestCount === 1 ? "" : "s"} · {checkout.guestEmail}
+                                </p>
+                                <p className="mt-2 text-sm text-white/70">
+                                    Listed {formatGuidePrice(checkout.listedTotalMinor, checkout.listedCurrency)}
+                                    {checkout.chargeCurrency !== checkout.listedCurrency ? ` · charged ${formatGuidePrice(checkout.chargeAmountMinor, checkout.chargeCurrency)}` : ""}
+                                </p>
+                                {checkout.message ? <p className="mt-2 text-sm leading-6 text-white/55">{checkout.message}</p> : null}
+                                <p className="mt-2 text-xs leading-5 text-white/40">This fee is already paid. Do not collect it again in cash. It is not withdrawable Earnings yet.</p>
+                            </div>
+                            {checkout.status === "paid" ? (
+                                <div className="flex flex-wrap gap-2">
+                                    <button type="button" disabled={busy} onClick={() => void resolveCheckout(checkout.id, "accepted")} className="rounded-full bg-primary-400 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Accept</button>
+                                    <button type="button" disabled={busy} onClick={() => void resolveCheckout(checkout.id, "declined")} className="rounded-full border border-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white/70">Decline</button>
+                                </div>
+                            ) : null}
+                        </AppSurface>
+                    ))}
+                    {bookings.map((booking) => (
                             <AppSurface key={booking.id} className="space-y-3">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
@@ -329,10 +383,10 @@ export default function GuidesClient({initialTab = "setup"}: {initialTab?: HubTa
                                     <button type="button" disabled={busy} onClick={() => void resolveBooking(booking.id, "completed")} className="rounded-full bg-primary-400 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Mark complete</button>
                                 ) : null}
                             </AppSurface>
-                        ))}
-                    </div>
+                    ))}
+                </div>
                 ) : (
-                    <AppEmpty icon="bell" title="No booking requests yet" detail="When a collector requests your experience, it will show up here for accept, decline, or completion." />
+                    <AppEmpty icon="bell" title="No guests yet" detail="When someone pays the listed fee, or sends an app request, it shows up here." />
                 )
             ) : null}
         </AppPage>

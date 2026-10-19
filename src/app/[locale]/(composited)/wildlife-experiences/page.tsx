@@ -54,8 +54,8 @@ const activityGuideHeadings: Record<GuideCategory, string> = {
 const findGuideSteps = [
     "Browse the published experiences on this page, or filter by activity: birding, herping, night wildlife, photography, marine, insects, or general wildlife.",
     "Open a listing to see the public area, duration, group size, per-person price, and the Guide's record of wild species found in AnimalDex.",
-    "Send a request for a date and group size in the AnimalDex app. The Guide accepts or declines, and exact meeting details are shared only after they accept.",
-    "Meet the Guide and pay them in cash on the day. AnimalDex does not collect that payment or run the outing."
+    "Open a listing, choose a date and group size, and pay the listed fee. No account is required. Apple Pay, Google Pay, and cards appear when your device supports them.",
+    "The Guide confirms the outing. Exact meeting details stay private until then. AnimalDex does not run the walk, and sightings are never guaranteed."
 ];
 
 const faqs = [
@@ -65,7 +65,7 @@ const faqs = [
     },
     {
         question: "How do I request a wildlife experience?",
-        answer: "Open a listing, then send a request in the AnimalDex app. The Guide accepts or declines. A request is not a confirmed booking, and this website does not take payment."
+        answer: "Open a listing, choose a date and group size, and pay the listed fee on this page. You do not need an account. The Guide still accepts or declines, so payment is not an instant confirmation."
     },
     {
         question: "Do AnimalDex Guides guarantee wildlife sightings?",
@@ -73,7 +73,7 @@ const faqs = [
     },
     {
         question: "How do I pay a Wildlife Guide?",
-        answer: "You pay the Guide in cash on the day. AnimalDex does not collect that payment, and Credits are never used for the outing."
+        answer: "You pay the listed per-person fee on this website. Checkout can offer Apple Pay, Google Pay, or a card, depending on your device. Credits are never used."
     },
     {
         question: "Can I find herping experiences on AnimalDex?",
@@ -89,7 +89,7 @@ const faqs = [
     },
     {
         question: "How much does a wildlife guide cost?",
-        answer: "Each Guide sets their own per-person price in their local currency, and it is shown on the listing before you send a request. You pay that price to the Guide in cash on the day. AnimalDex does not take the payment, and Credits are never used for an outing."
+        answer: "Each Guide sets their own per-person price, and it is shown before you pay. You pay that listed fee here. If the price is in a currency our merchant cannot charge, checkout uses the USD equivalent and shows it before you confirm."
     },
     {
         question: "Is there a wildlife guide near me?",
@@ -392,15 +392,15 @@ export default async function WildlifeExperiencesPage({params}: {params: {locale
 
             <section aria-labelledby="before-you-book" className="flex flex-col gap-6">
                 <h2 id="before-you-book" className="font-display text-3xl font-black uppercase tracking-[0.04em] text-white">
-                    Before you request
+                    Before you pay
                 </h2>
                 <ul className="max-w-3xl space-y-3 text-ink-300">
                     <li>Guides are independent sellers, not AnimalDex staff.</li>
                     <li>Wildlife sightings are never guaranteed.</li>
                     <li>Guides are responsible for the permits, licences, and insurance their activity requires.</li>
-                    <li>Exact meeting details stay private until the Guide accepts your request in the app.</li>
+                    <li>Exact meeting details stay private until the Guide accepts.</li>
                     <li>Wildlife should not be baited, lured, handled, or disturbed for a photo or a “sure thing.”</li>
-                    <li>You pay the Guide in cash on the day. AnimalDex does not collect that payment.</li>
+                    <li>You pay the listed fee on this page. Apple Pay, Google Pay, and cards appear when your device supports them.</li>
                 </ul>
                 <p className="text-sm text-ink-400">
                     <Link href={supportArticleHrefs.guidePayments} className="text-primary-200 hover:text-white">

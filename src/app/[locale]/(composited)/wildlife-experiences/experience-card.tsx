@@ -18,7 +18,7 @@ export default function ExperienceCard({listing, locale}: {listing: PublicGuideL
     const host = guideHostName(listing);
 
     return (
-        <article className="flex h-full overflow-hidden  border border-white/10 bg-white/[0.035]">
+        <article className="flex h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] shadow-[0_24px_70px_-36px_rgba(0,0,0,0.65)] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35">
             <div className="flex w-full flex-col">
                 <div className="theme-dark relative h-52 overflow-hidden bg-[#0A1A12]">
                     {listing.cover_image_url ? (
@@ -72,7 +72,7 @@ export default function ExperienceCard({listing, locale}: {listing: PublicGuideL
                             listing_id: listing.id,
                             service_category: listing.service_category
                         })}
-                        className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-primary-400/50 px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.12em] text-primary-200 hover:bg-primary-400/10 hover:text-white"
+                        className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary-400 px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition hover:bg-primary-300"
                     >
                         View experience →
                     </Link>

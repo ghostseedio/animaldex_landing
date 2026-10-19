@@ -21,7 +21,8 @@ type GuideAction =
     | "submit-listing"
     | "pause-listing"
     | "resume-listing"
-    | "resolve-booking";
+    | "resolve-booking"
+    | "resolve-web-checkout";
 
 function jsonError(message: string, status = 400) {
     return NextResponse.json({ok: false, error: message}, {status});
@@ -64,27 +65,47 @@ export async function GET() {
     // Missing on older databases; the client still treats those rows as expired.
     await auth.supabase.rpc("expire_past_guide_booking_requests").then(() => undefined, () => undefined);
 
-    const [eligibilityRes, listingsRes, bookingsRes] = await Promise.all([
+    const [eligibilityRes, listingsRes, bookingsRes, checkoutsRes] = await Promise.all([
         auth.supabase.rpc("get_guide_seller_eligibility"),
         auth.supabase.from("guide_listings").select("*").eq("seller_user_id", auth.user.id).order("updated_at", {ascending: false}),
-        auth.supabase.from("guide_booking_requests").select("*").eq("seller_user_id", auth.user.id).order("created_at", {ascending: false}).limit(50)
+        auth.supabase.from("guide_booking_requests").select("*").eq("seller_user_id", auth.user.id).order("created_at", {ascending: false}).limit(50),
+        auth.supabase.from("guide_web_checkouts").select("*").eq("seller_user_id", auth.user.id).order("created_at", {ascending: false}).limit(50)
     ]);
 
     if (eligibilityRes.error) return jsonError(eligibilityRes.error.message, 500);
     if (listingsRes.error) return jsonError(listingsRes.error.message, 500);
     if (bookingsRes.error) return jsonError(bookingsRes.error.message, 500);
+    const checkoutsMissing = Boolean(checkoutsRes.error && /guide_web_checkouts|schema cache|does not exist/i.test(checkoutsRes.error.message));
+    if (checkoutsRes.error && !checkoutsMissing) return jsonError(checkoutsRes.error.message, 500);
 
     const listings = (listingsRes.data ?? []).map((row) => mapOwnedGuideListing(row as Record<string, unknown>));
     const listingTitles = new Map(listings.map((listing) => [listing.id, listing.title]));
     const bookings = (bookingsRes.data ?? []).map((row) =>
         mapSellerGuideBooking(row as Record<string, unknown>, listingTitles.get(String((row as Record<string, unknown>).guide_listing_id)) ?? null)
     );
+    const webCheckouts = checkoutsMissing ? [] : (checkoutsRes.data ?? []).map((row) => {
+        const record = row as Record<string, unknown>;
+        return {
+            id: String(record.id),
+            listingTitle: listingTitles.get(String(record.guide_listing_id)) ?? null,
+            status: String(record.status ?? ""),
+            requestedDate: String(record.requested_date ?? "").slice(0, 10),
+            guestCount: Number(record.guest_count ?? 0),
+            guestEmail: String(record.guest_email ?? ""),
+            message: typeof record.message === "string" ? record.message : null,
+            listedCurrency: String(record.listed_currency ?? ""),
+            listedTotalMinor: Number(record.listed_total_minor ?? 0),
+            chargeCurrency: String(record.charge_currency ?? ""),
+            chargeAmountMinor: Number(record.charge_amount_minor ?? 0)
+        };
+    });
 
     return NextResponse.json({
         ok: true,
         eligibility: mapGuideEligibility(eligibilityRes.data),
         listings,
-        bookings
+        bookings,
+        webCheckouts
     });
 }
 
@@ -189,6 +210,18 @@ export async function POST(request: Request) {
             });
             if (error) return jsonError(error.message, 400);
             return NextResponse.json({ok: true, booking: data});
+        }
+        case "resolve-web-checkout": {
+            const checkoutId = typeof body.checkoutId === "string" ? body.checkoutId : "";
+            const resolveAction = typeof body.resolveAction === "string" ? body.resolveAction : "";
+            if (!isUuid(checkoutId)) return jsonError("Checkout id is required.");
+            if (!["accepted", "declined"].includes(resolveAction)) return jsonError("Invalid checkout action.");
+            const {data, error} = await auth.supabase.rpc("resolve_guide_web_checkout", {
+                p_checkout_id: checkoutId,
+                p_action: resolveAction
+            });
+            if (error) return jsonError(error.message, 400);
+            return NextResponse.json({ok: true, checkout: data});
         }
         default:
             return jsonError("Unknown action.");

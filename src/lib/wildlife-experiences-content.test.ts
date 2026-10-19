@@ -53,16 +53,17 @@ test("experience blogs are buyer-facing and point at the gateway", () => {
     }
 });
 
-test("listing pages request in the app and do not invent checkout", () => {
+test("listing pages take the listed fee in guest checkout and do not promise an instant booking", () => {
     const listing = readRepo("src/app/[locale]/(composited)/guides/[listing]/page.tsx");
     const cta = readRepo("src/components/guides/guide-booking-request.tsx");
     assert.match(listing, /GuideBookingRequestCta/);
     assert.match(listing, /HowBookingWorks/);
     assert.match(listing, /isGuideListingIndexable/);
-    assert.match(cta, /Request this experience/);
+    assert.match(cta, /Pay for this experience/);
     assert.match(cta, /guide_booking_request_clicked/);
-    assert.match(cta, /auth_started_for_guide_request/);
+    assert.match(cta, /\/api\/app\/guides\/checkout/);
     assert.doesNotMatch(cta, /app_booking_request_started/);
+    assert.doesNotMatch(cta, /cash on the day/);
     const analytics = readRepo("src/components/guides/guide-analytics.tsx");
     assert.match(analytics, /JSON.stringify\(dimensions\)/);
     assert.doesNotMatch(analytics, /app_booking_request_started/);

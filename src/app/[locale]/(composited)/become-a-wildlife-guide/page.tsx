@@ -45,7 +45,7 @@ const faqs = [
     },
     {
         question: "Does AnimalDex pay me for bookings?",
-        answer: "No. The collector pays you in cash on the day. AnimalDex does not collect or process that cash. When you mark the outing complete, seller net is recorded on Earnings."
+        answer: "Guests on the website pay the listed fee by Apple Pay, Google Pay, or card. AnimalDex collects that payment. It is not added to withdrawable Earnings automatically, and you should not also collect it in cash. Older app requests can still be cash on the day."
     },
     {
         question: "How do I become a nature guide or wildlife tour guide on AnimalDex?",
@@ -53,7 +53,7 @@ const faqs = [
     },
     {
         question: "Can I start a wildlife tour business with AnimalDex?",
-        answer: "AnimalDex can be one place where people find your outings, but it is not a business in a box. You stay an independent seller and handle your own local rules, permits, and insurance. AnimalDex publishes approved listings and passes requests to you. It does not set your schedule, collect payment, or run the tours."
+        answer: "AnimalDex can be one place where people find your outings, but it is not a business in a box. You stay an independent seller and handle your own local rules, permits, and insurance. AnimalDex publishes approved listings and collects the listed website fee. It does not set your schedule or run the tours."
     },
     {
         question: "Do I need a tour guide license?",
@@ -116,7 +116,7 @@ export default async function BecomeAWildlifeGuidePage({params}: {params: {local
                             "List an experience: a birding morning, a herping or night wildlife walk, a macro or coast session, or field time for photographers.",
                             "Set your own per-person price, duration, and maximum group size. People see the public area. Your exact meeting point stays private until you accept a request.",
                             "Guests send a request for a date and group size in the app. You accept or decline each one.",
-                            "The people you guide pay you in cash on the day. AnimalDex does not collect that payment or run the outing, and Credits are never used."
+                            "Guests pay the listed fee on the website. AnimalDex collects that payment and does not run the outing. Credits are never used, and the same fee should not also be collected in cash."
                         ].map((item) => (
                             <li key={item} className="border-l border-primary-200/25 pl-4">{item}</li>
                         ))}
@@ -170,10 +170,10 @@ export default async function BecomeAWildlifeGuidePage({params}: {params: {local
                     <ol className="mt-8 space-y-5 text-ink-200">
                         {[
                             "You publish an approved listing with a real-money price per person. Credits are never used.",
-                            "A collector sends a booking request for a date and group size.",
+                            "A guest pays the listed fee for a date and group size. No account is required.",
                             "You accept. Exact meeting details stay private until then.",
-                            "The collector pays you in cash on the day. AnimalDex does not handle that payment.",
-                            "You mark the outing complete. Seller net is recorded on Earnings."
+                            "AnimalDex has already collected that fee. Do not collect it again in cash.",
+                            "Website payments are not added to withdrawable Earnings automatically."
                         ].map((step, index) => (
                             <li key={step} className="flex gap-4">
                                 <span className="font-display text-2xl font-black text-primary-200">{index + 1}</span>

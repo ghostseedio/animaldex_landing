@@ -3,7 +3,7 @@ import Link from "@/app/[locale]/_components/link";
 import {categoryLabel, formatDuration, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
 
 export default function GuideCard({listing, locale}: {listing: PublicGuideListing; locale: string}) {
-    return <article className="flex h-full overflow-hidden  border border-white/10 bg-white/[0.04] shadow-xl shadow-black/10">
+    return <article className="flex h-full overflow-hidden border border-white/10 bg-white/[0.04] shadow-[0_24px_70px_-36px_rgba(0,0,0,0.65)] transition duration-300 hover:-translate-y-1 hover:border-primary-400/35">
         <div className="flex w-full flex-col">
         <div className="theme-dark relative h-52 overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
             {listing.cover_image_url ? (
@@ -32,9 +32,9 @@ export default function GuideCard({listing, locale}: {listing: PublicGuideListin
             <dl className="mt-5 grid grid-cols-2 gap-3 text-sm text-white/75">
                 <div><dt className="text-white/45">Duration</dt><dd>{formatDuration(listing.duration_minutes)}</dd></div>
                 <div><dt className="text-white/45">Group</dt><dd>Up to {listing.max_guests}</dd></div>
-                <div className="col-span-2"><dt className="text-white/45">Payment</dt><dd className="font-bold text-white">Cash in person, no Credits</dd></div>
+                <div className="col-span-2"><dt className="text-white/45">Payment</dt><dd className="font-bold text-white">Pay the listed fee here</dd></div>
             </dl>
-            <Link href={guidePath(listing)} className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-primary-400/50 px-5 py-2.5 font-bold text-primary-300 hover:bg-primary-400/10">View experience</Link>
+            <Link href={guidePath(listing)} className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary-400 px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition hover:bg-primary-300">View experience</Link>
         </div>
         </div>
     </article>;

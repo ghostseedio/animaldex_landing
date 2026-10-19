@@ -117,6 +117,17 @@ test("approved full refund and chargeback go through durable adjustment policy",
     }
 });
 
+test("a paid guide experience does not grant credits or Pro", async () => {
+    const mock = mockSupabase();
+    await handlePaddleEvent(mock.client as never, transactionEvent({
+        custom_data: {kind: "guide_experience", checkout_id: "33333333-3333-4333-8333-333333333333"}
+    }));
+    const paid = mock.calls.find((call) => call.name === "mark_guide_web_checkout_paid");
+    assert.equal(paid?.args.p_checkout_id, "33333333-3333-4333-8333-333333333333");
+    assert.equal(paid?.args.p_transaction_id, "txn_1");
+    assert.equal(mock.calls.some((call) => call.name === "fulfill_web_purchase"), false);
+});
+
 test("unhandled payment-failure transaction event never grants or mutates Pro", async () => {
     const mock = mockSupabase();
     const result = await handlePaddleEvent(mock.client as never, {

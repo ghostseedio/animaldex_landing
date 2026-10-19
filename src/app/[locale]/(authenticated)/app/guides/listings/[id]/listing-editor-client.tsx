@@ -177,7 +177,7 @@ export default function ListingEditorClient({listing}: {listing: OwnedGuideListi
             <AppPageHeader
                 eyebrow="Wildlife Guides"
                 title={listing ? "Edit guide listing" : "Create guide listing"}
-                description="Real-money local experiences. Collectors pay you in cash on the day. AnimalDex does not process that payment."
+                description="Real-money local experiences. Guests pay the listed fee on the website. Do not collect that same fee again in cash."
                 action={<Link href="/app/guides" className="text-sm font-bold text-primary-200 hover:text-white">← Back to guides</Link>}
             />
 

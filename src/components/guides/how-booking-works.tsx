@@ -1,10 +1,10 @@
 export function HowBookingWorks({compact = false}: {compact?: boolean}) {
     const steps = [
-        "Find an experience",
-        "Send the Guide a request",
-        "Agree the details privately",
-        "Meet your Guide",
-        "Pay the Guide directly on the day"
+        "Choose an experience",
+        "Pay the listed fee",
+        "The Guide confirms",
+        "Meet in the field",
+        "Wildlife stays wild"
     ];
 
     return (
@@ -14,17 +14,16 @@ export function HowBookingWorks({compact = false}: {compact?: boolean}) {
             </h2>
             <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {steps.map((step, index) => (
-                    <li key={step} className="  border border-white/10 bg-white/[0.03] px-4 py-4">
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-primary-200">{index + 1}</p>
+                    <li key={step} className="border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.8)]">
+                        <p className="font-display text-lg font-black text-primary-300">{String(index + 1).padStart(2, "0")}</p>
                         <p className="mt-2 text-sm font-semibold leading-6 text-white">{step}</p>
                     </li>
                 ))}
             </ol>
             <ul className="max-w-3xl space-y-2 text-sm leading-6 text-white/60">
-                <li>A request is not an instant confirmation. The Guide accepts before the outing is on.</li>
-                <li>Wildlife sightings are never guaranteed.</li>
-                <li>AnimalDex does not collect the outing payment. You pay the Guide in cash on the day.</li>
-                <li>Exact meeting details stay private until the Guide accepts.</li>
+                <li>You pay the listed per-person fee here. Apple Pay, Google Pay, and cards appear in checkout when your device supports them.</li>
+                <li>A payment is not a confirmed outing. The Guide accepts before you meet, and exact details stay private until then.</li>
+                <li>Wildlife sightings are never guaranteed. Credits are never used for the fee.</li>
             </ul>
         </section>
     );

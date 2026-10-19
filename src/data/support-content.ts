@@ -222,7 +222,7 @@ const en: SupportContent = {
         {
             id: "wildlife-guides",
             title: "AnimalDex Wildlife Guides",
-            description: "Becoming a Guide seller and how cash-on-the-day bookings work.",
+            description: "Becoming a Guide seller and how the listed fee is paid.",
             items: [
                 {
                     question: "How do I become a Wildlife Guide?",
@@ -232,7 +232,7 @@ const en: SupportContent = {
                 },
                 {
                     question: "How do Wildlife Guide bookings and payments work?",
-                    answer: "A collector requests a date and guest count on a published listing. The Guide accepts. The collector pays the Guide in cash on the day. AnimalDex does not collect, hold, or process that cash, and Credits are never used. When the Guide marks the outing complete, seller net is recorded on Earnings. The listed price is not money owed by itself.",
+                    answer: "A guest chooses a date and group size on a published listing and pays the listed fee on the website. Apple Pay, Google Pay, and cards appear when the device supports them. The Guide still accepts or declines. Credits are never used. That website payment is not added to withdrawable Earnings automatically, and it should not also be collected in cash.",
                     linkHref: "/become-a-wildlife-guide",
                     linkLabel: "How Guide payments work"
                 }

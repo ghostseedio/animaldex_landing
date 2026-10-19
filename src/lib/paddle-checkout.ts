@@ -21,10 +21,11 @@ type PaddleBrowser = {
     Initialize(options: {token: string; eventCallback(event: PaddleCheckoutEvent): void}): void;
     Checkout: {
         open(options: {
-            items: Array<{priceId: string; quantity: number}>;
+            items?: Array<{priceId: string; quantity: number}>;
+            transactionId?: string;
             customer?: {email: string};
-            customData: Record<string, string>;
-            settings: {displayMode: "overlay"; theme: "dark"; locale: "en"};
+            customData?: Record<string, string>;
+            settings: {displayMode: "overlay"; theme: "dark"; locale: "en"; variant?: "one-page"};
         }): void;
     };
 };
@@ -117,5 +118,43 @@ export async function openPaddleCheckout(options: {
             ...(options.userId ? {animaldex_user_id: options.userId} : {})
         },
         settings: {displayMode: "overlay", theme: "dark", locale: "en"}
+    });
+}
+
+export async function openPaddleTransactionCheckout(options: {
+    environment: PaddleRuntimeEnvironment;
+    clientToken: string;
+    transactionId: string;
+    customerEmail?: string;
+    onCompleted(): void;
+    onClosed(): void;
+}) {
+    if (!options.transactionId.startsWith("txn_")) throw new Error("Invalid Paddle transaction.");
+    if (options.environment === "production" && !options.clientToken.startsWith("live_")) {
+        throw new Error("Paddle live token required.");
+    }
+    if (options.environment === "sandbox" && !options.clientToken.startsWith("test_")) {
+        throw new Error("Paddle sandbox token required.");
+    }
+    const paddle = await initializePaddleJs({
+        environment: options.environment,
+        clientToken: options.clientToken
+    });
+
+    const listener = (rawEvent: Event) => {
+        const event = (rawEvent as CustomEvent<PaddleCheckoutEvent>).detail;
+        if (event.name === "checkout.completed") {
+            window.removeEventListener("animaldex:paddle", listener);
+            options.onCompleted();
+        } else if (event.name === "checkout.closed") {
+            window.removeEventListener("animaldex:paddle", listener);
+            options.onClosed();
+        }
+    };
+    window.addEventListener("animaldex:paddle", listener);
+    paddle.Checkout.open({
+        transactionId: options.transactionId,
+        ...(options.customerEmail ? {customer: {email: options.customerEmail}} : {}),
+        settings: {displayMode: "overlay", theme: "dark", locale: "en", variant: "one-page"}
     });
 }

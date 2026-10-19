@@ -122,7 +122,7 @@ export const earnProductPageMeta = {
         // The layout template appends " | AnimalDex", so titles here never carry the brand.
         title: "Become a Wildlife Tour Guide: Lead Nature Tours",
         description:
-            "Become a wildlife or nature tour guide. List birding, herping, or night walks on AnimalDex, set your price and group size, and get paid cash on the day."
+            "Become a wildlife or nature tour guide. List birding, herping or night walks on AnimalDex, set your price, and guests pay the listed fee online."
     },
     creatorRewards: {
         title: "AnimalDex Creator Rewards | Rewarding Wildlife Contribution",
@@ -132,7 +132,7 @@ export const earnProductPageMeta = {
     wildlifeExperiences: {
         title: "Find a Wildlife Guide: Birding & Nature Tours",
         description:
-            "Find a local wildlife guide for birding, herping, night walks, and nature tours. Approved Guides set the price; request in the app and pay cash on the day."
+            "Find a local wildlife guide for birding, herping, night walks, and nature tours. Approved Guides set the price. Pay the listed fee on the website."
     },
     sponsor: {
         title: "Sponsor an AnimalDex Challenge | Wildlife Campaigns & Partnerships",

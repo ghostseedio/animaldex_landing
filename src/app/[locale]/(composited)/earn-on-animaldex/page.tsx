@@ -40,7 +40,7 @@ const faqs = [
     },
     {
         question: "What can actually become real money?",
-        answer: "Only Earnings. Today that means completed AnimalDex Wildlife Guide outings, where the collector pays the Guide in cash on the day and seller net is recorded after completion. Creator Rewards and Sponsored Challenge cash are not currently paying."
+        answer: "Earnings records completed cash Guide outings from the app. Website guests pay the listed fee by card, Apple Pay, or Google Pay, and that payment is not added to withdrawable Earnings automatically. Creator Rewards and Sponsored Challenge cash are not currently paying."
     },
     {
         question: "Do I need payouts set up to start?",
@@ -106,7 +106,7 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                             label="wildlife_guides"
                             title="Wildlife Guides"
                             status={earnStatus.guides}
-                            detail="Approved locals list real-money experiences. Collectors pay cash on the day. Completing the outing records seller net."
+                            detail="Approved locals list real-money experiences. Website guests pay the listed fee. That payment is not withdrawable Earnings yet."
                         />
                         <LedgerRow
                             href={earnPaths.creatorRewards}

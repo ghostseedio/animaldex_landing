@@ -28,7 +28,6 @@ import {
 } from "@/lib/guide-marketplace-core";
 import {earnBreadcrumbList} from "@/lib/earn-page-metadata";
 import {getAbsoluteUrl} from "@/lib/site";
-import {getViewerUserId} from "@/lib/viewer";
 
 export const revalidate = 86400;
 
@@ -102,7 +101,6 @@ export default async function GuideListingPage({params}: Props) {
     const showLocationLink = isLocationPageIndexable(locationInventory(allListings, locationSlug));
     const host = guideHostName(listing);
     const username = listing.seller_username?.replace(/^@/, "");
-    const signedIn = Boolean(await getViewerUserId());
     const explore = categoryExplore[listing.service_category];
     const hasDescription = listing.description.trim().length > 0;
     const hasSummary = listing.public_summary.trim().length > 0;
@@ -139,7 +137,7 @@ export default async function GuideListingPage({params}: Props) {
                         <Fact icon={PriceTagIcon} label="Price per person" value={formatGuidePrice(listing.amount_minor, listing.currency_code, params.locale)} />
                     </div>
                 </div>
-                <div className="overflow-hidden border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/25">
+                <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.75)]">
                     <div className="theme-dark relative h-80 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(34,211,238,0.16),rgba(0,0,0,0.18))]">
                         {listing.cover_image_url ? (
                             <img src={listing.cover_image_url} alt="" className="h-full w-full object-cover" />
@@ -154,8 +152,8 @@ export default async function GuideListingPage({params}: Props) {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/15" />
                         <div className="absolute bottom-5 left-5 right-5">
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-200">Request, then meet</p>
-                            <p className="mt-2 text-sm leading-6 text-white/70">Send a request in AnimalDex. The Guide accepts before details are shared. You pay the Guide directly on the day.</p>
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-primary-200">Pay the listed fee</p>
+                            <p className="mt-2 text-sm leading-6 text-white/70">Checkout on this page. The Guide confirms the date, and meeting details stay private until then.</p>
                         </div>
                     </div>
                 </div>
@@ -207,12 +205,12 @@ export default async function GuideListingPage({params}: Props) {
                             </div>
                         </div>
                     ) : null}
-                    <aside className="border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-white/70">
+                    <aside className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm leading-6 text-white/70">
                         <h2 className="font-display text-xl text-white">Wildlife-first rules</h2>
                         <p className="mt-3"><strong className="text-white">Wildlife stays wild.</strong> Sightings are never guaranteed. The public area is approximate. Exact meeting details stay private until a request is accepted in AnimalDex. Wildlife should not be baited, lured, handled, or disturbed for a photo.</p>
                     </aside>
                 </article>
-                <aside className="h-fit border border-white/10 bg-white/[0.04] p-7">
+                <aside className="h-fit rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.75)] lg:sticky lg:top-28">
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-300">Meet your Guide</p>
                     <div className="mt-5 flex items-center gap-4">
                         <GuideAvatar url={listing.seller_avatar_url} name={listing.seller_display_name || username || host} />
@@ -231,7 +229,7 @@ export default async function GuideListingPage({params}: Props) {
                     {/* The two counts the Guide programme actually qualifies on, read
                         as a profile stat row rather than a definition list — they belong
                         to the person in the avatar, not to the listing. */}
-                    <dl className="mt-6 grid grid-cols-2 border border-white/10 bg-white/[0.03]">
+                    <dl className="mt-6 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                         <GuideStat
                             value={listing.qualifying_wild_capture_count.toLocaleString(params.locale)}
                             label="wild captures"
@@ -255,9 +253,10 @@ export default async function GuideListingPage({params}: Props) {
                         <GuideBookingRequestCta
                             listingId={listing.id}
                             category={listing.service_category}
-                            listingPath={canonicalPath}
-                            signedIn={signedIn}
                             maxGuests={listing.max_guests}
+                            amountMinor={listing.amount_minor}
+                            currencyCode={listing.currency_code}
+                            locale={params.locale}
                         />
                     </div>
                 </aside>
@@ -337,7 +336,7 @@ function GuideStat({value, label, className = ""}: {value: string; label: string
 
 function Fact({icon: Icon, label, value}: {icon?: ComponentType<{className?: string; size?: number}>; label: string; value: string}) {
     return (
-        <div className="border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] text-white/45">
                 {Icon ? <Icon className="shrink-0 text-primary-300" size={14} /> : null}
                 <span className="min-w-0">{label}</span>
